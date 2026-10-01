@@ -1,6 +1,6 @@
 # Glueyneo working rules
 
-Glueyneo is a portable C Neo Geo MVS/AES emulation core at the initial planning stage. Begin with .planning/PROJECT.md and STATE.md, then read REQUIREMENTS.md and ROADMAP.md as appropriate. Use .planning/preparation/README.md to find dated evidence and DECISIONS.md for decision provenance; current canonical documents own active scope. Do not treat proposed designs or historical sibling-project receipts as implemented behavior.
+Glueyneo is a portable C Neo Geo MVS/AES emulation core in its initial CPU acceptance experiment; no backend is qualified yet. Begin with .planning/PROJECT.md and STATE.md, then read REQUIREMENTS.md and ROADMAP.md as appropriate. Use .planning/preparation/README.md to find dated evidence and DECISIONS.md for decision provenance; current canonical documents own active scope. Do not treat proposed designs or historical sibling-project receipts as implemented behavior.
 
 ## Engineering
 

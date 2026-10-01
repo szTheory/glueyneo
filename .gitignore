@@ -21,3 +21,8 @@
 
 # Regenerable OpenGSD research retrieval cache
 /.planning/research/.cache/
+
+# Local OpenGSD dispatch, process lock and derived state projection
+/.gsd/dispatch-isolation-sentinel.json
+/.planning/milestone.lock
+/.planning/state.json
