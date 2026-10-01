@@ -27,7 +27,7 @@ In this OpenGSD template, v1 means the first scoped deliverable, **v0.1**, not a
 
 - [ ] **DIAG-01**: An external C consumer executes an original redistributable CPU/bus guest program through the ordinary create/load/run/results/destroy path and checks meaningful guest-computed observations.
 - [ ] **DIAG-02**: A maintainer can reproduce the diagnostic bootstrap and its initialized-data/BSS and named CPU/bus assertions using documented oracle ancestry, with a deliberate wrong-behavior control that fails the checks.
-- [ ] **DIAG-03**: A maintainer can repeat and split the supported execution workload and interleave independent native instances while obtaining the same specified guest observations at equal execution boundaries.
+- [ ] **DIAG-03**: A maintainer can repeat and split the supported execution workload and run distinguishable native diagnostic instances both interleaved and concurrently while matching isolated-baseline guest observations at equal execution boundaries, including concurrent native creation/load/teardown paths.
 
 ### Build and Package Consumption
 
@@ -107,15 +107,42 @@ No performance values, platform minima, CPU choice or API/state stability are ac
 
 ## Traceability
 
-The roadmapper fills one primary phase per v1 requirement. Later requirements remain outside the current milestone allocation.
+Each v1 requirement has exactly one primary phase in v0.1. Later requirements remain outside the current milestone allocation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| CPU-01 | Phase 1 | Pending |
+| CPU-02 | Phase 1 | Pending |
+| CPU-03 | Phase 1 | Pending |
+| CPU-04 | Phase 1 | Pending |
+| CPU-05 | Phase 1 | Pending |
+| API-01 | Phase 2 | Pending |
+| API-02 | Phase 2 | Pending |
+| API-03 | Phase 2 | Pending |
+| API-04 | Phase 2 | Pending |
+| DIAG-01 | Phase 2 | Pending |
+| DIAG-02 | Phase 2 | Pending |
+| DIAG-03 | Phase 2 | Pending |
+| BUILD-01 | Phase 2 | Pending |
+| BUILD-02 | Phase 2 | Pending |
+| BUILD-03 | Phase 3 | Pending |
+| BUILD-04 | Phase 3 | Pending |
+| EVID-01 | Phase 2 | Pending |
+| EVID-02 | Phase 2 | Pending |
+| EVID-03 | Phase 2 | Pending |
+| EVID-04 | Phase 2 | Pending |
+| DOC-01 | Phase 2 | Pending |
+| DOC-02 | Phase 2 | Pending |
+| DEL-01 | Phase 3 | Pending |
+| DEL-02 | Phase 3 | Pending |
+| DEL-03 | Phase 3 | Pending |
+| DEL-04 | Phase 3 | Pending |
+| DEL-05 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 27 total
-- Mapped to phases: 0 (roadmap creation pending)
-- Unmapped: 27
+- Mapped to phases: 27
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-10-01*

@@ -1,5 +1,7 @@
 # Glueyneo preparation index
 
+**Supersession note — 2026-10-01:** OpenGSD initialization promotes active scope into [PROJECT.md](../PROJECT.md), [REQUIREMENTS.md](../REQUIREMENTS.md), [ROADMAP.md](../ROADMAP.md) and [STATE.md](../STATE.md). This directory remains the dated preparation record; the original initialization instructions and proposed sequence below are historical provenance. Initialization does not establish an implemented emulator or measured baseline.
+
 Research date: **2026-10-01**. Status: preparation ready for initialization; review and dispositions are recorded in [ADVERSARIAL-REVIEW.md](ADVERSARIAL-REVIEW.md). Implementation and OpenGSD initialization remain ahead. Intended reader: a fresh agent or contributor planning the first useful Glueyneo release.
 
 ## Start here
