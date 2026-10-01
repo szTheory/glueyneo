@@ -9,7 +9,7 @@ created: "2026-10-01"
 
 # Phase 01 — Validation Strategy
 
-This is a proposed execution contract derived from [phase research](01-RESEARCH.md), not a record of passing CPU tests. The planner must reconcile task identifiers, file paths, threat references and sanitizer options with the executable plans.
+This is a proposed execution contract reconciled with the four executable plans and [phase research](01-RESEARCH.md), not a record of passing CPU tests. Status remains draft; no implementation or validation audit has run.
 
 ## Test Infrastructure
 
@@ -23,7 +23,7 @@ This is a proposed execution contract derived from [phase research](01-RESEARCH.
 | Full run | `ctest --test-dir build/cpu -L cpu --output-on-failure --no-tests=error` |
 | Runtime | Unmeasured; quick feedback target is under 30 seconds |
 
-ASan/UBSan and TSan require separate build directories and explicit planner-defined options. The compiler launch probes in research do not establish backend sanitizer results. All commands above depend on Wave 0 infrastructure and are not yet runnable.
+ASan/UBSan uses `build/cpu-asan` with `-DGLUEYNEO_CPU_SANITIZER=ADDRESS_UNDEFINED`; TSan uses `build/cpu-tsan` with `-DGLUEYNEO_CPU_SANITIZER=THREAD`. Both options instrument the actual adapted runtime as well as tests. The compiler launch probes in research do not establish backend sanitizer results. Plan 01 task 1 creates the runnable infrastructure within the first tracer; there is no separate scaffolding-only execution wave. All commands above are proposed and are not yet runnable.
 
 ## Sampling Rate
 
@@ -35,16 +35,18 @@ ASan/UBSan and TSan require separate build directories and explicit planner-defi
 
 ## Per-Task Verification Map
 
-These provisional rows describe required coverage. Planning replaces their identifiers with actual plan tasks without dropping a requirement.
+These rows use actual plan/task identifiers. Every command has a nearest following fails_when sibling in its PLAN.md. A nonzero command, zero tests or the named behavioral mismatch is failure; missing infrastructure must be implemented by the owning task before verification.
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 01-01-01 | 01 | 1 | CPU-01 | Pending plan model | Only inventoried licensed source enters the runtime closure | Source closure | `ctest --test-dir build/cpu -R cpu_closure --output-on-failure --no-tests=error` | Missing — Wave 0 | Pending |
-| 01-01-02 | 01 | 1 | CPU-03 | Pending plan model | Bounded original guest reaches the expected observable marker | Integration | `ctest --test-dir build/cpu -R cpu_guest --output-on-failure --no-tests=error` | Missing — Wave 0 | Pending |
-| 01-02-01 | 02 | 2 | CPU-02 | Pending plan model | Distinguishable instances and concurrent cold initialization cannot affect one another | Concurrency | `ctest --test-dir build/cpu -R 'cpu_isolation|cpu_cold' --output-on-failure --no-tests=error` | Missing — Wave 0 | Pending |
-| 01-03-01 | 03 | 3 | CPU-03 | Pending plan model | Invalid inputs, reset, STOP, interrupts and exceptions remain bounded and host-safe | Timing/boundary | `ctest --test-dir build/cpu -R cpu_timing --output-on-failure --no-tests=error` | Missing — Wave 0 | Pending |
-| 01-03-02 | 03 | 3 | CPU-04 | Pending plan model | Restore binds destination ownership and continues complete guest-visible state | Continuation | `ctest --test-dir build/cpu -R cpu_state --output-on-failure --no-tests=error` | Missing — Wave 0 | Pending |
-| 01-04-01 | 04 | 4 | CPU-05 | Pending plan model | Acceptance requires current evidence within the recorded adaptation budget | Qualification | `ctest --test-dir build/cpu -R cpu_acceptance --output-on-failure --no-tests=error` | Missing — Wave 0 | Pending |
+| 01-01-01 | 01 | 1 | CPU-01, CPU-03, CPU-05 | T-01-01–04 | Freeze precedes adaptation; bounded original arithmetic guest and consequential control | Integration | `ctest --test-dir build/cpu -R '^cpu_guest(_negative)?$' --output-on-failure --no-tests=error` | Missing — task 01-01-01 | Pending |
+| 01-01-02 | 01 | 1 | CPU-01, CPU-05 | T-01-01, T-01-04 | Licensed complete closure; reproducible generation and inclusive caps | Source/control | `ctest --test-dir build/cpu -R '^cpu_(closure|budget|audit_controls)$' --output-on-failure --no-tests=error` | Missing — task 01-01-02 | Pending |
+| 01-02-01 | 02 | 2 | CPU-02, CPU-04 | T-01-05–06 | Distinct/cold instances retain complete ownership | Concurrency | `ctest --test-dir build/cpu -R '^cpu_(isolation(_negative)?|cold)' --output-on-failure --no-tests=error` | Missing — task 01-02-01 | Pending |
+| 01-02-02 | 02 | 2 | CPU-01, CPU-02 | T-01-07–08 | Every allocation failure and guest fault preserves healthy witness; actual instrumentation | Fault/inventory | `ctest --test-dir build/cpu -R '^cpu_(faults|inventory|budget)$' --output-on-failure --no-tests=error` | Missing — task 01-02-02 | Pending |
+| 01-03-01 | 03 | 3 | CPU-03 | T-01-09–10 | Requests/reset/STOP/IRQ/exceptions remain bounded and source-qualified | Timing/boundary | `ctest --test-dir build/cpu -R '^cpu_(timing|faults|isolation|budget)$' --output-on-failure --no-tests=error` | Missing — task 01-03-01 | Pending |
+| 01-03-02 | 03 | 3 | CPU-04 | T-01-11–12 | Fresh destination continues complete state; invalid restore is atomic | Continuation | `ctest --test-dir build/cpu -R '^cpu_(state(_negative)?|inventory|timing|isolation|budget)$' --output-on-failure --no-tests=error` | Missing — task 01-03-02 | Pending |
+| 01-04-01 | 04 | 4 | CPU-01–05 | T-01-13–14 | Empty/stale/over-budget evidence cannot admit; source/runtime evidence separate | Qualification controls | `python3 tools/cpu/acceptance.py self-test` | Missing — task 01-04-01 | Pending |
+| 01-04-02 | 04 | 4 | CPU-01–05 | T-01-13–16 | Current independent review and all mandatory evidence required; rejection is GAPS_FOUND | Admission | `python3 tools/cpu/acceptance.py verify --require-accepted` | Missing — task 01-04-01 | Pending |
 
 ## Wave 0 Requirements
 

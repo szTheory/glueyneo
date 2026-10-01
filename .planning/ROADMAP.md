@@ -25,48 +25,74 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
 ## Phase Details
 
 ### Phase 1: CPU acceptance experiment
-**Goal**: A maintainer can reproduce acceptance of a C 68000 backend that safely executes a tiny guest with independent instances and explicit state/timing limits.
+
+**Goal**: As a maintainer, I can reproduce acceptance of a C 68000 backend so I can build the diagnostic SDK on independent instances with explicit state and timing limits.
 **Mode:** mvp
 **Depends on**: Nothing (first phase)
 **Requirements**: CPU-01, CPU-02, CPU-03, CPU-04, CPU-05
 **Success Criteria** (what must be TRUE):
+
   1. A maintainer can rebuild the pinned candidate and account for every copied, generated, compiled and distributed file, its notices and host calls, including demonstrated FPU/SoftFloat exclusion or complete retained disposition. (CPU-01)
   2. Distinguishable instances execute a tiny real guest alternately and concurrently with isolated-baseline results, including simultaneous cold initialization and failing creation/teardown; guest failures do not terminate or corrupt the host. (CPU-02; CPU-01 host-call disposition)
   3. A maintainer can observe guest-computed progress, bounded stops and overshoot, and the selected interrupt/exception interactions, with supported precision and unsupported behavior stated. (CPU-03)
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit acceptance decision, commands and results against a finite effort/patch budget fixed before adaptation; failed or over-budget candidates have counterexamples and a replacement/replanning disposition. (CPU-05)
-**Plans**: TBD
+
+**Plans**: 4 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 01-01-PLAN.md — Freeze the admission contract, execute the first guest and prove source closure.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 01-02-PLAN.md — Prove independent/cold instances and bounded host failures.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 01-03-PLAN.md — Qualify timing and complete fresh-destination continuation.
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 01-04-PLAN.md — Reproduce evidence, independently review and issue the admission decision.
 
 Planning guidance: First set a concrete finite effort cap, patch budget and stopping/replacement rules. Then use small CMake/CTest experiment scaffolding, a licensed original tiny guest, source/host-call audit, and isolation/timing/continuation experiments. Evaluate the research's pinned Musashi candidate without presuming acceptance. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
 
 **Admission gate:** CPU-05 may be satisfied by a reproducible rejection or deferral. That does not satisfy CPU-01–04 or complete this phase. Phase 1 completion and Phase 2 admission require qualified backend acceptance, or an explicit evidence-backed roadmap revision that reconciles affected requirements. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
 
 ### Phase 2: Executable diagnostic SDK
+
 **Goal**: An external C integrator can install an offline SDK and execute a meaningful original CPU/bus diagnostic through its ordinary native API, with safe failures and reproducible evidence.
 **Mode:** mvp
 **Depends on**: Phase 1 acceptance gate
 **Requirements**: API-01, API-02, API-03, API-04, DIAG-01, DIAG-02, DIAG-03, BUILD-01, BUILD-02, EVID-01, EVID-02, EVID-03, EVID-04, DOC-01, DOC-02
 **Success Criteria** (what must be TRUE):
+
   1. An integrator can create/reset/destroy an opaque host-independent instance, load bounded diagnostic regions under explicit immutable-media ownership, and receive actionable errors with safe recovery/destruction for invalid sizes, unsupported capabilities, lifecycle misuse and allocation/load failures, without leaks, process exit or unintended state mutation. (API-01, API-02, API-04)
   2. An external consumer's create/load/run/results/destroy flow executes the original guest through bounded native calls reporting actual progress and stop reasons; initialized-data/BSS and named CPU/bus observations match justified oracles, and a deliberate wrong-behavior control fails. (API-03, DIAG-01, DIAG-02)
   3. Maintainers obtain isolated-baseline guest observations at equal boundaries for repeat/split execution and distinguishable native instances run both interleaved and concurrently, including concurrent native creation/load/teardown. Meaningful boundary/lifecycle/property, bounded input/call-sequence fuzz and supported sanitizer results retain discovered regressions. (DIAG-03, EVID-02)
   4. An integrator builds C17 static/shared libraries offline with target-scoped CMake/CTest and pinned test-only Unity, executes the diagnostic from out-of-tree installed C consumers for both variants, and compiles/links C++ public-header consumers. Compiled getting-started, ownership/error and failure-reproduction guidance matches the artifacts and states the exact supported subset and excluded game/BIOS/video/audio/public-state/persistence claims. (BUILD-01, BUILD-02, DOC-01, DOC-02)
   5. A maintainer can audit every public dependency/fixture's rights, notices, source and recipe, output digest, firmware needs and oracle ancestry; reproduce nonempty machine-readable results with exact identities and distinct outcomes; and reproduce diagnostic execution, memory/allocation, load and build-cost baselines on named hosts with uncertainty and no gameplay or uncalibrated-threshold claims. (EVID-01, EVID-03, EVID-04)
+
 **Plans**: TBD
 
 Planning guidance: Slice from opaque lifecycle and bounded media through the real diagnostic and installed consumer; add only its evidenced bus/bootstrap subset. Couple each behavior to its tests, provenance, compiled example and capability statement. Separate diagnostic-oracle research from standard package work. Begin lightweight CI and public-content checks as infrastructure permits; final hosted delivery acceptance belongs to Phase 3.
 
 ### Phase 3: Distributable release qualification
+
 **Goal**: A release consumer can download a complete unsigned SDK bound to a tested commit, rebuild or relocate it, and reproduce its diagnostic under truthful support claims.
 **Mode:** mvp
 **Depends on**: Phase 2
 **Requirements**: BUILD-03, BUILD-04, DEL-01, DEL-02, DEL-03, DEL-04, DEL-05
 **Success Criteria** (what must be TRUE):
+
   1. An integrator executes the relocated installed diagnostic after original source/build/install access is removed, rebuilds the release source archive offline, and can identify exercised compiler/SDK/OS/architecture/build combinations with failed, skipped, unsupported and untested cases explicit. (BUILD-03, BUILD-04)
   2. A maintainer receives an always-started aggregate required CI check with conservative change classification and meaningful execution counts, plus recorded cold-build, critical-path and runner-minute evidence. (DEL-01)
   3. Qualifying PRs merge through protection only after current-revision required checks and independent review; setup/shipping issue and PR triage and actual bot/App event behavior demonstrate unattended operation with untrusted execution separated from publication authority. (DEL-02)
   4. Pinned release-please automation uses one C version source to stage a complete unsigned SDK draft bound to the tested commit, recovers interrupted staging and no-new-release retries, refuses incomplete/wrong-commit publication, and yields a published download whose expected digests and real diagnostic consumer pass. (DEL-03, DEL-04)
   5. A maintainer can inspect public-content evidence covering source, documentation, commit identity, logs and archives for notices and exclusion of personal paths/private identity, secrets, commercial media and private corpus material before publication. (DEL-05)
+
 **Plans**: TBD
 
 Planning guidance: Qualify relocated/offline consumers and the exact support matrix; then required checks/protected PRs and the actual release event/recovery graph; then stage, inspect, publish and verify the downloaded artifacts. Do not wait for a tag event that the configured draft flow cannot emit. Treat action/service behavior as requiring current qualification. Unsigned SDK delivery does not require application notarization.
