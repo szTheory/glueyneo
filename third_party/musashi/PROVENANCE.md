@@ -1,8 +1,8 @@
 # Musashi experimental source provenance
 
 Candidate status: **under investigation, not admitted**. The second attempt
-builds and executes the private guest. Source closure and full reentrancy
-remain separate qualification obligations.
+builds and executes the private guest. Native unoptimized/optimized source
+closure passes; full reentrancy, timing and state qualification remain ahead.
 
 Official repository: https://github.com/kstenerud/Musashi
 Immutable pin: `313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd`.
@@ -23,7 +23,9 @@ grant/disclaimer. The generator also credits R. Belmont for FPU/MMU work.
 Those notices remain even though the FPU/MMU dependency files were not copied.
 The modified template injects the full upstream grant into both generated
 files. There is no SoftFloat, FPU, MMU, disassembler or MAME file in this
-vendored subset; compiled closure is **unproved** until the Task 2 audit.
+vendored subset. The Task 2 audit checks actual compiler dependencies,
+preprocessed include ancestry, AST function references, archive members,
+undefined symbols and a consumer link map in both optimization lanes.
 
 Recipe: `python3 tools/cpu/adapt.py PRISTINE_DIRECTORY third_party/musashi`,
 then compile m68kmake.c as a separate C17 host executable and invoke it with
@@ -39,9 +41,21 @@ integer aliases with existing signed core types in the template. A runtime
 archive and real guest execution now pass; this is not backend admission.
 
 The host generator performs allocation, file I/O, logging and process exit.
-It is a separate executable. CPU runtime host-call/linkage disposition has
-not yet been verified; Task 2 must inspect actual compiled objects and
-preprocessed dependencies, not infer safety from source exclusions.
+It is a separate executable; `m68k_in.c` is its input, not a C translation
+unit. The native runtime archive contains only adapter, core and generated
+opcode objects. Observed host calls are memory operations and current-call
+jump-frame operations. Clang emits checked memset in the unoptimized lane
+and zero/pattern-fill helpers in the optimized lane; each has an explicit
+manifest disposition. No generator or Unity object appears in the linked
+private consumer. Other compiler/platform closures remain unqualified.
+
+`tools/cpu/source-manifest.json` records each source, notice, immutable origin,
+generated status, compilation role and distributed hash. `audit.py regenerate`
+runs two independent parallel scratch generations and compares admitted bytes.
+`audit.py budget` replays historical edits, verifies the current recipe from
+pristine sources and binds semantic review to the current source identities.
+Historical failures remain in the attempt evidence; no source or cap is
+silently replaced by these passing narrow checks.
 
 The reproducible source diff and exact adapted/generated identities are in
 `experiments/cpu/evidence/attempt-1/`. `record_attempt.py` accepts the six

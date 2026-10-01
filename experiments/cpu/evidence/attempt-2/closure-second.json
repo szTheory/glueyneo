@@ -1,0 +1,6 @@
+{
+  "command": "python3 tools/cpu/audit.py closure --receipt build/cpu/closure-first.json",
+  "exit_code": 1,
+  "observed": "forbidden runtime import: ['bzero', 'memset_pattern16']",
+  "disposition": "Unoptimized lane passed; optimized Clang emitted zero-fill and repeated-pattern memory helpers. Classify both as compiler-selected memory operations, preserving the failure. No runtime source or frozen limit changes."
+}

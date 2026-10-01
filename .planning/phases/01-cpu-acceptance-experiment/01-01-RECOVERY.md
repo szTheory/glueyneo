@@ -53,4 +53,37 @@ the handwritten total. This is a conservative ceiling, not a claim that all
 471 lines change instruction semantics. The six allowed inputs are already
 used; no additional handwritten upstream file is available.
 
-Attempt 2 has not started. The accounting record must be committed first.
+Accounting was committed as `b3776f7`; attempt 2 then started at 17:01:29Z.
+Task 1 passed and was committed as `7f55bd1`. One additional template type
+correction was needed and its compiler counterexample was preserved.
+
+## Task 2 procedural checkpoint and bounded host-audit continuation
+
+The installed three-correction limit was reached after two explicit compiler
+memory-helper classifications and one coherent correction of independent
+review findings. Both native closure lanes and the cumulative budget passed,
+but two intended negative controls stopped at an unrelated path-boundary
+failure: the temporary subject root used `/var` while resolved dependencies
+used `/private/var`. The controls were not weakened or reported as passing.
+The complete failed gate is preserved in
+`experiments/cpu/evidence/attempt-2/audit-control-path-failure.txt`.
+
+At this reported checkpoint the orchestrator explicitly replanned one local
+host-audit correction under the user's existing recovery approval and standing
+routine-fix authorization. This is an orchestrator decision, not a new user
+message or reset of the correction ledger. Canonicalize the closure subject
+root at entry and directly matching comparison operands; rerun the existing
+intended controls and full Task 2 gate. If this single coherent correction
+fails, stop and preserve the remaining counterexample. No CPU source changes,
+new substantive adaptation attempt, budget increase or further retry loop is
+authorized by this addendum.
+
+The single path correction passed all three Task 2 CTests in 9.74 seconds;
+the compiled forbidden-import control additionally exercises a real symlink.
+During final receipt review, `m68k_in.c` was found incorrectly classified as
+a compiled test source by the generic `.c` fallback. The orchestrator
+explicitly authorized this separate factual closeout correction: classify it
+as generator input with no compilation role, correct the matching validator,
+and preserve the wrong classification as a regression. This metadata repair
+does not change CPU source, budgets or attempts. Final receipts must follow
+the corrected inventory and full verification gate.

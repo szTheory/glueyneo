@@ -1,0 +1,6 @@
+{
+  "command": "python3 tools/cpu/audit.py closure --receipt build/cpu/closure-first.json",
+  "exit_code": 1,
+  "observed": "forbidden runtime import: ['__memset_chk']",
+  "disposition": "Apple Clang optimized checked-memory support was not yet classified; classify this compiler-generated bounds-checked memset helper explicitly, then repeat closure. No runtime source or frozen limit changes."
+}

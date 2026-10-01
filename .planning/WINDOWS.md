@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 3
+open_count: 1
 waived_count: 0
-fixed_count: 0
+fixed_count: 2
 total_count: 3
-last_updated: 2026-10-01T16:33:14.562Z
+last_updated: 2026-10-01T17:35:11.098Z
 ---
 
 # Broken Windows Ledger
@@ -15,8 +15,8 @@ last_updated: 2026-10-01T16:33:14.562Z
 
 | id | phase | kind | file | line | description | status | reason | recorded_at | resolved_at |
 |----|-------|------|------|------|-------------|--------|--------|-------------|-------------|
-| 1 | 01 | unrun-verify | .planning/phases/01-cpu-acceptance-experiment/01-01-PLAN.md |  | Task 1 guest/control CTests and Task 2 closure/budget controls remain unrun because the adapted backend does not compile. | open |  | 2026-10-01T16:32:36.895Z |  |
-| 2 | 01 | unmet-truth | experiments/cpu/cpu_adapter.c | 63 | CPU experiment does not compile: CPU_STOPPED macro collision and generated immediate OPER_I calls omit context; source adaptation halted after three correction attempts. | open |  | 2026-10-01T16:33:14.447Z |  |
+| 1 | 01 | unrun-verify | .planning/phases/01-cpu-acceptance-experiment/01-01-PLAN.md |  | Task 1 guest/control CTests and Task 2 closure/budget controls remain unrun because the adapted backend does not compile. | fixed |  | 2026-10-01T16:32:36.895Z | 2026-10-01T17:35:10.918Z |
+| 2 | 01 | unmet-truth | experiments/cpu/cpu_adapter.c | 63 | CPU experiment does not compile: CPU_STOPPED macro collision and generated immediate OPER_I calls omit context; source adaptation halted after three correction attempts. | fixed |  | 2026-10-01T16:33:14.447Z | 2026-10-01T17:35:11.098Z |
 | 3 | 01 | todo | third_party/musashi/m68kmake.c | 53 | Retained upstream TODOs and incomplete later-model instructions/timings are not qualified; compiled 68000 closure and semantic review remain pending. | open |  | 2026-10-01T16:33:14.562Z |  |
 
 ````json
@@ -28,10 +28,10 @@ last_updated: 2026-10-01T16:33:14.562Z
     "file": ".planning/phases/01-cpu-acceptance-experiment/01-01-PLAN.md",
     "line": null,
     "description": "Task 1 guest/control CTests and Task 2 closure/budget controls remain unrun because the adapted backend does not compile.",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-10-01T16:32:36.895Z",
-    "resolved_at": null,
+    "resolved_at": "2026-10-01T17:35:10.918Z",
     "milestone": "v0.1"
   },
   {
@@ -41,10 +41,10 @@ last_updated: 2026-10-01T16:33:14.562Z
     "file": "experiments/cpu/cpu_adapter.c",
     "line": 63,
     "description": "CPU experiment does not compile: CPU_STOPPED macro collision and generated immediate OPER_I calls omit context; source adaptation halted after three correction attempts.",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-10-01T16:33:14.447Z",
-    "resolved_at": null,
+    "resolved_at": "2026-10-01T17:35:11.098Z",
     "milestone": "v0.1"
   },
   {

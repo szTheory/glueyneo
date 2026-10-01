@@ -1,6 +1,6 @@
 # CPU candidate acceptance experiment
 
-Status: **bounded recovery active; Task 1 guest passes; candidate not accepted**.
+Status: **plan 01-01 complete; private guest and native source audits pass; candidate not accepted**.
 
 ## Frozen admission contract
 
@@ -168,7 +168,31 @@ are in `evidence/recovery-accounting/core-semantic-refinement.json`.
 This refinement changes no handwritten/helper count or frozen limit.
 
 `evidence/attempt-2/tracer.json` records exact source identities and results.
-Task 2 reproducible budget, regeneration and closure controls remain pending.
+Task 2 is complete; the final qualification receipt below supersedes this tracer checkpoint.
+
+## Plan 01-01 final evidence — 2026-10-01
+
+`evidence/attempt-2/qualification.json` binds the final manifest and source
+identities to five passing CTests, 13 host-audit controls and two independent
+parallel regenerations. Native Apple Clang 21 closure passes without optimization
+and with optimization, including actual dependencies, preprocessed inputs,
+function references, archive symbols and minimal-consumer linkage. Distributed
+inputs exclude FPU/MMU/SoftFloat; the opcode template is a generator input,
+not a compiled test translation unit. This is native experiment evidence only.
+
+Final cumulative source charges are **2,423 handwritten**, **346 helper**,
+**356 semantic**, six inputs and two outputs totaling **36,559 lines /
+832,698 bytes**. Effort is recorded conservatively in `budget-ledger.json`;
+no frozen limit or attempt count was reset. All earlier checkpoint figures
+above remain historical observations.
+
+Task 2 reached its correction limit while intended negative controls failed
+at an unrelated temporary-path boundary. The preserved failure and explicit
+orchestrator continuation are in the recovery record. Canonicalizing the
+subject root made both intended controls pass; a separate metadata correction
+and regression establish the generator-template role. Neither changed CPU
+runtime source or weakened a negative control. Isolation, timing, continuation,
+remaining host safety and the final admission decision remain later-plan work.
 
 ## Private contract limitations
 

@@ -1,0 +1,449 @@
+{
+  "schema": 1,
+  "candidate": "313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd",
+  "unity_revision": "b6763fbd9cedfacaa89e2ad9fd00d615a234e355",
+  "scope": "Every distributed C/header/Python source in the experiment, copied/generated dependency file, build file and dependency notice. Historical evidence and planning documents are preserved separately; this manifest identity is recorded by receipts to avoid a self-hash.",
+  "adaptation_recipe": {
+    "path": "tools/cpu/adapt.py",
+    "sha256": "da81f988bd764c7716ebef7f5b088c0581eb9ead7781ec825c1a3c38735f18d8"
+  },
+  "host_call_dispositions": {
+    "memcpy": "explicit buffer copy",
+    "memset": "instance initialization",
+    "__memset_chk": "compiler-generated bounds-checked instance initialization",
+    "bzero": "compiler-selected zero fill",
+    "memset_pattern16": "compiler-selected repeated-pattern memory fill",
+    "setjmp": "current call fault frame",
+    "longjmp": "bounded return to current call",
+    "sigsetjmp": "backend address-error frame",
+    "siglongjmp": "backend address-error return",
+    "__stack_chk_fail": "compiler stack-integrity support",
+    "__stack_chk_guard": "compiler stack-integrity support"
+  },
+  "files": [
+    {
+      "path": "CMakeLists.txt",
+      "sha256": "0d424c96a6e63124725242db62ebaedbfd638d6bbada5e2f4bbf7e24a11bd1fe",
+      "origin": "Glueyneo",
+      "revision": "sha256:0d424c96a6e63124725242db62ebaedbfd638d6bbada5e2f4bbf7e24a11bd1fe",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "9dad75e7582e12fb43b0d1deeca3e3469757f94f0225b798cb659c1980661ec7",
+      "origin": "Glueyneo",
+      "revision": "sha256:9dad75e7582e12fb43b0d1deeca3e3469757f94f0225b798cb659c1980661ec7",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "experiments/cpu/CMakeLists.txt",
+      "sha256": "6968fb79f53b4ee49fb01056779521d6268226286b1ae31d1bfa4ad5d5e9d880",
+      "origin": "Glueyneo",
+      "revision": "sha256:6968fb79f53b4ee49fb01056779521d6268226286b1ae31d1bfa4ad5d5e9d880",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "experiments/cpu/cpu_adapter.c",
+      "sha256": "4224e06bfc4ff8bcc4ecd071fa9e635940e8a029a980c642317e19458d65d250",
+      "origin": "Glueyneo",
+      "revision": "sha256:4224e06bfc4ff8bcc4ecd071fa9e635940e8a029a980c642317e19458d65d250",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [
+        "runtime"
+      ],
+      "distributed": true,
+      "host_calls": "Only enumerated explicit memory/fault-frame/compiler support; verified in closure"
+    },
+    {
+      "path": "experiments/cpu/cpu_adapter.h",
+      "sha256": "077d4fd4d0b9817c8a033c7675d0322d6e33bd15e6c25f8867cf092afc71a322",
+      "origin": "Glueyneo",
+      "revision": "sha256:077d4fd4d0b9817c8a033c7675d0322d6e33bd15e6c25f8867cf092afc71a322",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [
+        "runtime"
+      ],
+      "distributed": true,
+      "host_calls": "Only enumerated explicit memory/fault-frame/compiler support; verified in closure"
+    },
+    {
+      "path": "experiments/cpu/test_bus.c",
+      "sha256": "2b682a9d3fd24d0991ddfd22ea2d1d4c00888a6d497842831bb3afe0aa6aa980",
+      "origin": "Glueyneo",
+      "revision": "sha256:2b682a9d3fd24d0991ddfd22ea2d1d4c00888a6d497842831bb3afe0aa6aa980",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [
+        "test"
+      ],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "experiments/cpu/test_bus.h",
+      "sha256": "e37ba87dc4dfc038bf47cc2824d2ed549297c6b38ae464bfe22363727f0ef624",
+      "origin": "Glueyneo",
+      "revision": "sha256:e37ba87dc4dfc038bf47cc2824d2ed549297c6b38ae464bfe22363727f0ef624",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [
+        "test"
+      ],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "tests/cpu/guest_fixture.c",
+      "sha256": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
+      "origin": "Glueyneo",
+      "revision": "sha256:3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [
+        "test"
+      ],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "tests/cpu/guest_fixture.h",
+      "sha256": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c",
+      "origin": "Glueyneo",
+      "revision": "sha256:12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [
+        "test"
+      ],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "tests/cpu/negative.py",
+      "sha256": "c9cdd4cb61843021a4441d09f3bf677fc7206d6782f1655c85dfda250b2c0492",
+      "origin": "Glueyneo",
+      "revision": "sha256:c9cdd4cb61843021a4441d09f3bf677fc7206d6782f1655c85dfda250b2c0492",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "tests/cpu/test_audit.py",
+      "sha256": "7b0092e0e8c54e8e26cdc294fde4ce9863a06a0506e55eb02ce5d1f8268f1ef4",
+      "origin": "Glueyneo",
+      "revision": "sha256:7b0092e0e8c54e8e26cdc294fde4ce9863a06a0506e55eb02ce5d1f8268f1ef4",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "tests/cpu/test_guest.c",
+      "sha256": "e63bcd7d187bc21dce01cd8513f4b490e7e6aa2bb2d2f91454037ad829e5ebe0",
+      "origin": "Glueyneo",
+      "revision": "sha256:e63bcd7d187bc21dce01cd8513f4b490e7e6aa2bb2d2f91454037ad829e5ebe0",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [
+        "test"
+      ],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "third_party/musashi/PROVENANCE.md",
+      "sha256": "821bce066c30292a0444639982cdd51eb24f8b642c5ba6e808b183c69f295499",
+      "origin": "Glueyneo",
+      "revision": "sha256:821bce066c30292a0444639982cdd51eb24f8b642c5ba6e808b183c69f295499",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "third_party/musashi/m68k.h",
+      "sha256": "408807a9cd8f6e94e3e10ba822416709be0c7f36ea329e5292243fd4c61a55d1",
+      "origin": "Musashi",
+      "revision": "313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd",
+      "license": "retained permissive upstream grant",
+      "notice": "third_party/musashi/m68k.h",
+      "copied": true,
+      "generated": false,
+      "compiled": [
+        "runtime"
+      ],
+      "distributed": true,
+      "host_calls": "Only enumerated explicit memory/fault-frame/compiler support; verified in closure"
+    },
+    {
+      "path": "third_party/musashi/m68k_in.c",
+      "sha256": "9b93f69a639a7f0086d8fa4e20771249a66500a88774a1f26da61a930cdb12d6",
+      "origin": "Musashi",
+      "revision": "313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd",
+      "license": "retained permissive upstream grant",
+      "notice": "third_party/musashi/m68k_in.c",
+      "copied": true,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "third_party/musashi/m68kconf.h",
+      "sha256": "5f0e6734df160fc6c4516550c7f251a2805503adc35ca2f41e20d3ba2e28875c",
+      "origin": "Musashi",
+      "revision": "313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd",
+      "license": "retained permissive upstream grant",
+      "notice": "third_party/musashi/m68kconf.h",
+      "copied": true,
+      "generated": false,
+      "compiled": [
+        "runtime"
+      ],
+      "distributed": true,
+      "host_calls": "Only enumerated explicit memory/fault-frame/compiler support; verified in closure"
+    },
+    {
+      "path": "third_party/musashi/m68kcpu.c",
+      "sha256": "4603101c1d7e0680d8d0243df7383f449d604922942d37cfce257f537f18c293",
+      "origin": "Musashi",
+      "revision": "313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd",
+      "license": "retained permissive upstream grant",
+      "notice": "third_party/musashi/m68kcpu.c",
+      "copied": true,
+      "generated": false,
+      "compiled": [
+        "runtime"
+      ],
+      "distributed": true,
+      "host_calls": "Only enumerated explicit memory/fault-frame/compiler support; verified in closure"
+    },
+    {
+      "path": "third_party/musashi/m68kcpu.h",
+      "sha256": "6c08f918ac5f77543556c3548ffc5ebc5cae3a679c733f600d143b5b7675d7ed",
+      "origin": "Musashi",
+      "revision": "313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd",
+      "license": "retained permissive upstream grant",
+      "notice": "third_party/musashi/m68kcpu.h",
+      "copied": true,
+      "generated": false,
+      "compiled": [
+        "runtime"
+      ],
+      "distributed": true,
+      "host_calls": "Only enumerated explicit memory/fault-frame/compiler support; verified in closure"
+    },
+    {
+      "path": "third_party/musashi/m68kmake.c",
+      "sha256": "14eb2b98806e399aa19b5109c94d263712255b5d964acdcc06de62ae22fb8754",
+      "origin": "Musashi",
+      "revision": "313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd",
+      "license": "retained permissive upstream grant",
+      "notice": "third_party/musashi/m68kmake.c",
+      "copied": true,
+      "generated": false,
+      "compiled": [
+        "host-generator"
+      ],
+      "distributed": true,
+      "host_calls": "Host generator: allocation, files, stdout and process exit; never runtime-linked"
+    },
+    {
+      "path": "third_party/musashi/m68kops.c",
+      "sha256": "c76b272ccaf90ddd09de03307e703a184a3974ea097791cb6b47d6c205d92680",
+      "origin": "Musashi",
+      "revision": "313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd",
+      "license": "retained permissive upstream grant",
+      "notice": "third_party/musashi/m68kops.c",
+      "copied": false,
+      "generated": true,
+      "compiled": [
+        "runtime"
+      ],
+      "distributed": true,
+      "host_calls": "Only enumerated explicit memory/fault-frame/compiler support; verified in closure"
+    },
+    {
+      "path": "third_party/musashi/m68kops.h",
+      "sha256": "ca121603347991ca99656bc7c49682a01560460a22ff6a9cb7f088e8c53f78fe",
+      "origin": "Musashi",
+      "revision": "313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd",
+      "license": "retained permissive upstream grant",
+      "notice": "third_party/musashi/m68kops.h",
+      "copied": false,
+      "generated": true,
+      "compiled": [
+        "runtime"
+      ],
+      "distributed": true,
+      "host_calls": "Only enumerated explicit memory/fault-frame/compiler support; verified in closure"
+    },
+    {
+      "path": "third_party/unity/LICENSE.txt",
+      "sha256": "ec6cf55f05ba2aa538b9677b2481b9ac14a87c63594fce8a0677d4f71c583980",
+      "origin": "Unity",
+      "revision": "b6763fbd9cedfacaa89e2ad9fd00d615a234e355",
+      "license": "MIT",
+      "notice": "third_party/unity/LICENSE.txt",
+      "copied": true,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "third_party/unity/PROVENANCE.md",
+      "sha256": "c6666a2ed5b5f44efc9bc5553a0485fd49a23cdf1e64c33da8810d67362c03ce",
+      "origin": "Glueyneo",
+      "revision": "sha256:c6666a2ed5b5f44efc9bc5553a0485fd49a23cdf1e64c33da8810d67362c03ce",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "third_party/unity/src/unity.c",
+      "sha256": "a6cc4b143075a03317d72c760b5ed67a4a12eeda1242f575464ad23f34042275",
+      "origin": "Unity",
+      "revision": "b6763fbd9cedfacaa89e2ad9fd00d615a234e355",
+      "license": "MIT",
+      "notice": "third_party/unity/LICENSE.txt",
+      "copied": true,
+      "generated": false,
+      "compiled": [
+        "test"
+      ],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "third_party/unity/src/unity.h",
+      "sha256": "b30ba4db1e0be1a1f6c862d359d73c91025a114977e41d3dad17103363804334",
+      "origin": "Unity",
+      "revision": "b6763fbd9cedfacaa89e2ad9fd00d615a234e355",
+      "license": "MIT",
+      "notice": "third_party/unity/LICENSE.txt",
+      "copied": true,
+      "generated": false,
+      "compiled": [
+        "test"
+      ],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "third_party/unity/src/unity_internals.h",
+      "sha256": "35bffad23ebc533977291e7a848c646027513572268fbfa9bd03d5ec21ee818a",
+      "origin": "Unity",
+      "revision": "b6763fbd9cedfacaa89e2ad9fd00d615a234e355",
+      "license": "MIT",
+      "notice": "third_party/unity/LICENSE.txt",
+      "copied": true,
+      "generated": false,
+      "compiled": [
+        "test"
+      ],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "tools/cpu/adapt.py",
+      "sha256": "da81f988bd764c7716ebef7f5b088c0581eb9ead7781ec825c1a3c38735f18d8",
+      "origin": "Glueyneo",
+      "revision": "sha256:da81f988bd764c7716ebef7f5b088c0581eb9ead7781ec825c1a3c38735f18d8",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "tools/cpu/audit.py",
+      "sha256": "460e40b681bddeb960873b91d8ce23d1f59870e52f82c2641c187134a1a2100e",
+      "origin": "Glueyneo",
+      "revision": "sha256:460e40b681bddeb960873b91d8ce23d1f59870e52f82c2641c187134a1a2100e",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "tools/cpu/record_attempt.py",
+      "sha256": "0c6d14294f48e8855a1d89d6b7f9e715da4850814a8ed63c897e9624ed2649f0",
+      "origin": "Glueyneo",
+      "revision": "sha256:0c6d14294f48e8855a1d89d6b7f9e715da4850814a8ed63c897e9624ed2649f0",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "tools/cpu/red.py",
+      "sha256": "cf02b581564bc600a26d68d867d75c67715f1b206e0b00497cb156eceb7d922f",
+      "origin": "Glueyneo",
+      "revision": "sha256:cf02b581564bc600a26d68d867d75c67715f1b206e0b00497cb156eceb7d922f",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    }
+  ]
+}
