@@ -2,190 +2,160 @@
 phase: 01-cpu-acceptance-experiment
 plan: "01"
 subsystem: cpu
-tags: [c17, musashi, unity, halted, source-provenance]
+tags: [c17, musashi, unity, source-provenance]
 requires: []
 provides:
-  - Immutable pre-adaptation admission contract
-  - Original manual-derived guest and verified intentional RED evidence
-  - Failed explicit-context adaptation with pinned sources and compile counterexamples
+  - Original guest execution through a bounded private explicit-instance adapter
+  - Reproducible native source closure, regeneration and cumulative budget audits
 affects: [01-02, 01-03, 01-04, 02-executable-diagnostic-sdk]
 actuals:
-  tokens: 463837
-  tasks: 0
-  commits: 3
+  tokens: 608697
+  tasks: 2
+  commits: 10
 plan_head_before: 3977c3bfbfdc752e1b43443aa3911c7012678177
 tech-stack:
-  added: [Musashi pinned candidate, Unity 2.7.0 test subset, CMake, CTest]
-  patterns: [explicit-context experiment, assertion-first guest, fail-closed admission]
+  added: [pinned Musashi, Unity 2.7.0 subset, CMake, CTest, Python host audit]
+  patterns: [explicit-instance private adapter, assertion-first guest, fail-closed source audit]
 key-files:
-  created:
-    - experiments/cpu/ACCEPTANCE.md
-    - experiments/cpu/evidence/attempt-1/receipt.json
-    - experiments/cpu/evidence/attempt-1/build-failure.txt
-    - experiments/cpu/evidence/attempt-1/source.patch
-    - third_party/musashi/PROVENANCE.md
-    - tests/cpu/ORACLE.md
-    - tests/cpu/red-evidence.json
-    - tools/cpu/adapt.py
-    - tools/cpu/record_attempt.py
-  modified: []
+  created: [experiments/cpu/ACCEPTANCE.md, experiments/cpu/budget-ledger.json, tools/cpu/source-manifest.json, tools/cpu/audit.py, tests/cpu/test_audit.py, experiments/cpu/evidence/attempt-2/qualification.json]
+  modified: [third_party/musashi/m68k_in.c, tools/cpu/adapt.py, experiments/cpu/cpu_adapter.c]
 key-decisions:
-  - Defer candidate investigation after executor correction limit; no backend acceptance or proven incompatibility.
-  - Preserve the fixed numeric contract and block dependent plans until a bounded continuation or replan resolves the halt.
+  - Preserve both substantive attempts and cumulative accounting without changing frozen caps.
+  - Complete only plan 01-01; CPU acceptance and Phase 2 admission remain pending.
 requirements-completed: []
 coverage:
   - id: D1
-    description: Original arithmetic/store test fails intentionally before implementation
+    description: Original guest and bounded private adapter behavior
     verification:
-      - kind: other
-        ref: node gsd-tools.cjs check tdd-red-evidence tests/cpu/red-evidence.json
+      - kind: integration
+        ref: "ctest --test-dir build/cpu -L cpu --output-on-failure --no-tests=error"
         status: pass
     human_judgment: false
   - id: D2
-    description: Adapted backend executes original guest
+    description: Native source closure, cumulative budgets and negative controls
     verification:
       - kind: integration
-        ref: cmake --build build/cpu
-        status: fail
+        ref: "ctest --test-dir build/cpu -L cpu --output-on-failure --no-tests=error"
+        status: pass
+      - kind: other
+        ref: "python3 tools/cpu/audit.py regenerate"
+        status: pass
     human_judgment: false
-duration: 18min
+duration: 84min
 completed: 2026-10-01
-status: halted
-outcome: deferred
+status: complete
 ---
 
-# Phase 1 Plan 1: CPU Acceptance Tracer — Halted Summary
+# Phase 1 Plan 1: CPU Tracer and Source Audit Summary
 
-**The frozen Musashi experiment has a verified arithmetic RED test and a
-preserved explicit-context patch, but the adapted backend does not compile.**
+**An original arithmetic/store guest executes through a private explicit-instance
+68000 adapter, with reproducible native closure, regeneration and budget evidence.**
 
-## Outcome
+## Outcome and Accomplishments
 
-Task 1 is unfinished and Task 2 was not started. The executor's three-inline-
-correction limit triggered while compiling the first substantive adaptation
-attempt. This is a procedural deferral, **not** a numeric-budget rejection or
-proof that Musashi cannot satisfy the requirements. No second substantive
-adaptation attempt started. The source remains unqualified and dependent plans
-01-02, 01-03 and 01-04 must remain blocked. Phase 2 is not admitted.
+Both tasks are complete. The user-authorized recovery reconciled historical
+edits before the second and final substantive adaptation attempt. The archived
+halted summary, failed patch and compiler/control counterexamples remain intact.
+No backend is accepted, no CPU requirement is complete, and no later plan ran.
 
-## Accomplishments
+Four Unity cases pass: arithmetic/store, zero-budget no-op, bounded bad-address
+failure, and reset-vector fault survival followed by reset recovery. The
+supervised operand mutation fails its intended assertion (10 versus 11).
+All five CTests pass in 9.28 seconds. Thirteen audit controls cover cap equality
+and excess, missing evidence, wrong pins, stale recipes, semantic/source drift,
+license removal, compiled forbidden imports and hidden runtime dependencies.
 
-- Committed the numeric admission contract before all source adaptation;
-  immutable candidate is `313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd`.
-- Explicitly imported only six Musashi inputs, two generated outputs and the
-  four-file pinned Unity subset. Preserved notices and per-input hashes.
-- Encoded two original MIT arithmetic/store guests and documented primary
-  manual pages, independent expectations and reset assumptions.
-- Compiled the initial assertion scaffold and ran one targeted intentional
-  failure: `guest_adds_and_stores`, expected 10 versus observed 0. The installed
-  TDD evidence gate returned `RED_EVIDENCE_OK`.
-- Preserved the unfinished source transform, exact current source identities,
-  source diff, measured patch/output sizes and sanitized build failure.
+Native Apple Clang 21 closure passes at O0 and O2 through actual dependencies,
+preprocessing, function references, archive/import and consumer-link evidence.
+FPU/MMU/SoftFloat are excluded. The opcode template is correctly inventoried
+as generator input. Two parallel independent regenerations match both outputs;
+interrupted publication preserves admitted outputs and prior receipts.
+The final qualification receipt binds the corrected manifest and ledger hashes.
+No sanitizer or other-platform qualification is claimed.
 
-## Commits
+## Task Commits
 
-1. `f9e7dda` — docs(01-01): freeze CPU candidate admission limits.
-2. `6ecfa4b` — test(01-01): assert original guest arithmetic before backend adaptation.
-3. `f4eb1af` — chore(01-01): preserve halted context adaptation and compile counterexamples.
-
-The third commit preserves a failed attempt; it is not a GREEN implementation
-commit. No task is reported complete. The three-commit count is measured from
-the on-disk plan ledger before this summary commit. Token actuals are realized
-diff characters divided by four (rounded up), including the large imported,
-generated and evidence files; they are not agent token consumption.
-
-## Verification Evidence
-
-| Command/evidence | Observed outcome |
+| Task/evidence | Commit |
 |---|---|
-| Configure experiment with Ninja | Passed; native Apple Clang 21.0.0.21000101 selected |
-| Initial scaffold build | Passed before backend import; not CPU execution evidence |
-| Initial full scaffold guest runner | 3 tests, 3 expected missing-implementation failures; not used as the specific RED gate |
-| Guest runner `--red` | 1 test, 1 intended arithmetic/store assertion failure, exit 1 |
-| `tools/cpu/red.py` and installed `check tdd-red-evidence` | Exact Unity assertion translated to TAP with raw output retained; RED_EVIDENCE_OK |
-| Separate C17 host generator | Produced 1,967 handlers from 518 primitives |
-| Adapted core-only compilation | Passed after operand-helper and integer-alias corrections; not full runtime closure |
-| Final `cmake --build build/cpu` | Failed, exit 1; receipt and diagnostics preserved |
-| Guest and consequential negative CTests | Unrun against adapted backend; build prerequisite failed |
-| Closure/budget/regeneration controls | Unimplemented and unrun; Task 2 blocked |
-| `git diff --cached --check` | Reported retained upstream/generated whitespace and literal patch-context whitespace; not a clean-format claim |
+| Frozen contract | f9e7dda |
+| Task 1 intentional RED | 6ecfa4b |
+| Failed attempt preservation | f4eb1af |
+| Halted summary and tracking | 6a72a9b, e847e59, 301c487 |
+| Accounting before recovery | b3776f7 |
+| Task 1 GREEN | 7f55bd1 |
+| Task 2 intentional RED | 1650228 |
+| Task 2 GREEN and final evidence | 1bb0047 |
 
-No stale scaffold executable is treated as a successful adapted backend.
-No tests were weakened, no golden expectations were changed, and no source
-cap was raised. There is no runtime sanitizer or platform-support claim.
+Ten commits are measured from the persisted ledger before this summary commit.
+Token actuals are ceiling(realized diff characters / 4), including imports,
+generated code and evidence, not model consumption. The diff contains 73 files.
 
 ## Budget and Effort
 
-Frozen maxima remain two attempts, six handwritten input files, 5,000 total
-handwritten added/deleted lines (including helpers), 500 semantic repair lines,
-600 helper/shim lines, 16 active hours total/eight per attempt, and exactly two
-generated files capped at 50,000 lines and 2 MiB.
+| Cumulative measurement | Result | Frozen limit |
+|---|---:|---:|
+| Substantive attempts | 2 | 2 |
+| Handwritten added/deleted lines | 2,423 | 5,000 |
+| Helper lines, included above | 346 | 600 |
+| Semantic upper bound, included above | 356 | 500 |
+| Handwritten upstream inputs | 6 | 6 |
+| Generated outputs | 2 | 2 |
+| Generated lines | 36,559 | 50,000 |
+| Generated bytes | 832,698 | 2,097,152 |
+| Charged cumulative seconds | 9,581 | 57,600 |
+| Maximum charged attempt seconds | 8,435 | 28,800 |
 
-Measured current patch: **1,761 upstream added/deleted lines** and **220 current
-support lines**, with the **15-line discarded RED scaffold also charged**:
-1,996 current subtotal. Generated files total **36,559 lines / 831,218 bytes**.
-The source receipt contains hashes and per-file counts. Complete cumulative
-accounting and semantic classification remain unreviewed; these figures are
-not a passing Task 2 budget audit.
+Historical edits replay exactly; every subsequent committed transition and
+working diff is charged. Independent semantic refinement excludes 144 proven
+context-only lines; all remaining residuals stay charged. The type repair
+adds 29 semantic lines. Effort includes parallel review and a conservative
+3,600-second closeout allowance after 17:35:11Z, explicitly an upper-bound
+charge rather than measured active time. Closeout must finish by 18:35:11Z
+or extend accounting. All frozen limits remain byte-identical.
 
-Conservative charged attempt interval: 16:19:53Z–16:31:13Z on 2026-10-01,
-680 seconds including preparation/tool time. Adaptation followed the RED
-commit at 16:24:08Z. Evidence/summary closeout followed the halt with no further
-backend fixes. Plan preparation began approximately 16:16Z; total session was
-about 18 minutes through summary creation.
+## TDD Gate Compliance
+
+Task 1 RED asserts result 10 versus 0 before implementation. Task 2 RED rejects
+an empty ledger before audit implementation. Raw failures and narrow TAP
+translations are retained; the installed checker accepted both RED receipts.
+GREEN commits follow each RED. The failed adaptation never counts as GREEN.
 
 ## Deviations from Plan
 
-**[Rule 3 — Blocking issue] Installed RED checker only parses TAP/Node-style
-test summaries.** Added a narrow host-only translator that requires the exact
-single Unity arithmetic assertion and preserves original relative-path output.
-It does not manufacture a failed test from a compile error or crash. Verified
-with the installed `RED_EVIDENCE_OK` result in the RED commit.
+1. **Rule 3 — RED translation:** installed checker required a narrow Unity/TAP
+   adapter preserving the exact raw assertion failure.
+2. **Procedural recovery:** the first executor stopped after three corrections.
+   User-approved continuation reconciled and committed cumulative accounting
+   before attempt 2; no allowance reset.
+3. **Rule 1 — compiler repairs:** direct immediate context calls, namespaced
+   private statuses and signed integer aliases fixed concrete counterexamples.
+   Generated files were regenerated from inputs.
+4. **Task 2 correction-limit checkpoint:** two compiler-helper dispositions and
+   one review-driven correction reached the limit. Intended negative controls
+   then failed at an unrelated temporary-root alias. The failure was preserved;
+   the orchestrator explicitly authorized one canonical-root correction. Both
+   intended controls passed without weakening or CPU source changes.
+5. **Factual closeout correction:** separately authorized template-role correction
+   and regression remove the incorrect compiled-test classification. The full
+   final gate followed this corrected inventory.
 
-The planned tracer did not reach GREEN. The executor's correction limit
-required stopping with remaining compiler errors. This planned-work failure
-is preserved honestly rather than reported as an architectural rejection.
+The complete chronology is in 01-01-RECOVERY.md. No authentication gate,
+architecture change or budget exception occurred.
 
-**Tracking correction:** The installed `init.execute-phase` correctly detects
-this halted summary and blocks all three dependent plans with zero runnable
-plans. `roadmap.update-plan-progress` nevertheless counted the summary as a
-completed plan and checked its roadmap box. Corrected STATE/ROADMAP manually
-to zero of four complete and blocked, preserving the actual outcome.
+## Known Stubs and Deferred Issues
 
-## Deferred Issues
+No new executable stub remains. Retained upstream generator/later-model TODOs
+remain WINDOWS.md entry 3; future-model support is unqualified. Native 68000
+closure and semantic accounting are now demonstrated. Historical missing-build
+and unrun-verification entries 1 and 2 are fixed.
 
-1. Direct `OPER_I_8/16/32()` calls in the opcode template do not supply the
-   context argument required by the adapted macro expansion. The generated
-   source fails to compile. Repair must change template/generator inputs,
-   never hand-edit generated files.
-2. Adapter `CPU_STOPPED` status conflicts with the backend macro in
-   `cpu_adapter.c:63`.
-3. The incomplete runtime needs the full guest, bounded-fault and zero-budget
-   checks, source closure and cumulative budget controls before this tracer
-   can complete. Subsequent isolation, state and timing evidence is absent.
-4. Source-level host faults, reset accounting and exception trap lifetime
-   still require actual runtime review/testing. A context-shaped API alone
-   does not prove safety or isolation.
+Complete mutable-state review, isolation/concurrency, cold startup, selected
+interrupts/exceptions, cycle accounting, continuation and remaining host safety
+belong to plans 01-02 through 01-04. Phase 2 is not admitted.
 
-## Known Stubs and Unqualified Source
+## Self-Check: PASSED
 
-No adapted runtime success is claimed. The RED-only nonexecuting adapter was
-replaced, but its historical commit remains intentionally failing evidence.
-Upstream generator TODOs (`m68kmake.c:53`, `:322`), later-model timing TODOs
-(`m68kcpu.c:409`, `:875`) and later-model opcode TODOs remain imported text;
-68000 compiled closure is not proven and no later model is admitted. These
-and unrun verification are recorded in `.planning/WINDOWS.md`.
-
-## Next Work
-
-Reconcile this halted attempt and its cumulative budget in a bounded
-continuation/replan before any further adaptation or dependent implementation.
-All CPU-01–CPU-05 requirements remain pending in this plan; Phase 1 is
-incomplete. A second attempt is not a fresh budget. No external credentials
-or human-only hardware evidence caused this halt.
-
-## Self-Check: PASSED (Artifact Integrity Only)
-
-Verified the receipt's source/support/generated files and this summary exist,
-and Git resolves all three reported commits. This check confirms preserved
-evidence, not implementation success; the build remains failed.
+The manifest, ledger, both RED receipts, preserved attempt-1 receipt, final
+qualification receipt and summary exist. All ten reported commits resolve.
+Current production evidence is five passing CTests, 13 controls, two matching
+independent regenerations and passing cumulative caps.
