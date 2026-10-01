@@ -22,7 +22,7 @@
     "plan_check": true,
     "verifier": true,
     "nyquist_validation": true,
-    "auto_advance": true,
+    "auto_advance": false,
     "node_repair": true,
     "node_repair_budget": 2,
     "ui_phase": true,
@@ -50,7 +50,7 @@
     "security_block_on": "high",
     "tdd_mode": false,
     "ui_review": true,
-    "_auto_chain_active": true,
+    "_auto_chain_active": false,
     "build_command": "cmake --build build/cpu",
     "test_command": "ctest --test-dir build/cpu -L cpu --output-on-failure --no-tests=error"
   },
@@ -92,7 +92,7 @@
     "source_grounding": true,
     "source_grounding_authority": "grep"
   },
-  "mode": "yolo",
+  "mode": "interactive",
   "intel": {
     "enabled": false
   },

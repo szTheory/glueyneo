@@ -19,9 +19,9 @@
 [19/27] Linking C executable experiments/cpu/cpu_generator
 [20/27] Building C object experiments/cpu/CMakeFiles/cpu_runtime.dir/__/__/third_party/musashi/m68kops.c.o
 [21/27] Linking C static library experiments/cpu/libcpu_runtime.a
-[22/27] Linking C executable experiments/cpu/cpu_guest
-[23/27] Linking C executable experiments/cpu/cpu_isolation
-[24/27] Linking C executable experiments/cpu/cpu_faults
-[25/27] Linking C executable experiments/cpu/cpu_cold
+[22/27] Linking C executable experiments/cpu/cpu_isolation
+[23/27] Linking C executable experiments/cpu/cpu_guest
+[24/27] Linking C executable experiments/cpu/cpu_cold
+[25/27] Linking C executable experiments/cpu/cpu_faults
 [26/27] Linking C executable experiments/cpu/cpu_state
 [27/27] Linking C executable experiments/cpu/cpu_timing

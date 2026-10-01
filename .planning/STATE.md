@@ -4,12 +4,12 @@ milestone: v0.1
 milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
-status: in_progress
-stopped_at: Completed 01-03-PLAN.md; plan 01-04 not started
-last_updated: "2026-10-01T18:30:17.797Z"
+status: paused
+stopped_at: User requested pause before 01-04 independent review; workflow/model checkpoints enabled
+last_updated: "2026-10-01T19:06:34.898Z"
 last_activity: 2026-10-01
-last_activity_desc: Plans 01-01 through 01-03 complete; selected timing and continuation evidence pass; no backend admitted
-state_head: 41682dba27385cd80ad3c78c5ca02fa509f5ebdb
+last_activity_desc: Paused at user request; 01-04 Task 1 complete, independent review pending; auto advancement disabled
+state_head: 6be55c2fd1ea402fe36f55774ed5226e968908b3
 progress:
   total_phases: 3
   completed_phases: 0
@@ -30,14 +30,14 @@ See: .planning/PROJECT.md (updated 2026-10-01)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — IN PROGRESS
+Phase: 01 (CPU acceptance experiment) — PAUSED BY USER
 Plan: 4 of 4
-Status: Plans 01-01 through 01-03 complete; plan 01-04 ready, not started
-Last activity: 2026-10-01 — Completed selected timing and fresh-destination continuation; no backend accepted
+Status: Plans 01-01 through 01-03 complete; 01-04 Task 1 complete; paused before Task 2 independent review
+Last activity: 2026-10-01 — User requested model/workflow pause; saved review-pending collection and discussion preferences
 
 Progress: [░░░░░░░░░░] 0%
 
-Requirement completion remains 0%; planned Phase 1 tasks are 3/4 plans complete.
+Requirement completion remains 0%; Phase 1 has 3/4 plans complete, with Task 1 of plan 01-04 complete. Candidate status is ready-for-review / GAPS_FOUND, not accepted.
 
 ## Performance Metrics
 
@@ -45,7 +45,7 @@ Requirement completion remains 0%; planned Phase 1 tasks are 3/4 plans complete.
 
 - Total plans completed: 3
 - Average recorded duration: 42.3min
-- Total recorded execution time: 127min; conservatively charged effort 15,065 seconds including concurrent review and closeout allowance
+- Total recorded execution time: 127min; conservatively charged effort 19,265 seconds including review and closeout allowances; plan 01-04 remains incomplete
 
 **By Phase:**
 
@@ -70,6 +70,8 @@ Requirement completion remains 0%; planned Phase 1 tasks are 3/4 plans complete.
 
 ### Decisions
 
+- [User clarification 2026-10-01]: Pause between named GSD workflow steps for review and model selection; no automatic chaining. Apply METHODOLOGY.md for relevant role analysis, adversarial synthesis, and small, flat dependency decisions.
+
 Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECISIONS.md.
 
 - v0.1 delivers an actual CPU/bus diagnostic SDK; next milestone outlines interactive graphics/input/sound, real RetroArch macOS, continuation and persistence.
@@ -84,13 +86,15 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 
 ### Pending Todos
 
-None yet.
+- User will choose the next session model and workflow step. Read METHODOLOGY.md and the pause handoff before resuming. Do not automatically advance.
 
 ### Blockers/Concerns
 
+- User-requested pause is active. Current configuration is interactive with auto_advance and _auto_chain_active false. The original --auto invocation is superseded by this pacing preference.
+
 - Native private guest, source closure, FPU/SoftFloat exclusion, selected isolation, timing, host safety and fresh-destination continuation pass. Final current-evidence admission and independent phase verification remain before CPU acceptance.
 - Preserve all counterexamples: odd IRQ crash, fixture UBSan, reset accounting/NMI, BSD address-error boundary and malformed-state/zero-request guards. The explicit state codec passes eight continuation checkpoints; raw upstream context-copy APIs remain unsuitable.
-- Frozen cumulative charges are 2,611 handwritten, 520 helper and 483 semantic lines, leaving 80 helper and 17 semantic lines. Two attempts remain consumed. Effort is conservatively charged through 18:50 UTC; extend the ledger if later work exceeds that charged interval.
+- Frozen cumulative charges are 2,614 handwritten, 523 helper and 483 semantic lines, leaving 77 helper and 17 semantic lines. Both attempts have started. Charged effort is 19,265 seconds total / 18,119 seconds in the final attempt, including an executor allowance through 19:30 UTC and 1,800 seconds reserved for independent review. Preserve charges; on resumption append actual active intervals rather than charging the user pause as active effort.
 - Remote/CI/protection/release authority is not configured; future delivery dependency. Continue independent implementation and artifact preparation; repeat remote triage at setup/shipping.
 - Evidence is limited to the native experiment; no supported platform, compatibility or performance claim is established. All 27 requirements remain pending.
 - Two substantive adaptation attempts are consumed. Preserve cumulative caps in later plans; no automatic further adaptation attempt is authorized. Phase 2 remains blocked on full CPU acceptance.
@@ -105,6 +109,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-01T18:30:17.778Z
-Stopped at: Completed 01-03-PLAN.md; plan 01-04 not started
-Resume file: None
+Last session: 2026-10-01T19:06:34.898Z
+Stopped at: User-requested pause before 01-04 Task 2 independent review
+Resume file: .planning/phases/01-cpu-acceptance-experiment/.continue-here.md

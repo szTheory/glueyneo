@@ -1,25 +1,25 @@
 Test project <build>/asan-ubsan
     Start  1: cpu_guest
-1/8 Test  #1: cpu_guest ........................   Passed    0.09 sec
+1/8 Test  #1: cpu_guest ........................   Passed    0.07 sec
     Start  2: cpu_isolation
-2/8 Test  #2: cpu_isolation ....................   Passed    1.23 sec
+2/8 Test  #2: cpu_isolation ....................   Passed    1.12 sec
     Start  3: cpu_faults
-3/8 Test  #3: cpu_faults .......................   Passed    0.16 sec
+3/8 Test  #3: cpu_faults .......................   Passed    0.14 sec
     Start  4: cpu_timing
-4/8 Test  #4: cpu_timing .......................   Passed    0.19 sec
+4/8 Test  #4: cpu_timing .......................   Passed    0.18 sec
     Start  5: cpu_state
-5/8 Test  #5: cpu_state ........................   Passed    0.51 sec
+5/8 Test  #5: cpu_state ........................   Passed    0.47 sec
     Start  6: cpu_state_negative
-6/8 Test  #6: cpu_state_negative ...............   Passed    0.16 sec
+6/8 Test  #6: cpu_state_negative ...............   Passed    0.15 sec
     Start  8: cpu_isolation_negative
-7/8 Test  #8: cpu_isolation_negative ...........   Passed    0.10 sec
+7/8 Test  #8: cpu_isolation_negative ...........   Passed    0.09 sec
     Start 25: cpu_guest_negative
 8/8 Test #25: cpu_guest_negative ...............   Passed    0.08 sec
 
 100% tests passed out of 8
 
 Label Time Summary:
-cpu         =   2.53 sec*proc (8 tests)
-cpu-fast    =   1.04 sec*proc (5 tests)
+cpu         =   2.30 sec*proc (8 tests)
+cpu-fast    =   0.96 sec*proc (5 tests)
 
-Total Test time (real) =   2.54 sec
+Total Test time (real) =   2.31 sec

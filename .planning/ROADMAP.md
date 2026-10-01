@@ -55,7 +55,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 01-04-PLAN.md — Reproduce evidence, independently review and issue the admission decision.
+- [ ] 01-04-PLAN.md — Task 1 evidence collection complete; paused by user before independent review and admission decision.
 
 Planning guidance: First set a concrete finite effort cap, patch budget and stopping/replacement rules. Then use small CMake/CTest experiment scaffolding, a licensed original tiny guest, source/host-call audit, and isolation/timing/continuation experiments. Evaluate the research's pinned Musashi candidate without presuming acceptance. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
 
@@ -105,7 +105,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 3/4 | In Progress|  |
+| 1. CPU acceptance experiment | v0.1 | 3/4 | Paused by user: 01-04 review pending | - |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
