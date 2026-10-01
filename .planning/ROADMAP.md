@@ -38,18 +38,18 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit acceptance decision, commands and results against a finite effort/patch budget fixed before adaptation; failed or over-budget candidates have counterexamples and a replacement/replanning disposition. (CPU-05)
 
-**Plans**: 1/4 plans completed
+**Plans**: 2/4 plans completed
 
 Plans:
 **Wave 1**
 
 - [x] 01-01-PLAN.md — Private guest, native source closure, regeneration and cumulative budget controls complete; failed attempts preserved; backend not admitted.
 
-**Wave 2** *(dependency met; not started)*
+**Wave 2** *(complete)*
 
-- [ ] 01-02-PLAN.md — Prove independent/cold instances and bounded host failures.
+- [x] 01-02-PLAN.md — Independent/cold instances, compiled-state inventory and bounded host failures pass; native ASan/UBSan and TSan evidence retained.
 
-**Wave 3** *(blocked on Wave 2 completion)*
+**Wave 3** *(dependency met; not started)*
 
 - [ ] 01-03-PLAN.md — Qualify timing and complete fresh-destination continuation.
 
@@ -105,7 +105,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 1/4 | In Progress | - |
+| 1. CPU acceptance experiment | v0.1 | 2/4 | In Progress|  |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
