@@ -1,0 +1,20 @@
+# Local automation credentials and machine-specific configuration
+.env
+.env.*
+!.env.example
+/CMakeUserPresets.json
+.DS_Store
+
+# Build outputs
+/build/
+/build-*/
+/out/
+/dist/
+
+# Private media and evidence belong here or outside the checkout.
+# Audited public test fixtures must use an explicit tracked location.
+/local/
+/roms/
+/bios/
+/private-corpus/
+/private-results/

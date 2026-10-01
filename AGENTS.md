@@ -1,0 +1,39 @@
+# Glueyneo working rules
+
+Glueyneo is a portable C Neo Geo MVS/AES emulation core. The project is currently in preparation. Begin with .planning/preparation/BRIEF.md and DECISIONS.md; use the preparation index to find the evidence relevant to the current task. Once OpenGSD initializes, read its current PROJECT, STATE, REQUIREMENTS and ROADMAP as appropriate. Do not treat proposed designs or historical sibling-project receipts as implemented behavior.
+
+## Engineering
+
+- Keep runtime code and selected runtime dependencies in C. C17, target-based CMake, CTest and a small pinned Unity dependency are initial defaults; prove actual platform support.
+- Keep the native core independent of frontend, filesystem, audio device, graphics API, network, secrets and wall clock. Use opaque per-instance state and explicit ownership, buffers, errors and deterministic time.
+- Audit reused CPU/audio code for every mutable global, callback, initialization race and state field. A context API alone does not establish reentrancy. Keep third-party changes small, pinned, licensed and documented.
+- Prefer simple concrete modules, defined integer behavior, explicit byte order and checked resource limits. Hardware comments should explain evidence and timing. Avoid speculative frameworks and optimizations without representative profiles.
+- Distinguish emulated hardware time from host pacing. Preserve original hardware behavior, including slowdown, unless an option explicitly describes a deviation.
+- Keep durable saves, emulator snapshots, replay compatibility and public ABI versions separate. Test actual continuation and instance isolation before making those claims.
+
+## Evidence and documentation
+
+- Use primary sources where available. Record exact references, revision/date, supported claim, uncertainty and test-oracle ancestry. A reference emulator's output is not automatically hardware truth.
+- Pair a behavioral change with appropriate automated evidence and documentation in the same PR. Use compiled examples, real consumer tests, meaningful boundary tests, properties and fuzz regressions. Keep test cost proportional to fault value.
+- Record unsupported/skipped/unknown outcomes explicitly. Do not update goldens, relax budgets or rerun away failures merely to get green CI. Explain intentional baseline changes.
+- Keep release and performance claims tied to exact code, dependency, configuration and input identities. Proposed numbers remain targets until measured.
+- Keep one current contract per topic. Preserve dated preparation as provenance with supersession links. Update stale instructions and examples when behavior changes.
+
+## Delivery and autonomy
+
+- Use OpenGSD @opengsd/gsd-core and its installed workflow/schema. Preserve .planning/preparation during initialization. Keep a detailed current milestone, outlined next milestone and revisable longer horizon.
+- The user authorizes subagent work, routine PRs, qualifying merges and automated releases. Use clear file ownership and integrate independent work without reverting others. Follow through without repeated approval requests for already authorized actions.
+- Prefer branches and PRs, protected green main, current-revision checks and an independent review pass. Triage relevant open issues/PRs at milestone start and shipping. Do not bypass protections or treat stale green checks as approval.
+- Automate repeatable verification and release steps. Human involvement should be limited to unavailable credentials/account decisions or physical evidence that actually requires it. Keep the unverified claim narrow and continue independent work.
+- Keep CI small and reliable. Measure critical path and runner-minutes, remove duplicate preparation, bound parallelism by memory, and cache only when it helps. Retain cold builds and fail-safe change classification.
+- Bind releases to tested commits and artifacts. Stage complete releases before publication; verify token/event behavior. Keep untrusted PR execution separate from signing/publishing authority.
+
+## Public repository hygiene
+
+- Original Glueyneo work uses MIT. Preserve imported licenses/notices and audit each dependency and fixture at an immutable revision. No game/BIOS redistribution without an established right.
+- Keep commercial ROMs, BIOS, private save states/captures and private test outputs outside Git and public CI. A hash identifies bytes; it does not establish redistribution permission.
+- The library requires no secrets. Explicit local automation may use ignored .env.local; use GitHub Actions secrets for CI credentials and configuration variables for nonsecrets. Never print secret values or dump environments.
+- Do not publish personal absolute paths, private emails, machine identifiers or private repository/account URLs. Check staged files, commit identity, generated docs, debug paths, archives and logs before public publication. Use an established public/noreply identity.
+- Other projects used as research evidence are read-only unless the user separately requests changes there.
+
+These rules capture project preferences, not an assertion that the proposed tooling, tests or automation already exists. Respect applicable runtime permissions and higher-priority instructions.
