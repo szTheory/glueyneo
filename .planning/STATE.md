@@ -4,17 +4,17 @@ milestone: v0.1
 milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
-status: blocked
-stopped_at: "Halted 01-01 Task 1: compiler errors after three correction attempts"
-last_updated: "2026-10-01T16:35:05.024Z"
+status: in_progress
+stopped_at: Completed 01-01-PLAN.md; later plans not started
+last_updated: "2026-10-01T17:39:31.525Z"
 last_activity: 2026-10-01
-last_activity_desc: Plan 01-01 halted; adapted backend compilation failed
-state_head: 6a72a9bc25cf692abdb8aff604b626b73581cc59
+last_activity_desc: Plan 01-01 complete; native guest and source audits pass; no backend admitted
+state_head: 53550c8873503c38233014ecb08e7d39ac5b0fc5
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 4
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -30,31 +30,39 @@ See: .planning/PROJECT.md (updated 2026-10-01)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — BLOCKED
-Plan: 1 of 4
-Status: Plan 01-01 halted in Task 1; dependent plans blocked
-Last activity: 2026-10-01 — Preserved failed adaptation and halted summary; no backend accepted
+Phase: 01 (CPU acceptance experiment) — IN PROGRESS
+Plan: 2 of 4
+Status: Plan 01-01 complete; plan 01-02 ready, not started
+Last activity: 2026-10-01 — Completed bounded recovery and source audits; no backend accepted
 
 Progress: [░░░░░░░░░░] 0%
+
+Requirement completion remains 0%; planned Phase 1 tasks are 1/4 plans complete.
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
-- Average duration: Not measured
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 84min elapsed across original attempt and recovery
+- Total execution time: 1.4 hours elapsed; conservatively charged effort 9,581 seconds including concurrent review and closeout allowance
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01 | 1 | 84min | 84min |
 
 **Recent Trend:**
 
-- Last 5 plans: None
+- Last 5 plans: 01-01
 - Trend: Not established
+
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01 P01 | 84min | 2 tasks | 73 files |
 
 ## Accumulated Context
 
@@ -67,7 +75,8 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - CPU-05 can record rejection; Phase 1 completion/Phase 2 admission require accepted CPU-01–04 evidence or an explicit reconciled roadmap revision.
 - All-C runtime, host-owned I/O and separate ABI/snapshot/replay/durable-save identities remain constraints; no backend or support matrix is qualified yet.
 - Local initialization has no remote fork base. OpenGSD selected sequential execution; `git.branching_strategy` is temporarily `none` so this run uses the existing `chore/initialize-project` feature branch. Restore phase branching when a remote/default base is established; no main merge or hosted qualification is implied.
-- [Phase 01]: CPU candidate investigation deferred, not accepted or disproven: frozen budget remains unchanged; no CPU requirement marked complete.
+- [Phase 01, historical]: Initial procedural halt was resolved by approved bounded recovery; frozen budget remains unchanged and no CPU requirement is complete.
+- [Phase 01]: Plan 01-01 completed under unchanged cumulative caps; native guest and source audits pass, CPU requirements and backend admission remain pending.
 
 ### Pending Todos
 
@@ -75,10 +84,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- Plan 01-01 compilation is blocked; CPU feasibility and FPU/SoftFloat disposition remain unproved. Resolve the recorded halted attempt within the frozen budget before dependent implementation.
+- Native private guest, source closure and FPU/SoftFloat exclusion pass. Complete isolation, state, timing and remaining host-safety evidence before a CPU admission decision.
 - Remote/CI/protection/release authority is not configured; future delivery dependency. Continue independent implementation and artifact preparation; repeat remote triage at setup/shipping.
-- No runtime, platform, compatibility or performance claim is verified. All 27 requirements remain pending.
-- Plan 01-01 halted after three inline compiler correction attempts; adapted Musashi still does not compile. Preserve fixed caps; plans 01-02 through 01-04 and Phase 2 remain blocked pending bounded continuation/replan.
+- Evidence is limited to the native experiment; no supported platform, compatibility or performance claim is established. All 27 requirements remain pending.
+- Two substantive adaptation attempts are consumed. Preserve cumulative caps in later plans; no automatic further adaptation attempt is authorized. Phase 2 remains blocked on full CPU acceptance.
 
 ## Deferred Items
 
@@ -90,6 +99,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-01T16:35:05.008Z
-Stopped at: Halted 01-01 Task 1: compiler errors after three correction attempts
-Resume file: .planning/phases/01-cpu-acceptance-experiment/01-01-SUMMARY.md
+Last session: 2026-10-01T17:39:31.496Z
+Stopped at: Completed 01-01-PLAN.md; later plans not started
+Resume file: None
