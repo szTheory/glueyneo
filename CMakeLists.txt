@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.20)
+project(Glueyneo LANGUAGES C)
+option(GLUEYNEO_CPU_EXPERIMENT "Build the private CPU acceptance experiment" OFF)
+if(GLUEYNEO_CPU_EXPERIMENT)
+  enable_testing()
+  add_subdirectory(experiments/cpu)
+endif()

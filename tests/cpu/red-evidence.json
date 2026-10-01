@@ -1,0 +1,10 @@
+{
+  "command": "python3 tools/cpu/red.py build/cpu/experiments/cpu/cpu_guest",
+  "exitCode": 1,
+  "output": "TAP version 13\nnot ok 1 - guest_adds_and_stores\n1..1\n# tests 1\n# pass 0\n# fail 1\n",
+  "raw_output": "tests/cpu/test_guest.c:23:guest_adds_and_stores:FAIL: Expected 10 Was 0:guest arithmetic/store result\n\n-----------------------\n1 Tests 1 Failures 0 Ignored \nFAIL\n",
+  "targetTest": "guest_adds_and_stores",
+  "targetFile": "tests/cpu/test_guest.c",
+  "expected": "guest stores computed value 10",
+  "actual": "guest store is 0 before backend implementation"
+}
