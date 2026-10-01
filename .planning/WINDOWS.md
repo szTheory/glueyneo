@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 1
-waived_count: 0
+open_count: 0
+waived_count: 1
 fixed_count: 6
 total_count: 7
-last_updated: 2026-10-01T18:25:33.655Z
+last_updated: 2026-10-01T21:07:56.583Z
 ---
 
 # Broken Windows Ledger
@@ -17,7 +17,7 @@ last_updated: 2026-10-01T18:25:33.655Z
 |----|-------|------|------|------|-------------|--------|--------|-------------|-------------|
 | 1 | 01 | unrun-verify | .planning/phases/01-cpu-acceptance-experiment/01-01-PLAN.md |  | Task 1 guest/control CTests and Task 2 closure/budget controls remain unrun because the adapted backend does not compile. | fixed |  | 2026-10-01T16:32:36.895Z | 2026-10-01T17:35:10.918Z |
 | 2 | 01 | unmet-truth | experiments/cpu/cpu_adapter.c | 63 | CPU experiment does not compile: CPU_STOPPED macro collision and generated immediate OPER_I calls omit context; source adaptation halted after three correction attempts. | fixed |  | 2026-10-01T16:33:14.447Z | 2026-10-01T17:35:11.098Z |
-| 3 | 01 | todo | third_party/musashi/m68kmake.c | 53 | Retained upstream TODOs and incomplete later-model instructions/timings are not qualified; compiled 68000 closure and semantic review remain pending. | open |  | 2026-10-01T16:33:14.562Z |  |
+| 3 | 01 | todo | third_party/musashi/m68kmake.c | 53 | Retained upstream TODOs and incomplete later-model instructions/timings are not qualified; compiled 68000 closure and semantic review remain pending. | waived | Later-model instructions and timings remain outside the bounded private 68000 experiment and are explicitly unsupported. The compiled 68000 closure and independent semantic review are complete; this records the retained upstream TODOs as an intentional scope deferral. | 2026-10-01T16:33:14.562Z | 2026-10-01T21:07:56.583Z |
 | 4 | 01 | deviation | experiments/cpu/evidence/plan-01-02/irq-fault-counterexample.json |  | Odd IRQ stack host crash repaired within final adaptation attempt; regression and clean sanitizer evidence retained | fixed |  | 2026-10-01T18:01:10.588Z | 2026-10-01T18:01:36.109Z |
 | 5 | 01 | deviation | experiments/cpu/evidence/plan-01-02/sanitizer-counterexample.json |  | UBSan test-bus pointer arithmetic repaired; fatal diagnostics enabled and affected lanes rerun clean | fixed |  | 2026-10-01T18:01:36.231Z | 2026-10-01T18:01:36.386Z |
 | 6 | 01 | deviation | experiments/cpu/evidence/plan-01-03/reset-counterexamples.md |  | Reset debt, stale NMI and BSD address-error boundary counterexamples repaired within the final frozen attempt | fixed |  | 2026-10-01T18:25:33.135Z | 2026-10-01T18:25:33.314Z |
@@ -58,10 +58,10 @@ last_updated: 2026-10-01T18:25:33.655Z
     "file": "third_party/musashi/m68kmake.c",
     "line": 53,
     "description": "Retained upstream TODOs and incomplete later-model instructions/timings are not qualified; compiled 68000 closure and semantic review remain pending.",
-    "status": "open",
-    "reason": "",
+    "status": "waived",
+    "reason": "Later-model instructions and timings remain outside the bounded private 68000 experiment and are explicitly unsupported. The compiled 68000 closure and independent semantic review are complete; this records the retained upstream TODOs as an intentional scope deferral.",
     "recorded_at": "2026-10-01T16:33:14.562Z",
-    "resolved_at": null,
+    "resolved_at": "2026-10-01T21:07:56.583Z",
     "milestone": "v0.1"
   },
   {

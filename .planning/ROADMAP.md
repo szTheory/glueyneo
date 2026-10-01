@@ -49,7 +49,7 @@ Plans:
 
 - [x] 01-02-PLAN.md — Independent/cold instances, compiled-state inventory and bounded host failures pass; native ASan/UBSan and TSan evidence retained.
 
-**Wave 3** *(dependency met; not started)*
+**Wave 3** *(complete)*
 
 - [x] 01-03-PLAN.md — Qualify timing and complete fresh-destination continuation.
 
