@@ -10,6 +10,7 @@
 /build-*/
 /out/
 /dist/
+__pycache__/
 
 # Private media and evidence belong here or outside the checkout.
 # Audited public test fixtures must use an explicit tracked location.

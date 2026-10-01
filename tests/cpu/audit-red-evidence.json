@@ -1,0 +1,10 @@
+{
+  "command": "python3 -m unittest discover -s tests/cpu -p test_audit.py",
+  "exitCode": 1,
+  "output": "TAP version 13\nnot ok 1 - test_budget_rejects_empty_ledger\n1..1\n# tests 1\n# pass 0\n# fail 1\n",
+  "raw_output": "F\n======================================================================\nFAIL: test_budget_rejects_empty_ledger (test_audit.BudgetControls.test_budget_rejects_empty_ledger)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"tests/cpu/test_audit.py\", line 13, in test_budget_rejects_empty_ledger\n    self.assertFalse(audit.validate_budget({}), \"empty ledger must not qualify\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: True is not false : empty ledger must not qualify\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nFAILED (failures=1)\n",
+  "targetTest": "test_budget_rejects_empty_ledger",
+  "targetFile": "tests/cpu/test_audit.py",
+  "expected": "Empty ledger is rejected",
+  "actual": "True is not false: empty ledger must not qualify"
+}
