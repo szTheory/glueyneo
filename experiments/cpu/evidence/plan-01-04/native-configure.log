@@ -8,6 +8,6 @@
 -- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
 -- Found Threads: TRUE
 -- Found Python3: /opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14 (found version "3.14.4") found components: Interpreter
--- Configuring done (0.5s)
+-- Configuring done (0.9s)
 -- Generating done (0.0s)
 -- Build files have been written to: <build>/native

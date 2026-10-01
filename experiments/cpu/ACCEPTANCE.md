@@ -1,6 +1,6 @@
 # CPU candidate acceptance experiment
 
-Status: **plans 01-01 through 01-03 evidence implemented; final review pending; candidate not accepted**.
+Status: **candidate accepted for the bounded private 68000 experiment; independent phase-goal verification is pending**.
 
 ## Current reproduction and admission gate
 
@@ -267,7 +267,7 @@ one allocation** on this native ABI. Creation durations are printed as measured
 host observations, not performance guarantees. Swapping A's baseline with B
 fails the intended ownership assertion.
 
-`state-inventory.json` covers 98 compiled objects/fields including seven
+`state-inventory.json` covers 99 compiled objects/fields including seven
 immutable shared tables. Compiler AST extraction checks exact declaration
 names/types and binds reviewed dispositions to source hashes. Disposable
 omitted-NMI and injected-mutable-global controls both fail as intended.
@@ -323,5 +323,39 @@ prefetched ADDQ independently fail their intended guest-result comparisons.
 Reset accounting, stale NMI and BSD address-error counterexamples and narrow
 repairs remain in `evidence/plan-01-03`. No installed headers, public ABI, durable
 snapshot compatibility, board, BIOS or platform-support claim is established.
-CPU requirements and backend admission still require plan 01-04 and independent
-phase verification.
+Plan 01-04 now supplies the accepted bounded candidate decision; formal Phase 1
+completion and Phase 2 admission remain subject to the separate GSD phase-goal
+verification step.
+
+## Plan 01-04 final qualification — 2026-10-01
+
+The candidate is **accepted** for this private, bounded 68000 experiment.
+`python3 tools/cpu/acceptance.py verify --require-accepted` confirms the sealed
+decision, and `ctest --test-dir build/cpu-final -L cpu --output-on-failure
+--no-tests=error` passes all **30/30** admission tests. The normalized report
+contains **56/56 passing records**: 30 native, 8 ASan/UBSan and 18 TSan. The
+independent source review has no unresolved blocking findings; its sole low
+finding (the inventory count, corrected from 98 to 99) is resolved.
+
+The accepted evidence binds to source revision
+`94f468326e5e529fd7c54f28434816c27f80f379`, content digest
+`81aa0d99145d7b214a7336ae02f9a825eff328c8c26011fd2eef35fbe977b527`, and
+canonical evidence digest
+`6dafb025bf1b3ba2a52750cae3e9f50a1db3a552ebb8507edebb8fa2ec493c66`.
+The independent review receipt SHA-256 is
+`254fae71bfdb3a468dec1126bfd4f8b4e73f8c194b6cc594945219243b17c649`.
+
+The frozen limits remain unchanged and all recorded totals are within them:
+2 attempts; 20,005 cumulative active seconds and 18,859 seconds in attempt 2;
+2,614 handwritten lines, including 483 semantic and 523 helper lines; six
+selected upstream inputs; and two generated files totaling 36,559 lines and
+832,698 bytes. No allowance was reset or raised.
+
+The acceptance is deliberately narrow. Other compiler toolchains and a release
+platform matrix are unsupported; the native evidence is Apple Clang 21 on
+Darwin arm64. Guest bus-error frames and bus-cycle suspension are unqualified;
+timing evidence covers selected instruction and exception boundaries. No board,
+BIOS or game compatibility is established. The same-build typed state record
+does not establish a public state format or compatibility promise. These limits
+remain constraints on subsequent SDK work. Phase 1 remains open until its
+separate goal-verification step.

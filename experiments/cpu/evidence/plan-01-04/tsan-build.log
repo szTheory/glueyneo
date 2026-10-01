@@ -9,8 +9,8 @@
 [9/27] Building C object experiments/cpu/CMakeFiles/cpu_isolation.dir/__/__/tests/cpu/test_isolation.c.o
 [10/27] Building C object experiments/cpu/CMakeFiles/cpu_runtime.dir/__/__/third_party/musashi/m68kops.c.o
 [11/27] Building C object experiments/cpu/CMakeFiles/cpu_isolation.dir/__/__/tests/cpu/guest_fixture.c.o
-[12/27] Building C object experiments/cpu/CMakeFiles/cpu_cold.dir/__/__/tests/cpu/test_cold.c.o
-[13/27] Linking C static library experiments/cpu/libcpu_runtime.a
+[12/27] Linking C static library experiments/cpu/libcpu_runtime.a
+[13/27] Building C object experiments/cpu/CMakeFiles/cpu_cold.dir/__/__/tests/cpu/test_cold.c.o
 [14/27] Building C object experiments/cpu/CMakeFiles/cpu_cold.dir/__/__/tests/cpu/guest_fixture.c.o
 [15/27] Building C object experiments/cpu/CMakeFiles/cpu_faults.dir/__/__/tests/cpu/test_faults.c.o
 [16/27] Building C object experiments/cpu/CMakeFiles/cpu_faults.dir/__/__/tests/cpu/guest_fixture.c.o

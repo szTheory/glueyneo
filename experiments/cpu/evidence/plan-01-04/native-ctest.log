@@ -1,22 +1,22 @@
 Test project <build>/native
       Start  1: cpu_guest
- 1/28 Test  #1: cpu_guest ........................   Passed    0.00 sec
+ 1/28 Test  #1: cpu_guest ........................   Passed    0.01 sec
       Start  2: cpu_isolation
- 2/28 Test  #2: cpu_isolation ....................   Passed    0.17 sec
+ 2/28 Test  #2: cpu_isolation ....................   Passed    0.18 sec
       Start  3: cpu_faults
- 3/28 Test  #3: cpu_faults .......................   Passed    0.01 sec
+ 3/28 Test  #3: cpu_faults .......................   Passed    0.02 sec
       Start  4: cpu_timing
  4/28 Test  #4: cpu_timing .......................   Passed    0.02 sec
       Start  5: cpu_state
- 5/28 Test  #5: cpu_state ........................   Passed    0.06 sec
+ 5/28 Test  #5: cpu_state ........................   Passed    0.07 sec
       Start  6: cpu_state_negative
  6/28 Test  #6: cpu_state_negative ...............   Passed    0.03 sec
       Start  7: cpu_inventory
- 7/28 Test  #7: cpu_inventory ....................   Passed   11.20 sec
+ 7/28 Test  #7: cpu_inventory ....................   Passed   13.09 sec
       Start  8: cpu_isolation_negative
- 8/28 Test  #8: cpu_isolation_negative ...........   Passed    0.03 sec
+ 8/28 Test  #8: cpu_isolation_negative ...........   Passed    0.04 sec
       Start  9: cpu_cold_1
- 9/28 Test  #9: cpu_cold_1 .......................   Passed    0.00 sec
+ 9/28 Test  #9: cpu_cold_1 .......................   Passed    0.01 sec
       Start 10: cpu_cold_2
 10/28 Test #10: cpu_cold_2 .......................   Passed    0.00 sec
       Start 11: cpu_cold_3
@@ -48,18 +48,18 @@ Test project <build>/native
       Start 24: cpu_cold_16
 24/28 Test #24: cpu_cold_16 ......................   Passed    0.00 sec
       Start 25: cpu_guest_negative
-25/28 Test #25: cpu_guest_negative ...............   Passed    0.02 sec
+25/28 Test #25: cpu_guest_negative ...............   Passed    0.03 sec
       Start 26: cpu_closure
-26/28 Test #26: cpu_closure ......................   Passed    3.26 sec
+26/28 Test #26: cpu_closure ......................   Passed    3.97 sec
       Start 27: cpu_budget
-27/28 Test #27: cpu_budget .......................   Passed    1.47 sec
+27/28 Test #27: cpu_budget .......................   Passed    1.79 sec
       Start 28: cpu_audit_controls
-28/28 Test #28: cpu_audit_controls ...............   Passed    2.34 sec
+28/28 Test #28: cpu_audit_controls ...............   Passed    2.68 sec
 
 100% tests passed out of 28
 
 Label Time Summary:
-cpu         =  18.68 sec*proc (28 tests)
-cpu-fast    =   0.14 sec*proc (5 tests)
+cpu         =  21.98 sec*proc (28 tests)
+cpu-fast    =   0.15 sec*proc (5 tests)
 
-Total Test time (real) =  18.69 sec
+Total Test time (real) =  22.00 sec

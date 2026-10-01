@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "plan-01-03-complete-not-admitted",
+  "status": "candidate-accepted-awaiting-phase-verification",
   "recovery_accounting_commit": "b3776f7",
   "freeze_commit": "f9e7dda6ce3593dc176ebfc99f9a6c504bf423f8",
   "historical_base": "f4eb1afe8b20299619abd93c48ed564e1780e617",
@@ -33,6 +33,13 @@
       "end": "2026-10-01T16:59:10Z",
       "charged_seconds": 1445,
       "reason": "Conservative full post-halt interval; includes time before reviewer spawn rather than undercount concurrent agent effort."
+    },
+    {
+      "role": "independent CPU source reviewer (Task 2)",
+      "start": "2026-10-01T19:50:54Z",
+      "end": "2026-10-01T20:03:14Z",
+      "charged_seconds": 740,
+      "reason": "Conservative observed active interval after resumption for the independent final source review; no user-pause time included."
     }
   ],
   "recovery_executor_charge_start": "2026-10-01T16:40:00Z",
