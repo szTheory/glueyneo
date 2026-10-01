@@ -509,4 +509,3 @@ These narrow observations are reproducible research inputs. Temporary files are 
 | Local environment | LOW generalization | Exact successful launch probes, only one machine/toolchain |
 
 **Valid until:** source findings remain tied to the pin; recheck environment at execution and reconsider the plan after either adaptation attempt. **Ready for planning:** yes. **Backend acceptance:** pending. **Phase 1 completion:** not established.
-
