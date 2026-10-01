@@ -21,8 +21,8 @@
     {
       "number": 2,
       "start": "2026-10-01T17:01:29Z",
-      "end": "2026-10-01T18:50:00Z",
-      "charged_seconds": 7800,
+      "end": "2026-10-01T19:30:00Z",
+      "charged_seconds": 10200,
       "reason": "User-authorized final substantive attempt; repair recorded compiler counterexamples only within cumulative frozen caps. Recovery preparation from 16:40Z is also charged to this attempt."
     }
   ],
@@ -60,7 +60,7 @@
   ],
   "recovery_semantic_lines": 156,
   "recovery_semantic_review": "Initial direct immediate context calls and private enum renaming are plumbing only. First correction charges all 14 template type-replacement lines twice plus one recipe line, conservatively semantic. Independent line-pair review reduces historical ceiling471 to327 by excluding144 pure context lines; current ceiling356.",
-  "additional_review_seconds": 4674,
+  "additional_review_seconds": 6474,
   "additional_review_reason": "79 seconds observed independent review plus a conservative 3600-second upper-bound charge reserved for metadata/evidence closeout after the executor interval ends. This is an explicit overcharge, not a claim of measured active duration; closeout must finish by 18:35:11Z or extend accounting.",
   "reviewed_source_hashes": {
     "third_party/musashi/m68k.h": "408807a9cd8f6e94e3e10ba822416709be0c7f36ea329e5292243fd4c61a55d1",
@@ -85,5 +85,6 @@
   "plan03_task1_review": "22 lines conservative timing semantic charge: reset5, BSD2, recipe4, adapter11. Primary-manual review300 seconds additive. Header/build plumbing counted as helpers by cumulative diff. Existing caps unchanged.",
   "plan03_task2_review": "Conservative semantic charge87: adapter C61 plus header19 plus4 discarded helper lines from reviewed guard rewrites plus3 margin; all codec C/header charged even ownership plumbing. Additional reviewer180 seconds. Entire attempt2 executor interval16:40..18:50 charges7800 seconds, additive to retained3600-second prior closeout allowance. No refunds; extend if completion after18:50.",
   "plan03_followup_review": "35 seconds read-only follow-up; reset malformed cases independently isolate supervisor/trace/mask checks; no remaining runtime blocker. Total515 seconds additional plan03 review.",
-  "plan04_build_review": "Three acceptance-only CTest registration lines; no runtime or semantic change; charged as helpers by cumulative diff. Host admission tools do not adapt runtime."
+  "plan04_build_review": "Three acceptance-only CTest registration lines; no runtime or semantic change; charged as helpers by cumulative diff. Host admission tools do not adapt runtime.",
+  "plan04_effort": "Extend executor interval through19:30 UTC; independently reserve1800 additional seconds for final reviewer, retaining all prior overcharges. Extend again if work or review exceeds these bounds; no refund."
 }

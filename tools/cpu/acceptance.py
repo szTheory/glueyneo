@@ -191,6 +191,7 @@ def command(args, build, name, timeout=240):
 
 
 def observe(name, output):
+    audit.require("[This part of the test output was removed" not in output, "truncated CTest output: " + name)
     if name in RUNTIME and not name.endswith("negative") or name in COLD:
         matches = re.findall(r"(\d+) Tests (\d+) Failures (\d+) Ignored", output)
         audit.require(len(matches) == 1 and matches[0][1:] == ("0", "0"), "invalid Unity execution: " + name)
@@ -236,7 +237,7 @@ def collect(build):
             _, build_seconds, _ = command(["cmake", "--build", directory, "--parallel", "2"], fresh, lane + "-build")
             cases = [name for name in REQUIRED[lane] if name not in ("regeneration", "acceptance_controls")]
             selection = "^(" + "|".join(sorted(cases)) + ")$"
-            args = ["ctest", "--test-dir", directory, "-R", selection, "-E", "^cpu_acceptance", "--output-on-failure", "--no-tests=error", "--output-junit", directory / "results.xml"]
+            args = ["ctest", "--test-dir", directory, "-R", selection, "-E", "^cpu_acceptance", "--output-on-failure", "--no-tests=error", "--test-output-size-passed", "10485760", "--test-output-size-failed", "10485760", "--output-junit", directory / "results.xml"]
             _, test_seconds, _ = command(args, fresh, lane + "-ctest", timeout=600)
             xml = ET.parse(directory / "results.xml").getroot()
             actual = xml.findall("testcase")
