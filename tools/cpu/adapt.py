@@ -16,6 +16,7 @@ h, c, op = s["m68kcpu.h"], s["m68kcpu.c"], s["m68k_in.c"]
 h = re.sub(r'^#include "softfloat/[^\n]+\n', '', h, flags=re.M)
 h = re.sub(r'^\s*floatx80 fpr\[8\];[^\n]*\n', '', h, flags=re.M)
 h = re.sub(r'\bint32\b', 'sint32', h)
+op = re.sub(r'\bint(8|16|32)\b', r'sint\1', op)
 c = re.sub(r'^extern (?:void m68040_fpu_op[01]|void m68881_mmu_ops|unsigned char m68ki_cycles|void \(\*m68ki_instruction_jump_table|void m68ki_build_opcode_table)[^\n]*\n', '', c, flags=re.M)
 c = re.sub(r'^#include "m68k(?:fpu.c|mmu.h)"[^\n]*\n', '', c, flags=re.M)
 op = re.sub(r'^extern void (?:m68040_fpu_op[01]|m68881_mmu_ops)[^\n]*\n', '', op, flags=re.M)
@@ -86,6 +87,7 @@ s["m68kmake.c"] = s["m68kmake.c"].replace('static void %s(void)', 'static void %
 s["m68kmake.c"] = re.sub(r'OPER_%s_(8|16|32)\(\)', r'OPER_%s_\1(ctx)', s["m68kmake.c"])
 # Generated immediate operands are macros; accept the propagated argument too.
 s['m68kcpu.h'] = re.sub(r'(#define OPER_I_\d+)\(\)', r'\1(ctx)', s['m68kcpu.h'])
+s['m68k_in.c'] = re.sub(r'\b(OPER_I_(?:8|16|32))\(\)', r'\1(ctx)', s['m68k_in.c'])
 # Put the complete upstream grant into both generated files via input sections.
 notice = s['m68k_in.c'][s['m68k_in.c'].index('/* ======================================================================== */'):s['m68k_in.c'].index('/* Special thanks')]
 for section in ('M68KMAKE_PROTOTYPE_HEADER', 'M68KMAKE_OPCODE_HANDLER_HEADER'):

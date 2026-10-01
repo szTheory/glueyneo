@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 typedef struct cpu_instance cpu_instance;
-typedef enum { CPU_OK, CPU_INVALID_ARGUMENT, CPU_ALLOCATION_FAILURE,
- CPU_UNSUPPORTED_MODEL, CPU_STOPPED, CPU_BUDGET, CPU_HOST_FAULT } cpu_status;
+typedef enum { CPU_STATUS_OK, CPU_STATUS_INVALID_ARGUMENT, CPU_STATUS_ALLOCATION_FAILURE,
+ CPU_STATUS_UNSUPPORTED_MODEL, CPU_STATUS_STOPPED, CPU_STATUS_BUDGET, CPU_STATUS_HOST_FAULT } cpu_status;
 typedef struct { void *userdata; void *(*allocate)(void *, size_t);
  void (*release)(void *, void *); } cpu_allocator;
 typedef struct { void *userdata; int (*read)(void *, uint32_t, unsigned, uint32_t *);

@@ -14,14 +14,14 @@ static void release(void *data,void *p) {(void)data; free(p);}
 void setUp(void) {
  memset(ram,0,sizeof(ram)); guest_fixture(rom,0,mutate);
  bus=(test_bus){.rom=rom,.rom_size=sizeof(rom),.ram=ram,.ram_size=sizeof(ram),.ram_base=0x1000};
- TEST_ASSERT_EQUAL(CPU_OK,cpu_create(68000,test_bus_bind(&bus),(cpu_allocator){NULL,allocate,release},&cpu));
- TEST_ASSERT_EQUAL(CPU_OK,cpu_reset(cpu));
+ TEST_ASSERT_EQUAL(CPU_STATUS_OK,cpu_create(68000,test_bus_bind(&bus),(cpu_allocator){NULL,allocate,release},&cpu));
+ TEST_ASSERT_EQUAL(CPU_STATUS_OK,cpu_reset(cpu));
 }
 void tearDown(void) {cpu_destroy(cpu); cpu=NULL;}
 static void guest_adds_and_stores(void) {
  cpu_run_result r=cpu_run(cpu,200);
  TEST_ASSERT_EQUAL_UINT32_MESSAGE(10,((uint32_t)ram[0]<<24)|((uint32_t)ram[1]<<16)|((uint32_t)ram[2]<<8)|ram[3],"guest arithmetic/store result");
- TEST_ASSERT_EQUAL(CPU_STOPPED,r.reason);
+ TEST_ASSERT_EQUAL(CPU_STATUS_STOPPED,r.reason);
  TEST_ASSERT_EQUAL_UINT64(4,r.instructions);
 }
 static void zero_is_noop(void) {
@@ -34,12 +34,22 @@ static void zero_is_noop(void) {
 static void bad_address_survives(void) {
  rom[0x108]=0x30;
  cpu_run_result r=cpu_run(cpu,200);
- TEST_ASSERT_EQUAL(CPU_HOST_FAULT,r.reason);
- TEST_ASSERT_EQUAL(CPU_HOST_FAULT,cpu_run(cpu,200).reason);
+ TEST_ASSERT_EQUAL(CPU_STATUS_HOST_FAULT,r.reason);
+ TEST_ASSERT_EQUAL(CPU_STATUS_HOST_FAULT,cpu_run(cpu,200).reason);
+}
+static void reset_fault_survives(void) {
+ bus.rom_size=4; /* SSP is readable; fetching the reset PC must fault. */
+ TEST_ASSERT_EQUAL(CPU_STATUS_HOST_FAULT,cpu_reset(cpu));
+ TEST_ASSERT_EQUAL(CPU_STATUS_HOST_FAULT,cpu_run(cpu,200).reason);
+ bus.rom_size=sizeof(rom);
+ TEST_ASSERT_EQUAL(CPU_STATUS_OK,cpu_reset(cpu));
+ cpu_run_result r=cpu_run(cpu,200);
+ TEST_ASSERT_EQUAL(CPU_STATUS_STOPPED,r.reason);
+ TEST_ASSERT_EQUAL_UINT8(10,ram[3]);
 }
 int main(int argc,char **argv) {
  mutate=argc==2 && strcmp(argv[1],"--mutate")==0;
  UNITY_BEGIN(); RUN_TEST(guest_adds_and_stores);
- if(argc==1) {RUN_TEST(zero_is_noop); RUN_TEST(bad_address_survives);}
+ if(argc==1) {RUN_TEST(zero_is_noop); RUN_TEST(bad_address_survives); RUN_TEST(reset_fault_survives);}
  return UNITY_END();
 }

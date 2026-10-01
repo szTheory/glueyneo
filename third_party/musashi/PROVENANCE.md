@@ -1,7 +1,8 @@
 # Musashi experimental source provenance
 
-Candidate status: **deferred, not admitted**. The private experiment does not
-currently compile. This file does not claim reentrancy or source closure.
+Candidate status: **under investigation, not admitted**. The second attempt
+builds and executes the private guest. Source closure and full reentrancy
+remain separate qualification obligations.
 
 Official repository: https://github.com/kstenerud/Musashi
 Immutable pin: `313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd`.
@@ -22,7 +23,7 @@ grant/disclaimer. The generator also credits R. Belmont for FPU/MMU work.
 Those notices remain even though the FPU/MMU dependency files were not copied.
 The modified template injects the full upstream grant into both generated
 files. There is no SoftFloat, FPU, MMU, disassembler or MAME file in this
-vendored subset; compiled closure is **unproved**, since the build fails.
+vendored subset; compiled closure is **unproved** until the Task 2 audit.
 
 Recipe: `python3 tools/cpu/adapt.py PRISTINE_DIRECTORY third_party/musashi`,
 then compile m68kmake.c as a separate C17 host executable and invoke it with
@@ -32,13 +33,14 @@ Generator execution reported 1,967 handlers from 518 primitives.
 
 The attempted patch propagates context arguments, puts mutable dispatch/cycle
 storage in the context, removes global default-callback observations and
-excludes external FPU/MMU calls. It is unfinished: generated immediate calls
-and the adapter's stopped-status name fail compilation. No runtime archive
-or successful guest execution from this adapted closure is claimed.
+excludes external FPU/MMU calls. The second attempt repairs direct immediate
+context calls, namespaces private statuses, and replaces excluded SoftFloat
+integer aliases with existing signed core types in the template. A runtime
+archive and real guest execution now pass; this is not backend admission.
 
 The host generator performs allocation, file I/O, logging and process exit.
 It is a separate executable. CPU runtime host-call/linkage disposition has
-not been verified; pending Task 2 must inspect actual compiled objects and
+not yet been verified; Task 2 must inspect actual compiled objects and
 preprocessed dependencies, not infer safety from source exclusions.
 
 The reproducible source diff and exact adapted/generated identities are in

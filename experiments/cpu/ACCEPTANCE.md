@@ -1,6 +1,6 @@
 # CPU candidate acceptance experiment
 
-Status: **deferred; plan 01-01 halted in Task 1; candidate not accepted**.
+Status: **bounded recovery active; Task 1 guest passes; candidate not accepted**.
 
 ## Frozen admission contract
 
@@ -146,13 +146,37 @@ the full original preparation-through-closeout interval (1,146 seconds),
 executor interval conservatively from 16:40Z. Parallel effort is additive.
 The second substantive attempt has not started at this accounting checkpoint.
 
-## Private contract limitations (unverified)
+## Attempt 2 tracer — 2026-10-01
+
+Accounting commit `b3776f7` preceded the transition at 17:01:29Z. Initial
+context/name repairs exposed template integer aliases from excluded SoftFloat
+headers; `evidence/attempt-2/compiler-1.txt` and its patch preserve that
+counterexample. One corrective pass replaced 14 template lines with the
+core's existing signed integer types and regenerated both outputs.
+
+Configure/build and both guest CTests pass. Four Unity cases prove arithmetic
+store, zero-budget no-op, bounded invalid-address failure, and reset-vector
+fault survival followed by reset recovery. The supervised operand mutation
+fails its exact arithmetic assertion (10 versus 11). No expected value changed.
+
+Current charges: **2,417 handwritten**, **340 helper**, **356 semantic**;
+six inputs; two outputs, **36,559 lines / 832,698 bytes**. The historical
+semantic ceiling was refined from 471 to 327 by independently identifying
+72 exact context-only core line pairs (144 lines). All remaining core changes
+stay charged; the type repair adds 29. Line-level evidence and its reproducer
+are in `evidence/recovery-accounting/core-semantic-refinement.json`.
+This refinement changes no handwritten/helper count or frozen limit.
+
+`evidence/attempt-2/tracer.json` records exact source identities and results.
+Task 2 reproducible budget, regeneration and closure controls remain pending.
+
+## Private contract limitations
 
 The proposed adapter accepts model 68000 only; instance allocation and bus
 callbacks belong to the caller. Each instance requires single-threaded access.
 Positive requests are clamped to 1,000,000 cycles with overshoot against that
-effective request; zero requests return before backend entry. None of these
-adapted-runtime behaviors has passed execution evidence yet. In particular,
+effective request; zero requests return before backend entry. The narrow
+guest and host-fault behaviors above pass execution evidence. In particular,
 reset-cycle accounting, active exception traps and complete state still need
 the later planned timing/safety qualification. There are no installed headers,
 public ABI, SDK, board, BIOS, snapshot or platform-support claims.

@@ -1,12 +1,14 @@
 {
   "schema": 1,
-  "status": "recovery-accounted",
+  "status": "attempt-2-active",
+  "recovery_accounting_commit": "b3776f7",
   "freeze_commit": "f9e7dda6ce3593dc176ebfc99f9a6c504bf423f8",
   "historical_base": "f4eb1afe8b20299619abd93c48ed564e1780e617",
   "historical_accounting": "experiments/cpu/evidence/recovery-accounting/history.json",
   "historical_handwritten": 2073,
   "historical_helpers": 302,
-  "historical_semantic_upper_bound": 471,
+  "historical_semantic_upper_bound": 327,
+  "historical_semantic_refinement": "experiments/cpu/evidence/recovery-accounting/core-semantic-refinement.json",
   "semantic_review": "independent recovered-source review; rationale and exact residuals preserved beside history.json",
   "attempts": [
     {
@@ -15,6 +17,13 @@
       "end": "2026-10-01T16:35:06Z",
       "charged_seconds": 1146,
       "reason": "Conservatively charge complete original preparation, adaptation and closeout interval, superseding the narrower 680-second receipt."
+    },
+    {
+      "number": 2,
+      "start": "2026-10-01T17:01:29Z",
+      "end": null,
+      "charged_seconds": null,
+      "reason": "User-authorized final substantive attempt; repair recorded compiler counterexamples only within cumulative frozen caps. Recovery preparation from 16:40Z is also charged to this attempt."
     }
   ],
   "preparation_intervals": [
@@ -31,6 +40,7 @@
   "upstream_paths": ["third_party/musashi/m68k.h", "third_party/musashi/m68kcpu.h", "third_party/musashi/m68kcpu.c", "third_party/musashi/m68kconf.h", "third_party/musashi/m68k_in.c", "third_party/musashi/m68kmake.c"],
   "helper_paths": ["tools/cpu/adapt.py", "experiments/cpu/cpu_adapter.c", "experiments/cpu/cpu_adapter.h", "experiments/cpu/test_bus.c", "experiments/cpu/test_bus.h", "CMakeLists.txt", "experiments/cpu/CMakeLists.txt"],
   "generated_paths": ["third_party/musashi/m68kops.c", "third_party/musashi/m68kops.h"],
-  "recovery_semantic_lines": 0,
-  "recovery_semantic_review": "No recovery adaptation has occurred."
+  "recovery_semantic_lines": 29,
+  "recovery_semantic_review": "Initial direct immediate context calls and private enum renaming are plumbing only. First correction charges all 14 template type-replacement lines twice plus one recipe line, conservatively semantic. Independent line-pair review reduces historical ceiling471 to327 by excluding144 pure context lines; current ceiling356.",
+  "additional_review_seconds": 34
 }

@@ -1349,7 +1349,7 @@ M68KMAKE_OP(adda, 32, ., .)
 M68KMAKE_OP(addi, 8, ., d)
 {
 	uint* r_dst = &DY;
-	uint src = OPER_I_8();
+	uint src = OPER_I_8(ctx);
 	uint dst = MASK_OUT_ABOVE_8(*r_dst);
 	uint res = src + dst;
 
@@ -1364,7 +1364,7 @@ M68KMAKE_OP(addi, 8, ., d)
 
 M68KMAKE_OP(addi, 8, ., .)
 {
-	uint src = OPER_I_8();
+	uint src = OPER_I_8(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_8;
 	uint dst = m68ki_read_8(ea);
 	uint res = src + dst;
@@ -1381,7 +1381,7 @@ M68KMAKE_OP(addi, 8, ., .)
 M68KMAKE_OP(addi, 16, ., d)
 {
 	uint* r_dst = &DY;
-	uint src = OPER_I_16();
+	uint src = OPER_I_16(ctx);
 	uint dst = MASK_OUT_ABOVE_16(*r_dst);
 	uint res = src + dst;
 
@@ -1396,7 +1396,7 @@ M68KMAKE_OP(addi, 16, ., d)
 
 M68KMAKE_OP(addi, 16, ., .)
 {
-	uint src = OPER_I_16();
+	uint src = OPER_I_16(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_16;
 	uint dst = m68ki_read_16(ea);
 	uint res = src + dst;
@@ -1413,7 +1413,7 @@ M68KMAKE_OP(addi, 16, ., .)
 M68KMAKE_OP(addi, 32, ., d)
 {
 	uint* r_dst = &DY;
-	uint src = OPER_I_32();
+	uint src = OPER_I_32(ctx);
 	uint dst = *r_dst;
 	uint res = src + dst;
 
@@ -1428,7 +1428,7 @@ M68KMAKE_OP(addi, 32, ., d)
 
 M68KMAKE_OP(addi, 32, ., .)
 {
-	uint src = OPER_I_32();
+	uint src = OPER_I_32(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_32;
 	uint dst = m68ki_read_32(ea);
 	uint res = src + dst;
@@ -1821,7 +1821,7 @@ M68KMAKE_OP(and, 32, re, .)
 
 M68KMAKE_OP(andi, 8, ., d)
 {
-	FLAG_Z = MASK_OUT_ABOVE_8(DY &= (OPER_I_8() | 0xffffff00));
+	FLAG_Z = MASK_OUT_ABOVE_8(DY &= (OPER_I_8(ctx) | 0xffffff00));
 
 	FLAG_N = NFLAG_8(FLAG_Z);
 	FLAG_C = CFLAG_CLEAR;
@@ -1831,7 +1831,7 @@ M68KMAKE_OP(andi, 8, ., d)
 
 M68KMAKE_OP(andi, 8, ., .)
 {
-	uint src = OPER_I_8();
+	uint src = OPER_I_8(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_8;
 	uint res = src & m68ki_read_8(ea);
 
@@ -1846,7 +1846,7 @@ M68KMAKE_OP(andi, 8, ., .)
 
 M68KMAKE_OP(andi, 16, ., d)
 {
-	FLAG_Z = MASK_OUT_ABOVE_16(DY &= (OPER_I_16() | 0xffff0000));
+	FLAG_Z = MASK_OUT_ABOVE_16(DY &= (OPER_I_16(ctx) | 0xffff0000));
 
 	FLAG_N = NFLAG_16(FLAG_Z);
 	FLAG_C = CFLAG_CLEAR;
@@ -1856,7 +1856,7 @@ M68KMAKE_OP(andi, 16, ., d)
 
 M68KMAKE_OP(andi, 16, ., .)
 {
-	uint src = OPER_I_16();
+	uint src = OPER_I_16(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_16;
 	uint res = src & m68ki_read_16(ea);
 
@@ -1871,7 +1871,7 @@ M68KMAKE_OP(andi, 16, ., .)
 
 M68KMAKE_OP(andi, 32, ., d)
 {
-	FLAG_Z = DY &= (OPER_I_32());
+	FLAG_Z = DY &= (OPER_I_32(ctx));
 
 	FLAG_N = NFLAG_32(FLAG_Z);
 	FLAG_C = CFLAG_CLEAR;
@@ -1881,7 +1881,7 @@ M68KMAKE_OP(andi, 32, ., d)
 
 M68KMAKE_OP(andi, 32, ., .)
 {
-	uint src = OPER_I_32();
+	uint src = OPER_I_32(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_32;
 	uint res = src & m68ki_read_32(ea);
 
@@ -1896,7 +1896,7 @@ M68KMAKE_OP(andi, 32, ., .)
 
 M68KMAKE_OP(andi, 16, toc, .)
 {
-	m68ki_set_ccr(ctx, m68ki_get_ccr() & OPER_I_8());
+	m68ki_set_ccr(ctx, m68ki_get_ccr() & OPER_I_8(ctx));
 }
 
 
@@ -1904,7 +1904,7 @@ M68KMAKE_OP(andi, 16, tos, .)
 {
 	if(FLAG_S)
 	{
-		uint src = OPER_I_16();
+		uint src = OPER_I_16(ctx);
 		m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
 		m68ki_set_sr(ctx, m68ki_get_sr() & src);
 		return;
@@ -2362,7 +2362,7 @@ M68KMAKE_OP(bcc, 16, ., .)
 {
 	if(M68KMAKE_CC)
 	{
-		uint offset = OPER_I_16();
+		uint offset = OPER_I_16(ctx);
 		REG_PC -= 2;
 		m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
 		m68ki_branch_16(ctx, offset);
@@ -2379,7 +2379,7 @@ M68KMAKE_OP(bcc, 32, ., .)
 	{
 		if(M68KMAKE_CC)
 		{
-			uint offset = OPER_I_32();
+			uint offset = OPER_I_32(ctx);
 			REG_PC -= 4;
 			m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
 			m68ki_branch_32(ctx, offset);
@@ -2425,7 +2425,7 @@ M68KMAKE_OP(bchg, 8, r, .)
 M68KMAKE_OP(bchg, 32, s, d)
 {
 	uint* r_dst = &DY;
-	uint mask = 1 << (OPER_I_8() & 0x1f);
+	uint mask = 1 << (OPER_I_8(ctx) & 0x1f);
 
 	FLAG_Z = *r_dst & mask;
 	*r_dst ^= mask;
@@ -2434,7 +2434,7 @@ M68KMAKE_OP(bchg, 32, s, d)
 
 M68KMAKE_OP(bchg, 8, s, .)
 {
-	uint mask = 1 << (OPER_I_8() & 7);
+	uint mask = 1 << (OPER_I_8(ctx) & 7);
 	uint ea = M68KMAKE_GET_EA_AY_8;
 	uint src = m68ki_read_8(ea);
 
@@ -2467,7 +2467,7 @@ M68KMAKE_OP(bclr, 8, r, .)
 M68KMAKE_OP(bclr, 32, s, d)
 {
 	uint* r_dst = &DY;
-	uint mask = 1 << (OPER_I_8() & 0x1f);
+	uint mask = 1 << (OPER_I_8(ctx) & 0x1f);
 
 	FLAG_Z = *r_dst & mask;
 	*r_dst &= ~mask;
@@ -2476,7 +2476,7 @@ M68KMAKE_OP(bclr, 32, s, d)
 
 M68KMAKE_OP(bclr, 8, s, .)
 {
-	uint mask = 1 << (OPER_I_8() & 7);
+	uint mask = 1 << (OPER_I_8(ctx) & 7);
 	uint ea = M68KMAKE_GET_EA_AY_8;
 	uint src = m68ki_read_8(ea);
 
@@ -2489,7 +2489,7 @@ M68KMAKE_OP(bfchg, 32, ., d)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint offset = (word2>>6)&31;
 		uint width = word2;
 		uint* data = &DY;
@@ -2524,7 +2524,7 @@ M68KMAKE_OP(bfchg, 32, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		sint offset = (word2>>6)&31;
 		uint width = word2;
 		uint mask_base;
@@ -2564,7 +2564,7 @@ M68KMAKE_OP(bfclr, 32, ., d)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint offset = (word2>>6)&31;
 		uint width = word2;
 		uint* data = &DY;
@@ -2601,7 +2601,7 @@ M68KMAKE_OP(bfclr, 32, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		sint offset = (word2>>6)&31;
 		uint width = word2;
 		uint mask_base;
@@ -2639,7 +2639,7 @@ M68KMAKE_OP(bfexts, 32, ., d)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint offset = (word2>>6)&31;
 		uint width = word2;
 		uint64 data = DY;
@@ -2673,7 +2673,7 @@ M68KMAKE_OP(bfexts, 32, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		sint offset = (word2>>6)&31;
 		uint width = word2;
 		uint data;
@@ -2721,7 +2721,7 @@ M68KMAKE_OP(bfextu, 32, ., d)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint offset = (word2>>6)&31;
 		uint width = word2;
 		uint64 data = DY;
@@ -2755,7 +2755,7 @@ M68KMAKE_OP(bfextu, 32, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		sint offset = (word2>>6)&31;
 		uint width = word2;
 		uint data;
@@ -2802,7 +2802,7 @@ M68KMAKE_OP(bfffo, 32, ., d)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint offset = (word2>>6)&31;
 		uint width = word2;
 		uint64 data = DY;
@@ -2840,7 +2840,7 @@ M68KMAKE_OP(bfffo, 32, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		sint offset = (word2>>6)&31;
 		sint local_offset;
 		uint width = word2;
@@ -2892,7 +2892,7 @@ M68KMAKE_OP(bfins, 32, ., d)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint offset = (word2>>6)&31;
 		uint width = word2;
 		uint* data = &DY;
@@ -2934,7 +2934,7 @@ M68KMAKE_OP(bfins, 32, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		sint offset = (word2>>6)&31;
 		uint width = word2;
 		uint insert_base = REG_D[(word2>>12)&7];
@@ -2975,7 +2975,7 @@ M68KMAKE_OP(bfset, 32, ., d)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint offset = (word2>>6)&31;
 		uint width = word2;
 		uint* data = &DY;
@@ -3012,7 +3012,7 @@ M68KMAKE_OP(bfset, 32, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		sint offset = (word2>>6)&31;
 		uint width = word2;
 		uint mask_base;
@@ -3050,7 +3050,7 @@ M68KMAKE_OP(bftst, 32, ., d)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint offset = (word2>>6)&31;
 		uint width = word2;
 		uint* data = &DY;
@@ -3085,7 +3085,7 @@ M68KMAKE_OP(bftst, 32, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		sint offset = (word2>>6)&31;
 		uint width = word2;
 		uint mask_base;
@@ -3153,7 +3153,7 @@ M68KMAKE_OP(bra, 8, ., .)
 
 M68KMAKE_OP(bra, 16, ., .)
 {
-	uint offset = OPER_I_16();
+	uint offset = OPER_I_16(ctx);
 	REG_PC -= 2;
 	m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
 	m68ki_branch_16(ctx, offset);
@@ -3166,7 +3166,7 @@ M68KMAKE_OP(bra, 32, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint offset = OPER_I_32();
+		uint offset = OPER_I_32(ctx);
 		REG_PC -= 4;
 		m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
 		m68ki_branch_32(ctx, offset);
@@ -3208,7 +3208,7 @@ M68KMAKE_OP(bset, 8, r, .)
 M68KMAKE_OP(bset, 32, s, d)
 {
 	uint* r_dst = &DY;
-	uint mask = 1 << (OPER_I_8() & 0x1f);
+	uint mask = 1 << (OPER_I_8(ctx) & 0x1f);
 
 	FLAG_Z = *r_dst & mask;
 	*r_dst |= mask;
@@ -3217,7 +3217,7 @@ M68KMAKE_OP(bset, 32, s, d)
 
 M68KMAKE_OP(bset, 8, s, .)
 {
-	uint mask = 1 << (OPER_I_8() & 7);
+	uint mask = 1 << (OPER_I_8(ctx) & 7);
 	uint ea = M68KMAKE_GET_EA_AY_8;
 	uint src = m68ki_read_8(ea);
 
@@ -3236,7 +3236,7 @@ M68KMAKE_OP(bsr, 8, ., .)
 
 M68KMAKE_OP(bsr, 16, ., .)
 {
-	uint offset = OPER_I_16();
+	uint offset = OPER_I_16(ctx);
 	m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
 	m68ki_push_32(ctx, REG_PC);
 	REG_PC -= 2;
@@ -3248,7 +3248,7 @@ M68KMAKE_OP(bsr, 32, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint offset = OPER_I_32();
+		uint offset = OPER_I_32(ctx);
 		m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
 		m68ki_push_32(ctx, REG_PC);
 		REG_PC -= 4;
@@ -3278,13 +3278,13 @@ M68KMAKE_OP(btst, 8, r, .)
 
 M68KMAKE_OP(btst, 32, s, d)
 {
-	FLAG_Z = DY & (1 << (OPER_I_8() & 0x1f));
+	FLAG_Z = DY & (1 << (OPER_I_8(ctx) & 0x1f));
 }
 
 
 M68KMAKE_OP(btst, 8, s, .)
 {
-	uint bit = OPER_I_8() & 7;
+	uint bit = OPER_I_8(ctx) & 7;
 
 	FLAG_Z = M68KMAKE_GET_OPER_AY_8 & (1 << bit);
 }
@@ -3313,7 +3313,7 @@ M68KMAKE_OP(cas, 8, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint ea = M68KMAKE_GET_EA_AY_8;
 		uint dest = m68ki_read_8(ea);
 		uint* compare = &REG_D[word2 & 7];
@@ -3342,7 +3342,7 @@ M68KMAKE_OP(cas, 16, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint ea = M68KMAKE_GET_EA_AY_16;
 		uint dest = m68ki_read_16(ea);
 		uint* compare = &REG_D[word2 & 7];
@@ -3371,7 +3371,7 @@ M68KMAKE_OP(cas, 32, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint ea = M68KMAKE_GET_EA_AY_32;
 		uint dest = m68ki_read_32(ea);
 		uint* compare = &REG_D[word2 & 7];
@@ -3400,7 +3400,7 @@ M68KMAKE_OP(cas2, 16, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_32();
+		uint word2 = OPER_I_32(ctx);
 		uint* compare1 = &REG_D[(word2 >> 16) & 7];
 		uint ea1 = REG_DA[(word2 >> 28) & 15];
 		uint dest1 = m68ki_read_16(ea1);
@@ -3445,7 +3445,7 @@ M68KMAKE_OP(cas2, 32, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_32();
+		uint word2 = OPER_I_32(ctx);
 		uint* compare1 = &REG_D[(word2 >> 16) & 7];
 		uint ea1 = REG_DA[(word2 >> 28) & 15];
 		uint dest1 = m68ki_read_32(ea1);
@@ -3572,14 +3572,14 @@ M68KMAKE_OP(chk2cmp2, 8, ., pcdi)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		sint compare = REG_DA[(word2 >> 12) & 15]&0xff;
 		uint ea = EA_PCDI_8();
 		sint lower_bound = m68ki_read_pcrel_8(ea);
 		sint upper_bound = m68ki_read_pcrel_8(ea + 1);
 
 		if(!BIT_F(word2))
-			compare = (int32)(int8)compare;
+			compare = (sint32)(sint8)compare;
       
 		FLAG_Z = !((upper_bound==compare) || (lower_bound==compare));  // JFF: | => ||
 
@@ -3599,14 +3599,14 @@ M68KMAKE_OP(chk2cmp2, 8, ., pcix)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		sint compare = REG_DA[(word2 >> 12) & 15]&0xff;
 		uint ea = EA_PCIX_8();
 		sint lower_bound = m68ki_read_pcrel_8(ea);
 		sint upper_bound = m68ki_read_pcrel_8(ea + 1);
 
 		if(!BIT_F(word2))
-			compare = (int32)(int8)compare;
+			compare = (sint32)(sint8)compare;
 		FLAG_Z = !((upper_bound==compare) || (lower_bound==compare));  // JFF: | => ||, faster operation short circuits
 
     FLAG_C = (lower_bound <= upper_bound ? compare < lower_bound || compare > upper_bound : compare > upper_bound || compare < lower_bound) << 8;
@@ -3624,14 +3624,14 @@ M68KMAKE_OP(chk2cmp2, 8, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		sint compare = REG_DA[(word2 >> 12) & 15]&0xff;
 		uint ea = M68KMAKE_GET_EA_AY_8;
-		sint lower_bound = (int8)m68ki_read_8(ea);
-		sint upper_bound = (int8)m68ki_read_8(ea + 1);
+		sint lower_bound = (sint8)m68ki_read_8(ea);
+		sint upper_bound = (sint8)m68ki_read_8(ea + 1);
 
 		if(!BIT_F(word2))
-			compare = (int32)(int8)compare;
+			compare = (sint32)(sint8)compare;
       
  		FLAG_Z = !((upper_bound==compare) || (lower_bound==compare));  // JFF: | => ||
 
@@ -3649,14 +3649,14 @@ M68KMAKE_OP(chk2cmp2, 16, ., pcdi)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		sint compare = REG_DA[(word2 >> 12) & 15]&0xffff;
 		uint ea = EA_PCDI_16();
-		sint lower_bound = (int16)m68ki_read_pcrel_16(ea);
-		sint upper_bound = (int16)m68ki_read_pcrel_16(ea + 2);
+		sint lower_bound = (sint16)m68ki_read_pcrel_16(ea);
+		sint upper_bound = (sint16)m68ki_read_pcrel_16(ea + 2);
 
 		if(!BIT_F(word2))
-			compare = (int32)(int16)compare;
+			compare = (sint32)(sint16)compare;
  		FLAG_Z = !((upper_bound==compare) || (lower_bound==compare));  // JFF: | => ||
 
     FLAG_C = (lower_bound <= upper_bound ? compare < lower_bound || compare > upper_bound : compare > upper_bound || compare < lower_bound) << 8;
@@ -3673,14 +3673,14 @@ M68KMAKE_OP(chk2cmp2, 16, ., pcix)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		sint compare = REG_DA[(word2 >> 12) & 15]&0xffff;
 		uint ea = EA_PCIX_16();
-		sint lower_bound = (int16)m68ki_read_pcrel_16(ea);
-		sint upper_bound = (int16)m68ki_read_pcrel_16(ea + 2);
+		sint lower_bound = (sint16)m68ki_read_pcrel_16(ea);
+		sint upper_bound = (sint16)m68ki_read_pcrel_16(ea + 2);
 
 		if(!BIT_F(word2))
-			compare = (int32)(int16)compare;
+			compare = (sint32)(sint16)compare;
  		FLAG_Z = !((upper_bound==compare) || (lower_bound==compare));  // JFF: | => ||
 
     FLAG_C = (lower_bound <= upper_bound ? compare < lower_bound || compare > upper_bound : compare > upper_bound || compare < lower_bound) << 8;
@@ -3697,14 +3697,14 @@ M68KMAKE_OP(chk2cmp2, 16, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		sint compare = REG_DA[(word2 >> 12) & 15]&0xffff;
 		uint ea = M68KMAKE_GET_EA_AY_16;
-		sint lower_bound = (int16)m68ki_read_16(ea);
-		sint upper_bound = (int16)m68ki_read_16(ea + 2);
+		sint lower_bound = (sint16)m68ki_read_16(ea);
+		sint upper_bound = (sint16)m68ki_read_16(ea + 2);
 
 		if(!BIT_F(word2))
-			compare = (int32)(int16)compare;
+			compare = (sint32)(sint16)compare;
  		FLAG_Z = !((upper_bound==compare) || (lower_bound==compare));  // JFF: | => ||
 
         FLAG_C = (lower_bound <= upper_bound ? compare < lower_bound || compare > upper_bound : compare > upper_bound || compare < lower_bound) << 8;
@@ -3721,7 +3721,7 @@ M68KMAKE_OP(chk2cmp2, 32, ., pcdi)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		sint compare = REG_DA[(word2 >> 12) & 15];
 		uint ea = EA_PCDI_32();
 		sint lower_bound = m68ki_read_pcrel_32(ea);
@@ -3743,7 +3743,7 @@ M68KMAKE_OP(chk2cmp2, 32, ., pcix)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		sint compare = REG_DA[(word2 >> 12) & 15];
 		uint ea = EA_PCIX_32();
 		sint lower_bound = m68ki_read_32(ea);
@@ -3765,7 +3765,7 @@ M68KMAKE_OP(chk2cmp2, 32, ., .)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{   
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		// JFF changed the logic. chk2/cmp2 uses signed values, not unsigned
 		sint compare = REG_DA[(word2 >> 12) & 15];
 		uint ea = M68KMAKE_GET_EA_AY_32;
@@ -4034,7 +4034,7 @@ M68KMAKE_OP(cmpa, 32, ., .)
 
 M68KMAKE_OP(cmpi, 8, ., d)
 {
-	uint src = OPER_I_8();
+	uint src = OPER_I_8(ctx);
 	uint dst = MASK_OUT_ABOVE_8(DY);
 	uint res = dst - src;
 
@@ -4047,7 +4047,7 @@ M68KMAKE_OP(cmpi, 8, ., d)
 
 M68KMAKE_OP(cmpi, 8, ., .)
 {
-	uint src = OPER_I_8();
+	uint src = OPER_I_8(ctx);
 	uint dst = M68KMAKE_GET_OPER_AY_8;
 	uint res = dst - src;
 
@@ -4062,7 +4062,7 @@ M68KMAKE_OP(cmpi, 8, ., pcdi)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint src = OPER_I_8();
+		uint src = OPER_I_8(ctx);
 		uint dst = OPER_PCDI_8(ctx);
 		uint res = dst - src;
 
@@ -4080,7 +4080,7 @@ M68KMAKE_OP(cmpi, 8, ., pcix)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint src = OPER_I_8();
+		uint src = OPER_I_8(ctx);
 		uint dst = OPER_PCIX_8(ctx);
 		uint res = dst - src;
 
@@ -4096,7 +4096,7 @@ M68KMAKE_OP(cmpi, 8, ., pcix)
 
 M68KMAKE_OP(cmpi, 16, ., d)
 {
-	uint src = OPER_I_16();
+	uint src = OPER_I_16(ctx);
 	uint dst = MASK_OUT_ABOVE_16(DY);
 	uint res = dst - src;
 
@@ -4109,7 +4109,7 @@ M68KMAKE_OP(cmpi, 16, ., d)
 
 M68KMAKE_OP(cmpi, 16, ., .)
 {
-	uint src = OPER_I_16();
+	uint src = OPER_I_16(ctx);
 	uint dst = M68KMAKE_GET_OPER_AY_16;
 	uint res = dst - src;
 
@@ -4124,7 +4124,7 @@ M68KMAKE_OP(cmpi, 16, ., pcdi)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint src = OPER_I_16();
+		uint src = OPER_I_16(ctx);
 		uint dst = OPER_PCDI_16(ctx);
 		uint res = dst - src;
 
@@ -4142,7 +4142,7 @@ M68KMAKE_OP(cmpi, 16, ., pcix)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint src = OPER_I_16();
+		uint src = OPER_I_16(ctx);
 		uint dst = OPER_PCIX_16(ctx);
 		uint res = dst - src;
 
@@ -4158,7 +4158,7 @@ M68KMAKE_OP(cmpi, 16, ., pcix)
 
 M68KMAKE_OP(cmpi, 32, ., d)
 {
-	uint src = OPER_I_32();
+	uint src = OPER_I_32(ctx);
 	uint dst = DY;
 	uint res = dst - src;
 
@@ -4172,7 +4172,7 @@ M68KMAKE_OP(cmpi, 32, ., d)
 
 M68KMAKE_OP(cmpi, 32, ., .)
 {
-	uint src = OPER_I_32();
+	uint src = OPER_I_32(ctx);
 	uint dst = M68KMAKE_GET_OPER_AY_32;
 	uint res = dst - src;
 
@@ -4187,7 +4187,7 @@ M68KMAKE_OP(cmpi, 32, ., pcdi)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint src = OPER_I_32();
+		uint src = OPER_I_32(ctx);
 		uint dst = OPER_PCDI_32(ctx);
 		uint res = dst - src;
 
@@ -4205,7 +4205,7 @@ M68KMAKE_OP(cmpi, 32, ., pcix)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint src = OPER_I_32();
+		uint src = OPER_I_32(ctx);
 		uint dst = OPER_PCIX_32(ctx);
 		uint res = dst - src;
 
@@ -4378,7 +4378,7 @@ M68KMAKE_OP(dbf, 16, ., .)
 	*r_dst = MASK_OUT_BELOW_16(*r_dst) | res;
 	if(res != 0xffff)
 	{
-		uint offset = OPER_I_16();
+		uint offset = OPER_I_16(ctx);
 		REG_PC -= 2;
 		m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
 		m68ki_branch_16(ctx, offset);
@@ -4400,7 +4400,7 @@ M68KMAKE_OP(dbcc, 16, ., .)
 		*r_dst = MASK_OUT_BELOW_16(*r_dst) | res;
 		if(res != 0xffff)
 		{
-			uint offset = OPER_I_16();
+			uint offset = OPER_I_16(ctx);
 			REG_PC -= 2;
 			m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
 			m68ki_branch_16(ctx, offset);
@@ -4549,7 +4549,7 @@ M68KMAKE_OP(divl, 32, ., d)
 
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint64 divisor   = DY;
 		uint64 dividend  = 0;
 		uint64 quotient  = 0;
@@ -4617,7 +4617,7 @@ M68KMAKE_OP(divl, 32, ., d)
 
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint divisor = DY;
 		uint dividend_hi = REG_D[word2 & 7];
 		uint dividend_lo = REG_D[(word2 >> 12) & 7];
@@ -4760,7 +4760,7 @@ M68KMAKE_OP(divl, 32, ., .)
 
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint64 divisor = M68KMAKE_GET_OPER_AY_32;
 		uint64 dividend  = 0;
 		uint64 quotient  = 0;
@@ -4828,7 +4828,7 @@ M68KMAKE_OP(divl, 32, ., .)
 
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint divisor = M68KMAKE_GET_OPER_AY_32;
 		uint dividend_hi = REG_D[word2 & 7];
 		uint dividend_lo = REG_D[(word2 >> 12) & 7];
@@ -5042,7 +5042,7 @@ M68KMAKE_OP(eor, 32, ., .)
 
 M68KMAKE_OP(eori, 8, ., d)
 {
-	uint res = MASK_OUT_ABOVE_8(DY ^= OPER_I_8());
+	uint res = MASK_OUT_ABOVE_8(DY ^= OPER_I_8(ctx));
 
 	FLAG_N = NFLAG_8(res);
 	FLAG_Z = res;
@@ -5053,7 +5053,7 @@ M68KMAKE_OP(eori, 8, ., d)
 
 M68KMAKE_OP(eori, 8, ., .)
 {
-	uint src = OPER_I_8();
+	uint src = OPER_I_8(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_8;
 	uint res = src ^ m68ki_read_8(ea);
 
@@ -5068,7 +5068,7 @@ M68KMAKE_OP(eori, 8, ., .)
 
 M68KMAKE_OP(eori, 16, ., d)
 {
-	uint res = MASK_OUT_ABOVE_16(DY ^= OPER_I_16());
+	uint res = MASK_OUT_ABOVE_16(DY ^= OPER_I_16(ctx));
 
 	FLAG_N = NFLAG_16(res);
 	FLAG_Z = res;
@@ -5079,7 +5079,7 @@ M68KMAKE_OP(eori, 16, ., d)
 
 M68KMAKE_OP(eori, 16, ., .)
 {
-	uint src = OPER_I_16();
+	uint src = OPER_I_16(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_16;
 	uint res = src ^ m68ki_read_16(ea);
 
@@ -5094,7 +5094,7 @@ M68KMAKE_OP(eori, 16, ., .)
 
 M68KMAKE_OP(eori, 32, ., d)
 {
-	uint res = DY ^= OPER_I_32();
+	uint res = DY ^= OPER_I_32(ctx);
 
 	FLAG_N = NFLAG_32(res);
 	FLAG_Z = res;
@@ -5105,7 +5105,7 @@ M68KMAKE_OP(eori, 32, ., d)
 
 M68KMAKE_OP(eori, 32, ., .)
 {
-	uint src = OPER_I_32();
+	uint src = OPER_I_32(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_32;
 	uint res = src ^ m68ki_read_32(ea);
 
@@ -5120,7 +5120,7 @@ M68KMAKE_OP(eori, 32, ., .)
 
 M68KMAKE_OP(eori, 16, toc, .)
 {
-	m68ki_set_ccr(ctx, m68ki_get_ccr() ^ OPER_I_8());
+	m68ki_set_ccr(ctx, m68ki_get_ccr() ^ OPER_I_8(ctx));
 }
 
 
@@ -5128,7 +5128,7 @@ M68KMAKE_OP(eori, 16, tos, .)
 {
 	if(FLAG_S)
 	{
-		uint src = OPER_I_16();
+		uint src = OPER_I_16(ctx);
 		m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
 		m68ki_set_sr(ctx, m68ki_get_sr() ^ src);
 		return;
@@ -5244,7 +5244,7 @@ M68KMAKE_OP(link, 16, ., a7)
 {
 	REG_A[7] -= 4;
 	m68ki_write_32(REG_A[7], REG_A[7]);
-	REG_A[7] = MASK_OUT_ABOVE_32(REG_A[7] + MAKE_INT_16(OPER_I_16()));
+	REG_A[7] = MASK_OUT_ABOVE_32(REG_A[7] + MAKE_INT_16(OPER_I_16(ctx)));
 }
 
 
@@ -5254,7 +5254,7 @@ M68KMAKE_OP(link, 16, ., .)
 
 	m68ki_push_32(ctx, *r_dst);
 	*r_dst = REG_A[7];
-	REG_A[7] = MASK_OUT_ABOVE_32(REG_A[7] + MAKE_INT_16(OPER_I_16()));
+	REG_A[7] = MASK_OUT_ABOVE_32(REG_A[7] + MAKE_INT_16(OPER_I_16(ctx)));
 }
 
 
@@ -5264,7 +5264,7 @@ M68KMAKE_OP(link, 32, ., a7)
 	{
 		REG_A[7] -= 4;
 		m68ki_write_32(REG_A[7], REG_A[7]);
-		REG_A[7] = MASK_OUT_ABOVE_32(REG_A[7] + OPER_I_32());
+		REG_A[7] = MASK_OUT_ABOVE_32(REG_A[7] + OPER_I_32(ctx));
 		return;
 	}
 	m68ki_exception_illegal(ctx);
@@ -5279,7 +5279,7 @@ M68KMAKE_OP(link, 32, ., .)
 
 		m68ki_push_32(ctx, *r_dst);
 		*r_dst = REG_A[7];
-		REG_A[7] = MASK_OUT_ABOVE_32(REG_A[7] + OPER_I_32());
+		REG_A[7] = MASK_OUT_ABOVE_32(REG_A[7] + OPER_I_32(ctx));
 		return;
 	}
 	m68ki_exception_illegal(ctx);
@@ -6757,7 +6757,7 @@ M68KMAKE_OP(movec, 32, cr, .)
 	{
 		if(FLAG_S)
 		{
-			uint word2 = OPER_I_16();
+			uint word2 = OPER_I_16(ctx);
 
 			m68ki_trace_t0();		   /* auto-disable (see m68kcpu.h) */
 			switch (word2 & 0xfff)
@@ -6887,7 +6887,7 @@ M68KMAKE_OP(movec, 32, rc, .)
 	{
 		if(FLAG_S)
 		{
-			uint word2 = OPER_I_16();
+			uint word2 = OPER_I_16(ctx);
 
 			m68ki_trace_t0();		   /* auto-disable (see m68kcpu.h) */
 			switch (word2 & 0xfff)
@@ -7039,7 +7039,7 @@ M68KMAKE_OP(movec, 32, rc, .)
 M68KMAKE_OP(movem, 16, re, pd)
 {
 	uint i = 0;
-	uint register_list = OPER_I_16();
+	uint register_list = OPER_I_16(ctx);
 	uint ea = AY;
 	uint count = 0;
 
@@ -7059,7 +7059,7 @@ M68KMAKE_OP(movem, 16, re, pd)
 M68KMAKE_OP(movem, 16, re, .)
 {
 	uint i = 0;
-	uint register_list = OPER_I_16();
+	uint register_list = OPER_I_16(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_16;
 	uint count = 0;
 
@@ -7078,7 +7078,7 @@ M68KMAKE_OP(movem, 16, re, .)
 M68KMAKE_OP(movem, 32, re, pd)
 {
 	uint i = 0;
-	uint register_list = OPER_I_16();
+	uint register_list = OPER_I_16(ctx);
 	uint ea = AY;
 	uint count = 0;
 
@@ -7099,7 +7099,7 @@ M68KMAKE_OP(movem, 32, re, pd)
 M68KMAKE_OP(movem, 32, re, .)
 {
 	uint i = 0;
-	uint register_list = OPER_I_16();
+	uint register_list = OPER_I_16(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_32;
 	uint count = 0;
 
@@ -7118,7 +7118,7 @@ M68KMAKE_OP(movem, 32, re, .)
 M68KMAKE_OP(movem, 16, er, pi)
 {
 	uint i = 0;
-	uint register_list = OPER_I_16();
+	uint register_list = OPER_I_16(ctx);
 	uint ea = AY;
 	uint count = 0;
 
@@ -7138,7 +7138,7 @@ M68KMAKE_OP(movem, 16, er, pi)
 M68KMAKE_OP(movem, 16, er, pcdi)
 {
 	uint i = 0;
-	uint register_list = OPER_I_16();
+	uint register_list = OPER_I_16(ctx);
 	uint ea = EA_PCDI_16();
 	uint count = 0;
 
@@ -7157,7 +7157,7 @@ M68KMAKE_OP(movem, 16, er, pcdi)
 M68KMAKE_OP(movem, 16, er, pcix)
 {
 	uint i = 0;
-	uint register_list = OPER_I_16();
+	uint register_list = OPER_I_16(ctx);
 	uint ea = EA_PCIX_16();
 	uint count = 0;
 
@@ -7176,7 +7176,7 @@ M68KMAKE_OP(movem, 16, er, pcix)
 M68KMAKE_OP(movem, 16, er, .)
 {
 	uint i = 0;
-	uint register_list = OPER_I_16();
+	uint register_list = OPER_I_16(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_16;
 	uint count = 0;
 
@@ -7195,7 +7195,7 @@ M68KMAKE_OP(movem, 16, er, .)
 M68KMAKE_OP(movem, 32, er, pi)
 {
 	uint i = 0;
-	uint register_list = OPER_I_16();
+	uint register_list = OPER_I_16(ctx);
 	uint ea = AY;
 	uint count = 0;
 
@@ -7215,7 +7215,7 @@ M68KMAKE_OP(movem, 32, er, pi)
 M68KMAKE_OP(movem, 32, er, pcdi)
 {
 	uint i = 0;
-	uint register_list = OPER_I_16();
+	uint register_list = OPER_I_16(ctx);
 	uint ea = EA_PCDI_32();
 	uint count = 0;
 
@@ -7234,7 +7234,7 @@ M68KMAKE_OP(movem, 32, er, pcdi)
 M68KMAKE_OP(movem, 32, er, pcix)
 {
 	uint i = 0;
-	uint register_list = OPER_I_16();
+	uint register_list = OPER_I_16(ctx);
 	uint ea = EA_PCIX_32();
 	uint count = 0;
 
@@ -7253,7 +7253,7 @@ M68KMAKE_OP(movem, 32, er, pcix)
 M68KMAKE_OP(movem, 32, er, .)
 {
 	uint i = 0;
-	uint register_list = OPER_I_16();
+	uint register_list = OPER_I_16(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_32;
 	uint count = 0;
 
@@ -7315,7 +7315,7 @@ M68KMAKE_OP(moves, 8, ., .)
 	{
 		if(FLAG_S)
 		{
-			uint word2 = OPER_I_16();
+			uint word2 = OPER_I_16(ctx);
 			uint ea = M68KMAKE_GET_EA_AY_8;
 
 			m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
@@ -7350,7 +7350,7 @@ M68KMAKE_OP(moves, 16, ., .)
 	{
 		if(FLAG_S)
 		{
-			uint word2 = OPER_I_16();
+			uint word2 = OPER_I_16(ctx);
 			uint ea = M68KMAKE_GET_EA_AY_16;
 
 			m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
@@ -7385,7 +7385,7 @@ M68KMAKE_OP(moves, 32, ., .)
 	{
 		if(FLAG_S)
 		{
-			uint word2 = OPER_I_16();
+			uint word2 = OPER_I_16(ctx);
 			uint ea = M68KMAKE_GET_EA_AY_32;
 
 			m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
@@ -7422,7 +7422,7 @@ M68KMAKE_OP(moveq, 32, ., .)
 
 M68KMAKE_OP(move16, 32, ., .)
 {
-	uint16 w2 = OPER_I_16();
+	uint16 w2 = OPER_I_16(ctx);
 	int ax = REG_IR & 7;
 	int ay = (w2 >> 12) & 7;
 
@@ -7542,7 +7542,7 @@ M68KMAKE_OP(mull, 32, ., d)
 
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint64 src = DY;
 		uint64 dst = REG_D[(word2 >> 12) & 7];
 		uint64 res;
@@ -7590,7 +7590,7 @@ M68KMAKE_OP(mull, 32, ., d)
 
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint src = DY;
 		uint dst = REG_D[(word2 >> 12) & 7];
 		uint neg = GET_MSB_32(src ^ dst);
@@ -7666,7 +7666,7 @@ M68KMAKE_OP(mull, 32, ., .)
 
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint64 src = M68KMAKE_GET_OPER_AY_32;
 		uint64 dst = REG_D[(word2 >> 12) & 7];
 		uint64 res;
@@ -7714,7 +7714,7 @@ M68KMAKE_OP(mull, 32, ., .)
 
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint word2 = OPER_I_16();
+		uint word2 = OPER_I_16(ctx);
 		uint src = M68KMAKE_GET_OPER_AY_32;
 		uint dst = REG_D[(word2 >> 12) & 7];
 		uint neg = GET_MSB_32(src ^ dst);
@@ -8234,7 +8234,7 @@ M68KMAKE_OP(or, 32, re, .)
 
 M68KMAKE_OP(ori, 8, ., d)
 {
-	uint res = MASK_OUT_ABOVE_8((DY |= OPER_I_8()));
+	uint res = MASK_OUT_ABOVE_8((DY |= OPER_I_8(ctx)));
 
 	FLAG_N = NFLAG_8(res);
 	FLAG_Z = res;
@@ -8245,7 +8245,7 @@ M68KMAKE_OP(ori, 8, ., d)
 
 M68KMAKE_OP(ori, 8, ., .)
 {
-	uint src = OPER_I_8();
+	uint src = OPER_I_8(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_8;
 	uint res = MASK_OUT_ABOVE_8(src | m68ki_read_8(ea));
 
@@ -8260,7 +8260,7 @@ M68KMAKE_OP(ori, 8, ., .)
 
 M68KMAKE_OP(ori, 16, ., d)
 {
-	uint res = MASK_OUT_ABOVE_16(DY |= OPER_I_16());
+	uint res = MASK_OUT_ABOVE_16(DY |= OPER_I_16(ctx));
 
 	FLAG_N = NFLAG_16(res);
 	FLAG_Z = res;
@@ -8271,7 +8271,7 @@ M68KMAKE_OP(ori, 16, ., d)
 
 M68KMAKE_OP(ori, 16, ., .)
 {
-	uint src = OPER_I_16();
+	uint src = OPER_I_16(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_16;
 	uint res = MASK_OUT_ABOVE_16(src | m68ki_read_16(ea));
 
@@ -8286,7 +8286,7 @@ M68KMAKE_OP(ori, 16, ., .)
 
 M68KMAKE_OP(ori, 32, ., d)
 {
-	uint res = DY |= OPER_I_32();
+	uint res = DY |= OPER_I_32(ctx);
 
 	FLAG_N = NFLAG_32(res);
 	FLAG_Z = res;
@@ -8297,7 +8297,7 @@ M68KMAKE_OP(ori, 32, ., d)
 
 M68KMAKE_OP(ori, 32, ., .)
 {
-	uint src = OPER_I_32();
+	uint src = OPER_I_32(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_32;
 	uint res = src | m68ki_read_32(ea);
 
@@ -8312,7 +8312,7 @@ M68KMAKE_OP(ori, 32, ., .)
 
 M68KMAKE_OP(ori, 16, toc, .)
 {
-	m68ki_set_ccr(ctx, m68ki_get_ccr() | OPER_I_8());
+	m68ki_set_ccr(ctx, m68ki_get_ccr() | OPER_I_8(ctx));
 }
 
 
@@ -8320,7 +8320,7 @@ M68KMAKE_OP(ori, 16, tos, .)
 {
 	if(FLAG_S)
 	{
-		uint src = OPER_I_16();
+		uint src = OPER_I_16(ctx);
 		m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
 		m68ki_set_sr(ctx, m68ki_get_sr() | src);
 		return;
@@ -8334,7 +8334,7 @@ M68KMAKE_OP(pack, 16, rr, .)
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
 		/* Note: DX and DY are reversed in Motorola's docs */
-		uint src = DY + OPER_I_16();
+		uint src = DY + OPER_I_16(ctx);
 		uint* r_dst = &DX;
 
 		*r_dst = MASK_OUT_BELOW_8(*r_dst) | ((src >> 4) & 0x00f0) | (src & 0x000f);
@@ -8352,7 +8352,7 @@ M68KMAKE_OP(pack, 16, mm, ax7)
 		uint ea_src = EA_AY_PD_8();
 		uint src = m68ki_read_8(ea_src);
 		ea_src = EA_AY_PD_8();
-		src = ((src << 8) | m68ki_read_8(ea_src)) + OPER_I_16();
+		src = ((src << 8) | m68ki_read_8(ea_src)) + OPER_I_16(ctx);
 
 		m68ki_write_8(EA_A7_PD_8(), ((src >> 4) & 0x00f0) | (src & 0x000f));
 		return;
@@ -8369,7 +8369,7 @@ M68KMAKE_OP(pack, 16, mm, ay7)
 		uint ea_src = EA_A7_PD_8();
 		uint src = m68ki_read_8(ea_src);
 		ea_src = EA_A7_PD_8();
-		src = ((src << 8) | m68ki_read_8(ea_src)) + OPER_I_16();
+		src = ((src << 8) | m68ki_read_8(ea_src)) + OPER_I_16(ctx);
 
 		m68ki_write_8(EA_AX_PD_8(), ((src >> 4) & 0x00f0) | (src & 0x000f));
 		return;
@@ -8385,7 +8385,7 @@ M68KMAKE_OP(pack, 16, mm, axy7)
 		uint ea_src = EA_A7_PD_8();
 		uint src = m68ki_read_8(ea_src);
 		ea_src = EA_A7_PD_8();
-		src = ((src << 8) | m68ki_read_8(ea_src)) + OPER_I_16();
+		src = ((src << 8) | m68ki_read_8(ea_src)) + OPER_I_16(ctx);
 
 		m68ki_write_8(EA_A7_PD_8(), ((src >> 4) & 0x00f0) | (src & 0x000f));
 		return;
@@ -8402,7 +8402,7 @@ M68KMAKE_OP(pack, 16, mm, .)
 		uint ea_src = EA_AY_PD_8();
 		uint src = m68ki_read_8(ea_src);
 		ea_src = EA_AY_PD_8();
-		src = ((src << 8) | m68ki_read_8(ea_src)) + OPER_I_16();
+		src = ((src << 8) | m68ki_read_8(ea_src)) + OPER_I_16(ctx);
 
 		m68ki_write_8(EA_AX_PD_8(), ((src >> 4) & 0x00f0) | (src & 0x000f));
 		return;
@@ -9233,7 +9233,7 @@ M68KMAKE_OP(rtd, 32, ., .)
 		uint new_pc = m68ki_pull_32(ctx);
 
 		m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
-		REG_A[7] = MASK_OUT_ABOVE_32(REG_A[7] + MAKE_INT_16(OPER_I_16()));
+		REG_A[7] = MASK_OUT_ABOVE_32(REG_A[7] + MAKE_INT_16(OPER_I_16(ctx)));
 		m68ki_jump(ctx, new_pc);
 		return;
 	}
@@ -9558,7 +9558,7 @@ M68KMAKE_OP(stop, 0, ., .)
 {
 	if(FLAG_S)
 	{
-		uint new_sr = OPER_I_16();
+		uint new_sr = OPER_I_16(ctx);
 		m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
 		CPU_STOPPED |= STOP_LEVEL_STOP;
 		m68ki_set_sr(ctx, new_sr);
@@ -9801,7 +9801,7 @@ M68KMAKE_OP(suba, 32, ., .)
 M68KMAKE_OP(subi, 8, ., d)
 {
 	uint* r_dst = &DY;
-	uint src = OPER_I_8();
+	uint src = OPER_I_8(ctx);
 	uint dst = MASK_OUT_ABOVE_8(*r_dst);
 	uint res = dst - src;
 
@@ -9816,7 +9816,7 @@ M68KMAKE_OP(subi, 8, ., d)
 
 M68KMAKE_OP(subi, 8, ., .)
 {
-	uint src = OPER_I_8();
+	uint src = OPER_I_8(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_8;
 	uint dst = m68ki_read_8(ea);
 	uint res = dst - src;
@@ -9833,7 +9833,7 @@ M68KMAKE_OP(subi, 8, ., .)
 M68KMAKE_OP(subi, 16, ., d)
 {
 	uint* r_dst = &DY;
-	uint src = OPER_I_16();
+	uint src = OPER_I_16(ctx);
 	uint dst = MASK_OUT_ABOVE_16(*r_dst);
 	uint res = dst - src;
 
@@ -9848,7 +9848,7 @@ M68KMAKE_OP(subi, 16, ., d)
 
 M68KMAKE_OP(subi, 16, ., .)
 {
-	uint src = OPER_I_16();
+	uint src = OPER_I_16(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_16;
 	uint dst = m68ki_read_16(ea);
 	uint res = dst - src;
@@ -9865,7 +9865,7 @@ M68KMAKE_OP(subi, 16, ., .)
 M68KMAKE_OP(subi, 32, ., d)
 {
 	uint* r_dst = &DY;
-	uint src = OPER_I_32();
+	uint src = OPER_I_32(ctx);
 	uint dst = *r_dst;
 	uint res = dst - src;
 
@@ -9880,7 +9880,7 @@ M68KMAKE_OP(subi, 32, ., d)
 
 M68KMAKE_OP(subi, 32, ., .)
 {
-	uint src = OPER_I_32();
+	uint src = OPER_I_32(ctx);
 	uint ea = M68KMAKE_GET_EA_AY_32;
 	uint dst = m68ki_read_32(ea);
 	uint res = dst - src;
@@ -10402,7 +10402,7 @@ M68KMAKE_OP(tst, 8, ., i)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint res = OPER_I_8();
+		uint res = OPER_I_8(ctx);
 
 		FLAG_N = NFLAG_8(res);
 		FLAG_Z = res;
@@ -10488,7 +10488,7 @@ M68KMAKE_OP(tst, 16, ., i)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint res = OPER_I_16();
+		uint res = OPER_I_16(ctx);
 
 		FLAG_N = NFLAG_16(res);
 		FLAG_Z = res;
@@ -10574,7 +10574,7 @@ M68KMAKE_OP(tst, 32, ., i)
 {
 	if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 	{
-		uint res = OPER_I_32();
+		uint res = OPER_I_32(ctx);
 
 		FLAG_N = NFLAG_32(res);
 		FLAG_Z = res;
@@ -10609,7 +10609,7 @@ M68KMAKE_OP(unpk, 16, rr, .)
 		uint src = DY;
 		uint* r_dst = &DX;
 
-		*r_dst = MASK_OUT_BELOW_16(*r_dst) | (((((src << 4) & 0x0f00) | (src & 0x000f)) + OPER_I_16()) & 0xffff);
+		*r_dst = MASK_OUT_BELOW_16(*r_dst) | (((((src << 4) & 0x0f00) | (src & 0x000f)) + OPER_I_16(ctx)) & 0xffff);
 		return;
 	}
 	m68ki_exception_illegal(ctx);
@@ -10624,7 +10624,7 @@ M68KMAKE_OP(unpk, 16, mm, ax7)
 		uint src = OPER_AY_PD_8(ctx);
 		uint ea_dst;
 
-		src = (((src << 4) & 0x0f00) | (src & 0x000f)) + OPER_I_16();
+		src = (((src << 4) & 0x0f00) | (src & 0x000f)) + OPER_I_16(ctx);
 		ea_dst = EA_A7_PD_8();
 		m68ki_write_8(ea_dst, (src >> 8) & 0xff);
 		ea_dst = EA_A7_PD_8();
@@ -10643,7 +10643,7 @@ M68KMAKE_OP(unpk, 16, mm, ay7)
 		uint src = OPER_A7_PD_8(ctx);
 		uint ea_dst;
 
-		src = (((src << 4) & 0x0f00) | (src & 0x000f)) + OPER_I_16();
+		src = (((src << 4) & 0x0f00) | (src & 0x000f)) + OPER_I_16(ctx);
 		ea_dst = EA_AX_PD_8();
 		m68ki_write_8(ea_dst, (src >> 8) & 0xff);
 		ea_dst = EA_AX_PD_8();
@@ -10661,7 +10661,7 @@ M68KMAKE_OP(unpk, 16, mm, axy7)
 		uint src = OPER_A7_PD_8(ctx);
 		uint ea_dst;
 
-		src = (((src << 4) & 0x0f00) | (src & 0x000f)) + OPER_I_16();
+		src = (((src << 4) & 0x0f00) | (src & 0x000f)) + OPER_I_16(ctx);
 		ea_dst = EA_A7_PD_8();
 		m68ki_write_8(ea_dst, (src >> 8) & 0xff);
 		ea_dst = EA_A7_PD_8();
@@ -10680,7 +10680,7 @@ M68KMAKE_OP(unpk, 16, mm, .)
 		uint src = OPER_AY_PD_8(ctx);
 		uint ea_dst;
 
-		src = (((src << 4) & 0x0f00) | (src & 0x000f)) + OPER_I_16();
+		src = (((src << 4) & 0x0f00) | (src & 0x000f)) + OPER_I_16(ctx);
 		ea_dst = EA_AX_PD_8();
 		m68ki_write_8(ea_dst, (src >> 8) & 0xff);
 		ea_dst = EA_AX_PD_8();

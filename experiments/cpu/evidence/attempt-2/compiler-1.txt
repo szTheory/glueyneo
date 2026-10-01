@@ -1,0 +1,63 @@
+[1/3] Building C object experiments/cpu/CMakeFiles/cpu_runtime.dir/__/__/third_party/musashi/m68kops.c.o
+FAILED: [code=1] experiments/cpu/CMakeFiles/cpu_runtime.dir/__/__/third_party/musashi/m68kops.c.o 
+/usr/bin/cc  -Iexperiments/cpu/../../third_party/musashi -Iexperiments/cpu -O0 -MD -MT experiments/cpu/CMakeFiles/cpu_runtime.dir/__/__/third_party/musashi/m68kops.c.o -MF experiments/cpu/CMakeFiles/cpu_runtime.dir/__/__/third_party/musashi/m68kops.c.o.d -o experiments/cpu/CMakeFiles/cpu_runtime.dir/__/__/third_party/musashi/m68kops.c.o -c third_party/musashi/m68kops.c
+third_party/musashi/m68kops.c:9596:15: error: use of undeclared identifier 'int32'
+ 9596 |                         compare = (int32)(int8)compare;
+      |                                    ^~~~~
+third_party/musashi/m68kops.c:9596:22: error: use of undeclared identifier 'int8'
+ 9596 |                         compare = (int32)(int8)compare;
+      |                                           ^~~~
+third_party/musashi/m68kops.c:9623:15: error: use of undeclared identifier 'int32'
+ 9623 |                         compare = (int32)(int8)compare;
+      |                                    ^~~~~
+third_party/musashi/m68kops.c:9623:22: error: use of undeclared identifier 'int8'
+ 9623 |                         compare = (int32)(int8)compare;
+      |                                           ^~~~
+third_party/musashi/m68kops.c:9644:23: error: use of undeclared identifier 'int8'
+ 9644 |                 sint lower_bound = (int8)m68ki_read_8(ea);
+      |                                     ^~~~
+third_party/musashi/m68kops.c:9645:23: error: use of undeclared identifier 'int8'
+ 9645 |                 sint upper_bound = (int8)m68ki_read_8(ea + 1);
+      |                                     ^~~~
+third_party/musashi/m68kops.c:9648:15: error: use of undeclared identifier 'int32'
+ 9648 |                         compare = (int32)(int8)compare;
+      |                                    ^~~~~
+third_party/musashi/m68kops.c:9648:22: error: use of undeclared identifier 'int8'
+ 9648 |                         compare = (int32)(int8)compare;
+      |                                           ^~~~
+third_party/musashi/m68kops.c:9669:23: error: use of undeclared identifier 'int8'
+ 9669 |                 sint lower_bound = (int8)m68ki_read_8(ea);
+      |                                     ^~~~
+third_party/musashi/m68kops.c:9670:23: error: use of undeclared identifier 'int8'
+ 9670 |                 sint upper_bound = (int8)m68ki_read_8(ea + 1);
+      |                                     ^~~~
+third_party/musashi/m68kops.c:9673:15: error: use of undeclared identifier 'int32'
+ 9673 |                         compare = (int32)(int8)compare;
+      |                                    ^~~~~
+third_party/musashi/m68kops.c:9673:22: error: use of undeclared identifier 'int8'
+ 9673 |                         compare = (int32)(int8)compare;
+      |                                           ^~~~
+third_party/musashi/m68kops.c:9694:23: error: use of undeclared identifier 'int8'
+ 9694 |                 sint lower_bound = (int8)m68ki_read_8(ea);
+      |                                     ^~~~
+third_party/musashi/m68kops.c:9695:23: error: use of undeclared identifier 'int8'
+ 9695 |                 sint upper_bound = (int8)m68ki_read_8(ea + 1);
+      |                                     ^~~~
+third_party/musashi/m68kops.c:9698:15: error: use of undeclared identifier 'int32'
+ 9698 |                         compare = (int32)(int8)compare;
+      |                                    ^~~~~
+third_party/musashi/m68kops.c:9698:22: error: use of undeclared identifier 'int8'
+ 9698 |                         compare = (int32)(int8)compare;
+      |                                           ^~~~
+third_party/musashi/m68kops.c:9719:23: error: use of undeclared identifier 'int8'
+ 9719 |                 sint lower_bound = (int8)m68ki_read_8(ea);
+      |                                     ^~~~
+third_party/musashi/m68kops.c:9720:23: error: use of undeclared identifier 'int8'
+ 9720 |                 sint upper_bound = (int8)m68ki_read_8(ea + 1);
+      |                                     ^~~~
+third_party/musashi/m68kops.c:9723:15: error: use of undeclared identifier 'int32'
+ 9723 |                         compare = (int32)(int8)compare;
+      |                                    ^~~~~
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+20 errors generated.
+ninja: build stopped: subcommand failed.
