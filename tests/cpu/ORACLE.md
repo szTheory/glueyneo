@@ -99,3 +99,22 @@ stack/vector host-fault and odd-IRQ regressions remain required. Callback bus
 failure means terminal host fault, not a guest bus-error input; upstream's
 68010 bus-error frame cannot establish 68000 fidelity. No arbitrary bus-cycle
 suspension, board accuracy, original BIOS or game support is established.
+
+## Private continuation observations
+
+`test_state.c` checkpoints reset debt, populated next-opcode prefetch, STOP,
+masked level3, level7 edge with subsequently low pins, illegal exception entry,
+address-error entry and normal modes after RTE. Guest RAM is copied separately;
+fresh destination callbacks observe a different owner and source storage is
+destroyed/overwritten before continuation. Eight checkpoints each continue for
+six calls and compare every explicit guest field, all RAM, ordered bus traffic,
+elapsed cycles, instructions and overshoot. They establish backend continuation,
+not additional hardware timing truth. Raw arithmetic flag intermediates are
+preserved because the backend stores full results and masks their relevant bits.
+
+Removing the pending NMI edge yields D1=0 instead of1 after one call. Changing
+the prefetched ADDQ#3 word $5680 to ADDQ#5 $5a80 yields D0=12 instead of10.
+The supervised controls require those exact assertions; crashes/timeouts or
+unrelated failure do not pass. Unlike an earlier review concern, the actual
+68000 RTE template explicitly resets instruction/run modes; entry modes are
+captured and post-RTE normal modes are tested separately.

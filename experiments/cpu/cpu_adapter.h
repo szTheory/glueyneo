@@ -27,4 +27,23 @@ cpu_status cpu_set_irq(cpu_instance *cpu, unsigned level);
 typedef struct { uint32_t registers[16], pc, previous_pc, sr, stopped, irq, nmi;
  uint64_t instructions; } cpu_observation;
 cpu_status cpu_inspect(cpu_instance *cpu, cpu_observation *out);
+/* Private same-build record, no durable or public ABI promise. Every field is
+ * required; size/version reject missing or incompatible records. Host memory
+ * is copied separately. Capture/restore reject active or terminal instances. */
+#define CPU_GUEST_STATE_VERSION 1
+#define CPU_GUEST_SCALARS(F) \
+ F(ppc) F(pc) F(vbr) F(ir) F(t1_flag) F(t0_flag) F(s_flag) F(m_flag) \
+ F(x_flag) F(n_flag) F(not_z_flag) F(v_flag) F(c_flag) F(int_mask) F(int_level) \
+ F(stopped) F(pref_addr) F(pref_data) F(instr_mode) F(run_mode) \
+ F(reset_cycles) F(virq_state) F(nmi_pending)
+typedef struct {
+ uint32_t version, size, model, dar[16], dar_save[16], sp[7];
+#define CPU_STATE_DECLARE(name) uint32_t name;
+ CPU_GUEST_SCALARS(CPU_STATE_DECLARE)
+#undef CPU_STATE_DECLARE
+ uint32_t tracing, address_space, aerr_address, aerr_write_mode, aerr_fc;
+ uint64_t instructions;
+} cpu_guest_state;
+cpu_status cpu_capture(cpu_instance *cpu, cpu_guest_state *out);
+cpu_status cpu_restore(cpu_instance *cpu, const cpu_guest_state *state);
 #endif

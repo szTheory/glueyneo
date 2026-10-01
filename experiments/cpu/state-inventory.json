@@ -2,8 +2,8 @@
   "schema": 1,
   "configuration": "C17; actual m68kconf.h; 68000 only; prefetch/address errors ON; callback features OFF",
   "source_hashes": {
-    "experiments/cpu/cpu_adapter.c": "a47fb50a98791b52df55203e2e3b2b0fb7d0b548451a4d6ee5e7f0f9bdc6abf0",
-    "experiments/cpu/cpu_adapter.h": "b04f6309f5f275030bb591265a9e39a72891df164848a3ea05e0e322acc4cc31",
+    "experiments/cpu/cpu_adapter.c": "71745c08b1954685c64a3b7bae4b7a89070a2c1fb29c7093c883efc7bb6fb110",
+    "experiments/cpu/cpu_adapter.h": "e4d3f67daea476bec85ff104c6b32319217857d98afe6142dc0f0c84b822849a",
     "third_party/musashi/m68kcpu.h": "3472bb3dd777b24950e076ac68f08c67862b39100d333dd0e121f9ffb5836a75",
     "third_party/musashi/m68kcpu.c": "15b7fdab836935e8ff5d5471bd5bac05a7aebacc948c4a5cf25b1d73e8d1aa17",
     "third_party/musashi/m68kops.c": "c76b272ccaf90ddd09de03307e703a184a3974ea097791cb6b47d6c205d92680",
@@ -22,7 +22,7 @@
       "mutation_sites": [
         "cpu_adapter.c:create/reset/run/destroy"
       ],
-      "restore": "Retain destination allocator and bindings; lifecycle must be eligible for restore; apply backend member dispositions"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "cpu_allocator.allocate",
@@ -34,7 +34,7 @@
       "mutation_sites": [
         "cpu_adapter.c:create/reset/run/destroy"
       ],
-      "restore": "Retain destination allocator and bindings; lifecycle must be eligible for restore; apply backend member dispositions"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "cpu_allocator.release",
@@ -46,7 +46,7 @@
       "mutation_sites": [
         "cpu_adapter.c:create/reset/run/destroy"
       ],
-      "restore": "Retain destination allocator and bindings; lifecycle must be eligible for restore; apply backend member dispositions"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_cpu_core.cpu_type",
@@ -59,7 +59,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_cpu_core.dar",
@@ -73,7 +73,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.dar"
     },
     {
       "name": "m68ki_cpu_core.dar_save",
@@ -87,7 +88,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.dar_save"
     },
     {
       "name": "m68ki_cpu_core.ppc",
@@ -101,7 +103,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.ppc"
     },
     {
       "name": "m68ki_cpu_core.pc",
@@ -115,7 +118,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.pc"
     },
     {
       "name": "m68ki_cpu_core.sp",
@@ -129,7 +133,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.sp"
     },
     {
       "name": "m68ki_cpu_core.vbr",
@@ -143,7 +148,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.vbr"
     },
     {
       "name": "m68ki_cpu_core.sfc",
@@ -155,7 +161,7 @@
       "mutation_sites": [
         "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
       ],
-      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+      "restore": "Invariant zero from destination creation: later-model writes excluded in compiled 68000 closure; PMMU reset also writes zero. Not transported; no supported API mutates these fields."
     },
     {
       "name": "m68ki_cpu_core.dfc",
@@ -167,7 +173,7 @@
       "mutation_sites": [
         "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
       ],
-      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+      "restore": "Invariant zero from destination creation: later-model writes excluded in compiled 68000 closure; PMMU reset also writes zero. Not transported; no supported API mutates these fields."
     },
     {
       "name": "m68ki_cpu_core.cacr",
@@ -179,7 +185,7 @@
       "mutation_sites": [
         "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
       ],
-      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+      "restore": "Invariant zero from destination creation: later-model writes excluded in compiled 68000 closure; PMMU reset also writes zero. Not transported; no supported API mutates these fields."
     },
     {
       "name": "m68ki_cpu_core.caar",
@@ -191,7 +197,7 @@
       "mutation_sites": [
         "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
       ],
-      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+      "restore": "Invariant zero from destination creation: later-model writes excluded in compiled 68000 closure; PMMU reset also writes zero. Not transported; no supported API mutates these fields."
     },
     {
       "name": "m68ki_cpu_core.ir",
@@ -205,7 +211,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.ir"
     },
     {
       "name": "m68ki_cpu_core.fpiar",
@@ -217,7 +224,7 @@
       "mutation_sites": [
         "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
       ],
-      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+      "restore": "Invariant zero from destination creation: later-model writes excluded in compiled 68000 closure; PMMU reset also writes zero. Not transported; no supported API mutates these fields."
     },
     {
       "name": "m68ki_cpu_core.fpsr",
@@ -229,7 +236,7 @@
       "mutation_sites": [
         "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
       ],
-      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+      "restore": "Invariant zero from destination creation: later-model writes excluded in compiled 68000 closure; PMMU reset also writes zero. Not transported; no supported API mutates these fields."
     },
     {
       "name": "m68ki_cpu_core.fpcr",
@@ -241,7 +248,7 @@
       "mutation_sites": [
         "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
       ],
-      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+      "restore": "Invariant zero from destination creation: later-model writes excluded in compiled 68000 closure; PMMU reset also writes zero. Not transported; no supported API mutates these fields."
     },
     {
       "name": "m68ki_cpu_core.t1_flag",
@@ -255,7 +262,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.t1_flag"
     },
     {
       "name": "m68ki_cpu_core.t0_flag",
@@ -269,7 +277,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.t0_flag"
     },
     {
       "name": "m68ki_cpu_core.s_flag",
@@ -283,7 +292,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.s_flag"
     },
     {
       "name": "m68ki_cpu_core.m_flag",
@@ -297,7 +307,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.m_flag"
     },
     {
       "name": "m68ki_cpu_core.x_flag",
@@ -311,7 +322,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.x_flag"
     },
     {
       "name": "m68ki_cpu_core.n_flag",
@@ -325,7 +337,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.n_flag"
     },
     {
       "name": "m68ki_cpu_core.not_z_flag",
@@ -339,7 +352,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.not_z_flag"
     },
     {
       "name": "m68ki_cpu_core.v_flag",
@@ -353,7 +367,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.v_flag"
     },
     {
       "name": "m68ki_cpu_core.c_flag",
@@ -367,7 +382,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.c_flag"
     },
     {
       "name": "m68ki_cpu_core.int_mask",
@@ -381,7 +397,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.int_mask"
     },
     {
       "name": "m68ki_cpu_core.int_level",
@@ -395,7 +412,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.int_level"
     },
     {
       "name": "m68ki_cpu_core.stopped",
@@ -409,7 +427,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.stopped"
     },
     {
       "name": "m68ki_cpu_core.pref_addr",
@@ -423,7 +442,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.pref_addr"
     },
     {
       "name": "m68ki_cpu_core.pref_data",
@@ -437,7 +457,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.pref_data"
     },
     {
       "name": "m68ki_cpu_core.address_mask",
@@ -450,7 +471,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_cpu_core.sr_mask",
@@ -463,7 +484,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_cpu_core.instr_mode",
@@ -477,7 +498,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.instr_mode"
     },
     {
       "name": "m68ki_cpu_core.run_mode",
@@ -491,7 +513,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.run_mode"
     },
     {
       "name": "m68ki_cpu_core.has_pmmu",
@@ -504,7 +527,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_cpu_core.pmmu_enabled",
@@ -516,7 +539,7 @@
       "mutation_sites": [
         "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
       ],
-      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+      "restore": "Invariant zero from destination creation: later-model writes excluded in compiled 68000 closure; PMMU reset also writes zero. Not transported; no supported API mutates these fields."
     },
     {
       "name": "m68ki_cpu_core.fpu_just_reset",
@@ -528,7 +551,7 @@
       "mutation_sites": [
         "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
       ],
-      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+      "restore": "Invariant zero from destination creation: later-model writes excluded in compiled 68000 closure; PMMU reset also writes zero. Not transported; no supported API mutates these fields."
     },
     {
       "name": "m68ki_cpu_core.reset_cycles",
@@ -542,7 +565,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.reset_cycles"
     },
     {
       "name": "m68ki_cpu_core.cyc_bcc_notake_b",
@@ -555,7 +579,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_cpu_core.cyc_bcc_notake_w",
@@ -568,7 +592,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_cpu_core.cyc_dbcc_f_noexp",
@@ -581,7 +605,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_cpu_core.cyc_dbcc_f_exp",
@@ -594,7 +618,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_cpu_core.cyc_scc_r_true",
@@ -607,7 +631,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_cpu_core.cyc_movem_w",
@@ -620,7 +644,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_cpu_core.cyc_movem_l",
@@ -633,7 +657,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_cpu_core.cyc_shift",
@@ -646,7 +670,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_cpu_core.cyc_reset",
@@ -659,7 +683,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_cpu_core.virq_state",
@@ -673,7 +697,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.virq_state"
     },
     {
       "name": "m68ki_cpu_core.nmi_pending",
@@ -687,7 +712,8 @@
         "m68kcpu.h: instruction/exception helpers",
         "m68kops.c: generated instruction handlers"
       ],
-      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.nmi_pending"
     },
     {
       "name": "m68ki_cpu_core.mmu_crp_aptr",
@@ -699,7 +725,7 @@
       "mutation_sites": [
         "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
       ],
-      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+      "restore": "Invariant zero from destination creation: later-model writes excluded in compiled 68000 closure; PMMU reset also writes zero. Not transported; no supported API mutates these fields."
     },
     {
       "name": "m68ki_cpu_core.mmu_crp_limit",
@@ -711,7 +737,7 @@
       "mutation_sites": [
         "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
       ],
-      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+      "restore": "Invariant zero from destination creation: later-model writes excluded in compiled 68000 closure; PMMU reset also writes zero. Not transported; no supported API mutates these fields."
     },
     {
       "name": "m68ki_cpu_core.mmu_srp_aptr",
@@ -723,7 +749,7 @@
       "mutation_sites": [
         "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
       ],
-      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+      "restore": "Invariant zero from destination creation: later-model writes excluded in compiled 68000 closure; PMMU reset also writes zero. Not transported; no supported API mutates these fields."
     },
     {
       "name": "m68ki_cpu_core.mmu_srp_limit",
@@ -735,7 +761,7 @@
       "mutation_sites": [
         "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
       ],
-      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+      "restore": "Invariant zero from destination creation: later-model writes excluded in compiled 68000 closure; PMMU reset also writes zero. Not transported; no supported API mutates these fields."
     },
     {
       "name": "m68ki_cpu_core.mmu_tc",
@@ -747,7 +773,7 @@
       "mutation_sites": [
         "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
       ],
-      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+      "restore": "Invariant zero from destination creation: later-model writes excluded in compiled 68000 closure; PMMU reset also writes zero. Not transported; no supported API mutates these fields."
     },
     {
       "name": "m68ki_cpu_core.mmu_sr",
@@ -759,7 +785,7 @@
       "mutation_sites": [
         "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
       ],
-      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+      "restore": "Invariant zero from destination creation: later-model writes excluded in compiled 68000 closure; PMMU reset also writes zero. Not transported; no supported API mutates these fields."
     },
     {
       "name": "m68ki_cpu_core.cyc_instruction",
@@ -772,7 +798,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_cpu_core.cyc_exception",
@@ -785,7 +811,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_cpu_core.int_ack_callback",
@@ -797,7 +823,7 @@
       "mutation_sites": [
         "m68kcpu.c:m68k_init and callback setters"
       ],
-      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_cpu_core.bkpt_ack_callback",
@@ -809,7 +835,7 @@
       "mutation_sites": [
         "m68kcpu.c:m68k_init and callback setters"
       ],
-      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_cpu_core.reset_instr_callback",
@@ -821,7 +847,7 @@
       "mutation_sites": [
         "m68kcpu.c:m68k_init and callback setters"
       ],
-      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_cpu_core.cmpild_instr_callback",
@@ -833,7 +859,7 @@
       "mutation_sites": [
         "m68kcpu.c:m68k_init and callback setters"
       ],
-      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_cpu_core.rte_instr_callback",
@@ -845,7 +871,7 @@
       "mutation_sites": [
         "m68kcpu.c:m68k_init and callback setters"
       ],
-      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_cpu_core.tas_instr_callback",
@@ -857,7 +883,7 @@
       "mutation_sites": [
         "m68kcpu.c:m68k_init and callback setters"
       ],
-      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_cpu_core.illg_instr_callback",
@@ -869,7 +895,7 @@
       "mutation_sites": [
         "m68kcpu.c:m68k_init and callback setters"
       ],
-      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_cpu_core.trap_instr_callback",
@@ -881,7 +907,7 @@
       "mutation_sites": [
         "m68kcpu.c:m68k_init and callback setters"
       ],
-      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_cpu_core.pc_changed_callback",
@@ -893,7 +919,7 @@
       "mutation_sites": [
         "m68kcpu.c:m68k_init and callback setters"
       ],
-      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_cpu_core.set_fc_callback",
@@ -905,7 +931,7 @@
       "mutation_sites": [
         "m68kcpu.c:m68k_init and callback setters"
       ],
-      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_cpu_core.instr_hook_callback",
@@ -917,7 +943,7 @@
       "mutation_sites": [
         "m68kcpu.c:m68k_init and callback setters"
       ],
-      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_context.cpu",
@@ -942,7 +968,7 @@
         "m68kcpu.c:m68k_execute",
         "m68kcpu.h:cycle/trace/address-error macros"
       ],
-      "restore": "Never restore mid-call; fresh entry establishes cycle/error scratch. Boundary normalization needs plan 01-03 evidence"
+      "restore": "initial_cycles/remaining_cycles normalized to zero; next non-early m68k_execute replaces both before traps/IRQ; early reset-debt return reads neither. Not guest work debt (reset_cycles is captured)."
     },
     {
       "name": "m68ki_context.remaining_cycles",
@@ -955,7 +981,7 @@
         "m68kcpu.c:m68k_execute",
         "m68kcpu.h:cycle/trace/address-error macros"
       ],
-      "restore": "Never restore mid-call; fresh entry establishes cycle/error scratch. Boundary normalization needs plan 01-03 evidence"
+      "restore": "initial_cycles/remaining_cycles normalized to zero; next non-early m68k_execute replaces both before traps/IRQ; early reset-debt return reads neither. Not guest work debt (reset_cycles is captured)."
     },
     {
       "name": "m68ki_context.tracing",
@@ -963,12 +989,13 @@
       "source": "third_party/musashi/m68kcpu.h",
       "owner": "containing explicit instance",
       "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
-      "class": "transient",
+      "class": "guest",
       "mutation_sites": [
         "m68kcpu.c:m68k_execute",
         "m68kcpu.h:cycle/trace/address-error macros"
       ],
-      "restore": "Never restore mid-call; fresh entry establishes cycle/error scratch. Boundary normalization needs plan 01-03 evidence"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.tracing"
     },
     {
       "name": "m68ki_context.address_space",
@@ -976,12 +1003,13 @@
       "source": "third_party/musashi/m68kcpu.h",
       "owner": "containing explicit instance",
       "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
-      "class": "transient",
+      "class": "guest",
       "mutation_sites": [
         "m68kcpu.c:m68k_execute",
         "m68kcpu.h:cycle/trace/address-error macros"
       ],
-      "restore": "Never restore mid-call; fresh entry establishes cycle/error scratch. Boundary normalization needs plan 01-03 evidence"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.address_space"
     },
     {
       "name": "m68ki_context.aerr_address",
@@ -989,12 +1017,13 @@
       "source": "third_party/musashi/m68kcpu.h",
       "owner": "containing explicit instance",
       "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
-      "class": "transient",
+      "class": "guest",
       "mutation_sites": [
         "m68kcpu.c:m68k_execute",
         "m68kcpu.h:cycle/trace/address-error macros"
       ],
-      "restore": "Never restore mid-call; fresh entry establishes cycle/error scratch. Boundary normalization needs plan 01-03 evidence"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.aerr_address"
     },
     {
       "name": "m68ki_context.aerr_write_mode",
@@ -1002,12 +1031,13 @@
       "source": "third_party/musashi/m68kcpu.h",
       "owner": "containing explicit instance",
       "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
-      "class": "transient",
+      "class": "guest",
       "mutation_sites": [
         "m68kcpu.c:m68k_execute",
         "m68kcpu.h:cycle/trace/address-error macros"
       ],
-      "restore": "Never restore mid-call; fresh entry establishes cycle/error scratch. Boundary normalization needs plan 01-03 evidence"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.aerr_write_mode"
     },
     {
       "name": "m68ki_context.aerr_fc",
@@ -1015,12 +1045,13 @@
       "source": "third_party/musashi/m68kcpu.h",
       "owner": "containing explicit instance",
       "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
-      "class": "transient",
+      "class": "guest",
       "mutation_sites": [
         "m68kcpu.c:m68k_execute",
         "m68kcpu.h:cycle/trace/address-error macros"
       ],
-      "restore": "Never restore mid-call; fresh entry establishes cycle/error scratch. Boundary normalization needs plan 01-03 evidence"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.aerr_fc"
     },
     {
       "name": "m68ki_context.aerr_trap",
@@ -1033,7 +1064,7 @@
         "cpu_adapter.c:reset/run setjmp",
         "m68kcpu.h:address/bus trap setjmp"
       ],
-      "restore": "Never copy/serialize jump buffers; establish live frames before use. Task 2 moved traps before IRQ entry; odd IRQ stack regression passes"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_context.bus_error_trap",
@@ -1046,7 +1077,7 @@
         "cpu_adapter.c:reset/run setjmp",
         "m68kcpu.h:address/bus trap setjmp"
       ],
-      "restore": "Never copy/serialize jump buffers; establish live frames before use. Task 2 moved traps before IRQ entry; odd IRQ stack regression passes"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_context.host_fault",
@@ -1059,7 +1090,7 @@
         "cpu_adapter.c:reset/run setjmp",
         "m68kcpu.h:address/bus trap setjmp"
       ],
-      "restore": "Never copy/serialize jump buffers; establish live frames before use. Task 2 moved traps before IRQ entry; odd IRQ stack regression passes"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_context.dispatch",
@@ -1072,7 +1103,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_context.cycles",
@@ -1085,7 +1116,7 @@
         "m68kcpu.c:m68k_set_cpu_type",
         "m68kops.c:m68ki_build_opcode_table"
       ],
-      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+      "restore": "Destination creation builds own dispatch/cycles; cpu_restore calls m68k_set_cpu_type(68000) to reconstruct masks/constants and rebind own cycle-table pointer; no pointer copied."
     },
     {
       "name": "m68ki_context.bus_data",
@@ -1098,7 +1129,7 @@
         "cpu_adapter.c:cpu_create/cpu_reset",
         "m68kcpu.c:m68k_execute increments instructions"
       ],
-      "restore": "Bind destination bus; observation instruction counter policy must be explicit in private codec"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_context.bus_read",
@@ -1111,7 +1142,7 @@
         "cpu_adapter.c:cpu_create/cpu_reset",
         "m68kcpu.c:m68k_execute increments instructions"
       ],
-      "restore": "Bind destination bus; observation instruction counter policy must be explicit in private codec"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_context.bus_write",
@@ -1124,7 +1155,7 @@
         "cpu_adapter.c:cpu_create/cpu_reset",
         "m68kcpu.c:m68k_execute increments instructions"
       ],
-      "restore": "Bind destination bus; observation instruction counter policy must be explicit in private codec"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "m68ki_context.instructions",
@@ -1132,12 +1163,13 @@
       "source": "third_party/musashi/m68kcpu.h",
       "owner": "containing explicit instance",
       "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
-      "class": "host",
+      "class": "guest",
       "mutation_sites": [
         "cpu_adapter.c:cpu_create/cpu_reset",
         "m68kcpu.c:m68k_execute increments instructions"
       ],
-      "restore": "Bind destination bus; observation instruction counter policy must be explicit in private codec"
+      "restore": "cpu_capture/cpu_restore explicit field (scalar macro or indexed array); validated temporary before any application. Raw flags preserved; CCR consumers mask their defined bits.",
+      "codec": "cpu_guest_state.instructions"
     },
     {
       "name": "cpu_instance.backend",
@@ -1161,7 +1193,7 @@
       "mutation_sites": [
         "cpu_adapter.c:create/reset/run/destroy"
       ],
-      "restore": "Retain destination allocator and bindings; lifecycle must be eligible for restore; apply backend member dispositions"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "cpu_instance.faulted",
@@ -1173,7 +1205,7 @@
       "mutation_sites": [
         "cpu_adapter.c:create/reset/run/destroy"
       ],
-      "restore": "Retain destination allocator and bindings; lifecycle must be eligible for restore; apply backend member dispositions"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "cpu_instance.ready",
@@ -1185,7 +1217,7 @@
       "mutation_sites": [
         "cpu_adapter.c:create/reset/run/destroy"
       ],
-      "restore": "Retain destination allocator and bindings; lifecycle must be eligible for restore; apply backend member dispositions"
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     },
     {
       "name": "global.m68ki_cpu_names",
@@ -1270,15 +1302,27 @@
         "Static const initializer only; descriptor builder reads into per-instance arrays, no writes to shared object"
       ],
       "restore": "Retain immutable program storage"
+    },
+    {
+      "name": "cpu_instance.active",
+      "type": "int",
+      "source": "experiments/cpu/cpu_adapter.c",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "cpu_reset/cpu_run entry and all exits including longjmp"
+      ],
+      "restore": "Retain destination allocator/bus/callback bindings. Jump targets installed only by next active reset/run. Terminal/active capture and restore reject; ready is set only after validated application."
     }
   ],
   "review": {
-    "method": "Independent read-only field/source and Clang AST review; 360 seconds charged",
+    "method": "Independent compiled-state review from plan02 plus read-only plan03 codec review180 seconds; concrete reset/zero counterexamples corrected. Field mapping is checked against compiled declarations and both codec directions.",
     "limitations": [
-      "No raw upstream get/set_context continuation: misses surrounding context and transplants cycle pointer",
-      "Pending NMI survives reset; timing/continuation disposition remains plan 01-03",
-      "Same-instance callback reentry unsupported; each instance is single-execution-thread only",
-      "Odd IRQ stack counterexample repaired by current-call traps before interrupt entry; regression retained"
+      "Private same-build field codec, no durable/public ABI",
+      "Backend instruction/exception boundaries only",
+      "RTE restores normal instruction/run modes in actual 68000 template; retained modes at exception boundary are captured",
+      "Inactive later-model fields remain invariant zero; no later-model claim"
     ]
   }
 }

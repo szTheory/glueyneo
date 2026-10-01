@@ -1,0 +1,12 @@
+{
+  "status": "pass",
+  "manifest_sha256": "7bb0b2b388d960021d862e57df1bf33872771ec97a1c84ad09c17316b9e6e776",
+  "generator_sha256": "14eb2b98806e399aa19b5109c94d263712255b5d964acdcc06de62ae22fb8754",
+  "compiler": "Apple clang version 21.0.0 (clang-2100.1.1.101)",
+  "independent_parallel_directories": 2,
+  "outputs": {
+    "m68kops.c": "c76b272ccaf90ddd09de03307e703a184a3974ea097791cb6b47d6c205d92680",
+    "m68kops.h": "ca121603347991ca99656bc7c49682a01560460a22ff6a9cb7f088e8c53f78fe"
+  },
+  "elapsed_seconds": 0.165
+}

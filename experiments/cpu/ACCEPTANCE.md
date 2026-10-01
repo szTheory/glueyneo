@@ -1,6 +1,6 @@
 # CPU candidate acceptance experiment
 
-Status: **plans 01-01 and 01-02 evidence implemented; final review pending; candidate not accepted**.
+Status: **plans 01-01 through 01-03 evidence implemented; final review pending; candidate not accepted**.
 
 ## Frozen admission contract
 
@@ -238,9 +238,32 @@ hardware timing, backend continuation or backend admission is claimed.
 
 The private adapter accepts model 68000 only; instance allocation and bus
 callbacks belong to the caller. Each instance requires single-threaded access.
-Positive requests are clamped to 1,000,000 cycles with overshoot against that
-effective request; zero requests return before backend entry. The narrow
-guest and host-fault behaviors above pass execution evidence. In particular,
-reset-cycle accounting, active exception traps and complete state still need
-the later planned timing/safety qualification. There are no installed headers,
-public ABI, SDK, board, BIOS, snapshot or platform-support claims.
+Signed requests outside 0..1,000,000 reject; zero requests return before backend
+entry. Plan 01-03 replaces the earlier clamping contract. Actual elapsed time,
+overshoot and completed dispatches are reported separately; stopped idle time
+does not count as instructions. IRQ entry can share its call boundary with the
+first handler instruction. See `tests/cpu/ORACLE.md` for exact manual/configuration
+boundaries and the distinction between host faults and unsupported guest bus errors.
+
+The private same-build state record explicitly captures guest fields, including
+pending reset/IRQ/NMI, raw arithmetic flags, prefetch and exception metadata.
+Capture/restore require a complete live typed record allocation; the size/version
+fields detect incompatible records, not arbitrary byte-buffer lengths. Restore
+validates before live mutation, retains destination host bindings and rebuilds
+model constants/table pointers. Inactive later-model storage stays invariant zero.
+Request-local cycle scratch is normalized; next executing entry overwrites it.
+Counter exhaustion rejects positive work before overflow; zero remains a no-op.
+Terminal host-fault results do not quantify partial progress before the fault;
+guest memory writes already performed are not rolled back.
+The host must copy guest memory separately. No host pointers or jump frames enter
+the record. Calls on one instance cannot overlap; callback capture/restore reject.
+
+Eight original continuation checkpoints compare full records, RAM, ordered bus
+observations and actual progress after destroying and overwriting the source.
+Twenty-five malformed cases reject atomically, and mutations of pending NMI or
+prefetched ADDQ independently fail their intended guest-result comparisons.
+Reset accounting, stale NMI and BSD address-error counterexamples and narrow
+repairs remain in `evidence/plan-01-03`. No installed headers, public ABI, durable
+snapshot compatibility, board, BIOS or platform-support claim is established.
+CPU requirements and backend admission still require plan 01-04 and independent
+phase verification.

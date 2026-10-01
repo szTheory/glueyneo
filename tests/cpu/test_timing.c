@@ -75,6 +75,7 @@ static void exceptions(void) {
   r=cpu_run(m.cpu,1);TEST_ASSERT_EQUAL(8,r.elapsed);TEST_ASSERT_EQUAL(1,inspect(&m).registers[1]);
   r=cpu_run(m.cpu,1);TEST_ASSERT_EQUAL(20,r.elapsed);o=inspect(&m);
   TEST_ASSERT_EQUAL_HEX32(i==0?address+2:address,o.pc);TEST_ASSERT_EQUAL_HEX32(saved_sr,o.sr);
+  TEST_ASSERT_EQUAL_HEX32(i==2?0:0x2000,o.registers[15]);
   cpu_destroy(m.cpu);
  }
 }
@@ -101,6 +102,7 @@ static void address_error(void) {
  cpu_run_result r=cpu_run(m.cpu,1);cpu_observation o=inspect(&m);
  TEST_ASSERT_EQUAL(50,r.elapsed);TEST_ASSERT_EQUAL(0,r.instructions);
  TEST_ASSERT_EQUAL_HEX32(0x180,o.pc);TEST_ASSERT_EQUAL_HEX32(0x1ff2,o.registers[15]);
+ TEST_ASSERT_EQUAL_HEX32(0x15,ram_value(&m,0x1ff2,2)); /* read, instruction mode, supervisor data */
  TEST_ASSERT_EQUAL_HEX32(0x1001,ram_value(&m,0x1ff4,4));TEST_ASSERT_EQUAL_HEX32(0x3039,ram_value(&m,0x1ff8,2));
  TEST_ASSERT_EQUAL_HEX32(0x2704,ram_value(&m,0x1ffa,2)); /* Backend initial CCR, not hardware reset promise. */
  cpu_destroy(m.cpu);

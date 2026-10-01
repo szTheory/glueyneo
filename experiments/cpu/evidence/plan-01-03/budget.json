@@ -1,0 +1,30 @@
+{
+  "status": "pass",
+  "metrics": {
+    "attempts": 2,
+    "total_seconds": 15065,
+    "attempt_seconds": 13919,
+    "upstream_files": 6,
+    "handwritten": 2611,
+    "semantic": 483,
+    "helpers": 520,
+    "generated_files": 2,
+    "generated_lines": 36559,
+    "generated_bytes": 832698
+  },
+  "caps": {
+    "attempts": 2,
+    "total_seconds": 57600,
+    "attempt_seconds": 28800,
+    "upstream_files": 6,
+    "handwritten": 5000,
+    "semantic": 500,
+    "helpers": 600,
+    "generated_files": 2,
+    "generated_lines": 50000,
+    "generated_bytes": 2097152
+  },
+  "historical_replay": "experiments/cpu/evidence/recovery-accounting/history.json",
+  "cumulative_method": "Historical edit replay plus every subsequent committed transition and current working diff; no net-diff reset.",
+  "elapsed_seconds": 2.883
+}

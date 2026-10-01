@@ -14,6 +14,15 @@ with tempfile.TemporaryDirectory(prefix="cpu-state-control-") as directory:
         shutil.copytree(root / name, subject / name)
     path = subject / "experiments/cpu/state-inventory.json"
     original = json.loads(path.read_text())
+    unmapped = json.loads(path.read_text())
+    next(r for r in unmapped["objects"] if r["name"] == "m68ki_cpu_core.nmi_pending").pop("codec")
+    path.write_text(json.dumps(unmapped))
+    try:
+        inventory.verify(subject)
+        raise SystemExit("missing codec mapping accepted")
+    except ValueError as error:
+        assert "missing codec field mapping" in str(error), str(error)
+    path.write_text(json.dumps(original))
     missing = json.loads(path.read_text())
     missing["objects"] = [row for row in missing["objects"] if row["name"] != "m68ki_cpu_core.nmi_pending"]
     path.write_text(json.dumps(missing))
@@ -31,4 +40,4 @@ with tempfile.TemporaryDirectory(prefix="cpu-state-control-") as directory:
         raise SystemExit("new shared mutation was accepted")
     except ValueError as error:
         assert "unclassified or stale compiled declaration" in str(error), str(error)
-print("PASS: omission and injected mutable declaration controls=2")
+print("PASS: omission, missing codec mapping and injected mutable declaration controls=3")
