@@ -75,7 +75,7 @@
     "experiments/cpu/test_bus.c": "2b682a9d3fd24d0991ddfd22ea2d1d4c00888a6d497842831bb3afe0aa6aa980",
     "experiments/cpu/test_bus.h": "e37ba87dc4dfc038bf47cc2824d2ed549297c6b38ae464bfe22363727f0ef624",
     "CMakeLists.txt": "0d424c96a6e63124725242db62ebaedbfd638d6bbada5e2f4bbf7e24a11bd1fe",
-    "experiments/cpu/CMakeLists.txt": "bdd0ce033aaf4beee460afef8efaddfd89201de2daf8d0a4e97ce7698b2764f1"
+    "experiments/cpu/CMakeLists.txt": "349585577e104272e6eb39c09a68e566a4469cfcf8d2068c45a2ec5126359817"
   },
   "plan02_review": "Independent current compiled-state review: conservative 360 seconds, additive to previous charge.",
   "plan02_semantic_review": "18 lines conservatively charged: 8 core trap relocation, 3 recipe lines, 5 adapter terminal-status lines plus 2 discarded incorrect inspector call lines charged conservatively as semantic and recorded separately as helper churn. Existing classification remains unchanged.",
@@ -84,5 +84,6 @@
   "plan02_followup_review": "Independent repair/source/test diff review: 120 seconds additive; no blocking findings.",
   "plan03_task1_review": "22 lines conservative timing semantic charge: reset5, BSD2, recipe4, adapter11. Primary-manual review300 seconds additive. Header/build plumbing counted as helpers by cumulative diff. Existing caps unchanged.",
   "plan03_task2_review": "Conservative semantic charge87: adapter C61 plus header19 plus4 discarded helper lines from reviewed guard rewrites plus3 margin; all codec C/header charged even ownership plumbing. Additional reviewer180 seconds. Entire attempt2 executor interval16:40..18:50 charges7800 seconds, additive to retained3600-second prior closeout allowance. No refunds; extend if completion after18:50.",
-  "plan03_followup_review": "35 seconds read-only follow-up; reset malformed cases independently isolate supervisor/trace/mask checks; no remaining runtime blocker. Total515 seconds additional plan03 review."
+  "plan03_followup_review": "35 seconds read-only follow-up; reset malformed cases independently isolate supervisor/trace/mask checks; no remaining runtime blocker. Total515 seconds additional plan03 review.",
+  "plan04_build_review": "Three acceptance-only CTest registration lines; no runtime or semantic change; charged as helpers by cumulative diff. Host admission tools do not adapt runtime."
 }

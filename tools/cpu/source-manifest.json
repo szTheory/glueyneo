@@ -49,9 +49,9 @@
     },
     {
       "path": "experiments/cpu/CMakeLists.txt",
-      "sha256": "bdd0ce033aaf4beee460afef8efaddfd89201de2daf8d0a4e97ce7698b2764f1",
+      "sha256": "349585577e104272e6eb39c09a68e566a4469cfcf8d2068c45a2ec5126359817",
       "origin": "Glueyneo",
-      "revision": "sha256:bdd0ce033aaf4beee460afef8efaddfd89201de2daf8d0a4e97ce7698b2764f1",
+      "revision": "sha256:349585577e104272e6eb39c09a68e566a4469cfcf8d2068c45a2ec5126359817",
       "license": "MIT",
       "notice": "LICENSE",
       "copied": false,
@@ -599,6 +599,32 @@
       "host_calls": "Test/build/evidence only; host services allowed outside runtime",
       "sha256": "ae97fab2cd24b5db404572340c484a044ae48b4f0f36445ba8f2ea9d0dc485f8",
       "revision": "sha256:ae97fab2cd24b5db404572340c484a044ae48b4f0f36445ba8f2ea9d0dc485f8"
+    },
+    {
+      "path": "tools/cpu/acceptance.py",
+      "origin": "Glueyneo",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime",
+      "sha256": "cb169efcede5e856ff3131115e3780574fe29775538ba733e7cfbdfaf18c5b20",
+      "revision": "sha256:cb169efcede5e856ff3131115e3780574fe29775538ba733e7cfbdfaf18c5b20"
+    },
+    {
+      "path": "tests/cpu/test_acceptance.py",
+      "origin": "Glueyneo",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime",
+      "sha256": "860a30086e585406895e889a6a221853de583fb769ae5438f0f706a481fedfb5",
+      "revision": "sha256:860a30086e585406895e889a6a221853de583fb769ae5438f0f706a481fedfb5"
     }
   ]
 }
