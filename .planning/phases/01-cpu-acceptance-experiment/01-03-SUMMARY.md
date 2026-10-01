@@ -58,8 +58,9 @@ Both tasks are complete. No backend is admitted, no CPU requirement is marked
 complete, and no later plan was executed. Four task commits are measured from
 the persisted plan ledger before this summary commit. Actual tokens are
 ceiling(realized diff characters / 4), including source, tests and evidence,
-across 28 changed files; they are not model token consumption. Execution and
-closeout took approximately 22 minutes, ending around 18:28 UTC.
+across 28 changed files; they are not model token consumption. Source and
+evidence work took approximately 22 minutes through 18:28 UTC; metadata
+closeout followed within the conservatively charged interval.
 
 ## Timing Evidence
 
