@@ -1,0 +1,1284 @@
+{
+  "schema": 1,
+  "configuration": "C17; actual m68kconf.h; 68000 only; prefetch/address errors ON; callback features OFF",
+  "source_hashes": {
+    "experiments/cpu/cpu_adapter.c": "f61035bfc8a42611c81066caafd3d7e9b9b1bcc13b494e0ae3a4134b1b097f94",
+    "experiments/cpu/cpu_adapter.h": "9dee9922db354f00cc0261afa4f8c918532a1386bb40962bde861afae3163363",
+    "third_party/musashi/m68kcpu.h": "6c08f918ac5f77543556c3548ffc5ebc5cae3a679c733f600d143b5b7675d7ed",
+    "third_party/musashi/m68kcpu.c": "4603101c1d7e0680d8d0243df7383f449d604922942d37cfce257f537f18c293",
+    "third_party/musashi/m68kops.c": "c76b272ccaf90ddd09de03307e703a184a3974ea097791cb6b47d6c205d92680",
+    "third_party/musashi/m68kops.h": "ca121603347991ca99656bc7c49682a01560460a22ff6a9cb7f088e8c53f78fe",
+    "third_party/musashi/m68k.h": "408807a9cd8f6e94e3e10ba822416709be0c7f36ea329e5292243fd4c61a55d1",
+    "third_party/musashi/m68kconf.h": "5f0e6734df160fc6c4516550c7f251a2805503adc35ca2f41e20d3ba2e28875c"
+  },
+  "objects": [
+    {
+      "name": "cpu_allocator.userdata",
+      "type": "void *",
+      "source": "experiments/cpu/cpu_adapter.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "cpu_adapter.c:create/reset/run/destroy"
+      ],
+      "restore": "Retain destination allocator and bindings; lifecycle must be eligible for restore; apply backend member dispositions"
+    },
+    {
+      "name": "cpu_allocator.allocate",
+      "type": "void *(*)(void *, size_t)",
+      "source": "experiments/cpu/cpu_adapter.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "cpu_adapter.c:create/reset/run/destroy"
+      ],
+      "restore": "Retain destination allocator and bindings; lifecycle must be eligible for restore; apply backend member dispositions"
+    },
+    {
+      "name": "cpu_allocator.release",
+      "type": "void (*)(void *, void *)",
+      "source": "experiments/cpu/cpu_adapter.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "cpu_adapter.c:create/reset/run/destroy"
+      ],
+      "restore": "Retain destination allocator and bindings; lifecycle must be eligible for restore; apply backend member dispositions"
+    },
+    {
+      "name": "m68ki_cpu_core.cpu_type",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_cpu_core.dar",
+      "type": "uint[16]",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.dar_save",
+      "type": "uint[16]",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.ppc",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.pc",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.sp",
+      "type": "uint[7]",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.vbr",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.sfc",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest-inert",
+      "mutation_sites": [
+        "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
+      ],
+      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+    },
+    {
+      "name": "m68ki_cpu_core.dfc",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest-inert",
+      "mutation_sites": [
+        "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
+      ],
+      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+    },
+    {
+      "name": "m68ki_cpu_core.cacr",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest-inert",
+      "mutation_sites": [
+        "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
+      ],
+      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+    },
+    {
+      "name": "m68ki_cpu_core.caar",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest-inert",
+      "mutation_sites": [
+        "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
+      ],
+      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+    },
+    {
+      "name": "m68ki_cpu_core.ir",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.fpiar",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest-inert",
+      "mutation_sites": [
+        "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
+      ],
+      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+    },
+    {
+      "name": "m68ki_cpu_core.fpsr",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest-inert",
+      "mutation_sites": [
+        "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
+      ],
+      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+    },
+    {
+      "name": "m68ki_cpu_core.fpcr",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest-inert",
+      "mutation_sites": [
+        "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
+      ],
+      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+    },
+    {
+      "name": "m68ki_cpu_core.t1_flag",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.t0_flag",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.s_flag",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.m_flag",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.x_flag",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.n_flag",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.not_z_flag",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.v_flag",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.c_flag",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.int_mask",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.int_level",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.stopped",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.pref_addr",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.pref_data",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.address_mask",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_cpu_core.sr_mask",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_cpu_core.instr_mode",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.run_mode",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.has_pmmu",
+      "type": "int",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_cpu_core.pmmu_enabled",
+      "type": "int",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest-inert",
+      "mutation_sites": [
+        "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
+      ],
+      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+    },
+    {
+      "name": "m68ki_cpu_core.fpu_just_reset",
+      "type": "int",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest-inert",
+      "mutation_sites": [
+        "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
+      ],
+      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+    },
+    {
+      "name": "m68ki_cpu_core.reset_cycles",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.cyc_bcc_notake_b",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_cpu_core.cyc_bcc_notake_w",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_cpu_core.cyc_dbcc_f_noexp",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_cpu_core.cyc_dbcc_f_exp",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_cpu_core.cyc_scc_r_true",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_cpu_core.cyc_movem_w",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_cpu_core.cyc_movem_l",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_cpu_core.cyc_shift",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_cpu_core.cyc_reset",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_cpu_core.virq_state",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.nmi_pending",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest",
+      "mutation_sites": [
+        "m68kcpu.c: execute/reset/set_reg/set_irq",
+        "m68kcpu.h: instruction/exception helpers",
+        "m68kops.c: generated instruction handlers"
+      ],
+      "restore": "Preserve field value at supported instruction boundaries; plan 01-03 must prove consequential continuation"
+    },
+    {
+      "name": "m68ki_cpu_core.mmu_crp_aptr",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest-inert",
+      "mutation_sites": [
+        "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
+      ],
+      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+    },
+    {
+      "name": "m68ki_cpu_core.mmu_crp_limit",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest-inert",
+      "mutation_sites": [
+        "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
+      ],
+      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+    },
+    {
+      "name": "m68ki_cpu_core.mmu_srp_aptr",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest-inert",
+      "mutation_sites": [
+        "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
+      ],
+      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+    },
+    {
+      "name": "m68ki_cpu_core.mmu_srp_limit",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest-inert",
+      "mutation_sites": [
+        "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
+      ],
+      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+    },
+    {
+      "name": "m68ki_cpu_core.mmu_tc",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest-inert",
+      "mutation_sites": [
+        "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
+      ],
+      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+    },
+    {
+      "name": "m68ki_cpu_core.mmu_sr",
+      "type": "uint16",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "guest-inert",
+      "mutation_sites": [
+        "Zeroed by cpu_create; later-model mutations excluded by m68kconf.h; retained storage remains inventoried"
+      ],
+      "restore": "Preserve or validate zero in private codec; no supported later-model behavior"
+    },
+    {
+      "name": "m68ki_cpu_core.cyc_instruction",
+      "type": "const uint8 *",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_cpu_core.cyc_exception",
+      "type": "const uint8 *",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_cpu_core.int_ack_callback",
+      "type": "int (*)(m68ki_context *, int)",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_init and callback setters"
+      ],
+      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+    },
+    {
+      "name": "m68ki_cpu_core.bkpt_ack_callback",
+      "type": "void (*)(m68ki_context *, unsigned int)",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_init and callback setters"
+      ],
+      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+    },
+    {
+      "name": "m68ki_cpu_core.reset_instr_callback",
+      "type": "void (*)(m68ki_context *)",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_init and callback setters"
+      ],
+      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+    },
+    {
+      "name": "m68ki_cpu_core.cmpild_instr_callback",
+      "type": "void (*)(m68ki_context *, unsigned int, int)",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_init and callback setters"
+      ],
+      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+    },
+    {
+      "name": "m68ki_cpu_core.rte_instr_callback",
+      "type": "void (*)(m68ki_context *)",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_init and callback setters"
+      ],
+      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+    },
+    {
+      "name": "m68ki_cpu_core.tas_instr_callback",
+      "type": "int (*)(m68ki_context *)",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_init and callback setters"
+      ],
+      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+    },
+    {
+      "name": "m68ki_cpu_core.illg_instr_callback",
+      "type": "int (*)(m68ki_context *, int)",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_init and callback setters"
+      ],
+      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+    },
+    {
+      "name": "m68ki_cpu_core.trap_instr_callback",
+      "type": "int (*)(m68ki_context *, int)",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_init and callback setters"
+      ],
+      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+    },
+    {
+      "name": "m68ki_cpu_core.pc_changed_callback",
+      "type": "void (*)(m68ki_context *, unsigned int)",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_init and callback setters"
+      ],
+      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+    },
+    {
+      "name": "m68ki_cpu_core.set_fc_callback",
+      "type": "void (*)(m68ki_context *, unsigned int)",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_init and callback setters"
+      ],
+      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+    },
+    {
+      "name": "m68ki_cpu_core.instr_hook_callback",
+      "type": "void (*)(m68ki_context *, unsigned int)",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_init and callback setters"
+      ],
+      "restore": "Keep destination callbacks; all configurable callback features OFF; defaults receive explicit context and hold no static observations"
+    },
+    {
+      "name": "m68ki_context.cpu",
+      "type": "m68ki_cpu_core",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "container",
+      "mutation_sites": [
+        "All member sites listed separately"
+      ],
+      "restore": "Apply each m68ki_cpu_core member disposition"
+    },
+    {
+      "name": "m68ki_context.initial_cycles",
+      "type": "int",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "transient",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_execute",
+        "m68kcpu.h:cycle/trace/address-error macros"
+      ],
+      "restore": "Never restore mid-call; fresh entry establishes cycle/error scratch. Boundary normalization needs plan 01-03 evidence"
+    },
+    {
+      "name": "m68ki_context.remaining_cycles",
+      "type": "int",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "transient",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_execute",
+        "m68kcpu.h:cycle/trace/address-error macros"
+      ],
+      "restore": "Never restore mid-call; fresh entry establishes cycle/error scratch. Boundary normalization needs plan 01-03 evidence"
+    },
+    {
+      "name": "m68ki_context.tracing",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "transient",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_execute",
+        "m68kcpu.h:cycle/trace/address-error macros"
+      ],
+      "restore": "Never restore mid-call; fresh entry establishes cycle/error scratch. Boundary normalization needs plan 01-03 evidence"
+    },
+    {
+      "name": "m68ki_context.address_space",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "transient",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_execute",
+        "m68kcpu.h:cycle/trace/address-error macros"
+      ],
+      "restore": "Never restore mid-call; fresh entry establishes cycle/error scratch. Boundary normalization needs plan 01-03 evidence"
+    },
+    {
+      "name": "m68ki_context.aerr_address",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "transient",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_execute",
+        "m68kcpu.h:cycle/trace/address-error macros"
+      ],
+      "restore": "Never restore mid-call; fresh entry establishes cycle/error scratch. Boundary normalization needs plan 01-03 evidence"
+    },
+    {
+      "name": "m68ki_context.aerr_write_mode",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "transient",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_execute",
+        "m68kcpu.h:cycle/trace/address-error macros"
+      ],
+      "restore": "Never restore mid-call; fresh entry establishes cycle/error scratch. Boundary normalization needs plan 01-03 evidence"
+    },
+    {
+      "name": "m68ki_context.aerr_fc",
+      "type": "uint",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "transient",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_execute",
+        "m68kcpu.h:cycle/trace/address-error macros"
+      ],
+      "restore": "Never restore mid-call; fresh entry establishes cycle/error scratch. Boundary normalization needs plan 01-03 evidence"
+    },
+    {
+      "name": "m68ki_context.aerr_trap",
+      "type": "jmp_buf",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "cpu_adapter.c:reset/run setjmp",
+        "m68kcpu.h:address/bus trap setjmp"
+      ],
+      "restore": "Never copy/serialize jump buffers; establish live frames before use. IRQ-before-trap hazard is pending task 2"
+    },
+    {
+      "name": "m68ki_context.bus_error_trap",
+      "type": "jmp_buf",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "cpu_adapter.c:reset/run setjmp",
+        "m68kcpu.h:address/bus trap setjmp"
+      ],
+      "restore": "Never copy/serialize jump buffers; establish live frames before use. IRQ-before-trap hazard is pending task 2"
+    },
+    {
+      "name": "m68ki_context.host_fault",
+      "type": "jmp_buf",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "cpu_adapter.c:reset/run setjmp",
+        "m68kcpu.h:address/bus trap setjmp"
+      ],
+      "restore": "Never copy/serialize jump buffers; establish live frames before use. IRQ-before-trap hazard is pending task 2"
+    },
+    {
+      "name": "m68ki_context.dispatch",
+      "type": "void (*[65536])(m68ki_context *)",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_context.cycles",
+      "type": "unsigned char[5][65536]",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "derived",
+      "mutation_sites": [
+        "m68kcpu.c:m68k_set_cpu_type",
+        "m68kops.c:m68ki_build_opcode_table"
+      ],
+      "restore": "Rebuild for 68000; instruction-cycle pointer binds destination cycles[0], exception-cycle pointer binds const exception table"
+    },
+    {
+      "name": "m68ki_context.bus_data",
+      "type": "void *",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "cpu_adapter.c:cpu_create/cpu_reset",
+        "m68kcpu.c:m68k_execute increments instructions"
+      ],
+      "restore": "Bind destination bus; observation instruction counter policy must be explicit in private codec"
+    },
+    {
+      "name": "m68ki_context.bus_read",
+      "type": "int (*)(void *, unsigned int, unsigned int, unsigned int *)",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "cpu_adapter.c:cpu_create/cpu_reset",
+        "m68kcpu.c:m68k_execute increments instructions"
+      ],
+      "restore": "Bind destination bus; observation instruction counter policy must be explicit in private codec"
+    },
+    {
+      "name": "m68ki_context.bus_write",
+      "type": "int (*)(void *, unsigned int, unsigned int, unsigned int)",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "cpu_adapter.c:cpu_create/cpu_reset",
+        "m68kcpu.c:m68k_execute increments instructions"
+      ],
+      "restore": "Bind destination bus; observation instruction counter policy must be explicit in private codec"
+    },
+    {
+      "name": "m68ki_context.instructions",
+      "type": "unsigned long long",
+      "source": "third_party/musashi/m68kcpu.h",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "cpu_adapter.c:cpu_create/cpu_reset",
+        "m68kcpu.c:m68k_execute increments instructions"
+      ],
+      "restore": "Bind destination bus; observation instruction counter policy must be explicit in private codec"
+    },
+    {
+      "name": "cpu_instance.backend",
+      "type": "m68ki_context",
+      "source": "experiments/cpu/cpu_adapter.c",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "container",
+      "mutation_sites": [
+        "cpu_adapter.c:create/reset/run/destroy"
+      ],
+      "restore": "Retain destination allocator and bindings; lifecycle must be eligible for restore; apply backend member dispositions"
+    },
+    {
+      "name": "cpu_instance.allocator",
+      "type": "cpu_allocator",
+      "source": "experiments/cpu/cpu_adapter.c",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "cpu_adapter.c:create/reset/run/destroy"
+      ],
+      "restore": "Retain destination allocator and bindings; lifecycle must be eligible for restore; apply backend member dispositions"
+    },
+    {
+      "name": "cpu_instance.faulted",
+      "type": "int",
+      "source": "experiments/cpu/cpu_adapter.c",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "cpu_adapter.c:create/reset/run/destroy"
+      ],
+      "restore": "Retain destination allocator and bindings; lifecycle must be eligible for restore; apply backend member dispositions"
+    },
+    {
+      "name": "cpu_instance.ready",
+      "type": "int",
+      "source": "experiments/cpu/cpu_adapter.c",
+      "owner": "containing explicit instance",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "host",
+      "mutation_sites": [
+        "cpu_adapter.c:create/reset/run/destroy"
+      ],
+      "restore": "Retain destination allocator and bindings; lifecycle must be eligible for restore; apply backend member dispositions"
+    },
+    {
+      "name": "global.m68ki_cpu_names",
+      "type": "const char *const[11]",
+      "source": "third_party/musashi/m68kcpu.c",
+      "owner": "shared immutable",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "immutable",
+      "mutation_sites": [
+        "Static const initializer only; descriptor builder reads into per-instance arrays, no writes to shared object"
+      ],
+      "restore": "Retain immutable program storage"
+    },
+    {
+      "name": "global.m68ki_shift_8_table",
+      "type": "const uint8[65]",
+      "source": "third_party/musashi/m68kcpu.c",
+      "owner": "shared immutable",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "immutable",
+      "mutation_sites": [
+        "Static const initializer only; descriptor builder reads into per-instance arrays, no writes to shared object"
+      ],
+      "restore": "Retain immutable program storage"
+    },
+    {
+      "name": "global.m68ki_shift_16_table",
+      "type": "const uint16[65]",
+      "source": "third_party/musashi/m68kcpu.c",
+      "owner": "shared immutable",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "immutable",
+      "mutation_sites": [
+        "Static const initializer only; descriptor builder reads into per-instance arrays, no writes to shared object"
+      ],
+      "restore": "Retain immutable program storage"
+    },
+    {
+      "name": "global.m68ki_shift_32_table",
+      "type": "const uint[65]",
+      "source": "third_party/musashi/m68kcpu.c",
+      "owner": "shared immutable",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "immutable",
+      "mutation_sites": [
+        "Static const initializer only; descriptor builder reads into per-instance arrays, no writes to shared object"
+      ],
+      "restore": "Retain immutable program storage"
+    },
+    {
+      "name": "global.m68ki_exception_cycle_table",
+      "type": "const uint8[5][256]",
+      "source": "third_party/musashi/m68kcpu.c",
+      "owner": "shared immutable",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "immutable",
+      "mutation_sites": [
+        "Static const initializer only; descriptor builder reads into per-instance arrays, no writes to shared object"
+      ],
+      "restore": "Retain immutable program storage"
+    },
+    {
+      "name": "global.m68ki_ea_idx_cycle_table",
+      "type": "const uint8[64]",
+      "source": "third_party/musashi/m68kcpu.c",
+      "owner": "shared immutable",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "immutable",
+      "mutation_sites": [
+        "Static const initializer only; descriptor builder reads into per-instance arrays, no writes to shared object"
+      ],
+      "restore": "Retain immutable program storage"
+    },
+    {
+      "name": "global.m68k_opcode_handler_table",
+      "type": "const opcode_handler_struct[1968]",
+      "source": "third_party/musashi/m68kops.c",
+      "owner": "shared immutable",
+      "callback_access": "Only the passed context or its explicit bus userdata; no current-context routing",
+      "class": "immutable",
+      "mutation_sites": [
+        "Static const initializer only; descriptor builder reads into per-instance arrays, no writes to shared object"
+      ],
+      "restore": "Retain immutable program storage"
+    }
+  ],
+  "review": {
+    "method": "Independent read-only field/source and Clang AST review; 360 seconds charged",
+    "limitations": [
+      "No raw upstream get/set_context continuation: misses surrounding context and transplants cycle pointer",
+      "Pending NMI survives reset; timing/continuation disposition remains plan 01-03",
+      "Same-instance callback reentry unsupported; each instance is single-execution-thread only",
+      "Odd IRQ stack can use stale address-error frame before current trap; task 2 regression required"
+    ]
+  }
+}

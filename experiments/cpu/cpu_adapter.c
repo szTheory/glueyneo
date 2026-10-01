@@ -10,7 +10,14 @@ struct cpu_instance {
  int faulted, ready;
 };
 cpu_status cpu_inspect(cpu_instance *c,cpu_observation *out) {
- (void)c; (void)out; return CPU_STATUS_INVALID_ARGUMENT;
+ if(!c || !out) return CPU_STATUS_INVALID_ARGUMENT;
+ memset(out,0,sizeof(*out));
+ for(unsigned i=0;i<16;i++) out->registers[i]=c->backend.cpu.dar[i];
+ out->pc=c->backend.cpu.pc; out->previous_pc=c->backend.cpu.ppc;
+ out->sr=m68k_get_reg(&c->backend,NULL,M68K_REG_SR);
+ out->stopped=c->backend.cpu.stopped; out->irq=c->backend.cpu.int_level;
+ out->nmi=c->backend.cpu.nmi_pending; out->instructions=c->backend.instructions;
+ return CPU_STATUS_OK;
 }
 /* A host fault always returns to the current reset/run call, never to a
  * previous call's jump frame. The failed guest is terminal until reset. */

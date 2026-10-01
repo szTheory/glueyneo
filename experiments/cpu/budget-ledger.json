@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "plan-01-01-complete-not-admitted",
+  "status": "plan-01-02-in-progress-not-admitted",
   "recovery_accounting_commit": "b3776f7",
   "freeze_commit": "f9e7dda6ce3593dc176ebfc99f9a6c504bf423f8",
   "historical_base": "f4eb1afe8b20299619abd93c48ed564e1780e617",
@@ -21,8 +21,8 @@
     {
       "number": 2,
       "start": "2026-10-01T17:01:29Z",
-      "end": "2026-10-01T17:35:11Z",
-      "charged_seconds": 3311,
+      "end": null,
+      "charged_seconds": null,
       "reason": "User-authorized final substantive attempt; repair recorded compiler counterexamples only within cumulative frozen caps. Recovery preparation from 16:40Z is also charged to this attempt."
     }
   ],
@@ -60,7 +60,7 @@
   ],
   "recovery_semantic_lines": 29,
   "recovery_semantic_review": "Initial direct immediate context calls and private enum renaming are plumbing only. First correction charges all 14 template type-replacement lines twice plus one recipe line, conservatively semantic. Independent line-pair review reduces historical ceiling471 to327 by excluding144 pure context lines; current ceiling356.",
-  "additional_review_seconds": 3679,
+  "additional_review_seconds": 4039,
   "additional_review_reason": "79 seconds observed independent review plus a conservative 3600-second upper-bound charge reserved for metadata/evidence closeout after the executor interval ends. This is an explicit overcharge, not a claim of measured active duration; closeout must finish by 18:35:11Z or extend accounting.",
   "reviewed_source_hashes": {
     "third_party/musashi/m68k.h": "408807a9cd8f6e94e3e10ba822416709be0c7f36ea329e5292243fd4c61a55d1",
@@ -70,11 +70,12 @@
     "third_party/musashi/m68k_in.c": "9b93f69a639a7f0086d8fa4e20771249a66500a88774a1f26da61a930cdb12d6",
     "third_party/musashi/m68kmake.c": "14eb2b98806e399aa19b5109c94d263712255b5d964acdcc06de62ae22fb8754",
     "tools/cpu/adapt.py": "da81f988bd764c7716ebef7f5b088c0581eb9ead7781ec825c1a3c38735f18d8",
-    "experiments/cpu/cpu_adapter.c": "4224e06bfc4ff8bcc4ecd071fa9e635940e8a029a980c642317e19458d65d250",
-    "experiments/cpu/cpu_adapter.h": "077d4fd4d0b9817c8a033c7675d0322d6e33bd15e6c25f8867cf092afc71a322",
+    "experiments/cpu/cpu_adapter.c": "f61035bfc8a42611c81066caafd3d7e9b9b1bcc13b494e0ae3a4134b1b097f94",
+    "experiments/cpu/cpu_adapter.h": "9dee9922db354f00cc0261afa4f8c918532a1386bb40962bde861afae3163363",
     "experiments/cpu/test_bus.c": "2b682a9d3fd24d0991ddfd22ea2d1d4c00888a6d497842831bb3afe0aa6aa980",
     "experiments/cpu/test_bus.h": "e37ba87dc4dfc038bf47cc2824d2ed549297c6b38ae464bfe22363727f0ef624",
     "CMakeLists.txt": "0d424c96a6e63124725242db62ebaedbfd638d6bbada5e2f4bbf7e24a11bd1fe",
-    "experiments/cpu/CMakeLists.txt": "6968fb79f53b4ee49fb01056779521d6268226286b1ae31d1bfa4ad5d5e9d880"
-  }
+    "experiments/cpu/CMakeLists.txt": "e7ee3b9ddbc835719084df8abb311161488ad24173a8b476b0a45df8a3e801b1"
+  },
+  "plan02_review": "Independent current compiled-state review: conservative 360 seconds, additive to previous charge."
 }
