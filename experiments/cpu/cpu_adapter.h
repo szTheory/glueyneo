@@ -17,4 +17,8 @@ void cpu_destroy(cpu_instance *cpu);
 cpu_status cpu_reset(cpu_instance *cpu);
 cpu_run_result cpu_run(cpu_instance *cpu, uint64_t cycles);
 cpu_status cpu_set_irq(cpu_instance *cpu, unsigned level);
+/* Private observation only, not a serialized state or public ABI. */
+typedef struct { uint32_t registers[16], pc, previous_pc, sr, stopped, irq, nmi;
+ uint64_t instructions; } cpu_observation;
+cpu_status cpu_inspect(cpu_instance *cpu, cpu_observation *out);
 #endif

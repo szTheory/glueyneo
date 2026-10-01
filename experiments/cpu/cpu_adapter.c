@@ -9,6 +9,9 @@ struct cpu_instance {
  cpu_allocator allocator;
  int faulted, ready;
 };
+cpu_status cpu_inspect(cpu_instance *c,cpu_observation *out) {
+ (void)c; (void)out; return CPU_STATUS_INVALID_ARGUMENT;
+}
 /* A host fault always returns to the current reset/run call, never to a
  * previous call's jump frame. The failed guest is terminal until reset. */
 static unsigned read_bus(m68ki_context *ctx, unsigned address, unsigned width) {

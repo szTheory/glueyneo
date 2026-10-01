@@ -1,0 +1,10 @@
+{
+ "command": "ctest --test-dir build/cpu -R ^cpu_isolation$ --output-on-failure --no-tests=error",
+ "exitCode": 1,
+ "output": "TAP version 13\nnot ok 1 - reset_registers_are_observable\n1..1\n# tests 1\n# pass 0\n# fail 1\n",
+ "raw_output": "tests/cpu/test_isolation.c:21:reset_registers_are_observable:FAIL: Expected 0 Was 1:instance register observation available\n1 Tests 1 Failures 0 Ignored",
+ "targetTest": "reset_registers_are_observable",
+ "targetFile": "tests/cpu/test_isolation.c",
+ "expected": "CPU_STATUS_OK and reset register values",
+ "actual": "CPU_STATUS_INVALID_ARGUMENT before observation implementation"
+}
