@@ -6,9 +6,9 @@ current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: paused
 stopped_at: User requested pause before 01-04 independent review; workflow/model checkpoints enabled
-last_updated: "2026-10-01T19:06:34.898Z"
+last_updated: "2026-10-01T19:35:26Z"
 last_activity: 2026-10-01
-last_activity_desc: Paused at user request; 01-04 Task 1 complete, independent review pending; auto advancement disabled
+last_activity_desc: GSD health audited; only non-repairable W019 methodology-registry mismatch and expected 01-04 incomplete-plan info; awaiting authorization for Task 2
 state_head: 6be55c2fd1ea402fe36f55774ed5226e968908b3
 progress:
   total_phases: 3
@@ -109,6 +109,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-01T19:06:34.898Z
-Stopped at: User-requested pause before 01-04 Task 2 independent review
+Last session: 2026-10-01T19:35:26Z
+Stopped at: Session resumed; awaiting user model selection and authorization for 01-04 Task 2 independent acceptance review
 Resume file: .planning/phases/01-cpu-acceptance-experiment/.continue-here.md
