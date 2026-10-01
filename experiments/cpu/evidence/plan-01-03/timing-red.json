@@ -1,0 +1,10 @@
+{
+  "command": "ctest --test-dir build/cpu -R '^cpu_timing$' --output-on-failure --no-tests=error",
+  "exitCode": 8,
+  "output": "TAP version 13\nnot ok 1 - request_rejected\n1..1\n# tests 1\n# pass 0\n# fail 1\n",
+  "raw_output": "tests/cpu/test_timing.c:11:request_rejected:FAIL: Expected 1 Was 4:out-of-range request must reject\n1 Tests 1 Failures 0 Ignored",
+  "targetTest": "request_rejected",
+  "targetFile": "tests/cpu/test_timing.c",
+  "expected": "out-of-range request rejected",
+  "actual": "silently clamped and executed through STOP"
+}
