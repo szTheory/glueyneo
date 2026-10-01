@@ -2,9 +2,9 @@
 schema_version: 1
 open_count: 1
 waived_count: 0
-fixed_count: 4
-total_count: 5
-last_updated: 2026-10-01T18:01:36.386Z
+fixed_count: 6
+total_count: 7
+last_updated: 2026-10-01T18:25:33.655Z
 ---
 
 # Broken Windows Ledger
@@ -20,6 +20,8 @@ last_updated: 2026-10-01T18:01:36.386Z
 | 3 | 01 | todo | third_party/musashi/m68kmake.c | 53 | Retained upstream TODOs and incomplete later-model instructions/timings are not qualified; compiled 68000 closure and semantic review remain pending. | open |  | 2026-10-01T16:33:14.562Z |  |
 | 4 | 01 | deviation | experiments/cpu/evidence/plan-01-02/irq-fault-counterexample.json |  | Odd IRQ stack host crash repaired within final adaptation attempt; regression and clean sanitizer evidence retained | fixed |  | 2026-10-01T18:01:10.588Z | 2026-10-01T18:01:36.109Z |
 | 5 | 01 | deviation | experiments/cpu/evidence/plan-01-02/sanitizer-counterexample.json |  | UBSan test-bus pointer arithmetic repaired; fatal diagnostics enabled and affected lanes rerun clean | fixed |  | 2026-10-01T18:01:36.231Z | 2026-10-01T18:01:36.386Z |
+| 6 | 01 | deviation | experiments/cpu/evidence/plan-01-03/reset-counterexamples.md |  | Reset debt, stale NMI and BSD address-error boundary counterexamples repaired within the final frozen attempt | fixed |  | 2026-10-01T18:25:33.135Z | 2026-10-01T18:25:33.314Z |
+| 7 | 01 | deviation | experiments/cpu/evidence/plan-01-03/state-review-counterexamples.md |  | Inconsistent reset records and zero-request counter guard repaired with atomicity and no-op regressions | fixed |  | 2026-10-01T18:25:33.491Z | 2026-10-01T18:25:33.655Z |
 
 ````json
 [
@@ -86,6 +88,32 @@ last_updated: 2026-10-01T18:01:36.386Z
     "reason": "",
     "recorded_at": "2026-10-01T18:01:36.231Z",
     "resolved_at": "2026-10-01T18:01:36.386Z",
+    "milestone": "v0.1"
+  },
+  {
+    "id": 6,
+    "kind": "deviation",
+    "phase": "01",
+    "file": "experiments/cpu/evidence/plan-01-03/reset-counterexamples.md",
+    "line": null,
+    "description": "Reset debt, stale NMI and BSD address-error boundary counterexamples repaired within the final frozen attempt",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-01T18:25:33.135Z",
+    "resolved_at": "2026-10-01T18:25:33.314Z",
+    "milestone": "v0.1"
+  },
+  {
+    "id": 7,
+    "kind": "deviation",
+    "phase": "01",
+    "file": "experiments/cpu/evidence/plan-01-03/state-review-counterexamples.md",
+    "line": null,
+    "description": "Inconsistent reset records and zero-request counter guard repaired with atomicity and no-op regressions",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-01T18:25:33.491Z",
+    "resolved_at": "2026-10-01T18:25:33.655Z",
     "milestone": "v0.1"
   }
 ]
