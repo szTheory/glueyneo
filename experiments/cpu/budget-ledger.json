@@ -58,28 +58,29 @@
     "third_party/musashi/m68kops.c",
     "third_party/musashi/m68kops.h"
   ],
-  "recovery_semantic_lines": 47,
+  "recovery_semantic_lines": 69,
   "recovery_semantic_review": "Initial direct immediate context calls and private enum renaming are plumbing only. First correction charges all 14 template type-replacement lines twice plus one recipe line, conservatively semantic. Independent line-pair review reduces historical ceiling471 to327 by excluding144 pure context lines; current ceiling356.",
-  "additional_review_seconds": 4159,
+  "additional_review_seconds": 4459,
   "additional_review_reason": "79 seconds observed independent review plus a conservative 3600-second upper-bound charge reserved for metadata/evidence closeout after the executor interval ends. This is an explicit overcharge, not a claim of measured active duration; closeout must finish by 18:35:11Z or extend accounting.",
   "reviewed_source_hashes": {
     "third_party/musashi/m68k.h": "408807a9cd8f6e94e3e10ba822416709be0c7f36ea329e5292243fd4c61a55d1",
-    "third_party/musashi/m68kcpu.h": "6c08f918ac5f77543556c3548ffc5ebc5cae3a679c733f600d143b5b7675d7ed",
-    "third_party/musashi/m68kcpu.c": "71696061be049d46d2621ac5d8511c5afd06d7e35485b30f295d2638e4cd690f",
+    "third_party/musashi/m68kcpu.h": "3472bb3dd777b24950e076ac68f08c67862b39100d333dd0e121f9ffb5836a75",
+    "third_party/musashi/m68kcpu.c": "15b7fdab836935e8ff5d5471bd5bac05a7aebacc948c4a5cf25b1d73e8d1aa17",
     "third_party/musashi/m68kconf.h": "5f0e6734df160fc6c4516550c7f251a2805503adc35ca2f41e20d3ba2e28875c",
     "third_party/musashi/m68k_in.c": "9b93f69a639a7f0086d8fa4e20771249a66500a88774a1f26da61a930cdb12d6",
     "third_party/musashi/m68kmake.c": "14eb2b98806e399aa19b5109c94d263712255b5d964acdcc06de62ae22fb8754",
-    "tools/cpu/adapt.py": "d43eb6c2e981a06466a93d51ae943e996ab6507b78984dcb30bd6b7bfcc66bed",
-    "experiments/cpu/cpu_adapter.c": "5de2a53ea6efbf7cd7f0e10916de8e9dbab0bf287463927bcf67ee7c2d4980ce",
-    "experiments/cpu/cpu_adapter.h": "a630d1a60a1dba6470d6eea0ea7952bf0b5043f5155dee5f5fd4636c9c449335",
+    "tools/cpu/adapt.py": "9ce4d9ee0534f421e1012629eeafb1936ea08633a5120b34a972eba78dddf659",
+    "experiments/cpu/cpu_adapter.c": "a47fb50a98791b52df55203e2e3b2b0fb7d0b548451a4d6ee5e7f0f9bdc6abf0",
+    "experiments/cpu/cpu_adapter.h": "b04f6309f5f275030bb591265a9e39a72891df164848a3ea05e0e322acc4cc31",
     "experiments/cpu/test_bus.c": "2b682a9d3fd24d0991ddfd22ea2d1d4c00888a6d497842831bb3afe0aa6aa980",
     "experiments/cpu/test_bus.h": "e37ba87dc4dfc038bf47cc2824d2ed549297c6b38ae464bfe22363727f0ef624",
     "CMakeLists.txt": "0d424c96a6e63124725242db62ebaedbfd638d6bbada5e2f4bbf7e24a11bd1fe",
-    "experiments/cpu/CMakeLists.txt": "4944cbe0b58656d55374d33f5b29eeb8919ccb05b6b2511a59650f2d736c3849"
+    "experiments/cpu/CMakeLists.txt": "ca6a6c1f41528d2c70d74b0c1d1f81291b843a1bd829c5d48b49cac52b7efc6a"
   },
   "plan02_review": "Independent current compiled-state review: conservative 360 seconds, additive to previous charge.",
   "plan02_semantic_review": "18 lines conservatively charged: 8 core trap relocation, 3 recipe lines, 5 adapter terminal-status lines plus 2 discarded incorrect inspector call lines charged conservatively as semantic and recorded separately as helper churn. Existing classification remains unchanged.",
   "discarded_helper_lines": 2,
   "discarded_helper_reason": "Task1 inspector initially called m68k_get_reg with two arguments; one line replaced before GREEN (one added plus one deleted), not captured by committed transitions; conservatively charged separately.",
-  "plan02_followup_review": "Independent repair/source/test diff review: 120 seconds additive; no blocking findings."
+  "plan02_followup_review": "Independent repair/source/test diff review: 120 seconds additive; no blocking findings.",
+  "plan03_task1_review": "22 lines conservative timing semantic charge: reset5, BSD2, recipe4, adapter11. Primary-manual review300 seconds additive. Header/build plumbing counted as helpers by cumulative diff. Existing caps unchanged."
 }

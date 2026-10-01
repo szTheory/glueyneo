@@ -18,7 +18,10 @@ typedef struct { uint64_t requested, elapsed, instructions, overshoot;
 cpu_status cpu_create(unsigned model, cpu_bus bus, cpu_allocator allocator, cpu_instance **out);
 void cpu_destroy(cpu_instance *cpu);
 cpu_status cpu_reset(cpu_instance *cpu);
-cpu_run_result cpu_run(cpu_instance *cpu, uint64_t cycles);
+/* Signed requests 0..1000000. INT_MAX headroom exceeds the qualified maximum
+ * combined reset40 + IRQ44 + instruction132 debit; zero never consumes debt. */
+#define CPU_MAX_CYCLE_REQUEST INT64_C(1000000)
+cpu_run_result cpu_run(cpu_instance *cpu, int64_t cycles);
 cpu_status cpu_set_irq(cpu_instance *cpu, unsigned level);
 /* Private observation only, not a serialized state or public ABI. */
 typedef struct { uint32_t registers[16], pc, previous_pc, sr, stopped, irq, nmi;

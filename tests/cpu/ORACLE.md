@@ -57,3 +57,45 @@ ownership baselines for full trace/cycle comparisons; it is deliberately not
 an independent hardware timing oracle. The explicit arithmetic effects and
 swapped-owner failure make instance contamination consequential. Fault bytes
 are original mutations of these fixtures, with no external firmware.
+
+## Plan 01-03 timing contract
+
+The same primary manuals were re-read on 2026-10-01. UM Table 8-14,
+printed p.8-11: external reset recovery40, TRAP/illegal/privilege34,
+autovector IRQ44 (four-clock acknowledge), address error50. Table8-12,
+p.8-10: RESET instruction132, RTE20, STOP4. Reset40 starts after reset/halt
+are sampled negated; it is not the RESET instruction's external signal.
+PRM pp.6-83–6-85 defines RESET/RTE/STOP effects and encodings.
+
+`test_timing.c` uses original words: TRAP#0=$4e40, ILLEGAL=$4afc,
+MOVE #imm,SR=$46fc, MOVE.W ($1001).L,D0=$3039 $0000 $1001,
+NOP=$4e71, RESET=$4e70 and the earlier ADDQ/RTE/STOP words. UM Fig6-5,
+p.6-10 supplies the normal six-byte SR16/PC32 frame; Fig6-7 p.6-17 supplies
+the address-error status16/address32/IR16/SR16/PC32 frame. Sections6.3.5/6.3.7
+distinguish following PC for TRAP and faulting PC for privilege violation;
+the illegal opcode also saves its own PC. Address-error saved PC is not
+claimed to be a general restart address (§6.3.9.1).
+
+Exact cycle expectations apply only to these original fixtures and configuration.
+Signed requests 0..1000000 are accepted, others reject atomically. This bound
+leaves signed-int headroom beyond qualified reset40+IRQ44+RESET132 work.
+Zero consumes nothing; reset debt is consumed once as a whole. Requests39/40/41
+therefore return40/40/44. STOP idle consumes the requested time with zero
+instructions. Instruction counts count completed dispatches, including ordinary
+instruction-triggered exceptions; an address-error longjmp does not complete
+the dispatch and counts zero. Counters and elapsed outputs use uint64_t.
+
+IRQ entry at a call boundary coalesces with the first handler instruction:
+request1 returns44+8=52 and one completed ADDQ. Unmasking with MOVE to SR
+returns16+44=60, at handler entry. These are documented backend boundaries,
+not extra hardware exception clocks. Split40+12 and combined52 reach the same
+guest boundary; arbitrary request partitions need not do so. Backend CCR at
+creation is known fixture state, not a hardware guarantee for reset CCR.
+
+The native Apple/BSD sigsetjmp path is compiled and tested. Its signature uses
+the explicit context, and its exhausted-budget return now matches the generic
+path: address error50 returns before executing the handler. Original nested
+stack/vector host-fault and odd-IRQ regressions remain required. Callback bus
+failure means terminal host fault, not a guest bus-error input; upstream's
+68010 bus-error frame cannot establish 68000 fidelity. No arbitrary bus-cycle
+suspension, board accuracy, original BIOS or game support is established.

@@ -929,6 +929,7 @@ void m68k_set_cpu_type(m68ki_context *ctx, unsigned int cpu_type)
 /* ASG: removed per-instruction interrupt checks */
 int m68k_execute(m68ki_context *ctx, int num_cycles)
 {
+	int requested_cycles = num_cycles;
 	/* eat up any reset cycles */
 	if (RESET_CYCLES) {
 	    int rc = RESET_CYCLES;
@@ -940,7 +941,7 @@ int m68k_execute(m68ki_context *ctx, int num_cycles)
 
 	/* Set our pool of clock cycles available */
 	SET_CYCLES(num_cycles);
-	m68ki_initial_cycles = num_cycles;
+	m68ki_initial_cycles = requested_cycles;
 	/* Current-call traps must precede IRQ stack/vector accesses. */
 	m68ki_set_address_error_trap();
 	m68ki_check_bus_error_trap();
@@ -1098,6 +1099,7 @@ void m68k_pulse_reset(m68ki_context *ctx)
 	FLAG_INT_MASK = 0x0700;
 	CPU_INT_LEVEL = 0;
 	m68ki_cpu.virq_state = 0;
+	m68ki_cpu.nmi_pending = 0;
 	/* Reset VBR */
 	REG_VBR = 0;
 	/* Go to supervisor mode */

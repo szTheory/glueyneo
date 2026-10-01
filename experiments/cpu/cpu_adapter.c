@@ -57,15 +57,14 @@ cpu_status cpu_reset(cpu_instance *c) {
  if(setjmp(c->backend.host_fault)) {c->faulted=1; return CPU_STATUS_HOST_FAULT;}
  m68k_pulse_reset(&c->backend); c->ready=1; return CPU_STATUS_OK;
 }
-cpu_run_result cpu_run(cpu_instance *c,uint64_t cycles) {
- cpu_run_result r={.requested=cycles,.reason=CPU_STATUS_INVALID_ARGUMENT};
- if(!c) return r;
+cpu_run_result cpu_run(cpu_instance *c,int64_t cycles) {
+ cpu_run_result r={.requested=cycles<0?0:(uint64_t)cycles,.reason=CPU_STATUS_INVALID_ARGUMENT};
+ if(!c || cycles<0 || cycles>CPU_MAX_CYCLE_REQUEST) return r;
  if(c->faulted) {r.reason=CPU_STATUS_HOST_FAULT; return r;}
  if(!c->ready) return r;
  r.reason=CPU_STATUS_BUDGET;
  if(!cycles) return r;
- /* Leave ample signed headroom for a single instruction/exception overshoot. */
- unsigned request=cycles>1000000 ? 1000000 : (unsigned)cycles;
+ unsigned request=(unsigned)cycles;
  unsigned long long before=c->backend.instructions;
  if(setjmp(c->backend.host_fault)) {c->faulted=1; r.reason=CPU_STATUS_HOST_FAULT; return r;}
  r.elapsed=(unsigned)m68k_execute(&c->backend,(int)request);

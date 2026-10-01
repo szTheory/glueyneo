@@ -625,6 +625,8 @@ typedef uint32 uint64;
 				m68ki_remaining_cycles = 0; \
 			return m68ki_initial_cycles; \
 		} \
+		if(GET_CYCLES() <= 0) \
+			return m68ki_initial_cycles - GET_CYCLES(); \
 	}
 
 #define m68ki_check_address_error(ADDR, WRITE_MODE, FC) \

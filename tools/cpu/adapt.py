@@ -104,6 +104,10 @@ dst.mkdir(parents=True, exist_ok=True)
 # Recorded odd IRQ-stack counterexample: establish traps before IRQ entry.
 s['m68kcpu.c'] = s['m68kcpu.c'].replace('\tm68ki_initial_cycles = num_cycles;\n', '\tm68ki_initial_cycles = num_cycles;\n\t/* Current-call traps must precede IRQ stack/vector accesses. */\n\tm68ki_set_address_error_trap();\n\tm68ki_check_bus_error_trap();\n')
 s['m68kcpu.c'] = s['m68kcpu.c'].replace('\t\t/* Return point if we had an address error */\n\t\tm68ki_set_address_error_trap(); /* auto-disable (see m68kcpu.h) */\n\n\t\tm68ki_check_bus_error_trap();\n\n', '')
+# Preserved reset counterexamples: include debt and clear the stale NMI edge.
+s['m68kcpu.c'] = s['m68kcpu.c'].replace('int num_cycles)\n{', 'int num_cycles)\n{\n\tint requested_cycles = num_cycles;').replace('m68ki_initial_cycles = num_cycles;', 'm68ki_initial_cycles = requested_cycles;').replace('m68ki_cpu.virq_state = 0;', 'm68ki_cpu.virq_state = 0;\n\tm68ki_cpu.nmi_pending = 0;')
+# BSD address error must stop at the same exhausted boundary as generic setjmp.
+s['m68kcpu.h'] = s['m68kcpu.h'].replace('\t\t\treturn m68ki_initial_cycles; \\\n\t\t} \\\n\t}', '\t\t\treturn m68ki_initial_cycles; \\\n\t\t} \\\n\t\tif(GET_CYCLES() <= 0) \\\n\t\t\treturn m68ki_initial_cycles - GET_CYCLES(); \\\n\t}', 1)
 for name,text in s.items():
     (dst/name).write_text(text)
 print(f"Adapted {len(names)} inputs; propagated {len(functions)} functions")
