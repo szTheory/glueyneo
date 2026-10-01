@@ -2,9 +2,9 @@
 schema_version: 1
 open_count: 1
 waived_count: 0
-fixed_count: 2
-total_count: 3
-last_updated: 2026-10-01T17:35:11.098Z
+fixed_count: 4
+total_count: 5
+last_updated: 2026-10-01T18:01:36.386Z
 ---
 
 # Broken Windows Ledger
@@ -18,6 +18,8 @@ last_updated: 2026-10-01T17:35:11.098Z
 | 1 | 01 | unrun-verify | .planning/phases/01-cpu-acceptance-experiment/01-01-PLAN.md |  | Task 1 guest/control CTests and Task 2 closure/budget controls remain unrun because the adapted backend does not compile. | fixed |  | 2026-10-01T16:32:36.895Z | 2026-10-01T17:35:10.918Z |
 | 2 | 01 | unmet-truth | experiments/cpu/cpu_adapter.c | 63 | CPU experiment does not compile: CPU_STOPPED macro collision and generated immediate OPER_I calls omit context; source adaptation halted after three correction attempts. | fixed |  | 2026-10-01T16:33:14.447Z | 2026-10-01T17:35:11.098Z |
 | 3 | 01 | todo | third_party/musashi/m68kmake.c | 53 | Retained upstream TODOs and incomplete later-model instructions/timings are not qualified; compiled 68000 closure and semantic review remain pending. | open |  | 2026-10-01T16:33:14.562Z |  |
+| 4 | 01 | deviation | experiments/cpu/evidence/plan-01-02/irq-fault-counterexample.json |  | Odd IRQ stack host crash repaired within final adaptation attempt; regression and clean sanitizer evidence retained | fixed |  | 2026-10-01T18:01:10.588Z | 2026-10-01T18:01:36.109Z |
+| 5 | 01 | deviation | experiments/cpu/evidence/plan-01-02/sanitizer-counterexample.json |  | UBSan test-bus pointer arithmetic repaired; fatal diagnostics enabled and affected lanes rerun clean | fixed |  | 2026-10-01T18:01:36.231Z | 2026-10-01T18:01:36.386Z |
 
 ````json
 [
@@ -58,6 +60,32 @@ last_updated: 2026-10-01T17:35:11.098Z
     "reason": "",
     "recorded_at": "2026-10-01T16:33:14.562Z",
     "resolved_at": null,
+    "milestone": "v0.1"
+  },
+  {
+    "id": 4,
+    "kind": "deviation",
+    "phase": "01",
+    "file": "experiments/cpu/evidence/plan-01-02/irq-fault-counterexample.json",
+    "line": null,
+    "description": "Odd IRQ stack host crash repaired within final adaptation attempt; regression and clean sanitizer evidence retained",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-01T18:01:10.588Z",
+    "resolved_at": "2026-10-01T18:01:36.109Z",
+    "milestone": "v0.1"
+  },
+  {
+    "id": 5,
+    "kind": "deviation",
+    "phase": "01",
+    "file": "experiments/cpu/evidence/plan-01-02/sanitizer-counterexample.json",
+    "line": null,
+    "description": "UBSan test-bus pointer arithmetic repaired; fatal diagnostics enabled and affected lanes rerun clean",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-01T18:01:36.231Z",
+    "resolved_at": "2026-10-01T18:01:36.386Z",
     "milestone": "v0.1"
   }
 ]
