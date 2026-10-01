@@ -106,5 +106,6 @@
     }
   },
   "resolve_model_ids": "omit",
-  "granularity": "coarse"
+  "granularity": "coarse",
+  "runtime": "codex"
 }

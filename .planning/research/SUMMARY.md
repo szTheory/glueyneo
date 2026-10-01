@@ -132,7 +132,7 @@ Recommend **three coarse phases for v0.1**, each decomposed into small reviewabl
 - **Needs focused research:** Phase 1 CPU admission; Phase 2 diagnostic/oracle and supported bus subset; Phase 3 release action/service behavior and deployed authority.
 - **Standard patterns, skip broad re-research:** C17 target-local CMake/CTest, small Unity runners, opaque lifecycle, exported/relocated packages and compiled examples. Implementation receipts are still required.
 - **Next-milestone research:** Z80/YM2610 C feasibility and state, device timing/output boundaries, diagnostic firmware, sound oracle, actual RetroArch automation, continuation and persistence semantics.
-- Use `$gsd-plan-phase --research-phase <N>` for the uncertain parts when their phases are allocated. Existing research and dated preparation should seed bounded questions.
+- Use `$gsd-plan-phase <N> --research` for the uncertain parts when their phases are allocated. Existing research and dated preparation should seed bounded questions.
 
 ## Confidence Assessment
 
