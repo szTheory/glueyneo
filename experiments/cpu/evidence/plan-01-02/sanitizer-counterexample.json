@@ -1,0 +1,11 @@
+{
+ "schema": 1,
+ "lane": "Apple Clang 21 ASan+UBSan",
+ "ctest_exit": 0,
+ "actual_outcome": "fail: UBSan diagnostic despite successful CTest status",
+ "location": "tests/cpu/isolation_fixture.h:40",
+ "diagnostic": "runtime error: index 8188 out of bounds for type uint8_t[4096]",
+ "cause": "m->ram+a-0x1000 forms an out-of-bounds intermediate pointer before subtracting the base",
+ "repair": "m->ram+(a-0x1000) after existing validated address/width checks; compile sanitizer lane with -fno-sanitize-recover=all",
+ "scope": "Test-only bus; no runtime semantic change; preserve and rerun affected lanes"
+}

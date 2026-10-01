@@ -101,6 +101,9 @@ for feature in ('010','EC020','020','030','040','PMMU'):
 for feature in ('PREFETCH','ADDRESS_ERROR','TRACE'):
     s['m68kconf.h'] = re.sub(r'(#define M68K_EMULATE_'+feature+r'\s+)M68K_OPT_OFF', r'\1M68K_OPT_ON', s['m68kconf.h'])
 dst.mkdir(parents=True, exist_ok=True)
+# Recorded odd IRQ-stack counterexample: establish traps before IRQ entry.
+s['m68kcpu.c'] = s['m68kcpu.c'].replace('\tm68ki_initial_cycles = num_cycles;\n', '\tm68ki_initial_cycles = num_cycles;\n\t/* Current-call traps must precede IRQ stack/vector accesses. */\n\tm68ki_set_address_error_trap();\n\tm68ki_check_bus_error_trap();\n')
+s['m68kcpu.c'] = s['m68kcpu.c'].replace('\t\t/* Return point if we had an address error */\n\t\tm68ki_set_address_error_trap(); /* auto-disable (see m68kcpu.h) */\n\n\t\tm68ki_check_bus_error_trap();\n\n', '')
 for name,text in s.items():
     (dst/name).write_text(text)
 print(f"Adapted {len(names)} inputs; propagated {len(functions)} functions")

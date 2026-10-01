@@ -5,11 +5,12 @@
   "firmware_required": false,
   "recipe": "guest_fixture.c constructs a 512-byte zero-filled ROM with SSP/PC vectors and a 14-byte arithmetic/store/STOP program",
   "oracle": "ORACLE.md: Motorola M68000PRM 1992 and MC68000UM ninth edition 1993",
-  "status": "encoded; adapted backend execution blocked by compilation",
+  "status": "base guest and isolation extension executed in native experiment; no backend admission",
+  "isolation_extension": "isolation_fixture.h adds original IRQ7 vector, ADDQ.L #1,D1/RTE handler and resumed STOP; source identity bound by tools/cpu/source-manifest.json",
   "scenarios": [
     {"id": 0, "operand": 7, "addend": 3, "store_address": 4096, "expected": 10},
     {"id": 1, "operand": 11, "addend": 5, "store_address": 4100, "expected": 16}
   ],
   "negative_control": "increment executed MOVEQ operand in scenario 0, retain expected 10; require actual 11 assertion failure",
-  "digest_status": "not yet compiled/exported and qualified; no admitted binary fixture"
+  "digest_status": "source recipes bound by source-manifest and plan-01-02 qualification receipt; no separately distributed binary fixture"
 }

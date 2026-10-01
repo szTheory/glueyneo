@@ -24,6 +24,7 @@ static void allocations_and_witness(void) {
 }
 static void faults_preserve_witness(void) {
  for(unsigned kind=0;kind<7;kind++) {
+  printf("fault_case=%u\n",kind);
   machine m,w;prepare_machine(&m,1);prepare_machine(&w,0);
   TEST_ASSERT_EQUAL(CPU_STATUS_OK,create_machine(&m));TEST_ASSERT_EQUAL(CPU_STATUS_OK,create_machine(&w));
   TEST_ASSERT_EQUAL(CPU_STATUS_OK,cpu_reset(w.cpu));
@@ -60,6 +61,7 @@ static void invalid_requests(void) {
  TEST_ASSERT_EQUAL(CPU_STATUS_INVALID_ARGUMENT,cpu_reset(NULL));cpu_destroy(NULL);
 }
 int main(int argc,char **argv) {
+ setbuf(stdout,NULL);
  UNITY_BEGIN();RUN_TEST(terminal_fault_rejects_inspection);
  if(argc==1) {RUN_TEST(allocations_and_witness);RUN_TEST(faults_preserve_witness);RUN_TEST(invalid_requests);}
  (void)argv;return UNITY_END();

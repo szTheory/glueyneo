@@ -148,6 +148,9 @@ def budget(root=ROOT):
         helpers += diff_count(root, commit + "^", commit, HELPERS)
     upstream += diff_count(root, "HEAD", None, UPSTREAM)
     helpers += diff_count(root, "HEAD", None, HELPERS)
+    discarded = ledger.get("discarded_helper_lines", 0)
+    require(type(discarded) is int and discarded >= 0, "invalid discarded helper charge")
+    helpers += discarded
     attempts = ledger["attempts"]
     require([a["number"] for a in attempts] == list(range(1, len(attempts) + 1)), "duplicate or missing attempt")
     seconds = []
@@ -325,9 +328,13 @@ def closure(root=ROOT):
     return {"status": "pass", "manifest_sha256": sha(root / "tools/cpu/source-manifest.json"), "lanes": lanes,
             "scope": "native compiler closure only; no platform matrix or backend admission"}
 
+def state_inventory(root=ROOT):
+    from state_inventory import verify
+    return verify(root)
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("budget", "closure", "regenerate", "self-test"))
+    parser.add_argument("command", choices=("budget", "closure", "regenerate", "self-test", "state_inventory"))
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--receipt", type=Path)
     parser.add_argument("--interrupt", action="store_true")

@@ -2,10 +2,10 @@
   "schema": 1,
   "configuration": "C17; actual m68kconf.h; 68000 only; prefetch/address errors ON; callback features OFF",
   "source_hashes": {
-    "experiments/cpu/cpu_adapter.c": "f61035bfc8a42611c81066caafd3d7e9b9b1bcc13b494e0ae3a4134b1b097f94",
-    "experiments/cpu/cpu_adapter.h": "9dee9922db354f00cc0261afa4f8c918532a1386bb40962bde861afae3163363",
+    "experiments/cpu/cpu_adapter.c": "5de2a53ea6efbf7cd7f0e10916de8e9dbab0bf287463927bcf67ee7c2d4980ce",
+    "experiments/cpu/cpu_adapter.h": "a630d1a60a1dba6470d6eea0ea7952bf0b5043f5155dee5f5fd4636c9c449335",
     "third_party/musashi/m68kcpu.h": "6c08f918ac5f77543556c3548ffc5ebc5cae3a679c733f600d143b5b7675d7ed",
-    "third_party/musashi/m68kcpu.c": "4603101c1d7e0680d8d0243df7383f449d604922942d37cfce257f537f18c293",
+    "third_party/musashi/m68kcpu.c": "71696061be049d46d2621ac5d8511c5afd06d7e35485b30f295d2638e4cd690f",
     "third_party/musashi/m68kops.c": "c76b272ccaf90ddd09de03307e703a184a3974ea097791cb6b47d6c205d92680",
     "third_party/musashi/m68kops.h": "ca121603347991ca99656bc7c49682a01560460a22ff6a9cb7f088e8c53f78fe",
     "third_party/musashi/m68k.h": "408807a9cd8f6e94e3e10ba822416709be0c7f36ea329e5292243fd4c61a55d1",
@@ -1033,7 +1033,7 @@
         "cpu_adapter.c:reset/run setjmp",
         "m68kcpu.h:address/bus trap setjmp"
       ],
-      "restore": "Never copy/serialize jump buffers; establish live frames before use. IRQ-before-trap hazard is pending task 2"
+      "restore": "Never copy/serialize jump buffers; establish live frames before use. Task 2 moved traps before IRQ entry; odd IRQ stack regression passes"
     },
     {
       "name": "m68ki_context.bus_error_trap",
@@ -1046,7 +1046,7 @@
         "cpu_adapter.c:reset/run setjmp",
         "m68kcpu.h:address/bus trap setjmp"
       ],
-      "restore": "Never copy/serialize jump buffers; establish live frames before use. IRQ-before-trap hazard is pending task 2"
+      "restore": "Never copy/serialize jump buffers; establish live frames before use. Task 2 moved traps before IRQ entry; odd IRQ stack regression passes"
     },
     {
       "name": "m68ki_context.host_fault",
@@ -1059,7 +1059,7 @@
         "cpu_adapter.c:reset/run setjmp",
         "m68kcpu.h:address/bus trap setjmp"
       ],
-      "restore": "Never copy/serialize jump buffers; establish live frames before use. IRQ-before-trap hazard is pending task 2"
+      "restore": "Never copy/serialize jump buffers; establish live frames before use. Task 2 moved traps before IRQ entry; odd IRQ stack regression passes"
     },
     {
       "name": "m68ki_context.dispatch",
@@ -1278,7 +1278,7 @@
       "No raw upstream get/set_context continuation: misses surrounding context and transplants cycle pointer",
       "Pending NMI survives reset; timing/continuation disposition remains plan 01-03",
       "Same-instance callback reentry unsupported; each instance is single-execution-thread only",
-      "Odd IRQ stack can use stale address-error frame before current trap; task 2 regression required"
+      "Odd IRQ stack counterexample repaired by current-call traps before interrupt entry; regression retained"
     ]
   }
 }

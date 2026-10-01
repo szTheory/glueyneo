@@ -5,7 +5,7 @@
   "scope": "Every distributed C/header/Python source in the experiment, copied/generated dependency file, build file and dependency notice. Historical evidence and planning documents are preserved separately; this manifest identity is recorded by receipts to avoid a self-hash.",
   "adaptation_recipe": {
     "path": "tools/cpu/adapt.py",
-    "sha256": "da81f988bd764c7716ebef7f5b088c0581eb9ead7781ec825c1a3c38735f18d8"
+    "sha256": "d43eb6c2e981a06466a93d51ae943e996ab6507b78984dcb30bd6b7bfcc66bed"
   },
   "host_call_dispositions": {
     "memcpy": "explicit buffer copy",
@@ -49,9 +49,9 @@
     },
     {
       "path": "experiments/cpu/CMakeLists.txt",
-      "sha256": "e7ee3b9ddbc835719084df8abb311161488ad24173a8b476b0a45df8a3e801b1",
+      "sha256": "4944cbe0b58656d55374d33f5b29eeb8919ccb05b6b2511a59650f2d736c3849",
       "origin": "Glueyneo",
-      "revision": "sha256:e7ee3b9ddbc835719084df8abb311161488ad24173a8b476b0a45df8a3e801b1",
+      "revision": "sha256:4944cbe0b58656d55374d33f5b29eeb8919ccb05b6b2511a59650f2d736c3849",
       "license": "MIT",
       "notice": "LICENSE",
       "copied": false,
@@ -62,9 +62,9 @@
     },
     {
       "path": "experiments/cpu/cpu_adapter.c",
-      "sha256": "f61035bfc8a42611c81066caafd3d7e9b9b1bcc13b494e0ae3a4134b1b097f94",
+      "sha256": "5de2a53ea6efbf7cd7f0e10916de8e9dbab0bf287463927bcf67ee7c2d4980ce",
       "origin": "Glueyneo",
-      "revision": "sha256:f61035bfc8a42611c81066caafd3d7e9b9b1bcc13b494e0ae3a4134b1b097f94",
+      "revision": "sha256:5de2a53ea6efbf7cd7f0e10916de8e9dbab0bf287463927bcf67ee7c2d4980ce",
       "license": "MIT",
       "notice": "LICENSE",
       "copied": false,
@@ -77,9 +77,9 @@
     },
     {
       "path": "experiments/cpu/cpu_adapter.h",
-      "sha256": "9dee9922db354f00cc0261afa4f8c918532a1386bb40962bde861afae3163363",
+      "sha256": "a630d1a60a1dba6470d6eea0ea7952bf0b5043f5155dee5f5fd4636c9c449335",
       "origin": "Glueyneo",
-      "revision": "sha256:9dee9922db354f00cc0261afa4f8c918532a1386bb40962bde861afae3163363",
+      "revision": "sha256:a630d1a60a1dba6470d6eea0ea7952bf0b5043f5155dee5f5fd4636c9c449335",
       "license": "MIT",
       "notice": "LICENSE",
       "copied": false,
@@ -162,8 +162,8 @@
       ],
       "distributed": true,
       "host_calls": "Test/build/evidence only; host services allowed outside runtime",
-      "sha256": "f173578d3924e53b87e64e9b003453dd159f9733977bd328fd375f74adbe4b82",
-      "revision": "sha256:f173578d3924e53b87e64e9b003453dd159f9733977bd328fd375f74adbe4b82"
+      "sha256": "f53554e48a270accd9cdba59e7fbd588f2097afe1d9f961f7d4ab02606acfab8",
+      "revision": "sha256:f53554e48a270accd9cdba59e7fbd588f2097afe1d9f961f7d4ab02606acfab8"
     },
     {
       "path": "tests/cpu/isolation_negative.py",
@@ -220,6 +220,21 @@
       "revision": "sha256:e13a9e00b446fb4b699bf837c1516f3496dfec58360ee54f50547ac3d55dd2dd"
     },
     {
+      "path": "tests/cpu/test_faults.c",
+      "origin": "Glueyneo",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [
+        "test"
+      ],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime",
+      "sha256": "1654cf9c1b50d4997aeb08a27ea281f2ce1151297cf466681da207d8f7b612c2",
+      "revision": "sha256:1654cf9c1b50d4997aeb08a27ea281f2ce1151297cf466681da207d8f7b612c2"
+    },
+    {
       "path": "tests/cpu/test_guest.c",
       "sha256": "e63bcd7d187bc21dce01cd8513f4b490e7e6aa2bb2d2f91454037ad829e5ebe0",
       "origin": "Glueyneo",
@@ -233,6 +248,19 @@
       ],
       "distributed": true,
       "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "tests/cpu/test_inventory.py",
+      "origin": "Glueyneo",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime",
+      "sha256": "dc8078de0b313c937379542a3e0e0862e66705f05d869a5b546f7cb85c11de0e",
+      "revision": "sha256:dc8078de0b313c937379542a3e0e0862e66705f05d869a5b546f7cb85c11de0e"
     },
     {
       "path": "tests/cpu/test_isolation.c",
@@ -307,7 +335,7 @@
     },
     {
       "path": "third_party/musashi/m68kcpu.c",
-      "sha256": "4603101c1d7e0680d8d0243df7383f449d604922942d37cfce257f537f18c293",
+      "sha256": "71696061be049d46d2621ac5d8511c5afd06d7e35485b30f295d2638e4cd690f",
       "origin": "Musashi",
       "revision": "313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd",
       "license": "retained permissive upstream grant",
@@ -453,9 +481,9 @@
     },
     {
       "path": "tools/cpu/adapt.py",
-      "sha256": "da81f988bd764c7716ebef7f5b088c0581eb9ead7781ec825c1a3c38735f18d8",
+      "sha256": "d43eb6c2e981a06466a93d51ae943e996ab6507b78984dcb30bd6b7bfcc66bed",
       "origin": "Glueyneo",
-      "revision": "sha256:da81f988bd764c7716ebef7f5b088c0581eb9ead7781ec825c1a3c38735f18d8",
+      "revision": "sha256:d43eb6c2e981a06466a93d51ae943e996ab6507b78984dcb30bd6b7bfcc66bed",
       "license": "MIT",
       "notice": "LICENSE",
       "copied": false,
@@ -466,9 +494,9 @@
     },
     {
       "path": "tools/cpu/audit.py",
-      "sha256": "460e40b681bddeb960873b91d8ce23d1f59870e52f82c2641c187134a1a2100e",
+      "sha256": "338315bcd59b4f27374638c58c8c4027e6f69a9cf8fa99c64bae384c429d36f3",
       "origin": "Glueyneo",
-      "revision": "sha256:460e40b681bddeb960873b91d8ce23d1f59870e52f82c2641c187134a1a2100e",
+      "revision": "sha256:338315bcd59b4f27374638c58c8c4027e6f69a9cf8fa99c64bae384c429d36f3",
       "license": "MIT",
       "notice": "LICENSE",
       "copied": false,
@@ -489,6 +517,19 @@
       "compiled": [],
       "distributed": true,
       "host_calls": "Test/build/evidence only; host services allowed outside runtime"
+    },
+    {
+      "path": "tools/cpu/record_safety.py",
+      "origin": "Glueyneo",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "copied": false,
+      "generated": false,
+      "compiled": [],
+      "distributed": true,
+      "host_calls": "Test/build/evidence only; host services allowed outside runtime",
+      "sha256": "dc28453f72e88a72f44b47098d915c29731ace0b5fd4f60541dfb2a8ceff389d",
+      "revision": "sha256:dc28453f72e88a72f44b47098d915c29731ace0b5fd4f60541dfb2a8ceff389d"
     },
     {
       "path": "tools/cpu/red.py",

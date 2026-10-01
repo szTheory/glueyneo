@@ -941,6 +941,9 @@ int m68k_execute(m68ki_context *ctx, int num_cycles)
 	/* Set our pool of clock cycles available */
 	SET_CYCLES(num_cycles);
 	m68ki_initial_cycles = num_cycles;
+	/* Current-call traps must precede IRQ stack/vector accesses. */
+	m68ki_set_address_error_trap();
+	m68ki_check_bus_error_trap();
 
 	/* See if interrupts came in */
 	m68ki_check_interrupts(ctx);
@@ -948,11 +951,6 @@ int m68k_execute(m68ki_context *ctx, int num_cycles)
 	/* Make sure we're not stopped */
 	if(!CPU_STOPPED)
 	{
-		/* Return point if we had an address error */
-		m68ki_set_address_error_trap(); /* auto-disable (see m68kcpu.h) */
-
-		m68ki_check_bus_error_trap();
-
 		/* Main loop.  Keep going until we run out of clock cycles */
 		do
 		{

@@ -39,3 +39,21 @@ The negative control increments the executed MOVEQ operand while retaining
 expected 10. It must fail the arithmetic/store assertion with actual 11 in a
 supervised subprocess; crash, timeout and unrelated failure are rejected.
 Backend reset accounting and prefetch behavior require separate timing tests.
+
+## Plan 01-02 isolation extension
+
+Original MIT extension in `isolation_fixture.h`, reviewed 2026-10-01 against
+the same primary manuals: vector 31 at $7c points to $180. UM table 6-2
+(printed p.6-7) gives the level-7 autovector; section 6.3.2 (pp.6-12–6-13)
+describes the level-7 edge irrespective of the interrupt mask. The handler
+words `5281 4e73` encode `ADDQ.L #1,D1; RTE`; ADDQ fields follow PRM
+pp.4-11–4-12, and RTE's encoding/restoration follows PRM p.6-84. A second
+`STOP #$2700` at $10e ends the resumed sequence. The test knows its initial
+zeroed backend D1 as an implementation baseline, not a hardware reset promise.
+
+Nine observations cover zero work, reset debt, each original instruction,
+IRQ entry/handler addition, RTE and resumed STOP. Isolated execution supplies
+ownership baselines for full trace/cycle comparisons; it is deliberately not
+an independent hardware timing oracle. The explicit arithmetic effects and
+swapped-owner failure make instance contamination consequential. Fault bytes
+are original mutations of these fixtures, with no external firmware.

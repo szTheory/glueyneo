@@ -37,7 +37,7 @@ static int access_bus(machine *m,uint32_t a,unsigned w,uint32_t *v,int write) {
  if(w!=1 && w!=2 && w!=4) return 0;
  if((write?m->fail_write:m->fail_read) && a==m->fail_address) return 0;
  if(!write && a<=512 && w<=512-a) p=m->rom+a;
- if(a>=0x1000 && a<=0x2000 && w<=0x2000-a) p=m->ram+a-0x1000;
+ if(a>=0x1000 && a<=0x2000 && w<=0x2000-a) p=m->ram+(a-0x1000);
  if(!p) return 0;
  if(write) {for(unsigned i=0;i<w;i++) p[i]=(uint8_t)(*v>>(8*(w-i-1)));}
  else {*v=0;for(unsigned i=0;i<w;i++) *v=(*v<<8)|p[i];}

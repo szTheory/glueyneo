@@ -1,6 +1,6 @@
 # CPU candidate acceptance experiment
 
-Status: **plan 01-01 complete; private guest and native source audits pass; candidate not accepted**.
+Status: **plans 01-01 and 01-02 evidence implemented; final review pending; candidate not accepted**.
 
 ## Frozen admission contract
 
@@ -194,9 +194,49 @@ and regression establish the generator-template role. Neither changed CPU
 runtime source or weakened a negative control. Isolation, timing, continuation,
 remaining host safety and the final admission decision remain later-plan work.
 
-## Private contract limitations
+## Plan 01-02 isolation and host safety — 2026-10-01
 
-The proposed adapter accepts model 68000 only; instance allocation and bus
+The private observer exposes registers and lifecycle observations without a
+snapshot format. Distinct A/B guests match isolated baselines across **64
+interleavings and 64 concurrent pairs**, each at nine actual guest boundaries.
+Comparisons include all 4,096 RAM bytes, all D/A registers, PC/SR/IRQ/STOP,
+instruction counts, actual cycles, and bounded ordered read/write owner traces.
+The IRQ fixture uses level-7 autovector, ADDQ.L D1 and RTE. These comparisons
+establish ownership, not the still-pending independent timing oracle.
+Sixteen separate CTest processes each start two construction workers behind a
+barrier before any backend exists. Each instance allocates **853,104 bytes in
+one allocation** on this native ABI. Creation durations are printed as measured
+host observations, not performance guarantees. Swapping A's baseline with B
+fails the intended ownership assertion.
+
+`state-inventory.json` covers 98 compiled objects/fields including seven
+immutable shared tables. Compiler AST extraction checks exact declaration
+names/types and binds reviewed dispositions to source hashes. Disposable
+omitted-NMI and injected-mutable-global controls both fail as intended.
+
+Fault injection covers the one actual allocation position with zero live
+allocations and an independently executing healthy witness. Seven malformed
+guest cases cover reset, fetch, store, IRQ stack, exception stack, secondary
+address-error stack failure, and odd IRQ stack. The latter reproduced SIGSEGV;
+`evidence/plan-01-02/irq-fault-counterexample.json` preserves the reproduction
+and final-attempt scope update. Current-call backend traps now precede IRQ
+entry, and unrecoverable backend HALT becomes a terminal adapter host fault.
+Failed instances reject execution, IRQ changes and inspection; reset/destruction
+remain permitted. No third attempt or frozen-cap change was made.
+
+Actual Apple Clang 21.0.0 runtime objects and tests were instrumented separately:
+ASan+UBSan first diagnosed intermediate out-of-bounds pointer arithmetic in
+the test bus despite CTest returning success. The preserved sanitizer
+counterexample explains the parenthesized offset fix and added fatal-diagnostic
+flag. Final ASan+UBSan guest/fault/isolation and TSan isolation/cold outcomes,
+exact identities, flags, test results and logs are bound by
+`evidence/plan-01-02/qualification.json`. Queried distinct GCC/Clang executables
+are unavailable; that lane is unsupported, not passing. No platform matrix,
+hardware timing, backend continuation or backend admission is claimed.
+
+## Remaining private contract limitations
+
+The private adapter accepts model 68000 only; instance allocation and bus
 callbacks belong to the caller. Each instance requires single-threaded access.
 Positive requests are clamped to 1,000,000 cycles with overshoot against that
 effective request; zero requests return before backend entry. The narrow

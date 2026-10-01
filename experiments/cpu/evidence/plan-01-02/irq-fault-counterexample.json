@@ -1,0 +1,13 @@
+{
+ "schema": 1,
+ "source_commit": "d5a5355",
+ "working_change": "Terminal inspection and IRQ setters reject failed instances before the experiment; no vendor change yet",
+ "command": "build/cpu/experiments/cpu/cpu_faults",
+ "exit_code": -11,
+ "outcome": "host SIGSEGV",
+ "completed_cases": ["reset vector", "fetch", "store", "IRQ stack callback rejection", "illegal exception stack callback rejection", "odd fetch with secondary stack rejection"],
+ "failing_case": "case 6: reset SSP=0x2001, consume reset debt, queue IRQ7, run 200 cycles",
+ "source_cause": "m68k_execute checks interrupts before establishing the current address-error trap; odd stack access jumps through stale or zero jump buffer",
+ "scope_update": "Final attempt 2 only: move existing address/bus trap setup before IRQ checking in m68kcpu.c and matching adaptation recipe; map unrecoverable backend HALT to terminal adapter host fault. Regenerate outputs and rerun source, budget, isolation, fault and sanitizer gates.",
+ "constraints": "No new attempt, no cap change, no new handwritten upstream file; preserve original six-file list and generated recipe"
+}

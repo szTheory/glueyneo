@@ -1,0 +1,121 @@
+Start testing: Oct 01 13:57 EDT
+----------------------------------------------------------
+1/25 Testing: cpu_guest
+1/25 Test: cpu_guest
+Command: "<source>/build/cpu-asan/experiments/cpu/cpu_guest"
+Directory: <source>/build/cpu-asan/experiments/cpu
+"cpu_guest" start time: Oct 01 13:57 EDT
+Output:
+----------------------------------------------------------
+<source>/tests/cpu/test_guest.c:52:guest_adds_and_stores:PASS
+<source>/tests/cpu/test_guest.c:53:zero_is_noop:PASS
+<source>/tests/cpu/test_guest.c:53:bad_address_survives:PASS
+<source>/tests/cpu/test_guest.c:53:reset_fault_survives:PASS
+
+-----------------------
+4 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.14 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_guest" end time: Oct 01 13:57 EDT
+"cpu_guest" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/25 Testing: cpu_isolation
+2/25 Test: cpu_isolation
+Command: "<source>/build/cpu-asan/experiments/cpu/cpu_isolation"
+Directory: <source>/build/cpu-asan/experiments/cpu
+"cpu_isolation" start time: Oct 01 13:57 EDT
+Output:
+----------------------------------------------------------
+<source>/tests/cpu/test_isolation.c:50:reset_registers_are_observable:PASS
+instance=0 allocations=1 bytes=853104 create_ns=9098000 boundaries=9
+instance=1 allocations=1 bytes=853104 create_ns=8737000 boundaries=9
+<source>/tests/cpu/test_isolation.c:50:distinct_baselines:PASS
+<source>/tests/cpu/test_isolation.c:50:owner_comparison:PASS
+interleavings=64 concurrent_pairs=64 boundaries_per_instance=9 trace_overflows=0
+<source>/tests/cpu/test_isolation.c:51:interleaved_and_concurrent:PASS
+
+-----------------------
+4 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   2.16 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_isolation" end time: Oct 01 13:57 EDT
+"cpu_isolation" time elapsed: 00:00:02
+----------------------------------------------------------
+
+3/25 Testing: cpu_faults
+3/25 Test: cpu_faults
+Command: "<source>/build/cpu-asan/experiments/cpu/cpu_faults"
+Directory: <source>/build/cpu-asan/experiments/cpu
+"cpu_faults" start time: Oct 01 13:57 EDT
+Output:
+----------------------------------------------------------
+<source>/tests/cpu/test_faults.c:65:terminal_fault_rejects_inspection:PASS
+construction_allocations=1 failed_positions=1 leaked_allocations=0
+<source>/tests/cpu/test_faults.c:66:allocations_and_witness:PASS
+fault_case=0
+fault_case=1
+fault_case=2
+fault_case=3
+fault_case=4
+fault_case=5
+fault_case=6
+fault_cases=7 healthy_witnesses=7 terminal_reuse_rejected=7
+<source>/tests/cpu/test_faults.c:66:faults_preserve_witness:PASS
+<source>/tests/cpu/test_faults.c:66:invalid_requests:PASS
+
+-----------------------
+4 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.30 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_faults" end time: Oct 01 13:58 EDT
+"cpu_faults" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/25 Testing: cpu_isolation_negative
+5/25 Test: cpu_isolation_negative
+Command: "<python>" "<source>/tests/cpu/isolation_negative.py" "<source>/build/cpu-asan/experiments/cpu/cpu_isolation"
+Directory: <source>/build/cpu-asan/experiments/cpu
+"cpu_isolation_negative" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+PASS: swapped baseline rejected by boundary ownership comparison
+<end of output>
+Test time =   0.20 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_isolation_negative" end time: Oct 01 13:58 EDT
+"cpu_isolation_negative" time elapsed: 00:00:00
+----------------------------------------------------------
+
+22/25 Testing: cpu_guest_negative
+22/25 Test: cpu_guest_negative
+Command: "<python>" "<source>/tests/cpu/negative.py" "<source>/build/cpu-asan/experiments/cpu/cpu_guest"
+Directory: <source>/build/cpu-asan/experiments/cpu
+"cpu_guest_negative" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+PASS: executed operand mutation failed the arithmetic/store assertion
+<end of output>
+Test time =   0.16 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_guest_negative" end time: Oct 01 13:58 EDT
+"cpu_guest_negative" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Oct 01 13:58 EDT
+
+cpu =   2.97 sec*proc
+
+cpu-fast =   0.30 sec*proc
+

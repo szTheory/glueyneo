@@ -1,0 +1,416 @@
+Start testing: Oct 01 13:57 EDT
+----------------------------------------------------------
+2/25 Testing: cpu_isolation
+2/25 Test: cpu_isolation
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_isolation"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_isolation" start time: Oct 01 13:57 EDT
+Output:
+----------------------------------------------------------
+<source>/tests/cpu/test_isolation.c:50:reset_registers_are_observable:PASS
+instance=0 allocations=1 bytes=853104 create_ns=26912000 boundaries=9
+instance=1 allocations=1 bytes=853104 create_ns=26105000 boundaries=9
+<source>/tests/cpu/test_isolation.c:50:distinct_baselines:PASS
+<source>/tests/cpu/test_isolation.c:50:owner_comparison:PASS
+interleavings=64 concurrent_pairs=64 boundaries_per_instance=9 trace_overflows=0
+<source>/tests/cpu/test_isolation.c:51:interleaved_and_concurrent:PASS
+
+-----------------------
+4 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   6.32 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_isolation" end time: Oct 01 13:58 EDT
+"cpu_isolation" time elapsed: 00:00:06
+----------------------------------------------------------
+
+5/25 Testing: cpu_isolation_negative
+5/25 Test: cpu_isolation_negative
+Command: "<python>" "<source>/tests/cpu/isolation_negative.py" "<source>/build/cpu-tsan/experiments/cpu/cpu_isolation"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_isolation_negative" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+PASS: swapped baseline rejected by boundary ownership comparison
+<end of output>
+Test time =   0.59 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_isolation_negative" end time: Oct 01 13:58 EDT
+"cpu_isolation_negative" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/25 Testing: cpu_cold_1
+6/25 Test: cpu_cold_1
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_cold"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_cold_1" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+cold_instance=0 allocations=1 bytes=853104 create_ns=24969000
+cold_instance=1 allocations=1 bytes=853104 create_ns=23388000
+cold_process_cases=1 barrier_started_instances=2 boundaries_per_instance=9
+<source>/tests/cpu/test_cold.c:22:cold_concurrent_lifecycle:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.56 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_cold_1" end time: Oct 01 13:58 EDT
+"cpu_cold_1" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/25 Testing: cpu_cold_2
+7/25 Test: cpu_cold_2
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_cold"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_cold_2" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+cold_instance=0 allocations=1 bytes=853104 create_ns=26556000
+cold_instance=1 allocations=1 bytes=853104 create_ns=28464000
+cold_process_cases=1 barrier_started_instances=2 boundaries_per_instance=9
+<source>/tests/cpu/test_cold.c:22:cold_concurrent_lifecycle:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.54 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_cold_2" end time: Oct 01 13:58 EDT
+"cpu_cold_2" time elapsed: 00:00:00
+----------------------------------------------------------
+
+8/25 Testing: cpu_cold_3
+8/25 Test: cpu_cold_3
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_cold"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_cold_3" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+cold_instance=0 allocations=1 bytes=853104 create_ns=29198000
+cold_instance=1 allocations=1 bytes=853104 create_ns=26954000
+cold_process_cases=1 barrier_started_instances=2 boundaries_per_instance=9
+<source>/tests/cpu/test_cold.c:22:cold_concurrent_lifecycle:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.58 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_cold_3" end time: Oct 01 13:58 EDT
+"cpu_cold_3" time elapsed: 00:00:00
+----------------------------------------------------------
+
+9/25 Testing: cpu_cold_4
+9/25 Test: cpu_cold_4
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_cold"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_cold_4" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+cold_instance=0 allocations=1 bytes=853104 create_ns=26389000
+cold_instance=1 allocations=1 bytes=853104 create_ns=28004000
+cold_process_cases=1 barrier_started_instances=2 boundaries_per_instance=9
+<source>/tests/cpu/test_cold.c:22:cold_concurrent_lifecycle:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.54 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_cold_4" end time: Oct 01 13:58 EDT
+"cpu_cold_4" time elapsed: 00:00:00
+----------------------------------------------------------
+
+10/25 Testing: cpu_cold_5
+10/25 Test: cpu_cold_5
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_cold"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_cold_5" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+cold_instance=0 allocations=1 bytes=853104 create_ns=22388000
+cold_instance=1 allocations=1 bytes=853104 create_ns=20853000
+cold_process_cases=1 barrier_started_instances=2 boundaries_per_instance=9
+<source>/tests/cpu/test_cold.c:22:cold_concurrent_lifecycle:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.47 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_cold_5" end time: Oct 01 13:58 EDT
+"cpu_cold_5" time elapsed: 00:00:00
+----------------------------------------------------------
+
+11/25 Testing: cpu_cold_6
+11/25 Test: cpu_cold_6
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_cold"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_cold_6" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+cold_instance=0 allocations=1 bytes=853104 create_ns=29684000
+cold_instance=1 allocations=1 bytes=853104 create_ns=27293000
+cold_process_cases=1 barrier_started_instances=2 boundaries_per_instance=9
+<source>/tests/cpu/test_cold.c:22:cold_concurrent_lifecycle:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.64 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_cold_6" end time: Oct 01 13:58 EDT
+"cpu_cold_6" time elapsed: 00:00:00
+----------------------------------------------------------
+
+12/25 Testing: cpu_cold_7
+12/25 Test: cpu_cold_7
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_cold"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_cold_7" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+cold_instance=0 allocations=1 bytes=853104 create_ns=20659000
+cold_instance=1 allocations=1 bytes=853104 create_ns=22367000
+cold_process_cases=1 barrier_started_instances=2 boundaries_per_instance=9
+<source>/tests/cpu/test_cold.c:22:cold_concurrent_lifecycle:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.50 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_cold_7" end time: Oct 01 13:58 EDT
+"cpu_cold_7" time elapsed: 00:00:00
+----------------------------------------------------------
+
+13/25 Testing: cpu_cold_8
+13/25 Test: cpu_cold_8
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_cold"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_cold_8" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+cold_instance=0 allocations=1 bytes=853104 create_ns=27057000
+cold_instance=1 allocations=1 bytes=853104 create_ns=25481000
+cold_process_cases=1 barrier_started_instances=2 boundaries_per_instance=9
+<source>/tests/cpu/test_cold.c:22:cold_concurrent_lifecycle:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.65 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_cold_8" end time: Oct 01 13:58 EDT
+"cpu_cold_8" time elapsed: 00:00:00
+----------------------------------------------------------
+
+14/25 Testing: cpu_cold_9
+14/25 Test: cpu_cold_9
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_cold"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_cold_9" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+cold_instance=0 allocations=1 bytes=853104 create_ns=22716000
+cold_instance=1 allocations=1 bytes=853104 create_ns=20236000
+cold_process_cases=1 barrier_started_instances=2 boundaries_per_instance=9
+<source>/tests/cpu/test_cold.c:22:cold_concurrent_lifecycle:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.50 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_cold_9" end time: Oct 01 13:58 EDT
+"cpu_cold_9" time elapsed: 00:00:00
+----------------------------------------------------------
+
+15/25 Testing: cpu_cold_10
+15/25 Test: cpu_cold_10
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_cold"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_cold_10" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+cold_instance=0 allocations=1 bytes=853104 create_ns=27335000
+cold_instance=1 allocations=1 bytes=853104 create_ns=26111000
+cold_process_cases=1 barrier_started_instances=2 boundaries_per_instance=9
+<source>/tests/cpu/test_cold.c:22:cold_concurrent_lifecycle:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.63 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_cold_10" end time: Oct 01 13:58 EDT
+"cpu_cold_10" time elapsed: 00:00:00
+----------------------------------------------------------
+
+16/25 Testing: cpu_cold_11
+16/25 Test: cpu_cold_11
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_cold"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_cold_11" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+cold_instance=0 allocations=1 bytes=853104 create_ns=20834000
+cold_instance=1 allocations=1 bytes=853104 create_ns=22315000
+cold_process_cases=1 barrier_started_instances=2 boundaries_per_instance=9
+<source>/tests/cpu/test_cold.c:22:cold_concurrent_lifecycle:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.51 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_cold_11" end time: Oct 01 13:58 EDT
+"cpu_cold_11" time elapsed: 00:00:00
+----------------------------------------------------------
+
+17/25 Testing: cpu_cold_12
+17/25 Test: cpu_cold_12
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_cold"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_cold_12" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+cold_instance=0 allocations=1 bytes=853104 create_ns=22913000
+cold_instance=1 allocations=1 bytes=853104 create_ns=20842000
+cold_process_cases=1 barrier_started_instances=2 boundaries_per_instance=9
+<source>/tests/cpu/test_cold.c:22:cold_concurrent_lifecycle:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.53 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_cold_12" end time: Oct 01 13:58 EDT
+"cpu_cold_12" time elapsed: 00:00:00
+----------------------------------------------------------
+
+18/25 Testing: cpu_cold_13
+18/25 Test: cpu_cold_13
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_cold"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_cold_13" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+cold_instance=0 allocations=1 bytes=853104 create_ns=22339000
+cold_instance=1 allocations=1 bytes=853104 create_ns=20627000
+cold_process_cases=1 barrier_started_instances=2 boundaries_per_instance=9
+<source>/tests/cpu/test_cold.c:22:cold_concurrent_lifecycle:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.53 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_cold_13" end time: Oct 01 13:58 EDT
+"cpu_cold_13" time elapsed: 00:00:00
+----------------------------------------------------------
+
+19/25 Testing: cpu_cold_14
+19/25 Test: cpu_cold_14
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_cold"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_cold_14" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+cold_instance=0 allocations=1 bytes=853104 create_ns=24617000
+cold_instance=1 allocations=1 bytes=853104 create_ns=22971000
+cold_process_cases=1 barrier_started_instances=2 boundaries_per_instance=9
+<source>/tests/cpu/test_cold.c:22:cold_concurrent_lifecycle:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.56 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_cold_14" end time: Oct 01 13:58 EDT
+"cpu_cold_14" time elapsed: 00:00:00
+----------------------------------------------------------
+
+20/25 Testing: cpu_cold_15
+20/25 Test: cpu_cold_15
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_cold"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_cold_15" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+cold_instance=0 allocations=1 bytes=853104 create_ns=20122000
+cold_instance=1 allocations=1 bytes=853104 create_ns=21862000
+cold_process_cases=1 barrier_started_instances=2 boundaries_per_instance=9
+<source>/tests/cpu/test_cold.c:22:cold_concurrent_lifecycle:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.47 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_cold_15" end time: Oct 01 13:58 EDT
+"cpu_cold_15" time elapsed: 00:00:00
+----------------------------------------------------------
+
+21/25 Testing: cpu_cold_16
+21/25 Test: cpu_cold_16
+Command: "<source>/build/cpu-tsan/experiments/cpu/cpu_cold"
+Directory: <source>/build/cpu-tsan/experiments/cpu
+"cpu_cold_16" start time: Oct 01 13:58 EDT
+Output:
+----------------------------------------------------------
+cold_instance=0 allocations=1 bytes=853104 create_ns=22332000
+cold_instance=1 allocations=1 bytes=853104 create_ns=20734000
+cold_process_cases=1 barrier_started_instances=2 boundaries_per_instance=9
+<source>/tests/cpu/test_cold.c:22:cold_concurrent_lifecycle:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+<end of output>
+Test time =   0.48 sec
+----------------------------------------------------------
+Test Passed.
+"cpu_cold_16" end time: Oct 01 13:58 EDT
+"cpu_cold_16" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Oct 01 13:58 EDT
+
+cpu =  15.61 sec*proc
+

@@ -12,6 +12,9 @@ typedef struct { void *userdata; int (*read)(void *, uint32_t, unsigned, uint32_
  int (*write)(void *, uint32_t, unsigned, uint32_t); } cpu_bus;
 typedef struct { uint64_t requested, elapsed, instructions, overshoot;
  cpu_status reason; } cpu_run_result;
+/* Host bindings must remain live; calls on one instance cannot overlap/reenter.
+ * A host fault permits reset/destruction only. Reset does not undo bus writes.
+ * NULL destruction is safe; destroying an already freed handle is not. */
 cpu_status cpu_create(unsigned model, cpu_bus bus, cpu_allocator allocator, cpu_instance **out);
 void cpu_destroy(cpu_instance *cpu);
 cpu_status cpu_reset(cpu_instance *cpu);

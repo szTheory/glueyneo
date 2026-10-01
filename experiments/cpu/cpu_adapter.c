@@ -11,6 +11,7 @@ struct cpu_instance {
 };
 cpu_status cpu_inspect(cpu_instance *c,cpu_observation *out) {
  if(!c || !out) return CPU_STATUS_INVALID_ARGUMENT;
+ if(c->faulted) return CPU_STATUS_HOST_FAULT;
  memset(out,0,sizeof(*out));
  for(unsigned i=0;i<16;i++) out->registers[i]=c->backend.cpu.dar[i];
  out->pc=c->backend.cpu.pc; out->previous_pc=c->backend.cpu.ppc;
@@ -68,13 +69,15 @@ cpu_run_result cpu_run(cpu_instance *c,uint64_t cycles) {
  unsigned long long before=c->backend.instructions;
  if(setjmp(c->backend.host_fault)) {c->faulted=1; r.reason=CPU_STATUS_HOST_FAULT; return r;}
  r.elapsed=(unsigned)m68k_execute(&c->backend,(int)request);
+ if(c->backend.cpu.stopped & STOP_LEVEL_HALT) {c->faulted=1; r.reason=CPU_STATUS_HOST_FAULT; return r;}
  r.instructions=c->backend.instructions-before;
  r.overshoot=r.elapsed>request ? r.elapsed-request : 0;
  r.reason=c->backend.cpu.stopped ? CPU_STATUS_STOPPED : CPU_STATUS_BUDGET;
  return r;
 }
 cpu_status cpu_set_irq(cpu_instance *c,unsigned level) {
- if(!c || level>7 || !c->ready) return CPU_STATUS_INVALID_ARGUMENT;
+ if(!c || level>7) return CPU_STATUS_INVALID_ARGUMENT;
  if(c->faulted) return CPU_STATUS_HOST_FAULT;
+ if(!c->ready) return CPU_STATUS_INVALID_ARGUMENT;
  m68k_set_irq(&c->backend,level); return CPU_STATUS_OK;
 }
