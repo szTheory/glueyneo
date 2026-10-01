@@ -1,0 +1,27 @@
+[1/27] Building C object experiments/cpu/CMakeFiles/cpu_runtime.dir/cpu_adapter.c.o
+[2/27] Building C object experiments/cpu/CMakeFiles/cpu_runtime.dir/__/__/third_party/musashi/m68kcpu.c.o
+[3/27] Building C object experiments/cpu/CMakeFiles/cpu_unity.dir/__/__/third_party/unity/src/unity.c.o
+[4/27] Building C object experiments/cpu/CMakeFiles/cpu_generator.dir/__/__/third_party/musashi/m68kmake.c.o
+[5/27] Linking C static library experiments/cpu/libcpu_unity.a
+[6/27] Building C object experiments/cpu/CMakeFiles/cpu_guest.dir/test_bus.c.o
+[7/27] Building C object experiments/cpu/CMakeFiles/cpu_guest.dir/__/__/tests/cpu/test_guest.c.o
+[8/27] Building C object experiments/cpu/CMakeFiles/cpu_runtime.dir/__/__/third_party/musashi/m68kops.c.o
+[9/27] Building C object experiments/cpu/CMakeFiles/cpu_guest.dir/__/__/tests/cpu/guest_fixture.c.o
+[10/27] Building C object experiments/cpu/CMakeFiles/cpu_isolation.dir/__/__/tests/cpu/test_isolation.c.o
+[11/27] Linking C static library experiments/cpu/libcpu_runtime.a
+[12/27] Building C object experiments/cpu/CMakeFiles/cpu_isolation.dir/__/__/tests/cpu/guest_fixture.c.o
+[13/27] Building C object experiments/cpu/CMakeFiles/cpu_cold.dir/__/__/tests/cpu/test_cold.c.o
+[14/27] Building C object experiments/cpu/CMakeFiles/cpu_cold.dir/__/__/tests/cpu/guest_fixture.c.o
+[15/27] Building C object experiments/cpu/CMakeFiles/cpu_faults.dir/__/__/tests/cpu/test_faults.c.o
+[16/27] Building C object experiments/cpu/CMakeFiles/cpu_faults.dir/__/__/tests/cpu/guest_fixture.c.o
+[17/27] Building C object experiments/cpu/CMakeFiles/cpu_timing.dir/__/__/tests/cpu/guest_fixture.c.o
+[18/27] Building C object experiments/cpu/CMakeFiles/cpu_timing.dir/__/__/tests/cpu/test_timing.c.o
+[19/27] Building C object experiments/cpu/CMakeFiles/cpu_state.dir/__/__/tests/cpu/guest_fixture.c.o
+[20/27] Building C object experiments/cpu/CMakeFiles/cpu_state.dir/__/__/tests/cpu/test_state.c.o
+[21/27] Linking C executable experiments/cpu/cpu_generator
+[22/27] Linking C executable experiments/cpu/cpu_guest
+[23/27] Linking C executable experiments/cpu/cpu_cold
+[24/27] Linking C executable experiments/cpu/cpu_isolation
+[25/27] Linking C executable experiments/cpu/cpu_faults
+[26/27] Linking C executable experiments/cpu/cpu_timing
+[27/27] Linking C executable experiments/cpu/cpu_state

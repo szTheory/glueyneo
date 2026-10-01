@@ -2,6 +2,64 @@
 
 Status: **plans 01-01 through 01-03 evidence implemented; final review pending; candidate not accepted**.
 
+## Current reproduction and admission gate
+
+Use the committed checkout containing the final report's evaluated inputs:
+
+```sh
+cmake -S . -B build/cpu-final -G Ninja -DGLUEYNEO_CPU_EXPERIMENT=ON
+cmake --build build/cpu-final --parallel 2
+python3 tools/cpu/acceptance.py self-test
+python3 tools/cpu/acceptance.py collect --build-dir build/cpu-final
+python3 tools/cpu/acceptance.py verify --require-accepted
+ctest --test-dir build/cpu-final -L cpu --output-on-failure --no-tests=error
+```
+
+`collect` creates unique fresh native, ASan/UBSan and TSan build trees below
+the requested build directory, limits each build to two workers, runs actual
+runtime cases, and regenerates twice in separate scratch directories. It excludes
+acceptance CTests from collection to avoid recursion. Native required execution
+is 28 CTests; ASan/UBSan is 8; TSan is 18. Two additional native source records
+cover independent regeneration and ten acceptance control methods (many contain
+per-cap/per-case subtests). The final CPU label adds two admission CTests.
+
+Each required case has an expected and observed count, lane/configuration/input
+identity, status and retained output with SHA-256. Unity counts count registered
+test functions; supervised controls count intended failures; source counts name
+the check/control denominator. These are not instruction-coverage percentages.
+Runtime object compile blocks and archive/object digests separately prove the
+instrumented closure. Source closure, rights, state inventory and cap checks
+remain source evidence. Queried absent distinct compilers and unsupported
+capabilities remain explicit separate records.
+
+Collection grants only `ready-for-review` / `GAPS_FOUND`. An independent source
+reviewer must inspect the current source and the report, then author `REVIEW.md`
+with the evaluated revision, content digest and canonical evidence digest.
+`python3 tools/cpu/acceptance.py seal --require-accepted` incorporates that
+review and rejects unresolved high/critical findings. Recollection intentionally
+invalidates an old review even if runtime source is unchanged: the reviewer
+must confirm the newly produced evidence digest. `verify` performs read-only
+identity/output/decision validation and runs no CPU tests or receipt writes.
+
+The content digest includes runtime/build/test/tool sources, fixtures and their
+oracle, notices, source/state/fixture manifests, and immutable recovery-accounting
+inputs. Produced reports/logs, review and the mutable effort ledger are excluded
+to avoid recursive hashes; the ledger and cumulative Git source-history digest
+are checked separately. The frozen contract is compared with its original commit.
+Later documentation/evidence-only commits can retain the evaluated revision if
+every input byte and cumulative source charge remains identical. Such commits
+do not claim another runtime run. These local receipts are not signatures against
+a malicious author able to replace both the tool and its evidence; independent
+review and the repository's later protected delivery gates remain separate.
+
+The original malformed guest and earlier compiler/sanitizer/timing/state
+counterexamples remain under `evidence/attempt-1`, `evidence/attempt-2`,
+`evidence/plan-01-02` and `evidence/plan-01-03`. The first final collection's
+CTest-output truncation is preserved under `evidence/plan-01-04`; it never
+qualified as acceptance. A failed/rejected/deferred candidate keeps CPU-01–04
+pending, reports `GAPS_FOUND`, and blocks Phase 2. Replacement or scope changes
+need a separate bounded plan; neither a new allowance nor attempt 3 is implied.
+
 ## Frozen admission contract
 
 <!-- freeze:start -->
