@@ -3,13 +3,13 @@ gsd_state_version: "1.0"
 milestone: v0.1
 milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
-current_phase_name: cpu-acceptance-experiment
+current_phase_name: CPU acceptance experiment
 status: executing
 stopped_at: Phase 1 context gathered
-last_updated: "2026-10-01T16:13:44.285Z"
+last_updated: "2026-10-01T16:15:38.462Z"
 last_activity: 2026-10-01
-last_activity_desc: Created initial roadmap and mapped all 27 requirements; implementation pending.
-state_head: 8f10fc7b284866adda9c372b4b7ca03aa7976e2b
+last_activity_desc: Phase 01 execution started
+state_head: ac75d9966339b549e45b8c7dd0878050fe244a55
 progress:
   total_phases: 3
   completed_phases: 0
@@ -25,15 +25,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-01)
 
 **Core value:** Trustworthy Neo Geo emulation that other software can embed easily.
-**Current focus:** Phase 1 — CPU acceptance experiment
+**Current focus:** Phase 01 — CPU acceptance experiment
 **Current milestone:** v0.1 — CPU/bus diagnostic SDK alpha
 
 ## Current Position
 
-Phase: 01 (cpu-acceptance-experiment) — READY TO EXECUTE
-Plan: 0 of TBD in current phase
-Status: Ready to execute
-Last activity: 2026-10-01 — Created initial roadmap and mapped all 27 requirements; implementation pending.
+Phase: 01 (CPU acceptance experiment) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 01
+Last activity: 2026-10-01 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -66,6 +66,7 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - Phase 1 must set a finite effort/patch budget before CPU adaptation and demonstrate real execution, isolation, state, timing and host safety.
 - CPU-05 can record rejection; Phase 1 completion/Phase 2 admission require accepted CPU-01–04 evidence or an explicit reconciled roadmap revision.
 - All-C runtime, host-owned I/O and separate ABI/snapshot/replay/durable-save identities remain constraints; no backend or support matrix is qualified yet.
+- Local initialization has no remote fork base. OpenGSD selected sequential execution; `git.branching_strategy` is temporarily `none` so this run uses the existing `chore/initialize-project` feature branch. Restore phase branching when a remote/default base is established; no main merge or hosted qualification is implied.
 
 ### Pending Todos
 
