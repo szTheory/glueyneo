@@ -4,12 +4,12 @@ milestone: v0.1
 milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
-status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-10-01T16:15:38.462Z"
+status: blocked
+stopped_at: "Halted 01-01 Task 1: compiler errors after three correction attempts"
+last_updated: "2026-10-01T16:35:05.024Z"
 last_activity: 2026-10-01
-last_activity_desc: Phase 01 execution started
-state_head: ac75d9966339b549e45b8c7dd0878050fe244a55
+last_activity_desc: Plan 01-01 halted; adapted backend compilation failed
+state_head: 6a72a9bc25cf692abdb8aff604b626b73581cc59
 progress:
   total_phases: 3
   completed_phases: 0
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-01)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — EXECUTING
+Phase: 01 (CPU acceptance experiment) — BLOCKED
 Plan: 1 of 4
-Status: Executing Phase 01
-Last activity: 2026-10-01 — Phase 01 execution started
+Status: Plan 01-01 halted in Task 1; dependent plans blocked
+Last activity: 2026-10-01 — Preserved failed adaptation and halted summary; no backend accepted
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -67,6 +67,7 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - CPU-05 can record rejection; Phase 1 completion/Phase 2 admission require accepted CPU-01–04 evidence or an explicit reconciled roadmap revision.
 - All-C runtime, host-owned I/O and separate ABI/snapshot/replay/durable-save identities remain constraints; no backend or support matrix is qualified yet.
 - Local initialization has no remote fork base. OpenGSD selected sequential execution; `git.branching_strategy` is temporarily `none` so this run uses the existing `chore/initialize-project` feature branch. Restore phase branching when a remote/default base is established; no main merge or hosted qualification is implied.
+- [Phase 01]: CPU candidate investigation deferred, not accepted or disproven: frozen budget remains unchanged; no CPU requirement marked complete.
 
 ### Pending Todos
 
@@ -74,9 +75,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- No current planning blocker. CPU feasibility and FPU/SoftFloat disposition remain Phase 1 admission risks.
+- Plan 01-01 compilation is blocked; CPU feasibility and FPU/SoftFloat disposition remain unproved. Resolve the recorded halted attempt within the frozen budget before dependent implementation.
 - Remote/CI/protection/release authority is not configured; future delivery dependency. Continue independent implementation and artifact preparation; repeat remote triage at setup/shipping.
 - No runtime, platform, compatibility or performance claim is verified. All 27 requirements remain pending.
+- Plan 01-01 halted after three inline compiler correction attempts; adapted Musashi still does not compile. Preserve fixed caps; plans 01-02 through 01-04 and Phase 2 remain blocked pending bounded continuation/replan.
 
 ## Deferred Items
 
@@ -88,6 +90,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-01T15:31:47.009Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-cpu-acceptance-experiment/01-CONTEXT.md
+Last session: 2026-10-01T16:35:05.008Z
+Stopped at: Halted 01-01 Task 1: compiler errors after three correction attempts
+Resume file: .planning/phases/01-cpu-acceptance-experiment/01-01-SUMMARY.md

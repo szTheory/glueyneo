@@ -146,6 +146,12 @@ The planned tracer did not reach GREEN. The executor's correction limit
 required stopping with remaining compiler errors. This planned-work failure
 is preserved honestly rather than reported as an architectural rejection.
 
+**Tracking correction:** The installed `init.execute-phase` correctly detects
+this halted summary and blocks all three dependent plans with zero runnable
+plans. `roadmap.update-plan-progress` nevertheless counted the summary as a
+completed plan and checked its roadmap box. Corrected STATE/ROADMAP manually
+to zero of four complete and blocked, preserving the actual outcome.
+
 ## Deferred Issues
 
 1. Direct `OPER_I_8/16/32()` calls in the opcode template do not supply the

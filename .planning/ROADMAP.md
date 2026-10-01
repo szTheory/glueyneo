@@ -38,12 +38,12 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit acceptance decision, commands and results against a finite effort/patch budget fixed before adaptation; failed or over-budget candidates have counterexamples and a replacement/replanning disposition. (CPU-05)
 
-**Plans**: 4 plans
+**Plans**: 1/4 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Freeze the admission contract, execute the first guest and prove source closure.
+- [ ] 01-01-PLAN.md — **Halted in Task 1:** frozen contract and failed adaptation preserved; guest execution and source closure incomplete.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -105,7 +105,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 0/TBD | Not started | - |
+| 1. CPU acceptance experiment | v0.1 | 0/4 | Blocked: 01-01 halted | - |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
