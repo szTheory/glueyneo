@@ -1,0 +1,107 @@
+diff --git a/m68kcpu.h b/m68kcpu.h
+index bb882d4..d5a6cff 100644
+--- a/m68kcpu.h
++++ b/m68kcpu.h
+@@ -759,9 +759,9 @@ typedef uint32 uint64;
+ #define EA_PCIX_32()   EA_PCIX_8()
+ 
+ 
+-#define OPER_I_8()     m68ki_read_imm_8(ctx)
+-#define OPER_I_16()    m68ki_read_imm_16(ctx)
+-#define OPER_I_32()    m68ki_read_imm_32(ctx)
++#define OPER_I_8(ctx)     m68ki_read_imm_8(ctx)
++#define OPER_I_16(ctx)    m68ki_read_imm_16(ctx)
++#define OPER_I_32(ctx)    m68ki_read_imm_32(ctx)
+ 
+ 
+ 
+@@ -2247,11 +2247,11 @@ static uint32 lshift32_safe(uint32 val, unsigned shift) {
+ 	return shift < 32 ? (val << shift) : 0;
+ }
+ 
+-static inline unsigned m68ki_bitfield_patch_offset(m68ki_context *ctx, int32 offset) {
++static inline unsigned m68ki_bitfield_patch_offset(m68ki_context *ctx, sint32 offset) {
+ 	return ((uint32)offset) % 8;
+ }
+ 
+-static inline uint32 m68ki_bitfield_patch_ea(m68ki_context *ctx, uint32 ea, int32 offset) {
++static inline uint32 m68ki_bitfield_patch_ea(m68ki_context *ctx, uint32 ea, sint32 offset) {
+ 	return ea + (offset >= 0 ? offset / 8 : -((7 - offset) / 8));
+ }
+ 
+diff --git a/m68k_in.c b/m68k_in.c
+index cabd754..58a90c5 100644
+--- a/m68k_in.c
++++ b/m68k_in.c
+@@ -95,6 +95,35 @@ must fix:
+ 
+ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+ M68KMAKE_PROTOTYPE_HEADER
++/* ======================================================================== */
++/* ========================= LICENSING & COPYRIGHT ======================== */
++/* ======================================================================== */
++/*
++ *                                  MUSASHI
++ *                                Version 3.32
++ *
++ * A portable Motorola M680x0 processor emulation engine.
++ * Copyright Karl Stenerud.  All rights reserved.
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a copy
++ * of this software and associated documentation files (the "Software"), to deal
++ * in the Software without restriction, including without limitation the rights
++ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++ * copies of the Software, and to permit persons to whom the Software is
++ * furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++ * THE SOFTWARE.
++ */
++
+ 
+ #ifndef M68KOPS__HEADER
+ #define M68KOPS__HEADER
+@@ -277,6 +306,35 @@ void m68ki_build_opcode_table(m68ki_context *ctx)
+ 
+ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+ M68KMAKE_OPCODE_HANDLER_HEADER
++/* ======================================================================== */
++/* ========================= LICENSING & COPYRIGHT ======================== */
++/* ======================================================================== */
++/*
++ *                                  MUSASHI
++ *                                Version 3.32
++ *
++ * A portable Motorola M680x0 processor emulation engine.
++ * Copyright Karl Stenerud.  All rights reserved.
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a copy
++ * of this software and associated documentation files (the "Software"), to deal
++ * in the Software without restriction, including without limitation the rights
++ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++ * copies of the Software, and to permit persons to whom the Software is
++ * furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++ * THE SOFTWARE.
++ */
++
+ 
+ #include <stdio.h>
+ #include "m68kcpu.h"

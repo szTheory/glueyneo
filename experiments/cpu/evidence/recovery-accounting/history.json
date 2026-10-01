@@ -1,0 +1,125 @@
+{
+  "status": "historical-reconstruction",
+  "candidate": "313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd",
+  "halted_commit": "f4eb1af",
+  "method": "Recovered initial recipe and all three successful correction edits; replayed each from hash-verified pristine inputs and measured consecutive normal Git added/deleted line diffs. Final bytes match halted commit.",
+  "stages": [
+    {
+      "stage": 0,
+      "recipe_lines": 96,
+      "recipe_churn": 96,
+      "input_churn": {
+        "m68k.h": 103,
+        "m68kcpu.h": 604,
+        "m68kcpu.c": 188,
+        "m68kconf.h": 18,
+        "m68k_in.c": 592,
+        "m68kmake.c": 2
+      },
+      "input_total": 1507
+    },
+    {
+      "stage": 1,
+      "recipe_lines": 96,
+      "recipe_churn": 4,
+      "input_churn": {
+        "m68k.h": 0,
+        "m68kcpu.h": 94,
+        "m68kcpu.c": 0,
+        "m68kconf.h": 0,
+        "m68k_in.c": 96,
+        "m68kmake.c": 0
+      },
+      "input_total": 190
+    },
+    {
+      "stage": 2,
+      "recipe_lines": 104,
+      "recipe_churn": 8,
+      "input_churn": {
+        "m68k.h": 0,
+        "m68kcpu.h": 10,
+        "m68kcpu.c": 0,
+        "m68kconf.h": 0,
+        "m68k_in.c": 58,
+        "m68kmake.c": 0
+      },
+      "input_total": 68
+    },
+    {
+      "stage": 3,
+      "recipe_lines": 104,
+      "recipe_churn": 2,
+      "input_churn": {
+        "m68k.h": 0,
+        "m68kcpu.h": 0,
+        "m68kcpu.c": 0,
+        "m68kconf.h": 0,
+        "m68k_in.c": 0,
+        "m68kmake.c": 6
+      },
+      "input_total": 6
+    }
+  ],
+  "failed_edit": "A duplicate delete/add operation was rejected before mutation; corrected update then succeeded as stage 3.",
+  "upstream_cumulative": 1771,
+  "support": {
+    "red_creation": 61,
+    "adapter_replacement": 83,
+    "recipe_cumulative": 110,
+    "cmake_creation": 41,
+    "cmake_replacement": 7
+  },
+  "helper_cumulative_conservative": 302,
+  "handwritten_cumulative_conservative": 2073,
+  "semantic_upper_bound": 471,
+  "semantic_charges": {
+    "all_m68kcpu_c": 188,
+    "all_config": 18,
+    "public_header_residual": 1,
+    "internal_header_residual": 48,
+    "template_residual_without_notices": 16,
+    "all_runtime_support_history": 144,
+    "recipe_behavior_and_state_sections": 56
+  },
+  "semantic_method": "Conservatively charge all core C and config churn, all runtime support history, and all non-signature residuals in headers/template. Header/template signature normalization removes ctx arguments/context types and normalizes whitespace only for semantic classification; it does not reduce handwritten totals. Exclude 58 inserted notice lines. Initial recipe lines 15-47,66-83,89-92 plus correction2 integer-alias insertion are charged; remaining recipe content is I/O, signature propagation or notices.",
+  "excluded_host_evidence": [
+    "tools/cpu/red.py",
+    "tools/cpu/record_attempt.py"
+  ],
+  "exclusion_reason": "These scripts validate and preserve test/build evidence without changing runtime candidate behavior or producing adapted source.",
+  "source_identities": {
+    "stage-0/m68k.h": "408807a9cd8f6e94e3e10ba822416709be0c7f36ea329e5292243fd4c61a55d1",
+    "stage-0/m68kcpu.h": "818b379ab40ce43496c66de4f48f57cd7fff557811364bf94103edf987726d03",
+    "stage-0/m68kcpu.c": "4603101c1d7e0680d8d0243df7383f449d604922942d37cfce257f537f18c293",
+    "stage-0/m68kconf.h": "5f0e6734df160fc6c4516550c7f251a2805503adc35ca2f41e20d3ba2e28875c",
+    "stage-0/m68k_in.c": "b821e9fedec7992e88380145c2ec81a9497e0e1bd98178a961be259c2abedf90",
+    "stage-0/m68kmake.c": "5beb09bf36feb46e2a80d928490293d83a7892cebf7f520294e870849e8299e0",
+    "stage-0/adapt.py": "87eba7ae943cab624db72e00505678fc47c344aadf99ea71cdc208b79431dc71",
+    "stage-0/transition.patch": "053c5a09a70a4d7484167db723de8ed1657965efee5a3371fb6f9b09ac16f53d",
+    "stage-1/m68k.h": "408807a9cd8f6e94e3e10ba822416709be0c7f36ea329e5292243fd4c61a55d1",
+    "stage-1/m68kcpu.h": "847ef23f701fc383802dd436fa2b780291662857165bf2fd8f290e27b8e7760f",
+    "stage-1/m68kcpu.c": "4603101c1d7e0680d8d0243df7383f449d604922942d37cfce257f537f18c293",
+    "stage-1/m68kconf.h": "5f0e6734df160fc6c4516550c7f251a2805503adc35ca2f41e20d3ba2e28875c",
+    "stage-1/m68k_in.c": "320c1f4fdeddd60091c6466ea901aec86a54077b71c8f34d06e9743f1dfe6e6d",
+    "stage-1/m68kmake.c": "5beb09bf36feb46e2a80d928490293d83a7892cebf7f520294e870849e8299e0",
+    "stage-1/adapt.py": "c4c00cc47ef407b6407647a6005fc0f511dab3947d38beefe5bcbbce698d1b0b",
+    "stage-1/transition.patch": "3c9beb8cde6325e6501ef9319fb486e940394f609a9f0444e6d05f8cbbb1917f",
+    "stage-2/m68k.h": "408807a9cd8f6e94e3e10ba822416709be0c7f36ea329e5292243fd4c61a55d1",
+    "stage-2/m68kcpu.h": "6c08f918ac5f77543556c3548ffc5ebc5cae3a679c733f600d143b5b7675d7ed",
+    "stage-2/m68kcpu.c": "4603101c1d7e0680d8d0243df7383f449d604922942d37cfce257f537f18c293",
+    "stage-2/m68kconf.h": "5f0e6734df160fc6c4516550c7f251a2805503adc35ca2f41e20d3ba2e28875c",
+    "stage-2/m68k_in.c": "1e6a020f7154459265290f5c2caacf3f8c00a42b50ab97f30081d815467933fc",
+    "stage-2/m68kmake.c": "5beb09bf36feb46e2a80d928490293d83a7892cebf7f520294e870849e8299e0",
+    "stage-2/adapt.py": "d950ba7a0d442135dad8a7e1dcd4238904fe0bf30cb5b1373d2858f6c4a9056f",
+    "stage-2/transition.patch": "dea4126175dd6cd721a071babeb100a095fe4809c79a3a2f7d02f995c29c1969",
+    "stage-3/m68k.h": "408807a9cd8f6e94e3e10ba822416709be0c7f36ea329e5292243fd4c61a55d1",
+    "stage-3/m68kcpu.h": "6c08f918ac5f77543556c3548ffc5ebc5cae3a679c733f600d143b5b7675d7ed",
+    "stage-3/m68kcpu.c": "4603101c1d7e0680d8d0243df7383f449d604922942d37cfce257f537f18c293",
+    "stage-3/m68kconf.h": "5f0e6734df160fc6c4516550c7f251a2805503adc35ca2f41e20d3ba2e28875c",
+    "stage-3/m68k_in.c": "1e6a020f7154459265290f5c2caacf3f8c00a42b50ab97f30081d815467933fc",
+    "stage-3/m68kmake.c": "14eb2b98806e399aa19b5109c94d263712255b5d964acdcc06de62ae22fb8754",
+    "stage-3/adapt.py": "402a4478afa7359862156bf31a1fc714366de97e77c634a044445dc89ed86a4c",
+    "stage-3/transition.patch": "b326ec0c0eb016c63a397e4dd5d8f4b4908465b4176daf14f1f5bbb9db6c5ee7"
+  }
+}

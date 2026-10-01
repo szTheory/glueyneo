@@ -1,0 +1,7 @@
+*** Update File: tools/cpu/adapt.py
+@@
+-decl = re.compile(r'^(?P<prefix>(?:static inline |static |extern )?(?:(?:unsigned|signed) )?\w+[ \t*]+)(?P<name>(?:m68k\w*|default_\w+))\s*\(', re.M)
++decl = re.compile(r'^(?P<prefix>(?:static inline |static |extern )?(?:(?:unsigned|signed) )?\w+[ \t*]+)(?P<name>(?:m68k\w*|default_\w+|OPER_\w+))\s*\(', re.M)
+@@
+-    t = re.sub(r'(?m)^((?:static inline |static |extern )?(?:(?:unsigned|signed) )?\w+[ \t*]+(?:m68k\w*|default_\w+)\s*\()ctx', r'\1m68ki_context *ctx', t)
++    t = re.sub(r'(?m)^((?:static inline |static |extern )?(?:(?:unsigned|signed) )?\w+[ \t*]+(?:m68k\w*|default_\w+|OPER_\w+)\s*\()ctx', r'\1m68ki_context *ctx', t)

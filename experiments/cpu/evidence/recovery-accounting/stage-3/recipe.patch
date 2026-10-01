@@ -1,0 +1,4 @@
+*** Update File: tools/cpu/adapt.py
+@@
+-s["m68kmake.c"] = s["m68kmake.c"].replace('OPER_%s_%d()', 'OPER_%s_%d(ctx)')
++s["m68kmake.c"] = re.sub(r'OPER_%s_(8|16|32)\(\)', r'OPER_%s_\1(ctx)', s["m68kmake.c"])

@@ -123,7 +123,30 @@ Evidence: `evidence/attempt-1/receipt.json`, `source.patch` and
 `build-failure.txt`; reproduction script: `tools/cpu/record_attempt.py`.
 The build receipt contains public relative paths and current source hashes.
 
-## Private contract limitations
+## Recovery accounting — 2026-10-01
+
+The user approved the bounded continuation described in
+`.planning/phases/01-cpu-acceptance-experiment/01-01-RECOVERY.md`.
+The archived attempt-1 summary, receipt, source patch and failure remain intact.
+Recovered original edits replay offline to the exact halted source bytes:
+`python3 experiments/cpu/evidence/recovery-accounting/replay.py .`.
+
+The reconciled historical charges supersede the incomplete subtotal above:
+1,771 upstream + 302 helpers (including 48 build-file lines) = **2,073
+cumulative handwritten lines**. The conservative independently reviewed
+semantic ceiling is **471 lines**. Exact transitions, identities, residuals
+and classification rationale are in `evidence/recovery-accounting/history.json`.
+These are within the unchanged limits; none is reset for the second attempt.
+Historical recipe/source copies are immutable evidence of already charged
+work, not new helper implementations. Test/evidence tools do not adapt runtime.
+
+`budget-ledger.json` owns machine-readable accounting and time. It charges
+the full original preparation-through-closeout interval (1,146 seconds),
+1,445 seconds for the independent historical review, and the full recovery
+executor interval conservatively from 16:40Z. Parallel effort is additive.
+The second substantive attempt has not started at this accounting checkpoint.
+
+## Private contract limitations (unverified)
 
 The proposed adapter accepts model 68000 only; instance allocation and bus
 callbacks belong to the caller. Each instance requires single-threaded access.

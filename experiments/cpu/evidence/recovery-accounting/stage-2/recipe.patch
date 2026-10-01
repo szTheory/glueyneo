@@ -1,0 +1,13 @@
+*** Update File: tools/cpu/adapt.py
+@@
+ h = re.sub(r'^\s*floatx80 fpr\[8\];[^\n]*\n', '', h, flags=re.M)
++h = re.sub(r'\bint32\b', 'sint32', h)
+@@
+ s["m68kmake.c"] = s["m68kmake.c"].replace('static void %s(void)', 'static void %s(m68ki_context *ctx)')
++s["m68kmake.c"] = s["m68kmake.c"].replace('OPER_%s_%d()', 'OPER_%s_%d(ctx)')
++# Generated immediate operands are macros; accept the propagated argument too.
++s['m68kcpu.h'] = re.sub(r'(#define OPER_I_\d+)\(\)', r'\1(ctx)', s['m68kcpu.h'])
++# Put the complete upstream grant into both generated files via input sections.
++notice = s['m68k_in.c'][s['m68k_in.c'].index('/* ======================================================================== */'):s['m68k_in.c'].index('/* Special thanks')]
++for section in ('M68KMAKE_PROTOTYPE_HEADER', 'M68KMAKE_OPCODE_HANDLER_HEADER'):
++    s['m68k_in.c'] = s['m68k_in.c'].replace(section+'\n', section+'\n'+notice, 1)

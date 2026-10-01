@@ -1,0 +1,135 @@
+STAGE 0 m68k.h RESIDUAL 1
++typedef struct m68ki_context m68ki_context;
+STAGE 0 m68kcpu.h RESIDUAL 44
+-#include "softfloat/milieu.h"
+-#include "softfloat/softfloat.h"
+-extern sigjmp_buf m68ki_aerr_trap;
+-#define m68ki_set_address_error_trap(m68k) \
+-		m68ki_exception_address_error(m68k); \
++#define m68ki_set_address_error_trap() \
++		m68ki_exception_address_error(ctx); \
+-extern jmp_buf m68ki_aerr_trap;
+-	floatx80 fpr[8];     /* FPU Data Register (m68030/040) */
+-extern m68ki_cpu_core m68ki_cpu;
+-extern sint           m68ki_remaining_cycles;
+-extern uint           m68ki_tracing;
+-extern uint           m68ki_address_space;
+-extern uint           m68ki_aerr_address;
+-extern uint           m68ki_aerr_write_mode;
+-extern uint           m68ki_aerr_fc;
++/* Glueyneo: all execution mutation belongs to the explicitly passed instance. */
++struct m68ki_context {
++ m68ki_cpu_core cpu;
++ int initial_cycles, remaining_cycles;
++ uint tracing, address_space, aerr_address, aerr_write_mode, aerr_fc;
++ jmp_buf aerr_trap, bus_error_trap, host_fault;
++ void (*dispatch[0x10000])(m68ki_context *);
++ unsigned char cycles[5][0x10000];
++ void *bus_data;
++ int (*bus_read)(void *, unsigned int, unsigned, unsigned int *);
++ int (*bus_write)(void *, unsigned int, unsigned, unsigned int);
++ unsigned long long instructions;
++};
++#define m68ki_cpu (ctx->cpu)
++#define m68ki_initial_cycles (ctx->initial_cycles)
++#define m68ki_remaining_cycles (ctx->remaining_cycles)
++#define m68ki_tracing (ctx->tracing)
++#define m68ki_address_space (ctx->address_space)
++#define m68ki_aerr_address (ctx->aerr_address)
++#define m68ki_aerr_write_mode (ctx->aerr_write_mode)
++#define m68ki_aerr_fc (ctx->aerr_fc)
++#define m68ki_aerr_trap (ctx->aerr_trap)
++#define m68ki_bus_error_jmp_buf (ctx->bus_error_trap)
++#define m68ki_instruction_jump_table (ctx->dispatch)
++#define m68ki_cycles (ctx->cycles)
++
++
+-extern jmp_buf m68ki_bus_error_jmp_buf;
+STAGE 0 m68k_in.c RESIDUAL 16
++#include "m68k.h"
+-extern void (*m68ki_instruction_jump_table[0x10000])(void); /* opcode handler jump table */
+-extern unsigned char m68ki_cycles[][0x10000];
+-void  (*m68ki_instruction_jump_table[0x10000])(void); /* opcode handler jump table */
+-unsigned char m68ki_cycles[NUM_CPU_TYPES][0x10000]; /* Cycles used by CPU type */
+-extern void m68040_fpu_op0(void);
+-extern void m68040_fpu_op1(void);
+-extern void m68881_mmu_ops(void);
+-		m68040_fpu_op0();
++	m68ki_exception_1111(ctx);
+-		m68040_fpu_op1();
++	m68ki_exception_1111(ctx);
+-		fprintf(stderr,"68040: unhandled PFLUSH\n");
+-		m68881_mmu_ops();
++		m68ki_exception_1111(ctx);
++		m68ki_exception_1111(ctx);
+STAGE 0 m68kmake.c RESIDUAL 0
+
+STAGE 1 m68kcpu.h RESIDUAL 0
+
+STAGE 1 m68k_in.c RESIDUAL 0
+
+STAGE 2 m68kcpu.h RESIDUAL 4
+-static inline unsigned m68ki_bitfield_patch_offset(m68ki_context *ctx, int32 offset) {
+-static inline uint32 m68ki_bitfield_patch_ea(m68ki_context *ctx, uint32 ea, int32 offset) {
++static inline unsigned m68ki_bitfield_patch_offset(m68ki_context *ctx, sint32 offset) {
++static inline uint32 m68ki_bitfield_patch_ea(m68ki_context *ctx, uint32 ea, sint32 offset) {
+STAGE 2 m68k_in.c RESIDUAL 58
++/* ======================================================================== */
++/* ========================= LICENSING & COPYRIGHT ======================== */
++/* ======================================================================== */
++/*
++ *                                  MUSASHI
++ *                                Version 3.32
++ *
++ * A portable Motorola M680x0 processor emulation engine.
++ * Copyright Karl Stenerud.  All rights reserved.
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a copy
++ * of this software and associated documentation files (the "Software"), to deal
++ * in the Software without restriction, including without limitation the rights
++ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++ * copies of the Software, and to permit persons to whom the Software is
++ * furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++ * THE SOFTWARE.
++ */
++
++/* ======================================================================== */
++/* ========================= LICENSING & COPYRIGHT ======================== */
++/* ======================================================================== */
++/*
++ *                                  MUSASHI
++ *                                Version 3.32
++ *
++ * A portable Motorola M680x0 processor emulation engine.
++ * Copyright Karl Stenerud.  All rights reserved.
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a copy
++ * of this software and associated documentation files (the "Software"), to deal
++ * in the Software without restriction, including without limitation the rights
++ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++ * copies of the Software, and to permit persons to whom the Software is
++ * furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++ * THE SOFTWARE.
++ */
++
+STAGE 3 m68kmake.c RESIDUAL 0

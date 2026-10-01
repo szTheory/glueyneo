@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "recovery-accounted",
+  "freeze_commit": "f9e7dda6ce3593dc176ebfc99f9a6c504bf423f8",
+  "historical_base": "f4eb1afe8b20299619abd93c48ed564e1780e617",
+  "historical_accounting": "experiments/cpu/evidence/recovery-accounting/history.json",
+  "historical_handwritten": 2073,
+  "historical_helpers": 302,
+  "historical_semantic_upper_bound": 471,
+  "semantic_review": "independent recovered-source review; rationale and exact residuals preserved beside history.json",
+  "attempts": [
+    {
+      "number": 1,
+      "start": "2026-10-01T16:16:00Z",
+      "end": "2026-10-01T16:35:06Z",
+      "charged_seconds": 1146,
+      "reason": "Conservatively charge complete original preparation, adaptation and closeout interval, superseding the narrower 680-second receipt."
+    }
+  ],
+  "preparation_intervals": [
+    {
+      "role": "independent historical reviewer",
+      "start": "2026-10-01T16:35:05Z",
+      "end": "2026-10-01T16:59:10Z",
+      "charged_seconds": 1445,
+      "reason": "Conservative full post-halt interval; includes time before reviewer spawn rather than undercount concurrent agent effort."
+    }
+  ],
+  "recovery_executor_charge_start": "2026-10-01T16:40:00Z",
+  "recovery_executor_charge_reason": "Conservative interval beginning before executor startup; all recovery reading, accounting, implementation, tests and closeout are charged without tool-wait deductions.",
+  "upstream_paths": ["third_party/musashi/m68k.h", "third_party/musashi/m68kcpu.h", "third_party/musashi/m68kcpu.c", "third_party/musashi/m68kconf.h", "third_party/musashi/m68k_in.c", "third_party/musashi/m68kmake.c"],
+  "helper_paths": ["tools/cpu/adapt.py", "experiments/cpu/cpu_adapter.c", "experiments/cpu/cpu_adapter.h", "experiments/cpu/test_bus.c", "experiments/cpu/test_bus.h", "CMakeLists.txt", "experiments/cpu/CMakeLists.txt"],
+  "generated_paths": ["third_party/musashi/m68kops.c", "third_party/musashi/m68kops.h"],
+  "recovery_semantic_lines": 0,
+  "recovery_semantic_review": "No recovery adaptation has occurred."
+}
