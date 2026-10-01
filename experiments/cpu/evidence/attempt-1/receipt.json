@@ -1,0 +1,110 @@
+{
+  "status": "halted",
+  "outcome": "deferred",
+  "attempt": 1,
+  "candidate": "313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd",
+  "freeze_commit": "f9e7dda6ce3593dc176ebfc99f9a6c504bf423f8",
+  "starting_revision": "3977c3bfbfdc752e1b43443aa3911c7012678177",
+  "interval": {
+    "start": "2026-10-01T16:19:53+00:00",
+    "end": "2026-10-01T16:31:13.329456+00:00",
+    "charged_seconds": 680,
+    "accounting": "conservative full wall interval, including preparation/tool wait"
+  },
+  "inputs": [
+    {
+      "file": "third_party/musashi/m68k.h",
+      "pristine_sha256": "7fb10f51ee36d45f6e2be38d72aa0c57853810a816f1cf19e0f0c600bd1afa4a",
+      "adapted_sha256": "408807a9cd8f6e94e3e10ba822416709be0c7f36ea329e5292243fd4c61a55d1",
+      "added": 52,
+      "deleted": 51
+    },
+    {
+      "file": "third_party/musashi/m68k_in.c",
+      "pristine_sha256": "7a5836fa60ac5c59f77adbcfe086a288d5356c3d373ab15d337986a4e51e0132",
+      "adapted_sha256": "1e6a020f7154459265290f5c2caacf3f8c00a42b50ab97f30081d815467933fc",
+      "added": 399,
+      "deleted": 347
+    },
+    {
+      "file": "third_party/musashi/m68kconf.h",
+      "pristine_sha256": "8193cf670f6bfe61ad373055e7f44039427174195109bee78167ff3e0630dca4",
+      "adapted_sha256": "5f0e6734df160fc6c4516550c7f251a2805503adc35ca2f41e20d3ba2e28875c",
+      "added": 9,
+      "deleted": 9
+    },
+    {
+      "file": "third_party/musashi/m68kcpu.c",
+      "pristine_sha256": "0d98c1bfd104929ca393ab6020c05adaa3de5433961cbf924d0ab78a82778405",
+      "adapted_sha256": "4603101c1d7e0680d8d0243df7383f449d604922942d37cfce257f537f18c293",
+      "added": 77,
+      "deleted": 111
+    },
+    {
+      "file": "third_party/musashi/m68kcpu.h",
+      "pristine_sha256": "372d2086a9c39aadf87d9e0fa42104c5849bd4972ce74b191c0d458208193635",
+      "adapted_sha256": "6c08f918ac5f77543556c3548ffc5ebc5cae3a679c733f600d143b5b7675d7ed",
+      "added": 356,
+      "deleted": 342
+    },
+    {
+      "file": "third_party/musashi/m68kmake.c",
+      "pristine_sha256": "c6da040b9f9b4a2a30aabc7b26f7228796ef6090934002d9c8a788d754904788",
+      "adapted_sha256": "14eb2b98806e399aa19b5109c94d263712255b5d964acdcc06de62ae22fb8754",
+      "added": 4,
+      "deleted": 4
+    }
+  ],
+  "adaptation_support": [
+    {
+      "file": "tools/cpu/adapt.py",
+      "lines": 104,
+      "sha256": "402a4478afa7359862156bf31a1fc714366de97e77c634a044445dc89ed86a4c"
+    },
+    {
+      "file": "experiments/cpu/cpu_adapter.c",
+      "lines": 70,
+      "sha256": "e57cdc4fc72445afd2d428d56521a15ef0ec06996a4e5523d28557d958ced7cd"
+    },
+    {
+      "file": "experiments/cpu/cpu_adapter.h",
+      "lines": 20,
+      "sha256": "195b9102c90c2e2a6b4bede891aa1b9eadca54b9831aca8727f44772a0367393"
+    },
+    {
+      "file": "experiments/cpu/test_bus.c",
+      "lines": 18,
+      "sha256": "2b682a9d3fd24d0991ddfd22ea2d1d4c00888a6d497842831bb3afe0aa6aa980"
+    },
+    {
+      "file": "experiments/cpu/test_bus.h",
+      "lines": 8,
+      "sha256": "e37ba87dc4dfc038bf47cc2824d2ed549297c6b38ae464bfe22363727f0ef624"
+    }
+  ],
+  "generated": [
+    {
+      "file": "third_party/musashi/m68kops.c",
+      "lines": 36508,
+      "bytes": 829031,
+      "sha256": "23ba5c2781d9c1ccdcc42c37e976cdb6279afceaadb2fb86aff253c261487586"
+    },
+    {
+      "file": "third_party/musashi/m68kops.h",
+      "lines": 51,
+      "bytes": 2187,
+      "sha256": "ca121603347991ca99656bc7c49682a01560460a22ff6a9cb7f088e8c53f78fe"
+    }
+  ],
+  "upstream_added_deleted": 1761,
+  "support_current_lines": 220,
+  "discarded_red_scaffold_lines": 15,
+  "semantic_classification": "unreviewed; no acceptance claim",
+  "commands": [
+    {
+      "command": "cmake --build build/cpu",
+      "exit_code": 1
+    }
+  ],
+  "reason": "Three inline correction attempts exhausted; initial build still fails. Numeric admission caps have not been shown exceeded."
+}

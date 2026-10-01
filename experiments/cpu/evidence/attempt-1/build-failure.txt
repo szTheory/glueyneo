@@ -1,0 +1,191 @@
+[1/5] Building C object experiments/cpu/CMakeFiles/cpu_runtime.dir/cpu_adapter.c.o
+FAILED: [code=1] experiments/cpu/CMakeFiles/cpu_runtime.dir/cpu_adapter.c.o 
+/usr/bin/cc  -Iexperiments/cpu/../../third_party/musashi -Iexperiments/cpu -O0 -MD -MT experiments/cpu/CMakeFiles/cpu_runtime.dir/cpu_adapter.c.o -MF experiments/cpu/CMakeFiles/cpu_runtime.dir/cpu_adapter.c.o.d -o experiments/cpu/CMakeFiles/cpu_runtime.dir/cpu_adapter.c.o -c experiments/cpu/cpu_adapter.c
+experiments/cpu/cpu_adapter.c:63:36: error: use of undeclared identifier 'ctx'
+   63 |  r.reason=c->backend.cpu.stopped ? CPU_STOPPED : CPU_BUDGET;
+      |                                    ^~~~~~~~~~~
+experiments/cpu/../../third_party/musashi/m68kcpu.h:364:26: note: expanded from macro 'CPU_STOPPED'
+  364 | #define CPU_STOPPED      m68ki_cpu.stopped
+      |                          ^~~~~~~~~
+experiments/cpu/../../third_party/musashi/m68kcpu.h:1027:20: note: expanded from macro 'm68ki_cpu'
+ 1027 | #define m68ki_cpu (ctx->cpu)
+      |                    ^~~
+1 error generated.
+[2/5] Linking C executable experiments/cpu/cpu_generator
+[3/5] Building C object experiments/cpu/CMakeFiles/cpu_runtime.dir/__/__/third_party/musashi/m68kops.c.o
+FAILED: [code=1] experiments/cpu/CMakeFiles/cpu_runtime.dir/__/__/third_party/musashi/m68kops.c.o 
+/usr/bin/cc  -Iexperiments/cpu/../../third_party/musashi -Iexperiments/cpu -O0 -MD -MT experiments/cpu/CMakeFiles/cpu_runtime.dir/__/__/third_party/musashi/m68kops.c.o -MF experiments/cpu/CMakeFiles/cpu_runtime.dir/__/__/third_party/musashi/m68kops.c.o.d -o experiments/cpu/CMakeFiles/cpu_runtime.dir/__/__/third_party/musashi/m68kops.c.o -c third_party/musashi/m68kops.c
+third_party/musashi/m68kops.c:1378:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1378 |         uint src = OPER_I_8();
+      |                    ^~~~~~~~~~
+third_party/musashi/m68kcpu.h:762:47: note: expanded from macro 'OPER_I_8'
+  762 | #define OPER_I_8(ctx)     m68ki_read_imm_8(ctx)
+      |                           ~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1103:20: note: 'm68ki_read_imm_8' declared here
+ 1103 | static inline uint m68ki_read_imm_8(m68ki_context *ctx)
+      |                    ^                ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1393:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1393 |         uint src = OPER_I_8();
+      |                    ^~~~~~~~~~
+third_party/musashi/m68kcpu.h:762:47: note: expanded from macro 'OPER_I_8'
+  762 | #define OPER_I_8(ctx)     m68ki_read_imm_8(ctx)
+      |                           ~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1103:20: note: 'm68ki_read_imm_8' declared here
+ 1103 | static inline uint m68ki_read_imm_8(m68ki_context *ctx)
+      |                    ^                ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1409:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1409 |         uint src = OPER_I_8();
+      |                    ^~~~~~~~~~
+third_party/musashi/m68kcpu.h:762:47: note: expanded from macro 'OPER_I_8'
+  762 | #define OPER_I_8(ctx)     m68ki_read_imm_8(ctx)
+      |                           ~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1103:20: note: 'm68ki_read_imm_8' declared here
+ 1103 | static inline uint m68ki_read_imm_8(m68ki_context *ctx)
+      |                    ^                ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1425:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1425 |         uint src = OPER_I_8();
+      |                    ^~~~~~~~~~
+third_party/musashi/m68kcpu.h:762:47: note: expanded from macro 'OPER_I_8'
+  762 | #define OPER_I_8(ctx)     m68ki_read_imm_8(ctx)
+      |                           ~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1103:20: note: 'm68ki_read_imm_8' declared here
+ 1103 | static inline uint m68ki_read_imm_8(m68ki_context *ctx)
+      |                    ^                ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1441:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1441 |         uint src = OPER_I_8();
+      |                    ^~~~~~~~~~
+third_party/musashi/m68kcpu.h:762:47: note: expanded from macro 'OPER_I_8'
+  762 | #define OPER_I_8(ctx)     m68ki_read_imm_8(ctx)
+      |                           ~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1103:20: note: 'm68ki_read_imm_8' declared here
+ 1103 | static inline uint m68ki_read_imm_8(m68ki_context *ctx)
+      |                    ^                ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1457:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1457 |         uint src = OPER_I_8();
+      |                    ^~~~~~~~~~
+third_party/musashi/m68kcpu.h:762:47: note: expanded from macro 'OPER_I_8'
+  762 | #define OPER_I_8(ctx)     m68ki_read_imm_8(ctx)
+      |                           ~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1103:20: note: 'm68ki_read_imm_8' declared here
+ 1103 | static inline uint m68ki_read_imm_8(m68ki_context *ctx)
+      |                    ^                ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1473:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1473 |         uint src = OPER_I_8();
+      |                    ^~~~~~~~~~
+third_party/musashi/m68kcpu.h:762:47: note: expanded from macro 'OPER_I_8'
+  762 | #define OPER_I_8(ctx)     m68ki_read_imm_8(ctx)
+      |                           ~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1103:20: note: 'm68ki_read_imm_8' declared here
+ 1103 | static inline uint m68ki_read_imm_8(m68ki_context *ctx)
+      |                    ^                ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1489:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1489 |         uint src = OPER_I_8();
+      |                    ^~~~~~~~~~
+third_party/musashi/m68kcpu.h:762:47: note: expanded from macro 'OPER_I_8'
+  762 | #define OPER_I_8(ctx)     m68ki_read_imm_8(ctx)
+      |                           ~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1103:20: note: 'm68ki_read_imm_8' declared here
+ 1103 | static inline uint m68ki_read_imm_8(m68ki_context *ctx)
+      |                    ^                ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1505:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1505 |         uint src = OPER_I_8();
+      |                    ^~~~~~~~~~
+third_party/musashi/m68kcpu.h:762:47: note: expanded from macro 'OPER_I_8'
+  762 | #define OPER_I_8(ctx)     m68ki_read_imm_8(ctx)
+      |                           ~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1103:20: note: 'm68ki_read_imm_8' declared here
+ 1103 | static inline uint m68ki_read_imm_8(m68ki_context *ctx)
+      |                    ^                ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1521:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1521 |         uint src = OPER_I_8();
+      |                    ^~~~~~~~~~
+third_party/musashi/m68kcpu.h:762:47: note: expanded from macro 'OPER_I_8'
+  762 | #define OPER_I_8(ctx)     m68ki_read_imm_8(ctx)
+      |                           ~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1103:20: note: 'm68ki_read_imm_8' declared here
+ 1103 | static inline uint m68ki_read_imm_8(m68ki_context *ctx)
+      |                    ^                ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1538:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1538 |         uint src = OPER_I_16();
+      |                    ^~~~~~~~~~~
+third_party/musashi/m68kcpu.h:763:48: note: expanded from macro 'OPER_I_16'
+  763 | #define OPER_I_16(ctx)    m68ki_read_imm_16(ctx)
+      |                           ~~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1071:20: note: 'm68ki_read_imm_16' declared here
+ 1071 | static inline uint m68ki_read_imm_16(m68ki_context *ctx)
+      |                    ^                 ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1553:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1553 |         uint src = OPER_I_16();
+      |                    ^~~~~~~~~~~
+third_party/musashi/m68kcpu.h:763:48: note: expanded from macro 'OPER_I_16'
+  763 | #define OPER_I_16(ctx)    m68ki_read_imm_16(ctx)
+      |                           ~~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1071:20: note: 'm68ki_read_imm_16' declared here
+ 1071 | static inline uint m68ki_read_imm_16(m68ki_context *ctx)
+      |                    ^                 ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1569:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1569 |         uint src = OPER_I_16();
+      |                    ^~~~~~~~~~~
+third_party/musashi/m68kcpu.h:763:48: note: expanded from macro 'OPER_I_16'
+  763 | #define OPER_I_16(ctx)    m68ki_read_imm_16(ctx)
+      |                           ~~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1071:20: note: 'm68ki_read_imm_16' declared here
+ 1071 | static inline uint m68ki_read_imm_16(m68ki_context *ctx)
+      |                    ^                 ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1585:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1585 |         uint src = OPER_I_16();
+      |                    ^~~~~~~~~~~
+third_party/musashi/m68kcpu.h:763:48: note: expanded from macro 'OPER_I_16'
+  763 | #define OPER_I_16(ctx)    m68ki_read_imm_16(ctx)
+      |                           ~~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1071:20: note: 'm68ki_read_imm_16' declared here
+ 1071 | static inline uint m68ki_read_imm_16(m68ki_context *ctx)
+      |                    ^                 ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1601:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1601 |         uint src = OPER_I_16();
+      |                    ^~~~~~~~~~~
+third_party/musashi/m68kcpu.h:763:48: note: expanded from macro 'OPER_I_16'
+  763 | #define OPER_I_16(ctx)    m68ki_read_imm_16(ctx)
+      |                           ~~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1071:20: note: 'm68ki_read_imm_16' declared here
+ 1071 | static inline uint m68ki_read_imm_16(m68ki_context *ctx)
+      |                    ^                 ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1617:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1617 |         uint src = OPER_I_16();
+      |                    ^~~~~~~~~~~
+third_party/musashi/m68kcpu.h:763:48: note: expanded from macro 'OPER_I_16'
+  763 | #define OPER_I_16(ctx)    m68ki_read_imm_16(ctx)
+      |                           ~~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1071:20: note: 'm68ki_read_imm_16' declared here
+ 1071 | static inline uint m68ki_read_imm_16(m68ki_context *ctx)
+      |                    ^                 ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1633:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1633 |         uint src = OPER_I_16();
+      |                    ^~~~~~~~~~~
+third_party/musashi/m68kcpu.h:763:48: note: expanded from macro 'OPER_I_16'
+  763 | #define OPER_I_16(ctx)    m68ki_read_imm_16(ctx)
+      |                           ~~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1071:20: note: 'm68ki_read_imm_16' declared here
+ 1071 | static inline uint m68ki_read_imm_16(m68ki_context *ctx)
+      |                    ^                 ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1649:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1649 |         uint src = OPER_I_16();
+      |                    ^~~~~~~~~~~
+third_party/musashi/m68kcpu.h:763:48: note: expanded from macro 'OPER_I_16'
+  763 | #define OPER_I_16(ctx)    m68ki_read_imm_16(ctx)
+      |                           ~~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1071:20: note: 'm68ki_read_imm_16' declared here
+ 1071 | static inline uint m68ki_read_imm_16(m68ki_context *ctx)
+      |                    ^                 ~~~~~~~~~~~~~~~~~~
+third_party/musashi/m68kops.c:1666:13: error: too few arguments to function call, single argument 'ctx' was not specified
+ 1666 |         uint src = OPER_I_32();
+      |                    ^~~~~~~~~~~
+third_party/musashi/m68kcpu.h:764:48: note: expanded from macro 'OPER_I_32'
+  764 | #define OPER_I_32(ctx)    m68ki_read_imm_32(ctx)
+      |                           ~~~~~~~~~~~~~~~~~    ^
+third_party/musashi/m68kcpu.h:1109:20: note: 'm68ki_read_imm_32' declared here
+ 1109 | static inline uint m68ki_read_imm_32(m68ki_context *ctx)
+      |                    ^                 ~~~~~~~~~~~~~~~~~~
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+20 errors generated.
+ninja: build stopped: subcommand failed.

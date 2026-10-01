@@ -1,15 +1,70 @@
-/* SPDX-License-Identifier: MIT
- * RED-stage link scaffold; no backend execution exists yet. */
+/* SPDX-License-Identifier: MIT */
 #include "cpu_adapter.h"
-struct cpu_instance { cpu_allocator allocator; };
-cpu_status cpu_create(unsigned model, cpu_bus bus, cpu_allocator a, cpu_instance **out) {
- (void)model; (void)bus; *out = a.allocate(a.userdata, sizeof(**out));
- if (!*out) return CPU_ALLOCATION_FAILURE;
- (*out)->allocator = a; return CPU_OK;
+#include "m68kcpu.h"
+#include <string.h>
+#include <stdint.h>
+
+struct cpu_instance {
+ m68ki_context backend;
+ cpu_allocator allocator;
+ int faulted, ready;
+};
+/* A host fault always returns to the current reset/run call, never to a
+ * previous call's jump frame. The failed guest is terminal until reset. */
+static unsigned read_bus(m68ki_context *ctx, unsigned address, unsigned width) {
+ unsigned value=0;
+ if(!ctx->bus_read(ctx->bus_data,address,width,&value)) longjmp(ctx->host_fault,1);
+ return value;
 }
-void cpu_destroy(cpu_instance *c) { c->allocator.release(c->allocator.userdata, c); }
-cpu_status cpu_reset(cpu_instance *c) { (void)c; return CPU_OK; }
-cpu_run_result cpu_run(cpu_instance *c, uint64_t cycles) {
- (void)c; return (cpu_run_result){ .requested=cycles, .reason=CPU_BUDGET };
+static void write_bus(m68ki_context *ctx, unsigned address, unsigned width, unsigned value) {
+ if(!ctx->bus_write(ctx->bus_data,address,width,value)) longjmp(ctx->host_fault,1);
 }
-cpu_status cpu_set_irq(cpu_instance *c, unsigned level) { (void)c; (void)level; return CPU_OK; }
+unsigned m68k_read_memory_8(m68ki_context *ctx,unsigned a) {return read_bus(ctx,a,1);}
+unsigned m68k_read_memory_16(m68ki_context *ctx,unsigned a) {return read_bus(ctx,a,2);}
+unsigned m68k_read_memory_32(m68ki_context *ctx,unsigned a) {return read_bus(ctx,a,4);}
+void m68k_write_memory_8(m68ki_context *ctx,unsigned a,unsigned v) {write_bus(ctx,a,1,v);}
+void m68k_write_memory_16(m68ki_context *ctx,unsigned a,unsigned v) {write_bus(ctx,a,2,v);}
+void m68k_write_memory_32(m68ki_context *ctx,unsigned a,unsigned v) {write_bus(ctx,a,4,v);}
+cpu_status cpu_create(unsigned model,cpu_bus bus,cpu_allocator a,cpu_instance **out) {
+ if(!out) return CPU_INVALID_ARGUMENT;
+ *out=NULL;
+ if(model!=68000) return CPU_UNSUPPORTED_MODEL;
+ if(!bus.read || !bus.write || !a.allocate || !a.release) return CPU_INVALID_ARGUMENT;
+ cpu_instance *c=a.allocate(a.userdata,sizeof(*c));
+ if(!c) return CPU_ALLOCATION_FAILURE;
+ memset(c,0,sizeof(*c)); c->allocator=a;
+ c->backend.bus_data=bus.userdata; c->backend.bus_read=bus.read; c->backend.bus_write=bus.write;
+ m68k_init(&c->backend); m68k_set_cpu_type(&c->backend,M68K_CPU_TYPE_68000);
+ *out=c; return CPU_OK;
+}
+void cpu_destroy(cpu_instance *c) {
+ if(c) {cpu_allocator a=c->allocator; a.release(a.userdata,c);}
+}
+cpu_status cpu_reset(cpu_instance *c) {
+ if(!c) return CPU_INVALID_ARGUMENT;
+ c->faulted=0; c->ready=0; c->backend.instructions=0;
+ if(setjmp(c->backend.host_fault)) {c->faulted=1; return CPU_HOST_FAULT;}
+ m68k_pulse_reset(&c->backend); c->ready=1; return CPU_OK;
+}
+cpu_run_result cpu_run(cpu_instance *c,uint64_t cycles) {
+ cpu_run_result r={.requested=cycles,.reason=CPU_INVALID_ARGUMENT};
+ if(!c) return r;
+ if(c->faulted) {r.reason=CPU_HOST_FAULT; return r;}
+ if(!c->ready) return r;
+ r.reason=CPU_BUDGET;
+ if(!cycles) return r;
+ /* Leave ample signed headroom for a single instruction/exception overshoot. */
+ unsigned request=cycles>1000000 ? 1000000 : (unsigned)cycles;
+ unsigned long long before=c->backend.instructions;
+ if(setjmp(c->backend.host_fault)) {c->faulted=1; r.reason=CPU_HOST_FAULT; return r;}
+ r.elapsed=(unsigned)m68k_execute(&c->backend,(int)request);
+ r.instructions=c->backend.instructions-before;
+ r.overshoot=r.elapsed>request ? r.elapsed-request : 0;
+ r.reason=c->backend.cpu.stopped ? CPU_STOPPED : CPU_BUDGET;
+ return r;
+}
+cpu_status cpu_set_irq(cpu_instance *c,unsigned level) {
+ if(!c || level>7 || !c->ready) return CPU_INVALID_ARGUMENT;
+ if(c->faulted) return CPU_HOST_FAULT;
+ m68k_set_irq(&c->backend,level); return CPU_OK;
+}
