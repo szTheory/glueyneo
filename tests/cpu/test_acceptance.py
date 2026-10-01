@@ -85,6 +85,9 @@ class AcceptanceControls(unittest.TestCase):
     def test_failed_stale_duplicate_and_zero_records(self):
         with self.assertRaises(acceptance.audit.AuditError):
             acceptance.observe("cpu_closure", '{"status":"pass"}\n[This part of the test output was removed')
+        self.assertEqual(acceptance.observe("cpu_audit_controls", '{"status":"pass","tests":13}'), 13)
+        with self.assertRaises(acceptance.audit.AuditError):
+            acceptance.observe("cpu_audit_controls", '{"status":"fail","tests":13}')
         for key, value in (("status", "fail"), ("status", "unknown"), ("observed", 0),
                            ("configuration", "wrong"), ("input_digest", "b" * 64),
                            ("output_sha256", ""), ("kind", "probe")):

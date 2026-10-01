@@ -198,14 +198,15 @@ def observe(name, output):
         return int(matches[0][0])
     needles = {"cpu_guest_negative": "PASS: executed operand mutation", "cpu_isolation_negative": "PASS: swapped baseline",
                "cpu_state_negative": "intended consequential assertion failed",
-               "cpu_inventory": "controls=3", "cpu_audit_controls": "Ran 13 tests"}
+               "cpu_inventory": "controls=3"}
     if name in needles:
         count = output.count(needles[name])
         audit.require(count == (2 if name == "cpu_state_negative" else 1), "missing control assertions: " + name)
         return SOURCE.get(name, RUNTIME.get(name))
-    if name in ("cpu_closure", "cpu_budget"):
-        audit.require(json.loads(output)["status"] == "pass", "failed source evidence: " + name)
-        return 1
+    if name in ("cpu_closure", "cpu_budget", "cpu_audit_controls"):
+        result = json.loads(output)
+        audit.require(result["status"] == "pass", "failed source evidence: " + name)
+        return result["tests"] if name == "cpu_audit_controls" else 1
     raise audit.AuditError("unclassified result " + name)
 
 

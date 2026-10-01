@@ -610,8 +610,8 @@
       "compiled": [],
       "distributed": true,
       "host_calls": "Test/build/evidence only; host services allowed outside runtime",
-      "sha256": "0c5a07324c019ebbe27e7570b0b54c24390196e56fa631d60dbd74339acc3c0d",
-      "revision": "sha256:0c5a07324c019ebbe27e7570b0b54c24390196e56fa631d60dbd74339acc3c0d"
+      "sha256": "276ad07449fad4386d0e2890950e6e50c16594416063dff633d533ce08de5c7a",
+      "revision": "sha256:276ad07449fad4386d0e2890950e6e50c16594416063dff633d533ce08de5c7a"
     },
     {
       "path": "tests/cpu/test_acceptance.py",
@@ -623,8 +623,8 @@
       "compiled": [],
       "distributed": true,
       "host_calls": "Test/build/evidence only; host services allowed outside runtime",
-      "sha256": "30b044034ba84d3777ec86a17dae416ebffbfda039cf690bb35546536ba95c5d",
-      "revision": "sha256:30b044034ba84d3777ec86a17dae416ebffbfda039cf690bb35546536ba95c5d"
+      "sha256": "74ede54f86d2ded465b33b0a0f4a3f1fd043f23edb3d3fa56c7443b9936ba3a7",
+      "revision": "sha256:74ede54f86d2ded465b33b0a0f4a3f1fd043f23edb3d3fa56c7443b9936ba3a7"
     }
   ]
 }
