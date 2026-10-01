@@ -1,0 +1,10 @@
+{
+  "command": "ctest --test-dir build/cpu -R '^cpu_state$' --output-on-failure --no-tests=error",
+  "exitCode": 8,
+  "output": "TAP version 13\nnot ok 1 - complete_state_available\n1..1\n# tests 1\n# pass 0\n# fail 1\n",
+  "raw_output": "tests/cpu/test_state.c:10:complete_state_available:FAIL: Expected 1 Was 0:complete guest record available\n1 Tests 1 Failures 0 Ignored",
+  "targetTest": "complete_state_available",
+  "targetFile": "tests/cpu/test_state.c",
+  "expected": "complete guest-state capture contract available",
+  "actual": "private state record absent"
+}
