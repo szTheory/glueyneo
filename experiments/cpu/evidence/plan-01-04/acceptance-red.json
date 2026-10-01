@@ -1,0 +1,10 @@
+{
+  "command": "python3 tests/cpu/test_acceptance.py",
+  "exitCode": 1,
+  "output": "TAP version 13\nnot ok 1 - test_empty_report_never_admits\n1..1\n# tests 1\n# pass 0\n# fail 1\n",
+  "raw_output": "FAIL: test_empty_report_never_admits (__main__.AcceptanceControls.test_empty_report_never_admits)\nAssertionError: 'accepted' == 'accepted' : empty evidence must never admit a CPU\nRan 1 test\nFAILED (failures=1)\n",
+  "targetTest": "test_empty_report_never_admits",
+  "targetFile": "tests/cpu/test_acceptance.py",
+  "expected": "Empty evidence never admits a CPU",
+  "actual": "accepted returned for empty evidence"
+}
