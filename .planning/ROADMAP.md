@@ -38,7 +38,7 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit acceptance decision, commands and results against a finite effort/patch budget fixed before adaptation; failed or over-budget candidates have counterexamples and a replacement/replanning disposition. (CPU-05)
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans executed
 
 Plans:
 **Wave 1**
@@ -53,13 +53,13 @@ Plans:
 
 - [x] 01-03-PLAN.md — Qualify timing and complete fresh-destination continuation.
 
-**Wave 4** *(blocked on Wave 3 completion)*
+**Wave 4** *(complete; phase-goal verification pending)*
 
-- [ ] 01-04-PLAN.md — Task 1 evidence collection complete; paused by user before independent review and admission decision.
+- [x] 01-04-PLAN.md — Independent review and acceptance seal complete; candidate accepted for the bounded private experiment.
 
 Planning guidance: First set a concrete finite effort cap, patch budget and stopping/replacement rules. Then use small CMake/CTest experiment scaffolding, a licensed original tiny guest, source/host-call audit, and isolation/timing/continuation experiments. Evaluate the research's pinned Musashi candidate without presuming acceptance. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
 
-**Admission gate:** CPU-05 may be satisfied by a reproducible rejection or deferral. That does not satisfy CPU-01–04 or complete this phase. Phase 1 completion and Phase 2 admission require qualified backend acceptance, or an explicit evidence-backed roadmap revision that reconciles affected requirements. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
+**Admission gate:** CPU-05 may be satisfied by a reproducible rejection or deferral. That does not satisfy CPU-01–04 or complete this phase. The bounded candidate is now accepted against CPU-01–05; Phase 1 completion and Phase 2 admission still require the separate phase-goal verification step. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
 
 ### Phase 2: Executable diagnostic SDK
 
@@ -105,11 +105,11 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 3/4 | Paused by user: 01-04 review pending | - |
+| 1. CPU acceptance experiment | v0.1 | 4/4 | Ready for phase-goal verification | - |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
-Coverage: 27/27 current requirements assigned exactly once; 5 in Phase 1, 15 in Phase 2, 7 in Phase 3. All remain Pending in [traceability](REQUIREMENTS.md#traceability). Deferred v2 requirements are not allocated to these phases.
+Coverage: 27/27 current requirements assigned exactly once; 5 in Phase 1, 15 in Phase 2, 7 in Phase 3. CPU-01–05 have accepted task-level evidence and await phase-goal verification; the other 22 remain Pending in [traceability](REQUIREMENTS.md#traceability). Deferred v2 requirements are not allocated to these phases.
 
 ## Next Milestone Outline — Interactive Diagnostic Alpha
 

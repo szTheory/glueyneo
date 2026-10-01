@@ -10,11 +10,11 @@ In this OpenGSD template, v1 means the first scoped deliverable, **v0.1**, not a
 
 ### CPU Admission
 
-- [ ] **CPU-01**: A maintainer can reproduce the exact C 68000 candidate build from pinned sources and a per-file copied/generated/compiled/distributed inventory with license notices and host-call disposition, including proof of whether FPU/SoftFloat is excluded or retained.
-- [ ] **CPU-02**: A maintainer can run distinguishable CPU instances alternately and concurrently, including simultaneous cold initialization and failing creation/teardown paths, with results matching isolated baselines and no shared mutable machine state.
-- [ ] **CPU-03**: A maintainer can observe actual guest progress, stop/overshoot behavior and the selected interrupt/exception interactions in a bounded execution experiment whose timing precision and unsupported behavior are documented.
-- [ ] **CPU-04**: A maintainer can inspect a complete mutable-state and callback inventory and reproduce backend continuation at supported boundaries without serializing host pointers or jump buffers; this establishes no public board-snapshot format.
-- [ ] **CPU-05**: A maintainer receives an explicit backend accept/reject/defer decision against an effort and patch budget set before adaptation, with commands, results and counterexamples; an over-budget or failed candidate triggers replacement/replanning before SDK integration.
+- [x] **CPU-01**: A maintainer can reproduce the exact C 68000 candidate build from pinned sources and a per-file copied/generated/compiled/distributed inventory with license notices and host-call disposition, including proof of whether FPU/SoftFloat is excluded or retained.
+- [x] **CPU-02**: A maintainer can run distinguishable CPU instances alternately and concurrently, including simultaneous cold initialization and failing creation/teardown paths, with results matching isolated baselines and no shared mutable machine state.
+- [x] **CPU-03**: A maintainer can observe actual guest progress, stop/overshoot behavior and the selected interrupt/exception interactions in a bounded execution experiment whose timing precision and unsupported behavior are documented.
+- [x] **CPU-04**: A maintainer can inspect a complete mutable-state and callback inventory and reproduce backend continuation at supported boundaries without serializing host pointers or jump buffers; this establishes no public board-snapshot format.
+- [x] **CPU-05**: A maintainer receives an explicit backend accept/reject/defer decision against an effort and patch budget set before adaptation, with commands, results and counterexamples; an over-budget or failed candidate triggers replacement/replanning before SDK integration.
 
 ### Native API and Host Safety
 
@@ -111,11 +111,11 @@ Each v1 requirement has exactly one primary phase in v0.1. Later requirements re
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CPU-01 | Phase 1 | Pending |
-| CPU-02 | Phase 1 | Pending |
-| CPU-03 | Phase 1 | Pending |
-| CPU-04 | Phase 1 | Pending |
-| CPU-05 | Phase 1 | Pending |
+| CPU-01 | Phase 1 | Complete |
+| CPU-02 | Phase 1 | Complete |
+| CPU-03 | Phase 1 | Complete |
+| CPU-04 | Phase 1 | Complete |
+| CPU-05 | Phase 1 | Complete |
 | API-01 | Phase 2 | Pending |
 | API-02 | Phase 2 | Pending |
 | API-03 | Phase 2 | Pending |
@@ -140,6 +140,7 @@ Each v1 requirement has exactly one primary phase in v0.1. Later requirements re
 | DEL-05 | Phase 3 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 27 total
 - Mapped to phases: 27
 - Unmapped: 0
