@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 
@@ -86,6 +87,47 @@ class ContractControls(unittest.TestCase):
         result = contract.validate_budget(self.root)
         self.assertEqual(result["status"], "pause-for-review")
         self.assertEqual(result["phase_disposition"], "GAPS_FOUND")
+
+    def test_record_measures_intervals_build_fixture_churn_and_ctest(self):
+        subprocess.run(["git", "init", "--quiet"], cwd=self.root, check=True)
+        subprocess.run(["git", "config", "user.name", "Contract Test"], cwd=self.root, check=True)
+        subprocess.run(["git", "config", "user.email", "contract-test@example.invalid"],
+                       cwd=self.root, check=True)
+        subprocess.run(["git", "add", "-A"], cwd=self.root, check=True)
+        subprocess.run(["git", "commit", "--quiet", "-m", "test baseline"], cwd=self.root, check=True)
+
+        ledger_path = self.root / contract.LEDGER_PATH
+        ledger = self.read_ledger()
+        ledger["code_start"]["commit"] = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=self.root, text=True).strip()
+        ledger["code_start"]["contract_sha256"] = contract.sha256(self.root / contract.CONTRACT_PATH)
+        self.write_ledger(ledger)
+
+        runtime = self.root / "experiments/owned_cpu/cpu.c"
+        runtime.parent.mkdir(parents=True, exist_ok=True)
+        runtime.write_text("int owned_cpu_step(void) { return 1; }\n", encoding="utf-8")
+        behavior = self.root / "tests/owned_cpu/test_behavior.c"
+        behavior.parent.mkdir(parents=True, exist_ok=True)
+        behavior.write_text("int test_owned_cpu(void) { return 1; }\n", encoding="utf-8")
+        build = self.root / "build/owned-cpu"
+        (build / "Testing/Temporary").mkdir(parents=True, exist_ok=True)
+        (build / "CMakeCache.txt").write_text("CMAKE_BUILD_TYPE=Debug\n", encoding="utf-8")
+        (build / "build.ninja").write_text("ninja_required_version = 1.10\n", encoding="utf-8")
+        (build / "Testing/Temporary/LastTest.log").write_text(
+            "1/1 Test #1: owned_cpu_contract ... Passed 0.01 sec\n", encoding="utf-8")
+
+        result = contract.record(
+            self.root, "plan-01-08-diagnostic", build,
+            ["test-agent,2026-01-01T00:00:01Z,2026-01-01T00:00:03Z"],
+        )
+        self.assertEqual(result["status"], "pass")
+        self.assertEqual(result["active_seconds"], 2)
+        self.assertEqual(result["build_dir"], "build/owned-cpu")
+        self.assertEqual(result["cumulative_churn"]["runtime_added"], 1)
+        self.assertEqual(result["cumulative_churn"]["test_tool_added"], 1)
+        self.assertEqual(result["test_results"]["expected"], 1)
+        self.assertEqual(result["test_results"]["observed"], 1)
+        self.assertNotIn(str(self.root), Path(ledger_path).read_text(encoding="utf-8"))
 
     def test_self_test_has_nonempty_positive_and_negative_denominators(self):
         result = contract.self_test()

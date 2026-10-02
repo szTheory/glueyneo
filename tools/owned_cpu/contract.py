@@ -424,7 +424,9 @@ def _write_json(path: Path, value: dict) -> None:
 
 
 def _copy_subject(target: Path) -> None:
-    for relative in (CONTRACT_PATH, Path(".planning/REQUIREMENTS.md"), Path(".planning/ROADMAP.md")):
+    for relative in (CONTRACT_PATH, Path(".planning/REQUIREMENTS.md"), Path(".planning/ROADMAP.md"),
+                     Path("tests/cpu/guest_fixture.c"), Path("tests/cpu/guest_fixture.h"),
+                     Path("tests/cpu/ORACLE.md")):
         destination = target / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / relative, destination)
