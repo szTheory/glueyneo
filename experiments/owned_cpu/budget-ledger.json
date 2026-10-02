@@ -1,0 +1,144 @@
+{
+  "caps": {
+    "active_effort_seconds": 115200,
+    "diagnostic_gate_seconds": 28800,
+    "runtime_churn_added_deleted_nonblank_lines": 6000,
+    "test_tool_churn_added_deleted_nonblank_lines": 8000
+  },
+  "churn_baseline": {
+    "commit": "7acc36e4538cc2c152d791763f9b39425122f6db",
+    "measurement": "cumulative Git diff added/deleted nonblank lines from code_start, counted by category.",
+    "runtime_added": 0,
+    "runtime_deleted": 0,
+    "test_tool_added": 590,
+    "test_tool_deleted": 0
+  },
+  "code_start": {
+    "commit": "7acc36e4538cc2c152d791763f9b39425122f6db",
+    "contract_sha256": "aa8e9fddee5312460b3206a4aad62674bf64cff20071e133a0e3fc09d72b3567"
+  },
+  "diagnostic_gate": {
+    "cap_seconds": 28800,
+    "completion_condition": "The unmodified original guest and its named wrong-behavior control both execute with their expected outcomes.",
+    "excluded_stage": "plan-01-07-governance",
+    "started_at": null,
+    "starts_on": "first owned emulation-runtime or behavioral-test change in Plan 01-08",
+    "status": "not-started"
+  },
+  "effort_checkpoints": [
+    {
+      "action": "Review diagnostic gate and remaining implementation/review reserve.",
+      "cumulative_seconds": 28800
+    },
+    {
+      "action": "Reconcile scope, findings, and repair/re-review reserve before further expansion.",
+      "cumulative_seconds": 57600
+    },
+    {
+      "action": "User-controlled scope review before consuming the final effort tranche.",
+      "cumulative_seconds": 86400
+    },
+    {
+      "action": "Hard cumulative cap; stop mutation and preserve GAPS_FOUND unless the supported outcome is already recorded.",
+      "cumulative_seconds": 115200
+    }
+  ],
+  "entries": [
+    {
+      "active_seconds": 1937,
+      "agent_intervals": [
+        {
+          "agent": "primary-agent",
+          "end": "2026-10-02T18:39:17Z",
+          "reason": "Conservative full interval, rounded down to one minute before the earliest observed GSD activity timestamp; includes initialization, source/manual review, implementation, failed control repair, tests, and scope reconciliation.",
+          "start": "2026-10-02T18:07:00Z"
+        }
+      ],
+      "commit": "7acc36e4538cc2c152d791763f9b39425122f6db",
+      "cumulative_churn": {
+        "runtime_added": 0,
+        "runtime_deleted": 0,
+        "test_tool_added": 590,
+        "test_tool_deleted": 0
+      },
+      "diagnostic_gate": false,
+      "recorded_at": "2026-10-02T18:39:17Z",
+      "stage": "plan-01-07-governance",
+      "test_results": {
+        "contract_validate": {
+          "canonical_story_errors": [],
+          "canonical_story_valid": true,
+          "historical_files": 10,
+          "phase_02": "gated",
+          "requirements_pending": [
+            "CPU-01",
+            "CPU-02",
+            "CPU-03",
+            "CPU-04",
+            "CPU-05"
+          ],
+          "status": "pass"
+        },
+        "expected": 8,
+        "observed": 8,
+        "resolved_control_failures": [
+          "Empty-record self-test first hit the deliberately mutated historical-file fixture; the control now restores that fixture before testing the ledger.",
+          "Optimized-Python self-test first matched a text fragment against JSON output; the control now parses and checks the named JSON rejection reason."
+        ],
+        "self_test": {
+          "commands": [
+            [
+              "python3",
+              "tools/owned_cpu/contract.py",
+              "self-test"
+            ],
+            [
+              "python3",
+              "-O",
+              "tools/owned_cpu/contract.py",
+              "self-test"
+            ]
+          ],
+          "negative_controls": 6,
+          "positive_cases": 2,
+          "status": "pass"
+        },
+        "status": "pass",
+        "unit_tests": {
+          "command": [
+            "python3",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "tests/owned_cpu",
+            "-p",
+            "test_contract.py"
+          ],
+          "expected": 8,
+          "observed": 8,
+          "status": "pass"
+        }
+      },
+      "working_tree_dirty": true
+    }
+  ],
+  "freeze_recorded_at": "2026-10-02T18:39:17Z",
+  "historical_sha256": {
+    "experiments/cpu/ACCEPTANCE.md": "00b2da4548384c78e921d0085ced2147f0ec7eca30635a2961f49279dcd6cf3b",
+    "experiments/cpu/REVIEW.md": "35bf8e3a849d05e90e7291c9868cffcae014ada4d1607ad3542de7f912e9be6e",
+    "experiments/cpu/acceptance-results.json": "6e5efacd1ec655d803b4edb56570615ea8b8a81f89deda725ffc551a17bc3641",
+    "experiments/cpu/budget-ledger.json": "62266377e31f81cba19526c78fb23390bb21448181c06cdea1c77d385da43800",
+    "experiments/cpu/evidence/attempt-1/receipt.json": "c63d0fcfb2588498f7f0672a3a4d00d7f823a35fec6a575ea72163281a9fa721",
+    "experiments/cpu/evidence/attempt-1/source.patch": "b69a0c887e92cd588892c024c33ebebe58e2031cac26ec83bb6175fea36772ce",
+    "experiments/cpu/evidence/attempt-2/qualification.json": "fffc599d92dea0a401651f8e323805ce471cb26b54140c8876b0e7f74eb7ca55",
+    "experiments/cpu/evidence/plan-01-05/prior-REVIEW.md": "254fae71bfdb3a468dec1126bfd4f8b4e73f8c194b6cc594945219243b17c649",
+    "experiments/cpu/evidence/plan-01-05/prior-acceptance-results.json": "3b9d6a736fb7ac8e647aed77f1ca9c10cc17233b3f1991c2d3be13ae25f9a2d3",
+    "experiments/cpu/evidence/recovery-accounting/history.json": "27879b678585ba229303620469fa22cb25f1716412c4090e1962b53efcf1f3c4"
+  },
+  "pause": null,
+  "phase": "01-cpu-acceptance-experiment",
+  "schema": 1,
+  "status": "frozen-pre-implementation",
+  "threshold_policy": "pause-for-user-scope-review"
+}
