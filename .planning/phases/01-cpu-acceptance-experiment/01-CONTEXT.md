@@ -1,111 +1,135 @@
 # Phase 1: CPU acceptance experiment - Context
 
-**Gathered:** 2026-10-01
-**Status:** Ready for planning
-**Mode:** Automatic continuation from new-project; choices below are agent recommendations under the supplied brief's standing authorization, not individual user answers.
+**Gathered:** 2026-10-02
+**Status:** Discussion captured; backend selection and scope reconciliation remain for planning review.
 
 <domain>
 ## Phase Boundary
 
-Qualify a reproducible C 68000 backend by executing a tiny real guest with demonstrated instance independence, complete backend state handling, host safety and explicit timing limits. CPU-01–CPU-05 define acceptance. This is a private feasibility harness; the native public API, board diagnostic SDK and release qualification follow in Phases 2–3. No backend has been accepted.
+Phase 01 remains the CPU acceptance experiment. Its declared goal is reproducible acceptance of a C 68000 backend before SDK integration. It is still open / GAPS_FOUND: the current pinned Musashi candidate is rejected/deferred, CPU-01–04 remain Pending, CPU-05's bounded-decision obligation is complete, and Phase 02 remains gated.
+
+This discussion records the developer's preferred direction and recommended architecture for a future gap plan. It does not accept a backend, revise canonical requirements or the roadmap, change the experiment caps, or authorize implementation. Any owned-core plan must reconcile the candidate-specific CPU-01–04 obligations and define a separate, bounded development budget while preserving all consumed Musashi charges.
+
+This context supersedes the earlier Musashi-only implementation preference where it conflicts with the direction below. The earlier experiment, source identities, failures, and accounting remain historical evidence in the linked receipts and summaries.
+
 </domain>
 
 <decisions>
 ## Implementation Decisions
 
-IDs below are local to Phase 1; preparation D-01–D-44 remain separate historical provenance.
+### Backend ownership and evidence boundary
 
-### Bounded candidate experiment
+- **D-01:** The developer prefers building original C CPU behavior as far as practical, because a flawed foundation is not worth reusing. Correctness and efficient delivery both matter. This is a strong preference, not a final backend selection or a claim that all third-party code is flawed.
+- **D-02:** The current pinned Musashi candidate remains rejected/deferred. Its two substantive adaptation attempts and all recorded charges/caps remain unchanged. No third adaptation, refund, or cap increase is authorized. Any later repair or replacement work needs a distinct plan and explicit budget.
+- **D-03:** Reconsider an imported CPU core only if a bounded source review shows a material correctness or delivery advantage that justifies its full code, build, license, provenance, and maintenance costs. Rocket68 is a possible comparison reference, not an approved dependency: its upstream project describes itself as early and lists tests from Musashi and the MAME-derived m68000 corpus.
+- **D-04:** Keep the runtime C17 and dependency tree small. Do not introduce a public CPU plugin ABI, dynamic loader, C++ runtime engine, or generic backend framework as part of this decision.
 
-- **D-01:** Investigate Musashi at `313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd` as one candidate. Do not implement multiple production backends or an all-new CPU during this phase. Failure produces a counterexample and replacement/replanning decision.
-- **D-02:** Allow at most two substantive adaptation attempts. The planner must inspect the source and set an explicit numeric budget for changed handwritten upstream files/lines, account separately for reproducible generated output, and record stopping/repair rules **before any adaptation**. Acceptance is bounded by both attempts and that patch budget. An exceeded cap is a reported rejection/replan condition, not permission to expand silently.
-- **D-03:** Keep the experiment private and reviewable. Use enough CMake/CTest scaffolding and original guest input to reproduce results; do not freeze a public ABI, implement future devices, or turn the experiment into a full emulator fork.
+### Replacement boundary and incremental migration
 
-### Compiled closure and host safety
+- **D-05:** Put any future CPU implementation behind a thin private per-instance boundary covering lifecycle/reset, bounded execution, interrupt input, bus access, explicit result/error reporting, and test-only observation. The existing experimental cpu_instance adapter shows a useful boundary shape, but it embeds Musashi-specific state and is not accepted production code.
+- **D-06:** If two implementations are compared, replace the whole CPU backend at that boundary. Start each run from equivalent fresh guest state and separate mutable memory/bus fixtures, then compare architectural observations and ordered bus effects at named instruction boundaries. Measure cycle counts and bus traces as separate claims.
+- **D-07:** Do not mix opcode handlers from two engines or live-swap opaque CPU state. Prefetch, exceptions, interrupts, bus order, and internal state cross instruction boundaries; state conversion would be its own compatibility contract and is not needed to learn whether a new core is correct.
+- **D-08:** “Strangler-style” applies here as a seam for replacing the complete CPU component, not routing production traffic: Glueyneo has no qualified shipping backend yet. Keep backend choice static per test/build unless later evidence justifies a runtime selector.
 
-- **D-04:** Prefer a demonstrated minimal 68000 source closure. Inventory every copied, generated, compiled and distributed file at its immutable identity, including generator provenance. Prove FPU/SoftFloat exclusion if claimed; build flags or unused runtime paths alone are insufficient. If any files remain, document their actual notices, obligations and host-call disposition before admission.
-- **D-05:** Retain all applicable notices and document small upstream patches. The experimental runtime must remain C and cannot call process exit, perform ambient file/device/network/environment I/O, or use wall clock for guest execution. Dependency guest errors must return bounded observations/errors to the harness without terminating its host.
-- **D-06:** Inventory every mutable global, lazy-initialized table, callback, counter, exception field and host jump buffer. A context copy, global current-instance pointer, thread-local current-instance workaround or global execution lock does not fulfill the opaque independent-instance direction. Shared tables must be immutable with safe construction; per-machine mutation belongs to an explicit instance.
+### Scope and correctness
 
-### Observable timing and continuation
+- **D-09:** The project's v0.1 contract is an original deterministic CPU/bus diagnostic with an exact supported subset; it does not promise a full game-ready 68000 or full Neo Geo emulation. Recommend starting with a named diagnostic instruction/exception/timing contract and reporting every unsupported instruction explicitly. Never silently treat unsupported opcodes as NOPs.
+- **D-10:** Preserve an architecture that can grow toward broader MC68000 coverage: clear register/flag rules, effective-address behavior, exception/interrupt paths, explicit byte order, bounded bus access, and instruction-family tests. Build vertical slices; do not add a generator, micro-op framework, JIT, or hot-path optimization before representative evidence makes its value clear.
+- **D-11:** Use the Motorola MC68000 manuals and original, independently justified guest expectations for documented CPU behavior. The existing original guest demonstrates a small starting slice (MOVEQ, ADDQ.L, MOVE.L, STOP, reset vectors, and selected IRQ/exception cases); it does not prove complete coverage or hardware behavior.
+- **D-12:** Treat Musashi, MAME, Rocket68, and emulator-generated corpora as useful for finding disagreements, with source and test ancestry recorded. Agreement among implementations with shared ancestry is not an independent oracle. Where feasible, add board captures only with exact board/revision/setup provenance; CPU manuals alone do not establish Neo Geo board timing.
 
-- **D-07:** Start with a qualified instruction-boundary execution contract, reporting actual guest progress and any overshoot. Include the selected interrupt/exception and stop/resume cases needed for the tiny guest experiment. Do not imply arbitrary bus-cycle suspension, Neo Geo board accuracy or original BIOS compatibility from CPU cycle totals.
-- **D-08:** Capture and restore all mutable **backend guest** state at defined supported boundaries, then compare uninterrupted and restored execution/observations. Host pointers, callback identities and jump buffers are rebound or reconstructed; they are not serialized guest data. This remains a private experimental representation, without a public snapshot/ABI compatibility promise.
+### Open decisions required before implementation planning
 
-### Acceptance evidence and failure disposition
+1. Define the exact instruction, addressing-mode, reset, interrupt, exception, and timing cases required to run and qualify the v0.1 diagnostic. Decide whether the new plan first delivers that slice or commits to broader MC68000 coverage.
+2. Reconcile CPU-01–04 with an owned implementation: source/build provenance, per-instance behavior, bounded progress, complete private mutable-state inventory, continuation, and supported-boundary limits still need measurable acceptance criteria.
+3. Set a new development budget and stop/review rule independently from the exhausted Musashi adaptation budget. Estimate and measure the first vertical slice before expanding coverage.
+4. Decide whether any other-core comparison is worth a strict source-only/time-bounded screen. Do not adopt Rocket68 or another library by default.
+5. Before a later phase verification, resolve the independent MVP story-format blocker recorded in 01-VERIFICATION.md as well as the CPU admission gaps.
 
-- **D-09:** Use a small original, redistributable guest and hand-justified expectations from exact CPU primary references. Include meaningful guest-computed memory/register effects and a consequential wrong-behavior control. Emulator agreement retains its ancestry and does not replace the independent oracle. Full board bootstrap/BSS evidence belongs to Phase 2; CPU reset/startup assumptions used here must still be explicit.
-- **D-10:** Compare distinguishable isolated, interleaved and concurrent instances, simultaneous cold initialization and failing creation/teardown paths. Compare guest state/observations at equal boundaries. Audit plus supported race/safety instrumentation and meaningful behavioral stress provide separate evidence; unavailable tools must be recorded honestly.
-- **D-11:** Begin on the available native toolchain and run useful additional toolchains when available. Record exact compiler/configuration/architecture identities and unsupported/skipped outcomes. This experiment does not establish the release platform matrix. Keep host threading/test mechanisms outside the all-C runtime's host-independent contract.
-- **D-12:** Acceptance requires CPU-01–CPU-04 evidence and CPU-05's documented decision. A rejection satisfies only the decision obligation. Preserve failures and counterexamples; do not weaken isolation/timing/rights requirements, regenerate goldens, or claim Phase 1 complete to enable Phase 2. Reconcile any necessary scope change explicitly with the roadmap.
+### the agent's Discretion
 
-### Agent's Discretion
+Recommend concrete module boundaries, test organization, supported-opcode reporting shape, and instrumentation during research/planning, provided they remain private, C17, explicitly bounded, and consistent with the acceptance requirements. Report unsupported or unknown behavior honestly. Do not expand the runtime dependency tree without showing a concrete correctness or maintenance advantage.
 
-The brief delegates routine technical choices. The researcher/planner chooses the finite numeric patch budget from inspected source, private harness structure, exact instruction cases, field encoding and fault injection strategy. Those choices must implement the decisions above and remain testable within the recorded cap. No external credentials or physical hardware are prerequisites for this local experiment; unavailable physical evidence narrows its claim.
 </decisions>
 
 <canonical_refs>
 ## Canonical References
 
-Downstream agents must read the current scope and the relevant source-qualified evidence before planning or implementation.
+**Downstream agents MUST read these before planning or implementing.**
 
-### Current contracts
+### Current project contracts and workflow
+- AGENTS.md — C17, ownership, host isolation, evidence, dependency, and delivery constraints.
+- .planning/PROJECT.md — v0.1 scope; diagnostic subset; C17 and no speculative frameworks.
+- .planning/REQUIREMENTS.md — CPU-01–05 and Phase 02 admission gate.
+- .planning/ROADMAP.md — Phase 01 goal and current open/GAPS_FOUND status.
+- .planning/METHODOLOGY.md — breadth, adversarial review, synthesis, and dependency tradeoff method.
+- .planning/STATE.md — current workflow position, frozen accounting, and next-step pause.
 
-- `AGENTS.md` — engineering, public hygiene, autonomy and evidence rules.
-- `.planning/PROJECT.md` — current v0.1 scope, all-C/ownership constraints and next milestone.
-- `.planning/REQUIREMENTS.md` — CPU-01–CPU-05; Phase 2 isolation requirements must not be mistaken for already verified behavior.
-- `.planning/ROADMAP.md` — Phase 1 acceptance and Phase 2 admission gate.
-- `.planning/config.json` — installed OpenGSD runtime/workflow configuration.
+### CPU decision and evidence
+- .planning/phases/01-cpu-acceptance-experiment/01-05-SUMMARY.md — current rejection and finding disposition.
+- .planning/phases/01-cpu-acceptance-experiment/01-06-DIRECTION.md — developer selected backend-replanning discussion and authorization boundary.
+- .planning/phases/01-cpu-acceptance-experiment/01-VERIFICATION.md — prior preflight refusal, CPU admission gaps, and separate MVP format blocker.
+- .planning/phases/01-cpu-acceptance-experiment/01-REVIEW.md — independent phase-source review.
+- experiments/cpu/ACCEPTANCE.md, experiments/cpu/REVIEW.md, and experiments/cpu/budget-ledger.json — current candidate disposition, blockers, and frozen effort/patch accounting.
+- third_party/musashi/PROVENANCE.md — exact local source provenance; upstream descriptions do not establish local qualification.
 
-### Research and dated provenance
+### Existing experimental shape and independent fixture
+- experiments/cpu/cpu_adapter.h and experiments/cpu/cpu_adapter.c — private cpu_instance, bus, bounded run, IRQ, observation, and private state-codec shape; implementation is Musashi-specific.
+- experiments/cpu/state-inventory.json — the current candidate's mutable-state and callback inventory; not a future core inventory.
+- tests/cpu/ORACLE.md and tests/cpu/guest_fixture.c — original diagnostic expectations and their Motorola manual ancestry.
 
-- `.planning/research/STACK.md` — exact candidate, source-closure/FPU/SoftFloat and build findings.
-- `.planning/research/ARCHITECTURE.md` — explicit contexts, timing, complete mutable state and host boundaries.
-- `.planning/research/PITFALLS.md` — P1–P4 admission and oracle failures, with recovery rules.
-- `.planning/research/SUMMARY.md` — cross-report implications and unresolved gates.
-- `.planning/preparation/BRIEF.md` — original task, authorized automatic defaults and first-deliverable intent.
-- `.planning/preparation/DECISIONS.md` — D-04, D-07–D-17, D-21–D-24, D-27–D-33 and reopening conditions.
-- `.planning/preparation/C-CORE-ARCHITECTURE.md` — timing/device boundaries, integer rules, state and actual consumer contracts.
-- `.planning/preparation/NEOGEO-HARDWARE-AND-ECOSYSTEM.md` — CPU primary-source ledger and source/oracle ancestry.
-- `.planning/preparation/ROADMAP-SEED.md` — bounded feasibility experiment and CPU-only alpha boundary.
-- `.planning/preparation/ADVERSARIAL-REVIEW.md` — A-02 global/init/host-state risk and preserved implementation gates.
+### Research and preparation
+- .planning/research/STACK.md — backend candidates, build/source closure, and dependency findings.
+- .planning/research/ARCHITECTURE.md — instance ownership, timing, host boundary, and continuation constraints.
+- .planning/research/PITFALLS.md — correlated oracles, undefined behavior, state, and admission traps.
+- .planning/preparation/NEOGEO-HARDWARE-AND-ECOSYSTEM.md — primary-source ledger, hardware evidence limits, and candidate research.
+- .planning/preparation/DECISIONS.md — durable project decision provenance and reopening conditions.
+
+### Primary and candidate sources
+- [Motorola M68000 User Manual](https://www.nxp.com/docs/en/reference-manual/MC68000UM.pdf) — reset, bus, interrupt/exception behavior, and timing tables; primary CPU documentation, not Neo Geo board evidence.
+- [Motorola M68000 Programmer's Reference Manual](https://www.nxp.com/docs/en/reference-manual/M68000PRM.pdf) — instruction behavior and encodings.
+- [Musashi upstream](https://github.com/kstenerud/Musashi) — upstream C 680x0 core description and MIT notice; not proof of the local fork's safety or fit.
+- [SingleStepTests m68000](https://github.com/SingleStepTests/m68000) — useful vectors, explicitly generated from MAME's microcoded core.
+- [Rocket68 upstream](https://github.com/habedi/rocket68) — possible C11 comparison candidate; upstream labels itself early and lists tests from Musashi and m68000.
+- [Martin Fowler's Strangler Fig description](https://martinfowler.com/bliki/StranglerFigApplication.html) — gradual whole-component replacement pattern; transfer is limited because Glueyneo has no qualified production backend or live traffic.
+
 </canonical_refs>
 
 <code_context>
 ## Existing Code Insights
 
 ### Reusable Assets
-
-- MIT license, ignore rules, preparation and current planning documents exist.
-- No runtime code, dependency checkout, build system, test harness, diagnostic binary or codebase map exists yet.
+- experiments/cpu/cpu_adapter.h: an opaque per-instance handle with explicit bus callbacks, lifecycle/reset, bounded run result, IRQ input, and private inspection/state calls. Reuse the stable conceptual seam, not the embedded Musashi context, raw state layout, or claim of acceptance.
+- tests/cpu/guest_fixture.c and tests/cpu/ORACLE.md: original MIT fixture with manual-derived register/store assertions and a negative control; a useful first vertical slice.
+- Existing CMake/CTest and pinned Unity setup under experiments/cpu/ and third_party/unity/: research/planning can assess which parts remain useful after the backend changes.
 
 ### Established Patterns
-
-- Original runtime work is C17 with target-scoped CMake/CTest and test-only pinned Unity as adopted defaults.
-- Planning is tracked on `chore/initialize-project`; phase branches and review are configured. No remote repository or hosted checks are configured.
-- Existing research contains candidate evidence; it cannot substitute for a runnable experiment.
+- Keep runtime and chosen runtime dependencies in C17; opaque instance owns all mutable state; host callbacks and memory are explicit; deterministic guest cycles are separate from host pacing.
+- Original fixture inputs and their oracle ancestry are recorded. Keep test results tied to exact binary, source, toolchain, configuration, and fixture identity.
+- The current candidate's prior runtime passes are historical and do not override the six open source blockers or prove a new implementation.
 
 ### Integration Points
+- A replacement core connects to the private CPU boundary and the machine bus, before public SDK API and board devices are finalized.
+- Future SDK integration remains gated on a newly reconciled and accepted CPU contract; no backend-specific private state becomes a public snapshot or persistence format.
 
-- The experiment should expose a private adapter boundary suitable for later native API integration without committing that ABI now.
-- Future source/package/license inventories and original fixture manifests should reuse the experiment's immutable provenance.
 </code_context>
 
 <specifics>
 ## Specific Ideas
 
-Compare two guests with distinguishable state and bus results so accidental cross-instance callbacks or shared counters are observable. Test cold initialization from a fresh process, including concurrent creation, instead of relying solely on warm sequential instances. Track generated opcode provenance and keep failure output free of personal paths and private media.
+The developer wants to build as much of the emulator as practical, especially where reuse would create a flawed foundation, while preserving correctness and efficient delivery. A strangler-style migration is welcome. The synthesized recommendation is to build an owned C core behind a thin private whole-CPU seam, start with an explicit SDK-diagnostic slice, and retain the option to expand after measured evidence. This recommendation still needs user review before a plan treats it as the selected backend path.
+
 </specifics>
 
 <deferred>
 ## Deferred Ideas
 
-- Public native SDK lifecycle/media API, full board diagnostic/bootstrap and installed consumers — Phase 2.
-- Release platform matrix, protected hosted delivery, release-please and downloadable alpha — Phase 3.
-- Z80/YM2610 implementation, selected graphics/input/audio, real RetroArch macOS, public snapshot continuation and durable persistence — next milestone.
-- Commercial BIOS/game compatibility and representative gameplay optimization — later evidence-driven milestones.
+- Full commercial-game compatibility and full Neo Geo MVS/AES machine support remain outside v0.1.
+- Public CPU plugin ABI, dynamically loadable CPU engines, public snapshots, live CPU-state conversion, JIT, and optimizations without representative profiles remain deferred.
+
 </deferred>
 
 ---
+
 *Phase: 01-cpu-acceptance-experiment*
-*Context gathered: 2026-10-01, automatic single pass.*
+*Context gathered: 2026-10-02*
