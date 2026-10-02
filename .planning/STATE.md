@@ -5,15 +5,15 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: planning
-stopped_at: Phase 01 verification found gaps; ready for gap-closure planning
-last_updated: "2026-10-02T01:36:50Z"
-last_activity: 2026-10-01
-last_activity_desc: Phase 01 verifier returned gaps_found: invalid MVP goal format and six later source-review blockers; no tests rerun
-state_head: 96bb9a23abc7b45844ad224e3dea53becd0852ca
+stopped_at: Phase 01 gap-closure planning complete; paused before execution
+last_updated: "2026-10-02T04:02:14Z"
+last_activity: 2026-10-02
+last_activity_desc: "Phase 01 gap-closure plans 01-05 and 01-06 passed independent planning review; ready for gaps-only execution"
+state_head: 75800893742dffeff1895c7faa46eb4d4260307b
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 4
+  total_plans: 6
   completed_plans: 4
   percent: 0
 ---
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-01)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — VERIFICATION GAPS FOUND
-Plan: 4 of 4
-Status: Plans 01-01 through 01-04 are executed; formal verification stopped at the MVP story-format guard and recorded six source blockers. Phase 01 remains open.
-Last activity: 2026-10-01 — The verifier returned `gaps_found`; its 0/5 score is a preflight refusal, not an evaluation that all five requirements failed. No tests were rerun.
+Phase: 01 (CPU acceptance experiment) — READY TO EXECUTE GAP CLOSURE
+Plan: 4 of 6
+Status: Plans 01-01 through 01-04 are executed; gap-closure plans 01-05 and 01-06 are ready. Current backend admission remains unresolved and Phase 01 remains open.
+Last activity: 2026-10-02 — Gap-closure plans passed independent planning review. The verifier's 0/5 score remains a preflight refusal, not an evaluation that all five requirements failed.
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -88,7 +88,7 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 
 ### Pending Todos
 
-- Next command: `$gsd-plan-phase 01 --gaps` to plan the canonical-goal format correction and blocker disposition within the frozen budget. After that plan is reviewed, execute its gap-closure plans with `$gsd-execute-phase 01 --gaps-only`; keep Phase 2 gated until verification passes.
+- Next command: `$gsd-execute-phase 01 --gaps-only` to execute plans 01-05 and 01-06. Plan 01-06 pauses for developer direction. Then run `$gsd-verify-work 01` as a separate step; keep Phase 2 gated unless current accepted CPU-01–04 evidence passes verification.
 
 ### Blockers/Concerns
 

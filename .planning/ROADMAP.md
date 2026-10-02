@@ -38,7 +38,7 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit acceptance decision, commands and results against a finite effort/patch budget fixed before adaptation; failed or over-budget candidates have counterexamples and a replacement/replanning disposition. (CPU-05)
 
-**Plans**: 4/4 plans executed
+**Plans**: 4/6 plans completed; gap-closure plans are ready to execute
 
 Plans:
 **Wave 1**
@@ -56,6 +56,14 @@ Plans:
 **Wave 4** *(plan execution complete; verification gaps found)*
 
 - [x] 01-04-PLAN.md — The bounded private-candidate acceptance receipt was sealed. A later independent phase review found six blockers; current backend admission is unresolved.
+
+**Wave 5** *(gap closure; follows Wave 4)*
+
+- [ ] 01-05-PLAN.md — Correct the canonical MVP story, preserve historical evidence, and record a truthful current candidate disposition.
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 01-06-PLAN.md — Pause for developer direction before any further backend work or scope change.
 
 Planning guidance: First set a concrete finite effort cap, patch budget and stopping/replacement rules. Then use small CMake/CTest experiment scaffolding, a licensed original tiny guest, source/host-call audit, and isolation/timing/continuation experiments. Evaluate the research's pinned Musashi candidate without presuming acceptance. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
 
