@@ -36,7 +36,7 @@ The initial instruction subset is exactly:
 |---|---|---|
 | `MOVEQ #imm8,Dn` | `0111 ddd 0 iiiiiiii`; all D0–D7, signed 8-bit immediate sign-extended to 32 bits | Set N/Z from 32-bit result, clear V/C, preserve X. |
 | `ADDQ.L #1..8,Dn` | `0101 qqq 0 10 000 ddd`; data-register direct destination only; encoded `qqq=000` means 8 | Add modulo 2^32; set N/Z/V/C and X according to 32-bit addition. |
-| `MOVE.L Dn,(abs.L)` | Long MOVE with D0–D7 source and absolute-long destination only; two extension words | Store high word before low word; preserve Dn; set N/Z from value, clear V/C, preserve X. |
+| `MOVE.L Dn,(abs.L)` | `0010 001 111 000 ddd`; D0–D7 source in `ddd`, absolute-long destination only; two extension words | Store high word before low word; preserve Dn; set N/Z from value, clear V/C, preserve X. |
 | `STOP #imm16` | Opcode `0x4e72`, one immediate word; supervisor-only | Load the specified SR and enter stopped state. A qualifying interrupt may wake the instance. |
 
 Scenario A computes 10 and stores big-endian `00 00 00 0a` at `0x1000`.
@@ -60,14 +60,17 @@ boundaries:
 | `TRAP #0` | Exact opcode `0x4e40`; vector 32; stack old SR and next PC on supervisor stack; enter supervisor mode and fetch handler PC. |
 | `ILLEGAL` | Exact canonical illegal instruction word `0x4afc`; vector 4; stack old SR and next PC. Other unsupported encodings must report `UNSUPPORTED_OPCODE`, not be treated as this instruction. |
 | `MOVE.W #imm16,SR` | Exact opcode `0x46fc` and one immediate word; supervisor-only; replace SR and switch active stack correctly. |
-| `MOVE.W (abs.L),Dn` | Long absolute address extension and D0–D7 data-register destination; replace only the low word and set N/Z, clear V/C, preserve X. Odd operand address takes address-error exception. |
+| `MOVE.W (abs.L),Dn` | `0011 ddd 000 111 001`; D0–D7 destination in `ddd`, followed by a long absolute address extension; replace only the low word and set N/Z, clear V/C, preserve X. Odd operand address takes address-error exception. |
 | Level-3 IRQ masking | A level-3 request is not accepted while SR mask is 3 or higher; acceptance occurs at an instruction boundary when unmasked; vector is autovector 27. |
-| Level-7 edge IRQ | A low-to-high transition is latched and accepted regardless of SR mask; a continuously high level does not create repeated interrupts; vector is autovector 31. |
+| Level-7 edge IRQ | A transition from a lower request level to 7 is accepted regardless of SR mask; if the request remains at 7, the level comparison also accepts it when software lowers the mask below 7; vector is autovector 31. |
 | Privilege violation | User-mode execution of `STOP`, `RESET`, `RTE`, or `MOVE.W #imm,SR` raises vector 8 before the privileged operation takes effect. |
 | Address error | Odd word/long data access and odd instruction fetch are checked before invoking an aligned bus transaction. Use the MC68000 address-error frame and halt on a nested exception-frame fault. Do not claim restart fidelity: the MC68000 manual calls the saved PC for bus/address error unpredictable. |
 
-`RESET`, `TRAP`, `ILLEGAL`, `RTE`, privilege, and address-error outcomes are
-derived from the MC68000 manual references below. Save old SR before changing
+`RESET`, `TRAP`, `ILLEGAL`, `RTE`, privilege, address-error, and level-7
+interrupt outcomes are derived from the MC68000 manual references below.
+Level 7 is transition-triggered when the request changes from a lower level to
+7 and is not maskable; while it remains asserted, it is also accepted when the
+current SR priority is lowered below 7. Save old SR before changing
 supervisor/trace/interrupt bits. Group-1/2 exception frames save the next
 unexecuted PC for the named instruction exceptions. The address-error frame
 records the manual-described context; it does not promise an address-error
@@ -112,7 +115,7 @@ runtime dependency. Preserve Unity as a test-only pinned dependency.
 
 Primary references are Motorola/NXP *M68000 8-/16-/32-Bit Microprocessors
 User's Manual*, document MC68000UM, Rev 9.1 (2006-01-25), especially §§2, 5,
-and 6.3 and Figures 6-5 and 6-7; and Motorola *M68000 Family Programmer's
+and 6.3 (especially §6.3.2 and §6.3.10) and Figures 6-5 and 6-7; and Motorola *M68000 Family Programmer's
 Reference Manual*, document M68000PRM (2000-07-01), instruction descriptions
 and encoding tables for MOVEQ, ADDQ, MOVE, STOP, NOP, RESET, RTE, TRAP, ILLEGAL,
 and SR operations. Check the 68K Programmer's Reference Manual Errata,

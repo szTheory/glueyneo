@@ -30,6 +30,9 @@ class ContractControls(unittest.TestCase):
         self.assertTrue(contract.check_story(self.root)["valid"])
         contract.check_requirements(self.root)
         self.assertEqual(contract.validate_budget(self.root)["status"], "pass")
+        content = (self.root / contract.CONTRACT_PATH).read_text(encoding="utf-8")
+        self.assertIn("current SR priority is lowered below 7", content)
+        self.assertNotIn("a continuously high level does not create repeated interrupts", content)
 
     def test_mutated_opcode_scope_has_named_rejection(self):
         path = self.root / contract.CONTRACT_PATH
