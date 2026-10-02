@@ -26,7 +26,7 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
 
 ### Phase 1: CPU acceptance experiment
 
-**Goal**: As a maintainer, I can reproduce acceptance of a C 68000 backend so I can build the diagnostic SDK on independent instances with explicit state and timing limits.
+**Goal**: As a maintainer, I want to reproduce acceptance of a C 68000 backend, so that I can build the diagnostic SDK on independent instances with explicit state and timing limits.
 **Mode:** mvp
 **Depends on**: Nothing (first phase)
 **Requirements**: CPU-01, CPU-02, CPU-03, CPU-04, CPU-05
@@ -67,7 +67,7 @@ Plans:
 
 Planning guidance: First set a concrete finite effort cap, patch budget and stopping/replacement rules. Then use small CMake/CTest experiment scaffolding, a licensed original tiny guest, source/host-call audit, and isolation/timing/continuation experiments. Evaluate the research's pinned Musashi candidate without presuming acceptance. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
 
-**Admission gate:** CPU-05 may be satisfied by a reproducible rejection or deferral. That does not satisfy CPU-01–04 or complete this phase. The 01-04 receipt records bounded candidate acceptance, but a later independent review identified six source blockers and the phase verifier returned `gaps_found`. Treat backend admission as unresolved. Correct the canonical MVP goal, disposition the findings within the frozen budget (or explicitly reject/defer and replan), then obtain fresh evidence and phase verification before Phase 2 admission. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
+**Admission gate:** CPU-01–04 are Pending for current admission. Historical task evidence exists; the phase verifier refused grammar preflight rather than establish that all four behaviors failed. At plan 01-05 task 1, CPU-05 is Pending final disposition; task 3 owns its evidence-conditioned requirement result. Both adaptation attempts are consumed; no further adaptation is authorized. Execution closes governance gaps and does not qualify the backend. CPU-05 may be satisfied by a reproducible rejection or deferral. That does not satisfy CPU-01–04 or complete this phase. The historical 01-04 accepted receipt is contradicted for current admission by six later source blockers. Phase 01 remains open with `gaps_found`, and Phase 02 stays gated until accepted evidence and fresh phase verification or an explicitly reconciled roadmap revision. Plan 01-06 owns developer direction before further work. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
 
 ### Phase 2: Executable diagnostic SDK
 

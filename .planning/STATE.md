@@ -4,12 +4,12 @@ milestone: v0.1
 milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
-status: planning
+status: executing
 stopped_at: Phase 01 gap-closure planning complete; paused before execution
-last_updated: "2026-10-02T04:02:14Z"
+last_updated: "2026-10-02T11:31:14.675Z"
 last_activity: 2026-10-02
-last_activity_desc: "Phase 01 gap-closure plans 01-05 and 01-06 passed independent planning review; ready for gaps-only execution"
-state_head: 75800893742dffeff1895c7faa46eb4d4260307b
+last_activity_desc: Phase 01 execution started
+state_head: 1507376b5e0264c171a2d25f973961f75b79c250
 progress:
   total_phases: 3
   completed_phases: 0
@@ -30,14 +30,16 @@ See: .planning/PROJECT.md (updated 2026-10-01)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — READY TO EXECUTE GAP CLOSURE
-Plan: 4 of 6
-Status: Plans 01-01 through 01-04 are executed; gap-closure plans 01-05 and 01-06 are ready. Current backend admission remains unresolved and Phase 01 remains open.
-Last activity: 2026-10-02 — Gap-closure plans passed independent planning review. The verifier's 0/5 score remains a preflight refusal, not an evaluation that all five requirements failed.
+Phase: 01 (CPU acceptance experiment) — EXECUTING
+Plan: 5 of 6
+Status: Executing governance gap closure; Phase 01 remains open and Phase 02 gated.
+Last activity: 2026-10-02 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
 Task-level evidence exists for CPU-01 through CPU-05 (5/27 v1 requirements), but the later source review disputes clean backend admission. The current verification is `gaps_found`; Phase 1 remains open and Phase 2 stays gated.
+
+Plan 01-05 task 1 checkpoint: CPU-01–04 are Pending current admission; historical task evidence remains, and full verification refused grammar preflight without concluding all four behaviors failed. CPU-05 is Pending final disposition until task 3 seals and evaluates the rejection receipt. Both adaptation attempts are consumed; no further adaptation is authorized. This execution closes governance gaps and does not qualify the backend. Task 3 reports final CPU-05 status in REQUIREMENTS.md and its summary; this checkpoint is chronological.
 
 ## Performance Metrics
 
