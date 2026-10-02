@@ -129,6 +129,30 @@ class ContractControls(unittest.TestCase):
         self.assertEqual(result["test_results"]["observed"], 1)
         self.assertNotIn(str(self.root), Path(ledger_path).read_text(encoding="utf-8"))
 
+    def test_churn_counts_committed_lines_even_after_revert(self):
+        subprocess.run(["git", "init", "--quiet"], cwd=self.root, check=True)
+        subprocess.run(["git", "config", "user.name", "Contract Test"], cwd=self.root, check=True)
+        subprocess.run(["git", "config", "user.email", "contract-test@example.invalid"],
+                       cwd=self.root, check=True)
+        subprocess.run(["git", "add", "-A"], cwd=self.root, check=True)
+        subprocess.run(["git", "commit", "--quiet", "-m", "test baseline"], cwd=self.root, check=True)
+        baseline = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=self.root, text=True).strip()
+
+        transient = self.root / "experiments/owned_cpu/transient.c"
+        transient.parent.mkdir(parents=True, exist_ok=True)
+        transient.write_text("int first(void) { return 1; }\nint second(void) { return 2; }\n",
+                             encoding="utf-8")
+        subprocess.run(["git", "add", "-A"], cwd=self.root, check=True)
+        subprocess.run(["git", "commit", "--quiet", "-m", "add transient runtime"],
+                       cwd=self.root, check=True)
+        transient.unlink()
+        subprocess.run(["git", "add", "-A"], cwd=self.root, check=True)
+        subprocess.run(["git", "commit", "--quiet", "-m", "revert transient runtime"],
+                       cwd=self.root, check=True)
+
+        self.assertEqual(contract._nonblank_numstat(
+            self.root, baseline, ["experiments/owned_cpu/*.c"]), (2, 2))
+
     def test_self_test_has_nonempty_positive_and_negative_denominators(self):
         result = contract.self_test()
         self.assertGreater(result["positive_cases"], 0)

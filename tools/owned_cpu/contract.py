@@ -311,16 +311,20 @@ def _git_output(root: Path, *args: str) -> str:
 
 
 def _nonblank_numstat(root: Path, baseline: str, category_paths: list[str]) -> tuple[int, int]:
-    output = _git_output(root, "diff", "--unified=0", baseline, "--", *category_paths)
+    committed = _git_output(root, "log", "--format=", "--no-ext-diff", "--no-renames",
+                            "--unified=0", f"{baseline}..HEAD", "--", *category_paths)
+    pending = _git_output(root, "diff", "--no-ext-diff", "--unified=0", "HEAD", "--",
+                          *category_paths)
     added = 0
     deleted = 0
-    for line in output.splitlines():
-        if line.startswith("+++") or line.startswith("---"):
-            continue
-        if line.startswith("+") and line[1:].strip():
-            added += 1
-        elif line.startswith("-") and line[1:].strip():
-            deleted += 1
+    for output in (committed, pending):
+        for line in output.splitlines():
+            if line.startswith("+++") or line.startswith("---"):
+                continue
+            if line.startswith("+") and line[1:].strip():
+                added += 1
+            elif line.startswith("-") and line[1:].strip():
+                deleted += 1
     untracked = _git_output(root, "ls-files", "--others", "--exclude-standard", "--", *category_paths)
     for relative in untracked.splitlines():
         path = root / relative
