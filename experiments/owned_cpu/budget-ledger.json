@@ -54,7 +54,7 @@
           "start": "2026-10-02T18:07:00Z"
         }
       ],
-      "commit": "44ecf9e",
+      "commit": "44ecf9ecc7e523bf552a1924a139397831d61095",
       "cumulative_churn": {
         "runtime_added": 0,
         "runtime_deleted": 0,
@@ -146,7 +146,7 @@
     },
     {
       "from_revision": 2,
-      "preceding_commit": "44ecf9e",
+      "preceding_commit": "44ecf9ecc7e523bf552a1924a139397831d61095",
       "previous_contract_sha256": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73",
       "reason": "Added and passed an end-to-end temporary-subject test of interval parsing, build and fixture identities, CTest counts, path privacy, and churn measurement before first runtime work. No scope or cap changed.",
       "recorded_at": "2026-10-02T19:03:00Z"
