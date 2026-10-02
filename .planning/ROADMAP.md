@@ -38,7 +38,7 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit owned-core decision, commands and results against finite effort/churn limits fixed before implementation; failed work and findings are preserved, actionable issues receive budgeted repair, and resource thresholds trigger review/replanning rather than automatic backend rejection. (CPU-05)
 
-**Plans**: 9/14 plans executed; reviewed gap plans 01-10–01-14 are executing in dependency order. Phase 01 remains open / GAPS_FOUND and Phase 02 gated. CPU-01–05 remain Pending until current evidence and phase verification support a disposition.
+**Plans**: 10/14 plans executed; reviewed gap plans 01-10–01-14 are executing in dependency order. Phase 01 remains open / GAPS_FOUND and Phase 02 gated. CPU-01–05 remain Pending until current evidence and phase verification support a disposition.
 
 Plans:
 **Wave 1**
@@ -77,11 +77,11 @@ Plans:
 
 - [x] 01-09-PLAN.md — Qualify named interrupt, exception, instruction-boundary timing, and bus limits with a 23-case timing harness; admission remains open.
 
-**Wave 10** *(next; instance safety and inventory)*
+**Wave 10** *(gap closure complete; instance safety and inventory)*
 
-- [ ] 01-10-PLAN.md — Prove cold/concurrent instance isolation, fault containment, and complete mutable-state inventory.
+- [x] 01-10-PLAN.md — Prove cold/concurrent instance isolation, fault containment, and source-bound mutable-state inventory on the current native host; broader portability remains open.
 
-**Wave 11** *(blocked on Wave 10; continuation)*
+**Wave 11** *(next; continuation)*
 
 - [ ] 01-11-PLAN.md — Restore captured state into a fresh destination and prove identical continuation and atomic rejection.
 
@@ -97,7 +97,7 @@ Plans:
 
 - [ ] 01-14-PLAN.md — Independently review the final revision, repair narrow evidence-tool findings, and seal only a fully supported disposition.
 
-Planning guidance: Plan 01-07 froze owned-core effort/churn guardrails without an attempt count. Plan 01-08 passed the original diagnostic and named mutation control inside its eight-hour gate. Plan 01-09 now covers named timing, exceptions, interrupts, and functional bus limits. Continue with independent/cold instance safety, then actual continuation; preserve Musashi accounting as historical evidence only. Review findings lead to regression-backed repair within budget; retain open GAPS_FOUND and replan when a threshold or scope boundary blocks a fix. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
+Planning guidance: Plan 01-07 froze owned-core effort/churn guardrails without an attempt count. Plan 01-08 passed the original diagnostic and named mutation control inside its eight-hour gate. Plan 01-09 added named timing, exceptions, interrupts, and functional bus limits. Plan 01-10 passed separate-instance interleaving/cold-init, fault-containment, source-inventory, ASan+UBSan and TSan checks on Apple Clang 21 / Darwin arm64. Continue with fresh-destination state continuation, then independent review and fresh execution; preserve Musashi accounting as historical evidence only. Review findings lead to regression-backed repair within budget; retain open GAPS_FOUND and replan when a threshold or scope boundary blocks a fix. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
 
 **Admission gate:** CPU-01–04 remain Pending for current admission. Historical task evidence exists; the phase verifier refused grammar preflight rather than establish that all four behaviors failed. Plan 01-05 completed only the historical Musashi CPU-05 decision; the owned-core CPU-05 decision is still pending. Both Musashi adaptation attempts are consumed, and no further Musashi adaptation is authorized. Plans 01-07–01-14 carry the separately budgeted owned-core work; planning or a non-admitting disposition does not satisfy CPU-01–04. The historical 01-04 accepted receipt is contradicted for current admission by six later source blockers. Phase 01 remains open with `gaps_found`, and Phase 02 stays gated until accepted evidence and fresh phase verification or an explicitly reconciled roadmap revision. Plan 01-06 records an earlier direction checkpoint; current owner-approved scope is in Phase 01 CONTEXT and PROJECT/REQUIREMENTS. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
 
@@ -145,7 +145,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 9/14 (5 gap plans remain) | Open / GAPS_FOUND; plans 01-10–01-14 remain in the reviewed execution chain | - |
+| 1. CPU acceptance experiment | v0.1 | 10/14 | In Progress|  |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 

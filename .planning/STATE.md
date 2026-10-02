@@ -5,16 +5,16 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: executing
-stopped_at: Plan 01-09 complete; execute-phase continues with dependent gap plans 01-10–01-14
-last_updated: "2026-10-02T20:46:57Z"
+stopped_at: Plan 01-10 complete; continue Plan 01-11 within the active gaps-only execute-phase step
+last_updated: "2026-10-02T21:22:04.845Z"
 last_activity: 2026-10-02
-last_activity_desc: Plan 01-09 passed the named timing/exception suite and original diagnostic regressions; Phase 01 remains open / GAPS_FOUND
-state_head: 0d4f1e3d9cb1d421d61b317cc16be1de064eeb47
+last_activity_desc: Plan 01-10 passed native isolation/fault/inventory checks plus ASan+UBSan and TSan safety lanes on the current host; Phase 01 remains open / GAPS_FOUND
+state_head: 79f36c8b57db30fef2b4b1f382023e44efe2890f
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 14
-  completed_plans: 9
+  completed_plans: 10
   percent: 0
 ---
 
@@ -31,9 +31,9 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 ## Current Position
 
 Phase: 01 (CPU acceptance experiment) — GAP CLOSURE EXECUTING
-Plan: 9 of 14 complete; next is 01-10
-Status: Plan 01-09 implemented named instruction, IRQ, exception, and run-boundary behavior with a 23-case timing harness and passing original diagnostic regressions. The core has not been accepted. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
-Last activity: 2026-10-02 — Closed Plan 01-09 with passing timing/exception and regression suites; the cumulative effort/churn receipt is part of this closeout.
+Plan: 10 of 14 complete; next is 01-11
+Status: Plan 01-10 qualified separate-instance interleaving, concurrent cold creation, fault containment, and source-bound state/compile inventory. Native, ASan+UBSan, and TSan safety suites pass on the current Apple Clang host. The core has not been accepted. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
+Last activity: 2026-10-02 — Closed Plan 01-10 with passing native and sanitizer safety suites; its effort/churn receipt is part of this closeout.
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -45,19 +45,19 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 
 **Velocity:**
 
-- Total plans completed: 9
-- Average recorded duration: 36.8min
-- Total recorded execution time: 331min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
+- Total plans completed: 10
+- Average recorded duration: 36.9min
+- Total recorded execution time: 369min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 9 | 331min | 36.8min |
+| 01 | 10 | 369min | 36.9min |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-03, 01-04, 01-05, 01-06, 01-07
+- Last 5 plans: 01-06, 01-07, 01-08, 01-09, 01-10
 - Trend: Not established
 
 **Per-Plan Metrics:**
@@ -73,6 +73,7 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 | Phase 01 P07 | 56min | 3 tasks | 9 files |
 | Phase 01 P08 | 43min | 2 tasks | 11 files |
 | Phase 01 P09 | 59min | 2 tasks | 14 files |
+| Phase 01 P10 | 38min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -99,10 +100,11 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - [Phase 01, Plan 01-07]: Froze the revision-3 owned-core budget ledger and 32-hour / 8-hour gates before any CPU runtime or behavioral test change. Charged 3,360 seconds for governance; baseline churn is 0 runtime and 636 added test/tool lines. The official MC68000 manual review corrected level-7 acceptance and explicit MOVE absolute opcode patterns. CPU-01–05 remain Pending; Phase 02 remains gated.
 - [Phase 01, Plan 01-08]: The original arithmetic/store fixture and its named wrong-result control pass on a private owned C17 slice. The diagnostic gate consumed 2,565 seconds; cumulative owned effort is 5,925 seconds, with 517 runtime and 1,623 test/tool added/deleted lines against the frozen baseline. The 8-hour gate and cumulative caps pass. This proves only the documented first slice; CPU-01–05 remain Pending, Phase 01 stays GAPS_FOUND and Phase 02 gated.
 - [Phase 01, Plan 01-09]: Added manual-backed named IRQ, exception, odd-address frame, and whole-event timing behavior. The 23-case timing harness, three normal owned CPU CTest targets, and two negative controls pass. The original 36 instruction-clock diagnostic remains separate from reset40 and STOP idle. The core remains private and unadmitted; CPU-01–05 stay Pending and Phase 02 gated.
+- [Phase 01, Plan 01-10]: Added 32 interleaved and 32 barrier-started concurrent instance pairs plus 16 supervised cold processes; the complete native 11-case suite and six safety cases each under ASan+UBSan and TSan passed on Apple Clang 21 / Darwin arm64. A 26-field, nine-source inventory and named corruption controls pass. Same-instance overlap and other platforms remain unsupported or untested; CPU-01–05 stay Pending.
 
 ### Pending Todos
 
-- Nine plans are complete; reviewed gap plans 01-10–01-14 remain in the active gaps-only execution chain. Plan 01-10 must qualify independent/cold instance safety, fault containment, and the mutable-state inventory. Preserve budget for independent review and regression-backed repair. Phase 02 remains gated.
+- Ten plans are complete; reviewed gap plans 01-11–01-14 remain in the active gaps-only execution chain. Plan 01-11 owns fresh-destination state continuation. Preserve budget for independent review and regression-backed repair. Phase 02 remains gated.
 
 ### Blockers/Concerns
 
@@ -127,6 +129,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-02 — execute-phase 01 --gaps-only; Plan 01-09 complete
-Stopped at: Continue with Plan 01-10 in the active execute-phase step
+Last session: 2026-10-02 — execute-phase 01 --gaps-only; Plan 01-10 complete
+Stopped at: Plan 01-10 complete; continue Plan 01-11 within the active gaps-only execute-phase step
 Resume file: .planning/phases/01-cpu-acceptance-experiment/.continue-here.md
