@@ -18,12 +18,14 @@
     "contract_sha256": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73"
   },
   "diagnostic_gate": {
+    "active_seconds": 2565,
     "cap_seconds": 28800,
+    "completed_at": "2026-10-02T19:49:49.507600Z",
     "completion_condition": "The unmodified original guest and its named wrong-behavior control both execute with their expected outcomes.",
     "excluded_stage": "plan-01-07-governance",
     "started_at": "2026-10-02T19:07:00Z",
     "starts_on": "first owned emulation-runtime or behavioral-test change in Plan 01-08",
-    "status": "in-progress"
+    "status": "passed"
   },
   "effort_checkpoints": [
     {
@@ -134,6 +136,48 @@
         "validator": "b894fee5596088554396d123e423760099018466fda6e569eb3b40c0a37c2c45"
       },
       "working_tree_dirty": true
+    },
+    {
+      "active_seconds": 2565,
+      "agent_intervals": [
+        {
+          "agent": "primary-agent",
+          "end": "2026-10-02T19:49:45Z",
+          "start": "2026-10-02T19:07:00Z"
+        }
+      ],
+      "build_dir": "build/owned-cpu",
+      "build_identity": {
+        "build_ninja_sha256": "d8ca2246d43a520b7f84004f1e53f26d158488ac0432ea60d93d0a55e8f3c01d",
+        "cmake_cache_sha256": "b9e61114fccbf023cad78f30e909c11f96dec0dbae878bd58b9560a588131e1e"
+      },
+      "commit": "d8c5450ff40fc5121605d8429773098caac29f2c",
+      "cumulative_churn": {
+        "runtime_added": 489,
+        "runtime_deleted": 28,
+        "test_tool_added": 1593,
+        "test_tool_deleted": 30
+      },
+      "diagnostic_gate": true,
+      "fixture_sha256": {
+        "tests/cpu/ORACLE.md": "8a1f9c113ea4fe7608a41b2fedd856c69533a1009b07f9dda6dafd276dc93ade",
+        "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
+        "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c"
+      },
+      "recorded_at": "2026-10-02T19:49:49.507600Z",
+      "stage": "diagnostic",
+      "test_results": {
+        "cases": [
+          "owned_cpu_negative",
+          "owned_cpu_diagnostic",
+          "owned_cpu_semantics"
+        ],
+        "expected": 3,
+        "log_sha256": "55f2aa15dc3f5e8a6c00aa617afb9b1948c31b6cdfeb906929cb1e2071f75407",
+        "observed": 3,
+        "status": "pass"
+      },
+      "working_tree_dirty": false
     }
   ],
   "freeze_amendments": [
