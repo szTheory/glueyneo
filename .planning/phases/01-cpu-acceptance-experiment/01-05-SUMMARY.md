@@ -108,7 +108,7 @@ CPU-05 alone is Complete because the current explicit reject/defer decision pres
 
 ## Deviations from Plan
 
-None in task execution. The generic summary/requirements closeout instruction to copy or complete every plan requirement is constrained by this plan's explicit CPU-01–04 Pending contract and AGENTS.md evidence rules: only CPU-05 is recorded as completed. Git metadata writes needed sandbox escalation; authorized commits succeeded without bypassing hooks or changing checkouts.
+None in task execution. The generic summary/requirements closeout instruction to copy or complete every plan requirement is constrained by this plan's explicit CPU-01–04 Pending contract and AGENTS.md evidence rules: only CPU-05 is recorded as completed. Git metadata writes needed sandbox escalation; authorized commits succeeded without bypassing hooks or changing checkouts. Closeout corrected the SDK-generated `executedd` typo and generic roadmap progress status so the phase's admission rejection remains explicit; no acceptance scope changed.
 
 ## Issues and remaining gate
 

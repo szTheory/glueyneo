@@ -38,7 +38,7 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit acceptance decision, commands and results against a finite effort/patch budget fixed before adaptation; failed or over-budget candidates have counterexamples and a replacement/replanning disposition. (CPU-05)
 
-**Plans**: 4/6 plans completed; gap-closure plans are ready to execute
+**Plans**: 5/6 plans executed; plan 01-06 awaits the blocking developer-direction checkpoint
 
 Plans:
 **Wave 1**
@@ -59,9 +59,9 @@ Plans:
 
 **Wave 5** *(gap closure; follows Wave 4)*
 
-- [ ] 01-05-PLAN.md — Correct the canonical MVP story, preserve historical evidence, and record a truthful current candidate disposition.
+- [x] 01-05-PLAN.md — Correct the canonical MVP story, preserve historical evidence, and record a truthful current candidate disposition.
 
-**Wave 6** *(blocked on Wave 5 completion)*
+**Wave 6** *(Wave 5 complete; blocking developer direction next)*
 
 - [ ] 01-06-PLAN.md — Pause for developer direction before any further backend work or scope change.
 
@@ -113,7 +113,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 4/4 | Verification gaps found; gap planning required | - |
+| 1. CPU acceptance experiment | v0.1 | 5/6 | Governance gap closure in progress; admission rejected / GAPS_FOUND | - |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 

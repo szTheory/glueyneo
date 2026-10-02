@@ -5,16 +5,16 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: executing
-stopped_at: Phase 01 gap-closure planning complete; paused before execution
-last_updated: "2026-10-02T11:31:14.675Z"
+stopped_at: Completed 01-05-PLAN.md; awaiting orchestrator dispatch of blocking 01-06
+last_updated: "2026-10-02T11:45:18.018Z"
 last_activity: 2026-10-02
 last_activity_desc: Phase 01 execution started
-state_head: 1507376b5e0264c171a2d25f973961f75b79c250
+state_head: 8fe8f269f7ee6c4edaf70e4d568a234786f14cdb
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -31,9 +31,9 @@ See: .planning/PROJECT.md (updated 2026-10-01)
 ## Current Position
 
 Phase: 01 (CPU acceptance experiment) — EXECUTING
-Plan: 5 of 6
-Status: Executing governance gap closure; Phase 01 remains open and Phase 02 gated.
-Last activity: 2026-10-02 — Phase 01 execution started
+Plan: 6 of 6
+Status: Plan 01-05 complete; plan 01-06 direction checkpoint remains. Phase 01 open / GAPS_FOUND; Phase 02 gated.
+Last activity: 2026-10-02 — Current admission rejected with independently reconciled source blockers; CPU-05 bounded decision complete.
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -68,6 +68,7 @@ Plan 01-05 task 1 checkpoint: CPU-01–04 are Pending current admission; histori
 | Phase 01 P02 | 21min | 2 tasks | 28 files |
 | Phase 01 P03 | 22min | 2 tasks | 28 files |
 | Phase 01 P04 | 31min | 2 tasks | 13 files |
+| Phase 01 P05 | 10min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -87,10 +88,12 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - [Phase 01, checkpoint]: Plan 01-02 proved selected isolation and host containment within unchanged caps; timing, continuation and candidate admission were still pending at that checkpoint.
 - [Phase 01, checkpoint]: Plan 01-03 qualified selected timing and explicit fresh-destination continuation within frozen caps; final candidate admission is recorded in plan 01-04.
 - [Phase 01, verification 2026-10-01]: OpenGSD returned `gaps_found`. Its MVP story validator rejected the canonical ROADMAP goal before implementation scoring; 0/5 is not a claim that all requirements failed. A later independent source review corroborated six blockers. No tests were rerun during verification; the current source/admission claim needs disposition and a fresh verification pass.
+- [Phase 01]: Reject current CPU admission for six unresolved source blockers; defer repair/replacement direction to blocking plan 01-06.
+- [Phase 01]: CPU-05 alone satisfies its bounded-decision obligation; CPU-01–04 remain Pending, Phase 01 open and Phase 02 gated.
 
 ### Pending Todos
 
-- Next command: `$gsd-execute-phase 01 --gaps-only` to execute plans 01-05 and 01-06. Plan 01-06 pauses for developer direction. Then run `$gsd-verify-work 01` as a separate step; keep Phase 2 gated unless current accepted CPU-01–04 evidence passes verification.
+- Next within the authorized execution step: orchestrator dispatches plan 01-06, which pauses for developer direction. Plan 01-05 is complete. Then run `$gsd-verify-work 01` as a separately requested step; keep Phase 2 gated unless current accepted CPU-01–04 evidence passes verification or an explicit roadmap revision is reconciled.
 
 ### Blockers/Concerns
 
@@ -113,6 +116,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-02T01:36:50Z
-Stopped at: Phase 01 goal verification returned gaps_found; ready for gap-closure planning
+Last session: 2026-10-02T11:45:18.004Z
+Stopped at: Completed 01-05-PLAN.md; awaiting orchestrator dispatch of blocking 01-06
 Resume file: None
