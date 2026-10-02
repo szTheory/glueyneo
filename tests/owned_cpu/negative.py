@@ -16,11 +16,20 @@ def fail(message: str, output: str = "") -> int:
 def main(arguments: list[str]) -> int:
     if len(arguments) == 3 and arguments[1] == "--isolation":
         return swapped_owner_control(arguments[2])
+    if len(arguments) == 4 and arguments[2] == "--state":
+        status = diagnostic_control(arguments[1])
+        if status != 0:
+            return status
+        return state_omission_controls(arguments[3])
     if len(arguments) != 2:
-        return fail("usage: negative.py PATH_TO_OWNED_DIAGNOSTIC")
+        return fail("usage: negative.py PATH_TO_OWNED_DIAGNOSTIC [--state PATH_TO_OWNED_STATE]")
+    return diagnostic_control(arguments[1])
+
+
+def diagnostic_control(executable: str) -> int:
     try:
         child = subprocess.run(
-            [arguments[1], "--mutate"],
+            [executable, "--mutate"],
             capture_output=True,
             text=True,
             errors="replace",
@@ -46,6 +55,34 @@ def main(arguments: list[str]) -> int:
         return fail("failure was not the single named 10-versus-11 guest result assertion", output)
 
     print("PASS: mutation changed 10 to 11; only the named guest arithmetic/store assertion failed")
+    return 0
+
+
+def state_omission_controls(executable: str) -> int:
+    controls = (
+        ("--omit-irq7", "Expected 1 Was 0:state omission pending level7 changed D1"),
+        ("--omit-instruction-counter", "Expected 4 Was 3:state omission instruction counter"),
+    )
+    for option, expected_assertion in controls:
+        try:
+            child = subprocess.run(
+                [executable, option], capture_output=True, text=True,
+                errors="replace", timeout=20, check=False
+            )
+        except subprocess.TimeoutExpired as error:
+            output = error.stdout or ""
+            if isinstance(output, bytes):
+                output = output.decode("utf-8", errors="replace")
+            return fail(f"state omission control {option} timed out", output)
+        except OSError as error:
+            return fail(f"cannot execute state omission control {option}: {error}")
+
+        output = child.stdout + child.stderr
+        summary = re.search(r"(?m)^1 Tests 1 Failures 0 Ignored\s*$", output)
+        if (child.returncode != 1 or expected_assertion not in output or
+                summary is None or len(re.findall(r":FAIL:", output)) != 1):
+            return fail(f"state omission {option} did not produce its one named assertion", output)
+        print(f"PASS: {option} was caught by its exact continuation assertion")
     return 0
 
 

@@ -93,17 +93,21 @@ target_include_directories(owned_cpu_faults PRIVATE
 target_link_libraries(owned_cpu_faults PRIVATE owned_cpu owned_cpu_unity)
 target_compile_definitions(owned_cpu_faults PRIVATE OWNED_CPU_TEST_HOOKS=1)
 
+add_executable(owned_cpu_state ../../tests/owned_cpu/test_state.c)
+target_link_libraries(owned_cpu_state PRIVATE owned_cpu owned_cpu_unity)
+target_compile_definitions(owned_cpu_state PRIVATE OWNED_CPU_TEST_HOOKS=1)
+
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 add_test(NAME owned_cpu_negative
   COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/owned_cpu/negative.py
-          $<TARGET_FILE:owned_cpu_diagnostic>)
+          $<TARGET_FILE:owned_cpu_diagnostic> --state $<TARGET_FILE:owned_cpu_state>)
 add_test(NAME owned_cpu_isolation_negative
   COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/owned_cpu/negative.py
           --isolation $<TARGET_FILE:owned_cpu_isolation>)
 
 set(OWNED_CPU_TARGETS owned_cpu owned_cpu_unity owned_cpu_diagnostic
     owned_cpu_semantics owned_cpu_timing owned_cpu_isolation owned_cpu_cold
-    owned_cpu_faults)
+    owned_cpu_faults owned_cpu_state)
 foreach(target IN LISTS OWNED_CPU_TARGETS)
   set_target_properties(${target} PROPERTIES
     C_STANDARD 17
@@ -114,7 +118,7 @@ foreach(target IN LISTS OWNED_CPU_TARGETS)
 endforeach()
 
 foreach(target owned_cpu_diagnostic owned_cpu_semantics owned_cpu_timing
-               owned_cpu_isolation owned_cpu_cold owned_cpu_faults)
+               owned_cpu_isolation owned_cpu_cold owned_cpu_faults owned_cpu_state)
   target_link_options(${target} PRIVATE ${OWNED_CPU_SANITIZER_FLAGS})
 endforeach()
 
@@ -155,6 +159,10 @@ set_tests_properties(owned_cpu_cold PROPERTIES
 add_test(NAME owned_cpu_faults COMMAND owned_cpu_faults)
 set_tests_properties(owned_cpu_faults PROPERTIES
   LABELS "owned-cpu;owned-safety"
+  TIMEOUT 30)
+add_test(NAME owned_cpu_state COMMAND owned_cpu_state)
+set_tests_properties(owned_cpu_state PROPERTIES
+  LABELS "owned-cpu;owned-state"
   TIMEOUT 30)
 add_test(NAME owned_cpu_inventory
   COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/owned_cpu/test_inventory.py)
