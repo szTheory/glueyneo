@@ -4,12 +4,12 @@ milestone: v0.1
 milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
-status: verifying
-stopped_at: Completed 01-04 plan; ready for phase-goal verification
-last_updated: "2026-10-01T20:23:35.409Z"
+status: gap_planning
+stopped_at: Phase 01 verification found gaps; ready for gap-closure planning
+last_updated: "2026-10-02T01:36:50Z"
 last_activity: 2026-10-01
-last_activity_desc: Plan 01-04 accepted after independent source review; all 30 CPU CTests pass; ready for phase-goal verification
-state_head: 3644c8c1d9114df7d86f8b7a90b2750e37b3c0df
+last_activity_desc: Phase 01 verifier returned gaps_found: invalid MVP goal format and six later source-review blockers; no tests rerun
+state_head: 96bb9a23abc7b45844ad224e3dea53becd0852ca
 progress:
   total_phases: 3
   completed_phases: 0
@@ -30,14 +30,14 @@ See: .planning/PROJECT.md (updated 2026-10-01)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — READY FOR PHASE-GOAL VERIFICATION
+Phase: 01 (CPU acceptance experiment) — VERIFICATION GAPS FOUND
 Plan: 4 of 4
-Status: Plans 01-01 through 01-04 execution complete; candidate accepted for the bounded private experiment; phase-goal verification pending
-Last activity: 2026-10-01 — Sealed the independently reviewed candidate decision and passed all 30 CPU-labeled CTests; stopped before the separate phase verifier
+Status: Plans 01-01 through 01-04 are executed; formal verification stopped at the MVP story-format guard and recorded six source blockers. Phase 01 remains open.
+Last activity: 2026-10-01 — The verifier returned `gaps_found`; its 0/5 score is a preflight refusal, not an evaluation that all five requirements failed. No tests were rerun.
 
 Progress: [░░░░░░░░░░] 0%
 
-Task-level evidence is recorded complete for CPU-01 through CPU-05 (5/27 v1 requirements). Phase 1 remains open until the separate GSD phase-goal verification step; Phase 2 stays gated.
+Task-level evidence exists for CPU-01 through CPU-05 (5/27 v1 requirements), but the later source review disputes clean backend admission. The current verification is `gaps_found`; Phase 1 remains open and Phase 2 stays gated.
 
 ## Performance Metrics
 
@@ -45,7 +45,7 @@ Task-level evidence is recorded complete for CPU-01 through CPU-05 (5/27 v1 requ
 
 - Total plans completed: 4
 - Average recorded duration: 39.5min
-- Total recorded execution time: 158min; conservatively charged effort 20,005 seconds including review and closeout allowances; plan 01-04 is complete and phase verification is pending
+- Total recorded execution time: 158min; conservatively charged effort 20,005 seconds including review and closeout allowances; all four plans are complete and verification found gaps
 
 **By Phase:**
 
@@ -77,29 +77,29 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 
 - v0.1 delivers an actual CPU/bus diagnostic SDK; next milestone outlines interactive graphics/input/sound, real RetroArch macOS, continuation and persistence.
 - Phase 1 must set a finite effort/patch budget before CPU adaptation and demonstrate real execution, isolation, state, timing and host safety.
-- CPU-05 can record rejection; Phase 1 completion/Phase 2 admission require accepted CPU-01–04 evidence or an explicit reconciled roadmap revision. Plan 01-04 records a bounded private candidate acceptance; phase-goal verification remains pending.
-- All-C runtime, host-owned I/O and separate ABI/snapshot/replay/durable-save identities remain constraints. One private bounded 68000 candidate is accepted; no release platform matrix or broad compatibility claim is qualified.
+- CPU-05 can record rejection; Phase 1 completion/Phase 2 admission require accepted CPU-01–04 evidence or an explicit reconciled roadmap revision. The 01-04 receipt records bounded private candidate acceptance; the later phase review found six blockers, so admission is unresolved pending disposition and fresh verification.
+- All-C runtime, host-owned I/O and separate ABI/snapshot/replay/durable-save identities remain constraints. No release platform matrix or broad compatibility claim is qualified.
 - Local initialization has no remote fork base. OpenGSD selected sequential execution; `git.branching_strategy` is temporarily `none` so this run uses the existing `chore/initialize-project` feature branch. Restore phase branching when a remote/default base is established; no main merge or hosted qualification is implied.
 - [Phase 01, historical]: Initial procedural halt was resolved by approved bounded recovery; frozen budget remains unchanged.
 - [Phase 01, checkpoint]: Plan 01-01 completed under unchanged cumulative caps; native guest and source audits passed, with later requirements still pending at that checkpoint.
 - [Phase 01, checkpoint]: Plan 01-02 proved selected isolation and host containment within unchanged caps; timing, continuation and candidate admission were still pending at that checkpoint.
 - [Phase 01, checkpoint]: Plan 01-03 qualified selected timing and explicit fresh-destination continuation within frozen caps; final candidate admission is recorded in plan 01-04.
-- [Phase 01]: Plan 01-04 accepts the pinned candidate for the bounded private 68000 experiment after independent source review; CPU-01 through CPU-05 evidence is complete, while formal Phase 1 verification remains pending.
+- [Phase 01, verification 2026-10-01]: OpenGSD returned `gaps_found`. Its MVP story validator rejected the canonical ROADMAP goal before implementation scoring; 0/5 is not a claim that all requirements failed. A later independent source review corroborated six blockers. No tests were rerun during verification; the current source/admission claim needs disposition and a fresh verification pass.
 
 ### Pending Todos
 
-- Next workflow step is the separate Phase 1 goal-verification review. Do not auto-chain into it or start Phase 2; the user may select the model and adjust the step when continuing.
+- Next command: `$gsd-plan-phase 01 --gaps` to plan the canonical-goal format correction and blocker disposition within the frozen budget. After that plan is reviewed, execute its gap-closure plans with `$gsd-execute-phase 01 --gaps-only`; keep Phase 2 gated until verification passes.
 
 ### Blockers/Concerns
 
-- Execution is complete at the required GSD boundary before phase-goal verification. Current configuration remains interactive with auto_advance and _auto_chain_active false.
+- The required pause is at the gap-planning boundary. Current configuration remains interactive with auto_advance and _auto_chain_active false.
 
-- Native private guest, source closure, FPU/SoftFloat exclusion, selected isolation, timing, host safety, and fresh-destination continuation pass. The candidate is accepted within the documented limits; phase-goal verification remains before Phase 1 completion and Phase 2 admission.
+- Earlier plan receipts record the private guest, source closure, FPU/SoftFloat exclusion, selected isolation, timing, host-safety, and fresh-destination continuation evidence. The later independent review found legal-instruction undefined behavior and generator defects; do not treat the old acceptance receipt alone as current SDK admission evidence.
 - Preserve all counterexamples: odd IRQ crash, fixture UBSan, reset accounting/NMI, BSD address-error boundary and malformed-state/zero-request guards. The explicit state codec passes eight continuation checkpoints; raw upstream context-copy APIs remain unsuitable.
 - Frozen cumulative charges are 2,614 handwritten, 523 helper and 483 semantic lines, leaving 77 helper and 17 semantic lines. Both attempts are consumed. Charged effort is 20,005 seconds total / 18,859 seconds in the final attempt. Preserve these charges; any future work must remain inside the original limits or be separately replanned.
 - Remote/CI/protection/release authority is not configured; future delivery dependency. Continue independent implementation and artifact preparation; repeat remote triage at setup/shipping.
-- Evidence is limited to the native Apple Clang 21 / Darwin arm64 experiment; no release platform matrix, board/BIOS/game compatibility, public state format, or performance claim is established. CPU-01 through CPU-05 are complete; the other 22 v1 requirements remain pending.
-- Two substantive adaptation attempts are consumed. Preserve cumulative caps in later plans; no automatic further adaptation attempt is authorized. Phase 2 remains blocked until the Phase 1 goal-verification gate passes.
+- Evidence is limited to the native Apple Clang 21 / Darwin arm64 experiment; no release platform matrix, board/BIOS/game compatibility, public state format, or performance claim is established. Task-level records exist for CPU-01 through CPU-05, but the current phase verification did not certify them; the other 22 v1 requirements remain pending.
+- Two substantive adaptation attempts are consumed. Preserve cumulative caps in later plans; no automatic further adaptation attempt is authorized. Phase 2 remains blocked until the source findings are dispositioned and Phase 1 verification passes.
 
 ## Deferred Items
 
@@ -111,6 +111,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-01T20:23:35.396Z
-Stopped at: Completed 01-04 plan; ready for phase-goal verification
+Last session: 2026-10-02T01:36:50Z
+Stopped at: Phase 01 goal verification returned gaps_found; ready for gap-closure planning
 Resume file: None

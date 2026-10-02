@@ -2,7 +2,7 @@
 
 ## Overview
 
-Deliver an offline installable C SDK whose ordinary native API runs an original deterministic CPU/bus diagnostic. Qualify the CPU before SDK integration, demonstrate the complete consumer workflow, then distribute a tested unsigned alpha. All implementation and acceptance evidence remain pending. [PROJECT.md](PROJECT.md) and [REQUIREMENTS.md](REQUIREMENTS.md) govern scope; [research synthesis](research/SUMMARY.md), [roadmap seed](preparation/ROADMAP-SEED.md) and [adversarial gates](preparation/ADVERSARIAL-REVIEW.md) supply dated rationale.
+Deliver an offline installable C SDK whose ordinary native API runs an original deterministic CPU/bus diagnostic. Qualify the CPU before SDK integration, demonstrate the complete consumer workflow, then distribute a tested unsigned alpha. Phase 1 plan evidence is recorded, but its phase-level verification found gaps; Phases 2–3 remain unplanned and release evidence remains pending. [PROJECT.md](PROJECT.md) and [REQUIREMENTS.md](REQUIREMENTS.md) govern scope; [research synthesis](research/SUMMARY.md), [roadmap seed](preparation/ROADMAP-SEED.md) and [adversarial gates](preparation/ADVERSARIAL-REVIEW.md) supply dated rationale.
 
 ## Milestones
 
@@ -53,13 +53,13 @@ Plans:
 
 - [x] 01-03-PLAN.md — Qualify timing and complete fresh-destination continuation.
 
-**Wave 4** *(complete; phase-goal verification pending)*
+**Wave 4** *(plan execution complete; verification gaps found)*
 
-- [x] 01-04-PLAN.md — Independent review and acceptance seal complete; candidate accepted for the bounded private experiment.
+- [x] 01-04-PLAN.md — The bounded private-candidate acceptance receipt was sealed. A later independent phase review found six blockers; current backend admission is unresolved.
 
 Planning guidance: First set a concrete finite effort cap, patch budget and stopping/replacement rules. Then use small CMake/CTest experiment scaffolding, a licensed original tiny guest, source/host-call audit, and isolation/timing/continuation experiments. Evaluate the research's pinned Musashi candidate without presuming acceptance. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
 
-**Admission gate:** CPU-05 may be satisfied by a reproducible rejection or deferral. That does not satisfy CPU-01–04 or complete this phase. The bounded candidate is now accepted against CPU-01–05; Phase 1 completion and Phase 2 admission still require the separate phase-goal verification step. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
+**Admission gate:** CPU-05 may be satisfied by a reproducible rejection or deferral. That does not satisfy CPU-01–04 or complete this phase. The 01-04 receipt records bounded candidate acceptance, but a later independent review identified six source blockers and the phase verifier returned `gaps_found`. Treat backend admission as unresolved. Correct the canonical MVP goal, disposition the findings within the frozen budget (or explicitly reject/defer and replan), then obtain fresh evidence and phase verification before Phase 2 admission. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
 
 ### Phase 2: Executable diagnostic SDK
 
@@ -105,11 +105,11 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 4/4 | Ready for phase-goal verification | - |
+| 1. CPU acceptance experiment | v0.1 | 4/4 | Verification gaps found; gap planning required | - |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
-Coverage: 27/27 current requirements assigned exactly once; 5 in Phase 1, 15 in Phase 2, 7 in Phase 3. CPU-01–05 have accepted task-level evidence and await phase-goal verification; the other 22 remain Pending in [traceability](REQUIREMENTS.md#traceability). Deferred v2 requirements are not allocated to these phases.
+Coverage: 27/27 current requirements assigned exactly once; 5 in Phase 1, 15 in Phase 2, 7 in Phase 3. Task-level records for CPU-01–05 exist, but phase verification is `gaps_found` and later source findings block current backend admission; the other 22 remain Pending in [traceability](REQUIREMENTS.md#traceability). Deferred v2 requirements are not allocated to these phases.
 
 ## Next Milestone Outline — Interactive Diagnostic Alpha
 
