@@ -114,7 +114,20 @@ class ContractControls(unittest.TestCase):
         (build / "CMakeCache.txt").write_text("CMAKE_BUILD_TYPE=Debug\n", encoding="utf-8")
         (build / "build.ninja").write_text("ninja_required_version = 1.10\n", encoding="utf-8")
         (build / "Testing/Temporary/LastTest.log").write_text(
-            "1/1 Test #1: owned_cpu_contract ... Passed 0.01 sec\n", encoding="utf-8")
+            """Start testing: Oct 02 15:46 EDT
+----------------------------------------------------------
+1/1 Testing: owned_cpu_contract
+1/1 Test: owned_cpu_contract
+Command: owned_cpu_contract
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+----------------------------------------------------------
+End testing: Oct 02 15:46 EDT
+""", encoding="utf-8")
+        # CTest may leave this from an earlier run; LastTest.log is the current run's receipt.
+        (build / "Testing/Temporary/LastTestsFailed.log").write_text(
+            "owned_cpu_contract\n", encoding="utf-8")
 
         result = contract.record(
             self.root, "record-control", build,
@@ -127,8 +140,48 @@ class ContractControls(unittest.TestCase):
         self.assertEqual(result["cumulative_churn"]["test_tool_added"], 1)
         self.assertEqual(result["test_results"]["expected"], 1)
         self.assertEqual(result["test_results"]["observed"], 1)
+        self.assertEqual(result["test_results"]["cases"], ["owned_cpu_contract"])
         self.assertFalse(result["diagnostic_gate"])
         self.assertNotIn(str(self.root), Path(ledger_path).read_text(encoding="utf-8"))
+
+    def test_ctest_log_records_each_passed_test_block(self):
+        build = self.root / "build/owned-cpu"
+        temporary = build / "Testing/Temporary"
+        temporary.mkdir(parents=True)
+        (temporary / "LastTest.log").write_text(
+            """Start testing: Oct 02 15:46 EDT
+----------------------------------------------------------
+1/2 Testing: owned_cpu_diagnostic
+1/2 Test: owned_cpu_diagnostic
+Command: owned_cpu_diagnostic
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+----------------------------------------------------------
+2/2 Testing: owned_cpu_negative
+2/2 Test: owned_cpu_negative
+Command: owned_cpu_negative
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+----------------------------------------------------------
+End testing: Oct 02 15:46 EDT
+""", encoding="utf-8")
+        (temporary / "LastTestsFailed.log").write_text(
+            "owned_cpu_diagnostic\n", encoding="utf-8")
+
+        results = contract._test_results(build)
+        self.assertEqual(results["cases"], ["owned_cpu_diagnostic", "owned_cpu_negative"])
+        self.assertEqual(results["expected"], 2)
+        self.assertEqual(results["observed"], 2)
+        self.assertEqual(results["status"], "pass")
+
+        log = temporary / "LastTest.log"
+        log.write_text(log.read_text(encoding="utf-8").replace(
+            "Test Passed.", "Test Failed.", 1), encoding="utf-8")
+        with self.assertRaises(contract.ContractError) as caught:
+            contract._test_results(build)
+        self.assertEqual(caught.exception.reason, "stage_test_results")
 
     def test_churn_counts_committed_lines_even_after_revert(self):
         subprocess.run(["git", "init", "--quiet"], cwd=self.root, check=True)

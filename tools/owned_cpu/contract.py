@@ -386,13 +386,28 @@ def _test_results(build_dir: Path) -> dict:
     log = build_dir / "Testing/Temporary/LastTest.log"
     require(log.is_file(), "stage_test_results", "CTest LastTest.log is missing")
     content = log.read_text(encoding="utf-8", errors="replace")
-    passed = re.findall(r"(?m)^\d+/\d+ Test #\d+:\s+(.+?)\s+\.\.\.\s+Passed", content)
-    failed_log = build_dir / "Testing/Temporary/LastTestsFailed.log"
-    failed = failed_log.read_text(encoding="utf-8", errors="replace").splitlines() if failed_log.is_file() else []
-    require(bool(passed), "stage_test_results", "CTest log contains no observed passing cases")
-    require(not failed, "stage_test_results", "CTest last-failure file is nonempty")
-    return {"expected": len(passed), "observed": len(passed), "status": "pass",
-            "cases": passed, "log_sha256": sha256(log)}
+    blocks = list(re.finditer(r"(?m)^\d+/\d+ Testing:\s+(.+?)\s*$", content))
+    if blocks:
+        cases = []
+        for index, match in enumerate(blocks):
+            end = blocks[index + 1].start() if index + 1 < len(blocks) else len(content)
+            block = content[match.start():end]
+            passed = re.findall(r"(?m)^Test Passed\.$", block)
+            failed = re.findall(r"(?m)^Test Failed\.$", block)
+            require(len(passed) == 1 and not failed, "stage_test_results",
+                    f"CTest case did not pass exactly once: {match.group(1)}")
+            cases.append(match.group(1))
+    else:
+        # Older CTest versions write their concise console summary into LastTest.log.
+        results = re.findall(
+            r"(?m)^\d+/\d+ Test #\d+:\s+(.+?)\s+\.\.\.\s+(Passed|\*\*\*Failed)", content)
+        require(bool(results), "stage_test_results", "CTest log contains no observed test results")
+        require(all(result == "Passed" for _, result in results), "stage_test_results",
+                "CTest log contains a failed case")
+        cases = [name for name, _ in results]
+    require(bool(cases), "stage_test_results", "CTest log contains no observed passing cases")
+    return {"expected": len(cases), "observed": len(cases), "status": "pass",
+            "cases": cases, "log_sha256": sha256(log)}
 
 
 def record(root: Path, stage: str, build_dir: Path, interval_values: list[str]) -> dict:
