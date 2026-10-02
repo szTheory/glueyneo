@@ -21,9 +21,9 @@
     "cap_seconds": 28800,
     "completion_condition": "The unmodified original guest and its named wrong-behavior control both execute with their expected outcomes.",
     "excluded_stage": "plan-01-07-governance",
-    "started_at": null,
+    "started_at": "2026-10-02T19:07:00Z",
     "starts_on": "first owned emulation-runtime or behavioral-test change in Plan 01-08",
-    "status": "not-started"
+    "status": "in-progress"
   },
   "effort_checkpoints": [
     {
