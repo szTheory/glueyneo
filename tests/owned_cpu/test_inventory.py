@@ -14,6 +14,7 @@ class InventoryControls(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.runtime = (ROOT / inventory.RUNTIME_PATH).read_text(encoding="utf-8")
+        cls.header = (ROOT / inventory.HEADER_PATH).read_text(encoding="utf-8")
         cls.fixture = (ROOT / inventory.FIXTURE_PATH).read_text(encoding="utf-8")
         cls.document = inventory.json.loads(
             (ROOT / inventory.INVENTORY_PATH).read_text(encoding="utf-8")
@@ -37,6 +38,20 @@ class InventoryControls(unittest.TestCase):
         fields[0]["declaration"] = "void * bus"
         errors = inventory.field_errors(fields, self.runtime)
         self.assertIn("field declaration mismatch: bus", errors)
+
+    def test_private_state_inventory_matches_named_record_fields(self):
+        actual = inventory.parse_state_record_fields(self.header)
+        declared = {entry["name"]: entry["declaration"]
+                    for entry in self.document["private_state_record"]["record_fields"]}
+        self.assertEqual(actual, declared)
+
+    def test_private_state_identity_is_bound_to_exact_cpu_source(self):
+        digest = inventory.sha256(ROOT / inventory.RUNTIME_PATH)
+        stale = self.header.replace(digest, "0" * 64, 1)
+        self.assertIn(
+            "private state core identity is stale against cpu.c SHA-256",
+            inventory.state_identity_errors(stale, digest),
+        )
 
     def test_stale_source_hash_has_named_rejection(self):
         hashes = dict(self.document["source_hashes"])

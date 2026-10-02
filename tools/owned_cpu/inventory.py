@@ -34,6 +34,7 @@ EXPECTED_COMPILED_SOURCES = {
     "tests/owned_cpu/test_isolation.c",
     "tests/owned_cpu/test_cold.c",
     "tests/owned_cpu/test_faults.c",
+    "tests/owned_cpu/test_state.c",
     "tests/cpu/guest_fixture.c",
 }
 HASHED_SOURCES = {
@@ -50,6 +51,7 @@ HASHED_SOURCES = {
     "tests/owned_cpu/test_isolation.c",
     "tests/owned_cpu/test_cold.c",
     "tests/owned_cpu/test_faults.c",
+    "tests/owned_cpu/test_state.c",
     "tests/owned_cpu/cold.py",
     "tests/owned_cpu/negative.py",
     "tests/owned_cpu/test_inventory.py",
@@ -64,6 +66,7 @@ EXECUTABLE_TARGETS = {
     "owned_cpu_isolation",
     "owned_cpu_cold",
     "owned_cpu_faults",
+    "owned_cpu_state",
 }
 
 
@@ -98,6 +101,33 @@ def parse_cpu_fields(source: str) -> dict[str, str]:
     return fields
 
 
+def parse_state_record_fields(source: str) -> dict[str, str]:
+    match = re.search(
+        r"typedef\s+struct\s*\{(?P<body>[^{}]*)\}\s*owned_cpu_state\s*;",
+        source,
+        re.S,
+    )
+    if match is None:
+        raise InventoryError("owned_cpu_state record not found")
+    fields: dict[str, str] = {}
+    declaration = re.compile(
+        r"^\s*(?P<type>[A-Za-z_][A-Za-z_0-9]*(?:\s+\*+)?)[ \t]+"
+        r"(?P<name>[A-Za-z_][A-Za-z_0-9]*)(?P<array>\s*\[[^]]+\])?\s*;\s*$"
+    )
+    for line in match.group("body").splitlines():
+        item = declaration.match(line)
+        if item is None:
+            if line.strip():
+                raise InventoryError(f"unparsed state record field declaration: {line.strip()}")
+            continue
+        name = item.group("name")
+        fields[name] = " ".join(
+            part for part in (item.group("type").strip(), name + (item.group("array") or ""))
+            if part
+        )
+    return fields
+
+
 def field_errors(field_entries: list[dict[str, Any]], source: str) -> list[str]:
     actual = parse_cpu_fields(source)
     entries = {str(item.get("name", "")): item for item in field_entries}
@@ -110,6 +140,45 @@ def field_errors(field_entries: list[dict[str, Any]], source: str) -> list[str]:
         if entries[name].get("declaration") != actual[name]:
             errors.append(f"field declaration mismatch: {name}")
     return errors
+
+
+def state_record_errors(root: Path, inventory: dict[str, Any]) -> list[str]:
+    header = (root / HEADER_PATH).read_text(encoding="utf-8")
+    runtime_hash = sha256(root / RUNTIME_PATH)
+    errors: list[str] = []
+    errors.extend(state_identity_errors(header, runtime_hash))
+
+    record = inventory.get("private_state_record", {})
+    try:
+        actual = parse_state_record_fields(header)
+    except InventoryError as error:
+        return [str(error)]
+    entries = {str(item.get("name", "")): item
+               for item in record.get("record_fields", [])}
+    if len(entries) != len(record.get("record_fields", [])):
+        errors.append("duplicate private state inventory field")
+    for name in sorted(actual.keys() - entries.keys()):
+        errors.append(f"missing private state inventory entry: {name}")
+    for name in sorted(entries.keys() - actual.keys()):
+        errors.append(f"extra private state inventory entry: {name}")
+    for name in sorted(actual.keys() & entries.keys()):
+        if entries[name].get("declaration") != actual[name]:
+            errors.append(f"private state field declaration mismatch: {name}")
+
+    for entry in inventory.get("fields", []):
+        name = str(entry.get("name", ""))
+        disposition = str(entry.get("capture_disposition", "")).strip()
+        if not disposition:
+            errors.append(f"missing capture disposition: {name}")
+        if entry.get("classification") == "host-binding" and "destination" not in disposition:
+            errors.append(f"host binding does not name destination ownership: {name}")
+    return errors
+
+
+def state_identity_errors(header: str, runtime_hash: str) -> list[str]:
+    if f'"{runtime_hash}"' not in header:
+        return ["private state core identity is stale against cpu.c SHA-256"]
+    return []
 
 
 def mutable_file_scope_objects(source: str) -> list[str]:
@@ -307,6 +376,7 @@ def check_inventory(root: Path, build_dir: Path, inventory: dict[str, Any]) -> l
     errors: list[str] = []
     runtime = (root / RUNTIME_PATH).read_text(encoding="utf-8")
     errors.extend(field_errors(inventory.get("fields", []), runtime))
+    errors.extend(state_record_errors(root, inventory))
     errors.extend(runtime_global_errors(runtime))
     errors.extend(hash_errors(root, inventory.get("source_hashes", {})))
     errors.extend(file_scope_errors(root, inventory.get("file_scope_objects", [])))
@@ -339,6 +409,19 @@ def run_self_test(root: Path, inventory: dict[str, Any]) -> int:
     extra = copy.deepcopy(inventory["fields"])
     extra.append({"name": "invented", "declaration": "uint32_t invented"})
     expect_named(field_errors(extra, runtime), "extra field inventory entry: invented")
+
+    missing_state = copy.deepcopy(inventory)
+    missing_state["private_state_record"]["record_fields"].pop()
+    expect_named(state_record_errors(root, missing_state),
+                 "missing private state inventory entry: reset_signal_events")
+
+    current_header = (root / HEADER_PATH).read_text(encoding="utf-8")
+    current_hash = sha256(root / RUNTIME_PATH)
+    stale_core = current_header.replace(current_hash, "0" * 64, 1)
+    if stale_core == current_header:
+        raise InventoryError("self-test could not mutate private state core identity")
+    expect_named(state_identity_errors(stale_core, current_hash),
+                 "private state core identity is stale against cpu.c SHA-256")
 
     stale_hashes = dict(inventory["source_hashes"])
     stale_hashes["experiments/owned_cpu/cpu.c"] = "0" * 64

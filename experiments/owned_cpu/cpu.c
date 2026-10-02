@@ -791,6 +791,169 @@ owned_cpu_status owned_cpu_observe(const owned_cpu *cpu, owned_cpu_observation *
 }
 
 #ifdef OWNED_CPU_TEST_HOOKS
+_Static_assert(sizeof(owned_cpu_state) <= UINT32_MAX,
+               "private state record size must fit its fixed header");
+_Static_assert(sizeof(OWNED_CPU_STATE_CORE_IDENTITY_SHA256) == 65u,
+               "private state identity must be one full SHA-256 hex digest");
+
+static void state_from_cpu(const owned_cpu *cpu, owned_cpu_state *state) {
+    state->size = (uint32_t)sizeof(*state);
+    state->version = OWNED_CPU_STATE_VERSION;
+    memcpy(state->core_identity, OWNED_CPU_STATE_CORE_IDENTITY_SHA256,
+           sizeof(state->core_identity));
+    state->present_fields = OWNED_CPU_STATE_REQUIRED_FIELDS;
+    for (unsigned index = 0u; index < 8u; ++index) {
+        state->data_registers[index] = cpu->data_registers[index];
+        state->address_registers[index] = cpu->address_registers[index];
+    }
+    state->pc = cpu->pc;
+    state->previous_pc = cpu->previous_pc;
+    state->usp = cpu->usp;
+    state->ssp = cpu->ssp;
+    state->fault_pc = cpu->fault_pc;
+    state->sr = cpu->sr;
+    state->instruction_register = cpu->instruction_register;
+    state->stopped = cpu->stopped;
+    state->irq_level = cpu->irq_level;
+    state->irq7_pending = cpu->irq7_pending;
+    state->reset_pending = cpu->reset_pending;
+    state->last_exception_vector = cpu->last_exception_vector;
+    state->instructions = cpu->instructions;
+    state->instruction_cycles = cpu->instruction_cycles;
+    state->reset_cycles = cpu->reset_cycles;
+    state->exception_cycles = cpu->exception_cycles;
+    state->idle_cycles = cpu->idle_cycles;
+    state->total_cycles = cpu->total_cycles;
+    state->reset_signal_events = cpu->reset_signal_events;
+}
+
+static void state_copy_named(const owned_cpu_state *source, owned_cpu_state *target) {
+    target->size = source->size;
+    target->version = source->version;
+    memcpy(target->core_identity, source->core_identity, sizeof(target->core_identity));
+    target->present_fields = source->present_fields;
+    for (unsigned index = 0u; index < 8u; ++index) {
+        target->data_registers[index] = source->data_registers[index];
+        target->address_registers[index] = source->address_registers[index];
+    }
+    target->pc = source->pc;
+    target->previous_pc = source->previous_pc;
+    target->usp = source->usp;
+    target->ssp = source->ssp;
+    target->fault_pc = source->fault_pc;
+    target->sr = source->sr;
+    target->instruction_register = source->instruction_register;
+    target->stopped = source->stopped;
+    target->irq_level = source->irq_level;
+    target->irq7_pending = source->irq7_pending;
+    target->reset_pending = source->reset_pending;
+    target->last_exception_vector = source->last_exception_vector;
+    target->instructions = source->instructions;
+    target->instruction_cycles = source->instruction_cycles;
+    target->reset_cycles = source->reset_cycles;
+    target->exception_cycles = source->exception_cycles;
+    target->idle_cycles = source->idle_cycles;
+    target->total_cycles = source->total_cycles;
+    target->reset_signal_events = source->reset_signal_events;
+}
+
+static int state_counter_sum(const owned_cpu_state *state, uint64_t *sum) {
+    uint64_t value = state->reset_pending != 0u ? 0u : RESET_EVENT_CYCLES;
+    const uint64_t counters[] = {
+        state->instruction_cycles, state->exception_cycles, state->idle_cycles};
+    for (size_t index = 0u; index < sizeof(counters) / sizeof(counters[0]); ++index) {
+        if (value > UINT64_MAX - counters[index]) return 0;
+        value += counters[index];
+    }
+    *sum = value;
+    return 1;
+}
+
+static int state_valid(const owned_cpu_state *state) {
+    if (state->size != (uint32_t)sizeof(*state) ||
+        state->version != OWNED_CPU_STATE_VERSION ||
+        memcmp(state->core_identity, OWNED_CPU_STATE_CORE_IDENTITY_SHA256,
+               sizeof(state->core_identity)) != 0 ||
+        state->present_fields != OWNED_CPU_STATE_REQUIRED_FIELDS) {
+        return 0;
+    }
+    if (state->stopped > 1u || state->irq7_pending > 1u ||
+        state->reset_pending > 1u || state->irq_level > 7u ||
+        state->pc % 2u != 0u || state->reset_cycles != RESET_EVENT_CYCLES) {
+        return 0;
+    }
+    uint32_t active_stack = (state->sr & SR_S) != 0u ? state->ssp : state->usp;
+    if (state->address_registers[7] != active_stack || active_stack % 2u != 0u) {
+        return 0;
+    }
+    uint64_t expected_total = 0u;
+    if (!state_counter_sum(state, &expected_total) ||
+        state->total_cycles != expected_total) {
+        return 0;
+    }
+    if (state->reset_pending != 0u &&
+        (state->instructions != 0u || state->instruction_cycles != 0u ||
+         state->exception_cycles != 0u || state->idle_cycles != 0u ||
+         state->total_cycles != 0u || state->reset_signal_events != 0u)) {
+        return 0;
+    }
+    return 1;
+}
+
+owned_cpu_status owned_cpu_capture_state(const owned_cpu *cpu, owned_cpu_state *out_state) {
+    if (cpu == NULL || out_state == NULL || cpu->active != 0u) {
+        return OWNED_CPU_INVALID_ARGUMENT;
+    }
+    if (cpu->faulted != 0u) return OWNED_CPU_HOST_FAULT;
+    if (cpu->ready == 0u) return OWNED_CPU_INVALID_ARGUMENT;
+    owned_cpu_state candidate;
+    state_from_cpu(cpu, &candidate);
+    if (!state_valid(&candidate)) return OWNED_CPU_INVALID_ARGUMENT;
+    state_copy_named(&candidate, out_state);
+    return OWNED_CPU_OK;
+}
+
+owned_cpu_status owned_cpu_restore_state(owned_cpu *cpu, const owned_cpu_state *state) {
+    if (cpu == NULL || state == NULL || cpu->active != 0u) {
+        return OWNED_CPU_INVALID_ARGUMENT;
+    }
+    if (cpu->faulted != 0u) return OWNED_CPU_HOST_FAULT;
+
+    /* Read the fixed header first, then stage every member by name. The record
+     * is an in-process fixed-size object; size/version reject incompatible
+     * instances but do not make an arbitrary byte buffer safe to parse. */
+    if (state->size != (uint32_t)sizeof(*state)) return OWNED_CPU_INVALID_ARGUMENT;
+    owned_cpu_state candidate;
+    state_copy_named(state, &candidate);
+    if (!state_valid(&candidate)) return OWNED_CPU_INVALID_ARGUMENT;
+
+    for (unsigned index = 0u; index < 8u; ++index) {
+        cpu->data_registers[index] = candidate.data_registers[index];
+        cpu->address_registers[index] = candidate.address_registers[index];
+    }
+    cpu->pc = candidate.pc;
+    cpu->previous_pc = candidate.previous_pc;
+    cpu->usp = candidate.usp;
+    cpu->ssp = candidate.ssp;
+    cpu->fault_pc = candidate.fault_pc;
+    cpu->sr = candidate.sr;
+    cpu->instruction_register = candidate.instruction_register;
+    cpu->stopped = candidate.stopped;
+    cpu->irq_level = candidate.irq_level;
+    cpu->irq7_pending = candidate.irq7_pending;
+    cpu->reset_pending = candidate.reset_pending;
+    cpu->last_exception_vector = candidate.last_exception_vector;
+    cpu->instructions = candidate.instructions;
+    cpu->instruction_cycles = candidate.instruction_cycles;
+    cpu->reset_cycles = candidate.reset_cycles;
+    cpu->exception_cycles = candidate.exception_cycles;
+    cpu->idle_cycles = candidate.idle_cycles;
+    cpu->total_cycles = candidate.total_cycles;
+    cpu->reset_signal_events = candidate.reset_signal_events;
+    cpu->ready = 1u;
+    return OWNED_CPU_OK;
+}
+
 owned_cpu_status owned_cpu_test_seed_data_register(owned_cpu *cpu, unsigned reg,
                                                     uint32_t value) {
     if (cpu == NULL || cpu->active != 0u || cpu->ready == 0u || reg > 7u) {

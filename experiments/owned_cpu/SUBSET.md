@@ -21,6 +21,32 @@ other registers to zero as deterministic test state. This does not claim those
 registers have those values on physical reset. An odd initial SSP or PC returns
 `OWNED_CPU_ADDRESS_ERROR`; reset does not build an exception frame.
 
+The experiment now has a private same-build continuation record under
+`OWNED_CPU_TEST_HOOKS`. It lists guest registers, status, IRQ edge/input state,
+reset debt, diagnostics and event counters by field, with a fixed size, format
+version, mandatory field mask and the full SHA-256 identity of `cpu.c`. Capture
+requires a ready, idle, nonterminal instance. Restore validates into a temporary
+named representation before changing the destination; it makes no bus calls
+and keeps the destination's bus and allocator bindings. The caller must copy
+guest memory separately. `ready` is reconstructed on success; `active` and
+terminal `faulted` state are not stored. The full field disposition is in
+[`state-inventory.json`](state-inventory.json).
+
+Continuation is exercised after reset debt, each of the four original
+diagnostic instructions (including STOP), a masked IRQ input, a pending level-7
+edge after the pin is deasserted, IRQ entry, TRAP entry, ILLEGAL entry,
+privilege-exception entry, address-error entry and RTE completion. For each
+checkpoint, the test clones guest memory, restores into a separately bound
+instance, destroys and overwrites the source owner, then compares six
+instruction-boundary run calls against the uninterrupted baseline. It checks
+named CPU fields, every guest-memory byte, ordered bus calls, run results,
+elapsed/overshoot cycles and stop reasons.
+
+This record is an in-process fixed C object. Its size check does not make an
+arbitrary byte buffer safe to parse. Compatibility is limited to the exact
+compiled core source identity. It does not define a public ABI, cross-build
+compatibility, emulator snapshot, replay, durable save or guest-memory format.
+
 ## Supported operations
 
 | Operation | Accepted encoding and effect | Cycles |
@@ -112,7 +138,8 @@ then both stop at PC `0x10e` after 36 instruction clocks; reset40 is separate.
 Not implemented or established: trace exception processing, guest bus-error
 input, prefetch fidelity, wait states, arbitrary mid-instruction suspension,
 physical interrupt acknowledge, external RESET device behavior, full ISA or
-later CPU models, durable snapshots, BIOS/games, and Neo Geo board timing.
+later CPU models, public or durable snapshots, BIOS/games, and Neo Geo board
+timing. No prefetch or buffered guest state exists in this implementation.
 An emulator's output is a comparison lead, not hardware truth. The experiment
 still has not passed independent review or phase admission; CPU-01–05 remain
 pending until the current roadmap's full gates are completed.

@@ -17,29 +17,31 @@
     "tests/owned_cpu/test_faults.c",
     "tests/owned_cpu/test_isolation.c",
     "tests/owned_cpu/test_semantics.c",
+    "tests/owned_cpu/test_state.c",
     "tests/owned_cpu/test_timing.c",
     "third_party/unity/src/unity.c"
   ],
   "source_hashes": {
-    "experiments/owned_cpu/CMakeLists.txt": "c1df3beb82783a84ec96fab80dbe9a49d9b6f4d1278c3f747597c6e83235489f",
-    "experiments/owned_cpu/cpu.c": "041cd6af7dbcdaca8c72123961ed469f55a41eae0554a6290a64162c6f95cf2c",
-    "experiments/owned_cpu/cpu.h": "662a7effd0bca4c89bd97261e992c858fe73119c735440128e28a8a5e4d6c018",
+    "experiments/owned_cpu/CMakeLists.txt": "990848e89ffbff684df06ba60414db7722078aed92e4c3431a96039f31b585a3",
+    "experiments/owned_cpu/cpu.c": "c4eaac805176cf6120dc8fd887e0096cfd34fe2047b9651087c9fe2e8e2e4f0d",
+    "experiments/owned_cpu/cpu.h": "3eac455ea9b07e48c5d3e792788bc2c6a2bd955632e2928d0cb1f4b4222dd457",
     "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
     "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c",
     "tests/owned_cpu/cold.py": "4f0687b793cb04a4c61b31dc917ec7d08233e9a272bf2c0e41b274d06d604f84",
     "tests/owned_cpu/isolation_fixture.h": "95ca205b077d7459edd2af0194dc9af79954be011fe9c39e8f1efa7da5eb474d",
-    "tests/owned_cpu/negative.py": "dccad40e9939b4165a62082798c7e558ae0d19788a930f599f2221b9ab0ed713",
+    "tests/owned_cpu/negative.py": "39d0514dabcdab1625c4acbb9de636d158f02e1ac8d937999c4f3569ecf348de",
     "tests/owned_cpu/test_cold.c": "e2bcb33eea1a24cdc8c0a5340928e4b5d3705b4f0649b6299c370d5560e26d63",
     "tests/owned_cpu/test_diagnostic.c": "a3d7b2e60f2f0e4fd49042b069dc8729a268816c8bbfd42bfa3a34ed3121937a",
     "tests/owned_cpu/test_faults.c": "71e09309af7c556b907563229ae6e176958ee91dbe7ddad5ceff124fabe071fa",
-    "tests/owned_cpu/test_inventory.py": "f38de92ef4d074f442f82ac82a7b858a3d88d89d1445a51382d97e0da3d87afa",
+    "tests/owned_cpu/test_inventory.py": "dc6f4e6e00079165009e1c9a06ff5d983395ce9e778432ddfa5b2e401e0d5ba7",
     "tests/owned_cpu/test_isolation.c": "35a5a515e1df3798bcae4a190387e32c4ea6ce6a0aa2ac628789111d85d7e155",
     "tests/owned_cpu/test_semantics.c": "33102065bd511e8f5721b5d645b72cc00cad1ef98bd46ef99324fc1d2c123301",
+    "tests/owned_cpu/test_state.c": "a43fcb4eea57b8e1ffe438966764ac6c504194cae2eb9c49341925280ac274e4",
     "tests/owned_cpu/test_timing.c": "7747995fa198148e941b84130a409cc2a4a9ce688ec5cd64b5f7ccd24fc3b0e4",
     "third_party/unity/src/unity.c": "a6cc4b143075a03317d72c760b5ed67a4a12eeda1242f575464ad23f34042275",
     "third_party/unity/src/unity.h": "b30ba4db1e0be1a1f6c862d359d73c91025a114977e41d3dad17103363804334",
     "third_party/unity/src/unity_internals.h": "35bffad23ebc533977291e7a848c646027513572268fbfa9bd03d5ec21ee818a",
-    "tools/owned_cpu/inventory.py": "cf44869d43401bd0fe9c67ea99a162735d9e04b1b0479026cc4f67a3e82a2863"
+    "tools/owned_cpu/inventory.py": "8ac89bc33f5169f9095ab97d81f46b287a8bec165e8eec44e28a4e08129b7e76"
   },
   "build_contract": {
     "language": "C17, required, C extensions disabled",
@@ -55,7 +57,7 @@
     "instrumented_objects": [
       "owned_cpu",
       "owned_cpu_unity",
-      "all six owned CPU test executables"
+      "all seven owned CPU test executables"
     ],
     "compile_database": "CMake compile_commands.json generated at build root; local absolute build paths are not copied into this inventory"
   },
@@ -71,7 +73,7 @@
         "write_word"
       ],
       "reset_disposition": "retain across reset; fixed at construction",
-      "capture_disposition": "opaque host callback binding"
+      "capture_disposition": "excluded from guest state; destination bus userdata/read16/write16 bindings remain attached"
     },
     {
       "name": "allocator",
@@ -83,7 +85,7 @@
         "owned_cpu_destroy"
       ],
       "reset_disposition": "retain across reset; fixed at construction",
-      "capture_disposition": "opaque host allocator binding"
+      "capture_disposition": "excluded from guest state; destination allocator userdata/allocate/release bindings remain attached"
     },
     {
       "name": "data_registers",
@@ -97,7 +99,7 @@
         "owned_cpu_test_seed_data_register"
       ],
       "reset_disposition": "zero on reset",
-      "capture_disposition": "owned_cpu_observation.data_registers"
+      "capture_disposition": "owned_cpu_state.data_registers; all eight values are captured by name"
     },
     {
       "name": "address_registers",
@@ -112,7 +114,7 @@
         "owned_cpu_test_seed_execution_state"
       ],
       "reset_disposition": "zero on reset then SSP loaded into A7",
-      "capture_disposition": "owned_cpu_observation.address_registers"
+      "capture_disposition": "owned_cpu_state.address_registers; all eight values are captured by name"
     },
     {
       "name": "pc",
@@ -126,7 +128,7 @@
         "owned_cpu_test_seed_execution_state"
       ],
       "reset_disposition": "loaded from reset vector",
-      "capture_disposition": "owned_cpu_observation.pc"
+      "capture_disposition": "owned_cpu_state.pc"
     },
     {
       "name": "previous_pc",
@@ -140,7 +142,7 @@
         "owned_cpu_run"
       ],
       "reset_disposition": "loaded from reset PC",
-      "capture_disposition": "owned_cpu_observation.previous_pc"
+      "capture_disposition": "owned_cpu_state.previous_pc"
     },
     {
       "name": "usp",
@@ -153,7 +155,7 @@
         "owned_cpu_test_seed_execution_state"
       ],
       "reset_disposition": "zero on reset",
-      "capture_disposition": "owned_cpu_observation.usp"
+      "capture_disposition": "owned_cpu_state.usp"
     },
     {
       "name": "ssp",
@@ -167,7 +169,7 @@
         "owned_cpu_test_seed_execution_state"
       ],
       "reset_disposition": "loaded from reset vector",
-      "capture_disposition": "owned_cpu_observation.ssp"
+      "capture_disposition": "owned_cpu_state.ssp"
     },
     {
       "name": "fault_pc",
@@ -178,7 +180,7 @@
         "execute_one"
       ],
       "reset_disposition": "clear on reset and after successful instruction",
-      "capture_disposition": "not currently exposed by observation; run result reports fault PC"
+      "capture_disposition": "owned_cpu_state.fault_pc; retained for same-build run-result continuation"
     },
     {
       "name": "sr",
@@ -194,7 +196,7 @@
         "exception entry"
       ],
       "reset_disposition": "set to 0x2700 on successful reset",
-      "capture_disposition": "owned_cpu_observation.sr"
+      "capture_disposition": "owned_cpu_state.sr; retained without padding or struct-byte serialization"
     },
     {
       "name": "instruction_register",
@@ -205,7 +207,7 @@
         "execute_one"
       ],
       "reset_disposition": "zero on reset; set during dispatch/fault",
-      "capture_disposition": "not currently exposed by observation; run result reports instruction register"
+      "capture_disposition": "owned_cpu_state.instruction_register; retained for same-build diagnostic continuation"
     },
     {
       "name": "stopped",
@@ -219,7 +221,7 @@
         "enter_address_exception"
       ],
       "reset_disposition": "zero on reset",
-      "capture_disposition": "owned_cpu_observation.stopped"
+      "capture_disposition": "owned_cpu_state.stopped"
     },
     {
       "name": "irq_level",
@@ -232,7 +234,7 @@
         "owned_cpu_run"
       ],
       "reset_disposition": "zero on reset; set by caller",
-      "capture_disposition": "owned_cpu_observation.irq_level"
+      "capture_disposition": "owned_cpu_state.irq_level; current caller level is part of continuation input"
     },
     {
       "name": "irq7_pending",
@@ -245,7 +247,7 @@
         "owned_cpu_run"
       ],
       "reset_disposition": "clear on reset and accepted edge",
-      "capture_disposition": "owned_cpu_observation.irq7_pending"
+      "capture_disposition": "owned_cpu_state.irq7_pending; pending edge survives pin deassertion"
     },
     {
       "name": "ready",
@@ -256,7 +258,7 @@
         "owned_cpu_reset"
       ],
       "reset_disposition": "clear before reset vector reads; set after valid vectors",
-      "capture_disposition": "not currently exposed; gates run/IRQ/observe"
+      "capture_disposition": "reconstructed as ready=1 after successful restore; capture requires a ready source"
     },
     {
       "name": "faulted",
@@ -273,7 +275,7 @@
         "owned_cpu_reset"
       ],
       "reset_disposition": "clear at reset start; set on bus/exception callback failure",
-      "capture_disposition": "not currently exposed; terminal until reset or destroy"
+      "capture_disposition": "excluded; capture and restore reject terminal host-fault state"
     },
     {
       "name": "active",
@@ -285,7 +287,7 @@
         "owned_cpu_run"
       ],
       "reset_disposition": "cleared after guarded operation",
-      "capture_disposition": "not captured; rejects reentrant same-instance API calls"
+      "capture_disposition": "excluded transient reentry guard; capture and restore reject while active"
     },
     {
       "name": "reset_pending",
@@ -297,7 +299,7 @@
         "owned_cpu_run"
       ],
       "reset_disposition": "set after valid reset and consumed once by run",
-      "capture_disposition": "owned_cpu_observation.reset_pending"
+      "capture_disposition": "owned_cpu_state.reset_pending; reset debt is preserved"
     },
     {
       "name": "last_exception_vector",
@@ -310,7 +312,7 @@
         "enter_address_exception"
       ],
       "reset_disposition": "zero on reset",
-      "capture_disposition": "owned_cpu_observation.last_exception_vector"
+      "capture_disposition": "owned_cpu_state.last_exception_vector"
     },
     {
       "name": "instructions",
@@ -322,7 +324,7 @@
         "owned_cpu_run"
       ],
       "reset_disposition": "zero on reset; overflow checked before event commit",
-      "capture_disposition": "owned_cpu_observation.instructions"
+      "capture_disposition": "owned_cpu_state.instructions"
     },
     {
       "name": "instruction_cycles",
@@ -334,7 +336,7 @@
         "owned_cpu_run"
       ],
       "reset_disposition": "zero on reset; overflow checked before event commit",
-      "capture_disposition": "owned_cpu_observation.instruction_cycles"
+      "capture_disposition": "owned_cpu_state.instruction_cycles"
     },
     {
       "name": "reset_cycles",
@@ -345,7 +347,7 @@
         "owned_cpu_reset"
       ],
       "reset_disposition": "set to 40 after valid reset; not incremented by run",
-      "capture_disposition": "owned_cpu_observation.reset_cycles"
+      "capture_disposition": "owned_cpu_state.reset_cycles"
     },
     {
       "name": "exception_cycles",
@@ -357,7 +359,7 @@
         "owned_cpu_run"
       ],
       "reset_disposition": "zero on reset; exceptions accounted independently",
-      "capture_disposition": "owned_cpu_observation.exception_cycles"
+      "capture_disposition": "owned_cpu_state.exception_cycles"
     },
     {
       "name": "idle_cycles",
@@ -369,7 +371,7 @@
         "owned_cpu_run"
       ],
       "reset_disposition": "zero on reset; stopped idle accounted independently",
-      "capture_disposition": "owned_cpu_observation.idle_cycles"
+      "capture_disposition": "owned_cpu_state.idle_cycles"
     },
     {
       "name": "total_cycles",
@@ -381,7 +383,7 @@
         "owned_cpu_run"
       ],
       "reset_disposition": "zero on reset; checked event additions only",
-      "capture_disposition": "owned_cpu_observation.total_cycles"
+      "capture_disposition": "owned_cpu_state.total_cycles; validated against reset debt and event counters"
     },
     {
       "name": "reset_signal_events",
@@ -393,7 +395,7 @@
         "execute_one"
       ],
       "reset_disposition": "zero on reset; RESET instruction counts one event",
-      "capture_disposition": "owned_cpu_observation.reset_signal_events"
+      "capture_disposition": "owned_cpu_state.reset_signal_events"
     }
   ],
   "callbacks": [
@@ -1085,6 +1087,165 @@
   "review_limitations": [
     "The checker recognizes the current conventional C source shape and explicit callback fixture names; it is a regression aid, not a C parser or proof of global completeness.",
     "ThreadSanitizer evidence applies only when that instrumented configuration runs successfully on the current host. Separate-instance tests do not permit same-instance concurrent calls.",
-    "State continuation/snapshot serialization is not implemented by this inventory; Plan 11 owns save-state continuation evidence."
-  ]
+    "Plan 11 qualifies a private same-build in-memory continuation record only; it is not a public snapshot, cross-build compatibility, replay, durable save format, or memory snapshot."
+  ],
+  "private_state_record": {
+    "visibility": "owned_cpu_state and capture/restore declarations exist only under OWNED_CPU_TEST_HOOKS; they are absent from consumer builds",
+    "record_kind": "fixed-size, named-field, in-memory continuation record; fields are read and written individually, never serialized as raw struct bytes",
+    "version": 1,
+    "core_identity": "full SHA-256 of experiments/owned_cpu/cpu.c; format version is checked separately",
+    "presence_mask": "all sixteen field-group bits are required; missing groups reject before restore commit",
+    "presence_groups": [
+      "data_registers",
+      "address_registers",
+      "pc_and_previous_pc",
+      "usp_and_ssp",
+      "fault_pc_and_instruction_register",
+      "sr",
+      "stopped",
+      "irq_level",
+      "irq7_pending",
+      "reset_pending",
+      "last_exception_vector",
+      "instructions",
+      "instruction_cycles",
+      "reset_cycles",
+      "exception_and_idle_cycles",
+      "total_cycles_and_reset_signal_events"
+    ],
+    "record_fields": [
+      {
+        "name": "size",
+        "declaration": "uint32_t size"
+      },
+      {
+        "name": "version",
+        "declaration": "uint32_t version"
+      },
+      {
+        "name": "core_identity",
+        "declaration": "char core_identity[65]"
+      },
+      {
+        "name": "present_fields",
+        "declaration": "uint64_t present_fields"
+      },
+      {
+        "name": "data_registers",
+        "declaration": "uint32_t data_registers[8]"
+      },
+      {
+        "name": "address_registers",
+        "declaration": "uint32_t address_registers[8]"
+      },
+      {
+        "name": "pc",
+        "declaration": "uint32_t pc"
+      },
+      {
+        "name": "previous_pc",
+        "declaration": "uint32_t previous_pc"
+      },
+      {
+        "name": "usp",
+        "declaration": "uint32_t usp"
+      },
+      {
+        "name": "ssp",
+        "declaration": "uint32_t ssp"
+      },
+      {
+        "name": "fault_pc",
+        "declaration": "uint32_t fault_pc"
+      },
+      {
+        "name": "sr",
+        "declaration": "uint16_t sr"
+      },
+      {
+        "name": "instruction_register",
+        "declaration": "uint16_t instruction_register"
+      },
+      {
+        "name": "stopped",
+        "declaration": "uint8_t stopped"
+      },
+      {
+        "name": "irq_level",
+        "declaration": "uint8_t irq_level"
+      },
+      {
+        "name": "irq7_pending",
+        "declaration": "uint8_t irq7_pending"
+      },
+      {
+        "name": "reset_pending",
+        "declaration": "uint8_t reset_pending"
+      },
+      {
+        "name": "last_exception_vector",
+        "declaration": "uint8_t last_exception_vector"
+      },
+      {
+        "name": "instructions",
+        "declaration": "uint64_t instructions"
+      },
+      {
+        "name": "instruction_cycles",
+        "declaration": "uint64_t instruction_cycles"
+      },
+      {
+        "name": "reset_cycles",
+        "declaration": "uint64_t reset_cycles"
+      },
+      {
+        "name": "exception_cycles",
+        "declaration": "uint64_t exception_cycles"
+      },
+      {
+        "name": "idle_cycles",
+        "declaration": "uint64_t idle_cycles"
+      },
+      {
+        "name": "total_cycles",
+        "declaration": "uint64_t total_cycles"
+      },
+      {
+        "name": "reset_signal_events",
+        "declaration": "uint64_t reset_signal_events"
+      }
+    ],
+    "capture_rules": [
+      "Capture requires a ready, idle, nonterminal instance and writes every record member by name.",
+      "Restore accepts an idle, nonterminal destination and validates a complete temporary named representation before the first CPU field assignment.",
+      "Restore performs no bus callbacks and retains destination-owned bus and allocator bindings.",
+      "The caller clones guest memory separately; the CPU record owns no memory buffer.",
+      "Fixed size/version checks require a valid accessible owned_cpu_state object; this is not an arbitrary-byte parser."
+    ],
+    "validation": [
+      "exact sizeof, version, full cpu.c SHA-256 identity, and required presence mask",
+      "boolean bytes, IRQ level range, even PC and even selected stack pointer",
+      "active A7 agrees with the S-selected USP or SSP",
+      "reset debt and event-cycle counters satisfy the implementation accounting invariant without overflow"
+    ],
+    "excluded_or_reconstructed": [
+      "bus and allocator are destination-rebound",
+      "ready is reconstructed to one only on successful restore",
+      "faulted and active are never stored and reject the operation when present on the relevant instance",
+      "no instruction prefetch/buffer state exists in this implementation"
+    ],
+    "supported_checkpoints": [
+      "reset debt before its first run consumption",
+      "after each of the four original diagnostic instructions including STOP",
+      "masked IRQ input",
+      "pending level-7 edge after pin deassertion",
+      "IRQ entry",
+      "TRAP entry",
+      "ILLEGAL entry",
+      "privilege exception entry",
+      "address-error entry",
+      "RTE completion"
+    ],
+    "compatibility_limit": "same compiled source build only; no public ABI, cross-build compatibility, durable snapshot, replay or save format is provided"
+  }
 }
