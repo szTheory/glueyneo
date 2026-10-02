@@ -20,7 +20,8 @@ typedef enum {
     OWNED_CPU_UNSUPPORTED_OPCODE,
     OWNED_CPU_HOST_FAULT,
     OWNED_CPU_BUDGET,
-    OWNED_CPU_STOPPED
+    OWNED_CPU_STOPPED,
+    OWNED_CPU_COUNTER_OVERFLOW
 } owned_cpu_status;
 
 typedef struct {
@@ -57,9 +58,15 @@ typedef struct {
     uint8_t stopped;
     uint8_t irq_level;
     uint8_t irq7_pending;
+    uint8_t reset_pending;
+    uint8_t last_exception_vector;
     uint64_t instructions;
     uint64_t instruction_cycles;
     uint64_t reset_cycles;
+    uint64_t exception_cycles;
+    uint64_t idle_cycles;
+    uint64_t total_cycles;
+    uint64_t reset_signal_events;
 } owned_cpu_observation;
 
 /* All callback and allocator bindings must remain live for the instance.
@@ -74,10 +81,18 @@ owned_cpu_status owned_cpu_set_irq(owned_cpu *cpu, unsigned level);
 owned_cpu_status owned_cpu_observe(const owned_cpu *cpu, owned_cpu_observation *out);
 
 #ifdef OWNED_CPU_TEST_HOOKS
-/* Test-only seed for arithmetic flag boundaries that the first guest subset
- * cannot construct in a bounded number of instructions. */
+/* Private test-only seeds for flag, stack-bank, fault-boundary, and accounting
+ * cases. These declarations are absent from consumer builds. */
 owned_cpu_status owned_cpu_test_seed_data_register(owned_cpu *cpu, unsigned reg,
                                                     uint32_t value);
+owned_cpu_status owned_cpu_test_seed_execution_state(owned_cpu *cpu, uint16_t sr,
+                                                      uint32_t usp, uint32_t ssp,
+                                                      uint32_t pc);
+owned_cpu_status owned_cpu_test_seed_counters(owned_cpu *cpu, uint64_t instructions,
+                                               uint64_t instruction_cycles,
+                                               uint64_t exception_cycles,
+                                               uint64_t idle_cycles,
+                                               uint64_t total_cycles);
 #endif
 
 #endif

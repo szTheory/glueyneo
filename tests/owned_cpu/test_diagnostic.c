@@ -148,7 +148,12 @@ static void assert_scenario(unsigned scenario, uint32_t expected, uint32_t desti
     TEST_ASSERT_EQUAL_UINT(events_before_zero, memory.event_count);
     TEST_ASSERT_EQUAL_INT(0, memcmp(&before, &after_zero, sizeof(before)));
 
-    owned_cpu_run_result result = owned_cpu_run(cpu, UINT64_C(200));
+    owned_cpu_run_result reset_event = owned_cpu_run(cpu, UINT64_C(1));
+    TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, reset_event.reason);
+    TEST_ASSERT_EQUAL_UINT64(40u, reset_event.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(0u, reset_event.instructions);
+
+    owned_cpu_run_result result = owned_cpu_run(cpu, UINT64_C(36));
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(
         expected, ram_long((size_t)(destination - TEST_RAM_BASE)),
         "guest arithmetic/store result");

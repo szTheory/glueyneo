@@ -111,7 +111,14 @@ static owned_cpu_status reset_with_program(const uint8_t *program, size_t length
         return OWNED_CPU_INVALID_ARGUMENT;
     }
     memcpy(memory.rom + 0x100u, program, length);
-    return owned_cpu_reset(cpu);
+    owned_cpu_status status = owned_cpu_reset(cpu);
+    if (status != OWNED_CPU_OK) return status;
+    owned_cpu_run_result reset_event = owned_cpu_run(cpu, UINT64_C(1));
+    if (reset_event.reason != OWNED_CPU_BUDGET || reset_event.elapsed_cycles != 40u ||
+        reset_event.instructions != 0u) {
+        return OWNED_CPU_HOST_FAULT;
+    }
+    return OWNED_CPU_OK;
 }
 
 static void emit_word(uint8_t *program, size_t *length, uint16_t word) {
@@ -140,7 +147,7 @@ static void reset_host_fault_stays_terminal_until_reset(void) {
 
 static void cycle_budgets_and_opcode_errors_are_explicit(void) {
     create_cpu();
-    const uint8_t program[] = {0x4e, 0x71}; /* NOP remains outside the first accepted subset. */
+    const uint8_t program[] = {0xff, 0xff}; /* Reserved encoding remains unsupported. */
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, reset_with_program(program, sizeof(program)));
     owned_cpu_run_result result = owned_cpu_run(cpu, OWNED_CPU_MAX_CYCLE_BUDGET + UINT64_C(1));
     TEST_ASSERT_EQUAL(OWNED_CPU_INVALID_ARGUMENT, result.reason);
@@ -148,7 +155,7 @@ static void cycle_budgets_and_opcode_errors_are_explicit(void) {
     TEST_ASSERT_EQUAL(OWNED_CPU_UNSUPPORTED_OPCODE, result.reason);
     TEST_ASSERT_EQUAL_HEX32(0x100u, result.pc);
     TEST_ASSERT_EQUAL_HEX32(0x100u, result.fault_pc);
-    TEST_ASSERT_EQUAL_HEX16(0x4e71u, result.instruction_register);
+    TEST_ASSERT_EQUAL_HEX16(0xffffu, result.instruction_register);
     TEST_ASSERT_EQUAL_UINT64(0u, result.instructions);
     TEST_ASSERT_EQUAL_UINT64(0u, result.elapsed_cycles);
 }
@@ -346,9 +353,10 @@ static void unsupported_modes_and_illegal_word_report_pc_and_ir(void) {
     const uint8_t guest_illegal[] = {0x4a, 0xfc};
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, reset_with_program(guest_illegal, sizeof(guest_illegal)));
     result = owned_cpu_run(cpu, UINT64_C(4));
-    TEST_ASSERT_EQUAL(OWNED_CPU_UNSUPPORTED_OPCODE, result.reason);
-    TEST_ASSERT_EQUAL_HEX32(0x100u, result.fault_pc);
-    TEST_ASSERT_EQUAL_HEX16(0x4afcu, result.instruction_register);
+    TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, result.reason);
+    TEST_ASSERT_EQUAL_UINT64(34u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(1u, result.instructions);
+    TEST_ASSERT_EQUAL_HEX32(0u, result.pc);
 
     const uint8_t unsupported_moveq[] = {0x71, 0x00};
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, reset_with_program(unsupported_moveq, sizeof(unsupported_moveq)));
@@ -369,11 +377,20 @@ static void odd_reset_vectors_and_odd_store_are_explicit(void) {
     set_vector(0u, UINT32_C(0x2000));
     const uint8_t odd_store[] = {0x70, 0x01, 0x23, 0xc0, 0x00, 0x00, 0x10, 0x01};
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, reset_with_program(odd_store, sizeof(odd_store)));
-    owned_cpu_run_result result = owned_cpu_run(cpu, UINT64_C(100));
-    TEST_ASSERT_EQUAL(OWNED_CPU_ADDRESS_ERROR, result.reason);
+    owned_cpu_run_result result = owned_cpu_run(cpu, UINT64_C(54));
+    TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, result.reason);
+    TEST_ASSERT_EQUAL_UINT64(54u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(1u, result.instructions);
     TEST_ASSERT_EQUAL_HEX32(0x102u, result.fault_pc);
     TEST_ASSERT_EQUAL_HEX16(0x23c0u, result.instruction_register);
-    TEST_ASSERT_EQUAL_UINT(0u, memory.write_attempts);
+    TEST_ASSERT_EQUAL_UINT(7u, memory.write_attempts);
+    TEST_ASSERT_EQUAL_HEX32(0x1ffcu, memory.write_addresses[0]);
+    TEST_ASSERT_EQUAL_HEX32(0x1ffeu, memory.write_addresses[1]);
+    TEST_ASSERT_EQUAL_HEX32(0x1ffau, memory.write_addresses[2]);
+    TEST_ASSERT_EQUAL_HEX32(0x1ff8u, memory.write_addresses[3]);
+    TEST_ASSERT_EQUAL_HEX32(0x1ff4u, memory.write_addresses[4]);
+    TEST_ASSERT_EQUAL_HEX32(0x1ff6u, memory.write_addresses[5]);
+    TEST_ASSERT_EQUAL_HEX32(0x1ff2u, memory.write_addresses[6]);
 }
 
 static void incomplete_extension_fetch_becomes_terminal_host_fault(void) {

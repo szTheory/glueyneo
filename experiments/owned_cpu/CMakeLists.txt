@@ -19,19 +19,23 @@ add_executable(owned_cpu_semantics ../../tests/owned_cpu/test_semantics.c)
 target_link_libraries(owned_cpu_semantics PRIVATE owned_cpu owned_cpu_unity)
 target_compile_definitions(owned_cpu_semantics PRIVATE OWNED_CPU_TEST_HOOKS=1)
 
+add_executable(owned_cpu_timing ../../tests/owned_cpu/test_timing.c)
+target_link_libraries(owned_cpu_timing PRIVATE owned_cpu owned_cpu_unity)
+target_compile_definitions(owned_cpu_timing PRIVATE OWNED_CPU_TEST_HOOKS=1)
+
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 add_test(NAME owned_cpu_negative
   COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/owned_cpu/negative.py
           $<TARGET_FILE:owned_cpu_diagnostic>)
 
-foreach(target owned_cpu owned_cpu_unity owned_cpu_diagnostic owned_cpu_semantics)
+foreach(target owned_cpu owned_cpu_unity owned_cpu_diagnostic owned_cpu_semantics owned_cpu_timing)
   set_target_properties(${target} PROPERTIES
     C_STANDARD 17
     C_STANDARD_REQUIRED YES
     C_EXTENSIONS NO)
 endforeach()
 
-foreach(target owned_cpu owned_cpu_diagnostic owned_cpu_semantics)
+foreach(target owned_cpu owned_cpu_diagnostic owned_cpu_semantics owned_cpu_timing)
   target_compile_options(${target} PRIVATE -Wall -Wextra -Werror)
 endforeach()
 
@@ -45,4 +49,14 @@ set_tests_properties(owned_cpu_semantics PROPERTIES
   TIMEOUT 30)
 set_tests_properties(owned_cpu_negative PROPERTIES
   LABELS "owned-cpu;owned-diagnostic-control"
+  TIMEOUT 30)
+add_test(NAME owned_cpu_timing COMMAND owned_cpu_timing)
+set_tests_properties(owned_cpu_timing PROPERTIES
+  LABELS "owned-cpu;owned-timing"
+  TIMEOUT 30)
+add_test(NAME owned_cpu_timing_negative
+  COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/owned_cpu/negative_timing.py
+          $<TARGET_FILE:owned_cpu_timing>)
+set_tests_properties(owned_cpu_timing_negative PROPERTIES
+  LABELS "owned-cpu;owned-timing-control"
   TIMEOUT 30)
