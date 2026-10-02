@@ -117,7 +117,7 @@ class ContractControls(unittest.TestCase):
             "1/1 Test #1: owned_cpu_contract ... Passed 0.01 sec\n", encoding="utf-8")
 
         result = contract.record(
-            self.root, "plan-01-08-diagnostic", build,
+            self.root, "record-control", build,
             ["test-agent,2026-01-01T00:00:01Z,2026-01-01T00:00:03Z"],
         )
         self.assertEqual(result["status"], "pass")
@@ -127,6 +127,7 @@ class ContractControls(unittest.TestCase):
         self.assertEqual(result["cumulative_churn"]["test_tool_added"], 1)
         self.assertEqual(result["test_results"]["expected"], 1)
         self.assertEqual(result["test_results"]["observed"], 1)
+        self.assertFalse(result["diagnostic_gate"])
         self.assertNotIn(str(self.root), Path(ledger_path).read_text(encoding="utf-8"))
 
     def test_churn_counts_committed_lines_even_after_revert(self):
@@ -152,6 +153,28 @@ class ContractControls(unittest.TestCase):
 
         self.assertEqual(contract._nonblank_numstat(
             self.root, baseline, ["experiments/owned_cpu/*.c"]), (2, 2))
+
+    def test_diagnostic_gate_requires_both_named_guest_cases(self):
+        with self.assertRaises(contract.ContractError) as caught:
+            contract.check_diagnostic_gate(self.root)
+        self.assertEqual(caught.exception.reason, "diagnostic_gate")
+
+    def test_diagnostic_gate_rejects_malformed_case_names_explicitly(self):
+        ledger = self.read_ledger()
+        ledger["diagnostic_gate"]["status"] = "passed"
+        ledger["diagnostic_gate"]["started_at"] = "2026-01-01T00:00:00Z"
+        ledger["diagnostic_gate"]["completed_at"] = "2026-01-01T00:00:02Z"
+        entry = dict(ledger["entries"][0])
+        entry["stage"] = "diagnostic"
+        entry["diagnostic_gate"] = True
+        entry["test_results"] = {"expected": 2, "observed": 2, "status": "pass",
+                                 "cases": ["owned_cpu_diagnostic", {"invalid": "name"}]}
+        ledger["diagnostic_gate"]["active_seconds"] = entry["active_seconds"]
+        ledger["entries"].append(entry)
+        self.write_ledger(ledger)
+        with self.assertRaises(contract.ContractError) as caught:
+            contract.check_diagnostic_gate(self.root)
+        self.assertEqual(caught.exception.reason, "diagnostic_gate")
 
     def test_self_test_has_nonempty_positive_and_negative_denominators(self):
         result = contract.self_test()

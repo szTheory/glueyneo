@@ -28,6 +28,7 @@ EFFORT_CAP_SECONDS = 32 * 60 * 60
 DIAGNOSTIC_CAP_SECONDS = 8 * 60 * 60
 RUNTIME_CHURN_CAP = 6000
 TEST_TOOL_CHURN_CAP = 8000
+DIAGNOSTIC_REQUIRED_CASES = frozenset(("owned_cpu_diagnostic", "owned_cpu_negative"))
 
 # Immutable evidence from the rejected Musashi experiment. These hashes are
 # also copied to the owned ledger at freeze time. No code here rewrites them.
@@ -271,6 +272,16 @@ def validate_budget(root: Path = ROOT) -> dict:
     tooling_churn = final_churn["test_tool_added"] + final_churn["test_tool_deleted"]
     require(ledger.get("threshold_policy") == "pause-for-user-scope-review",
             "threshold_outcome", "threshold policy must pause for a user scope review")
+    diagnostic_gate = ledger.get("diagnostic_gate")
+    require(isinstance(diagnostic_gate, dict)
+            and diagnostic_gate.get("status") in ("not-started", "in-progress", "passed"),
+            "diagnostic_gate", "diagnostic gate status must be explicit")
+    diagnostic_entries = [entry for entry in entries if entry.get("stage") == "diagnostic"]
+    if diagnostic_gate.get("status") == "passed":
+        check_diagnostic_gate(root)
+    else:
+        require(not diagnostic_entries, "diagnostic_gate",
+                "a recorded diagnostic stage must close as passed")
     over_runtime = runtime_churn > RUNTIME_CHURN_CAP
     over_tooling = tooling_churn > TEST_TOOL_CHURN_CAP
     pause = ledger.get("pause")
@@ -287,6 +298,41 @@ def validate_budget(root: Path = ROOT) -> dict:
             "runtime_churn_added_deleted": runtime_churn,
             "test_tool_churn_added_deleted": tooling_churn,
             "records": len(entries), "pause": pause if paused else None}
+
+
+def check_diagnostic_gate(root: Path = ROOT) -> dict:
+    path = root / LEDGER_PATH
+    require(path.is_file(), "diagnostic_gate", "owned budget ledger is missing")
+    try:
+        ledger = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ContractError("diagnostic_gate", f"cannot parse owned budget ledger: {exc}") from exc
+    gate = ledger.get("diagnostic_gate")
+    require(isinstance(gate, dict) and gate.get("status") == "passed",
+            "diagnostic_gate", "original diagnostic and named negative control have not passed")
+    started = _parse_time(gate.get("started_at"), "diagnostic_gate.started_at")
+    completed = _parse_time(gate.get("completed_at"), "diagnostic_gate.completed_at")
+    require(completed >= started, "diagnostic_gate", "diagnostic completion precedes its start")
+    entries = ledger.get("entries")
+    require(isinstance(entries, list), "diagnostic_gate", "effort entries must be a list")
+    matching = [entry for entry in entries
+                if isinstance(entry, dict) and entry.get("stage") == "diagnostic"
+                and entry.get("diagnostic_gate") is True]
+    require(len(matching) == 1, "diagnostic_gate", "exactly one measured diagnostic gate record is required")
+    tests = matching[0].get("test_results")
+    cases = tests.get("cases", []) if isinstance(tests, dict) else []
+    require(isinstance(cases, list) and all(isinstance(case, str) for case in cases),
+            "diagnostic_gate", "recorded CTest case names must be strings")
+    require(DIAGNOSTIC_REQUIRED_CASES.issubset(set(cases)),
+            "diagnostic_gate", "the original guest and named negative control must both be recorded")
+    active_seconds = _integer(matching[0].get("active_seconds"), "diagnostic.active_seconds")
+    require(tests.get("status") == "pass" and tests.get("expected") == tests.get("observed")
+            and active_seconds > 0 and gate.get("active_seconds") == active_seconds,
+            "diagnostic_gate", "the measured diagnostic stage must have nonempty passing evidence")
+    return {"status": "pass", "started_at": gate["started_at"],
+            "completed_at": gate["completed_at"],
+            "active_seconds": active_seconds,
+            "required_cases": sorted(DIAGNOSTIC_REQUIRED_CASES)}
 
 
 def _parse_intervals(values: list[str]) -> list[dict]:
@@ -368,6 +414,16 @@ def record(root: Path, stage: str, build_dir: Path, interval_values: list[str]) 
     require(cache.is_file() and ninja.is_file(), "build_identity",
             "CMakeCache.txt and build.ninja are required build identities")
     tests = _test_results(build_dir)
+    ledger_path = root / LEDGER_PATH
+    ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+    if stage == "diagnostic":
+        gate = ledger.get("diagnostic_gate")
+        require(isinstance(gate, dict) and gate.get("status") == "in-progress"
+                and gate.get("started_at") is not None,
+                "diagnostic_gate", "diagnostic timing must start before its measured record")
+        cases = tests.get("cases", [])
+        require(DIAGNOSTIC_REQUIRED_CASES.issubset(set(cases)), "diagnostic_gate",
+                "CTest must pass the original guest and named negative control")
     baseline = json.loads((root / LEDGER_PATH).read_text(encoding="utf-8"))["code_start"]["commit"]
     runtime_paths = ["experiments/owned_cpu/*.c", "experiments/owned_cpu/*.h"]
     test_tool_paths = ["CMakeLists.txt", "experiments/owned_cpu/CMakeLists.txt",
@@ -378,8 +434,6 @@ def record(root: Path, stage: str, build_dir: Path, interval_values: list[str]) 
                      root / "tests/cpu/ORACLE.md"]
     fixture_hashes = {p.relative_to(root).as_posix(): sha256(p) for p in fixture_paths if p.is_file()}
     require(len(fixture_hashes) == len(fixture_paths), "fixture_identity", "diagnostic fixture/oracle is incomplete")
-    ledger_path = root / LEDGER_PATH
-    ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
     entry = {
         "stage": stage,
         "recorded_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -390,12 +444,16 @@ def record(root: Path, stage: str, build_dir: Path, interval_values: list[str]) 
         "fixture_sha256": fixture_hashes,
         "agent_intervals": intervals,
         "active_seconds": seconds,
-        "diagnostic_gate": stage not in ("plan-01-07-governance",),
+        "diagnostic_gate": stage == "diagnostic",
         "test_results": tests,
         "cumulative_churn": {"runtime_added": runtime_added, "runtime_deleted": runtime_deleted,
                               "test_tool_added": test_tool_added, "test_tool_deleted": test_tool_deleted},
     }
     ledger["entries"].append(entry)
+    if stage == "diagnostic":
+        ledger["diagnostic_gate"]["status"] = "passed"
+        ledger["diagnostic_gate"]["completed_at"] = entry["recorded_at"]
+        ledger["diagnostic_gate"]["active_seconds"] = seconds
     runtime_total = runtime_added + runtime_deleted
     tooling_total = test_tool_added + test_tool_deleted
     if runtime_total > RUNTIME_CHURN_CAP or tooling_total > TEST_TOOL_CHURN_CAP:
@@ -448,6 +506,14 @@ def _copy_subject(target: Path) -> None:
                  "diagnostic_gate_seconds": DIAGNOSTIC_CAP_SECONDS,
                  "runtime_churn_added_deleted_nonblank_lines": RUNTIME_CHURN_CAP,
                  "test_tool_churn_added_deleted_nonblank_lines": TEST_TOOL_CHURN_CAP},
+        "diagnostic_gate": {
+            "cap_seconds": DIAGNOSTIC_CAP_SECONDS,
+            "completion_condition": "The unmodified original guest and its named wrong-behavior control both execute with their expected outcomes.",
+            "excluded_stage": "plan-01-07-governance",
+            "started_at": None,
+            "starts_on": "first owned emulation-runtime or behavioral-test change in Plan 01-08",
+            "status": "not-started",
+        },
         "threshold_policy": "pause-for-user-scope-review",
         "pause": None,
         "entries": [{"stage": "plan-01-07-governance", "active_seconds": 1,
@@ -541,7 +607,8 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("validate", help="validate current scope, immutable history, story, and admission gate")
-    sub.add_parser("budget", help="validate the frozen owned effort/churn ledger")
+    budget_parser = sub.add_parser("budget", help="validate the frozen owned effort/churn ledger")
+    budget_parser.add_argument("--require-diagnostic-gate", action="store_true")
     sub.add_parser("self-test", help="exercise positive and named negative controls")
     rec = sub.add_parser("record", help="append measured stage effort, churn, build, fixture, and test evidence")
     rec.add_argument("--stage", required=True)
@@ -561,6 +628,8 @@ def main(argv: list[str] | None = None) -> int:
             result = validate()
         elif args.command == "budget":
             result = validate_budget()
+            if args.require_diagnostic_gate:
+                result["diagnostic_gate"] = check_diagnostic_gate()
         elif args.command == "self-test":
             result = self_test()
         elif args.command == "record":

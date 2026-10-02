@@ -157,12 +157,18 @@ static void assert_scenario(unsigned scenario, uint32_t expected, uint32_t desti
     TEST_ASSERT_EQUAL_UINT64(4u, result.instructions);
     TEST_ASSERT_EQUAL_HEX32(0x10eu, result.pc);
     TEST_ASSERT_EQUAL_UINT64(2u, memory.writes);
-    TEST_ASSERT_EQUAL_CHAR('W', memory.events[events_before_zero + 0u].operation);
-    TEST_ASSERT_EQUAL_HEX32(destination, memory.events[events_before_zero + 0u].address);
-    TEST_ASSERT_EQUAL_UINT16((uint16_t)(expected >> 16), memory.events[events_before_zero + 0u].value);
-    TEST_ASSERT_EQUAL_CHAR('W', memory.events[events_before_zero + 1u].operation);
-    TEST_ASSERT_EQUAL_HEX32(destination + 2u, memory.events[events_before_zero + 1u].address);
-    TEST_ASSERT_EQUAL_UINT16((uint16_t)expected, memory.events[events_before_zero + 1u].value);
+    size_t observed_writes = 0u;
+    for (size_t index = events_before_zero; index < memory.event_count; ++index) {
+        if (memory.events[index].operation == 'W') {
+            uint32_t expected_address = destination + (uint32_t)(observed_writes * 2u);
+            uint16_t expected_word = observed_writes == 0u ? (uint16_t)(expected >> 16)
+                                                           : (uint16_t)expected;
+            TEST_ASSERT_EQUAL_HEX32(expected_address, memory.events[index].address);
+            TEST_ASSERT_EQUAL_UINT16(expected_word, memory.events[index].value);
+            observed_writes++;
+        }
+    }
+    TEST_ASSERT_EQUAL_UINT(2u, observed_writes);
 
     owned_cpu_observation after_run;
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_observe(cpu, &after_run));

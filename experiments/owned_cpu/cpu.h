@@ -73,4 +73,11 @@ owned_cpu_run_result owned_cpu_run(owned_cpu *cpu, uint64_t cycle_budget);
 owned_cpu_status owned_cpu_set_irq(owned_cpu *cpu, unsigned level);
 owned_cpu_status owned_cpu_observe(const owned_cpu *cpu, owned_cpu_observation *out);
 
+#ifdef OWNED_CPU_TEST_HOOKS
+/* Test-only seed for arithmetic flag boundaries that the first guest subset
+ * cannot construct in a bounded number of instructions. */
+owned_cpu_status owned_cpu_test_seed_data_register(owned_cpu *cpu, unsigned reg,
+                                                    uint32_t value);
+#endif
+
 #endif
