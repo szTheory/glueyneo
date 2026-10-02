@@ -5,11 +5,11 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: executing
-stopped_at: Completed 01-06-PLAN.md; execute-phase pause before backend replanning discussion; Phase 01 open / GAPS_FOUND and Phase 02 gated
-last_updated: "2026-10-02T12:19:37.162Z"
+stopped_at: Phase 01 backend replanning discussion complete; pause before planning
+last_updated: "2026-10-02T12:42:20.208Z"
 last_activity: 2026-10-02
 last_activity_desc: Phase 01 execution started
-state_head: af1d7b8192d0e4ad089f68bec5975ef03d154f11
+state_head: 80ba2ec8e0d808cbaa57244eaa1ab3c7654ff8b2
 progress:
   total_phases: 3
   completed_phases: 0
@@ -118,6 +118,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-02T12:19:37.148Z
-Stopped at: Completed 01-06-PLAN.md; execute-phase pause before backend replanning discussion; Phase 01 open / GAPS_FOUND and Phase 02 gated
-Resume file: None
+Last session: 2026-10-02T12:42:20.190Z
+Stopped at: Phase 01 backend replanning discussion complete; pause before planning
+Resume file: .planning/phases/01-cpu-acceptance-experiment/01-CONTEXT.md
