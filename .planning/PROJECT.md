@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Glueyneo is a planned portable Neo Geo MVS/AES cartridge emulation core written in C, for frontend integrators, players, maintainers and hardware researchers. It is intended to make trustworthy emulation easy to embed in Playstead and other shared hosts, with a thin libretro adapter providing the first interactive path through RetroArch. A private CPU experiment exists, but no Neo Geo core, public SDK, platform support, compatibility or performance claim is currently qualified.
+Glueyneo is a planned portable Neo Geo MVS/AES cartridge emulation core written in C, for frontend integrators, players, maintainers and hardware researchers. It is intended to make trustworthy emulation easy to embed in Playstead and other shared hosts, with a thin libretro adapter providing the first interactive path through RetroArch. A private owned-CPU diagnostic experiment is underway, but no Neo Geo core, public SDK, platform support, compatibility or performance claim is currently qualified.
 
 ## Core Value
 
@@ -18,7 +18,7 @@ Trustworthy Neo Geo emulation that other software can embed easily.
 
 Current milestone: **v0.1 — CPU/bus diagnostic SDK alpha**. The first delivered capability is an offline installable C library that executes an original deterministic diagnostic through its ordinary native API. A stub API or green automation without meaningful execution does not satisfy it.
 
-- [ ] Build and qualify an owned C17 68000 backend with a bounded diagnostic-first scope, complete mutable-state audit, independent instances and documented timing limits.
+- [ ] Build and qualify an owned C17 68000 backend under the [Phase 01 contract](../experiments/owned_cpu/CONTRACT.md), with a bounded diagnostic-first scope, complete mutable-state audit, independent instances and documented timing limits.
 - [ ] Provide an opaque native instance API with explicit ownership, lifecycle, normalized diagnostic media, bounded execution, useful errors and no ambient host dependencies.
 - [ ] Execute an original redistributable CPU/bus diagnostic with a justified oracle, deterministic outputs and isolation evidence through a real out-of-tree consumer and a headless diagnostic runner.
 - [ ] Ship a C17/CMake/CTest foundation with pinned Unity, static/shared builds, installed/relocated package consumption, compiled examples and a tested platform matrix.
@@ -39,7 +39,7 @@ The next milestone adds a real interactive diagnostic: selected video/input/soun
 
 ## Context
 
-The preparation dossier was produced on 2026-10-01 and is preserved under [preparation/README.md](preparation/README.md). [BRIEF.md](preparation/BRIEF.md) records user intent; [DECISIONS.md](preparation/DECISIONS.md) supplies the dated preparation decision register (`PREP-D-01`–`PREP-D-44`). The dossier is research, not implemented behavior. Current canonical documents supersede its proposed scope where explicitly linked; historical source receipts remain dated.
+The preparation dossier was produced on 2026-10-01 and is preserved under [preparation/README.md](preparation/README.md). [BRIEF.md](preparation/BRIEF.md) records user intent; [DECISIONS.md](preparation/DECISIONS.md) supplies the dated preparation decision register (`PREP-D-01`–`PREP-D-44`). The dossier is research, not implemented behavior. Current canonical documents supersede its proposed scope where explicitly linked; historical source receipts remain dated. The [Phase 01 owned-core contract](../experiments/owned_cpu/CONTRACT.md) defines the replacement experiment without admitting an implementation.
 
 The intended machine has an original board model and audited reusable chips behind private adapters. Preparation identifies process-global state and serializer/timing coupling in candidate engines. A nominal context API or global lock does not prove reentrancy. The owned-core direction is approved for planning, but Phase 1 must produce bounded acceptance evidence or an explicit GAPS_FOUND outcome before backend admission or a public CPU ABI. Future Z80/YM2610 candidates are inventoried without making their full implementation a prerequisite for a CPU-only alpha.
 
