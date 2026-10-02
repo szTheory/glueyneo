@@ -5,10 +5,10 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: executing
-stopped_at: Revised Phase 01 plans passed independent check; pause before execution
-last_updated: "2026-10-02T17:15:29Z"
+stopped_at: Phase 01 gap plans passed independent review; awaiting explicit execution command
+last_updated: "2026-10-02T17:25:13Z"
 last_activity: 2026-10-02
-last_activity_desc: Revised owned-core plans 01-07–01-14 passed installed structure/story/Nyquist checks; Phase 01 remains open
+last_activity_desc: Owned-core gap plans 01-07–01-14 passed independent review; Phase 01 remains open / GAPS_FOUND
 state_head: 6d24c3f7a21db902f52e7ab98c1fda844f99eef6
 progress:
   total_phases: 3
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — PLANS CHECKED; PAUSE BEFORE EXECUTION
+Phase: 01 (CPU acceptance experiment) — GAP PLANS REVIEWED; AWAITING EXECUTION
 Plan: 6 of 14 complete
-Status: Revised plans 01-07 through 01-14 passed the installed plan/story/Nyquist checks and await developer review before execution. The developer approved the owned C17 core/private seam as the planning direction; no implementation is accepted. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
+Status: Revised plans 01-07 through 01-14 passed installed structure/story/dependency/Nyquist checks and independent review; they are ready for explicit gap-closure execution. The developer approved the owned C17 core/private seam as the planning direction; no implementation is accepted. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
 Last activity: 2026-10-02 — Added shared-host scope, bounded review repair, evidence-first delivery and build hygiene lessons; independently rechecked plans.
 
 Progress: [░░░░░░░░░░] 0%
@@ -96,7 +96,7 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 
 ### Pending Todos
 
-- Six historical plans are complete; revised plans 01-07–01-14 passed independent checking. Pause here for developer review before `$gsd-execute-phase 01 --gaps-only`. Execution must freeze the separate authored-core budget, preserve old Musashi accounting, run the owned diagnostic early, and retain budget for review-driven repair. Phase 02 remains gated.
+- Six historical plans are complete; revised plans 01-07–01-14 passed independent checking and are ready to execute. After the user clears context, the next command is `$gsd-execute-phase 01 --gaps-only`. Execution must freeze the separate authored-core budget, preserve old Musashi accounting, run the owned diagnostic early, and retain budget for review-driven repair. Phase 02 remains gated.
 
 ### Blockers/Concerns
 
@@ -122,5 +122,5 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 ## Session Continuity
 
 Last session: 2026-10-02 — owner-directed planning revisions and independent plan check
-Stopped at: Revised Phase 01 plans passed independent check; pause before execution
+Stopped at: Phase 01 gap plans passed independent review; awaiting explicit execution command
 Resume file: .planning/phases/01-cpu-acceptance-experiment/01-CONTEXT.md

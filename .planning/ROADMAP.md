@@ -38,7 +38,7 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit owned-core decision, commands and results against finite effort/churn limits fixed before implementation; failed work and findings are preserved, actionable issues receive budgeted repair, and resource thresholds trigger review/replanning rather than automatic backend rejection. (CPU-05)
 
-**Plans**: 6/14 plans executed; revised plans 01-07–01-14 are gap-closure work awaiting independent review. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
+**Plans**: 6/14 plans executed; revised plans 01-07–01-14 passed independent review and are ready for gap-closure execution. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
 
 Plans:
 **Wave 1**
@@ -145,7 +145,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 6/6 historical | Open / GAPS_FOUND; owned-core plans 01-07–01-14 under review | - |
+| 1. CPU acceptance experiment | v0.1 | 6/14 (8 gap plans ready) | Open / GAPS_FOUND; plans 01-07–01-14 independently checked and ready for execution | - |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
