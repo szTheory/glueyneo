@@ -4,7 +4,7 @@ milestone: v0.1
 milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
-status: gap_planning
+status: planning
 stopped_at: Phase 01 verification found gaps; ready for gap-closure planning
 last_updated: "2026-10-02T01:36:50Z"
 last_activity: 2026-10-01
