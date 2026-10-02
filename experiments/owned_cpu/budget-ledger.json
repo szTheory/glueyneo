@@ -178,6 +178,50 @@
         "status": "pass"
       },
       "working_tree_dirty": false
+    },
+    {
+      "active_seconds": 3488,
+      "agent_intervals": [
+        {
+          "agent": "primary-agent",
+          "end": "2026-10-02T20:47:53Z",
+          "start": "2026-10-02T19:49:45Z"
+        }
+      ],
+      "build_dir": "build/owned-cpu",
+      "build_identity": {
+        "build_ninja_sha256": "47fbe929d2b773deb59a3b9b02a35dd7325ef52acee63c38f17b14df32d8fb56",
+        "cmake_cache_sha256": "b9e61114fccbf023cad78f30e909c11f96dec0dbae878bd58b9560a588131e1e"
+      },
+      "commit": "9323b1f3b416588777a31c81306f2113f6c76c5d",
+      "cumulative_churn": {
+        "runtime_added": 938,
+        "runtime_deleted": 51,
+        "test_tool_added": 2489,
+        "test_tool_deleted": 42
+      },
+      "diagnostic_gate": false,
+      "fixture_sha256": {
+        "tests/cpu/ORACLE.md": "8a1f9c113ea4fe7608a41b2fedd856c69533a1009b07f9dda6dafd276dc93ade",
+        "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
+        "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c"
+      },
+      "recorded_at": "2026-10-02T20:48:05.796100Z",
+      "stage": "plan-01-09",
+      "test_results": {
+        "cases": [
+          "owned_cpu_negative",
+          "owned_cpu_diagnostic",
+          "owned_cpu_semantics",
+          "owned_cpu_timing",
+          "owned_cpu_timing_negative"
+        ],
+        "expected": 5,
+        "log_sha256": "e06ea3916ab4ad74ebbd06251ff2bbfa76bc44978dbb7899019cd63b7a0de21e",
+        "observed": 5,
+        "status": "pass"
+      },
+      "working_tree_dirty": false
     }
   ],
   "freeze_amendments": [
