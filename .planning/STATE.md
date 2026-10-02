@@ -5,15 +5,15 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: executing
-stopped_at: Phase 01 backend replanning discussion complete; pause before planning
-last_updated: "2026-10-02T12:42:20.208Z"
+stopped_at: Phase 01 gap-closure plans checked; pause before execution
+last_updated: "2026-10-02T14:25:35.211Z"
 last_activity: 2026-10-02
-last_activity_desc: Phase 01 execution started
-state_head: 80ba2ec8e0d808cbaa57244eaa1ab3c7654ff8b2
+last_activity_desc: Plans 01-07 through 01-12 passed the independent plan checker; Phase 01 remains open / GAPS_FOUND
+state_head: 8377966965e175d19bbc262a63c314ad3e06f230
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 6
+  total_plans: 12
   completed_plans: 6
   percent: 0
 ---
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-01)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — EXECUTING
-Plan: 6 of 6
-Status: Plan 01-06 complete; developer selected C and execute-phase pauses before backend replanning discussion. Phase 01 open / GAPS_FOUND; Phase 02 gated.
-Last activity: 2026-10-02 — Current Musashi candidate rejected/deferred; discussion direction recorded, with CPU-01–04 Pending and CPU-05 bounded decision complete.
+Phase: 01 (CPU acceptance experiment) — READY TO EXECUTE
+Plan: 6 of 12 complete
+Status: Plans 01-07 through 01-12 are checked and ready for gap-closure execution. The developer approved the owned C17 core/private seam as the planning direction; no implementation is accepted. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
+Last activity: 2026-10-02 — Owned-core gap plans passed independent plan review; historical Musashi rejection and budget remain unchanged.
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -92,14 +92,15 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - [Phase 01]: Reject current CPU admission for six unresolved source blockers; defer repair/replacement direction to blocking plan 01-06.
 - [Phase 01]: CPU-05 alone satisfies its bounded-decision obligation; CPU-01–04 remain Pending, Phase 01 open and Phase 02 gated.
 - [Phase 01]: Developer selected C: reject/defer current Musashi candidate and discuss backend replanning; owned C core/private seam and strangler transition remain proposals; no source work, attempt, cap, backend selection or scope change authorized.
+- [Phase 01, planning 2026-10-02]: The developer approved the owned C17 core behind a private whole-CPU seam, diagnostic-first scope, and evidence-led expansion as the gap-planning direction. Plans 01-07–01-12 passed independent plan review. Their proposed 32-hour owned-core cap is not frozen until plan 01-07 executes; all consumed Musashi charges/caps remain immutable. No implementation or backend admission has occurred.
 
 ### Pending Todos
 
-- Execute-phase work is complete: all six plans executed, with option C recorded in 01-06-DIRECTION.md. Pause for user review/model selection before the next named step, discuss backend replanning. An owned C 68000 core, narrow private replacement seam and strangler-style transition are discussion proposals only. Do not begin source work, another adaptation attempt, cap changes, final backend selection, roadmap/milestone changes or phase verification from this selection. Phase 02 remains gated.
+- Six historical plans are complete; gap-closure plans 01-07–01-12 are checked and ready. The next step is `$gsd-execute-phase 01 --gaps-only`; pause here for the developer to review the plans and choose whether to execute. Execution must first freeze the separate authored-core budget, preserve the old Musashi accounting, and stop if the diagnostic gate or budget fails. Phase 02 remains gated.
 
 ### Blockers/Concerns
 
-- The required pause is at the gap-planning boundary. Current configuration remains interactive with auto_advance and _auto_chain_active false.
+- The required pause is before gap-plan execution. Current configuration remains interactive with auto_advance and _auto_chain_active false.
 
 - Earlier plan receipts record the private guest, source closure, FPU/SoftFloat exclusion, selected isolation, timing, host-safety, and fresh-destination continuation evidence. The later independent review found legal-instruction undefined behavior and generator defects; do not treat the old acceptance receipt alone as current SDK admission evidence.
 - Preserve all counterexamples: odd IRQ crash, fixture UBSan, reset accounting/NMI, BSD address-error boundary and malformed-state/zero-request guards. The explicit state codec passes eight continuation checkpoints; raw upstream context-copy APIs remain unsuitable.
@@ -118,6 +119,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-02T12:42:20.190Z
-Stopped at: Phase 01 backend replanning discussion complete; pause before planning
+Last session: 2026-10-02T14:25:35.211Z
+Stopped at: Phase 01 gap-closure plans checked; pause before execution
 Resume file: .planning/phases/01-cpu-acceptance-experiment/01-CONTEXT.md

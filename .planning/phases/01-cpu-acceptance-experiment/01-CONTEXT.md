@@ -1,14 +1,14 @@
 # Phase 1: CPU acceptance experiment - Context
 
 **Gathered:** 2026-10-02
-**Status:** Discussion captured; backend selection and scope reconciliation remain for planning review.
+**Status:** Developer approved the owned C-core direction for gap-closure planning; backend implementation is not accepted.
 
 <domain>
 ## Phase Boundary
 
 Phase 01 remains the CPU acceptance experiment. Its declared goal is reproducible acceptance of a C 68000 backend before SDK integration. It is still open / GAPS_FOUND: the current pinned Musashi candidate is rejected/deferred, CPU-01–04 remain Pending, CPU-05's bounded-decision obligation is complete, and Phase 02 remains gated.
 
-This discussion records the developer's preferred direction and recommended architecture for a future gap plan. It does not accept a backend, revise canonical requirements or the roadmap, change the experiment caps, or authorize implementation. Any owned-core plan must reconcile the candidate-specific CPU-01–04 obligations and define a separate, bounded development budget while preserving all consumed Musashi charges.
+The developer approved the owned C17-core direction behind a private whole-CPU seam, beginning with the exact v0.1 diagnostic subset and expanding only after evidence, for gap-closure planning. This is an architecture and planning decision; it does not accept an implementation, revise canonical requirements or the roadmap, change the experiment caps, or authorize source work. The gap plan must explicitly reconcile the candidate-specific CPU-01–04 obligations and define a separate, bounded development budget while preserving all consumed Musashi charges.
 
 This context supersedes the earlier Musashi-only implementation preference where it conflicts with the direction below. The earlier experiment, source identities, failures, and accounting remain historical evidence in the linked receipts and summaries.
 
@@ -19,7 +19,7 @@ This context supersedes the earlier Musashi-only implementation preference where
 
 ### Backend ownership and evidence boundary
 
-- **D-01:** The developer prefers building original C CPU behavior as far as practical, because a flawed foundation is not worth reusing. Correctness and efficient delivery both matter. This is a strong preference, not a final backend selection or a claim that all third-party code is flawed.
+- **D-01:** For the replacement direction, build an owned C17 CPU core behind the private whole-CPU seam, starting with the exact v0.1 diagnostic subset and expanding only after evidence. The developer approved this direction for planning because correctness and ownership outweigh the apparent speed of building on a questionable foundation, while delivery efficiency remains a goal. This does not claim all third-party code is flawed or that a future implementation is accepted.
 - **D-02:** The current pinned Musashi candidate remains rejected/deferred. Its two substantive adaptation attempts and all recorded charges/caps remain unchanged. No third adaptation, refund, or cap increase is authorized. Any later repair or replacement work needs a distinct plan and explicit budget.
 - **D-03:** Reconsider an imported CPU core only if a bounded source review shows a material correctness or delivery advantage that justifies its full code, build, license, provenance, and maintenance costs. Rocket68 is a possible comparison reference, not an approved dependency: its upstream project describes itself as early and lists tests from Musashi and the MAME-derived m68000 corpus.
 - **D-04:** Keep the runtime C17 and dependency tree small. Do not introduce a public CPU plugin ABI, dynamic loader, C++ runtime engine, or generic backend framework as part of this decision.
@@ -38,12 +38,12 @@ This context supersedes the earlier Musashi-only implementation preference where
 - **D-11:** Use the Motorola MC68000 manuals and original, independently justified guest expectations for documented CPU behavior. The existing original guest demonstrates a small starting slice (MOVEQ, ADDQ.L, MOVE.L, STOP, reset vectors, and selected IRQ/exception cases); it does not prove complete coverage or hardware behavior.
 - **D-12:** Treat Musashi, MAME, Rocket68, and emulator-generated corpora as useful for finding disagreements, with source and test ancestry recorded. Agreement among implementations with shared ancestry is not an independent oracle. Where feasible, add board captures only with exact board/revision/setup provenance; CPU manuals alone do not establish Neo Geo board timing.
 
-### Open decisions required before implementation planning
+### Decisions the gap plan must make explicit before implementation
 
-1. Define the exact instruction, addressing-mode, reset, interrupt, exception, and timing cases required to run and qualify the v0.1 diagnostic. Decide whether the new plan first delivers that slice or commits to broader MC68000 coverage.
-2. Reconcile CPU-01–04 with an owned implementation: source/build provenance, per-instance behavior, bounded progress, complete private mutable-state inventory, continuation, and supported-boundary limits still need measurable acceptance criteria.
+1. Define the exact instruction, addressing-mode, reset, interrupt, exception, and timing cases required to run and qualify the v0.1 diagnostic. The first implementation slice is the named diagnostic subset, not broader MC68000 coverage.
+2. Reconcile CPU-01–04 with the owned implementation: source/build provenance, per-instance behavior, bounded progress, complete private mutable-state inventory, continuation, and supported-boundary limits need measurable acceptance criteria.
 3. Set a new development budget and stop/review rule independently from the exhausted Musashi adaptation budget. Estimate and measure the first vertical slice before expanding coverage.
-4. Decide whether any other-core comparison is worth a strict source-only/time-bounded screen. Do not adopt Rocket68 or another library by default.
+4. Decide whether a source-only, time-bounded screen of another core would materially improve correctness or delivery. Do not adopt Rocket68 or another library by default; preserve the approved owned-core path unless evidence justifies changing it.
 5. Before a later phase verification, resolve the independent MVP story-format blocker recorded in 01-VERIFICATION.md as well as the CPU admission gaps.
 
 ### the agent's Discretion
@@ -117,7 +117,7 @@ Recommend concrete module boundaries, test organization, supported-opcode report
 <specifics>
 ## Specific Ideas
 
-The developer wants to build as much of the emulator as practical, especially where reuse would create a flawed foundation, while preserving correctness and efficient delivery. A strangler-style migration is welcome. The synthesized recommendation is to build an owned C core behind a thin private whole-CPU seam, start with an explicit SDK-diagnostic slice, and retain the option to expand after measured evidence. This recommendation still needs user review before a plan treats it as the selected backend path.
+The developer wants to build as much of the emulator as practical, especially where reuse would create a flawed foundation, while preserving correctness and efficient delivery. A strangler-style migration is welcome. The developer approved planning an owned C17 core behind a thin private whole-CPU seam, starting with an explicit SDK-diagnostic slice and expanding after measured evidence. This is not implementation authorization or a backend acceptance claim.
 
 </specifics>
 

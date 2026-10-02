@@ -38,7 +38,7 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit acceptance decision, commands and results against a finite effort/patch budget fixed before adaptation; failed or over-budget candidates have counterexamples and a replacement/replanning disposition. (CPU-05)
 
-**Plans**: 6/6 plans executed; option C recorded in plan 01-06, with Phase 01 open / GAPS_FOUND and Phase 02 gated
+**Plans**: 6/12 plans executed; plans 01-07–01-12 are gap-closure plans ready for execution. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
 
 Plans:
 **Wave 1**
@@ -64,6 +64,30 @@ Plans:
 **Wave 6** *(direction recorded; execute-phase workflow pause)*
 
 - [x] 01-06-PLAN.md — Developer selected C: reject/defer the current candidate and discuss backend replanning; no source work or scope change authorized.
+
+**Wave 7** *(gap closure; contract and budget)*
+
+- [ ] 01-07-PLAN.md — Reconcile the owned-core acceptance contract and freeze its separate budget without changing historical Musashi accounting.
+
+**Wave 8** *(blocked on Wave 7; diagnostic tracer)*
+
+- [ ] 01-08-PLAN.md — Execute the original diagnostic through the owned CPU's private whole-core seam.
+
+**Wave 9** *(blocked on Wave 8; timing and exceptions)*
+
+- [ ] 01-09-PLAN.md — Qualify named interrupt, exception, instruction-boundary timing, and bus limits.
+
+**Wave 10** *(blocked on Wave 9; instance safety and inventory)*
+
+- [ ] 01-10-PLAN.md — Prove cold/concurrent instance isolation, fault containment, and complete mutable-state inventory.
+
+**Wave 11** *(blocked on Wave 10; continuation)*
+
+- [ ] 01-11-PLAN.md — Restore captured state into a fresh destination and prove identical continuation and atomic rejection.
+
+**Wave 12** *(blocked on Waves 8–11; independent qualification)*
+
+- [ ] 01-12-PLAN.md — Collect exact-source evidence and independent review before any backend admission decision.
 
 Planning guidance: First set a concrete finite effort cap, patch budget and stopping/replacement rules. Then use small CMake/CTest experiment scaffolding, a licensed original tiny guest, source/host-call audit, and isolation/timing/continuation experiments. Evaluate the research's pinned Musashi candidate without presuming acceptance. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
 
