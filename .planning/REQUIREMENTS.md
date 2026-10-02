@@ -6,15 +6,17 @@
 
 ## v1 Requirements
 
-In this OpenGSD template, v1 means the first scoped deliverable, **v0.1**, not a stable 1.0 API or a complete Neo Geo emulator. All requirements are pending. Acceptance is evidence from actual execution; preparation and research are design inputs.
+In this OpenGSD template, v1 means the first scoped deliverable, **v0.1**, not a stable 1.0 API or a complete Neo Geo emulator. Acceptance is evidence from actual execution; preparation and research are design inputs. CPU-01–04 are Pending current admission despite historical task evidence. The historical phase verifier refused grammar preflight; it did not establish that all four behaviors failed. CPU-05 alone is Complete for its bounded-decision obligation after plan 01-05 task 3 reproduced structured rejection and independently reviewed every decision criterion. Phase 01 stays open and Phase 02 gated; both adaptation attempts are consumed and no further adaptation is authorized.
 
 ### CPU Admission
 
-- [x] **CPU-01**: A maintainer can reproduce the exact C 68000 candidate build from pinned sources and a per-file copied/generated/compiled/distributed inventory with license notices and host-call disposition, including proof of whether FPU/SoftFloat is excluded or retained.
-- [x] **CPU-02**: A maintainer can run distinguishable CPU instances alternately and concurrently, including simultaneous cold initialization and failing creation/teardown paths, with results matching isolated baselines and no shared mutable machine state.
-- [x] **CPU-03**: A maintainer can observe actual guest progress, stop/overshoot behavior and the selected interrupt/exception interactions in a bounded execution experiment whose timing precision and unsupported behavior are documented.
-- [x] **CPU-04**: A maintainer can inspect a complete mutable-state and callback inventory and reproduce backend continuation at supported boundaries without serializing host pointers or jump buffers; this establishes no public board-snapshot format.
+- [ ] **CPU-01**: A maintainer can reproduce the exact C 68000 candidate build from pinned sources and a per-file copied/generated/compiled/distributed inventory with license notices and host-call disposition, including proof of whether FPU/SoftFloat is excluded or retained.
+- [ ] **CPU-02**: A maintainer can run distinguishable CPU instances alternately and concurrently, including simultaneous cold initialization and failing creation/teardown paths, with results matching isolated baselines and no shared mutable machine state.
+- [ ] **CPU-03**: A maintainer can observe actual guest progress, stop/overshoot behavior and the selected interrupt/exception interactions in a bounded execution experiment whose timing precision and unsupported behavior are documented.
+- [ ] **CPU-04**: A maintainer can inspect a complete mutable-state and callback inventory and reproduce backend continuation at supported boundaries without serializing host pointers or jump buffers; this establishes no public board-snapshot format.
 - [x] **CPU-05**: A maintainer receives an explicit backend accept/reject/defer decision against an effort and patch budget set before adaptation, with commands, results and counterexamples; an over-budget or failed candidate triggers replacement/replanning before SDK integration.
+
+CPU-05 evidence: [current bounded rejection](../experiments/cpu/ACCEPTANCE.md#current-supersession-and-bounded-rejection--2026-10-02-plan-01-05), [sealed report](../experiments/cpu/acceptance-results.json), [independent reconciliation](../experiments/cpu/REVIEW.md), and [01-05 summary](phases/01-cpu-acceptance-experiment/01-05-SUMMARY.md). Normal-Python seal and read-only verify each return exit 1 with rejected / GAPS_FOUND and `blocking review finding`. The original pre-adaptation limits, two consumed attempts and 2,614 handwritten / 523 helper / 483 semantic lines, 20,005 total / 18,859 final-attempt seconds remain unchanged. All eight later source counterexamples and uncertainties are dispositioned without repair; earlier runtime results remain historical. SDK integration is prohibited, with replacement/repair direction referred to the blocking plan 01-06 checkpoint and separate replanning. Only the decision obligation is satisfied; no accepted backend or Phase 01 completion follows.
 
 ### Native API and Host Safety
 
@@ -111,10 +113,10 @@ Each v1 requirement has exactly one primary phase in v0.1. Later requirements re
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CPU-01 | Phase 1 | Complete |
-| CPU-02 | Phase 1 | Complete |
-| CPU-03 | Phase 1 | Complete |
-| CPU-04 | Phase 1 | Complete |
+| CPU-01 | Phase 1 | Pending |
+| CPU-02 | Phase 1 | Pending |
+| CPU-03 | Phase 1 | Pending |
+| CPU-04 | Phase 1 | Pending |
 | CPU-05 | Phase 1 | Complete |
 | API-01 | Phase 2 | Pending |
 | API-02 | Phase 2 | Pending |

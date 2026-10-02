@@ -1,8 +1,8 @@
 # CPU candidate acceptance experiment
 
-Status: **candidate accepted for the bounded private 68000 experiment; independent phase-goal verification is pending**.
+Status: **current admission rejected / GAPS_FOUND; historical acceptance is superseded by unresolved source blockers**. Phase 01 remains open and Phase 02 gated. No further adaptation is authorized; both attempts are consumed. See the current disposition below.
 
-## Current reproduction and admission gate
+## Historical reproduction and admission gate — superseded for current admission
 
 Use the committed checkout containing the final report's evaluated inputs:
 
@@ -359,3 +359,104 @@ BIOS or game compatibility is established. The same-build typed state record
 does not establish a public state format or compatibility promise. These limits
 remain constraints on subsequent SDK work. Phase 1 remains open until its
 separate goal-verification step.
+
+## Current supersession and bounded rejection — 2026-10-02, plan 01-05
+
+The preceding sections retain historical observations, commands, case denominators
+and acceptance claims. They are superseded for current admission by this section
+and the current `REVIEW.md` / `acceptance-results.json`. The later independent
+phase source review (`.planning/phases/01-cpu-acceptance-experiment/01-REVIEW.md`,
+2026-10-01T22:01:37Z) found six blockers and two warnings. Plan 01-05 independently
+reconciles their cited source paths and receipt bindings; it performs no CPU run,
+build, regeneration or sanitizer run and makes no exhaustive source-audit claim.
+The historical verifier refused grammar preflight rather than concluding all
+CPU-01–04 behaviors failed. Its report and all four prior SUMMARYs remain intact.
+
+### Preserved receipt identities
+
+Task 2 archived both active receipts byte-for-byte before reconciliation, and task 3
+independently compared the original source bytes and these hashes before mutation:
+
+| Archive | SHA-256 |
+| --- | --- |
+| `evidence/plan-01-05/prior-acceptance-results.json` | `3b9d6a736fb7ac8e647aed77f1ca9c10cc17233b3f1991c2d3be13ae25f9a2d3` |
+| `evidence/plan-01-05/prior-REVIEW.md` | `254fae71bfdb3a468dec1126bfd4f8b4e73f8c194b6cc594945219243b17c649` |
+
+The evaluated source revision remains `94f468326e5e529fd7c54f28434816c27f80f379`,
+content digest remains `81aa0d99145d7b214a7336ae02f9a825eff328c8c26011fd2eef35fbe977b527`,
+and canonical evidence digest remains
+`6dafb025bf1b3ba2a52750cae3e9f50a1db3a552ebb8507edebb8fa2ec493c66`.
+Only the active review/result change in the report; its execution records, source
+inputs, ledger identity, candidate eligibility field and all historical outputs
+remain byte-equivalent as parsed records. Historical eligibility describes the
+submitted receipt inputs, not current admission. The sealed review's new receipt
+hash identifies the current reconciliation; the final plan summary records it.
+
+### Eight unresolved source dispositions
+
+Each row is source-only evidence, with no repair performed and no newly observed
+runtime failure. Exact details and proposed repairs remain in the later phase
+review and current independent reconciliation. C17 consequences are tied to the
+admitted 32-bit unsigned-int configuration and nonrecovering UBSan wiring;
+neither emulator agreement nor prior selected case passes establishes hardware truth.
+
+| ID | Source reference and supported consequence | Disposition and uncertainty |
+| --- | --- | --- |
+| CR-01 | `m68k_in.c:1984–1987`, generated `m68kops.c:3630–3635,34952`: legal register count 32–63 reaches a width-invalid shift before guards. | Open critical; blocks runtime admission. Source consequence, no new operand execution. |
+| CR-02 | `m68k_in.c:4446,4484`, generated `m68kops.c:12136–12164,34711`: negative nonzero DIVS remainder is shifted as signed. | Open critical; blocks runtime admission. Example -7/3 follows operand domain, not a fresh result. |
+| CR-03 | `m68k_in.c:2407,2428,2449,2470,3190,3211,3269,3281`, generated BCHG/BCLR/BSET/BTST: signed literal 1 shifted to bit 31 is unrepresentable. | Open critical; blocks runtime admission. Actual generated 68000 wiring, no new sanitizer result. |
+| CR-04 | `m68kmake.c:1248–1255`: unchecked path copies, slash append and empty-path index permit out-of-bounds access. | Open critical; blocks safe generator qualification. Separate host tool; does not disprove prior pinned happy-path generation. |
+| CR-05 | `m68kmake.c:594–599,1171–1176,1184–1202`: unsigned EOF becomes SIZE_MAX, `< 0` checks fail and pointer advance is invalid. | Open critical; blocks safe generator qualification. Malformed/truncated inputs were not executed here. |
+| CR-06 | `m68kmake.c:795,1020`: capacity guards use `>` before writes at first disallowed index. | Open critical; blocks safe generator qualification. Prior complete template does not qualify capacity boundaries. |
+| WR-01 | `evidence/recovery-accounting/replay.py:19,31–57`: factual subprocess/hash/churn/cap checks are inside `assert` and vanish under optimized Python. | Open medium warning; blocks trusting optimized replay as validation. Normal-Python seal does not resolve it or refund charges. |
+| WR-02 | `tools/cpu/record_attempt.py:35–46`: relative pristine path fails diff-header normalization required by basename replay. | Open medium warning; blocks relative-path patch replay claims. Original immutable patches and charges remain; no replacement patch generated. |
+
+### Reproducible current decision and replanning disposition
+
+Use normal Python with `PYTHONOPTIMIZE` absent (plan validation explicitly removes
+it from each subprocess environment):
+
+```sh
+python3 tools/cpu/acceptance.py seal --require-accepted
+python3 tools/cpu/acceptance.py verify --require-accepted
+```
+
+Both commands must return exit **1** with the structured result
+`{"decision":"rejected","phase_status":"GAPS_FOUND","reasons":["blocking review finding"]}`.
+Seal binds the current review; verify is read-only. This expected admission
+refusal establishes the governance decision, not CPU acceptance. A metadata
+error, stale receipt, timeout or malformed output is not equivalent evidence.
+
+**Decision:** Reject current candidate admission and defer repair/replacement
+direction to the blocking developer checkpoint in plan **01-06**. SDK integration
+is prohibited until accepted CPU-01–04 evidence and fresh phase verification, or
+an explicit reconciled roadmap revision. This referral triggers replanning before
+integration; it authorizes no replacement, repair, third attempt or scope change.
+Open warnings require separate repair/validation if this candidate path resumes.
+
+The frozen block above, `budget-ledger.json`, recovery recipes/patches and all
+source hashes are unchanged. Preserve **2,614 handwritten, 523 helper, 483 semantic
+lines**, **20,005 total seconds / 18,859 final-attempt seconds**, two consumed
+attempts, six upstream files and 36,559 generated lines / 832,698 bytes. The
+remaining 77 helper / 17 semantic lines are headroom, not attempt authorization.
+All pre-adaptation caps and prior conservative overcharges remain; governance
+effort is recorded separately in the plan summary with no refund.
+
+Historical 56/56 records (30 native, 8 ASan/UBSan, 18 TSan), 30/30 final tests,
+99 state entries, eight continuation checkpoints, original manual-derived oracle
+and every earlier counterexample remain historical evidence. In particular retain
+odd IRQ crash, fixture UBSan, reset accounting/stale NMI, BSD address-error,
+malformed-state and zero-request guards. D-04–D-11 limitations remain: original
+notices, separate generator, minimal FPU/SoftFloat-free runtime closure, explicit
+context ownership, selected instruction-boundary timing, private same-build state,
+original fixture ancestry, recorded isolation/cold/failure observations and native
+Apple Clang scope. Unsupported toolchains, real guest bus-error fidelity,
+bus-cycle suspension, board/BIOS/game behavior, public/durable state and release
+platform support remain unsupported or unqualified.
+
+CPU-01–04 remain Pending current admission. CPU-05 may be Complete only after the
+actual structured seal and read-only verify match the required rejection and an
+independent receipt check confirms this decision, unchanged budgets/charges,
+commands/results, all eight counterexamples/uncertainties and SDK-blocking
+replanning referral. Its requirement status is owned by REQUIREMENTS.md and the
+final summary; task 1's pending entry is an earlier chronological checkpoint.

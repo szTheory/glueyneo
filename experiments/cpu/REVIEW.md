@@ -1,88 +1,114 @@
-# Independent CPU source review
+# Independent CPU source review reconciliation
 
-## Identity and disposition
+## Identity and current disposition
 
-- Reviewer: `codex:cpu_acceptance_review_01` (independent of the implementation role)
+Reviewer: `/root/phase01_plan05/review_reconcile`, the independent agent assigned to plan 01-05 task 3. This agent did not implement the candidate.
+
+**Admission rejected/deferred:** six critical findings and two medium warnings remain open. No repair was performed. This reconciliation does not qualify a backend or complete Phase 01.
+
 - Evaluated source revision: `94f468326e5e529fd7c54f28434816c27f80f379`
 - Content digest: `81aa0d99145d7b214a7336ae02f9a825eff328c8c26011fd2eef35fbe977b527`
-- Evidence digest: `6dafb025bf1b3ba2a52750cae3e9f50a1db3a552ebb8507edebb8fa2ec493c66`
-- Disposition: **No open findings.** The reviewed candidate is suitable for the plan's private, instruction-boundary 68000 experiment. The low-severity documentation count discrepancy identified during review was corrected and independently confirmed. This source review does not itself seal the acceptance report or complete Phase 1.
+- Canonical evidence digest: `6dafb025bf1b3ba2a52750cae3e9f50a1db3a552ebb8507edebb8fa2ec493c66`
 
-The current receipt has 56 passing records, but its decision remains `ready-for-review`, `phase_status` is `GAPS_FOUND`, and `review` is null (`experiments/cpu/acceptance-results.json:107-1289`). I independently recomputed both digests and verified all 56 retained output digests. All 65 input hashes match both the collector's source revision and the originally reviewed revision `6be55c2fd1ea402fe36f55774ed5226e968908b3`; the inspected source inputs are byte-identical across those revisions.
+All 65 input hashes in the archived acceptance report match the current checkout. The canonical evidence digest independently recomputes to the value above using `tools/cpu/acceptance.py:68-74`. No runtime record or source identity is changed by this reconciliation.
 
-## Scope and methods
+## Provenance and inspection limits
 
-I read the Task 2 instructions and D-12 context, the four Phase 01 plan threat models, frozen admission contract, budget ledger, state inventory, source manifest, fixture manifest, oracle, adapter and Musashi source, adaptation and audit tools, acceptance reducer, and guest, isolation, cold-start, fault, timing, state, and negative-control tests. I inspected source and ownership paths directly rather than relying on the receipt summary.
+The earlier clean review by `codex:cpu_acceptance_review_01` is preserved byte-for-byte in `experiments/cpu/evidence/plan-01-05/prior-REVIEW.md`, SHA-256 `254fae71bfdb3a468dec1126bfd4f8b4e73f8c194b6cc594945219243b17c649`. Its clean disposition is historical and superseded for current admission. Its corresponding accepted report is preserved as `experiments/cpu/evidence/plan-01-05/prior-acceptance-results.json`, SHA-256 `3b9d6a736fb7ac8e647aed77f1ca9c10cc17233b3f1991c2d3be13ae25f9a2d3`.
 
-I checked the receipt's case denominator, status counts, identities, output digests, supported configurations, unsupported entries, budget totals, and review state. I verified the report's content digest from its 65 input hashes, its canonical evidence digest, and each input hash against both the evaluated Git tree and current checkout. I scanned the tracked CPU evidence and source text for absolute user paths, private email addresses, and secret-like assignments; the only email match is an upstream author contact retained in Musashi's generator source. No private machine identity, commercial ROM, BIOS, or binary guest fixture was found.
+The later `.planning/phases/01-cpu-acceptance-experiment/01-REVIEW.md` is dated `2026-10-01T22:01:37Z`; it examined 44 handwritten files with generated handlers as supporting evidence. Its imported instruction template, helper header, generator and Unity coverage was targeted at relevant surfaces, not a complete line-by-line audit. Uninspected imported branches remain unknown. It ran no builds, tests, sanitizers or fresh runtime reproductions.
 
-This is a source and receipt audit. I did not recollect evidence, execute tests, build binaries, run sanitizers, or claim a new race/safety-instrumentation result. Runtime outcomes below are the submitted, identity-matched evidence that I inspected, not independent runtime reruns.
+This agent independently inspected cited template expressions; representative generated handlers and dispatch entries; integer typedefs; generator path, EOF and capacity code; CMake runtime/generator wiring and sanitizer configuration; replay assertions and their audit caller; recorder normalization and scratch consumers; and review schema/digest logic. Full citation extents below retain the later review's references; representative inspection does not claim exhaustive generated-handler coverage.
+
+The machine-readable `inspected` array retains the twelve historical scope names because the existing schema requires exact `REVIEW_SCOPE` equality (`tools/cpu/acceptance.py:35-38,125-138`). It records historical scope carried forward with this targeted independent reconciliation, **not a claim that this agent repeated all twelve audits**. The extra scope provenance makes that distinction explicit. Earlier rights/oracle, closure, ownership, state, cold-init, fault, cycle, binding, control, budget and hygiene narratives remain historical observations in the immutable archive.
+
+This is source-only review. I did not build, regenerate, execute CPU fixtures, run sanitizers or rerun adaptation. No newly observed crash, diagnostic, race result or hardware conformance is claimed.
 
 ## Findings
 
-### REV-LOW-01 — State inventory count in the acceptance narrative is stale — resolved
+Each finding remains unresolved. No repair or fresh behavioral qualification was performed.
 
-- Severity: `low`
-- Status: `resolved`
-- Evidence: The initial review found `experiments/cpu/ACCEPTANCE.md:270-273` saying 98 compiled objects/fields. `experiments/cpu/state-inventory.json:14-1317` contains 99 object entries, including `cpu_instance.active` at lines 1307-1316. `tools/cpu/state_inventory.py:53-56,83` requires exact compiled-declaration coverage and reports the number of inventory rows. The acceptance narrative now says 99.
-- Impact: The machine-readable inventory and its declaration-coverage check include the active flag; the former prose count understated the reviewed inventory by one and did not identify a missing state field.
-- Resolution: The acceptance narrative now says 99, matching the 99 object entries in `state-inventory.json` (`experiments/cpu/ACCEPTANCE.md:270-273`; `experiments/cpu/state-inventory.json:14-1317`). I independently confirmed the corrected count against the inventory.
+### CR-01 — Register shift counts reach undefined shifts before guards
 
-No high- or critical-severity source finding remains open.
+- Severity/status: `critical` / `open`.
+- Sources: `third_party/musashi/m68k_in.c:1984-1987,2040,2093,2224,2262,2300,5351,5389,5427,5536,5574,5612; third_party/musashi/m68kcpu.h:75-79; generated third_party/musashi/m68kops.c:3631-3635,34952`.
+- Supported consequence: ASR/ASL/LSR/LSL compute `DX & 0x3f` and evaluate the C shift before operand-width guards. On the documented 32-bit unsigned-int configuration, legal counts 32–63 invoke undefined behavior, including narrow guest operands represented as `uint`. ASR.L D1,D0 with D1=32 reaches a generated handler with a nonzero 68000 dispatch entry.
+- Uncertainty: No new shift execution or sanitizer abort was observed; other integer widths remain unqualified. Selected prior cases do not cover these boundaries.
+- Disposition: Blocks runtime admission. No repair performed; any repair and validation require separately authorized work.
 
-## Source and evidence review
+### CR-02 — DIVS shifts a negative signed remainder
 
-### Rights, fixture ancestry, and oracle
+- Severity/status: `critical` / `open`.
+- Sources: `third_party/musashi/m68k_in.c:4446,4484; generated third_party/musashi/m68kops.c:12136-12164,34711`.
+- Supported consequence: Signed `%` can yield negative `sint remainder`; `(remainder << 16)` is undefined in C17. D0=-7 divided by 3 yields fitting quotient -2 and remainder -1, reaching the generated register form. The same template expression supplies memory/immediate forms.
+- Uncertainty: No fresh negative-remainder execution or exhaustive generated-form testing; selected historical passes do not cover this counterexample.
+- Disposition: Blocks runtime admission. No repair performed; any repair and validation require separately authorized work.
 
-`tools/cpu/source-manifest.json` enumerates 43 distributed inputs and generated outputs, pins Musashi to `313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd`, pins Unity, retains the upstream license notices, and records each file's role and host-call disposition. `third_party/musashi/PROVENANCE.md:7-28,30-50` and `third_party/unity/PROVENANCE.md:3-14` document source acquisition, notices, and scope. The fixture manifest identifies original MIT guest and test-local byte arrays, states that firmware is not required, and says there is no separately distributed binary fixture (`tests/cpu/fixture-manifest.json:3-21`).
+### CR-03 — Bit 31 masks shift a signed int into its sign bit
 
-The oracle derives the MOVEQ, ADDQ.L, absolute-long store, STOP, exception-frame, and selected timing expectations from the listed Motorola manuals, not emulator agreement (`tests/cpu/ORACLE.md:7-41,61-101`). The referenced editions are the 1992 M68000 Family Programmer's Reference Manual and the ninth-edition 1993 M68000 User's Manual. The fixture bytes are authored in-tree; no third-party game or BIOS bytes are used. The report and checked-in evidence contain repository-relative paths and no private local paths. Rights and fixture provenance are adequate for this private experiment.
+- Severity/status: `critical` / `open`.
+- Sources: `third_party/musashi/m68k_in.c:2407,2428,2449,2470,3190,3211,3269,3281; generated third_party/musashi/m68kops.c:4865-4868 and corresponding BCLR/BSET/BTST handlers; third_party/musashi/m68kcpu.h:75-79`.
+- Supported consequence: Longword BCHG/BCLR/BSET/BTST use signed literal `1 << (bit & 0x1f)`. Legal immediate or register bit 31 yields an unrepresentable signed-int value on the admitted 32-bit configuration. Assigning to `uint` afterward does not define the shift.
+- Uncertainty: No fresh bit-31 execution or sanitizer observation; consequences on other integer-width hosts are unqualified.
+- Disposition: Blocks runtime admission. No repair performed; any repair and validation require separately authorized work.
 
-### Closure, generation, FPU/SoftFloat, and host calls
+### CR-04 — Generator path arguments overflow buffers or access before them
 
-The runtime target contains only the adapter, `m68kcpu.c`, and generated `m68kops.c`; generator and Unity targets are separate (`experiments/cpu/CMakeLists.txt:9-18,30-43`). The adaptation recipe disables later CPU/MMU configurations, removes FPU/MMU/SoftFloat dependency edges, replaces 040 FPU/MMU dispatch with unsupported-instruction exceptions, and generates the opcode sources from the pinned input (`tools/cpu/adapt.py:15-49,91-110`). The selected configuration keeps prefetch and address-error handling on (`third_party/musashi/m68kconf.h:67-84,223-234,254-255`). I found no real FPU or SoftFloat implementation in the runtime closure.
+- Severity/status: `critical` / `open`.
+- Sources: `third_party/musashi/m68kmake.c:1248-1255; experiments/cpu/CMakeLists.txt:9-11`.
+- Supported consequence: Unchecked `strcpy` copies argv paths into 1024-byte arrays; overlong paths overflow, and the appended slash can overflow a full path. An empty output argument reaches `output_path[strlen(output_path)-1]` outside storage. The generator is a separate host executable, not an ambient filesystem service in the CPU archive.
+- Uncertainty: No malformed/limit argument was executed here. Earlier successful generation with ordinary paths does not qualify these bounds.
+- Disposition: Blocks safe generator qualification. No repair performed; any repair and validation require separately authorized work.
 
-The submitted `cpu_closure` evidence records the runtime objects, compiler dependency and preprocessed-source closure, AST references, archive imports, and minimal-consumer link map; `regeneration` records two parallel scratch generations matching the checked-in generated bytes. The source audit implements these checks in `tools/cpu/audit.py:267-329,226-251`. I inspected the recorded receipts and generated-source provenance; I did not regenerate them. The declared host calls are bounded memory/initialization, current-call jump-frame, and compiler support calls. Runtime bus operations use explicit callbacks (`experiments/cpu/cpu_adapter.c:25-38`); no runtime file/device/network/environment or wall-clock service is exposed. The generator's host I/O and process exit are isolated from the runtime archive.
+### CR-05 — Unsigned EOF sentinel bypasses generator error handling
 
-### Explicit context propagation and mutable ownership
+- Severity/status: `critical` / `open`.
+- Sources: `third_party/musashi/m68kmake.c:594-599,1171-1176,1184-1202 and other fgetline callers`.
+- Supported consequence: `size_t fgetline` returns `-1`, converted to `SIZE_MAX`, while callers test `< 0`. Truncation immediately after an insert header can bypass rejection, perform invalid `ptr += SIZE_MAX` and write a newline outside valid storage. Other scanning loops can process stale contents at EOF.
+- Uncertainty: No truncated/I/O-failure input was executed. The complete historical template avoids this path; a safe failure claim is unsupported.
+- Disposition: Blocks safe generator qualification. No repair performed; any repair and validation require separately authorized work.
 
-Each adapter instance owns its `m68ki_context`, allocator, readiness/fault/active flags, and bus binding (`experiments/cpu/cpu_adapter.c:7-11`). The adapted Musashi context owns CPU state, cycle scratch, trace/address-error fields, jump frames, dispatch/cycle tables, bus data/callbacks, and instruction count (`third_party/musashi/m68kcpu.h:1016-1040`). Core macros resolve through the explicit `ctx`, and generated handlers take that context (`third_party/musashi/m68kcpu.h:326-400`; `tools/cpu/adapt.py:56-90`). I found no mutable global current-instance pointer, TLS route, global execution lock, or lazy global opcode initialization. Shared opcode/cycle/shift tables in the state inventory are `const`; per-instance opcode tables are built by `m68ki_build_opcode_table(ctx)` (`third_party/musashi/m68kcpu.c:1059-1074`).
+### CR-06 — Generator capacity guards permit the first invalid entry
 
-The compiler-derived state inventory has 99 entries and binds each declared field/global to a reviewed class, owner, mutation sites, and restore disposition. `tools/cpu/state_inventory.py:17-45,47-83` extracts declarations, checks exact equality with the inventory, rejects mutable shared globals, and verifies guest-field codec mappings. Guest arrays and scalars are copied in both directions; host allocator/bus/callback pointers and `jmp_buf`s remain on the destination; derived tables and CPU constants are rebuilt; transient cycle scratch is normalized (`experiments/cpu/cpu_adapter.c:87-124`; `experiments/cpu/state-inventory.json:14-1317`).
+- Severity/status: `critical` / `open`.
+- Sources: `third_party/musashi/m68kmake.c:795-801,1020-1026; array declarations :208,271`.
+- Supported consequence: Pre-write guards use `>` rather than `>=`. A 301st body row reaches `body[300]` and a 3001st output entry reaches table index 3000, outside their arrays; rejection only on a following iteration is too late.
+- Uncertainty: Exact-capacity and one-over controls were not run. The submitted template stays below these limits; terminator capacity requires validation during any repair.
+- Disposition: Blocks safe generator qualification. No repair performed; any repair and validation require separately authorized work.
 
-### Cold initialization, failure cleanup, and fault frames
+### WR-01 — Python optimization removes historical replay validation
 
-`cpu_create` validates callbacks and model before its sole allocation, initializes the whole instance, then builds its own backend tables (`experiments/cpu/cpu_adapter.c:39-49`). Allocation failure returns with `*out == NULL`; there is no later allocation to leak. Destruction retains and calls the instance allocator, while overlapping/reentrant same-instance lifecycle calls are rejected or prohibited by contract (`experiments/cpu/cpu_adapter.c:51-59`; `cpu_adapter.h:15-20`). The recorded cold tests start two workers behind a barrier before backend creation and compare their results to isolated baselines (`tests/cpu/test_cold.c:7-20`); the fault tests fail each observed allocation position and preserve a healthy witness (`tests/cpu/test_faults.c:14-23`). The receipt reports native and TSan cold lanes as executed and passing; this review did not repeat those runs.
+- Severity/status: `medium` / `open`.
+- Sources: `experiments/cpu/evidence/recovery-accounting/replay.py:19,31-57; tools/cpu/audit.py:139`.
+- Supported consequence: Replay uses `assert` for subprocess statuses, hashes, churn, recipe identity and totals. Its caller inherits the environment. `PYTHONOPTIMIZE=1` removes these checks, including churn expressions, while a hardcoded passing receipt still claims all four stages replayed.
+- Uncertainty: No evidence shows historical optimization was enabled, so historical charges are not changed. No optimized replay ran here; normal-Python sealing does not resolve this defect.
+- Disposition: Blocks trusting optimized replay as validation. No repair performed; any repair and validation require separately authorized work.
 
-Reset and run install a host-fault `setjmp` frame for that call, clear `active` and mark the instance terminal when a bus callback fails, and permit subsequent reset/destruction only (`experiments/cpu/cpu_adapter.c:54-79`). Musashi installs its address-error and bus-error frames at execution entry before IRQ stack/vector accesses (`third_party/musashi/m68kcpu.c:928-950`); the address-error path handles nested stack failures and exhausted cycle budgets (`third_party/musashi/m68kcpu.h:612-667,2073-2102`). Tests retain reset/fetch/store/IRQ-stack/exception-stack/nested-stack/odd-IRQ regressions with healthy witnesses (`tests/cpu/test_faults.c:25-53`). Callback failure is explicitly a host fault, not a guest bus-error frame. True 68000 guest bus errors remain unsupported.
+### WR-02 — Relative pristine paths produce unreplayable patch prefixes
 
-### Cycles, exception bounds, and selected guest behavior
+- Severity/status: `medium` / `open`.
+- Sources: `tools/cpu/record_attempt.py:35-46; tools/cpu/audit.py:102-116; experiments/cpu/evidence/recovery-accounting/replay.py:24-31`.
+- Supported consequence: Normalization searches `"a" + str(pristine)`: for relative pristine/m68k.h it seeks `apristine/m68k.h` while Git emits `a/pristine/m68k.h`. Old diff/--- paths retain directories incompatible with consumers' basename-only scratch trees.
+- Uncertainty: No relative/absolute recorder reproduction ran. This conditional counterexample does not declare the preserved historical patch invalid or change any charged total.
+- Disposition: Blocks relative-path patch replay claims. No repair performed; any repair and validation require separately authorized work.
 
-The public-private adapter entry accepts signed requests from 0 through 1,000,000, returns before backend entry on zero, rejects invalid bounds, and checks instruction-counter headroom before positive execution (`experiments/cpu/cpu_adapter.h:21-24`; `experiments/cpu/cpu_adapter.c:61-79,100-114`). With the request bounded below signed-int limits and the selected overshoot tied to the finite instruction/exception tables, the current arithmetic has substantial `int` headroom. Tests cover exact neighboring reset-debt requests, overshoot, zero, STOP idle, invalid requests, instruction budgets, RESET, TRAP, illegal and privilege exceptions, IRQ/RTE, and address error (`tests/cpu/test_timing.c:6-58,60-109`). The oracle explicitly limits claims to selected instruction and exception boundaries; it does not claim bus-cycle suspension, board timing, or hardware measurements (`tests/cpu/ORACLE.md:79-101`).
+### REV-LOW-01 — Historical inventory prose count — resolved
 
-The original guest's expected value 10 comes from MOVEQ #7, ADDQ.L #3, and a big-endian store; the supervised operand mutation must produce the intended assertion failure with 11 (`tests/cpu/guest_fixture.c:4-10`; `tests/cpu/test_guest.c:21-39`; `tests/cpu/negative.py:1-9`). Isolation, IRQ/RTE ownership, and state mutations have similarly consequential comparisons rather than crash-only controls (`tests/cpu/test_isolation.c:16-46`; `tests/cpu/state_negative.py:1-11`; `tests/cpu/test_state.c:110-122`).
+Severity/status: `low` / `resolved`. The archived review found the acceptance narrative said 98 at its then-current `experiments/cpu/ACCEPTANCE.md:270-273`, while `experiments/cpu/state-inventory.json:14-1317` contained 99 entries, including `cpu_instance.active`. It independently confirmed the prose correction to 99. This historical resolution is retained and does not resolve any CR/WR.
 
-### Fresh-destination bindings and continuation
+## Consequences and retained limits
 
-The state test creates a destination with a distinct owner, copies guest RAM separately, restores a typed guest record, destroys and overwrites the source, then compares six continuation calls, RAM, full state, and ordered bus observations (`tests/cpu/test_state.c:54-78`). It covers reset debt, prefetch, STOP, masked IRQ, pending NMI with pins low, illegal/address-error entry, and post-RTE normal modes (`tests/cpu/test_state.c:33-52`). Restore validates a private temporary before mutating live state, rebuilds CPU-derived fields, and does not copy host pointers or jump buffers (`experiments/cpu/cpu_adapter.c:100-124`). The report's native and ASan/UBSan continuation and mutation records pass. These are private same-build continuation observations; the report correctly makes no durable or public ABI claim.
+`experiments/cpu/CMakeLists.txt:11,30-43` compiles generated handlers into the runtime and configures `-fsanitize=address,undefined -fno-sanitize-recover=all` for its ASan/UBSan lane. CR-01–03 can therefore terminate that lane on legal operands; this is a source-derived possibility, not a fresh observed sanitizer failure. CR-04–06 concern the separate generator at lines 9–10; runtime independence from host filesystem services remains a separate contract.
 
-### Budget, review identity, and admission tooling
+The submitted 56/56 passing records, selected cold/isolation/fault/timing/continuation outcomes and sanitizer receipts are historical evidence, retained without a new denominator or runtime claim. Distinct compiler lanes, true 68000 guest bus-error fidelity, arbitrary bus-cycle suspension, board/BIOS/game compatibility, public/durable state compatibility and release-platform support remain unsupported. Uninspected branches remain unknown.
 
-The frozen contract permits two attempts, 16 cumulative hours, 8 hours per attempt, six selected upstream files, and the listed handwritten/semantic/helper/generated caps (`experiments/cpu/ACCEPTANCE.md:63-110`). The report's computed values are within all caps: 2 attempts, 20,005 total seconds, 18,859 final-attempt seconds, 6 upstream files, 2,614 handwritten lines, 483 semantic lines, 523 helper lines, and 36,559 generated lines / 832,698 bytes (`experiments/cpu/acceptance-results.json:78-97`). The effort ledger and audit retain cumulative history and bind semantic review to source hashes (`tools/cpu/audit.py:128-180`; `experiments/cpu/budget-ledger.json`). This review does not reset or expand the frozen allowance.
-
-The reducer requires exact source/configuration identities, the complete per-lane required-case denominator, nonzero matching observed counts, supported toolchain identity, exact unsupported denominator, cap compliance, and a review matching source and evidence digests (`tools/cpu/acceptance.py:77-142`). Verification checks the evaluated commit's input bytes, ledger/history, frozen contract, output digests, regeneration receipt, and review receipt (`tools/cpu/acceptance.py:294-343`). The receipt has 56/56 passing records but still has `review: null` and `GAPS_FOUND`; that is an appropriate non-admitting state before this review is sealed.
-
-The following remain explicitly unsupported, and this review does not promote them: distinct compiler/toolchain lane, true 68000 guest bus-error fidelity, arbitrary bus-cycle suspension, Neo Geo board/BIOS/game compatibility, public/durable state compatibility, and release-platform support (`experiments/cpu/acceptance-results.json:39-45`). The recorded Apple Clang ASan/UBSan and TSan outcomes are runtime evidence supplied in the report; this source audit is neither a sanitizer rerun nor a new race-detector result.
-
-## Limitations
-
-This review covers the exact evaluated Musashi adaptation, current source/fixtures, and submitted report. It does not establish hardware truth beyond the cited manual-derived cases; actual Neo Geo hardware, full board/BIOS/game compatibility, unsupported guest bus errors, arbitrary mid-instruction or bus-cycle checkpoints, public state compatibility, other compiler families, or release platform support. The report's native runtime, ASan/UBSan, TSan, cold-start, and continuation outcomes were inspected as receipts only and were not rerun by this reviewer.
+Frozen allowance remains two attempts, 16 cumulative hours, 8 hours per attempt and every existing patch/source cap. Both attempts are consumed. Charges remain 2,614 handwritten, 523 helper and 483 semantic lines, 20,005 total seconds and 18,859 final-attempt seconds. This review grants no refund, extra attempt, repair or replacement. CPU-01–04 admission remains pending, Phase 01 stays open and Phase 02/SDK integration stays gated. Blocking plan 01-06 owns developer direction and referral to separately authorized replanning before further repair/replacement or integration.
 
 ## Machine-readable review metadata
 
 ```json
 {
-  "reviewer": "codex:cpu_acceptance_review_01",
+  "reviewer": "/root/phase01_plan05/review_reconcile",
   "independent": true,
   "source_revision": "94f468326e5e529fd7c54f28434816c27f80f379",
   "content_digest": "81aa0d99145d7b214a7336ae02f9a825eff328c8c26011fd2eef35fbe977b527",
@@ -101,13 +127,80 @@ This review covers the exact evaluated Musashi adaptation, current source/fixtur
     "admission-tooling",
     "public-hygiene"
   ],
+  "scope_provenance": {
+    "inspected_meaning": "Historical scope retained from archived review; current reviewer performed targeted source reconciliation, not a repeated exhaustive audit.",
+    "historical_reviewer": "codex:cpu_acceptance_review_01",
+    "historical_review": "experiments/cpu/evidence/plan-01-05/prior-REVIEW.md",
+    "historical_review_sha256": "254fae71bfdb3a468dec1126bfd4f8b4e73f8c194b6cc594945219243b17c649",
+    "later_review": ".planning/phases/01-cpu-acceptance-experiment/01-REVIEW.md",
+    "current_inspection": [
+      "cited-template-expressions",
+      "representative-generated-handlers-and-dispatch",
+      "integer-typedefs",
+      "generator-path-eof-capacity",
+      "cmake-wiring",
+      "replay-and-audit-caller",
+      "patch-normalization-and-consumers",
+      "acceptance-schema-and-identities"
+    ],
+    "runtime_rerun": false,
+    "repair_performed": false
+  },
   "findings": [
+    {
+      "id": "CR-01",
+      "severity": "critical",
+      "status": "open",
+      "summary": "Register shift counts reach undefined shifts before guards; Blocks runtime admission."
+    },
+    {
+      "id": "CR-02",
+      "severity": "critical",
+      "status": "open",
+      "summary": "DIVS shifts a negative signed remainder; Blocks runtime admission."
+    },
+    {
+      "id": "CR-03",
+      "severity": "critical",
+      "status": "open",
+      "summary": "Bit 31 masks shift a signed int into its sign bit; Blocks runtime admission."
+    },
+    {
+      "id": "CR-04",
+      "severity": "critical",
+      "status": "open",
+      "summary": "Generator path arguments overflow buffers or access before them; Blocks safe generator qualification."
+    },
+    {
+      "id": "CR-05",
+      "severity": "critical",
+      "status": "open",
+      "summary": "Unsigned EOF sentinel bypasses generator error handling; Blocks safe generator qualification."
+    },
+    {
+      "id": "CR-06",
+      "severity": "critical",
+      "status": "open",
+      "summary": "Generator capacity guards permit the first invalid entry; Blocks safe generator qualification."
+    },
+    {
+      "id": "WR-01",
+      "severity": "medium",
+      "status": "open",
+      "summary": "Python optimization removes historical replay validation; Blocks trusting optimized replay as validation."
+    },
+    {
+      "id": "WR-02",
+      "severity": "medium",
+      "status": "open",
+      "summary": "Relative pristine paths produce unreplayable patch prefixes; Blocks relative-path patch replay claims."
+    },
     {
       "id": "REV-LOW-01",
       "severity": "low",
       "status": "resolved",
-      "summary": "The initial review found ACCEPTANCE.md said 98 state inventory entries; the checked inventory has 99.",
-      "resolution": "ACCEPTANCE.md now says 99, matching all 99 entries in state-inventory.json; no runtime-source change was needed."
+      "summary": "Earlier narrative inventory count was 98 while the checked inventory has 99.",
+      "resolution": "The archived review independently confirmed prose corrected to 99; historical resolution retained, no runtime-source change."
     }
   ]
 }

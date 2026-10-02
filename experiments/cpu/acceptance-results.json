@@ -1285,7 +1285,7 @@
     }
   ],
   "review": {
-    "reviewer": "codex:cpu_acceptance_review_01",
+    "reviewer": "/root/phase01_plan05/review_reconcile",
     "independent": true,
     "source_revision": "94f468326e5e529fd7c54f28434816c27f80f379",
     "content_digest": "81aa0d99145d7b214a7336ae02f9a825eff328c8c26011fd2eef35fbe977b527",
@@ -1304,21 +1304,90 @@
       "admission-tooling",
       "public-hygiene"
     ],
+    "scope_provenance": {
+      "inspected_meaning": "Historical scope retained from archived review; current reviewer performed targeted source reconciliation, not a repeated exhaustive audit.",
+      "historical_reviewer": "codex:cpu_acceptance_review_01",
+      "historical_review": "experiments/cpu/evidence/plan-01-05/prior-REVIEW.md",
+      "historical_review_sha256": "254fae71bfdb3a468dec1126bfd4f8b4e73f8c194b6cc594945219243b17c649",
+      "later_review": ".planning/phases/01-cpu-acceptance-experiment/01-REVIEW.md",
+      "current_inspection": [
+        "cited-template-expressions",
+        "representative-generated-handlers-and-dispatch",
+        "integer-typedefs",
+        "generator-path-eof-capacity",
+        "cmake-wiring",
+        "replay-and-audit-caller",
+        "patch-normalization-and-consumers",
+        "acceptance-schema-and-identities"
+      ],
+      "runtime_rerun": false,
+      "repair_performed": false
+    },
     "findings": [
+      {
+        "id": "CR-01",
+        "severity": "critical",
+        "status": "open",
+        "summary": "Register shift counts reach undefined shifts before guards; Blocks runtime admission."
+      },
+      {
+        "id": "CR-02",
+        "severity": "critical",
+        "status": "open",
+        "summary": "DIVS shifts a negative signed remainder; Blocks runtime admission."
+      },
+      {
+        "id": "CR-03",
+        "severity": "critical",
+        "status": "open",
+        "summary": "Bit 31 masks shift a signed int into its sign bit; Blocks runtime admission."
+      },
+      {
+        "id": "CR-04",
+        "severity": "critical",
+        "status": "open",
+        "summary": "Generator path arguments overflow buffers or access before them; Blocks safe generator qualification."
+      },
+      {
+        "id": "CR-05",
+        "severity": "critical",
+        "status": "open",
+        "summary": "Unsigned EOF sentinel bypasses generator error handling; Blocks safe generator qualification."
+      },
+      {
+        "id": "CR-06",
+        "severity": "critical",
+        "status": "open",
+        "summary": "Generator capacity guards permit the first invalid entry; Blocks safe generator qualification."
+      },
+      {
+        "id": "WR-01",
+        "severity": "medium",
+        "status": "open",
+        "summary": "Python optimization removes historical replay validation; Blocks trusting optimized replay as validation."
+      },
+      {
+        "id": "WR-02",
+        "severity": "medium",
+        "status": "open",
+        "summary": "Relative pristine paths produce unreplayable patch prefixes; Blocks relative-path patch replay claims."
+      },
       {
         "id": "REV-LOW-01",
         "severity": "low",
         "status": "resolved",
-        "summary": "The initial review found ACCEPTANCE.md said 98 state inventory entries; the checked inventory has 99.",
-        "resolution": "ACCEPTANCE.md now says 99, matching all 99 entries in state-inventory.json; no runtime-source change was needed."
+        "summary": "Earlier narrative inventory count was 98 while the checked inventory has 99.",
+        "resolution": "The archived review independently confirmed prose corrected to 99; historical resolution retained, no runtime-source change."
       }
     ],
-    "receipt_sha256": "254fae71bfdb3a468dec1126bfd4f8b4e73f8c194b6cc594945219243b17c649"
+    "receipt_sha256": "35bf8e3a849d05e90e7291c9868cffcae014ada4d1607ad3542de7f912e9be6e"
   },
   "result": {
-    "decision": "accepted",
-    "phase_status": "ACCEPTED",
-    "reasons": [],
+    "decision": "rejected",
+    "phase_status": "GAPS_FOUND",
+    "reasons": [
+      "blocking review finding"
+    ],
     "records": [
       {
         "lane": "native",
