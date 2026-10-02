@@ -38,7 +38,7 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit acceptance decision, commands and results against a finite effort/patch budget fixed before adaptation; failed or over-budget candidates have counterexamples and a replacement/replanning disposition. (CPU-05)
 
-**Plans**: 5/6 plans executed; plan 01-06 awaits the blocking developer-direction checkpoint
+**Plans**: 6/6 plans executed; option C recorded in plan 01-06, with Phase 01 open / GAPS_FOUND and Phase 02 gated
 
 Plans:
 **Wave 1**
@@ -61,9 +61,9 @@ Plans:
 
 - [x] 01-05-PLAN.md — Correct the canonical MVP story, preserve historical evidence, and record a truthful current candidate disposition.
 
-**Wave 6** *(Wave 5 complete; blocking developer direction next)*
+**Wave 6** *(direction recorded; execute-phase workflow pause)*
 
-- [ ] 01-06-PLAN.md — Pause for developer direction before any further backend work or scope change.
+- [x] 01-06-PLAN.md — Developer selected C: reject/defer the current candidate and discuss backend replanning; no source work or scope change authorized.
 
 Planning guidance: First set a concrete finite effort cap, patch budget and stopping/replacement rules. Then use small CMake/CTest experiment scaffolding, a licensed original tiny guest, source/host-call audit, and isolation/timing/continuation experiments. Evaluate the research's pinned Musashi candidate without presuming acceptance. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
 
@@ -113,7 +113,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 5/6 | Governance gap closure in progress; admission rejected / GAPS_FOUND | - |
+| 1. CPU acceptance experiment | v0.1 | 6/6 | Open / GAPS_FOUND; C recorded, backend discussion next | - |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 

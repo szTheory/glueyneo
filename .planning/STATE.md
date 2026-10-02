@@ -5,16 +5,16 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: executing
-stopped_at: Completed 01-05-PLAN.md; awaiting orchestrator dispatch of blocking 01-06
-last_updated: "2026-10-02T11:45:18.018Z"
+stopped_at: Completed 01-06-PLAN.md; execute-phase pause before backend replanning discussion; Phase 01 open / GAPS_FOUND and Phase 02 gated
+last_updated: "2026-10-02T12:19:37.162Z"
 last_activity: 2026-10-02
 last_activity_desc: Phase 01 execution started
-state_head: 8fe8f269f7ee6c4edaf70e4d568a234786f14cdb
+state_head: af1d7b8192d0e4ad089f68bec5975ef03d154f11
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
   percent: 0
 ---
 
@@ -32,8 +32,8 @@ See: .planning/PROJECT.md (updated 2026-10-01)
 
 Phase: 01 (CPU acceptance experiment) — EXECUTING
 Plan: 6 of 6
-Status: Plan 01-05 complete; plan 01-06 direction checkpoint remains. Phase 01 open / GAPS_FOUND; Phase 02 gated.
-Last activity: 2026-10-02 — Current admission rejected with independently reconciled source blockers; CPU-05 bounded decision complete.
+Status: Plan 01-06 complete; developer selected C and execute-phase pauses before backend replanning discussion. Phase 01 open / GAPS_FOUND; Phase 02 gated.
+Last activity: 2026-10-02 — Current Musashi candidate rejected/deferred; discussion direction recorded, with CPU-01–04 Pending and CPU-05 bounded decision complete.
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -69,6 +69,7 @@ Plan 01-05 task 1 checkpoint: CPU-01–04 are Pending current admission; histori
 | Phase 01 P03 | 22min | 2 tasks | 28 files |
 | Phase 01 P04 | 31min | 2 tasks | 13 files |
 | Phase 01 P05 | 10min | 3 tasks | 8 files |
+| Phase 01 P06 | 5min | 1 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -90,10 +91,11 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - [Phase 01, verification 2026-10-01]: OpenGSD returned `gaps_found`. Its MVP story validator rejected the canonical ROADMAP goal before implementation scoring; 0/5 is not a claim that all requirements failed. A later independent source review corroborated six blockers. No tests were rerun during verification; the current source/admission claim needs disposition and a fresh verification pass.
 - [Phase 01]: Reject current CPU admission for six unresolved source blockers; defer repair/replacement direction to blocking plan 01-06.
 - [Phase 01]: CPU-05 alone satisfies its bounded-decision obligation; CPU-01–04 remain Pending, Phase 01 open and Phase 02 gated.
+- [Phase 01]: Developer selected C: reject/defer current Musashi candidate and discuss backend replanning; owned C core/private seam and strangler transition remain proposals; no source work, attempt, cap, backend selection or scope change authorized.
 
 ### Pending Todos
 
-- Next within the authorized execution step: orchestrator dispatches plan 01-06, which pauses for developer direction. Plan 01-05 is complete. Then run `$gsd-verify-work 01` as a separately requested step; keep Phase 2 gated unless current accepted CPU-01–04 evidence passes verification or an explicit roadmap revision is reconciled.
+- Execute-phase work is complete: all six plans executed, with option C recorded in 01-06-DIRECTION.md. Pause for user review/model selection before the next named step, discuss backend replanning. An owned C 68000 core, narrow private replacement seam and strangler-style transition are discussion proposals only. Do not begin source work, another adaptation attempt, cap changes, final backend selection, roadmap/milestone changes or phase verification from this selection. Phase 02 remains gated.
 
 ### Blockers/Concerns
 
@@ -116,6 +118,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-02T11:45:18.004Z
-Stopped at: Completed 01-05-PLAN.md; awaiting orchestrator dispatch of blocking 01-06
+Last session: 2026-10-02T12:19:37.148Z
+Stopped at: Completed 01-06-PLAN.md; execute-phase pause before backend replanning discussion; Phase 01 open / GAPS_FOUND and Phase 02 gated
 Resume file: None
