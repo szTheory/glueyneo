@@ -10,7 +10,7 @@
     "measurement": "cumulative Git diff added/deleted nonblank lines from code_start, counted by category.",
     "runtime_added": 0,
     "runtime_deleted": 0,
-    "test_tool_added": 596,
+    "test_tool_added": 636,
     "test_tool_deleted": 0
   },
   "code_start": {
@@ -45,24 +45,24 @@
   ],
   "entries": [
     {
-      "active_seconds": 2958,
+      "active_seconds": 3360,
       "agent_intervals": [
         {
           "agent": "primary-agent",
-          "end": "2026-10-02T18:56:18Z",
-          "reason": "Conservative full interval, rounded down to one minute before the earliest observed GSD activity timestamp; includes initialization, source/manual review, implementation, failed control repair, tests, and scope reconciliation.",
+          "end": "2026-10-02T19:03:00Z",
+          "reason": "Conservative full interval, rounded down to the last complete minute from the earliest observed GSD activity timestamp; includes initialization, source/manual review, implementation, control repair, end-to-end recording coverage, tests, and scope reconciliation.",
           "start": "2026-10-02T18:07:00Z"
         }
       ],
-      "commit": "b3c2951b3a4abcc38be6a12f617af9ba7f9aabaa",
+      "commit": "44ecf9e",
       "cumulative_churn": {
         "runtime_added": 0,
         "runtime_deleted": 0,
-        "test_tool_added": 596,
+        "test_tool_added": 636,
         "test_tool_deleted": 0
       },
       "diagnostic_gate": false,
-      "recorded_at": "2026-10-02T18:39:17Z",
+      "recorded_at": "2026-10-02T19:03:00Z",
       "stage": "plan-01-07-governance",
       "test_results": {
         "contract_validate": {
@@ -79,12 +79,13 @@
           ],
           "status": "pass"
         },
-        "expected": 8,
-        "observed": 8,
+        "expected": 9,
+        "observed": 9,
         "resolved_control_failures": [
           "Empty-record self-test first hit the deliberately mutated historical-file fixture; the control now restores that fixture before testing the ledger.",
           "Optimized-Python self-test first matched a text fragment against JSON output; the control now parses and checks the named JSON rejection reason.",
-          "Primary-manual review corrected the overbroad continuous-level-7 statement and added exact MOVE absolute encoding patterns; final normal/-O self-tests, eight unit tests, and GSD story validation passed."
+          "Primary-manual review corrected the overbroad continuous-level-7 statement and added exact MOVE absolute encoding patterns; final normal/-O self-tests, eight unit tests, and GSD story validation passed.",
+          "End-to-end record-path control initially omitted creating its temporary test directory; fixture setup now creates it and the nine-test suite passes."
         ],
         "resolved_manual_review": {
           "result": "Contract and direct contract test corrected; no runtime code or cap changed.",
@@ -122,15 +123,15 @@
             "-p",
             "test_contract.py"
           ],
-          "expected": 8,
-          "observed": 8,
+          "expected": 9,
+          "observed": 9,
           "status": "pass"
         }
       },
       "tested_source_sha256": {
         "contract": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73",
-        "tests": "5590341c82e4772841f3d4c3eed2259be185881c595cfe28f7ee7984d38ee272",
-        "validator": "bb0346a0887b289dff9594c1629e309c13de56b44dd3a033a7bc620b61cd5bca"
+        "tests": "19385e744bd2f3dcecd20cd76967e948ffbaf8985efc309e8e0345205d67d867",
+        "validator": "b894fee5596088554396d123e423760099018466fda6e569eb3b40c0a37c2c45"
       },
       "working_tree_dirty": true
     }
@@ -142,10 +143,17 @@
       "previous_contract_sha256": "aa8e9fddee5312460b3206a4aad62674bf64cff20071e133a0e3fc09d72b3567",
       "reason": "Before owned runtime work, the official MC68000 manual check refined level-7 interrupt acceptance and exact MOVE absolute opcode patterns. No supported scope, effort cap, churn threshold, or historical Musashi record changed.",
       "recorded_at": "2026-10-02T18:56:18Z"
+    },
+    {
+      "from_revision": 2,
+      "preceding_commit": "44ecf9e",
+      "previous_contract_sha256": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73",
+      "reason": "Added and passed an end-to-end temporary-subject test of interval parsing, build and fixture identities, CTest counts, path privacy, and churn measurement before first runtime work. No scope or cap changed.",
+      "recorded_at": "2026-10-02T19:03:00Z"
     }
   ],
-  "freeze_recorded_at": "2026-10-02T18:56:18Z",
-  "freeze_revision": 2,
+  "freeze_recorded_at": "2026-10-02T19:03:00Z",
+  "freeze_revision": 3,
   "historical_sha256": {
     "experiments/cpu/ACCEPTANCE.md": "00b2da4548384c78e921d0085ced2147f0ec7eca30635a2961f49279dcd6cf3b",
     "experiments/cpu/REVIEW.md": "35bf8e3a849d05e90e7291c9868cffcae014ada4d1607ad3542de7f912e9be6e",
