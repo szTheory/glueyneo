@@ -46,14 +46,14 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 **Velocity:**
 
 - Total plans completed: 10
-- Average recorded duration: 36.9min
-- Total recorded execution time: 369min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
+- Average recorded duration: 36.8min
+- Total recorded execution time: 368min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 10 | 369min | 36.9min |
+| 01 | 10 | 368min | 36.8min |
 
 **Recent Trend:**
 
@@ -73,7 +73,7 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 | Phase 01 P07 | 56min | 3 tasks | 9 files |
 | Phase 01 P08 | 43min | 2 tasks | 11 files |
 | Phase 01 P09 | 59min | 2 tasks | 14 files |
-| Phase 01 P10 | 38min | 2 tasks | 10 files |
+| Phase 01 P10 | 37min | 2 tasks | 10 files |
 
 ## Accumulated Context
 

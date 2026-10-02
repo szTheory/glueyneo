@@ -12,7 +12,7 @@ affects: [phase-01-execution, owned-cpu-admission]
 actuals:
   tokens: 20000
   tasks: 2
-  commits: 3
+  commits: 4
 plan_head_before: 2f6ddbd79b5c594af05a5bfff1cfcc92a71b994b
 tech-stack:
   added: []
@@ -34,7 +34,7 @@ key-decisions:
   - "Independent instances may be used concurrently when each instance and callback userdata have one owner; overlapping calls on the same instance remain unsupported."
   - "The active byte rejects synchronous callback reentry; it is not a same-instance thread synchronization primitive."
   - "Sanitizers instrument the owned core, Unity test object and each linked C test target; tool output is bounded source-review support, not an independent completeness proof."
-duration: 38min
+duration: 37min
 completed: 2026-10-02
 status: complete
 ---
@@ -55,7 +55,7 @@ status: complete
 
 - Native strict C17 build and full owned CTest suite passed: 11 expected, 11 observed, including the exact owner-mutation control, 16 supervised cold processes, inventory tests and actual compile-database check.
 - ASan+UBSan configuration built successfully; all six `owned-safety` CTests passed. ThreadSanitizer configured, built at `-O2`, and all six safety CTests passed on this host. The native `NONE`/`-O0` and TSan `RELEASE`/`-O2` modes both passed source/compile/link inventory checks. These are results for this machine and compiler/runtime only.
-- Inventory's seven unit controls passed in normal Python and `python3 -O`; its self-test passed in both modes, including missing/extra fields, stale digest, hidden global and callback-owner mutation controls. The contract self-test passed with two positive cases and six named negative controls. The frozen budget/churn check passed before the Plan 10 receipt was appended; the receipt is recorded during execute-phase closeout.
+- Inventory's seven unit controls passed in normal Python and `python3 -O`; its self-test passed in both modes, including missing/extra fields, stale digest, hidden global and callback-owner mutation controls. The contract self-test passed with two positive cases and six named negative controls. The Plan 10 receipt records 2,217 active seconds; cumulative effort is 11,630 seconds, with 989 runtime and 3,728 test/tool added/deleted lines. The frozen budget/churn check passes with no threshold pause.
 - Early failures were retained and corrected: the first ASan capability probe compiled with instrumentation but omitted sanitizer linker flags, falsely reporting the compiler lane unavailable; the probe now links with the same sanitizer flags. An expanded lifecycle test initially compared the fixture helper's boolean return to the CPU status enum; the assertion now checks truth. The inventory gate also correctly rejected one stale test-source digest after that edit; the digest is current and the complete suites pass.
 - `git diff --check` passed before commit. Implementation/evidence commit: `79f36c8`.
 
