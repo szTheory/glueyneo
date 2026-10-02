@@ -38,7 +38,7 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit owned-core decision, commands and results against finite effort/churn limits fixed before implementation; failed work and findings are preserved, actionable issues receive budgeted repair, and resource thresholds trigger review/replanning rather than automatic backend rejection. (CPU-05)
 
-**Plans**: 6/14 plans executed; reviewed gap plans 01-07–01-14 are now executing in dependency order. Phase 01 remains open / GAPS_FOUND and Phase 02 gated. Plan counts and requirement status change only at plan closeout and fresh phase verification.
+**Plans**: 7/14 plans executed; reviewed gap plans 01-07–01-14 are executing in dependency order. Phase 01 remains open / GAPS_FOUND and Phase 02 gated. CPU-01–05 remain Pending until current evidence and phase verification support a disposition.
 
 Plans:
 **Wave 1**
@@ -67,9 +67,9 @@ Plans:
 
 **Wave 7** *(gap closure; contract and budget)*
 
-- [ ] 01-07-PLAN.md — Reconcile the owned-core acceptance contract and freeze its separate budget without changing historical Musashi accounting.
+- [x] 01-07-PLAN.md — Reconcile the owned-core acceptance contract and freeze its separate budget without changing historical Musashi accounting; no CPU runtime has been accepted.
 
-**Wave 8** *(blocked on Wave 7; diagnostic tracer)*
+**Wave 8** *(gap closure; diagnostic tracer)*
 
 - [ ] 01-08-PLAN.md — Execute the original diagnostic through the owned CPU's private whole-core seam.
 

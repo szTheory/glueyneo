@@ -5,16 +5,16 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: executing
-stopped_at: Phase 01 gap plans passed independent review; awaiting explicit execution command
-last_updated: "2026-10-02T17:25:13Z"
+stopped_at: Plan 01-07 complete; execute-phase continues with dependent gap plans 01-08–01-14
+last_updated: "2026-10-02T19:06:00Z"
 last_activity: 2026-10-02
-last_activity_desc: Owned-core gap plans 01-07–01-14 passed independent review; Phase 01 remains open / GAPS_FOUND
-state_head: 6d24c3f7a21db902f52e7ab98c1fda844f99eef6
+last_activity_desc: Plan 01-07 froze the owned-core contract and budget before runtime work; Phase 01 remains open / GAPS_FOUND
+state_head: 2b10ab6a3b8d80b95669953ba407a62aa11fd7c2
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 14
-  completed_plans: 6
+  completed_plans: 7
   percent: 0
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — GAP PLANS REVIEWED; AWAITING EXECUTION
-Plan: 6 of 14 complete
-Status: Revised plans 01-07 through 01-14 passed installed structure/story/dependency/Nyquist checks and independent review; they are ready for explicit gap-closure execution. The developer approved the owned C17 core/private seam as the planning direction; no implementation is accepted. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
-Last activity: 2026-10-02 — Added shared-host scope, bounded review repair, evidence-first delivery and build hygiene lessons; independently rechecked plans.
+Phase: 01 (CPU acceptance experiment) — GAP CLOSURE EXECUTING
+Plan: 7 of 14 complete; next is 01-08
+Status: Plan 01-07 completed the owned-core contract, scope reconciliation, and separate budget freeze. Plans 01-08 through 01-14 remain in the authorized gaps-only execution chain. The owned CPU runtime has not started or been accepted. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
+Last activity: 2026-10-02 — Closed Plan 01-07 with nine contract tests, optimized-Python controls, preserved-history checks, and a revision-3 ledger baseline.
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -45,19 +45,19 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 
 **Velocity:**
 
-- Total plans completed: 4
-- Average recorded duration: 39.5min
-- Total recorded execution time: 158min; conservatively charged effort 20,005 seconds including review and closeout allowances; all four plans are complete and verification found gaps
+- Total plans completed: 7
+- Average recorded duration: 31.7min
+- Total recorded execution time: 229min; conservatively charged effort 23,365 seconds including review and closeout allowances; Phase 01 remains open with gaps
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 4 | 158min | 39.5min |
+| 01 | 7 | 229min | 32.7min |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-01, 01-02, 01-03
+- Last 5 plans: 01-03, 01-04, 01-05, 01-06, 01-07
 - Trend: Not established
 
 **Per-Plan Metrics:**
@@ -70,6 +70,7 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 | Phase 01 P04 | 31min | 2 tasks | 13 files |
 | Phase 01 P05 | 10min | 3 tasks | 8 files |
 | Phase 01 P06 | 5min | 1 tasks | 4 files |
+| Phase 01 P07 | 56min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -93,14 +94,15 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - [Phase 01, historical]: The Musashi decision satisfied its bounded-decision obligation. Consolidated CPU-05 remains Pending for the owned-core decision; CPU-01–04 remain Pending, Phase 01 open and Phase 02 gated.
 - [Phase 01, historical checkpoint]: Developer selected C: reject/defer current Musashi candidate and discuss backend replanning; at that checkpoint the owned C core/private seam and strangler transition remained proposals, with no source work, attempt, cap, backend selection or scope change authorized. Superseded by the later owner approval of owned-core gap planning below.
 - [Phase 01, planning 2026-10-02]: The developer approved the owned C17 core behind a private whole-CPU seam, diagnostic-first scope, and evidence-led expansion as the gap-planning direction. Revised plans 01-07–01-14 pass the installed structural, story, dependency and Nyquist checks. Plan 01-12 is a bounded source/test review-repair tranche; Plan 01-13 owns inventory, presets and fresh run evidence; Plan 01-14 owns independent final review and sealing. The proposed 32-hour owned-core cap is not frozen until Plan 01-07 executes; all consumed Musashi charges/caps remain immutable. No implementation or backend admission has occurred.
+- [Phase 01, Plan 01-07]: Froze the revision-3 owned-core budget ledger and 32-hour / 8-hour gates before any CPU runtime or behavioral test change. Charged 3,360 seconds for governance; baseline churn is 0 runtime and 636 added test/tool lines. The official MC68000 manual review corrected level-7 acceptance and explicit MOVE absolute opcode patterns. CPU-01–05 remain Pending; Phase 02 remains gated.
 
 ### Pending Todos
 
-- Six historical plans are complete; revised plans 01-07–01-14 passed independent checking and are ready to execute. After the user clears context, the next command is `$gsd-execute-phase 01 --gaps-only`. Execution must freeze the separate authored-core budget, preserve old Musashi accounting, run the owned diagnostic early, and retain budget for review-driven repair. Phase 02 remains gated.
+- Seven plans are complete; reviewed gap plans 01-08–01-14 remain in the active gaps-only execution chain. Plan 01-08 must run the original diagnostic first, preserve the eight-hour diagnostic gate, and retain budget for independent review and regression-backed repair. Phase 02 remains gated.
 
 ### Blockers/Concerns
 
-- The required pause is before gap-plan execution. Current configuration remains interactive with auto_advance and _auto_chain_active false.
+- The explicit gaps-only command cleared the pre-execution pause. Pause again after this named execute-phase step; current configuration keeps auto_advance and _auto_chain_active false.
 - No per-core GUI is in scope. Each core repository targets a library, headless diagnostic runner and thin libretro adapter; RetroArch remains the interactive frontend until a shared Playstead/external host is ready.
 - UI-phase/review and AI-integration gates are disabled for this C-only, non-AI project. Keep API coverage enabled for phases that integrate external APIs/SDKs such as libretro; the installed gate is conditional on those integrations.
 
@@ -121,6 +123,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-02 — owner-directed planning revisions and independent plan check
-Stopped at: Phase 01 gap plans passed independent review; awaiting explicit execution command
-Resume file: .planning/phases/01-cpu-acceptance-experiment/01-CONTEXT.md
+Last session: 2026-10-02 — execute-phase 01 --gaps-only; Plan 01-07 complete
+Stopped at: Continue with Plan 01-08 in the active execute-phase step
+Resume file: .planning/phases/01-cpu-acceptance-experiment/.continue-here.md
