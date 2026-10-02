@@ -1,12 +1,12 @@
 # Glueyneo
 
-Glueyneo is a planned portable Neo Geo MVS/AES emulator core written in C, intended for reuse in Playstead and other frontends.
+Glueyneo is a planned portable Neo Geo MVS/AES emulator core written in C. The long-term direction is several independent cores used by Playstead or another shared host.
 
-The project is initialized for development. Its private CPU experiment builds and runs an original arithmetic diagnostic; there is no playable emulator or public SDK yet. The first milestone is a CPU/bus diagnostic SDK alpha: a small native C API, deterministic execution of an original diagnostic, explicit host I/O boundaries and a real installed-package consumer.
+The project is initialized for development. Its private CPU experiment runs an original diagnostic, but the pinned Musashi candidate is rejected for current admission after source review found six blockers. There is no playable emulator or public SDK yet. The first milestone is a CPU/bus diagnostic SDK alpha with an owned C17 core under active planning; no replacement implementation has started or been accepted.
 
-Phase 1 is a bounded CPU acceptance experiment. The second adaptation repaired the recorded compiler failures and passes the guest, consequential negative control, and native source/budget audits. The [experiment contract](experiments/cpu/ACCEPTANCE.md) preserves failures, cumulative limits and current evidence. No backend has been accepted; isolation, timing and continuation qualification remain separate obligations.
+Each core repository targets a reusable library, a headless diagnostic runner and a thin libretro adapter. RetroArch is the interactive frontend until Playstead or a separate shared host is ready; no core repository will own a GUI or windowed host application. See the [project contract](.planning/PROJECT.md), [requirements](.planning/REQUIREMENTS.md) and [roadmap](.planning/ROADMAP.md).
 
-Start with the [project](.planning/PROJECT.md), [requirements](.planning/REQUIREMENTS.md), [roadmap](.planning/ROADMAP.md) and [current state](.planning/STATE.md). These are the current planning contracts. The next milestone outlines an interactive diagnostic through libretro and RetroArch on macOS; game compatibility expands after that evidence exists.
+Phase 1 remains open / GAPS_FOUND. Revised plans 01-07 through 01-14 for the owned-core gap closure are saved and awaiting independent recheck before execution. Review findings will receive bounded regression-backed repair; final qualification remains separate. The [experiment contract](experiments/cpu/ACCEPTANCE.md) preserves the rejected candidate's evidence and frozen accounting; it does not qualify a replacement core.
 
 The preserved [preparation index](.planning/preparation/README.md), [brief](.planning/preparation/BRIEF.md) and [decision register](.planning/preparation/DECISIONS.md) contain dated hardware sources, engineering recommendations, sibling-project lessons and the rationale behind the plan. They do not establish implemented behavior.
 

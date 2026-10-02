@@ -32,13 +32,13 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
 **Requirements**: CPU-01, CPU-02, CPU-03, CPU-04, CPU-05
 **Success Criteria** (what must be TRUE):
 
-  1. A maintainer can rebuild the pinned candidate and account for every copied, generated, compiled and distributed file, its notices and host calls, including demonstrated FPU/SoftFloat exclusion or complete retained disposition. (CPU-01)
+  1. A maintainer can build the owned C17 candidate and account for every authored, copied, generated, compiled and distributed file, its notices and host calls, with imported CPU/FPU/SoftFloat/generator code excluded from its runtime closure. (CPU-01)
   2. Distinguishable instances execute a tiny real guest alternately and concurrently with isolated-baseline results, including simultaneous cold initialization and failing creation/teardown; guest failures do not terminate or corrupt the host. (CPU-02; CPU-01 host-call disposition)
   3. A maintainer can observe guest-computed progress, bounded stops and overshoot, and the selected interrupt/exception interactions, with supported precision and unsupported behavior stated. (CPU-03)
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
-  5. A maintainer can reproduce the explicit acceptance decision, commands and results against a finite effort/patch budget fixed before adaptation; failed or over-budget candidates have counterexamples and a replacement/replanning disposition. (CPU-05)
+  5. A maintainer can reproduce the explicit owned-core decision, commands and results against finite effort/churn limits fixed before implementation; failed work and findings are preserved, actionable issues receive budgeted repair, and resource thresholds trigger review/replanning rather than automatic backend rejection. (CPU-05)
 
-**Plans**: 6/12 plans executed; plans 01-07–01-12 are gap-closure plans ready for execution. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
+**Plans**: 6/14 plans executed; revised plans 01-07–01-14 are gap-closure work awaiting independent review. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
 
 Plans:
 **Wave 1**
@@ -61,7 +61,7 @@ Plans:
 
 - [x] 01-05-PLAN.md — Correct the canonical MVP story, preserve historical evidence, and record a truthful current candidate disposition.
 
-**Wave 6** *(direction recorded; execute-phase workflow pause)*
+**Wave 6** *(historical direction checkpoint; later owned-core planning approved)*
 
 - [x] 01-06-PLAN.md — Developer selected C: reject/defer the current candidate and discuss backend replanning; no source work or scope change authorized.
 
@@ -87,22 +87,30 @@ Plans:
 
 **Wave 12** *(blocked on Waves 8–11; independent qualification)*
 
-- [ ] 01-12-PLAN.md — Collect exact-source evidence and independent review before any backend admission decision.
+- [ ] 01-12-PLAN.md — Independently review the owned implementation and fix findings within a bounded source/test tranche.
 
-Planning guidance: First set a concrete finite effort cap, patch budget and stopping/replacement rules. Then use small CMake/CTest experiment scaffolding, a licensed original tiny guest, source/host-call audit, and isolation/timing/continuation experiments. Evaluate the research's pinned Musashi candidate without presuming acceptance. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
+**Wave 13** *(blocked on Wave 12; source inventory and fresh evidence)*
 
-**Admission gate:** CPU-01–04 are Pending for current admission. Historical task evidence exists; the phase verifier refused grammar preflight rather than establish that all four behaviors failed. At plan 01-05 task 1, CPU-05 is Pending final disposition; task 3 owns its evidence-conditioned requirement result. Both adaptation attempts are consumed; no further adaptation is authorized. Execution closes governance gaps and does not qualify the backend. CPU-05 may be satisfied by a reproducible rejection or deferral. That does not satisfy CPU-01–04 or complete this phase. The historical 01-04 accepted receipt is contradicted for current admission by six later source blockers. Phase 01 remains open with `gaps_found`, and Phase 02 stays gated until accepted evidence and fresh phase verification or an explicitly reconciled roadmap revision. Plan 01-06 owns developer direction before further work. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
+- [ ] 01-13-PLAN.md — Complete source/rights inventory, portable presets, collector controls and current execution evidence.
+
+**Wave 14** *(blocked on Wave 13; final independent review and disposition)*
+
+- [ ] 01-14-PLAN.md — Independently review the final revision, repair narrow evidence-tool findings, and seal only a fully supported disposition.
+
+Planning guidance: Plan 01-07 freezes owned-core effort/churn guardrails without an attempt count. Run the original diagnostic in 01-08 before expanding scope; keep the evidence collector small, then qualify timing, faults, instance isolation and actual continuation. Preserve Musashi accounting as historical evidence only. Review findings lead to regression-backed repair within budget; retain open GAPS_FOUND and replan when a threshold or scope boundary blocks a fix. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
+
+**Admission gate:** CPU-01–04 remain Pending for current admission. Historical task evidence exists; the phase verifier refused grammar preflight rather than establish that all four behaviors failed. Plan 01-05 completed only the historical Musashi CPU-05 decision; the owned-core CPU-05 decision is still pending. Both Musashi adaptation attempts are consumed, and no further Musashi adaptation is authorized. Plans 01-07–01-14 carry the separately budgeted owned-core work; planning or a non-admitting disposition does not satisfy CPU-01–04. The historical 01-04 accepted receipt is contradicted for current admission by six later source blockers. Phase 01 remains open with `gaps_found`, and Phase 02 stays gated until accepted evidence and fresh phase verification or an explicitly reconciled roadmap revision. Plan 01-06 records an earlier direction checkpoint; current owner-approved scope is in Phase 01 CONTEXT and PROJECT/REQUIREMENTS. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
 
 ### Phase 2: Executable diagnostic SDK
 
-**Goal**: An external C integrator can install an offline SDK and execute a meaningful original CPU/bus diagnostic through its ordinary native API, with safe failures and reproducible evidence.
+**Goal**: As a C integrator, I want to install an offline SDK and run a meaningful original CPU/bus diagnostic through its ordinary native API and a headless runner, so that I can reproduce results with safe failures and clear evidence.
 **Mode:** mvp
 **Depends on**: Phase 1 acceptance gate
 **Requirements**: API-01, API-02, API-03, API-04, DIAG-01, DIAG-02, DIAG-03, BUILD-01, BUILD-02, EVID-01, EVID-02, EVID-03, EVID-04, DOC-01, DOC-02
 **Success Criteria** (what must be TRUE):
 
   1. An integrator can create/reset/destroy an opaque host-independent instance, load bounded diagnostic regions under explicit immutable-media ownership, and receive actionable errors with safe recovery/destruction for invalid sizes, unsupported capabilities, lifecycle misuse and allocation/load failures, without leaks, process exit or unintended state mutation. (API-01, API-02, API-04)
-  2. An external consumer's create/load/run/results/destroy flow executes the original guest through bounded native calls reporting actual progress and stop reasons; initialized-data/BSS and named CPU/bus observations match justified oracles, and a deliberate wrong-behavior control fails. (API-03, DIAG-01, DIAG-02)
+  2. An external consumer's create/load/run/results/destroy flow and a headless diagnostic runner execute the same original guest through the ordinary native API; bounded calls report actual progress and stop reasons, initialized-data/BSS and named CPU/bus observations match justified oracles, and a deliberate wrong-behavior control fails. (API-03, DIAG-01, DIAG-02)
   3. Maintainers obtain isolated-baseline guest observations at equal boundaries for repeat/split execution and distinguishable native instances run both interleaved and concurrently, including concurrent native creation/load/teardown. Meaningful boundary/lifecycle/property, bounded input/call-sequence fuzz and supported sanitizer results retain discovered regressions. (DIAG-03, EVID-02)
   4. An integrator builds C17 static/shared libraries offline with target-scoped CMake/CTest and pinned test-only Unity, executes the diagnostic from out-of-tree installed C consumers for both variants, and compiles/links C++ public-header consumers. Compiled getting-started, ownership/error and failure-reproduction guidance matches the artifacts and states the exact supported subset and excluded game/BIOS/video/audio/public-state/persistence claims. (BUILD-01, BUILD-02, DOC-01, DOC-02)
   5. A maintainer can audit every public dependency/fixture's rights, notices, source and recipe, output digest, firmware needs and oracle ancestry; reproduce nonempty machine-readable results with exact identities and distinct outcomes; and reproduce diagnostic execution, memory/allocation, load and build-cost baselines on named hosts with uncertainty and no gameplay or uncalibrated-threshold claims. (EVID-01, EVID-03, EVID-04)
@@ -113,7 +121,7 @@ Planning guidance: Slice from opaque lifecycle and bounded media through the rea
 
 ### Phase 3: Distributable release qualification
 
-**Goal**: A release consumer can download a complete unsigned SDK bound to a tested commit, rebuild or relocate it, and reproduce its diagnostic under truthful support claims.
+**Goal**: As a release consumer, I want to download a complete unsigned SDK bound to a tested commit and rebuild or relocate it, so that I can reproduce its diagnostic under truthful support claims.
 **Mode:** mvp
 **Depends on**: Phase 2
 **Requirements**: BUILD-03, BUILD-04, DEL-01, DEL-02, DEL-03, DEL-04, DEL-05
@@ -137,7 +145,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 6/6 | Open / GAPS_FOUND; C recorded, backend discussion next | - |
+| 1. CPU acceptance experiment | v0.1 | 6/6 historical | Open / GAPS_FOUND; owned-core plans 01-07–01-14 under review | - |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
@@ -155,7 +163,7 @@ This is an outline, not allocated phase scope or a promised release version. Ref
 
 1. Qualify a practical host-side media importer, useful BIOS/set/revision diagnostics and a first private commercial scenario with explicit game/BIOS/region/mode identity and public minimal regressions where lawful.
 2. Expand original BIOS/board profiles and banking, protection, raster, audio and peripheral families from concrete evidence, preserving hardware slowdown and recording unknowns.
-3. Demonstrate Playstead integration and a second real consumer before stabilizing broader API policy; select a minimal SDL3 host only for a recurring integration need.
+3. Demonstrate Playstead or shared-host integration and a second real consumer before stabilizing broader API policy. Interactive GUI ownership stays outside individual core repositories. For process integration, qualify the ROM path and explicit save-directory override, prove no save is written beside the ROM, verify periodic and on-demand battery-save flush with a stated loss window, test graceful SIGTERM shutdown, and verify distinct exit codes for normal completion, guest errors, and host errors. Treat these as target requirements, not current Playstead support: `AdapterPin.json` and `SUPPORT-MATRIX.md` at inspected revision `1de3e954166eaf0a52fe0e4a950b46756139884d` (2026-10-02) specify `{saveDir}/{romBaseName}.sav`, periodic flush every 24 seconds, no on-demand flush, a 24-second loss window, and SIGTERM classified as killed rather than graceful save-and-quit. Recheck the live launcher contract when planning this work.
 4. Optimize representative measured workloads with behavior equivalence and controlled-host calibration. Revisit broader platforms and optional advanced state features only when correctness and maintenance evidence support them.
 
 At milestone close, reconcile requirement evidence and failures, triage relevant issues/PRs, refresh docs and actual support claims, review diagnostic/CI costs, and revise the next outline and horizon. Preparation remains provenance; no historical sibling-project receipt proves Glueyneo behavior.

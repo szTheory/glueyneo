@@ -2,6 +2,8 @@
 
 Date: 2026-10-01. Status: coherent planning recommendations under the user's instruction to follow recommendations automatically. These are not measurements, frozen API specifications, or completed implementation decisions. Preserve IDs when a choice changes; record the new evidence and superseding decision.
 
+**Namespace note — 2026-10-02:** The `D-##` labels below are preserved as dated source identifiers and are referenced by current documents as `PREP-D-##`. Phase-local decisions use their own `P01-C-##` or `P01-R-##` namespace; do not interpret matching numbers as the same decision.
+
 ## Priority and evidence
 
 Choose memory safety and correctly specified behavior before accepting a performance optimization. Among correct choices, favor readable code, integration simplicity and measured speed. When hardware behavior is uncertain, record the uncertainty and its affected configurations instead of promoting an emulator's behavior into an unquestioned specification.

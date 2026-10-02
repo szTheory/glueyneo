@@ -2,6 +2,8 @@
 
 **Supersession note — 2026-10-01:** OpenGSD initialization promotes active scope into [PROJECT.md](../PROJECT.md), [REQUIREMENTS.md](../REQUIREMENTS.md), [ROADMAP.md](../ROADMAP.md) and [STATE.md](../STATE.md). This directory remains the dated preparation record; the original initialization instructions and proposed sequence below are historical provenance. Initialization does not establish an implemented emulator or measured baseline.
 
+**Supersession note — 2026-10-02:** The owner has clarified that no emulator-core repository will own a GUI or windowed host. Each core repository targets a library, headless diagnostic runner, and thin libretro adapter; RetroArch is the interactive frontend until Playstead or a separate shared host is ready. This supersedes all conditional SDL3-host suggestions in the dated preparation material, including the brief, decision register, quality/CI report, hardware/ecosystem report and roadmap seed. See the current contracts in [PROJECT.md](../PROJECT.md), [REQUIREMENTS.md](../REQUIREMENTS.md), and [ROADMAP.md](../ROADMAP.md); the dated source documents remain unchanged as provenance.
+
 Research date: **2026-10-01**. Status: preparation ready for initialization; review and dispositions are recorded in [ADVERSARIAL-REVIEW.md](ADVERSARIAL-REVIEW.md). Implementation and OpenGSD initialization remain ahead. Intended reader: a fresh agent or contributor planning the first useful Glueyneo release.
 
 ## Start here
@@ -19,7 +21,7 @@ Paste that into a fresh Codex conversation with this project as its working dire
 | Question / search terms | Read | Source namespace |
 |---|---|---|
 | Vision, constraints, user authorization, public privacy, first consumer | [Brief](BRIEF.md) | User instruction and synthesis |
-| Alternatives, stakeholder lenses, accepted defaults, reopening a choice | [Decision register](DECISIONS.md) | D-01 through D-44 |
+| Alternatives, stakeholder lenses, accepted defaults, reopening a choice | [Decision register](DECISIONS.md) | PREP-D-01 through PREP-D-44 |
 | 68000, Z80, YM2610, clocks, MVS, AES, video, protection, BIOS, emulator complaints | [Hardware and ecosystem](NEOGEO-HARDWARE-AND-ECOSYSTEM.md) | HW source IDs |
 | C17, ABI, allocation, scheduler, CMake, CTest, Unity, state, persistence, FFI | [C core architecture](C-CORE-ARCHITECTURE.md) | C source IDs |
 | Playstead, LatticeStripe, ExifCleaner, Lockspire, real past failures, fixture provenance | [Project DNA](PROJECT-DNA.md) | DNA source IDs with repository-relative paths and commit/date snapshots |

@@ -5,15 +5,15 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: executing
-stopped_at: Phase 01 gap-closure plans checked; pause before execution
-last_updated: "2026-10-02T14:25:35.211Z"
+stopped_at: Revised Phase 01 plans passed independent check; pause before execution
+last_updated: "2026-10-02T17:15:29Z"
 last_activity: 2026-10-02
-last_activity_desc: Plans 01-07 through 01-12 passed the independent plan checker; Phase 01 remains open / GAPS_FOUND
-state_head: 8377966965e175d19bbc262a63c314ad3e06f230
+last_activity_desc: Revised owned-core plans 01-07–01-14 passed installed structure/story/Nyquist checks; Phase 01 remains open
+state_head: 6d24c3f7a21db902f52e7ab98c1fda844f99eef6
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 12
+  total_plans: 14
   completed_plans: 6
   percent: 0
 ---
@@ -22,7 +22,7 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-01)
+See: .planning/PROJECT.md (updated 2026-10-02)
 
 **Core value:** Trustworthy Neo Geo emulation that other software can embed easily.
 **Current focus:** Phase 01 — CPU acceptance experiment
@@ -30,16 +30,16 @@ See: .planning/PROJECT.md (updated 2026-10-01)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — READY TO EXECUTE
-Plan: 6 of 12 complete
-Status: Plans 01-07 through 01-12 are checked and ready for gap-closure execution. The developer approved the owned C17 core/private seam as the planning direction; no implementation is accepted. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
-Last activity: 2026-10-02 — Owned-core gap plans passed independent plan review; historical Musashi rejection and budget remain unchanged.
+Phase: 01 (CPU acceptance experiment) — PLANS CHECKED; PAUSE BEFORE EXECUTION
+Plan: 6 of 14 complete
+Status: Revised plans 01-07 through 01-14 passed the installed plan/story/Nyquist checks and await developer review before execution. The developer approved the owned C17 core/private seam as the planning direction; no implementation is accepted. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
+Last activity: 2026-10-02 — Added shared-host scope, bounded review repair, evidence-first delivery and build hygiene lessons; independently rechecked plans.
 
 Progress: [░░░░░░░░░░] 0%
 
-Task-level evidence exists for CPU-01 through CPU-05 (5/27 v1 requirements), but the later source review disputes clean backend admission. The current verification is `gaps_found`; Phase 1 remains open and Phase 2 stays gated.
+Historical task-level evidence exists for CPU-01 through CPU-05 (5/27 v1 requirements), but the later source review disputes clean backend admission. The current verification is `gaps_found`; Phase 1 remains open and Phase 2 stays gated.
 
-Plan 01-05 task 1 checkpoint: CPU-01–04 are Pending current admission; historical task evidence remains, and full verification refused grammar preflight without concluding all four behaviors failed. CPU-05 is Pending final disposition until task 3 seals and evaluates the rejection receipt. Both adaptation attempts are consumed; no further adaptation is authorized. This execution closes governance gaps and does not qualify the backend. Task 3 reports final CPU-05 status in REQUIREMENTS.md and its summary; this checkpoint is chronological.
+Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending current admission; the full verifier refused grammar preflight without concluding all four behaviors failed. CPU-05 then awaited the Musashi decision. Current consolidated CPU-05 remains Pending for the owned-core decision; both original Musashi attempts remain consumed and no further adaptation is authorized.
 
 ## Performance Metrics
 
@@ -80,8 +80,8 @@ Plan 01-05 task 1 checkpoint: CPU-01–04 are Pending current admission; histori
 Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECISIONS.md.
 
 - v0.1 delivers an actual CPU/bus diagnostic SDK; next milestone outlines interactive graphics/input/sound, real RetroArch macOS, continuation and persistence.
-- Phase 1 must set a finite effort/patch budget before CPU adaptation and demonstrate real execution, isolation, state, timing and host safety.
-- CPU-05 can record rejection; Phase 1 completion/Phase 2 admission require accepted CPU-01–04 evidence or an explicit reconciled roadmap revision. The 01-04 receipt records bounded private candidate acceptance; the later phase review found six blockers, so admission is unresolved pending disposition and fresh verification.
+- Phase 1 uses bounded effort/churn guardrails for owned work, with no substantive-attempt counter; tooling halts do not consume an attempt. Review findings trigger in-scope regression-backed repair within the remaining budget. A threshold pauses work and preserves GAPS_FOUND; it is not a correctness verdict. The first owned diagnostic runs in Plan 01-08 before scope expansion.
+- The historical CPU-05 obligation recorded the Musashi rejection; consolidated CPU-05 remains pending for the owned-core decision. Phase 1 completion/Phase 2 admission require accepted CPU-01–04 evidence or an explicit reconciled roadmap revision. The 01-04 receipt records bounded private-candidate acceptance; the later phase review found six blockers, so admission is unresolved pending disposition and fresh verification.
 - All-C runtime, host-owned I/O and separate ABI/snapshot/replay/durable-save identities remain constraints. No release platform matrix or broad compatibility claim is qualified.
 - Local initialization has no remote fork base. OpenGSD selected sequential execution; `git.branching_strategy` is temporarily `none` so this run uses the existing `chore/initialize-project` feature branch. Restore phase branching when a remote/default base is established; no main merge or hosted qualification is implied.
 - [Phase 01, historical]: Initial procedural halt was resolved by approved bounded recovery; frozen budget remains unchanged.
@@ -90,24 +90,26 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - [Phase 01, checkpoint]: Plan 01-03 qualified selected timing and explicit fresh-destination continuation within frozen caps; final candidate admission is recorded in plan 01-04.
 - [Phase 01, verification 2026-10-01]: OpenGSD returned `gaps_found`. Its MVP story validator rejected the canonical ROADMAP goal before implementation scoring; 0/5 is not a claim that all requirements failed. A later independent source review corroborated six blockers. No tests were rerun during verification; the current source/admission claim needs disposition and a fresh verification pass.
 - [Phase 01]: Reject current CPU admission for six unresolved source blockers; defer repair/replacement direction to blocking plan 01-06.
-- [Phase 01]: CPU-05 alone satisfies its bounded-decision obligation; CPU-01–04 remain Pending, Phase 01 open and Phase 02 gated.
-- [Phase 01]: Developer selected C: reject/defer current Musashi candidate and discuss backend replanning; owned C core/private seam and strangler transition remain proposals; no source work, attempt, cap, backend selection or scope change authorized.
-- [Phase 01, planning 2026-10-02]: The developer approved the owned C17 core behind a private whole-CPU seam, diagnostic-first scope, and evidence-led expansion as the gap-planning direction. Plans 01-07–01-12 passed independent plan review. Their proposed 32-hour owned-core cap is not frozen until plan 01-07 executes; all consumed Musashi charges/caps remain immutable. No implementation or backend admission has occurred.
+- [Phase 01, historical]: The Musashi decision satisfied its bounded-decision obligation. Consolidated CPU-05 remains Pending for the owned-core decision; CPU-01–04 remain Pending, Phase 01 open and Phase 02 gated.
+- [Phase 01, historical checkpoint]: Developer selected C: reject/defer current Musashi candidate and discuss backend replanning; at that checkpoint the owned C core/private seam and strangler transition remained proposals, with no source work, attempt, cap, backend selection or scope change authorized. Superseded by the later owner approval of owned-core gap planning below.
+- [Phase 01, planning 2026-10-02]: The developer approved the owned C17 core behind a private whole-CPU seam, diagnostic-first scope, and evidence-led expansion as the gap-planning direction. Revised plans 01-07–01-14 pass the installed structural, story, dependency and Nyquist checks. Plan 01-12 is a bounded source/test review-repair tranche; Plan 01-13 owns inventory, presets and fresh run evidence; Plan 01-14 owns independent final review and sealing. The proposed 32-hour owned-core cap is not frozen until Plan 01-07 executes; all consumed Musashi charges/caps remain immutable. No implementation or backend admission has occurred.
 
 ### Pending Todos
 
-- Six historical plans are complete; gap-closure plans 01-07–01-12 are checked and ready. The next step is `$gsd-execute-phase 01 --gaps-only`; pause here for the developer to review the plans and choose whether to execute. Execution must first freeze the separate authored-core budget, preserve the old Musashi accounting, and stop if the diagnostic gate or budget fails. Phase 02 remains gated.
+- Six historical plans are complete; revised plans 01-07–01-14 passed independent checking. Pause here for developer review before `$gsd-execute-phase 01 --gaps-only`. Execution must freeze the separate authored-core budget, preserve old Musashi accounting, run the owned diagnostic early, and retain budget for review-driven repair. Phase 02 remains gated.
 
 ### Blockers/Concerns
 
 - The required pause is before gap-plan execution. Current configuration remains interactive with auto_advance and _auto_chain_active false.
+- No per-core GUI is in scope. Each core repository targets a library, headless diagnostic runner and thin libretro adapter; RetroArch remains the interactive frontend until a shared Playstead/external host is ready.
+- UI-phase/review and AI-integration gates are disabled for this C-only, non-AI project. Keep API coverage enabled for phases that integrate external APIs/SDKs such as libretro; the installed gate is conditional on those integrations.
 
 - Earlier plan receipts record the private guest, source closure, FPU/SoftFloat exclusion, selected isolation, timing, host-safety, and fresh-destination continuation evidence. The later independent review found legal-instruction undefined behavior and generator defects; do not treat the old acceptance receipt alone as current SDK admission evidence.
 - Preserve all counterexamples: odd IRQ crash, fixture UBSan, reset accounting/NMI, BSD address-error boundary and malformed-state/zero-request guards. The explicit state codec passes eight continuation checkpoints; raw upstream context-copy APIs remain unsuitable.
 - Frozen cumulative charges are 2,614 handwritten, 523 helper and 483 semantic lines, leaving 77 helper and 17 semantic lines. Both attempts are consumed. Charged effort is 20,005 seconds total / 18,859 seconds in the final attempt. Preserve these charges; any future work must remain inside the original limits or be separately replanned.
 - Remote/CI/protection/release authority is not configured; future delivery dependency. Continue independent implementation and artifact preparation; repeat remote triage at setup/shipping.
 - Evidence is limited to the native Apple Clang 21 / Darwin arm64 experiment; no release platform matrix, board/BIOS/game compatibility, public state format, or performance claim is established. Task-level records exist for CPU-01 through CPU-05, but the current phase verification did not certify them; the other 22 v1 requirements remain pending.
-- Two substantive adaptation attempts are consumed. Preserve cumulative caps in later plans; no automatic further adaptation attempt is authorized. Phase 2 remains blocked until the source findings are dispositioned and Phase 1 verification passes.
+- Both original Musashi adaptation attempts are consumed. Preserve those historical caps/charges and do not start another Musashi attempt automatically. The separate owned-core plans use their own proposed effort cap; Phase 2 remains blocked until current source findings are dispositioned and Phase 1 verification passes.
 
 ## Deferred Items
 
@@ -119,6 +121,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-02T14:25:35.211Z
-Stopped at: Phase 01 gap-closure plans checked; pause before execution
+Last session: 2026-10-02 — owner-directed planning revisions and independent plan check
+Stopped at: Revised Phase 01 plans passed independent check; pause before execution
 Resume file: .planning/phases/01-cpu-acceptance-experiment/01-CONTEXT.md

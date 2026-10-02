@@ -6,6 +6,8 @@
 **Confidence:** MEDIUM
 **Status:** Planning synthesis. No runtime code, backend acceptance, platform qualification, compatibility result or performance measurement is established.
 
+**Scope update — 2026-10-02:** The current [project contract](../PROJECT.md), [requirements](../REQUIREMENTS.md), and [roadmap](../ROADMAP.md) supersede this report's Musashi-first backend recommendation and conditional SDL3-host references. The owner selected planning for an owned C17 CPU core; each core repository targets a library, headless diagnostic runner, and thin libretro adapter, with GUI ownership in RetroArch and the future shared host. Preserve the report as dated research provenance.
+
 ## Executive Summary
 
 Glueyneo should begin as an installable **v0.1 CPU/bus diagnostic SDK alpha**. Its defining result is an external C consumer executing an original deterministic guest program through the ordinary native API. Build one concrete machine model with explicit instance ownership, a private audited CPU adapter and host-owned media loading and presentation. The [current project contract](../PROJECT.md) controls scope; dated preparation supplies provenance. The next milestone adds selected video/input/real chip sound, continuation and persistence, and a thin libretro adapter qualified in actual RetroArch on macOS. Commercial-game compatibility follows later.
@@ -161,7 +163,7 @@ Source classifications below retain the research reports' confidence instead of 
 ### Authoritative Project Scope and Dated Provenance
 
 - [PROJECT.md](../PROJECT.md) — current milestone, constraints and outlined next milestone; authoritative scope, no runtime evidence.
-- [Decision register](../preparation/DECISIONS.md), D-01–D-44; [roadmap seed](../preparation/ROADMAP-SEED.md) — decision ancestry and revisable sequence.
+- [Decision register](../preparation/DECISIONS.md), PREP-D-01–PREP-D-44; [roadmap seed](../preparation/ROADMAP-SEED.md) — decision ancestry and revisable sequence.
 - [C architecture](../preparation/C-CORE-ARCHITECTURE.md), C-01–C-29; [adversarial review](../preparation/ADVERSARIAL-REVIEW.md), A-01–A-04 — ownership, timing, state and failure gates.
 - [Quality/performance/CI](../preparation/QUALITY-PERFORMANCE-AND-CI.md) and [hardware/ecosystem](../preparation/NEOGEO-HARDWARE-AND-ECOSYSTEM.md) — evidence dimensions and source ancestry, without current measurements.
 

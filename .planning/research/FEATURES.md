@@ -4,6 +4,8 @@
 **Researched:** 2026-10-01
 **Confidence:** MEDIUM for ecosystem findings and planning synthesis; implementation evidence is absent.
 
+**Scope update — 2026-10-02:** Current scope in [PROJECT.md](../PROJECT.md), [REQUIREMENTS.md](../REQUIREMENTS.md), and [ROADMAP.md](../ROADMAP.md) supersedes the conditional SDL3-host references in this dated research. Each core repository targets a library, headless diagnostic runner, and thin libretro adapter; GUI ownership stays with RetroArch and the future shared host. Preserve this report as research provenance.
+
 ## Scope and Evidence Status
 
 [PROJECT.md](../PROJECT.md) owns current scope. The launch milestone is **v0.1 — CPU/bus diagnostic SDK alpha**: an integrator installs an offline C package and executes an original deterministic guest program through its ordinary native API. This is a useful emulation slice, not a complete Neo Geo machine or a game-playing release. The next milestone is an interactive diagnostic with selected video/input, real chip-generated sound, continuation/persistence and qualification in actual RetroArch on macOS.
@@ -156,7 +158,7 @@ S7 and S8 support the competitor descriptions at MEDIUM confidence. Their actual
 |----|--------------------------|-----------------|--------------------------|
 | S1 | [Current project contract](../PROJECT.md), initialized 2026-10-01 | v0.1 scope, next milestone and constraints | Authoritative local scope; no implemented behavior claimed |
 | S2 | [Preparation brief](../preparation/BRIEF.md), 2026-10-01 | Intended users, core value and eventual outcomes | User-intent synthesis, not market survey or implementation evidence |
-| S3 | [Decision register](../preparation/DECISIONS.md), D-01–D-44, 2026-10-01 | Adopted design/scope defaults and revisit conditions | Planning provenance; detailed contracts remain subject to bounded experiments |
+| S3 | [Decision register](../preparation/DECISIONS.md), PREP-D-01–PREP-D-44, 2026-10-01 | Adopted design/scope defaults and revisit conditions | Planning provenance; detailed contracts remain subject to bounded experiments |
 | S4 | [Roadmap seed](../preparation/ROADMAP-SEED.md), 2026-10-01 | Vertical milestones and meaningful acceptance | Proposal superseded by current PROJECT and eventual REQUIREMENTS/ROADMAP |
 | S5 | [C core architecture](../preparation/C-CORE-ARCHITECTURE.md), 2026-10-01 | Ownership, scheduling, state and real consumer constraints | Dated research with source ledger; all API details proposed |
 | S6 | [Quality/evidence plan](../preparation/QUALITY-PERFORMANCE-AND-CI.md) and [hardware/ecosystem](../preparation/NEOGEO-HARDWARE-AND-ECOSYSTEM.md), 2026-10-01 | Distinct evidence dimensions, fixture ancestry and broader hardware coverage | No measured Glueyneo results; reused source claims retain original limitations |

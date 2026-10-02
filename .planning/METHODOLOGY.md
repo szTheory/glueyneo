@@ -62,6 +62,41 @@ and long-term maintenance. A dependency is appropriate when its concrete value
 justifies those costs. Copied code still needs clear ownership, retained notices,
 source identity, applicable tests and an update strategy.
 
+## Evidence-first delivery and bounded repair
+
+- Reach the first useful executable emulator result early. Governance scripts,
+  audit dashboards and evidence plumbing must stay proportional to the failure
+  they prevent; they do not replace a guest that actually runs.
+- Use resource caps for work actually performed, not executor correction counts
+  or orchestration retries. Record active effort and code churn from failed and
+  reverted work. Do not add a substantive-attempt counter that a tooling halt
+  can consume.
+- Reserve room inside the approved budget for independent review, targeted
+  fixes, regression tests and re-review. A reproducible finding triggers repair
+  when it fits the agreed scope and budget. If a resource threshold prevents a
+  required fix, pause with the finding open and replan; the threshold alone does
+  not establish that the core is defective. Never turn a review finding into an
+  automatic pass.
+- Behavioral sign-offs name their scope, revision, command and actual test
+  counts. A document-only audit may reconcile prior evidence, but it must not
+  imply fresh execution. For C undefined-behavior risks, pair UBSan with small
+  boundary cases that assert the intended architectural result; exhaustive
+  operand enumeration is unnecessary when boundary vectors cover the fault.
+- Add fuzz targets when the project has useful hostile-input surfaces such as
+  media, state or public call-sequence parsers. Keep C warnings target-scoped,
+  disable compiler extensions on owned C targets, and introduce presets/CI
+  lanes as configurations become real. When hosted CI exists, use one local
+  CI entrypoint and check its workflow parity. Add content scanning before
+  public artifacts, and state the scanner's known blind spots.
+
+## Decision namespaces
+
+Use stable prefixes in cross-document references: `PROJECT-D-##` for current
+project decisions, `PREP-D-##` for the dated preparation register, `P01-C-##`
+for Phase 1 context decisions, and `P01-R-##` for Phase 1 research decisions.
+Keep immutable historical receipts intact; add a crosswalk or supersession note
+when an old local identifier remains relevant.
+
 ## Reusable discussion prompt
 
 > For each decision in this phase, fan out broadly and deeply across the

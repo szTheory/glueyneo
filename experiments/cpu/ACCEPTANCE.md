@@ -2,6 +2,8 @@
 
 Status: **current admission rejected / GAPS_FOUND; historical acceptance is superseded by unresolved source blockers**. Phase 01 remains open and Phase 02 gated. No further adaptation is authorized; both attempts are consumed. See the current disposition below.
 
+The status field inside `budget-ledger.json` is a historical snapshot from the former candidate workflow. This document and current `.planning` contracts own the present disposition. Preserve the ledger bytes as historical accounting; do not read its legacy status as current acceptance.
+
 ## Historical reproduction and admission gate — superseded for current admission
 
 Use the committed checkout containing the final report's evaluated inputs:

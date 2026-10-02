@@ -2,7 +2,7 @@ No external API integration: the current gap scope builds a private in-process o
 
 # Phase 1 Source Coverage
 
-Historical original-plan coverage below predates the approved owned-core direction and implemented experiment. It remains provenance; 01-GAP-COVERAGE.md supersedes it for plans 01-07–01-12.
+Historical original-plan coverage below predates the approved owned-core direction and implemented experiment. It remains provenance; 01-GAP-COVERAGE.md supersedes it for plans 01-07–01-14.
 
 Discovery consumes current pinned-source phase research and the greenfield pattern inventory. There is no existing runtime, prior implementation summary or proven verify command. Implementation paths are new outputs or earlier-plan dependencies. Project skills/graph are absent; agent_skills is empty. Calibration factor 1, zero samples, low confidence. No package-manager install or ORM/schema task exists. Assumption-delta detector returned detected:false. The API declaration above is a reasoned scope declaration, not an assertion that its detector ran.
 

@@ -6,17 +6,17 @@
 
 ## v1 Requirements
 
-In this OpenGSD template, v1 means the first scoped deliverable, **v0.1**, not a stable 1.0 API or a complete Neo Geo emulator. Acceptance is evidence from actual execution; preparation and research are design inputs. CPU-01–04 are Pending current admission despite historical task evidence. The historical phase verifier refused grammar preflight; it did not establish that all four behaviors failed. CPU-05 alone is Complete for its bounded-decision obligation after plan 01-05 task 3 reproduced structured rejection and independently reviewed every decision criterion. Phase 01 stays open and Phase 02 gated; both adaptation attempts are consumed and no further adaptation is authorized.
+In this OpenGSD template, v1 means the first scoped deliverable, **v0.1**, not a stable 1.0 API or a complete Neo Geo emulator. Acceptance is evidence from actual execution; preparation and research are design inputs. CPU-01–04 are Pending current admission despite historical task evidence. The historical phase verifier refused grammar preflight; it did not establish that all four behaviors failed. The Musashi rejection decision is complete historically; consolidated CPU-05 remains Pending until the owned-core experiment produces its own reproducible decision. Both Musashi adaptation attempts are consumed and no further Musashi adaptation is authorized. Phase 01 stays open and Phase 02 gated.
 
 ### CPU Admission
 
-- [ ] **CPU-01**: A maintainer can reproduce the exact C 68000 candidate build from pinned sources and a per-file copied/generated/compiled/distributed inventory with license notices and host-call disposition, including proof of whether FPU/SoftFloat is excluded or retained.
+- [ ] **CPU-01**: A maintainer can reproduce the owned C17 68000 build and per-file authored/copied/generated/compiled/distributed inventory with license notices and host-call disposition, proving that imported CPU/FPU/SoftFloat/generator code is absent from the owned runtime closure.
 - [ ] **CPU-02**: A maintainer can run distinguishable CPU instances alternately and concurrently, including simultaneous cold initialization and failing creation/teardown paths, with results matching isolated baselines and no shared mutable machine state.
 - [ ] **CPU-03**: A maintainer can observe actual guest progress, stop/overshoot behavior and the selected interrupt/exception interactions in a bounded execution experiment whose timing precision and unsupported behavior are documented.
 - [ ] **CPU-04**: A maintainer can inspect a complete mutable-state and callback inventory and reproduce backend continuation at supported boundaries without serializing host pointers or jump buffers; this establishes no public board-snapshot format.
-- [x] **CPU-05**: A maintainer receives an explicit backend accept/reject/defer decision against an effort and patch budget set before adaptation, with commands, results and counterexamples; an over-budget or failed candidate triggers replacement/replanning before SDK integration.
+- [ ] **CPU-05**: A maintainer can reproduce the owned-core decision against cumulative active-effort limits and churn review thresholds set before implementation, with commands and counterexamples. Do not use a fixed attempt count; tooling halts do not consume an attempt. Repair actionable in-scope findings from the remaining budget. If a hard effort limit or churn threshold prevents repair, preserve GAPS_FOUND and replan; a threshold alone does not reject the backend. The historical Musashi rejection and completed decision evidence remain preserved below.
 
-CPU-05 evidence: [current bounded rejection](../experiments/cpu/ACCEPTANCE.md#current-supersession-and-bounded-rejection--2026-10-02-plan-01-05), [sealed report](../experiments/cpu/acceptance-results.json), [independent reconciliation](../experiments/cpu/REVIEW.md), and [01-05 summary](phases/01-cpu-acceptance-experiment/01-05-SUMMARY.md). Normal-Python seal and read-only verify each return exit 1 with rejected / GAPS_FOUND and `blocking review finding`. The original pre-adaptation limits, two consumed attempts and 2,614 handwritten / 523 helper / 483 semantic lines, 20,005 total / 18,859 final-attempt seconds remain unchanged. All eight later source counterexamples and uncertainties are dispositioned without repair; earlier runtime results remain historical. SDK integration is prohibited, with replacement/repair direction referred to the blocking plan 01-06 checkpoint and separate replanning. Only the decision obligation is satisfied; no accepted backend or Phase 01 completion follows.
+Historical Musashi CPU-05 decision evidence: [bounded rejection](../experiments/cpu/ACCEPTANCE.md#current-supersession-and-bounded-rejection--2026-10-02-plan-01-05), [sealed report](../experiments/cpu/acceptance-results.json), [independent reconciliation](../experiments/cpu/REVIEW.md), and [01-05 summary](phases/01-cpu-acceptance-experiment/01-05-SUMMARY.md). Normal-Python seal and read-only verify each return exit 1 with rejected / GAPS_FOUND and `blocking review finding`. The original pre-adaptation limits, two consumed attempts and 2,614 handwritten / 523 helper / 483 semantic lines, 20,005 total / 18,859 final-attempt seconds remain unchanged. All eight later source counterexamples and uncertainties are dispositioned without repair; earlier runtime results remain historical. SDK integration is prohibited. This completes only the historical Musashi decision; owned-core decision and CPU-01–04 admission evidence remain pending.
 
 ### Native API and Host Safety
 
@@ -28,7 +28,7 @@ CPU-05 evidence: [current bounded rejection](../experiments/cpu/ACCEPTANCE.md#cu
 ### Executable Diagnostic
 
 - [ ] **DIAG-01**: An external C consumer executes an original redistributable CPU/bus guest program through the ordinary create/load/run/results/destroy path and checks meaningful guest-computed observations.
-- [ ] **DIAG-02**: A maintainer can reproduce the diagnostic bootstrap and its initialized-data/BSS and named CPU/bus assertions using documented oracle ancestry, with a deliberate wrong-behavior control that fails the checks.
+- [ ] **DIAG-02**: A maintainer can run a headless diagnostic runner through the ordinary native API and reproduce the diagnostic bootstrap, initialized-data/BSS and named CPU/bus assertions using documented oracle ancestry, with a deliberate wrong-behavior control that fails the checks.
 - [ ] **DIAG-03**: A maintainer can repeat and split the supported execution workload and run distinguishable native diagnostic instances both interleaved and concurrently while matching isolated-baseline guest observations at equal execution boundaries, including concurrent native creation/load/teardown paths.
 
 ### Build and Package Consumption
@@ -63,7 +63,7 @@ Deferred from v0.1. The **next milestone** is an interactive diagnostic, not a p
 
 - **PLAY-01**: A user runs an original diagnostic that exercises selected FIX/sprite/palette behavior and responds to logically sampled input under a documented firmware/bootstrap and board/timing profile.
 - **PLAY-02**: A user hears a justified real chip-generated sound case after C Z80/YM2610 candidates pass license, isolation, timing and state gates; raw emulated output and host resampling/device behavior have separate evidence.
-- **HOST-01**: A user loads, runs and unloads the released libretro adapter through an actual pinned RetroArch macOS build; the adapter uses the ordinary native API, with native/adapter observation equivalence and recorded architecture/core/frontend/media identities.
+- **HOST-01**: A user loads, runs and unloads the thin per-core libretro adapter through an actual pinned RetroArch macOS build; the adapter uses the ordinary native API, with native/adapter observation equivalence and recorded architecture/core/frontend/media identities. RetroArch remains the interactive frontend until a shared host is available.
 - **STATE-01**: A user restores a supported snapshot into a fresh instance and obtains the same continuation as uninterrupted execution; malformed or incompatible states are rejected atomically under explicit snapshot/replay compatibility identities.
 - **SAVE-01**: A user reopens durable media in a fresh process and a guest demonstrably consumes prior writes; restoring old snapshots and receiving stale acknowledgments cannot silently discard new dirty data.
 
@@ -72,7 +72,7 @@ Deferred from v0.1. The **next milestone** is an interactive diagnostic, not a p
 - **MEDIA-01**: A user imports one practical cartridge-media format outside the native core and receives useful set/revision/region and missing/wrong BIOS diagnostics under bounded malformed-input handling.
 - **GAME-01**: A user can identify supported private commercial-game scenarios by title/revision/BIOS/region/mode, with original BIOS/board behavior separately qualified and no proprietary data published.
 - **HW-01**: A maintainer expands banking/protection/raster/audio/peripheral families using minimal public regressions and explicit hardware evidence/uncertainty, preserving original slowdown.
-- **INTEG-01**: A Playstead consumer can use a demonstrated host-process or direct native integration, with a second real consumer informing API stability decisions.
+- **INTEG-01**: A Playstead consumer can use a demonstrated host-process or direct native integration, with a second real consumer informing API stability decisions. “Host-process” means Playstead launching an existing frontend with GlueyNeo's libretro core, or the future shared host; it does not mean a GlueyNeo-owned GUI executable. The future shared-host process contract must pass the ROM path and explicit save-directory override, never write saves beside the ROM, flush battery saves periodically and on request with a stated maximum-loss window, stop cleanly on SIGTERM, and expose distinct exit codes for normal completion, guest errors, and host errors. These are target requirements, not current Playstead capabilities: `AdapterPin.json` and `SUPPORT-MATRIX.md` at inspected Playstead revision `1de3e954166eaf0a52fe0e4a950b46756139884d` (2026-10-02) specify `{saveDir}/{romBaseName}.sav`, periodic flush every 24 seconds, no on-demand flush, a 24-second loss window, and SIGTERM classified as killed rather than a graceful save-and-quit.
 - **PERF-01**: A maintainer optimizes representative measured workloads with behavior-equivalence evidence and calibrated controlled-host budgets before adding architecture-specific acceleration.
 
 ## Out of Scope
@@ -80,7 +80,7 @@ Deferred from v0.1. The **next milestone** is an interactive diagnostic, not a p
 | Feature | Reason |
 |---------|--------|
 | Neo Geo CD, Pocket/Pocket Color and generic multi-system framework | Cartridge scope first; revisit only for an explicit funded use case |
-| Full GUI/game library and core-owned host device/filesystem/network services | Embedding and deterministic ownership remain the core value; SDL3 host is conditional on a demonstrated integration blocker |
+| Any GUI or windowed host application owned by an individual core repository; core-owned host device/filesystem/network services | Core repositories provide libraries, headless diagnostic runners, and thin libretro adapters. Interactive GUI ownership belongs to RetroArch today and Playstead or a separate shared host later. |
 | C++ runtime engine behind a C API | Does not satisfy the chosen all-C runtime requirement |
 | Universal compatibility or hardware-perfect timing claims | Require specific physical/scenario evidence and a defined tested denominator |
 | Commercial ROM/BIOS bundles, private capture uploads or public private-corpus identities | Redistribution/publication rights are not established |
@@ -117,7 +117,7 @@ Each v1 requirement has exactly one primary phase in v0.1. Later requirements re
 | CPU-02 | Phase 1 | Pending |
 | CPU-03 | Phase 1 | Pending |
 | CPU-04 | Phase 1 | Pending |
-| CPU-05 | Phase 1 | Complete |
+| CPU-05 | Phase 1 | Pending |
 | API-01 | Phase 2 | Pending |
 | API-02 | Phase 2 | Pending |
 | API-03 | Phase 2 | Pending |
