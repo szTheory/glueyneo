@@ -10,12 +10,12 @@
     "measurement": "cumulative Git diff added/deleted nonblank lines from code_start, counted by category.",
     "runtime_added": 0,
     "runtime_deleted": 0,
-    "test_tool_added": 590,
+    "test_tool_added": 596,
     "test_tool_deleted": 0
   },
   "code_start": {
     "commit": "7acc36e4538cc2c152d791763f9b39425122f6db",
-    "contract_sha256": "aa8e9fddee5312460b3206a4aad62674bf64cff20071e133a0e3fc09d72b3567"
+    "contract_sha256": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73"
   },
   "diagnostic_gate": {
     "cap_seconds": 28800,
@@ -45,20 +45,20 @@
   ],
   "entries": [
     {
-      "active_seconds": 1937,
+      "active_seconds": 2958,
       "agent_intervals": [
         {
           "agent": "primary-agent",
-          "end": "2026-10-02T18:39:17Z",
+          "end": "2026-10-02T18:56:18Z",
           "reason": "Conservative full interval, rounded down to one minute before the earliest observed GSD activity timestamp; includes initialization, source/manual review, implementation, failed control repair, tests, and scope reconciliation.",
           "start": "2026-10-02T18:07:00Z"
         }
       ],
-      "commit": "7acc36e4538cc2c152d791763f9b39425122f6db",
+      "commit": "b3c2951b3a4abcc38be6a12f617af9ba7f9aabaa",
       "cumulative_churn": {
         "runtime_added": 0,
         "runtime_deleted": 0,
-        "test_tool_added": 590,
+        "test_tool_added": 596,
         "test_tool_deleted": 0
       },
       "diagnostic_gate": false,
@@ -83,8 +83,15 @@
         "observed": 8,
         "resolved_control_failures": [
           "Empty-record self-test first hit the deliberately mutated historical-file fixture; the control now restores that fixture before testing the ledger.",
-          "Optimized-Python self-test first matched a text fragment against JSON output; the control now parses and checks the named JSON rejection reason."
+          "Optimized-Python self-test first matched a text fragment against JSON output; the control now parses and checks the named JSON rejection reason.",
+          "Primary-manual review corrected the overbroad continuous-level-7 statement and added exact MOVE absolute encoding patterns; final normal/-O self-tests, eight unit tests, and GSD story validation passed."
         ],
+        "resolved_manual_review": {
+          "result": "Contract and direct contract test corrected; no runtime code or cap changed.",
+          "rule": "Level 7 is transition-triggered from a lower request level and can also be accepted by level comparison when the SR mask is below 7.",
+          "source": "NXP-hosted Motorola MC68000 User's Manual MC68000UM Rev 9.1, \u00a76.3.2",
+          "status": "pass"
+        },
         "self_test": {
           "commands": [
             [
@@ -120,10 +127,25 @@
           "status": "pass"
         }
       },
+      "tested_source_sha256": {
+        "contract": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73",
+        "tests": "5590341c82e4772841f3d4c3eed2259be185881c595cfe28f7ee7984d38ee272",
+        "validator": "bb0346a0887b289dff9594c1629e309c13de56b44dd3a033a7bc620b61cd5bca"
+      },
       "working_tree_dirty": true
     }
   ],
-  "freeze_recorded_at": "2026-10-02T18:39:17Z",
+  "freeze_amendments": [
+    {
+      "from_revision": 1,
+      "preceding_commit": "b3c2951b3a4abcc38be6a12f617af9ba7f9aabaa",
+      "previous_contract_sha256": "aa8e9fddee5312460b3206a4aad62674bf64cff20071e133a0e3fc09d72b3567",
+      "reason": "Before owned runtime work, the official MC68000 manual check refined level-7 interrupt acceptance and exact MOVE absolute opcode patterns. No supported scope, effort cap, churn threshold, or historical Musashi record changed.",
+      "recorded_at": "2026-10-02T18:56:18Z"
+    }
+  ],
+  "freeze_recorded_at": "2026-10-02T18:56:18Z",
+  "freeze_revision": 2,
   "historical_sha256": {
     "experiments/cpu/ACCEPTANCE.md": "00b2da4548384c78e921d0085ced2147f0ec7eca30635a2961f49279dcd6cf3b",
     "experiments/cpu/REVIEW.md": "35bf8e3a849d05e90e7291c9868cffcae014ada4d1607ad3542de7f912e9be6e",
