@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -19,6 +21,13 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT_PATH = Path("experiments/owned_cpu/CONTRACT.md")
 LEDGER_PATH = Path("experiments/owned_cpu/budget-ledger.json")
+RECONCILIATION_PATH = Path("experiments/owned_cpu/illegal-reconciliation.json")
+# P01-C-14 pins one authorized candidate amendment; legacy marker checks remain
+# separate. Historical adjudication and original archive are not amendment data.
+FROZEN_CONTRACT_SHA256 = "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73"
+RECONCILIATION_ROOT_SHA256 = "826f17626df08f8bf4e08163aecf7d1d0d29bf7b3ec2e0349e09d98fdcd94e21"
+ACTIVE_AMENDMENT_SHA256 = "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad"
+ACTIVE_CONTRACT_IDENTITY_SHA256 = "27af8df79b55f83bffdef63981defc23984fff6b4e0002d10e99621310340419"
 CANONICAL_STORY = (
     "As a maintainer, I want to reproduce acceptance of a C 68000 backend, "
     "so that I can build the diagnostic SDK on independent instances with "
@@ -170,15 +179,89 @@ def check_contract(root: Path, markers: tuple[str, ...] = REQUIRED_MARKERS) -> N
             "runtime_exclusions", "FPU, SoftFloat, or generator exclusion is missing")
 
 
+def canonical_digest(value) -> str:
+    """Canonical JSON: sorted keys, compact separators, ASCII, UTF-8 SHA-256."""
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"),
+                                     ensure_ascii=True).encode("utf-8")).hexdigest()
+
+
+def check_candidate_contract(root: Path) -> dict:
+    try:
+        record = json.loads((root / RECONCILIATION_PATH).read_text(encoding="utf-8"))
+        ledger = json.loads((root / LEDGER_PATH).read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ContractError("amendment_required", "candidate contract record is unreadable") from exc
+    require(isinstance(record, dict) and isinstance(ledger, dict),
+            "amendment_root", "contract and ledger records must be objects")
+    frozen = record.get("frozen_contract")
+    baseline = ledger.get("code_start")
+    require(isinstance(frozen, dict) and isinstance(baseline, dict)
+            and frozen.get("sha256") == FROZEN_CONTRACT_SHA256
+            and baseline.get("contract_sha256") == FROZEN_CONTRACT_SHA256
+            and sha256(root / CONTRACT_PATH) == FROZEN_CONTRACT_SHA256,
+            "amendment_root", "original contract root or ledger digest changed")
+    # Strict decoding and byte comparison are independent of amendment content.
+    try:
+        archive = base64.b64decode(frozen.get("bytes_base64", ""), validate=True)
+    except (TypeError, ValueError, binascii.Error) as exc:
+        raise ContractError("amendment_archive", "invalid strict-base64 frozen archive") from exc
+    require(frozen.get("encoding") == "base64"
+            and hashlib.sha256(archive).hexdigest() == FROZEN_CONTRACT_SHA256
+            and archive == (root / CONTRACT_PATH).read_bytes(),
+            "amendment_archive", "archive differs from the original contract bytes")
+    historical = {key: value for key, value in record.items()
+                  if key != "candidate_contract_amendments"}
+    require(canonical_digest(historical) == RECONCILIATION_ROOT_SHA256,
+            "reconciliation_history", "pre-existing reconciliation fields changed")
+    amendments = record.get("candidate_contract_amendments")
+    require(isinstance(amendments, list) and amendments,
+            "amendment_required", "P01-C-14 candidate requires its additive amendment")
+    require(len(amendments) == 1 and isinstance(amendments[0], dict),
+            "amendment_chain", "exactly one ordered P01-C-14 amendment is authorized")
+    amendment = amendments[0]
+    require(amendment.get("preceding_sha256") == FROZEN_CONTRACT_SHA256
+            and amendment.get("root_contract_sha256") == FROZEN_CONTRACT_SHA256,
+            "amendment_chain", "amendment must follow the original frozen root")
+    require(amendment.get("schema") == 1 and amendment.get("version") == 1
+            and amendment.get("decision") == "P01-C-14"
+            and amendment.get("decision_reference") == "D1-14"
+            and amendment.get("authorized_date") == "2026-10-03",
+            "amendment_authorization", "amendment authorization changed")
+    scope = amendment.get("candidate_scope")
+    require(isinstance(scope, dict) and scope.get("excluded_opcodes") == [0x4afc]
+            and scope.get("result") == "OWNED_CPU_UNSUPPORTED_OPCODE",
+            "amendment_scope", "only numeric exact 0x4AFC exclusion is authorized")
+    require(amendment.get("hardware_saved_pc") == {
+        "decision": "P01-C-13", "status": "unknown", "selected": None},
+        "amendment_hardware", "hardware saved-PC question must remain unknown")
+    content = {key: value for key, value in amendment.items() if key != "content_sha256"}
+    identity_content = {key: value for key, value in content.items()
+                        if key != "active_contract_identity_sha256"}
+    require(content.get("active_contract_identity_sha256") == canonical_digest(identity_content)
+            and content.get("active_contract_identity_sha256") == ACTIVE_CONTRACT_IDENTITY_SHA256,
+            "amendment_identity", "active candidate contract identity is stale or altered")
+    require(amendment.get("content_sha256") == canonical_digest(content)
+            and amendment.get("content_sha256") == ACTIVE_AMENDMENT_SHA256,
+            "amendment_digest", "canonical amendment content or digest changed")
+    return {"baseline": CONTRACT_PATH.as_posix(),
+            "frozen_contract_sha256": FROZEN_CONTRACT_SHA256,
+            "amendment": RECONCILIATION_PATH.as_posix(), "decision": "P01-C-14",
+            "amendment_sha256": ACTIVE_AMENDMENT_SHA256,
+            "active_contract_identity_sha256": ACTIVE_CONTRACT_IDENTITY_SHA256,
+            "excluded_opcodes": [0x4afc], "hardware_saved_pc": "unknown"}
+
+
 def validate(root: Path = ROOT) -> dict:
     check_contract(root)
     history = check_history(root)
     story = check_story(root)
     check_requirements(root)
+    active = check_candidate_contract(root)
+    budget = validate_budget(root)
     return {"status": "pass", "contract_markers": len(REQUIRED_MARKERS),
             "historical_files": len(history), "canonical_story": story,
             "requirements_pending": ["CPU-01", "CPU-02", "CPU-03", "CPU-04", "CPU-05"],
-            "phase_02": "gated"}
+            "phase_02": "gated", "active_candidate_contract": active, "budget": budget}
 
 
 def _integer(value, name: str) -> int:
@@ -501,7 +584,8 @@ def _write_json(path: Path, value: dict) -> None:
 
 
 def _copy_subject(target: Path) -> None:
-    for relative in (CONTRACT_PATH, Path(".planning/REQUIREMENTS.md"), Path(".planning/ROADMAP.md"),
+    for relative in (CONTRACT_PATH, RECONCILIATION_PATH,
+                     Path(".planning/REQUIREMENTS.md"), Path(".planning/ROADMAP.md"),
                      Path("tests/cpu/guest_fixture.c"), Path("tests/cpu/guest_fixture.h"),
                      Path("tests/cpu/ORACLE.md")):
         destination = target / relative

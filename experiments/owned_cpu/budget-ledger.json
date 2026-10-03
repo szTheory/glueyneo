@@ -1127,6 +1127,83 @@
         "status": "pass"
       },
       "working_tree_dirty": true
+    },
+    {
+      "active_seconds": 859,
+      "agent_intervals": [
+        {
+          "agent": "executor-measured-includes-red-and-failed-gate-checks",
+          "end": "2026-10-03T20:30:33Z",
+          "start": "2026-10-03T20:21:14Z"
+        },
+        {
+          "agent": "executor-conservative-initial-context-allowance180s",
+          "end": "2026-10-03T20:21:14Z",
+          "start": "2026-10-03T20:18:14Z"
+        },
+        {
+          "agent": "executor-conservative-closeout-allowance120s",
+          "end": "2026-10-03T20:32:33Z",
+          "start": "2026-10-03T20:30:33Z"
+        }
+      ],
+      "build_dir": "build/owned-debug",
+      "build_identity": {
+        "build_ninja_sha256": "22e9fad5c86b1e9bc48708c054e98ec0d2582afde79cb5d4e205620d44c0ce57",
+        "cmake_cache_sha256": "ed9275b4e3884b1cc8dc26a699d60bdc50c8be8b34fd7b201be1630a78c9602e"
+      },
+      "commit": "67393f23e4d573b2e7708ef32cd444461d034c2b",
+      "cumulative_churn": {
+        "runtime_added": 1160,
+        "runtime_deleted": 61,
+        "test_tool_added": 5504,
+        "test_tool_deleted": 90
+      },
+      "diagnostic_gate": false,
+      "fixture_sha256": {
+        "tests/cpu/ORACLE.md": "8a1f9c113ea4fe7608a41b2fedd856c69533a1009b07f9dda6dafd276dc93ade",
+        "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
+        "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c"
+      },
+      "recorded_at": "2026-10-03T20:30:33.803494Z",
+      "stage": "plan-01-18-runtime-amendment",
+      "supplemental_checks": [
+        {
+          "command": "python3 -m unittest discover -s tests/owned_cpu -p test_contract.py",
+          "exit": 0,
+          "expected": 23,
+          "observed": 23,
+          "status": "pass"
+        },
+        {
+          "command": "python3 -O -m unittest discover -s tests/owned_cpu -p test_contract.py",
+          "exit": 0,
+          "expected": 23,
+          "observed": 23,
+          "status": "pass"
+        },
+        {
+          "assertion": "canonical unsupported result-status assertion",
+          "case": "canonical_unsupported_wrong_status_expectation",
+          "command": "owned_cpu_timing --mutate-unsupported",
+          "exit": 1,
+          "expected": 1,
+          "expected_failures": 1,
+          "observed": 1,
+          "observed_failures": 1,
+          "status": "expected-failure"
+        }
+      ],
+      "test_results": {
+        "cases": [
+          "owned_cpu_timing"
+        ],
+        "expected": 1,
+        "log_sha256": "32e4a685ad1c4b2120b1a0cbb727b1b698f286d2aab4ee8f33f740bc3689f612",
+        "observed": 1,
+        "status": "pass"
+      },
+      "working_tree_dirty": true
     }
   ],
   "freeze_amendments": [

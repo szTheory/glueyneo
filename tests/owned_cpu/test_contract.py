@@ -33,6 +33,136 @@ class ContractControls(unittest.TestCase):
         self.assertIn("candidate_contract_amendments", record,
                       "P01-C-14 active candidate must carry its amendment")
 
+    def read_reconciliation(self):
+        return json.loads((self.root / contract.RECONCILIATION_PATH).read_text(encoding="utf-8"))
+
+    def write_reconciliation(self, record):
+        contract._write_json(self.root / contract.RECONCILIATION_PATH, record)
+
+    def expect_candidate_reason(self, reason):
+        with self.assertRaises(contract.ContractError) as caught:
+            contract.check_candidate_contract(self.root)
+        self.assertEqual(caught.exception.reason, reason)
+
+    def test_active_amendment_binds_frozen_root_and_exact_scope(self):
+        result = contract.check_candidate_contract(self.root)
+        self.assertEqual(result["excluded_opcodes"], [0x4afc])
+        self.assertEqual(result["hardware_saved_pc"], "unknown")
+        self.assertEqual(result["frozen_contract_sha256"], self.read_ledger()["code_start"]["contract_sha256"])
+        self.assertEqual(result["active_contract_identity_sha256"],
+                         contract.ACTIVE_CONTRACT_IDENTITY_SHA256)
+        active = contract.validate(self.root)["active_candidate_contract"]
+        self.assertEqual(active, result)
+
+    def test_missing_duplicate_reordered_and_malformed_amendments_fail(self):
+        original = self.read_reconciliation()
+        amendment = original["candidate_contract_amendments"][0]
+        variants = [(None, "amendment_required"), ([], "amendment_required"),
+                    ([amendment, amendment], "amendment_chain"),
+                    ([{"decision": "P01-C-13"}, amendment], "amendment_chain"),
+                    ([amendment, {"decision": "P01-C-13"}], "amendment_chain"),
+                    ([None], "amendment_chain"), ({}, "amendment_required")]
+        for value, reason in variants:
+            with self.subTest(value=value):
+                record = json.loads(json.dumps(original))
+                record["candidate_contract_amendments"] = value
+                self.write_reconciliation(record)
+                self.expect_candidate_reason(reason)
+        original.pop("candidate_contract_amendments")
+        self.write_reconciliation(original)
+        self.expect_candidate_reason("amendment_required")
+
+    def test_amendment_chain_authorization_digest_and_identity_tamper_fail(self):
+        original = self.read_reconciliation()
+        variants = [("preceding_sha256", "0" * 64, "amendment_chain"),
+                    ("root_contract_sha256", "0" * 64, "amendment_chain"),
+                    ("schema", 2, "amendment_authorization"),
+                    ("version", 2, "amendment_authorization"),
+                    ("decision", "P01-C-13", "amendment_authorization"),
+                    ("decision_reference", "D1-13", "amendment_authorization"),
+                    ("authorized_date", "2026-10-02", "amendment_authorization"),
+                    ("content_sha256", "0" * 64, "amendment_digest"),
+                    ("active_contract_identity_sha256", "0" * 64, "amendment_identity")]
+        for field, value, reason in variants:
+            with self.subTest(field=field):
+                record = json.loads(json.dumps(original))
+                record["candidate_contract_amendments"][0][field] = value
+                self.write_reconciliation(record)
+                self.expect_candidate_reason(reason)
+
+    def test_broadened_or_nonnumeric_opcode_and_old_success_result_fail(self):
+        original = self.read_reconciliation()
+        for excluded in ([0x4afc, 0x4e40], ["0x4afc"], [], [0x4afd], [0x4afc, 0x4afc]):
+            with self.subTest(excluded=excluded):
+                record = json.loads(json.dumps(original))
+                record["candidate_contract_amendments"][0]["candidate_scope"]["excluded_opcodes"] = excluded
+                self.write_reconciliation(record)
+                self.expect_candidate_reason("amendment_scope")
+        original["candidate_contract_amendments"][0]["candidate_scope"]["result"] = "OWNED_CPU_BUDGET"
+        self.write_reconciliation(original)
+        self.expect_candidate_reason("amendment_scope")
+
+    def test_recomputed_digests_do_not_authorize_changed_rules_or_retained_cases(self):
+        original = self.read_reconciliation()
+        for target in ("cycles", "bus", "pc", "retained", "superseded", "extra"):
+            with self.subTest(target=target):
+                record = json.loads(json.dumps(original))
+                amendment = record["candidate_contract_amendments"][0]
+                if target == "cycles": amendment["candidate_scope"]["guest_exception_cycles"] = 34
+                if target == "bus": amendment["candidate_scope"]["vector_4_reads"] = 2
+                if target == "pc": amendment["candidate_scope"]["pc"] = "sequential PC"
+                if target == "retained": amendment["retained_cases"].remove("TRAP #0")
+                if target == "superseded": amendment["superseded"]["reference_scope"] = "all exceptions"
+                if target == "extra": amendment["unapproved"] = True
+                content = {k: v for k, v in amendment.items()
+                           if k not in ("content_sha256", "active_contract_identity_sha256")}
+                amendment["active_contract_identity_sha256"] = contract.canonical_digest(content)
+                amendment["content_sha256"] = contract.canonical_digest(
+                    {k: v for k, v in amendment.items() if k != "content_sha256"})
+                self.write_reconciliation(record)
+                self.expect_candidate_reason("amendment_identity")
+
+    def test_hardware_question_cannot_be_selected_by_amendment(self):
+        record = self.read_reconciliation()
+        record["candidate_contract_amendments"][0]["hardware_saved_pc"]["selected"] = "0x100"
+        self.write_reconciliation(record)
+        self.expect_candidate_reason("amendment_hardware")
+
+    def test_historical_reconciliation_fields_are_immutable(self):
+        original = self.read_reconciliation()
+        for field, value in (("resolution", "resolved"), ("saved_pc_rule", {"selected": "0x102"}),
+                             ("sources", []), ("unresolved_need", {})):
+            with self.subTest(field=field):
+                record = json.loads(json.dumps(original))
+                record[field] = value
+                self.write_reconciliation(record)
+                self.expect_candidate_reason("reconciliation_history")
+
+    def test_frozen_archive_and_root_checks_are_independent_of_amendment(self):
+        original = self.read_reconciliation()
+        for value in ("invalid!", "", original["frozen_contract"]["bytes_base64"] + "\n"):
+            with self.subTest(archive=value[:10]):
+                record = json.loads(json.dumps(original))
+                record.pop("candidate_contract_amendments")
+                record["frozen_contract"]["bytes_base64"] = value
+                self.write_reconciliation(record)
+                self.expect_candidate_reason("amendment_archive")
+        record = json.loads(json.dumps(original))
+        record["frozen_contract"]["sha256"] = "0" * 64
+        self.write_reconciliation(record)
+        self.expect_candidate_reason("amendment_root")
+        self.write_reconciliation(original)
+        ledger = self.read_ledger()
+        ledger["code_start"]["contract_sha256"] = "0" * 64
+        self.write_ledger(ledger)
+        self.expect_candidate_reason("amendment_root")
+
+    def test_marker_preserving_contract_mutation_cannot_change_root(self):
+        path = self.root / contract.CONTRACT_PATH
+        path.write_text(path.read_text(encoding="utf-8") + "\nunauthorized amendment\n", encoding="utf-8")
+        contract.check_contract(self.root)  # Legacy marker check is insufficient by itself.
+        self.expect_candidate_reason("amendment_root")
+
     def test_frozen_subject_and_pending_gate_validate(self):
         contract.check_contract(self.root)
         history = contract.check_history(self.root)

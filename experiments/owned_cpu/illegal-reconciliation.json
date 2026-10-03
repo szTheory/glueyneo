@@ -281,5 +281,74 @@
       "seconds": 76
     },
     "separation": "Authored no runtime/contract/test/reconciliation edits; Plan 01-16 final independent review remains required."
+  },
+  "candidate_contract_amendments": [
+  {
+    "schema": 1,
+    "version": 1,
+    "decision": "P01-C-14",
+    "decision_reference": "D1-14",
+    "authorized_date": "2026-10-03",
+    "preceding_sha256": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73",
+    "root_contract_sha256": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73",
+    "superseded": {
+      "illegal_row": "| `ILLEGAL` | Exact canonical illegal instruction word `0x4afc`; vector 4; stack old SR and next PC. Other unsupported encodings must report `UNSUPPORTED_OPCODE`, not be treated as this instruction. |",
+      "selected_exception_reference": "`RESET`, `TRAP`, `ILLEGAL`, `RTE`, privilege, address-error, and level-7\ninterrupt outcomes are derived from the MC68000 manual references below.",
+      "saved_pc_reference": "Group-1/2 exception frames save the next\nunexecuted PC for the named instruction exceptions.",
+      "reference_scope": "Only the ILLEGAL 0x4AFC obligations in these references are superseded; all other selected obligations are retained."
+    },
+    "candidate_scope": {
+      "excluded_opcodes": [
+        19196
+      ],
+      "result": "OWNED_CPU_UNSUPPORTED_OPCODE",
+      "pc": "logical opcode address",
+      "fault_pc": "logical opcode address",
+      "instruction_register": 19196,
+      "successful_fetch_required": true,
+      "allowed_bus_effect": "one successful opcode read",
+      "vector_4_reads": 0,
+      "exception_frame_writes": 0,
+      "completed_dispatches": 0,
+      "guest_instruction_cycles": 0,
+      "guest_exception_cycles": 0,
+      "unchanged": [
+        "registers",
+        "SR",
+        "stack banks",
+        "previous PC",
+        "vector marker",
+        "guest memory",
+        "event counters"
+      ],
+      "preceding_work": "Completed reset, IRQ and instruction events in the same request retain their separate charges.",
+      "fetch_failures": "Existing host-fault and odd-fetch address-error policies are retained."
+    },
+    "retained_cases": [
+      "MOVEQ",
+      "ADDQ.L",
+      "MOVE.L",
+      "STOP",
+      "NOP",
+      "RESET",
+      "RTE",
+      "TRAP #0",
+      "MOVE.W #imm16,SR",
+      "MOVE.W (abs.L),Dn",
+      "Level-3 IRQ masking",
+      "Level-7 edge IRQ",
+      "Privilege violation",
+      "Address error"
+    ],
+    "retained_limits": "All other frozen CONTRACT operations, exclusions, event policies and resource limits remain required.",
+    "hardware_saved_pc": {
+      "decision": "P01-C-13",
+      "status": "unknown",
+      "selected": null
+    },
+    "qualification": "candidate-only scope amendment; no hardware saved-PC selection or backend admission",
+    "active_contract_identity_sha256": "27af8df79b55f83bffdef63981defc23984fff6b4e0002d10e99621310340419",
+    "content_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad"
   }
+]
 }
