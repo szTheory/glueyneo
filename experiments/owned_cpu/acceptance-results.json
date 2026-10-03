@@ -1,15 +1,7 @@
 {
   "blockers": [
-    "blocking review finding",
-    "F14-03 HIGH open: frozen CONTRACT.md requires ILLEGAL next PC, while runtime and direct timing oracle save faulting PC; user-directed primary-source canonical reconciliation required outside Plan 14 repair scope"
+    "independent current-source review and bounded decision pending in Plan 01-14"
   ],
-  "independent_review": {
-    "revision": "3cd2d7d5192d0e85ebc4be9f472deace1a4511de",
-    "sha256": "fb622bdaaedbea8f9a52ec6d6f0eaa72b34742b913e664cc01804be8df3c8b27",
-    "disposition": "GAPS_FOUND",
-    "authored_runtime_collector_tests": false,
-    "findings": {"F14-01": "fixed", "F14-02": "fixed", "F14-03": "HIGH open"}
-  },
   "collections": [
     {
       "host": {
@@ -1745,24 +1737,600 @@
           "status": "pass"
         }
       }
+    },
+    {
+      "host": {
+        "architecture": "arm64",
+        "os": "Darwin",
+        "os_release": "25.6.0",
+        "python": "3.14.4"
+      },
+      "limitations": [
+        "CMake 3.20 execution unknown; schema 2 checked against official 3.20 documentation",
+        "Only recorded native host/compiler exercised; other platforms unknown",
+        "No silicon/board capture or gameplay performance oracle"
+      ],
+      "recorded_at": "2026-10-03T13:33:12.572174+00:00",
+      "revision": "17a2e90ca4535dd9ee8353f238c2867602722d35",
+      "runs": [
+        {
+          "artifacts": {
+            "build/owned-debug/CMakeCache.txt": "ed9275b4e3884b1cc8dc26a699d60bdc50c8be8b34fd7b201be1630a78c9602e",
+            "build/owned-debug/build.ninja": "22e9fad5c86b1e9bc48708c054e98ec0d2582afde79cb5d4e205620d44c0ce57",
+            "build/owned-debug/compile_commands.json": "c5b1ad9e119a5793c5b18cb1b88fab030db3d1a8512ebdfa0183156cbcfa9c82",
+            "build/owned-debug/experiments/owned_cpu/libowned_cpu.a": "cde1df1b311f3149ad01b36575e62b2a6e7742fd7cab1b651cfb73488315b57e",
+            "build/owned-debug/experiments/owned_cpu/owned_cpu_cold": "e93672b0e35063d62f5bb17321800c739df672ded3c64acc36f9a6632f10daba",
+            "build/owned-debug/experiments/owned_cpu/owned_cpu_diagnostic": "5aa79373429db8578c6a1a156f7490d6e53dfcf9cb6288a28d957e5513f12256",
+            "build/owned-debug/experiments/owned_cpu/owned_cpu_faults": "f833f44cc5ecb1508499877bb83a28e510b5b4054314e7c1a0299532e38401f7",
+            "build/owned-debug/experiments/owned_cpu/owned_cpu_isolation": "ef0e974c1f58b410fd4176952426f70d890277e09a52cd0b86b8550d6b2eb4a6",
+            "build/owned-debug/experiments/owned_cpu/owned_cpu_semantics": "04d57bd65b408a2cee9119d039cf8cb11ae762e792649a296ff330cf296f8ed8",
+            "build/owned-debug/experiments/owned_cpu/owned_cpu_state": "c0318f39757d0322f6a9fc65b54c85e4f64bd402a94e8bd0d238346658b159dd",
+            "build/owned-debug/experiments/owned_cpu/owned_cpu_timing": "bd2d13bd40ced667cb975d54f1dafacd783295b7c63e63584a85ba065e6d994f"
+          },
+          "compiler": {
+            "child_system_seconds": 0.095437,
+            "child_user_seconds": 0.007438,
+            "command": [
+              "/usr/bin/cc",
+              "--version"
+            ],
+            "elapsed_seconds": 0.12228241586126387,
+            "exit": 0,
+            "output": "Apple clang version 21.0.0 (clang-2100.1.1.101)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\n",
+            "output_sha256": "372772abd42b714a15cce01abdbe71843975dfeee9d80c53c703a08a45873ed2",
+            "status": "pass"
+          },
+          "configuration": {
+            "CMAKE_BUILD_TYPE": "Debug",
+            "GLUEYNEO_CPU_EXPERIMENT": "OFF",
+            "GLUEYNEO_OWNED_CPU_EXPERIMENT": "ON",
+            "GLUEYNEO_OWNED_CPU_OPTIMIZATION": "NONE",
+            "GLUEYNEO_OWNED_CPU_SANITIZER": "NONE"
+          },
+          "counts": {
+            "cold_processes": 16,
+            "concurrent_pairs": 32,
+            "ctest_expected": 12,
+            "ctest_observed": 12,
+            "interleaved_pairs": 32,
+            "negative_controls": 5,
+            "state_checkpoints": 13,
+            "unity": {
+              "owned_cpu_diagnostic": 2,
+              "owned_cpu_faults": 5,
+              "owned_cpu_isolation": 4,
+              "owned_cpu_semantics": 17,
+              "owned_cpu_state": 5,
+              "owned_cpu_timing": 23
+            }
+          },
+          "diagnostic_cost": {
+            "child_system_seconds": 0.0013799999999999923,
+            "child_user_seconds": 0.0009280000000000399,
+            "command": [
+              "$REPO/build/owned-debug/experiments/owned_cpu/owned_cpu_diagnostic"
+            ],
+            "elapsed_seconds": 0.004057500045746565,
+            "exit": 0,
+            "output": "$REPO/tests/owned_cpu/test_diagnostic.c:202:original_scenario_a_computes_and_stores_ten:PASS\n$REPO/tests/owned_cpu/test_diagnostic.c:204:original_scenario_b_computes_and_stores_sixteen:PASS\n\n-----------------------\n2 Tests 0 Failures 0 Ignored \nOK\nUnity denominator: expected=2 observed=2\n",
+            "output_sha256": "627a8e06d18b46d84fd496c14ac57604618869844f2c618ba237fd9be66d189a",
+            "resource_measurement": "child user/system CPU deltas; peak resident memory unknown; single sample, startup dominated",
+            "scope": "one diagnostic process including host startup; elapsed only; no gameplay throughput claim",
+            "status": "pass"
+          },
+          "optional": false,
+          "preset": "owned-debug",
+          "status": "pass",
+          "steps": [
+            {
+              "child_system_seconds": 0.096583,
+              "child_user_seconds": 0.18021199999999998,
+              "command": [
+                "cmake",
+                "--preset",
+                "owned-debug"
+              ],
+              "elapsed_seconds": 0.3108031670562923,
+              "exit": 0,
+              "output": "-- Configuring done (0.3s)\n-- Generating done (0.0s)\n-- Build files have been written to: $REPO/build/owned-debug\n",
+              "output_sha256": "e615ed673456609466fdfd3fb75dff90302d3af8e328d30e1ce6555dc3c40134",
+              "status": "pass"
+            },
+            {
+              "child_system_seconds": 0.007487999999999995,
+              "child_user_seconds": 0.006047999999999998,
+              "command": [
+                "cmake",
+                "--build",
+                "--preset",
+                "owned-debug",
+                "--parallel",
+                "2"
+              ],
+              "elapsed_seconds": 0.01772116683423519,
+              "exit": 0,
+              "output": "ninja: no work to do.\n",
+              "output_sha256": "8c35b1682f73592d30612d7b0fabdb384fcfff35cb5a076cb48b85b1368aa794",
+              "status": "pass"
+            },
+            {
+              "child_system_seconds": 0.15325100000000003,
+              "child_user_seconds": 0.258895,
+              "command": [
+                "ctest",
+                "--preset",
+                "owned-debug",
+                "--output-on-failure",
+                "--no-tests=error"
+              ],
+              "elapsed_seconds": 0.2486043330281973,
+              "exit": 0,
+              "output": "Test project $REPO/build/owned-debug\n      Start 11: owned_cpu_inventory\n      Start  8: owned_cpu_cold\n 1/12 Test  #8: owned_cpu_cold ...................   Passed    0.09 sec\n      Start 12: owned_cpu_inventory_check\n 2/12 Test #11: owned_cpu_inventory ..............   Passed    0.10 sec\n      Start  1: owned_cpu_negative\n 3/12 Test  #1: owned_cpu_negative ...............   Passed    0.05 sec\n      Start  2: owned_cpu_isolation_negative\n 4/12 Test #12: owned_cpu_inventory_check ........   Passed    0.09 sec\n      Start  6: owned_cpu_timing_negative\n 5/12 Test  #2: owned_cpu_isolation_negative .....   Passed    0.04 sec\n      Start  7: owned_cpu_isolation\n 6/12 Test  #7: owned_cpu_isolation ..............   Passed    0.01 sec\n      Start  5: owned_cpu_timing\n 7/12 Test  #5: owned_cpu_timing .................   Passed    0.00 sec\n      Start  4: owned_cpu_semantics\n 8/12 Test  #4: owned_cpu_semantics ..............   Passed    0.00 sec\n      Start  9: owned_cpu_faults\n 9/12 Test  #9: owned_cpu_faults .................   Passed    0.00 sec\n      Start 10: owned_cpu_state\n10/12 Test #10: owned_cpu_state ..................   Passed    0.00 sec\n      Start  3: owned_cpu_diagnostic\n11/12 Test  #3: owned_cpu_diagnostic .............   Passed    0.00 sec\n12/12 Test  #6: owned_cpu_timing_negative ........   Passed    0.03 sec\n\n100% tests passed out of 12\n\nLabel Time Summary:\nowned-cpu                   =   0.41 sec*proc (12 tests)\nowned-diagnostic            =   0.00 sec*proc (2 tests)\nowned-diagnostic-control    =   0.05 sec*proc (1 test)\nowned-safety                =   0.32 sec*proc (6 tests)\nowned-safety-control        =   0.04 sec*proc (1 test)\nowned-state                 =   0.00 sec*proc (1 test)\nowned-timing                =   0.00 sec*proc (1 test)\nowned-timing-control        =   0.03 sec*proc (1 test)\n\nTotal Test time (real) =   0.22 sec\n",
+              "output_sha256": "dad3f953517ed2f46f7cd91f395b37921813afc7eba56562c74946c97bc27549",
+              "status": "pass"
+            }
+          ],
+          "test_log": "Start testing: Oct 03 09:33 EDT\n----------------------------------------------------------\n8/12 Testing: owned_cpu_cold\n8/12 Test: owned_cpu_cold\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/cold.py\" \"$REPO/build/owned-debug/experiments/owned_cpu/owned_cpu_cold\"\nDirectory: $REPO/build/owned-debug/experiments/owned_cpu\n\"owned_cpu_cold\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: cold_process_cases=16 fresh_processes=16 concurrent_instances=2\n<end of output>\nTest time =   0.09 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_cold\" end time: Oct 03 09:33 EDT\n\"owned_cpu_cold\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n11/12 Testing: owned_cpu_inventory\n11/12 Test: owned_cpu_inventory\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/test_inventory.py\"\nDirectory: $REPO/build/owned-debug/experiments/owned_cpu\n\"owned_cpu_inventory\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\n..........\n----------------------------------------------------------------------\nRan 10 tests in 0.023s\n\nOK\n<end of output>\nTest time =   0.10 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_inventory\" end time: Oct 03 09:33 EDT\n\"owned_cpu_inventory\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n1/12 Testing: owned_cpu_negative\n1/12 Test: owned_cpu_negative\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/negative.py\" \"$REPO/build/owned-debug/experiments/owned_cpu/owned_cpu_diagnostic\" \"--state\" \"$REPO/build/owned-debug/experiments/owned_cpu/owned_cpu_state\"\nDirectory: $REPO/build/owned-debug/experiments/owned_cpu\n\"owned_cpu_negative\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: mutation changed 10 to 11; only the named guest arithmetic/store assertion failed\nPASS: --omit-irq7 was caught by its exact continuation assertion\nPASS: instruction-counter mismatch was rejected without destination or bus mutation\n<end of output>\nTest time =   0.05 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_negative\" end time: Oct 03 09:33 EDT\n\"owned_cpu_negative\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n12/12 Testing: owned_cpu_inventory_check\n12/12 Test: owned_cpu_inventory_check\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tools/owned_cpu/inventory.py\" \"check\" \"--build-dir\" \"$REPO/build/owned-debug\"\nDirectory: $REPO/build/owned-debug/experiments/owned_cpu\n\"owned_cpu_inventory_check\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: 26 owned fields; 10 compiled source files; runtime mutable globals=0; callback owner mutation=0\n<end of output>\nTest time =   0.09 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_inventory_check\" end time: Oct 03 09:33 EDT\n\"owned_cpu_inventory_check\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n2/12 Testing: owned_cpu_isolation_negative\n2/12 Test: owned_cpu_isolation_negative\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/negative.py\" \"--isolation\" \"$REPO/build/owned-debug/experiments/owned_cpu/owned_cpu_isolation\"\nDirectory: $REPO/build/owned-debug/experiments/owned_cpu\n\"owned_cpu_isolation_negative\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: swapped owner produced D0 16 against isolated owner D0 10\n<end of output>\nTest time =   0.04 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_isolation_negative\" end time: Oct 03 09:33 EDT\n\"owned_cpu_isolation_negative\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n7/12 Testing: owned_cpu_isolation\n7/12 Test: owned_cpu_isolation\nCommand: \"$REPO/build/owned-debug/experiments/owned_cpu/owned_cpu_isolation\"\nDirectory: $REPO/build/owned-debug/experiments/owned_cpu\n\"owned_cpu_isolation\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nisolated_baselines=2 boundaries_per_instance=6 guest_owners=2\n$REPO/tests/owned_cpu/test_isolation.c:95:build_isolated_baselines:PASS\n$REPO/tests/owned_cpu/test_isolation.c:96:owner_boundary_comparison:PASS\ninterleaved_pairs=32 boundaries_per_instance=6 bus_trace_overflows=0\n$REPO/tests/owned_cpu/test_isolation.c:98:interleaved_instances_match_every_named_boundary:PASS\nconcurrent_pairs=32 boundaries_per_instance=6 cold_first_use=1\n$REPO/tests/owned_cpu/test_isolation.c:99:concurrent_cold_instances_match_every_named_boundary:PASS\n\n-----------------------\n4 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.01 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_isolation\" end time: Oct 03 09:33 EDT\n\"owned_cpu_isolation\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n5/12 Testing: owned_cpu_timing\n5/12 Test: owned_cpu_timing\nCommand: \"$REPO/build/owned-debug/experiments/owned_cpu/owned_cpu_timing\"\nDirectory: $REPO/build/owned-debug/experiments/owned_cpu\n\"owned_cpu_timing\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\n$REPO/tests/owned_cpu/test_timing.c:778:reset_debt_is_consumed_once_and_nop_executes:PASS\n$REPO/tests/owned_cpu/test_timing.c:779:reset_instruction_is_distinct_and_observable:PASS\n$REPO/tests/owned_cpu/test_timing.c:780:trap_stacks_next_pc_then_addq_rte_resumes_stop:PASS\n$REPO/tests/owned_cpu/test_timing.c:781:illegal_uses_the_canonical_word_and_faulting_pc:PASS\n$REPO/tests/owned_cpu/test_timing.c:782:move_word_absolute_long_loads_every_data_register:PASS\n$REPO/tests/owned_cpu/test_timing.c:783:odd_word_source_stacks_manual_derived_address_error_frame:PASS\n$REPO/tests/owned_cpu/test_timing.c:784:odd_long_destination_stacks_a_write_address_error:PASS\n$REPO/tests/owned_cpu/test_timing.c:785:odd_instruction_fetch_enters_group_zero_without_an_odd_bus_read:PASS\n$REPO/tests/owned_cpu/test_timing.c:786:twenty_four_bit_bus_address_wrap_is_explicit:PASS\n$REPO/tests/owned_cpu/test_timing.c:787:failed_second_word_write_keeps_first_word_and_becomes_terminal:PASS\n$REPO/tests/owned_cpu/test_timing.c:788:irq3_stays_masked_until_move_to_sr_then_enters_as_its_own_event:PASS\n$REPO/tests/owned_cpu/test_timing.c:789:irq7_edge_is_unmasked_and_held_level_waits_for_mask_change:PASS\n$REPO/tests/owned_cpu/test_timing.c:790:user_mode_privileged_instructions_raise_vector_eight:PASS\n$REPO/tests/owned_cpu/test_timing.c:791:stopped_cpu_idles_to_the_exact_request_without_bus_access:PASS\n$REPO/tests/owned_cpu/test_timing.c:792:event_limits_and_counter_overflow_are_explicit:PASS\n$REPO/tests/owned_cpu/test_timing.c:793:reset_request_boundaries_never_split_the_reset_event:PASS\n$REPO/tests/owned_cpu/test_timing.c:794:reset_and_four_named_guest_instructions_total_seventy_six_cycles:PASS\n$REPO/tests/owned_cpu/test_timing.c:795:nested_vector_callback_failure_is_terminal_without_recursion:PASS\n$REPO/tests/owned_cpu/test_timing.c:796:odd_exception_stack_fault_is_terminal_without_recursive_entry:PASS\n$REPO/tests/owned_cpu/test_timing.c:797:move_to_sr_switches_to_user_stack:PASS\n$REPO/tests/owned_cpu/test_timing.c:798:rte_restores_user_stack_bank_from_short_frame:PASS\n$REPO/tests/owned_cpu/test_timing.c:799:inaccessible_rte_frame_read_is_terminal_without_return_commit:PASS\n$REPO/tests/owned_cpu/test_timing.c:800:independent_counter_boundaries_do_not_block_other_event_kinds:PASS\n\n-----------------------\n23 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.00 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_timing\" end time: Oct 03 09:33 EDT\n\"owned_cpu_timing\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n4/12 Testing: owned_cpu_semantics\n4/12 Test: owned_cpu_semantics\nCommand: \"$REPO/build/owned-debug/experiments/owned_cpu/owned_cpu_semantics\"\nDirectory: $REPO/build/owned-debug/experiments/owned_cpu\n\"owned_cpu_semantics\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\n$REPO/tests/owned_cpu/test_semantics.c:513:reset_host_fault_stays_terminal_until_reset:PASS\n$REPO/tests/owned_cpu/test_semantics.c:514:cycle_budgets_and_opcode_errors_are_explicit:PASS\n$REPO/tests/owned_cpu/test_semantics.c:515:sub_instruction_budget_makes_bounded_progress_and_reports_overshoot:PASS\n$REPO/tests/owned_cpu/test_semantics.c:516:moveq_selects_all_registers_and_sign_extends:PASS\n$REPO/tests/owned_cpu/test_semantics.c:517:addq_long_uses_eight_for_zero_and_sets_extend_flags:PASS\n$REPO/tests/owned_cpu/test_semantics.c:518:addq_long_selects_each_data_register:PASS\n$REPO/tests/owned_cpu/test_semantics.c:519:addq_long_reports_signed_positive_overflow:PASS\n$REPO/tests/owned_cpu/test_semantics.c:520:move_long_uses_each_data_register_and_ordered_words:PASS\n$REPO/tests/owned_cpu/test_semantics.c:521:move_long_clears_nzvc_and_preserves_x:PASS\n$REPO/tests/owned_cpu/test_semantics.c:522:stop_loads_sr_and_switches_to_the_selected_stack_bank:PASS\n$REPO/tests/owned_cpu/test_semantics.c:523:unsupported_modes_and_illegal_word_report_pc_and_ir:PASS\n$REPO/tests/owned_cpu/test_semantics.c:524:odd_reset_vectors_and_odd_store_are_explicit:PASS\n$REPO/tests/owned_cpu/test_semantics.c:525:incomplete_extension_fetch_becomes_terminal_host_fault:PASS\n$REPO/tests/owned_cpu/test_semantics.c:526:write_fault_keeps_the_successful_first_word:PASS\n$REPO/tests/owned_cpu/test_semantics.c:527:absolute_long_second_word_wraps_in_defined_unsigned_space:PASS\n$REPO/tests/owned_cpu/test_semantics.c:528:program_counter_keeps_logical_high_byte_while_bus_masks_to_24_bits:PASS\n$REPO/tests/owned_cpu/test_semantics.c:529:model_allocator_irq_and_invalid_budget_reject_without_side_effects:PASS\n\n-----------------------\n17 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.00 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_semantics\" end time: Oct 03 09:33 EDT\n\"owned_cpu_semantics\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n9/12 Testing: owned_cpu_faults\n9/12 Test: owned_cpu_faults\nCommand: \"$REPO/build/owned-debug/experiments/owned_cpu/owned_cpu_faults\"\nDirectory: $REPO/build/owned-debug/experiments/owned_cpu\n\"owned_cpu_faults\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\ncreate_rejections=4 null_api_rejections=4 allocation_sites=1 failed_allocations=1 leaked_bytes=0\n$REPO/tests/owned_cpu/test_faults.c:217:invalid_arguments_and_allocation_failure_are_contained:PASS\nsame_instance_callback_reentry=rejected destroy_reentry=no_op clean_destroy=1\n$REPO/tests/owned_cpu/test_faults.c:218:reentry_is_rejected_and_destroy_during_callback_preserves_owner:PASS\nreset_vector_fault=terminal reset_recovery=pass callbacks_after_fault=0\n$REPO/tests/owned_cpu/test_faults.c:219:reset_host_fault_is_terminal_and_reset_recovers:PASS\nhost_fault_cases=7 reset_recovery_case=1 partial_long_write_preserved=1\n$REPO/tests/owned_cpu/test_faults.c:220:bounded_fetch_store_stack_and_vector_faults_are_terminal:PASS\nstopped_pending_irq7_edge=wakes vector=31 clocks=44\n$REPO/tests/owned_cpu/test_faults.c:221:stopped_cpu_wakes_on_a_level_seven_edge:PASS\n\n-----------------------\n5 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.00 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_faults\" end time: Oct 03 09:33 EDT\n\"owned_cpu_faults\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n10/12 Testing: owned_cpu_state\n10/12 Test: owned_cpu_state\nCommand: \"$REPO/build/owned-debug/experiments/owned_cpu/owned_cpu_state\"\nDirectory: $REPO/build/owned-debug/experiments/owned_cpu\n\"owned_cpu_state\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nstate_checkpoints=13 continuation_run_calls=78 source_destroyed_and_overwritten=1\nstate_boundary_names=reset_debt,diagnostic_MOVEQ,diagnostic_ADDQ,diagnostic_MOVE_store,STOP,masked_IRQ,IRQ7_edge_pending_after_deassertion,IRQ_entry,TRAP_entry,ILLEGAL_entry,privilege_entry,address_error_entry,RTE\n$REPO/tests/owned_cpu/test_state.c:662:every_named_boundary_restores_and_continues_in_a_fresh_owner:PASS\nstate_invalid_records=15 null_inputs=4 atomic_destination_and_bus=1\n$REPO/tests/owned_cpu/test_state.c:663:malformed_and_incompatible_records_reject_atomically:PASS\nstate_instruction_counter_mismatch_rejected=1 atomic_destination_and_bus=1\n$REPO/tests/owned_cpu/test_state.c:664:instruction_counter_mismatch_rejects_atomically:PASS\nactive_capture_restore_rejected=1 restore_bus_callbacks=0\n$REPO/tests/owned_cpu/test_state.c:665:reentrant_capture_and_restore_reject_while_active:PASS\nterminal_capture_restore_rejected=1 additional_bus_callbacks=0\n$REPO/tests/owned_cpu/test_state.c:666:terminal_instance_rejects_restore_without_bus_activity:PASS\n\n-----------------------\n5 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.00 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_state\" end time: Oct 03 09:33 EDT\n\"owned_cpu_state\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n3/12 Testing: owned_cpu_diagnostic\n3/12 Test: owned_cpu_diagnostic\nCommand: \"$REPO/build/owned-debug/experiments/owned_cpu/owned_cpu_diagnostic\"\nDirectory: $REPO/build/owned-debug/experiments/owned_cpu\n\"owned_cpu_diagnostic\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\n$REPO/tests/owned_cpu/test_diagnostic.c:202:original_scenario_a_computes_and_stores_ten:PASS\n$REPO/tests/owned_cpu/test_diagnostic.c:204:original_scenario_b_computes_and_stores_sixteen:PASS\n\n-----------------------\n2 Tests 0 Failures 0 Ignored \nOK\nUnity denominator: expected=2 observed=2\n<end of output>\nTest time =   0.00 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_diagnostic\" end time: Oct 03 09:33 EDT\n\"owned_cpu_diagnostic\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n6/12 Testing: owned_cpu_timing_negative\n6/12 Test: owned_cpu_timing_negative\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/negative_timing.py\" \"$REPO/build/owned-debug/experiments/owned_cpu/owned_cpu_timing\"\nDirectory: $REPO/build/owned-debug/experiments/owned_cpu\n\"owned_cpu_timing_negative\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: wrong address-error cycle expectation produced one exact assertion\n<end of output>\nTest time =   0.03 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_timing_negative\" end time: Oct 03 09:33 EDT\n\"owned_cpu_timing_negative\" time elapsed: 00:00:00\n----------------------------------------------------------\n\nEnd testing: Oct 03 09:33 EDT\n\nowned-cpu =   0.41 sec*proc\n\nowned-diagnostic =   0.00 sec*proc\n\nowned-diagnostic-control =   0.05 sec*proc\n\nowned-safety =   0.32 sec*proc\n\nowned-safety-control =   0.04 sec*proc\n\nowned-state =   0.00 sec*proc\n\nowned-timing =   0.00 sec*proc\n\nowned-timing-control =   0.03 sec*proc\n\n",
+          "test_log_sha256": "64c2339b140ce0da477940302d1c5a990a76537aa856afd5138cc9ba47e31acb"
+        },
+        {
+          "artifacts": {
+            "build/owned-release/CMakeCache.txt": "20f8dc5cba8d086a03840575bbeee402246b80c0a159195b2d9852084e5805f7",
+            "build/owned-release/build.ninja": "120eb0c0ba897ec3d86c66e2906fdcd933cdb004287bd9671677970ec7cb898a",
+            "build/owned-release/compile_commands.json": "8e91934541f5636cfffadea9284b36293759bd380ddff6652b62a126debf9451",
+            "build/owned-release/experiments/owned_cpu/libowned_cpu.a": "243a0b5067d4b6e1cc89e574b09149f1f159d0c6b091817ae0b41b6ec2a3b236",
+            "build/owned-release/experiments/owned_cpu/owned_cpu_cold": "c94b7017613047273b7b71c9be7d6f71537e7d8fa094b5972f149876d4af4e7e",
+            "build/owned-release/experiments/owned_cpu/owned_cpu_diagnostic": "b408e7411ff0664f3ae01fa77e031e71995d88185cca0078588bdc75b40ddda9",
+            "build/owned-release/experiments/owned_cpu/owned_cpu_faults": "333581269e5a20193a243bdc7e76669e3fc51e67d3b78610ad8ecb8995fefd35",
+            "build/owned-release/experiments/owned_cpu/owned_cpu_isolation": "16968277c8f3bddbc56c255a56cf56fd011060a5a4427baf71a2d92a0aedf63a",
+            "build/owned-release/experiments/owned_cpu/owned_cpu_semantics": "2d4fef2a497c70ed34a62399aafc04f545b6417c68f6bf9cae156b6499a8e293",
+            "build/owned-release/experiments/owned_cpu/owned_cpu_state": "cd551fd4ad985561aed350e5830fd4bf6180e673c12610ee7b29695bcc839092",
+            "build/owned-release/experiments/owned_cpu/owned_cpu_timing": "f3ba2c105fcff368b791c915359f26398bf3bcb7aa5a2a27082ae04810cd6523"
+          },
+          "compiler": {
+            "child_system_seconds": 0.005996000000000001,
+            "child_user_seconds": 0.006560999999999928,
+            "command": [
+              "/usr/bin/cc",
+              "--version"
+            ],
+            "elapsed_seconds": 0.015842584194615483,
+            "exit": 0,
+            "output": "Apple clang version 21.0.0 (clang-2100.1.1.101)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\n",
+            "output_sha256": "372772abd42b714a15cce01abdbe71843975dfeee9d80c53c703a08a45873ed2",
+            "status": "pass"
+          },
+          "configuration": {
+            "CMAKE_BUILD_TYPE": "Release",
+            "GLUEYNEO_CPU_EXPERIMENT": "OFF",
+            "GLUEYNEO_OWNED_CPU_EXPERIMENT": "ON",
+            "GLUEYNEO_OWNED_CPU_OPTIMIZATION": "RELEASE",
+            "GLUEYNEO_OWNED_CPU_SANITIZER": "NONE"
+          },
+          "counts": {
+            "cold_processes": 16,
+            "concurrent_pairs": 32,
+            "ctest_expected": 12,
+            "ctest_observed": 12,
+            "interleaved_pairs": 32,
+            "negative_controls": 5,
+            "state_checkpoints": 13,
+            "unity": {
+              "owned_cpu_diagnostic": 2,
+              "owned_cpu_faults": 5,
+              "owned_cpu_isolation": 4,
+              "owned_cpu_semantics": 17,
+              "owned_cpu_state": 5,
+              "owned_cpu_timing": 23
+            }
+          },
+          "diagnostic_cost": {
+            "child_system_seconds": 0.0012250000000000316,
+            "child_user_seconds": 0.0008110000000000062,
+            "command": [
+              "$REPO/build/owned-release/experiments/owned_cpu/owned_cpu_diagnostic"
+            ],
+            "elapsed_seconds": 0.0034299581311643124,
+            "exit": 0,
+            "output": "$REPO/tests/owned_cpu/test_diagnostic.c:202:original_scenario_a_computes_and_stores_ten:PASS\n$REPO/tests/owned_cpu/test_diagnostic.c:204:original_scenario_b_computes_and_stores_sixteen:PASS\n\n-----------------------\n2 Tests 0 Failures 0 Ignored \nOK\nUnity denominator: expected=2 observed=2\n",
+            "output_sha256": "627a8e06d18b46d84fd496c14ac57604618869844f2c618ba237fd9be66d189a",
+            "resource_measurement": "child user/system CPU deltas; peak resident memory unknown; single sample, startup dominated",
+            "scope": "one diagnostic process including host startup; elapsed only; no gameplay throughput claim",
+            "status": "pass"
+          },
+          "optional": false,
+          "preset": "owned-release",
+          "status": "pass",
+          "steps": [
+            {
+              "child_system_seconds": 0.09173599999999998,
+              "child_user_seconds": 0.178718,
+              "command": [
+                "cmake",
+                "--preset",
+                "owned-release"
+              ],
+              "elapsed_seconds": 0.29606991610489786,
+              "exit": 0,
+              "output": "-- Configuring done (0.3s)\n-- Generating done (0.0s)\n-- Build files have been written to: $REPO/build/owned-release\n",
+              "output_sha256": "ea7191eb15375006ee83d98247fc69667e1bd3eb25aa97b6805cfc18d1d54a76",
+              "status": "pass"
+            },
+            {
+              "child_system_seconds": 0.005396000000000012,
+              "child_user_seconds": 0.005574999999999997,
+              "command": [
+                "cmake",
+                "--build",
+                "--preset",
+                "owned-release",
+                "--parallel",
+                "2"
+              ],
+              "elapsed_seconds": 0.013694207882508636,
+              "exit": 0,
+              "output": "ninja: no work to do.\n",
+              "output_sha256": "8c35b1682f73592d30612d7b0fabdb384fcfff35cb5a076cb48b85b1368aa794",
+              "status": "pass"
+            },
+            {
+              "child_system_seconds": 0.116759,
+              "child_user_seconds": 0.23058299999999998,
+              "command": [
+                "ctest",
+                "--preset",
+                "owned-release",
+                "--output-on-failure",
+                "--no-tests=error"
+              ],
+              "elapsed_seconds": 0.19548337487503886,
+              "exit": 0,
+              "output": "Test project $REPO/build/owned-release\n      Start  8: owned_cpu_cold\n      Start 11: owned_cpu_inventory\n 1/12 Test  #8: owned_cpu_cold ...................   Passed    0.08 sec\n      Start 12: owned_cpu_inventory_check\n 2/12 Test #11: owned_cpu_inventory ..............   Passed    0.08 sec\n      Start  1: owned_cpu_negative\n 3/12 Test  #1: owned_cpu_negative ...............   Passed    0.04 sec\n      Start  2: owned_cpu_isolation_negative\n 4/12 Test  #2: owned_cpu_isolation_negative .....   Passed    0.03 sec\n      Start  6: owned_cpu_timing_negative\n 5/12 Test #12: owned_cpu_inventory_check ........   Passed    0.07 sec\n      Start  7: owned_cpu_isolation\n 6/12 Test  #7: owned_cpu_isolation ..............   Passed    0.00 sec\n      Start  4: owned_cpu_semantics\n 7/12 Test  #4: owned_cpu_semantics ..............   Passed    0.00 sec\n      Start  5: owned_cpu_timing\n 8/12 Test  #5: owned_cpu_timing .................   Passed    0.00 sec\n      Start  9: owned_cpu_faults\n 9/12 Test  #9: owned_cpu_faults .................   Passed    0.00 sec\n      Start 10: owned_cpu_state\n10/12 Test #10: owned_cpu_state ..................   Passed    0.00 sec\n      Start  3: owned_cpu_diagnostic\n11/12 Test  #3: owned_cpu_diagnostic .............   Passed    0.00 sec\n12/12 Test  #6: owned_cpu_timing_negative ........   Passed    0.03 sec\n\n100% tests passed out of 12\n\nLabel Time Summary:\nowned-cpu                   =   0.35 sec*proc (12 tests)\nowned-diagnostic            =   0.00 sec*proc (2 tests)\nowned-diagnostic-control    =   0.04 sec*proc (1 test)\nowned-safety                =   0.27 sec*proc (6 tests)\nowned-safety-control        =   0.03 sec*proc (1 test)\nowned-state                 =   0.00 sec*proc (1 test)\nowned-timing                =   0.00 sec*proc (1 test)\nowned-timing-control        =   0.03 sec*proc (1 test)\n\nTotal Test time (real) =   0.19 sec\n",
+              "output_sha256": "f5a9f303d7ea4de7bb3e931d9201649383d4767da9df4f5656acf3b13c93d8b3",
+              "status": "pass"
+            }
+          ],
+          "test_log": "Start testing: Oct 03 09:33 EDT\n----------------------------------------------------------\n8/12 Testing: owned_cpu_cold\n8/12 Test: owned_cpu_cold\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/cold.py\" \"$REPO/build/owned-release/experiments/owned_cpu/owned_cpu_cold\"\nDirectory: $REPO/build/owned-release/experiments/owned_cpu\n\"owned_cpu_cold\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: cold_process_cases=16 fresh_processes=16 concurrent_instances=2\n<end of output>\nTest time =   0.08 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_cold\" end time: Oct 03 09:33 EDT\n\"owned_cpu_cold\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n11/12 Testing: owned_cpu_inventory\n11/12 Test: owned_cpu_inventory\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/test_inventory.py\"\nDirectory: $REPO/build/owned-release/experiments/owned_cpu\n\"owned_cpu_inventory\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\n..........\n----------------------------------------------------------------------\nRan 10 tests in 0.020s\n\nOK\n<end of output>\nTest time =   0.08 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_inventory\" end time: Oct 03 09:33 EDT\n\"owned_cpu_inventory\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n1/12 Testing: owned_cpu_negative\n1/12 Test: owned_cpu_negative\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/negative.py\" \"$REPO/build/owned-release/experiments/owned_cpu/owned_cpu_diagnostic\" \"--state\" \"$REPO/build/owned-release/experiments/owned_cpu/owned_cpu_state\"\nDirectory: $REPO/build/owned-release/experiments/owned_cpu\n\"owned_cpu_negative\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: mutation changed 10 to 11; only the named guest arithmetic/store assertion failed\nPASS: --omit-irq7 was caught by its exact continuation assertion\nPASS: instruction-counter mismatch was rejected without destination or bus mutation\n<end of output>\nTest time =   0.04 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_negative\" end time: Oct 03 09:33 EDT\n\"owned_cpu_negative\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n2/12 Testing: owned_cpu_isolation_negative\n2/12 Test: owned_cpu_isolation_negative\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/negative.py\" \"--isolation\" \"$REPO/build/owned-release/experiments/owned_cpu/owned_cpu_isolation\"\nDirectory: $REPO/build/owned-release/experiments/owned_cpu\n\"owned_cpu_isolation_negative\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: swapped owner produced D0 16 against isolated owner D0 10\n<end of output>\nTest time =   0.03 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_isolation_negative\" end time: Oct 03 09:33 EDT\n\"owned_cpu_isolation_negative\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n12/12 Testing: owned_cpu_inventory_check\n12/12 Test: owned_cpu_inventory_check\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tools/owned_cpu/inventory.py\" \"check\" \"--build-dir\" \"$REPO/build/owned-release\"\nDirectory: $REPO/build/owned-release/experiments/owned_cpu\n\"owned_cpu_inventory_check\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: 26 owned fields; 10 compiled source files; runtime mutable globals=0; callback owner mutation=0\n<end of output>\nTest time =   0.07 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_inventory_check\" end time: Oct 03 09:33 EDT\n\"owned_cpu_inventory_check\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n7/12 Testing: owned_cpu_isolation\n7/12 Test: owned_cpu_isolation\nCommand: \"$REPO/build/owned-release/experiments/owned_cpu/owned_cpu_isolation\"\nDirectory: $REPO/build/owned-release/experiments/owned_cpu\n\"owned_cpu_isolation\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nisolated_baselines=2 boundaries_per_instance=6 guest_owners=2\n$REPO/tests/owned_cpu/test_isolation.c:95:build_isolated_baselines:PASS\n$REPO/tests/owned_cpu/test_isolation.c:96:owner_boundary_comparison:PASS\ninterleaved_pairs=32 boundaries_per_instance=6 bus_trace_overflows=0\n$REPO/tests/owned_cpu/test_isolation.c:98:interleaved_instances_match_every_named_boundary:PASS\nconcurrent_pairs=32 boundaries_per_instance=6 cold_first_use=1\n$REPO/tests/owned_cpu/test_isolation.c:99:concurrent_cold_instances_match_every_named_boundary:PASS\n\n-----------------------\n4 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.00 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_isolation\" end time: Oct 03 09:33 EDT\n\"owned_cpu_isolation\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n4/12 Testing: owned_cpu_semantics\n4/12 Test: owned_cpu_semantics\nCommand: \"$REPO/build/owned-release/experiments/owned_cpu/owned_cpu_semantics\"\nDirectory: $REPO/build/owned-release/experiments/owned_cpu\n\"owned_cpu_semantics\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\n$REPO/tests/owned_cpu/test_semantics.c:513:reset_host_fault_stays_terminal_until_reset:PASS\n$REPO/tests/owned_cpu/test_semantics.c:514:cycle_budgets_and_opcode_errors_are_explicit:PASS\n$REPO/tests/owned_cpu/test_semantics.c:515:sub_instruction_budget_makes_bounded_progress_and_reports_overshoot:PASS\n$REPO/tests/owned_cpu/test_semantics.c:516:moveq_selects_all_registers_and_sign_extends:PASS\n$REPO/tests/owned_cpu/test_semantics.c:517:addq_long_uses_eight_for_zero_and_sets_extend_flags:PASS\n$REPO/tests/owned_cpu/test_semantics.c:518:addq_long_selects_each_data_register:PASS\n$REPO/tests/owned_cpu/test_semantics.c:519:addq_long_reports_signed_positive_overflow:PASS\n$REPO/tests/owned_cpu/test_semantics.c:520:move_long_uses_each_data_register_and_ordered_words:PASS\n$REPO/tests/owned_cpu/test_semantics.c:521:move_long_clears_nzvc_and_preserves_x:PASS\n$REPO/tests/owned_cpu/test_semantics.c:522:stop_loads_sr_and_switches_to_the_selected_stack_bank:PASS\n$REPO/tests/owned_cpu/test_semantics.c:523:unsupported_modes_and_illegal_word_report_pc_and_ir:PASS\n$REPO/tests/owned_cpu/test_semantics.c:524:odd_reset_vectors_and_odd_store_are_explicit:PASS\n$REPO/tests/owned_cpu/test_semantics.c:525:incomplete_extension_fetch_becomes_terminal_host_fault:PASS\n$REPO/tests/owned_cpu/test_semantics.c:526:write_fault_keeps_the_successful_first_word:PASS\n$REPO/tests/owned_cpu/test_semantics.c:527:absolute_long_second_word_wraps_in_defined_unsigned_space:PASS\n$REPO/tests/owned_cpu/test_semantics.c:528:program_counter_keeps_logical_high_byte_while_bus_masks_to_24_bits:PASS\n$REPO/tests/owned_cpu/test_semantics.c:529:model_allocator_irq_and_invalid_budget_reject_without_side_effects:PASS\n\n-----------------------\n17 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.00 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_semantics\" end time: Oct 03 09:33 EDT\n\"owned_cpu_semantics\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n5/12 Testing: owned_cpu_timing\n5/12 Test: owned_cpu_timing\nCommand: \"$REPO/build/owned-release/experiments/owned_cpu/owned_cpu_timing\"\nDirectory: $REPO/build/owned-release/experiments/owned_cpu\n\"owned_cpu_timing\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\n$REPO/tests/owned_cpu/test_timing.c:778:reset_debt_is_consumed_once_and_nop_executes:PASS\n$REPO/tests/owned_cpu/test_timing.c:779:reset_instruction_is_distinct_and_observable:PASS\n$REPO/tests/owned_cpu/test_timing.c:780:trap_stacks_next_pc_then_addq_rte_resumes_stop:PASS\n$REPO/tests/owned_cpu/test_timing.c:781:illegal_uses_the_canonical_word_and_faulting_pc:PASS\n$REPO/tests/owned_cpu/test_timing.c:782:move_word_absolute_long_loads_every_data_register:PASS\n$REPO/tests/owned_cpu/test_timing.c:783:odd_word_source_stacks_manual_derived_address_error_frame:PASS\n$REPO/tests/owned_cpu/test_timing.c:784:odd_long_destination_stacks_a_write_address_error:PASS\n$REPO/tests/owned_cpu/test_timing.c:785:odd_instruction_fetch_enters_group_zero_without_an_odd_bus_read:PASS\n$REPO/tests/owned_cpu/test_timing.c:786:twenty_four_bit_bus_address_wrap_is_explicit:PASS\n$REPO/tests/owned_cpu/test_timing.c:787:failed_second_word_write_keeps_first_word_and_becomes_terminal:PASS\n$REPO/tests/owned_cpu/test_timing.c:788:irq3_stays_masked_until_move_to_sr_then_enters_as_its_own_event:PASS\n$REPO/tests/owned_cpu/test_timing.c:789:irq7_edge_is_unmasked_and_held_level_waits_for_mask_change:PASS\n$REPO/tests/owned_cpu/test_timing.c:790:user_mode_privileged_instructions_raise_vector_eight:PASS\n$REPO/tests/owned_cpu/test_timing.c:791:stopped_cpu_idles_to_the_exact_request_without_bus_access:PASS\n$REPO/tests/owned_cpu/test_timing.c:792:event_limits_and_counter_overflow_are_explicit:PASS\n$REPO/tests/owned_cpu/test_timing.c:793:reset_request_boundaries_never_split_the_reset_event:PASS\n$REPO/tests/owned_cpu/test_timing.c:794:reset_and_four_named_guest_instructions_total_seventy_six_cycles:PASS\n$REPO/tests/owned_cpu/test_timing.c:795:nested_vector_callback_failure_is_terminal_without_recursion:PASS\n$REPO/tests/owned_cpu/test_timing.c:796:odd_exception_stack_fault_is_terminal_without_recursive_entry:PASS\n$REPO/tests/owned_cpu/test_timing.c:797:move_to_sr_switches_to_user_stack:PASS\n$REPO/tests/owned_cpu/test_timing.c:798:rte_restores_user_stack_bank_from_short_frame:PASS\n$REPO/tests/owned_cpu/test_timing.c:799:inaccessible_rte_frame_read_is_terminal_without_return_commit:PASS\n$REPO/tests/owned_cpu/test_timing.c:800:independent_counter_boundaries_do_not_block_other_event_kinds:PASS\n\n-----------------------\n23 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.00 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_timing\" end time: Oct 03 09:33 EDT\n\"owned_cpu_timing\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n9/12 Testing: owned_cpu_faults\n9/12 Test: owned_cpu_faults\nCommand: \"$REPO/build/owned-release/experiments/owned_cpu/owned_cpu_faults\"\nDirectory: $REPO/build/owned-release/experiments/owned_cpu\n\"owned_cpu_faults\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\ncreate_rejections=4 null_api_rejections=4 allocation_sites=1 failed_allocations=1 leaked_bytes=0\n$REPO/tests/owned_cpu/test_faults.c:217:invalid_arguments_and_allocation_failure_are_contained:PASS\nsame_instance_callback_reentry=rejected destroy_reentry=no_op clean_destroy=1\n$REPO/tests/owned_cpu/test_faults.c:218:reentry_is_rejected_and_destroy_during_callback_preserves_owner:PASS\nreset_vector_fault=terminal reset_recovery=pass callbacks_after_fault=0\n$REPO/tests/owned_cpu/test_faults.c:219:reset_host_fault_is_terminal_and_reset_recovers:PASS\nhost_fault_cases=7 reset_recovery_case=1 partial_long_write_preserved=1\n$REPO/tests/owned_cpu/test_faults.c:220:bounded_fetch_store_stack_and_vector_faults_are_terminal:PASS\nstopped_pending_irq7_edge=wakes vector=31 clocks=44\n$REPO/tests/owned_cpu/test_faults.c:221:stopped_cpu_wakes_on_a_level_seven_edge:PASS\n\n-----------------------\n5 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.00 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_faults\" end time: Oct 03 09:33 EDT\n\"owned_cpu_faults\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n10/12 Testing: owned_cpu_state\n10/12 Test: owned_cpu_state\nCommand: \"$REPO/build/owned-release/experiments/owned_cpu/owned_cpu_state\"\nDirectory: $REPO/build/owned-release/experiments/owned_cpu\n\"owned_cpu_state\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nstate_checkpoints=13 continuation_run_calls=78 source_destroyed_and_overwritten=1\nstate_boundary_names=reset_debt,diagnostic_MOVEQ,diagnostic_ADDQ,diagnostic_MOVE_store,STOP,masked_IRQ,IRQ7_edge_pending_after_deassertion,IRQ_entry,TRAP_entry,ILLEGAL_entry,privilege_entry,address_error_entry,RTE\n$REPO/tests/owned_cpu/test_state.c:662:every_named_boundary_restores_and_continues_in_a_fresh_owner:PASS\nstate_invalid_records=15 null_inputs=4 atomic_destination_and_bus=1\n$REPO/tests/owned_cpu/test_state.c:663:malformed_and_incompatible_records_reject_atomically:PASS\nstate_instruction_counter_mismatch_rejected=1 atomic_destination_and_bus=1\n$REPO/tests/owned_cpu/test_state.c:664:instruction_counter_mismatch_rejects_atomically:PASS\nactive_capture_restore_rejected=1 restore_bus_callbacks=0\n$REPO/tests/owned_cpu/test_state.c:665:reentrant_capture_and_restore_reject_while_active:PASS\nterminal_capture_restore_rejected=1 additional_bus_callbacks=0\n$REPO/tests/owned_cpu/test_state.c:666:terminal_instance_rejects_restore_without_bus_activity:PASS\n\n-----------------------\n5 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.00 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_state\" end time: Oct 03 09:33 EDT\n\"owned_cpu_state\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n3/12 Testing: owned_cpu_diagnostic\n3/12 Test: owned_cpu_diagnostic\nCommand: \"$REPO/build/owned-release/experiments/owned_cpu/owned_cpu_diagnostic\"\nDirectory: $REPO/build/owned-release/experiments/owned_cpu\n\"owned_cpu_diagnostic\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\n$REPO/tests/owned_cpu/test_diagnostic.c:202:original_scenario_a_computes_and_stores_ten:PASS\n$REPO/tests/owned_cpu/test_diagnostic.c:204:original_scenario_b_computes_and_stores_sixteen:PASS\n\n-----------------------\n2 Tests 0 Failures 0 Ignored \nOK\nUnity denominator: expected=2 observed=2\n<end of output>\nTest time =   0.00 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_diagnostic\" end time: Oct 03 09:33 EDT\n\"owned_cpu_diagnostic\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n6/12 Testing: owned_cpu_timing_negative\n6/12 Test: owned_cpu_timing_negative\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/negative_timing.py\" \"$REPO/build/owned-release/experiments/owned_cpu/owned_cpu_timing\"\nDirectory: $REPO/build/owned-release/experiments/owned_cpu\n\"owned_cpu_timing_negative\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: wrong address-error cycle expectation produced one exact assertion\n<end of output>\nTest time =   0.03 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_timing_negative\" end time: Oct 03 09:33 EDT\n\"owned_cpu_timing_negative\" time elapsed: 00:00:00\n----------------------------------------------------------\n\nEnd testing: Oct 03 09:33 EDT\n\nowned-cpu =   0.35 sec*proc\n\nowned-diagnostic =   0.00 sec*proc\n\nowned-diagnostic-control =   0.04 sec*proc\n\nowned-safety =   0.27 sec*proc\n\nowned-safety-control =   0.03 sec*proc\n\nowned-state =   0.00 sec*proc\n\nowned-timing =   0.00 sec*proc\n\nowned-timing-control =   0.03 sec*proc\n\n",
+          "test_log_sha256": "38ff0521d6c3283988fc528a9a300abc3ab2e5a35eef4e52fbf31b51e89fddac"
+        },
+        {
+          "artifacts": {
+            "build/owned-asan-ubsan/CMakeCache.txt": "b0d5e9948b7c427eb2333f866710e081659cb79fb1f0d4ecfccb2a0d9b5bf373",
+            "build/owned-asan-ubsan/build.ninja": "f8056eaf3d7bf14a18ef41fd50d057e2b4cc433d0d694a2337b7ffbf8bd300d4",
+            "build/owned-asan-ubsan/compile_commands.json": "7738ac79c705514b5c38eb07d39492be2476463985d0dfce7799101466877303",
+            "build/owned-asan-ubsan/experiments/owned_cpu/libowned_cpu.a": "06ef6300320ea0ad78f9de297d75845183539d2497a1774dfda3f6c1b4e75d3a",
+            "build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_cold": "2ac560f1b9b73252a117a55fb48bebd932f86df1efc339727ccb1529eb4c32f4",
+            "build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_diagnostic": "74a353e1fc2905b0913d450d37f1d0698e32f05b80e0e2ffb37c32d0d2399d71",
+            "build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_faults": "c8d9a2c5e6260276474e439043d3bf2c99c669ebd1a2c807e0812070025868ec",
+            "build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_isolation": "a1eeeefbc24ee877005a61c92cf4777b2eb50001e826ad98fca2cceb3583003d",
+            "build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_semantics": "fede301fd09bdfd77e6c5900b4581239cd30bbd04493a919c0232d0ded37d721",
+            "build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_state": "ba796c54022a80e0691d9d085c1b498356ea5fa9655d012fce13b1e4ffaab8f7",
+            "build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_timing": "c2b8c16b6e4c78a49e8d9c3ab7968d5654e04a782629cce73dda5202b601e0a2"
+          },
+          "compiler": {
+            "child_system_seconds": 0.0067669999999999675,
+            "child_user_seconds": 0.006736999999999993,
+            "command": [
+              "/usr/bin/cc",
+              "--version"
+            ],
+            "elapsed_seconds": 0.017232167068868876,
+            "exit": 0,
+            "output": "Apple clang version 21.0.0 (clang-2100.1.1.101)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\n",
+            "output_sha256": "372772abd42b714a15cce01abdbe71843975dfeee9d80c53c703a08a45873ed2",
+            "status": "pass"
+          },
+          "configuration": {
+            "CMAKE_BUILD_TYPE": "Debug",
+            "GLUEYNEO_CPU_EXPERIMENT": "OFF",
+            "GLUEYNEO_OWNED_CPU_EXPERIMENT": "ON",
+            "GLUEYNEO_OWNED_CPU_OPTIMIZATION": "NONE",
+            "GLUEYNEO_OWNED_CPU_SANITIZER": "ADDRESS_UNDEFINED"
+          },
+          "counts": {
+            "cold_processes": 16,
+            "concurrent_pairs": 32,
+            "ctest_expected": 12,
+            "ctest_observed": 12,
+            "interleaved_pairs": 32,
+            "negative_controls": 5,
+            "state_checkpoints": 13,
+            "unity": {
+              "owned_cpu_diagnostic": 2,
+              "owned_cpu_faults": 5,
+              "owned_cpu_isolation": 4,
+              "owned_cpu_semantics": 17,
+              "owned_cpu_state": 5,
+              "owned_cpu_timing": 23
+            }
+          },
+          "diagnostic_cost": {
+            "child_system_seconds": 0.07170200000000015,
+            "child_user_seconds": 0.005955000000000155,
+            "command": [
+              "$REPO/build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_diagnostic"
+            ],
+            "elapsed_seconds": 0.07958087488077581,
+            "exit": 0,
+            "output": "$REPO/tests/owned_cpu/test_diagnostic.c:202:original_scenario_a_computes_and_stores_ten:PASS\n$REPO/tests/owned_cpu/test_diagnostic.c:204:original_scenario_b_computes_and_stores_sixteen:PASS\n\n-----------------------\n2 Tests 0 Failures 0 Ignored \nOK\nUnity denominator: expected=2 observed=2\n",
+            "output_sha256": "627a8e06d18b46d84fd496c14ac57604618869844f2c618ba237fd9be66d189a",
+            "resource_measurement": "child user/system CPU deltas; peak resident memory unknown; single sample, startup dominated",
+            "scope": "one diagnostic process including host startup; elapsed only; no gameplay throughput claim",
+            "status": "pass"
+          },
+          "optional": false,
+          "preset": "owned-asan-ubsan",
+          "status": "pass",
+          "steps": [
+            {
+              "child_system_seconds": 0.08691199999999999,
+              "child_user_seconds": 0.172771,
+              "command": [
+                "cmake",
+                "--preset",
+                "owned-asan-ubsan"
+              ],
+              "elapsed_seconds": 0.28511124989017844,
+              "exit": 0,
+              "output": "-- Configuring done (0.3s)\n-- Generating done (0.0s)\n-- Build files have been written to: $REPO/build/owned-asan-ubsan\n",
+              "output_sha256": "d60109d46e73920f4b4a7c69597ca993c3071647414ff18cfac3f9cd70020bcc",
+              "status": "pass"
+            },
+            {
+              "child_system_seconds": 0.005511000000000044,
+              "child_user_seconds": 0.005622999999999934,
+              "command": [
+                "cmake",
+                "--build",
+                "--preset",
+                "owned-asan-ubsan",
+                "--parallel",
+                "2"
+              ],
+              "elapsed_seconds": 0.014323042007163167,
+              "exit": 0,
+              "output": "ninja: no work to do.\n",
+              "output_sha256": "8c35b1682f73592d30612d7b0fabdb384fcfff35cb5a076cb48b85b1368aa794",
+              "status": "pass"
+            },
+            {
+              "child_system_seconds": 1.966259,
+              "child_user_seconds": 0.3985080000000001,
+              "command": [
+                "ctest",
+                "--preset",
+                "owned-asan-ubsan",
+                "--output-on-failure",
+                "--no-tests=error"
+              ],
+              "elapsed_seconds": 1.3108606250025332,
+              "exit": 0,
+              "output": "Test project $REPO/build/owned-asan-ubsan\n      Start  8: owned_cpu_cold\n      Start  1: owned_cpu_negative\n 1/12 Test  #1: owned_cpu_negative ...............   Passed    0.28 sec\n      Start  2: owned_cpu_isolation_negative\n 2/12 Test  #2: owned_cpu_isolation_negative .....   Passed    0.11 sec\n      Start 12: owned_cpu_inventory_check\n 3/12 Test #12: owned_cpu_inventory_check ........   Passed    0.11 sec\n      Start  6: owned_cpu_timing_negative\n 4/12 Test  #6: owned_cpu_timing_negative ........   Passed    0.11 sec\n      Start 11: owned_cpu_inventory\n 5/12 Test #11: owned_cpu_inventory ..............   Passed    0.09 sec\n      Start  7: owned_cpu_isolation\n 6/12 Test  #7: owned_cpu_isolation ..............   Passed    0.08 sec\n      Start  4: owned_cpu_semantics\n 7/12 Test  #4: owned_cpu_semantics ..............   Passed    0.08 sec\n      Start  9: owned_cpu_faults\n 8/12 Test  #9: owned_cpu_faults .................   Passed    0.08 sec\n      Start  5: owned_cpu_timing\n 9/12 Test  #5: owned_cpu_timing .................   Passed    0.08 sec\n      Start  3: owned_cpu_diagnostic\n10/12 Test  #3: owned_cpu_diagnostic .............   Passed    0.08 sec\n      Start 10: owned_cpu_state\n11/12 Test #10: owned_cpu_state ..................   Passed    0.08 sec\n12/12 Test  #8: owned_cpu_cold ...................   Passed    1.30 sec\n\n100% tests passed out of 12\n\nLabel Time Summary:\nowned-cpu                   =   2.46 sec*proc (12 tests)\nowned-diagnostic            =   0.15 sec*proc (2 tests)\nowned-diagnostic-control    =   0.28 sec*proc (1 test)\nowned-safety                =   1.76 sec*proc (6 tests)\nowned-safety-control        =   0.11 sec*proc (1 test)\nowned-state                 =   0.08 sec*proc (1 test)\nowned-timing                =   0.08 sec*proc (1 test)\nowned-timing-control        =   0.11 sec*proc (1 test)\n\nTotal Test time (real) =   1.30 sec\n",
+              "output_sha256": "399194b1272ebcfd39f30685dc041f9c03fc6366b09e47e1859fb79118ba2acb",
+              "status": "pass"
+            }
+          ],
+          "test_log": "Start testing: Oct 03 09:33 EDT\n----------------------------------------------------------\n1/12 Testing: owned_cpu_negative\n1/12 Test: owned_cpu_negative\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/negative.py\" \"$REPO/build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_diagnostic\" \"--state\" \"$REPO/build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_state\"\nDirectory: $REPO/build/owned-asan-ubsan/experiments/owned_cpu\n\"owned_cpu_negative\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: mutation changed 10 to 11; only the named guest arithmetic/store assertion failed\nPASS: --omit-irq7 was caught by its exact continuation assertion\nPASS: instruction-counter mismatch was rejected without destination or bus mutation\n<end of output>\nTest time =   0.28 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_negative\" end time: Oct 03 09:33 EDT\n\"owned_cpu_negative\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n2/12 Testing: owned_cpu_isolation_negative\n2/12 Test: owned_cpu_isolation_negative\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/negative.py\" \"--isolation\" \"$REPO/build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_isolation\"\nDirectory: $REPO/build/owned-asan-ubsan/experiments/owned_cpu\n\"owned_cpu_isolation_negative\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: swapped owner produced D0 16 against isolated owner D0 10\n<end of output>\nTest time =   0.11 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_isolation_negative\" end time: Oct 03 09:33 EDT\n\"owned_cpu_isolation_negative\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n12/12 Testing: owned_cpu_inventory_check\n12/12 Test: owned_cpu_inventory_check\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tools/owned_cpu/inventory.py\" \"check\" \"--build-dir\" \"$REPO/build/owned-asan-ubsan\"\nDirectory: $REPO/build/owned-asan-ubsan/experiments/owned_cpu\n\"owned_cpu_inventory_check\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: 26 owned fields; 10 compiled source files; runtime mutable globals=0; callback owner mutation=0\n<end of output>\nTest time =   0.11 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_inventory_check\" end time: Oct 03 09:33 EDT\n\"owned_cpu_inventory_check\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n6/12 Testing: owned_cpu_timing_negative\n6/12 Test: owned_cpu_timing_negative\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/negative_timing.py\" \"$REPO/build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_timing\"\nDirectory: $REPO/build/owned-asan-ubsan/experiments/owned_cpu\n\"owned_cpu_timing_negative\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: wrong address-error cycle expectation produced one exact assertion\n<end of output>\nTest time =   0.11 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_timing_negative\" end time: Oct 03 09:33 EDT\n\"owned_cpu_timing_negative\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n11/12 Testing: owned_cpu_inventory\n11/12 Test: owned_cpu_inventory\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/test_inventory.py\"\nDirectory: $REPO/build/owned-asan-ubsan/experiments/owned_cpu\n\"owned_cpu_inventory\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\n..........\n----------------------------------------------------------------------\nRan 10 tests in 0.020s\n\nOK\n<end of output>\nTest time =   0.09 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_inventory\" end time: Oct 03 09:33 EDT\n\"owned_cpu_inventory\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n7/12 Testing: owned_cpu_isolation\n7/12 Test: owned_cpu_isolation\nCommand: \"$REPO/build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_isolation\"\nDirectory: $REPO/build/owned-asan-ubsan/experiments/owned_cpu\n\"owned_cpu_isolation\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nisolated_baselines=2 boundaries_per_instance=6 guest_owners=2\n$REPO/tests/owned_cpu/test_isolation.c:95:build_isolated_baselines:PASS\n$REPO/tests/owned_cpu/test_isolation.c:96:owner_boundary_comparison:PASS\ninterleaved_pairs=32 boundaries_per_instance=6 bus_trace_overflows=0\n$REPO/tests/owned_cpu/test_isolation.c:98:interleaved_instances_match_every_named_boundary:PASS\nconcurrent_pairs=32 boundaries_per_instance=6 cold_first_use=1\n$REPO/tests/owned_cpu/test_isolation.c:99:concurrent_cold_instances_match_every_named_boundary:PASS\n\n-----------------------\n4 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.08 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_isolation\" end time: Oct 03 09:33 EDT\n\"owned_cpu_isolation\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n4/12 Testing: owned_cpu_semantics\n4/12 Test: owned_cpu_semantics\nCommand: \"$REPO/build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_semantics\"\nDirectory: $REPO/build/owned-asan-ubsan/experiments/owned_cpu\n\"owned_cpu_semantics\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\n$REPO/tests/owned_cpu/test_semantics.c:513:reset_host_fault_stays_terminal_until_reset:PASS\n$REPO/tests/owned_cpu/test_semantics.c:514:cycle_budgets_and_opcode_errors_are_explicit:PASS\n$REPO/tests/owned_cpu/test_semantics.c:515:sub_instruction_budget_makes_bounded_progress_and_reports_overshoot:PASS\n$REPO/tests/owned_cpu/test_semantics.c:516:moveq_selects_all_registers_and_sign_extends:PASS\n$REPO/tests/owned_cpu/test_semantics.c:517:addq_long_uses_eight_for_zero_and_sets_extend_flags:PASS\n$REPO/tests/owned_cpu/test_semantics.c:518:addq_long_selects_each_data_register:PASS\n$REPO/tests/owned_cpu/test_semantics.c:519:addq_long_reports_signed_positive_overflow:PASS\n$REPO/tests/owned_cpu/test_semantics.c:520:move_long_uses_each_data_register_and_ordered_words:PASS\n$REPO/tests/owned_cpu/test_semantics.c:521:move_long_clears_nzvc_and_preserves_x:PASS\n$REPO/tests/owned_cpu/test_semantics.c:522:stop_loads_sr_and_switches_to_the_selected_stack_bank:PASS\n$REPO/tests/owned_cpu/test_semantics.c:523:unsupported_modes_and_illegal_word_report_pc_and_ir:PASS\n$REPO/tests/owned_cpu/test_semantics.c:524:odd_reset_vectors_and_odd_store_are_explicit:PASS\n$REPO/tests/owned_cpu/test_semantics.c:525:incomplete_extension_fetch_becomes_terminal_host_fault:PASS\n$REPO/tests/owned_cpu/test_semantics.c:526:write_fault_keeps_the_successful_first_word:PASS\n$REPO/tests/owned_cpu/test_semantics.c:527:absolute_long_second_word_wraps_in_defined_unsigned_space:PASS\n$REPO/tests/owned_cpu/test_semantics.c:528:program_counter_keeps_logical_high_byte_while_bus_masks_to_24_bits:PASS\n$REPO/tests/owned_cpu/test_semantics.c:529:model_allocator_irq_and_invalid_budget_reject_without_side_effects:PASS\n\n-----------------------\n17 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.08 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_semantics\" end time: Oct 03 09:33 EDT\n\"owned_cpu_semantics\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n9/12 Testing: owned_cpu_faults\n9/12 Test: owned_cpu_faults\nCommand: \"$REPO/build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_faults\"\nDirectory: $REPO/build/owned-asan-ubsan/experiments/owned_cpu\n\"owned_cpu_faults\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\ncreate_rejections=4 null_api_rejections=4 allocation_sites=1 failed_allocations=1 leaked_bytes=0\n$REPO/tests/owned_cpu/test_faults.c:217:invalid_arguments_and_allocation_failure_are_contained:PASS\nsame_instance_callback_reentry=rejected destroy_reentry=no_op clean_destroy=1\n$REPO/tests/owned_cpu/test_faults.c:218:reentry_is_rejected_and_destroy_during_callback_preserves_owner:PASS\nreset_vector_fault=terminal reset_recovery=pass callbacks_after_fault=0\n$REPO/tests/owned_cpu/test_faults.c:219:reset_host_fault_is_terminal_and_reset_recovers:PASS\nhost_fault_cases=7 reset_recovery_case=1 partial_long_write_preserved=1\n$REPO/tests/owned_cpu/test_faults.c:220:bounded_fetch_store_stack_and_vector_faults_are_terminal:PASS\nstopped_pending_irq7_edge=wakes vector=31 clocks=44\n$REPO/tests/owned_cpu/test_faults.c:221:stopped_cpu_wakes_on_a_level_seven_edge:PASS\n\n-----------------------\n5 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.08 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_faults\" end time: Oct 03 09:33 EDT\n\"owned_cpu_faults\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n5/12 Testing: owned_cpu_timing\n5/12 Test: owned_cpu_timing\nCommand: \"$REPO/build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_timing\"\nDirectory: $REPO/build/owned-asan-ubsan/experiments/owned_cpu\n\"owned_cpu_timing\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\n$REPO/tests/owned_cpu/test_timing.c:778:reset_debt_is_consumed_once_and_nop_executes:PASS\n$REPO/tests/owned_cpu/test_timing.c:779:reset_instruction_is_distinct_and_observable:PASS\n$REPO/tests/owned_cpu/test_timing.c:780:trap_stacks_next_pc_then_addq_rte_resumes_stop:PASS\n$REPO/tests/owned_cpu/test_timing.c:781:illegal_uses_the_canonical_word_and_faulting_pc:PASS\n$REPO/tests/owned_cpu/test_timing.c:782:move_word_absolute_long_loads_every_data_register:PASS\n$REPO/tests/owned_cpu/test_timing.c:783:odd_word_source_stacks_manual_derived_address_error_frame:PASS\n$REPO/tests/owned_cpu/test_timing.c:784:odd_long_destination_stacks_a_write_address_error:PASS\n$REPO/tests/owned_cpu/test_timing.c:785:odd_instruction_fetch_enters_group_zero_without_an_odd_bus_read:PASS\n$REPO/tests/owned_cpu/test_timing.c:786:twenty_four_bit_bus_address_wrap_is_explicit:PASS\n$REPO/tests/owned_cpu/test_timing.c:787:failed_second_word_write_keeps_first_word_and_becomes_terminal:PASS\n$REPO/tests/owned_cpu/test_timing.c:788:irq3_stays_masked_until_move_to_sr_then_enters_as_its_own_event:PASS\n$REPO/tests/owned_cpu/test_timing.c:789:irq7_edge_is_unmasked_and_held_level_waits_for_mask_change:PASS\n$REPO/tests/owned_cpu/test_timing.c:790:user_mode_privileged_instructions_raise_vector_eight:PASS\n$REPO/tests/owned_cpu/test_timing.c:791:stopped_cpu_idles_to_the_exact_request_without_bus_access:PASS\n$REPO/tests/owned_cpu/test_timing.c:792:event_limits_and_counter_overflow_are_explicit:PASS\n$REPO/tests/owned_cpu/test_timing.c:793:reset_request_boundaries_never_split_the_reset_event:PASS\n$REPO/tests/owned_cpu/test_timing.c:794:reset_and_four_named_guest_instructions_total_seventy_six_cycles:PASS\n$REPO/tests/owned_cpu/test_timing.c:795:nested_vector_callback_failure_is_terminal_without_recursion:PASS\n$REPO/tests/owned_cpu/test_timing.c:796:odd_exception_stack_fault_is_terminal_without_recursive_entry:PASS\n$REPO/tests/owned_cpu/test_timing.c:797:move_to_sr_switches_to_user_stack:PASS\n$REPO/tests/owned_cpu/test_timing.c:798:rte_restores_user_stack_bank_from_short_frame:PASS\n$REPO/tests/owned_cpu/test_timing.c:799:inaccessible_rte_frame_read_is_terminal_without_return_commit:PASS\n$REPO/tests/owned_cpu/test_timing.c:800:independent_counter_boundaries_do_not_block_other_event_kinds:PASS\n\n-----------------------\n23 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.08 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_timing\" end time: Oct 03 09:33 EDT\n\"owned_cpu_timing\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n3/12 Testing: owned_cpu_diagnostic\n3/12 Test: owned_cpu_diagnostic\nCommand: \"$REPO/build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_diagnostic\"\nDirectory: $REPO/build/owned-asan-ubsan/experiments/owned_cpu\n\"owned_cpu_diagnostic\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\n$REPO/tests/owned_cpu/test_diagnostic.c:202:original_scenario_a_computes_and_stores_ten:PASS\n$REPO/tests/owned_cpu/test_diagnostic.c:204:original_scenario_b_computes_and_stores_sixteen:PASS\n\n-----------------------\n2 Tests 0 Failures 0 Ignored \nOK\nUnity denominator: expected=2 observed=2\n<end of output>\nTest time =   0.08 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_diagnostic\" end time: Oct 03 09:33 EDT\n\"owned_cpu_diagnostic\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n10/12 Testing: owned_cpu_state\n10/12 Test: owned_cpu_state\nCommand: \"$REPO/build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_state\"\nDirectory: $REPO/build/owned-asan-ubsan/experiments/owned_cpu\n\"owned_cpu_state\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nstate_checkpoints=13 continuation_run_calls=78 source_destroyed_and_overwritten=1\nstate_boundary_names=reset_debt,diagnostic_MOVEQ,diagnostic_ADDQ,diagnostic_MOVE_store,STOP,masked_IRQ,IRQ7_edge_pending_after_deassertion,IRQ_entry,TRAP_entry,ILLEGAL_entry,privilege_entry,address_error_entry,RTE\n$REPO/tests/owned_cpu/test_state.c:662:every_named_boundary_restores_and_continues_in_a_fresh_owner:PASS\nstate_invalid_records=15 null_inputs=4 atomic_destination_and_bus=1\n$REPO/tests/owned_cpu/test_state.c:663:malformed_and_incompatible_records_reject_atomically:PASS\nstate_instruction_counter_mismatch_rejected=1 atomic_destination_and_bus=1\n$REPO/tests/owned_cpu/test_state.c:664:instruction_counter_mismatch_rejects_atomically:PASS\nactive_capture_restore_rejected=1 restore_bus_callbacks=0\n$REPO/tests/owned_cpu/test_state.c:665:reentrant_capture_and_restore_reject_while_active:PASS\nterminal_capture_restore_rejected=1 additional_bus_callbacks=0\n$REPO/tests/owned_cpu/test_state.c:666:terminal_instance_rejects_restore_without_bus_activity:PASS\n\n-----------------------\n5 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.08 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_state\" end time: Oct 03 09:33 EDT\n\"owned_cpu_state\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n8/12 Testing: owned_cpu_cold\n8/12 Test: owned_cpu_cold\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/cold.py\" \"$REPO/build/owned-asan-ubsan/experiments/owned_cpu/owned_cpu_cold\"\nDirectory: $REPO/build/owned-asan-ubsan/experiments/owned_cpu\n\"owned_cpu_cold\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: cold_process_cases=16 fresh_processes=16 concurrent_instances=2\n<end of output>\nTest time =   1.30 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_cold\" end time: Oct 03 09:33 EDT\n\"owned_cpu_cold\" time elapsed: 00:00:01\n----------------------------------------------------------\n\nEnd testing: Oct 03 09:33 EDT\n\nowned-cpu =   2.46 sec*proc\n\nowned-diagnostic =   0.15 sec*proc\n\nowned-diagnostic-control =   0.28 sec*proc\n\nowned-safety =   1.76 sec*proc\n\nowned-safety-control =   0.11 sec*proc\n\nowned-state =   0.08 sec*proc\n\nowned-timing =   0.08 sec*proc\n\nowned-timing-control =   0.11 sec*proc\n\n",
+          "test_log_sha256": "7378f2826046a03a28436777847e48aab01ce2acd0d15b0be2fc19735436165a"
+        },
+        {
+          "artifacts": {
+            "build/owned-tsan/CMakeCache.txt": "f006a589e8f9b21c1fe4a7e1f266b8787974d09501088252bee5fd51800152d7",
+            "build/owned-tsan/build.ninja": "6bf3b7c425fc29e135e49b40649316360a7876e4c39e4ef2e4429238b29141d2",
+            "build/owned-tsan/compile_commands.json": "3e245e4293623efcd686856afb8089f10df8cb7173475980160362046bae3c86",
+            "build/owned-tsan/experiments/owned_cpu/libowned_cpu.a": "60e82d017a7fa4ac682568de8f4a30d8d1a3f90bcbdc8adc83a10d5b16db450c",
+            "build/owned-tsan/experiments/owned_cpu/owned_cpu_cold": "d0812e7fc0c29fbea9bcd9ca020d4bc7f0e19d530bd4191b75b75ebf5756a1f5",
+            "build/owned-tsan/experiments/owned_cpu/owned_cpu_diagnostic": "bc2c0fd0dab0bee4a60bed2e99a2c8b4a6b77b8a0f31fede1a6db371b608ea43",
+            "build/owned-tsan/experiments/owned_cpu/owned_cpu_faults": "11f908bfc4176c0509d133ff8c7d30fbaf4698a8eeede898d0123b968a327ba3",
+            "build/owned-tsan/experiments/owned_cpu/owned_cpu_isolation": "fa5bcd0f19d289b13cff3817cb37476fd4bfd299d4c34525557400ebcd2f22f7",
+            "build/owned-tsan/experiments/owned_cpu/owned_cpu_semantics": "6c4b2626e462aade38c8754b314b7de831bf97cca947301a40448cd7e98f5153",
+            "build/owned-tsan/experiments/owned_cpu/owned_cpu_state": "a7f8c389057f00793fa5ada6f754a18b6f485dc12ef1c15e2afdf6755bd3c737",
+            "build/owned-tsan/experiments/owned_cpu/owned_cpu_timing": "b2e1236e5059276ea8b246018cd23a10b6a4c4bea9a4d6e08ed50f9b9e15e96b"
+          },
+          "compiler": {
+            "child_system_seconds": 0.009432000000000329,
+            "child_user_seconds": 0.0067910000000002135,
+            "command": [
+              "/usr/bin/cc",
+              "--version"
+            ],
+            "elapsed_seconds": 0.02059629186987877,
+            "exit": 0,
+            "output": "Apple clang version 21.0.0 (clang-2100.1.1.101)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\n",
+            "output_sha256": "372772abd42b714a15cce01abdbe71843975dfeee9d80c53c703a08a45873ed2",
+            "status": "pass"
+          },
+          "configuration": {
+            "CMAKE_BUILD_TYPE": "Release",
+            "GLUEYNEO_CPU_EXPERIMENT": "OFF",
+            "GLUEYNEO_OWNED_CPU_EXPERIMENT": "ON",
+            "GLUEYNEO_OWNED_CPU_OPTIMIZATION": "RELEASE",
+            "GLUEYNEO_OWNED_CPU_SANITIZER": "THREAD"
+          },
+          "counts": {
+            "cold_processes": 16,
+            "concurrent_pairs": 32,
+            "ctest_expected": 12,
+            "ctest_observed": 12,
+            "interleaved_pairs": 32,
+            "negative_controls": 5,
+            "state_checkpoints": 13,
+            "unity": {
+              "owned_cpu_diagnostic": 2,
+              "owned_cpu_faults": 5,
+              "owned_cpu_isolation": 4,
+              "owned_cpu_semantics": 17,
+              "owned_cpu_state": 5,
+              "owned_cpu_timing": 23
+            }
+          },
+          "diagnostic_cost": {
+            "child_system_seconds": 0.4561409999999988,
+            "child_user_seconds": 0.012645999999999713,
+            "command": [
+              "$REPO/build/owned-tsan/experiments/owned_cpu/owned_cpu_diagnostic"
+            ],
+            "elapsed_seconds": 0.47234479105100036,
+            "exit": 0,
+            "output": "$REPO/tests/owned_cpu/test_diagnostic.c:202:original_scenario_a_computes_and_stores_ten:PASS\n$REPO/tests/owned_cpu/test_diagnostic.c:204:original_scenario_b_computes_and_stores_sixteen:PASS\n\n-----------------------\n2 Tests 0 Failures 0 Ignored \nOK\nUnity denominator: expected=2 observed=2\n",
+            "output_sha256": "627a8e06d18b46d84fd496c14ac57604618869844f2c618ba237fd9be66d189a",
+            "resource_measurement": "child user/system CPU deltas; peak resident memory unknown; single sample, startup dominated",
+            "scope": "one diagnostic process including host startup; elapsed only; no gameplay throughput claim",
+            "status": "pass"
+          },
+          "optional": true,
+          "preset": "owned-tsan",
+          "status": "pass",
+          "steps": [
+            {
+              "child_system_seconds": 0.09989199999999965,
+              "child_user_seconds": 0.1805969999999999,
+              "command": [
+                "cmake",
+                "--preset",
+                "owned-tsan"
+              ],
+              "elapsed_seconds": 0.3144035830628127,
+              "exit": 0,
+              "output": "-- Configuring done (0.3s)\n-- Generating done (0.0s)\n-- Build files have been written to: $REPO/build/owned-tsan\n",
+              "output_sha256": "9cbd12893c1708bbff45cbd1e34c801d6aba2137e47eddba6d6376b564d09778",
+              "status": "pass"
+            },
+            {
+              "child_system_seconds": 0.005552000000000223,
+              "child_user_seconds": 0.005544999999999911,
+              "command": [
+                "cmake",
+                "--build",
+                "--preset",
+                "owned-tsan",
+                "--parallel",
+                "2"
+              ],
+              "elapsed_seconds": 0.01388320792466402,
+              "exit": 0,
+              "output": "ninja: no work to do.\n",
+              "output_sha256": "8c35b1682f73592d30612d7b0fabdb384fcfff35cb5a076cb48b85b1368aa794",
+              "status": "pass"
+            },
+            {
+              "child_system_seconds": 12.430196,
+              "child_user_seconds": 0.6100830000000002,
+              "command": [
+                "ctest",
+                "--preset",
+                "owned-tsan",
+                "--output-on-failure",
+                "--no-tests=error"
+              ],
+              "elapsed_seconds": 7.698411749908701,
+              "exit": 0,
+              "output": "Test project $REPO/build/owned-tsan\n      Start  8: owned_cpu_cold\n      Start  1: owned_cpu_negative\n 1/12 Test  #1: owned_cpu_negative ...............   Passed    1.30 sec\n      Start  4: owned_cpu_semantics\n 2/12 Test  #4: owned_cpu_semantics ..............   Passed    0.42 sec\n      Start  6: owned_cpu_timing_negative\n 3/12 Test  #6: owned_cpu_timing_negative ........   Passed    0.46 sec\n      Start 10: owned_cpu_state\n 4/12 Test #10: owned_cpu_state ..................   Passed    0.46 sec\n      Start  5: owned_cpu_timing\n 5/12 Test  #5: owned_cpu_timing .................   Passed    0.46 sec\n      Start  9: owned_cpu_faults\n 6/12 Test  #9: owned_cpu_faults .................   Passed    0.63 sec\n      Start  2: owned_cpu_isolation_negative\n 7/12 Test  #2: owned_cpu_isolation_negative .....   Passed    0.65 sec\n      Start  3: owned_cpu_diagnostic\n 8/12 Test  #3: owned_cpu_diagnostic .............   Passed    0.47 sec\n      Start  7: owned_cpu_isolation\n 9/12 Test  #7: owned_cpu_isolation ..............   Passed    0.49 sec\n      Start 12: owned_cpu_inventory_check\n10/12 Test #12: owned_cpu_inventory_check ........   Passed    0.12 sec\n      Start 11: owned_cpu_inventory\n11/12 Test #11: owned_cpu_inventory ..............   Passed    0.08 sec\n12/12 Test  #8: owned_cpu_cold ...................   Passed    7.69 sec\n\n100% tests passed out of 12\n\nLabel Time Summary:\nowned-cpu                   =  13.22 sec*proc (12 tests)\nowned-diagnostic            =   0.89 sec*proc (2 tests)\nowned-diagnostic-control    =   1.30 sec*proc (1 test)\nowned-safety                =   9.65 sec*proc (6 tests)\nowned-safety-control        =   0.65 sec*proc (1 test)\nowned-state                 =   0.46 sec*proc (1 test)\nowned-timing                =   0.46 sec*proc (1 test)\nowned-timing-control        =   0.46 sec*proc (1 test)\n\nTotal Test time (real) =   7.69 sec\n",
+              "output_sha256": "e572f519f94fc67917d35accddad13dab059650b9649abe6e65bf7d32ba23e83",
+              "status": "pass"
+            }
+          ],
+          "test_log": "Start testing: Oct 03 09:33 EDT\n----------------------------------------------------------\n1/12 Testing: owned_cpu_negative\n1/12 Test: owned_cpu_negative\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/negative.py\" \"$REPO/build/owned-tsan/experiments/owned_cpu/owned_cpu_diagnostic\" \"--state\" \"$REPO/build/owned-tsan/experiments/owned_cpu/owned_cpu_state\"\nDirectory: $REPO/build/owned-tsan/experiments/owned_cpu\n\"owned_cpu_negative\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: mutation changed 10 to 11; only the named guest arithmetic/store assertion failed\nPASS: --omit-irq7 was caught by its exact continuation assertion\nPASS: instruction-counter mismatch was rejected without destination or bus mutation\n<end of output>\nTest time =   1.30 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_negative\" end time: Oct 03 09:33 EDT\n\"owned_cpu_negative\" time elapsed: 00:00:01\n----------------------------------------------------------\n\n4/12 Testing: owned_cpu_semantics\n4/12 Test: owned_cpu_semantics\nCommand: \"$REPO/build/owned-tsan/experiments/owned_cpu/owned_cpu_semantics\"\nDirectory: $REPO/build/owned-tsan/experiments/owned_cpu\n\"owned_cpu_semantics\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\n$REPO/tests/owned_cpu/test_semantics.c:513:reset_host_fault_stays_terminal_until_reset:PASS\n$REPO/tests/owned_cpu/test_semantics.c:514:cycle_budgets_and_opcode_errors_are_explicit:PASS\n$REPO/tests/owned_cpu/test_semantics.c:515:sub_instruction_budget_makes_bounded_progress_and_reports_overshoot:PASS\n$REPO/tests/owned_cpu/test_semantics.c:516:moveq_selects_all_registers_and_sign_extends:PASS\n$REPO/tests/owned_cpu/test_semantics.c:517:addq_long_uses_eight_for_zero_and_sets_extend_flags:PASS\n$REPO/tests/owned_cpu/test_semantics.c:518:addq_long_selects_each_data_register:PASS\n$REPO/tests/owned_cpu/test_semantics.c:519:addq_long_reports_signed_positive_overflow:PASS\n$REPO/tests/owned_cpu/test_semantics.c:520:move_long_uses_each_data_register_and_ordered_words:PASS\n$REPO/tests/owned_cpu/test_semantics.c:521:move_long_clears_nzvc_and_preserves_x:PASS\n$REPO/tests/owned_cpu/test_semantics.c:522:stop_loads_sr_and_switches_to_the_selected_stack_bank:PASS\n$REPO/tests/owned_cpu/test_semantics.c:523:unsupported_modes_and_illegal_word_report_pc_and_ir:PASS\n$REPO/tests/owned_cpu/test_semantics.c:524:odd_reset_vectors_and_odd_store_are_explicit:PASS\n$REPO/tests/owned_cpu/test_semantics.c:525:incomplete_extension_fetch_becomes_terminal_host_fault:PASS\n$REPO/tests/owned_cpu/test_semantics.c:526:write_fault_keeps_the_successful_first_word:PASS\n$REPO/tests/owned_cpu/test_semantics.c:527:absolute_long_second_word_wraps_in_defined_unsigned_space:PASS\n$REPO/tests/owned_cpu/test_semantics.c:528:program_counter_keeps_logical_high_byte_while_bus_masks_to_24_bits:PASS\n$REPO/tests/owned_cpu/test_semantics.c:529:model_allocator_irq_and_invalid_budget_reject_without_side_effects:PASS\n\n-----------------------\n17 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.42 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_semantics\" end time: Oct 03 09:33 EDT\n\"owned_cpu_semantics\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n6/12 Testing: owned_cpu_timing_negative\n6/12 Test: owned_cpu_timing_negative\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/negative_timing.py\" \"$REPO/build/owned-tsan/experiments/owned_cpu/owned_cpu_timing\"\nDirectory: $REPO/build/owned-tsan/experiments/owned_cpu\n\"owned_cpu_timing_negative\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: wrong address-error cycle expectation produced one exact assertion\n<end of output>\nTest time =   0.46 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_timing_negative\" end time: Oct 03 09:33 EDT\n\"owned_cpu_timing_negative\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n10/12 Testing: owned_cpu_state\n10/12 Test: owned_cpu_state\nCommand: \"$REPO/build/owned-tsan/experiments/owned_cpu/owned_cpu_state\"\nDirectory: $REPO/build/owned-tsan/experiments/owned_cpu\n\"owned_cpu_state\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nstate_checkpoints=13 continuation_run_calls=78 source_destroyed_and_overwritten=1\nstate_boundary_names=reset_debt,diagnostic_MOVEQ,diagnostic_ADDQ,diagnostic_MOVE_store,STOP,masked_IRQ,IRQ7_edge_pending_after_deassertion,IRQ_entry,TRAP_entry,ILLEGAL_entry,privilege_entry,address_error_entry,RTE\n$REPO/tests/owned_cpu/test_state.c:662:every_named_boundary_restores_and_continues_in_a_fresh_owner:PASS\nstate_invalid_records=15 null_inputs=4 atomic_destination_and_bus=1\n$REPO/tests/owned_cpu/test_state.c:663:malformed_and_incompatible_records_reject_atomically:PASS\nstate_instruction_counter_mismatch_rejected=1 atomic_destination_and_bus=1\n$REPO/tests/owned_cpu/test_state.c:664:instruction_counter_mismatch_rejects_atomically:PASS\nactive_capture_restore_rejected=1 restore_bus_callbacks=0\n$REPO/tests/owned_cpu/test_state.c:665:reentrant_capture_and_restore_reject_while_active:PASS\nterminal_capture_restore_rejected=1 additional_bus_callbacks=0\n$REPO/tests/owned_cpu/test_state.c:666:terminal_instance_rejects_restore_without_bus_activity:PASS\n\n-----------------------\n5 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.46 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_state\" end time: Oct 03 09:33 EDT\n\"owned_cpu_state\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n5/12 Testing: owned_cpu_timing\n5/12 Test: owned_cpu_timing\nCommand: \"$REPO/build/owned-tsan/experiments/owned_cpu/owned_cpu_timing\"\nDirectory: $REPO/build/owned-tsan/experiments/owned_cpu\n\"owned_cpu_timing\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\n$REPO/tests/owned_cpu/test_timing.c:778:reset_debt_is_consumed_once_and_nop_executes:PASS\n$REPO/tests/owned_cpu/test_timing.c:779:reset_instruction_is_distinct_and_observable:PASS\n$REPO/tests/owned_cpu/test_timing.c:780:trap_stacks_next_pc_then_addq_rte_resumes_stop:PASS\n$REPO/tests/owned_cpu/test_timing.c:781:illegal_uses_the_canonical_word_and_faulting_pc:PASS\n$REPO/tests/owned_cpu/test_timing.c:782:move_word_absolute_long_loads_every_data_register:PASS\n$REPO/tests/owned_cpu/test_timing.c:783:odd_word_source_stacks_manual_derived_address_error_frame:PASS\n$REPO/tests/owned_cpu/test_timing.c:784:odd_long_destination_stacks_a_write_address_error:PASS\n$REPO/tests/owned_cpu/test_timing.c:785:odd_instruction_fetch_enters_group_zero_without_an_odd_bus_read:PASS\n$REPO/tests/owned_cpu/test_timing.c:786:twenty_four_bit_bus_address_wrap_is_explicit:PASS\n$REPO/tests/owned_cpu/test_timing.c:787:failed_second_word_write_keeps_first_word_and_becomes_terminal:PASS\n$REPO/tests/owned_cpu/test_timing.c:788:irq3_stays_masked_until_move_to_sr_then_enters_as_its_own_event:PASS\n$REPO/tests/owned_cpu/test_timing.c:789:irq7_edge_is_unmasked_and_held_level_waits_for_mask_change:PASS\n$REPO/tests/owned_cpu/test_timing.c:790:user_mode_privileged_instructions_raise_vector_eight:PASS\n$REPO/tests/owned_cpu/test_timing.c:791:stopped_cpu_idles_to_the_exact_request_without_bus_access:PASS\n$REPO/tests/owned_cpu/test_timing.c:792:event_limits_and_counter_overflow_are_explicit:PASS\n$REPO/tests/owned_cpu/test_timing.c:793:reset_request_boundaries_never_split_the_reset_event:PASS\n$REPO/tests/owned_cpu/test_timing.c:794:reset_and_four_named_guest_instructions_total_seventy_six_cycles:PASS\n$REPO/tests/owned_cpu/test_timing.c:795:nested_vector_callback_failure_is_terminal_without_recursion:PASS\n$REPO/tests/owned_cpu/test_timing.c:796:odd_exception_stack_fault_is_terminal_without_recursive_entry:PASS\n$REPO/tests/owned_cpu/test_timing.c:797:move_to_sr_switches_to_user_stack:PASS\n$REPO/tests/owned_cpu/test_timing.c:798:rte_restores_user_stack_bank_from_short_frame:PASS\n$REPO/tests/owned_cpu/test_timing.c:799:inaccessible_rte_frame_read_is_terminal_without_return_commit:PASS\n$REPO/tests/owned_cpu/test_timing.c:800:independent_counter_boundaries_do_not_block_other_event_kinds:PASS\n\n-----------------------\n23 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.46 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_timing\" end time: Oct 03 09:33 EDT\n\"owned_cpu_timing\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n9/12 Testing: owned_cpu_faults\n9/12 Test: owned_cpu_faults\nCommand: \"$REPO/build/owned-tsan/experiments/owned_cpu/owned_cpu_faults\"\nDirectory: $REPO/build/owned-tsan/experiments/owned_cpu\n\"owned_cpu_faults\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\ncreate_rejections=4 null_api_rejections=4 allocation_sites=1 failed_allocations=1 leaked_bytes=0\n$REPO/tests/owned_cpu/test_faults.c:217:invalid_arguments_and_allocation_failure_are_contained:PASS\nsame_instance_callback_reentry=rejected destroy_reentry=no_op clean_destroy=1\n$REPO/tests/owned_cpu/test_faults.c:218:reentry_is_rejected_and_destroy_during_callback_preserves_owner:PASS\nreset_vector_fault=terminal reset_recovery=pass callbacks_after_fault=0\n$REPO/tests/owned_cpu/test_faults.c:219:reset_host_fault_is_terminal_and_reset_recovers:PASS\nhost_fault_cases=7 reset_recovery_case=1 partial_long_write_preserved=1\n$REPO/tests/owned_cpu/test_faults.c:220:bounded_fetch_store_stack_and_vector_faults_are_terminal:PASS\nstopped_pending_irq7_edge=wakes vector=31 clocks=44\n$REPO/tests/owned_cpu/test_faults.c:221:stopped_cpu_wakes_on_a_level_seven_edge:PASS\n\n-----------------------\n5 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.63 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_faults\" end time: Oct 03 09:33 EDT\n\"owned_cpu_faults\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n2/12 Testing: owned_cpu_isolation_negative\n2/12 Test: owned_cpu_isolation_negative\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/negative.py\" \"--isolation\" \"$REPO/build/owned-tsan/experiments/owned_cpu/owned_cpu_isolation\"\nDirectory: $REPO/build/owned-tsan/experiments/owned_cpu\n\"owned_cpu_isolation_negative\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: swapped owner produced D0 16 against isolated owner D0 10\n<end of output>\nTest time =   0.65 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_isolation_negative\" end time: Oct 03 09:33 EDT\n\"owned_cpu_isolation_negative\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n3/12 Testing: owned_cpu_diagnostic\n3/12 Test: owned_cpu_diagnostic\nCommand: \"$REPO/build/owned-tsan/experiments/owned_cpu/owned_cpu_diagnostic\"\nDirectory: $REPO/build/owned-tsan/experiments/owned_cpu\n\"owned_cpu_diagnostic\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\n$REPO/tests/owned_cpu/test_diagnostic.c:202:original_scenario_a_computes_and_stores_ten:PASS\n$REPO/tests/owned_cpu/test_diagnostic.c:204:original_scenario_b_computes_and_stores_sixteen:PASS\n\n-----------------------\n2 Tests 0 Failures 0 Ignored \nOK\nUnity denominator: expected=2 observed=2\n<end of output>\nTest time =   0.47 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_diagnostic\" end time: Oct 03 09:33 EDT\n\"owned_cpu_diagnostic\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n7/12 Testing: owned_cpu_isolation\n7/12 Test: owned_cpu_isolation\nCommand: \"$REPO/build/owned-tsan/experiments/owned_cpu/owned_cpu_isolation\"\nDirectory: $REPO/build/owned-tsan/experiments/owned_cpu\n\"owned_cpu_isolation\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nisolated_baselines=2 boundaries_per_instance=6 guest_owners=2\n$REPO/tests/owned_cpu/test_isolation.c:95:build_isolated_baselines:PASS\n$REPO/tests/owned_cpu/test_isolation.c:96:owner_boundary_comparison:PASS\ninterleaved_pairs=32 boundaries_per_instance=6 bus_trace_overflows=0\n$REPO/tests/owned_cpu/test_isolation.c:98:interleaved_instances_match_every_named_boundary:PASS\nconcurrent_pairs=32 boundaries_per_instance=6 cold_first_use=1\n$REPO/tests/owned_cpu/test_isolation.c:99:concurrent_cold_instances_match_every_named_boundary:PASS\n\n-----------------------\n4 Tests 0 Failures 0 Ignored \nOK\n<end of output>\nTest time =   0.49 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_isolation\" end time: Oct 03 09:33 EDT\n\"owned_cpu_isolation\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n12/12 Testing: owned_cpu_inventory_check\n12/12 Test: owned_cpu_inventory_check\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tools/owned_cpu/inventory.py\" \"check\" \"--build-dir\" \"$REPO/build/owned-tsan\"\nDirectory: $REPO/build/owned-tsan/experiments/owned_cpu\n\"owned_cpu_inventory_check\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: 26 owned fields; 10 compiled source files; runtime mutable globals=0; callback owner mutation=0\n<end of output>\nTest time =   0.12 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_inventory_check\" end time: Oct 03 09:33 EDT\n\"owned_cpu_inventory_check\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n11/12 Testing: owned_cpu_inventory\n11/12 Test: owned_cpu_inventory\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/test_inventory.py\"\nDirectory: $REPO/build/owned-tsan/experiments/owned_cpu\n\"owned_cpu_inventory\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\n..........\n----------------------------------------------------------------------\nRan 10 tests in 0.018s\n\nOK\n<end of output>\nTest time =   0.08 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_inventory\" end time: Oct 03 09:33 EDT\n\"owned_cpu_inventory\" time elapsed: 00:00:00\n----------------------------------------------------------\n\n8/12 Testing: owned_cpu_cold\n8/12 Test: owned_cpu_cold\nCommand: \"/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14\" \"$REPO/tests/owned_cpu/cold.py\" \"$REPO/build/owned-tsan/experiments/owned_cpu/owned_cpu_cold\"\nDirectory: $REPO/build/owned-tsan/experiments/owned_cpu\n\"owned_cpu_cold\" start time: Oct 03 09:33 EDT\nOutput:\n----------------------------------------------------------\nPASS: cold_process_cases=16 fresh_processes=16 concurrent_instances=2\n<end of output>\nTest time =   7.69 sec\n----------------------------------------------------------\nTest Passed.\n\"owned_cpu_cold\" end time: Oct 03 09:33 EDT\n\"owned_cpu_cold\" time elapsed: 00:00:07\n----------------------------------------------------------\n\nEnd testing: Oct 03 09:33 EDT\n\nowned-cpu =  13.22 sec*proc\n\nowned-diagnostic =   0.89 sec*proc\n\nowned-diagnostic-control =   1.30 sec*proc\n\nowned-safety =   9.65 sec*proc\n\nowned-safety-control =   0.65 sec*proc\n\nowned-state =   0.46 sec*proc\n\nowned-timing =   0.46 sec*proc\n\nowned-timing-control =   0.46 sec*proc\n\n",
+          "test_log_sha256": "3d946311f4edbc87b212b2b19b476da260d2e5b8784b8e8217d23f85b08ecaf8"
+        }
+      ],
+      "sha256": "9ab91a0ba44cb20eadcb3383d147925b4ffd00bf859ba1ff1dd4ff96950875ed",
+      "source_hashes": {
+        "CMakeLists.txt": "cdcf97770a240f4e44fd28a618c9b9b5444713d385433cea777ae8d1020b43ff",
+        "CMakePresets.json": "d0ae026871d4bee5479e17f664bd8a27a939a71129d637d6fb19667d65030ded",
+        "LICENSE": "9dad75e7582e12fb43b0d1deeca3e3469757f94f0225b798cb659c1980661ec7",
+        "experiments/owned_cpu/ACCEPTANCE.md": "2a1b9f656a9142d48beb5ff62c1bed38516f04b1b11af5766ed5617cb0a42e64",
+        "experiments/owned_cpu/CMakeLists.txt": "990848e89ffbff684df06ba60414db7722078aed92e4c3431a96039f31b585a3",
+        "experiments/owned_cpu/CONTRACT.md": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73",
+        "experiments/owned_cpu/PROVENANCE.md": "14a9178963cb773b8331668223bc14272d009a9edacecd1e80f2083726fa1ce8",
+        "experiments/owned_cpu/SUBSET.md": "435d0c1a8e991b32c59e732b590bc0d9ae23be2983e0d14eaaadd126e20d078d",
+        "experiments/owned_cpu/cpu.c": "8ac6ded7859184651f6eb3fff8a87c073f8e24a98d66175b64c3d86f69cbd15f",
+        "experiments/owned_cpu/cpu.h": "afdc50cbfdce47cdb17f881fed6fe47b72d919e3220b9c599f6262f868d50eee",
+        "experiments/owned_cpu/illegal-reconciliation.json": "03130a6b9499c176842ce489ed12ab92afa81e682a45182914baefda8f32fee4",
+        "experiments/owned_cpu/source-manifest.json": "10c00df7a0733c9d620a6da43e8d2be3426e2a276f03831972d6b8f2c4499da0",
+        "experiments/owned_cpu/state-inventory.json": "d8972b1b359f3c9b260865251cc00e4b7f3ae820d065e8e46c4fed5e98d0d9f2",
+        "tests/cpu/ORACLE.md": "8a1f9c113ea4fe7608a41b2fedd856c69533a1009b07f9dda6dafd276dc93ade",
+        "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
+        "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c",
+        "tests/owned_cpu/ORACLE.md": "e5ef2662a2eb5c30e4d6b1127a55c58c82ab34f76f8c5750b2d4e2807d116c7d",
+        "tests/owned_cpu/cold.py": "4f0687b793cb04a4c61b31dc917ec7d08233e9a272bf2c0e41b274d06d604f84",
+        "tests/owned_cpu/isolation_fixture.h": "95ca205b077d7459edd2af0194dc9af79954be011fe9c39e8f1efa7da5eb474d",
+        "tests/owned_cpu/negative.py": "2f2cf4a75ba8078e09d5a7eae98181f574c5add8a030b58ab8aa741a9a3f863e",
+        "tests/owned_cpu/negative_timing.py": "9cbce720b2e429fb7d3682bb31b0c3517878bb175da930489ca89c561cb59502",
+        "tests/owned_cpu/test_acceptance.py": "d29bb78233a130c9e511f69bcff9c19fbfb0eafe6c0daee6cdc108c1470643f1",
+        "tests/owned_cpu/test_cold.c": "e2bcb33eea1a24cdc8c0a5340928e4b5d3705b4f0649b6299c370d5560e26d63",
+        "tests/owned_cpu/test_contract.py": "c584dce3be9a3f7ce25b73c01dd47b9740b5c0428be618a1c8b0781cfc3d6a14",
+        "tests/owned_cpu/test_diagnostic.c": "a3d7b2e60f2f0e4fd49042b069dc8729a268816c8bbfd42bfa3a34ed3121937a",
+        "tests/owned_cpu/test_faults.c": "71e09309af7c556b907563229ae6e176958ee91dbe7ddad5ceff124fabe071fa",
+        "tests/owned_cpu/test_inventory.py": "247cf3edf0bb528b9fc6a3198846f7e759f1b147c5b1807761ad9a4c29af383f",
+        "tests/owned_cpu/test_isolation.c": "35a5a515e1df3798bcae4a190387e32c4ea6ce6a0aa2ac628789111d85d7e155",
+        "tests/owned_cpu/test_semantics.c": "33102065bd511e8f5721b5d645b72cc00cad1ef98bd46ef99324fc1d2c123301",
+        "tests/owned_cpu/test_state.c": "25b12a79f08049cd7eb0bdf8af2f97ca74ba1798184397bccc90fa1cff308b31",
+        "tests/owned_cpu/test_timing.c": "7747995fa198148e941b84130a409cc2a4a9ce688ec5cd64b5f7ccd24fc3b0e4",
+        "third_party/unity/LICENSE.txt": "ec6cf55f05ba2aa538b9677b2481b9ac14a87c63594fce8a0677d4f71c583980",
+        "third_party/unity/PROVENANCE.md": "c6666a2ed5b5f44efc9bc5553a0485fd49a23cdf1e64c33da8810d67362c03ce",
+        "third_party/unity/src/unity.c": "a6cc4b143075a03317d72c760b5ed67a4a12eeda1242f575464ad23f34042275",
+        "third_party/unity/src/unity.h": "b30ba4db1e0be1a1f6c862d359d73c91025a114977e41d3dad17103363804334",
+        "third_party/unity/src/unity_internals.h": "35bffad23ebc533977291e7a848c646027513572268fbfa9bd03d5ec21ee818a",
+        "tools/owned_cpu/acceptance.py": "e0838b72ed62dc3861716710ff420e2427f12530af8e38c5ba142eef65cf9228",
+        "tools/owned_cpu/contract.py": "f8164b1573fe1ce873cdcebb466316bc23e6d9e3b71df864bce20ac855d9ad50",
+        "tools/owned_cpu/inventory.py": "763785aef1b7497bcabaf304bcaeee2bbeadba1e573ab1e9b2b6e228ff34a0bf"
+      },
+      "tools": {
+        "cmake": {
+          "child_system_seconds": 0.0029569999999999996,
+          "child_user_seconds": 0.003681,
+          "command": [
+            "cmake",
+            "--version"
+          ],
+          "elapsed_seconds": 0.008370375027880073,
+          "exit": 0,
+          "output": "cmake version 4.4.3\n\nCMake suite maintained and supported by Kitware (kitware.com/cmake).\n",
+          "output_sha256": "f46066af33a13476fb604a1a1a24bb8d4dbddb6eb5855e0c24f9f7132784c9f0",
+          "status": "pass"
+        },
+        "ninja": {
+          "child_system_seconds": 0.0018580000000000003,
+          "child_user_seconds": 0.0010820000000000005,
+          "command": [
+            "ninja",
+            "--version"
+          ],
+          "elapsed_seconds": 0.005532125011086464,
+          "exit": 0,
+          "output": "1.13.2\n",
+          "output_sha256": "810ab97f4b3fccb9adf1db7959945b479635931ccc4a0243c34a41b739eae25a",
+          "status": "pass"
+        },
+        "sdk": {
+          "child_system_seconds": 0.00449,
+          "child_user_seconds": 0.004343,
+          "command": [
+            "xcrun",
+            "--show-sdk-version"
+          ],
+          "elapsed_seconds": 0.011856833007186651,
+          "exit": 0,
+          "output": "26.5\n",
+          "output_sha256": "25205f2e2f02dc71036ee827e19c49b893b231a3d1af240e35a3ac55aa8cdcb6",
+          "status": "pass"
+        }
+      }
     }
   ],
   "disposition": "unqualified",
-  "phase_disposition": "GAPS_FOUND",
-  "schema": 1,
-  "seal": {
-    "budget": {
-      "active_seconds": 33506,
-      "diagnostic_gate_seconds": 2565,
-      "pause": null,
-      "phase_disposition": "not-admitted",
-      "records": 10,
-      "runtime_churn_added_deleted": 1206,
-      "status": "pass",
-      "test_tool_churn_added_deleted": 5252
+  "independent_review": {
+    "authored_runtime_collector_tests": false,
+    "disposition": "GAPS_FOUND",
+    "findings": {
+      "F14-01": "fixed",
+      "F14-02": "fixed",
+      "F14-03": "HIGH open"
     },
-    "collection_sha256": "1b09aaa3d55a9b05db117e81d0aa5a170729654c373770093a75eb63b620838f",
-    "review": null,
-    "revision": "3cd2d7d5192d0e85ebc4be9f472deace1a4511de"
-  }
+    "revision": "3cd2d7d5192d0e85ebc4be9f472deace1a4511de",
+    "sha256": "fb622bdaaedbea8f9a52ec6d6f0eaa72b34742b913e664cc01804be8df3c8b27"
+  },
+  "phase_disposition": "GAPS_FOUND",
+  "schema": 1
 }
