@@ -5,15 +5,15 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: gaps_found
-stopped_at: Plan 01-14 complete; concrete next command `$gsd-plan-phase 01 --gaps` for F14-03 reconciliation
-last_updated: "2026-10-03T02:18:12Z"
+stopped_at: Plans 01-15 and 01-16 planned and independently checked; next command `$gsd-execute-phase 01 --gaps-only`
+last_updated: "2026-10-03T11:32:55.684Z"
 last_activity: 2026-10-03
-last_activity_desc: Plan 01-14 completed; added a durable F14-03 handoff and concrete next GSD command `$gsd-plan-phase 01 --gaps`
-state_head: e83df14d5764e10f4b61e0e32437959855eb8ece
+last_activity_desc: Planned F14-03 gap-closure Plans 01-15 and 01-16; plan, decision, requirement and post-planning coverage checks passed
+state_head: ffa8d6387a36a0b69da5cc16cc7e26e9b23d6207
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 14
+  total_plans: 16
   completed_plans: 14
   percent: 0
 ---
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — OPEN / GAPS_FOUND
-Plan: 14 of 14 complete; execute-phase workflow boundary
-Status: Plan 01-14 independently repaired and re-reviewed F14-01/02. Final four lanes pass48/48 CTest cases; ordinary seal and read-only verify preserve unqualified/GAPS_FOUND. F14-03 remains HIGH/open: frozen ILLEGAL next-PC contract conflicts with tested fault-PC behavior. User-directed canonical reconciliation is required. CPU-01–05 remain Pending; Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
-Last activity: 2026-10-03 — Completed Plan 01-14 with exact-source review, preserved counterexamples and append-only charges. CMake3.20 execution remains unknown; no phase verification ran.
+Phase: 01 (CPU acceptance experiment) — READY TO EXECUTE
+Plan: 14 of 16 executed; gap-closure Plans 01-15 and 01-16 are ready to execute in dependency order
+Status: Plan 01-14 independently repaired and re-reviewed F14-01/02. Final four lanes pass48/48 CTest cases; ordinary seal and read-only verify preserve unqualified/GAPS_FOUND. F14-03 remains HIGH/open: frozen ILLEGAL next-PC contract conflicts with tested fault-PC behavior. Plans 01-15/01-16 now cover source reconciliation, direct behavior, dependent qualification and review. CPU-01–05 remain Pending; Phase 01 remains open / GAPS_FOUND and Phase 02 gated. No fresh phase verification ran.
+Last activity: 2026-10-03 — Planned and independently checked gap-closure Plans 01-15 and 01-16; 12/12 decisions and 17/17 requirement/decision coverage items are covered. CMake3.20 execution remains unknown.
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -45,7 +45,7 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 
 **Velocity:**
 
-- Total plans completed: 14
+- Total plans in phase: 16; executed: 14
 - Average recorded duration: 44.2min
 - Total recorded execution time: 619min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
 
@@ -53,7 +53,7 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 14 | 619min | 44.2min |
+| 01 | 14 of 16 | 619min | 44.2min |
 
 **Recent Trend:**
 
@@ -115,7 +115,7 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 
 ### Pending Todos
 
-- Fourteen plans are complete. Phase 01 verification remains `gaps_found`; next command is `$gsd-plan-phase 01 --gaps` to plan user-directed F14-03 primary-source contract reconciliation. Phase 01 remains open and Phase 02 gated.
+- Plans 01-01 through 01-14 are executed. Plans 01-15 and 01-16 are planned and independently checked; Phase 01 remains `gaps_found`, open, and Phase 02 gated. Next command: `$gsd-execute-phase 01 --gaps-only` (executes only the two gap-closure plans in dependency order). Fresh phase verification is a separate later step.
 
 ### Blockers/Concerns
 
@@ -140,6 +140,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-03T02:18:12Z
-Stopped at: Completed Phase 01 Plan 14; next command is `$gsd-plan-phase 01 --gaps` for F14-03 reconciliation
+Last session: 2026-10-03T11:32:55Z
+Stopped at: Plans 01-15 and 01-16 planned and checked; next command is `$gsd-execute-phase 01 --gaps-only`
 Resume file: None

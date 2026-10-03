@@ -1,8 +1,8 @@
-No external API integration: the current gap scope builds a private in-process owned C CPU and local harness; the detector's “CPU API” signal refers to our internal boundary, not a vendor service or endpoint. The deterministic scan ran on all six new plan files on 2026-10-02; current source coverage is in 01-GAP-COVERAGE.md.
+No external API integration: the current gap scope builds a private in-process owned C CPU and local harness; detector signals such as “CPU API,” “SDK integration,” and “external API integration” refer to internal boundaries or general product language, not a vendor service or endpoint. The deterministic scan was refreshed on 2026-10-03 across current Phase 01 plans; current source coverage and the F14-03 plan split are in 01-GAP-COVERAGE.md.
 
 # Phase 1 Source Coverage
 
-Historical original-plan coverage below predates the approved owned-core direction and implemented experiment. It remains provenance; 01-GAP-COVERAGE.md supersedes it for plans 01-07–01-14.
+Historical original-plan coverage below predates the approved owned-core direction and implemented experiment. It remains provenance; 01-GAP-COVERAGE.md supersedes it for plans 01-07–01-16.
 
 Discovery consumes current pinned-source phase research and the greenfield pattern inventory. There is no existing runtime, prior implementation summary or proven verify command. Implementation paths are new outputs or earlier-plan dependencies. Project skills/graph are absent; agent_skills is empty. Calibration factor 1, zero samples, low confidence. No package-manager install or ORM/schema task exists. Assumption-delta detector returned detected:false. The API declaration above is a reasoned scope declaration, not an assertion that its detector ran.
 

@@ -172,3 +172,31 @@ constraints are owned by the concrete STRIDE register. Existing no-external-API
 coverage declaration remains valid for the first-party private in-process CPU
 seam. Assumption-delta detected=false; no schema paths/push task; ASVS L1 is a
 workflow level, not native-C certification. Deferred ideas remain excluded.
+
+## F14-03 Final Plan Set — 2026-10-03
+
+The preceding Plan 01-15 task/file counts and five-task mapping are a preserved
+planning snapshot, superseded by the final two-plan split below. The split
+responds to independent plan-check scope feedback while retaining the same
+single F14-03 issue, exact-source decision, no-admission outcome and nine
+unresolved assumption flags. No runtime, tests, source evidence, or phase
+verification were executed during this planning revision.
+
+| Plan | Wave/dependency | Current bounded scope | Files/tasks | Gap disposition |
+|---|---|---|---|---|
+| 01-15 | Wave 15; depends on 01-14 | Primary-source/errata interpretation, reversible contract reconciliation, and conditional direct ILLEGAL fixture/runtime correction | 9 files; 2 tasks; no task exceeds 5 paths | Resolved only with source support; otherwise exact HIGH/open evidence need |
+| 01-16 | Wave 16; depends on 01-15 | Refresh affected state/source identity, collect bounded lanes, independent REVIEW-only review, final rebind and honest seal | 6 files; 3 tasks; no task exceeds 5 paths | May seal only the supported bounded result; unresolved source stays unqualified/GAPS_FOUND |
+
+Both plans are additive and `gap_closure: true`; `$gsd-execute-phase 01
+--gaps-only` therefore targets this two-plan closure after planning gates pass.
+Plan 01-15 owns the decision and any direct behavior repair. Plan 01-16 owns
+dependent qualification and review; the independent reviewer edits only
+`experiments/owned_cpu/REVIEW.md` and binds its disposition to the final exact
+closure. `budget-ledger.json` remains append-only across the ordered plans.
+No plan marks CPU-01–05 complete, closes Phase 01, or opens Phase 02.
+
+All nine previously unresolved spec-less probe rows remain unresolved and
+flagged. Their meaning and evidence need are unchanged; duplicating flags in
+the dependent plan does not add criteria or resolve any row. Historical Plan
+01-15 versions remain in Git as provenance; this table is the active plan-set
+mapping.

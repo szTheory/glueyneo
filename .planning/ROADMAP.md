@@ -38,9 +38,13 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit owned-core decision, commands and results against finite effort/churn limits fixed before implementation; failed work and findings are preserved, actionable issues receive budgeted repair, and resource thresholds trigger review/replanning rather than automatic backend rejection. (CPU-05)
 
-**Plans**: 14/14 plans executed. Plan01-14 repaired and independently re-reviewed two receipt-integrity findings, and sealed an explicit unqualified outcome. F14-03 remains HIGH/open: the frozen ILLEGAL next-PC contract conflicts with tested fault-PC behavior, requiring user-directed canonical reconciliation. Phase 01 remains open / GAPS_FOUND and Phase 02 gated. CPU-01–05 remain Pending; no fresh phase verification ran.
+**Plans**: 14/16 plans executed. Plan 01-14 repaired and independently re-reviewed two receipt-integrity findings, then sealed an explicit unqualified outcome. F14-03 remains HIGH/open: the frozen ILLEGAL next-PC contract conflicts with tested fault-PC behavior. Plans 01-15 and 01-16 are the bounded source/behavior and dependent qualification/review closure; both passed independent plan checking, and requirement/decision coverage passed. Phase 01 remains open / GAPS_FOUND and Phase 02 gated. CPU-01–05 remain Pending; no fresh phase verification ran.
 
 Plans:
+
+- [ ] 01-15-PLAN.md
+- [ ] 01-16-PLAN.md
+
 **Wave 1**
 
 - [x] 01-01-PLAN.md — Private guest, native source closure, regeneration and cumulative budget controls complete; failed attempts preserved; backend not admitted.
@@ -97,9 +101,17 @@ Plans:
 
 - [x] 01-14-PLAN.md — Independently review the final revision, repair narrow evidence-tool findings, and seal only a fully supported disposition.
 
-Planning guidance: Plan 01-07 froze owned-core effort/churn guardrails without an attempt count. Plan 01-08 passed the original diagnostic and named mutation control inside its eight-hour gate. Plan 01-09 added named timing, exceptions, interrupts, and functional bus limits. Plan 01-10 passed separate-instance interleaving/cold-init, fault-containment, source-inventory, ASan+UBSan and TSan checks on Apple Clang 21 / Darwin arm64. Continue with fresh-destination state continuation, then independent review and fresh execution; preserve Musashi accounting as historical evidence only. Review findings lead to regression-backed repair within budget; retain open GAPS_FOUND and replan when a threshold or scope boundary blocks a fix. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
+**Wave 15** *(F14-03 gap closure; source and direct behavior reconciliation)*
 
-**Admission gate:** CPU-01–04 remain Pending for current admission. Historical task evidence exists; the phase verifier refused grammar preflight rather than establish that all four behaviors failed. Plan 01-05 completed only the historical Musashi CPU-05 decision; the owned-core CPU-05 decision is still pending. Both Musashi adaptation attempts are consumed, and no further Musashi adaptation is authorized. Plans 01-07–01-14 carry the separately budgeted owned-core work; planning or a non-admitting disposition does not satisfy CPU-01–04. The historical 01-04 accepted receipt is contradicted for current admission by six later source blockers. Phase 01 remains open with `gaps_found`, and Phase 02 stays gated until accepted evidence and fresh phase verification or an explicitly reconciled roadmap revision. Plan 01-06 records an earlier direction checkpoint; current owner-approved scope is in Phase 01 CONTEXT and PROJECT/REQUIREMENTS. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
+- [ ] 01-15-PLAN.md — Reconcile the ILLEGAL saved-PC rule from primary evidence, then make only a justified narrow direct behavior change.
+
+**Wave 16** *(F14-03 gap closure; depends on Wave 15; qualification and review)*
+
+- [ ] 01-16-PLAN.md — Refresh affected identities, qualify the exact closure, independently review and seal a supported or explicitly unresolved disposition.
+
+Planning guidance: Plans 01-07–01-14 completed the owned-core experiment and sealed an explicit unqualified outcome; their evidence does not complete Phase 01 requirements. Plans 01-15 and 01-16 address the sole active finding F14-03 through primary-source reconciliation followed by dependent identity refresh, bounded qualification and independent review. Preserve all Musashi history and consumed attempts. A source ambiguity, failed repair or resource pause remains HIGH/open and GAPS_FOUND. Phase verification stays separate and must freshly assess CPU-01–05; no new requirement is complete merely because the plan closes the finding. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
+
+**Admission gate:** CPU-01–04 remain Pending for current admission. Historical task evidence exists; the phase verifier refused grammar preflight rather than establish that all four behaviors failed. Plan 01-05 completed only the historical Musashi CPU-05 decision; the owned-core CPU-05 decision is still pending. Both Musashi adaptation attempts are consumed, and no further Musashi adaptation is authorized. Plans 01-07–01-14 carry the separately budgeted owned-core work; Plans 01-15–01-16 address only F14-03. Planning or a non-admitting disposition does not satisfy CPU-01–04. The historical 01-04 accepted receipt is contradicted for current admission by six later source blockers. Phase 01 remains open with `gaps_found`, and Phase 02 stays gated until accepted evidence and fresh phase verification or an explicitly reconciled roadmap revision. Plan 01-06 records an earlier direction checkpoint; current owner-approved scope is in Phase 01 CONTEXT and PROJECT/REQUIREMENTS. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
 
 ### Phase 2: Executable diagnostic SDK
 
@@ -145,7 +157,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 14/14 | In Progress|  |
+| 1. CPU acceptance experiment | v0.1 | 14/16 | In Progress|  |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
