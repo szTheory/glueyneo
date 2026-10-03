@@ -101,11 +101,15 @@ Task 2's isolated direct amendment-presence assertion failed with one test, one 
 
 The existing recorder appended one `plan-01-18-runtime-amendment` entry, preserving the 21-entry prefix and all frozen fields, caps, diagnostic gate and Musashi accounting. Charge: 859 seconds, comprising a measured 559-second active interval including intentional RED and failed gate checks, a labeled conservative 180-second initial-context allowance and a labeled conservative 120-second closeout allowance. Recorder build/fixture/CTest identities describe the timing target actually run; supplemental results record both 23-test Python modes and the intentional one-case mutation outcome.
 
-Final budget: 38,811 active seconds, 2,565 diagnostic-gate seconds, 1,221 cumulative runtime churn lines, 5,594 cumulative test/tool churn lines, 22 records, no pause. Frozen 32-hour/6,000-runtime/8,000-test-tool limits remain unchanged. No new CPU backend, package or source acquisition was introduced.
+Final budget: 39,014 active seconds, 2,565 diagnostic-gate seconds, 1,221 cumulative runtime churn lines, 5,594 cumulative test/tool churn lines, 23 records, no pause. Frozen 32-hour/6,000-runtime/8,000-test-tool limits remain unchanged. No new CPU backend, package or source acquisition was introduced.
+
+Final state synchronization exceeded the first closeout allowance. A separate append-only `plan-01-18-closeout` record charges the measured interval after that allowance ended, plus a labeled conservative 60-second final-metadata allowance. This accounting/documentation commit is outside the measured four task commits.
 
 ## Deviations from Plan
 
 **1. [Rule 3 - Blocking documentation] Restored the existing canonical admission-gate wording.** The current ROADMAP expressed the open/GAPS_FOUND/Phase02 gate with wording that the unchanged literal validator rejected. The orchestrator explicitly authorized the smallest wording correction. The sentence now includes `Phase 01 remains open / GAPS_FOUND and Phase 02 gated`; its admission meaning and all requirement statuses are preserved. This bounded change is included in Task 2 commit `06d7001`; the validator was not weakened.
+
+The SDK progress scanner counted Plan 01-17’s checkpoint summary as complete and advanced the reset plan pointer from 1 to 2. Current state/roadmap were corrected to next Plan 19, 17 execution-complete plans versus 18 summary files, while retaining Plan 01-17 incomplete and the phase admission gate.
 
 Git ledger/index writes initially hit sandbox restrictions. Authorized elevated Git operations made normal commits with hooks; no commit protection was bypassed. Failure-handling effort is charged.
 

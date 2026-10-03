@@ -4,17 +4,17 @@ milestone: v0.1
 milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
-status: GAPS_FOUND
-stopped_at: "Phase 01 gap planning complete and independently checked. Next: $gsd-execute-phase 01 --gaps-only."
-last_updated: "2026-10-03T19:03:10.334Z"
+status: executing
+stopped_at: Completed 01-18-PLAN.md; continuing authorized sequential Phase 01 gap execution at Plan 01-19.
+last_updated: "2026-10-03T20:34:27.141Z"
 last_activity: 2026-10-03
-last_activity_desc: Four additive Phase 01 gap plans passed independent plan checking; implementation and execution evidence remain pending.
-state_head: 7726c470aca1293c95d5995d40f6f350564acf1f
+last_activity_desc: Plan 01-18 complete; Phase 01 open/GAPS_FOUND; Plans 01-19–01-21 remain.
+state_head: 654a78b0226ebf1142ebbcd9bdab8e42e888d042
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 21
-  completed_plans: 17
+  completed_plans: 18
   percent: 0
 ---
 
@@ -30,14 +30,14 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — READY TO EXECUTE
-Plan: 18 of 21 is next; Plans 01-18 through 01-21 are planned and unexecuted.
-Status: GAPS_FOUND
-Last activity: 2026-10-03 — Plans 01-18 through 01-21 passed the independent checker; all implementation, qualification, review and phase-verification work remains pending.
+Phase: 01 (CPU acceptance experiment) — EXECUTING
+Plan: 19 of 21
+Status: Ready to execute
+Last activity: 2026-10-03 — Plan 01-18 complete; Phase 01 open/GAPS_FOUND; Plans 01-19–01-21 remain.
 
 Progress: [░░░░░░░░░░] 0%
 
-GSD's frontmatter `progress.completed_plans` counts matching summary files and is 17, including Plan 01-17's answered checkpoint summary. It is not the execution-completion count: Plans 01-01 through 01-16 are complete; Plan 01-17 remains incomplete at its answered checkpoint, and Plans 01-18 through 01-21 have not executed.
+GSD's frontmatter `progress.completed_plans` counts matching summary files and is 18, including Plan 01-17's answered checkpoint summary. It is not the execution-completion count: Plans 01-01 through 01-16 and 01-18 are complete; Plan 01-17 remains incomplete at its answered checkpoint, and Plans 01-19 through 01-21 have not executed.
 
 Historical task-level evidence exists for CPU-01 through CPU-05 (5/27 v1 requirements), but the later source review disputes clean backend admission. The current verification is `gaps_found`; Phase 1 remains open and Phase 2 stays gated.
 
@@ -47,7 +47,7 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 
 **Velocity:**
 
-- Total plans in phase: 21; execution-complete: 16; Plan 01-17 remains at an answered decision checkpoint; Plans 01-18 through 01-21 are planned only
+- Total plans in phase: 21; execution-complete: 17; Plan 01-17 remains at an answered decision checkpoint; Plans 01-19 through 01-21 remain
 - Average recorded duration: 40.4min across the 16 completed plans
 - Total recorded execution time: 646min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
 
@@ -82,6 +82,7 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 | Phase 01 P14 | 30min | 3 tasks | 7 files |
 | Phase 01 P15 | 12min | 2 tasks | 2 files |
 | Phase 01 P16 | 15min | 3 tasks | 5 files |
+| Phase 01 P18 | 13min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -120,10 +121,11 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - [Phase 01]: Plan 01-16 freshly qualified exact unchanged behavior and independently retained F14-03 HIGH/open; seal unqualified/GAPS_FOUND, CPU-01–05 Pending and Phase 02 gated.
 - [Phase 01, P01-C-13, user decision 2026-10-03]: Preserve the original-MC68000 `ILLEGAL 0x4AFC` saved-PC behavior as unknown under the unchanged claim. The bounded source search and independent adjudication remain ambiguous. Do not select `$100` or `$102`, alter runtime/contract/oracle/subset, repeat the finite search, or claim mitigation/admission. F14-03 and T-01-15-03 remain HIGH/open; CPU-01–05 Pending; Phase 01 GAPS_FOUND/open; Phase 02 gated. Gap planning is authorized; any supported-subset change remains a separate owner decision.
 - [Phase 01, P01-C-14, user decision 2026-10-03]: Exclude only exact canonical `0x4AFC` from the owned candidate's qualified subset. Plan for the candidate to return `OWNED_CPU_UNSUPPORTED_OPCODE` with fault PC/IR and no guest ILLEGAL/vector-4 entry, frame/vector bus effects, instruction completion or guest-cycle charge. This states a candidate support boundary, not original MC68000 invalid-opcode behavior. Retain other selected exception interactions. P01-C-14 supersedes P01-C-13 only on the candidate subset boundary; the hardware saved-PC result remains unknown, and Plan 01-17's evidence remains immutable history. This authorizes same-phase gap planning, not implementation, mitigation claims, admission, phase verification or Phase 02.
+- [Phase 01]: Plan 01-18 applies exact 0x4AFC candidate rejection and additive P01-C-14 contract only; hardware saved PC stays unknown, CPU-01–05 Pending, HIGH findings open.
 
 ### Pending Todos
 
-- Plan 01-17 completed its bounded acquisition and independent adjudication but remains incomplete at its answered checkpoint. P01-C-13 preserved unknown silicon behavior; the later discussion selected a candidate-only `0x4AFC` unsupported boundary (P01-C-14). The earlier `$gsd-plan-phase 01 --gaps` returned PLANNING INCONCLUSIVE before this scope decision. Run `$gsd-plan-phase 01 --gaps` next to reconcile contract/subset/runtime/tests/oracle and acceptance evidence, then freshly qualify, independently review and reassess security. Do not repeat the finite source search or claim the hardware PC is resolved. F14-03 and T-01-15-03 remain HIGH/open until the planned gates are completed; Phase 01 remains GAPS_FOUND/open, CPU-01–05 Pending, Phase 02 gated.
+- Plan 01-17 completed its bounded acquisition and independent adjudication but remains incomplete at its answered checkpoint. P01-C-13 preserved unknown silicon behavior; the later discussion selected a candidate-only `0x4AFC` unsupported boundary (P01-C-14). The earlier `$gsd-plan-phase 01 --gaps` returned PLANNING INCONCLUSIVE before this scope decision. Plan 01-18 completed the exact candidate boundary and additive amendment; continue the authorized sequential gap execution at Plan 01-19 for semantic/continuation controls, then qualify and independently reassess in Plans 01-20–01-21. Do not repeat the finite source search or claim the hardware PC is resolved. F14-03 and T-01-15-03 remain HIGH/open until the planned gates are completed; Phase 01 remains GAPS_FOUND/open, CPU-01–05 Pending, Phase 02 gated.
 
 ### Blockers/Concerns
 
@@ -148,6 +150,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-03T17:04:36.604Z
-Stopped at: Phase 01 discussion complete; P01-C-14 excludes exact 0x4AFC from the candidate subset. Next: $gsd-plan-phase 01 --gaps.
-Resume file: .planning/phases/01-cpu-acceptance-experiment/01-CONTEXT.md
+Last session: 2026-10-03T20:33:30.905Z
+Stopped at: Completed 01-18-PLAN.md; continuing authorized sequential Phase 01 gap execution at Plan 01-19.
+Resume file: None
