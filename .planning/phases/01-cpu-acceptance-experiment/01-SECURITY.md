@@ -123,3 +123,146 @@ Same-instance callback reentry remains unsupported by contract; guards specifica
 - [ ] `status: verified` set in frontmatter — status is blocked pending mitigation
 
 **Approval:** blocked 2026-10-03; resolve the declared ILLEGAL frame mitigation, then rerun `$gsd-secure-phase 01`.
+
+<!-- owned-cpu-current-security:start -->
+## P01-C-14 reassessment — 2026-10-03
+
+Evidence revision: `0e2003fe8fdb4a1e804fb6a5fe92c618b909b43a`.
+Independent assessor: separate non-author agent `/root/phase01_plan21/security_assessor`.
+Authored runtime/collector/tests/receipts/ledger: no. Sole write ownership is
+this report and the appended validation audit; executor owns accounting and
+commits. Git root was checked before writing. This is an applicable native
+C/evidence ASVS L1 assessment with block_on high, not web certification.
+
+```json
+{
+  "schema": 1,
+  "asvs_level": 1,
+  "block_on": "high",
+  "independent_non_author": true,
+  "status": "verified",
+  "open_high_or_critical": 0,
+  "evidence_revision": "0e2003fe8fdb4a1e804fb6a5fe92c618b909b43a",
+  "collection_sha256": "53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e",
+  "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+  "source_map_sha256": "e63834b8585912d81f99e82e2dd9070139fbc8acc25854e23274105d8cad861b"
+}
+```
+
+### Historical mitigation and current candidate scope
+
+The original T-01-15-03 frame repair was withheld. Its HIGH/open register row,
+former blocked frontmatter, audits and approval above remain historical; this
+assessment does not claim that repair or its proposed wrong-PC control ran.
+P01-C-13/D1-13 preserves original-MC68000 saved PC as unknown. Separately
+authorized P01-C-14/D1-14 removes exact vector-4 dispatch for `0x4AFC` from the
+candidate's qualified capabilities. `cpu.c:479` returns unsupported after the
+successful opcode fetch and before exception preflight/frame/vector access.
+The strict additive amendment pins that single exclusion while preserving the
+original CONTRACT, archive, all earlier reconciliation fields and frozen caps.
+
+T-01-15-03's candidate-scope disposition is superseded by this evidenced
+capability mitigation. F14-03 is eligible for candidate-claim reconciliation;
+final closeout remains conditional on Task 3's exact report/source/budget seal.
+Neither disposition resolves hardware truth or admits a backend. The independent
+Task 1 review passes against `a3cec086a75c3c7783bcde610f6e8c4234354eeb`;
+the Task 1 commit changes only derived review/accounting metadata. Every one
+of the 39 included source inputs is identical at that review revision, this
+assessment revision and collected source `7411a33bf63428516a3efee289c393e1a8418b28`.
+Task 3 must rebind both independent reports to its final exact revision.
+
+### Reassessment threat crosswalk
+
+All rows use disposition mitigate. CLOSED means present and concretely checked
+in the stated candidate scope; a pending live closeout is identified separately.
+
+| Threat | Severity | Current control evidence | Outcome |
+|---|---|---|---|
+| T-01-15-03 | high | Exact unsupported PC/IR, no frame/vector/dispatch/charge, odd/inaccessible stack and repeated-call assertions in `test_timing.c:264`; independently run timing25 and state5 | SUPERSEDED for candidate claim; original mitigation withheld, hardware unknown |
+| T-01-29 | high | `cpu.c:479`, timing opcode-only bus and memory/register equality; reset40/IRQ44/NOP4 accounting; terminal failed fetch | CLOSED |
+| T-01-30 | high | `contract.py:193` strict root/archive/history and one authorized amendment; omission/order/content/broadening/hardware-selection mutations, contract23 normal and optimized | CLOSED |
+| T-01-31 | high | Unchanged four old collections, 21 old ledger entries/14 non-entry fields against pre-amendment baseline; five preplan collections/31 entries; Plan17/frozen CONTRACT five files; ten Musashi hashes; summed budget | CLOSED |
+| T-01-32 | high | SUBSET/ORACLE/ACCEPTANCE dated P01-C-14 supersession, immutable Plan17 unknown evidence and hardware-selection rejection regression | CLOSED |
+| T-01-33 | high | `test_state.c:397` fresh destination, source destruction/overwrite, all13 boundaries/78 calls, destination callbacks/memory equality; inventory26 fields | CLOSED |
+| T-01-34 | high | `negative_timing.py` exact unsupported-status classifier: one test/one intended failure/zero ignored, finite20s timeout; wrapper2 adversarial methods and native child | CLOSED |
+| T-01-35 | high | `acceptance.py:419` explicit legacy/current profile, pinned amendment and six current controls; rehashed spoof/history/configuration mutations, acceptance21 in both modes | CLOSED |
+| T-01-36 | high | Unique bounded review/security JSON, exact identities, historical finding crosswalk, multiline blocker and Boolean numeric rejection; synthetic deferred seal never admits | CLOSED |
+| T-01-37 | high | Snapshot39 equals collected/committed inputs; all44 actual lane artifact hashes equal receipts; compiler/configuration/input identities and nonempty native/control counts | CLOSED |
+| T-01-38 | high | Immutable collection prefix; inventory compiled-source/archive/object/link checks; four recorded native lanes13/13 each, strict fail/unknown/skipped/history controls | CLOSED |
+| T-01-39 | medium | Source-manifest MIT original work and pinned Unity notices, original fixture ancestry; all39 included text inputs scanned for personal home paths; sanitized receipt commands/outputs | CLOSED |
+| T-01-40 | high | Append-only explicit agent interval sums and failed/reverted churn, frozen limits and unqualified/GAPS_FOUND receipt | CLOSED |
+| T-01-41 | high | Separate REVIEW-only non-author reviewer, independent Debug build22 steps and direct native4/4; exact clean review-check passed against its recorded revision | CLOSED |
+| T-01-42 | high | Separate assessor, source/controls independently read/run, this evidence-bound high-blocking native reassessment and unchanged historical reports | CLOSED |
+| T-01-43 | high | Deferred seal/source/review/security byte binding and stale-audit regressions exercised in acceptance21; current snapshot unchanged | CLOSED control implementation; live Task3 seal PENDING |
+| T-01-44 | high | Frozen summed budget, contract pending requirement/phase gate checks; no accepted profile or phase completion permitted by deferred-seal regressions | CLOSED control implementation; final charges/live Task3 gate PENDING |
+
+### Assessor-executed evidence
+
+All commands below exited zero. Native commands use the executor/collector-built
+Debug binaries; this assessor did not rebuild or rerun the four full lanes.
+The separate reviewer did independently build its Debug target. Collection
+observations are reconciled evidence, not assessor-run sanitizer claims.
+
+```sh
+python3 -m unittest discover -s tests/owned_cpu -p test_contract.py
+python3 -O -m unittest discover -s tests/owned_cpu -p test_contract.py
+python3 -m unittest discover -s tests/owned_cpu -p test_acceptance.py
+python3 -O -m unittest discover -s tests/owned_cpu -p test_acceptance.py
+ctest --preset owned-debug -R '^owned_cpu_(timing|unsupported_negative|semantics|state|faults|isolation|cold_processes|state_negative|timing_negative|isolation_negative|diagnostic_negative)$' --output-on-failure --no-tests=error
+ctest --preset owned-debug -R '^owned_cpu_(negative|cold)$' --output-on-failure --no-tests=error
+build/owned-debug/experiments/owned_cpu/owned_cpu_timing
+build/owned-debug/experiments/owned_cpu/owned_cpu_state
+python3 tests/owned_cpu/negative_timing.py --unsupported build/owned-debug/experiments/owned_cpu/owned_cpu_timing
+python3 tests/owned_cpu/negative_timing.py --self-test
+python3 tools/owned_cpu/contract.py validate
+python3 tools/owned_cpu/acceptance.py verify
+python3 tools/owned_cpu/inventory.py check --build-dir build/owned-debug
+python3 tools/owned_cpu/contract.py budget
+python3 tools/owned_cpu/acceptance.py review-check --review experiments/owned_cpu/REVIEW.md --revision a3cec086a75c3c7783bcde610f6e8c4234354eeb
+```
+
+Contract23/23 in each Python mode; acceptance21/21 in each mode (88 total
+method executions). Targeted CTest8/8 plus negative/cold2/2. The first regex
+contains unmatched names; only the eight listed actual CTests count. Timing25
+and state5 Unity cases, zero failures/ignored; state13 boundaries/78 calls,
+15 invalid records/four null inputs, atomic mismatch/active/terminal rejection.
+Wrapper2/2 methods reject duplicate/foreign output, wrong numeric suffix/name,
+empty/crash/pass/timeout and altered denominators. Its printed FAIL strings
+are deliberate rejected classifier inputs; they are not native acceptance passes.
+The direct negative child exits1 with exactly its intended status assertion;
+the wrapper exits0. Diagnostic negative adds three controls, isolation negative
+one, timing negative one, canonical unsupported negative one: six total.
+
+Read-only Python comparisons additionally verified current snapshot39,
+all44 recorded lane artifacts, four pre-amendment/five preplan collection
+prefixes, preplan31 ledger entries, original reconciliation fields, five frozen
+CONTRACT/Plan17 files and no personal-home-path matches in39 included files.
+`contract.validate` separately proves ten frozen Musashi hashes and strict
+archived CONTRACT equality. `inventory.check` proves26 owned fields/10 compiled
+sources, runtime mutable globals0 and callback owner mutation0. The exact
+comparison baseline/conditions are reproduced in Plan20 SUMMARY; current
+source/artifact comparisons use `acceptance.snapshot()` and each lane's
+`artifacts` SHA-256 map against actual bytes, not only printed receipt hashes.
+
+Observed budget before this assessor's executor-owned charge: records32,
+active42,147 seconds, diagnostic2,565, runtime churn1,221, test/tool churn6,126.
+Caps remain115,200/28,800 seconds and6,000/8,000 churn; no pause. No dependency,
+public ABI, state format, network/auth endpoint or runtime ambient I/O was added.
+Runtime uses explicit host callbacks and per-instance ownership; fault cleanup,
+terminal exception failures, finite event accounting and restore validation are
+retained and directly tested. Evidence hash guards prove internal consistency,
+not independence from a fully malicious fabricated producer.
+
+### Current result and remaining limits
+
+Verified: zero current candidate high/critical findings. Sixteen new declared
+controls plus the original T-01-15-03 candidate reassessment are substantiated;
+the older67 closed controls and historical one-open audit remain unchanged.
+Final seal and accounting are still pending Task3 execution. Original silicon
+saved PC, functional-versus-pin timing, other platforms/CMake3.20 execution,
+full ISA, BIOS/games, public ABI and durable/cross-build continuation remain
+unknown/excluded. No physical evidence or finite silicon search was acquired
+or repeated. All nine specless flags remain unresolved. CPU-01–05 stay Pending,
+Phase01 open/GAPS_FOUND, Phase02 gated. This current native assessment supersedes
+the former blocked candidate disposition only within P01-C-14's changed scope.
+<!-- owned-cpu-current-security:end -->

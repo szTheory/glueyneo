@@ -157,3 +157,42 @@ remain Pending, Phase01 open/GAPS_FOUND, Phase02 gated. The earlier Nyquist
 sign-off is historical, not a fresh audit of these changed claims. Execution's
 01-21-02 must append actual commands, denominators and outcomes without
 overwriting these planning declarations or the retained audits.
+
+## P01-C-14 execution validation audit — 2026-10-03
+
+Independent non-author assessor: `/root/phase01_plan21/security_assessor`.
+Evidence revision: `0e2003fe8fdb4a1e804fb6a5fe92c618b909b43a`; current profile
+`owned-p01-c14-1`, collection
+`53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e`.
+The preceding audits and ten PLANNED rows are retained as dated declarations.
+This table records implemented outcomes; command details and actual assessor
+denominators are in the bounded SECURITY reassessment. None of these rows
+completes a CPU requirement or phase admission.
+
+| Task | Actual verification command/control | Nearest failure condition | Threat refs | Actual outcome |
+|---|---|---|---|---|
+| 01-18-01 | Targeted `ctest --preset owned-debug -R '^owned_cpu_(timing\|unsupported_negative\|semantics\|state\|faults\|isolation\|cold_processes\|state_negative\|timing_negative\|isolation_negative\|diagnostic_negative)$' --output-on-failure --no-tests=error`; direct timing binary | Nonzero/empty count, wrong PC/IR, vector/frame/memory/register mutation, charge/dispatch or failed-fetch classification | T-01-29,T-01-32 | EXECUTED: targeted8/8; direct timing25/25, retained exceptions/prior charges pass |
+| 01-18-02 | `python3 [-O] -m unittest discover -s tests/owned_cpu -p test_contract.py`; `contract.py validate` | Frozen root/archive/history/caps change; missing/tampered/broadened/reordered amendment or hardware-PC selection accepted | T-01-30,T-01-31 | EXECUTED:23/23 separately normal/-O; archive/history/pending gate pass |
+| 01-19-01 | Direct `owned_cpu_state`; semantics/state in targeted CTests; `inventory.py check --build-dir build/owned-debug` | Missing boundary, stale identity, mismatched result/state/bus or changed destination binding | T-01-33 | EXECUTED: state5/5,13 boundaries/78 calls; semantics17 via targeted test; inventory26 fields/10 compiled sources |
+| 01-19-02 | `negative_timing.py --unsupported build/owned-debug/experiments/owned_cpu/owned_cpu_timing`; `negative_timing.py --self-test` | Child crash/empty/unrelated failure, duplicate summary/status, altered count/ignored or timeout accepted | T-01-34 | EXECUTED: one exact child status failure; wrapper2/2 adversarial methods; both negative CTests pass |
+| 01-19-03 | `python3 [-O] -m unittest discover -s tests/owned_cpu -p test_acceptance.py` | Legacy/current spoof, stale/ambiguous/blocked independent attestation, changed audit bytes or accepting deferred seal | T-01-35,T-01-36 | EXECUTED:21/21 separately normal/-O; actual current seal still belongs to21.3 |
+| 01-20-01 | `contract.py validate`; read-only `acceptance.snapshot()` equality against collection/HEAD and source rights/path audit | Missing/stale source or unsupported hardware/dependency/publication claim | T-01-37,T-01-39 | EXECUTED:39/39 inputs and public-path scan; retained MIT/pinned Unity notices and original fixtures |
+| 01-20-02 | `acceptance.py verify`; `inventory.py check`; lane artifact SHA-256 and historical prefix comparisons; `contract.py budget` | Failed/unknown/skipped lane promoted, missing instrumented object/artifact, changed historical prefix or budget pause | T-01-38,T-01-40 | EXECUTED in Plan20: four lanes13/13 each,52 total; assessor reconciles all44 artifacts and histories, does not rerun four lanes |
+| 01-21-01 | Independent review-check against recorded `a3cec086a75c3c7783bcde610f6e8c4234354eeb`; independent reviewer Debug build/native/control evidence | Current review stale/ambiguous/not independent or unresolved high finding | T-01-41 | EXECUTED: reviewer own build22 steps/native4/4 plus normal/-O suites; assessor review-check clean; Task1 commit metadata source equality verified |
+| 01-21-02 | `contract.py validate`; `acceptance.py verify`; `inventory.py check`; assessor direct native/control runs and bounded security-binding validation | Changed claim/source/state/receipt, unsupported mitigation or missing task/threat map | T-01-42,T-01-15-03 | EXECUTED: applicable native L1/block-high, zero current high/critical; candidate mitigation supersedes original withheld mitigation only within P01-C-14 |
+| 01-21-03 | Planned live `review-check --revision HEAD`, `seal --defer-admission --security ...`, read-only `verify` and `contract.py budget` | Final binding stale, high finding, backend admitted, history changed or cap pause | T-01-43,T-01-44 | PENDING live closeout; implemented guard regressions pass; final audit/source rebind/accounting and real seal not yet executed |
+
+Assessor independently executed88 Python method runs (contract23 and
+acceptance21, each normal/-O), targeted10/10 CTests across two commands,
+direct timing25 and state5, plus wrapper2/2. Six native consequential controls,
+13 continuation boundaries/78 calls, retained fault safety and16 cold processes
+are covered by these native targets. These are runs of collector-built Debug
+binaries; the separate source reviewer rebuilt its own Debug target. Full
+Debug/Release/ASan+UBSan/TSan52/52 remains Plan20 collection evidence, independently
+identity-checked here. This audit did not generate receipts, tests or code.
+
+Applicable9=unresolved9+resolved0 remains unchanged: CPU-01 concurrency;
+CPU-02/03/04 unclassified; CPU-05 boundary, adjacency, empty, ordering, precision.
+None is reclassified as resolved by the candidate amendment or green tests.
+Original-silicon saved PC stays unknown; intentional ILLEGAL users remain
+incompatible. CPU-01–05 Pending, Phase01 incomplete/GAPS_FOUND and Phase02 gated.
