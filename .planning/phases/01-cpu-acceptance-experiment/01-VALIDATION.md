@@ -113,6 +113,10 @@ The current phase plan set contains 38 tasks across 16 plans. Each task has at l
 - Plan 01-16's four fresh qualification lanes each passed 12/12 cases. Its final receipt checks passed, while `review-check` returned its expected blocking result for F14-03.
 - The independent primary-source review could not resolve the competing fault-PC and next-PC readings. That is a documented evidence limitation and phase blocker, not a missing test suite. No CPU requirement is promoted to complete.
 
+## Decision Reconciliation 2026-10-03 — Preserve Unknown
+
+The user selected P01-C-13 after Plan 01-17's bounded acquisition and independent adjudication returned an ambiguous saved-PC verdict. Existing automated evidence and historical task counts above remain unchanged; Plan 01-17's document/preservation checks are recorded in its SUMMARY and are not new CPU behavior coverage. This decision authorizes no test, oracle, contract, runtime, supported-subset or admission change. In particular, accepting either `$100` or `$102` in a conformance test would weaken the frozen contract and would not resolve F14-03. A future behavior test becomes a conformance gate only after genuinely applicable authority or a separately explicit owner decision establishes the supported claim. Keep T-01-15-03 HIGH/open; this reconciliation does not qualify phase verification or admission.
+
 | Metric | Count |
 |--------|-------|
 | Current plan tasks with automated verification | 38/38 |

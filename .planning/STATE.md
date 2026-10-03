@@ -5,11 +5,11 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: GAPS_FOUND
-stopped_at: Plan 01-17 ambiguous checkpoint answered with preserve-unknown (P01-C-13); -plan-phase 01 --gaps planning in progress. Phase 01 remains GAPS_FOUND; F14-03/T-01-15-03 HIGH/open; CPU-01–05 Pending; Phase 02 gated.
-last_updated: "2026-10-03T16:23:38.512Z"
+stopped_at: Plan 01-17 decision checkpoint answered with preserve-unknown (P01-C-13); $gsd-plan-phase 01 --gaps in progress. Phase 01 remains GAPS_FOUND; F14-03/T-01-15-03 HIGH/open; CPU-01–05 Pending; Phase 02 gated.
+last_updated: "2026-10-03T16:27:41.901Z"
 last_activity: 2026-10-03
-last_activity_desc: Plan 01-17 reached a blocking-human decision checkpoint after both evidence tasks; source interpretation remains ambiguous. No saved-PC assumption selected.
-state_head: c6d482f21cf5f993cbe61a4467b59f9c6094a79f
+last_activity_desc: Plan 01-17 checkpoint answered by preserve-unknown (P01-C-13); gap planning is in progress and source semantics remain ambiguous.
+state_head: 622e9c5c4597bf7de2e6d19dee159e3e56d1bb2a
 progress:
   total_phases: 3
   completed_phases: 0
@@ -33,7 +33,7 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 Phase: 01 (CPU acceptance experiment)
 Plan: 17 of 17 (checkpoint; not complete)
 Status: GAPS_FOUND
-Last activity: 2026-10-03 — Plan 01-17's ambiguous checkpoint was answered with preserve-unknown (P01-C-13); same-phase gap planning is in progress. The saved-PC interpretation remains ambiguous.
+Last activity: 2026-10-03 — Plan 01-17 checkpoint answered by preserve-unknown (P01-C-13); gap planning is in progress and source semantics remain ambiguous.
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -146,5 +146,5 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 ## Session Continuity
 
 Last session: 2026-10-03T16:23:38.484Z
-Stopped at: Plan 01-17 ambiguous checkpoint answered with preserve-unknown (P01-C-13); -plan-phase 01 --gaps planning in progress. Phase 01 remains GAPS_FOUND; F14-03/T-01-15-03 HIGH/open; CPU-01–05 Pending; Phase 02 gated.
+Stopped at: Plan 01-17 decision checkpoint answered with preserve-unknown (P01-C-13); $gsd-plan-phase 01 --gaps in progress. Phase 01 remains GAPS_FOUND; F14-03/T-01-15-03 HIGH/open; CPU-01–05 Pending; Phase 02 gated.
 Resume file: None
