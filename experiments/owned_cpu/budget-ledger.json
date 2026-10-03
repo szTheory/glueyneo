@@ -1059,6 +1059,74 @@
         "status": "pass"
       },
       "working_tree_dirty": true
+    },
+    {
+      "active_seconds": 918,
+      "agent_intervals": [
+        {
+          "agent": "plan17-author-handoff-and-commit-recovery",
+          "end": "2026-10-03T15:37:52Z",
+          "start": "2026-10-03T15:33:54Z"
+        },
+        {
+          "agent": "plan17-executor-closeout-script-preparation",
+          "end": "2026-10-03T15:40:20Z",
+          "start": "2026-10-03T15:39:52Z"
+        },
+        {
+          "agent": "fresh-non-author-independent-adjudicator",
+          "end": "2026-10-03T15:43:01Z",
+          "start": "2026-10-03T15:37:32Z"
+        },
+        {
+          "agent": "independent-review-initial-read-conservative-allowance",
+          "end": "2026-10-03T15:37:32Z",
+          "start": "2026-10-03T15:36:32Z"
+        },
+        {
+          "agent": "plan17-executor-document-verification-and-checkpoint-summary",
+          "end": "2026-10-03T15:44:24Z",
+          "start": "2026-10-03T15:43:01Z"
+        },
+        {
+          "agent": "plan17-final-commit-and-checkpoint-closeout-allowance",
+          "end": "2026-10-03T15:47:24Z",
+          "start": "2026-10-03T15:44:24Z"
+        }
+      ],
+      "build_dir": "build/owned-debug",
+      "build_identity": {
+        "build_ninja_sha256": "22e9fad5c86b1e9bc48708c054e98ec0d2582afde79cb5d4e205620d44c0ce57",
+        "cmake_cache_sha256": "ed9275b4e3884b1cc8dc26a699d60bdc50c8be8b34fd7b201be1630a78c9602e"
+      },
+      "commit": "23291ff5e0a239693b8df81508b2d55a7fec1c21",
+      "cumulative_churn": {
+        "runtime_added": 1154,
+        "runtime_deleted": 52,
+        "test_tool_added": 5173,
+        "test_tool_deleted": 79
+      },
+      "diagnostic_gate": false,
+      "fixture_sha256": {
+        "tests/cpu/ORACLE.md": "8a1f9c113ea4fe7608a41b2fedd856c69533a1009b07f9dda6dafd276dc93ade",
+        "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
+        "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c"
+      },
+      "inherited_identity_status": "Historical build/fixture identities only; no fresh native qualification. Summary and checkpoint closeout allowance charged conservatively; no runtime/test churn.",
+      "recorded_at": "2026-10-03T15:44:24Z",
+      "stage": "plan17-independent-adjudication-and-blocking-decision-closeout",
+      "test_results": {
+        "cases": [
+          "adjudication-eight-structural-and-protected-checks",
+          "ledger-three-prefix-and-fixed-field-checks"
+        ],
+        "expected": 11,
+        "kind": "document-integrity/preservation; not architectural behavior",
+        "log_sha256": "22f647c2e9c56d63aeb9f6a909f7a38622d97fc9f3b282216ebe3b40b80dfadb",
+        "observed": 11,
+        "status": "pass"
+      },
+      "working_tree_dirty": true
     }
   ],
   "freeze_amendments": [
