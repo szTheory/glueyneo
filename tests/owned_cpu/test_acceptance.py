@@ -2,6 +2,7 @@
 import copy
 import hashlib
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -14,14 +15,20 @@ sys.path.insert(0, str(ROOT))
 from tools.owned_cpu import acceptance as a
 
 
-def log_fixture():
+def log_fixture(profile=None):
     blocks = []
-    for index, name in enumerate(sorted(a.CASES), 1):
+    cases = a.CASES if profile is None else a.CURRENT_CASES
+    unity = a.UNITY if profile is None else a.CURRENT_UNITY
+    for index, name in enumerate(sorted(cases), 1):
         output = ""
-        if name in a.UNITY:
-            output += f"{a.UNITY[name]} Tests 0 Failures 0 Ignored\n"
+        if name in unity:
+            output += f"{unity[name]} Tests 0 Failures 0 Ignored\n"
         if name == "owned_cpu_state":
             output += "state_checkpoints=13 continuation_run_calls=91\n"
+            if profile is not None:
+                output = ("5 Tests 0 Failures 0 Ignored\n"
+                          "state_checkpoints=13 continuation_run_calls=78 source_destroyed_and_overwritten=1\n"
+                          "state_boundary_names=" + ",".join(a.BOUNDARIES) + "\n")
         if name == "owned_cpu_isolation":
             output += "interleaved_pairs=32 boundaries_per_instance=6\nconcurrent_pairs=32 boundaries_per_instance=6\n"
         if name == "owned_cpu_cold":
@@ -30,12 +37,21 @@ def log_fixture():
             output += "PASS: diagnostic\nPASS: pending IRQ\nPASS: counter rejection\n"
         if name in ("owned_cpu_isolation_negative", "owned_cpu_timing_negative"):
             output += "PASS: exact control\n"
-        blocks.append(f"{index}/12 Testing: {name}\n{output}Test Passed.\n")
+        if profile is not None and name in a.CONTROLS:
+            output = "".join("PASS: " + control + "\n" for control in a.CONTROLS[name])
+        if profile is not None and name == "owned_cpu_timing":
+            source = (ROOT / "tests/owned_cpu/test_timing.c").read_text()
+            native = re.findall(r"RUN_TEST\((\w+)\)", source)
+            native = [case for case in native if not case.endswith("wrong_status_expectation") and not case.endswith("wrong_cycle_expectation")]
+            if len(native) != 25:
+                raise ValueError("declared current timing denominator changed")
+            output += "".join("test.c:1:" + case + ":PASS\n" for case in native)
+        blocks.append(f"{index}/{len(cases)} Testing: {name}\n{output}Test Passed.\n")
     return "".join(blocks)
 
 
-def document_fixture():
-    log = log_fixture()
+def document_fixture(profile=None):
+    log = log_fixture(profile)
     step = {"command": ["cmake", "--preset", "owned-debug"], "exit": 0,
             "status": "pass", "output": "", "output_sha256": hashlib.sha256(b"").hexdigest()}
     steps = [copy.deepcopy(step) for _ in range(3)]
@@ -43,7 +59,7 @@ def document_fixture():
     steps[2]["command"] = ["ctest", "--preset", "owned-debug", "--output-on-failure", "--no-tests=error"]
     lane = {"preset": "owned-debug", "optional": False, "status": "pass", "steps": steps,
             "test_log": log, "test_log_sha256": hashlib.sha256(log.encode()).hexdigest(),
-            "counts": a.test_counts(log), "artifacts": {
+            "counts": a.test_counts(log, profile), "artifacts": {
                 "build/owned-debug/" + path: "a" * 64 for path in (
                     "CMakeCache.txt", "build.ninja", "compile_commands.json", "experiments/owned_cpu/libowned_cpu.a",
                     *("experiments/owned_cpu/" + name for name in a.inventory.EXECUTABLE_TARGETS))},
@@ -54,6 +70,9 @@ def document_fixture():
             "diagnostic_cost": step | {"command": ["$REPO/build/owned-debug/experiments/owned_cpu/owned_cpu_diagnostic"]}}
     record = {"revision": "a" * 40, "source_hashes": {"cpu.c": "a" * 64},
               "host": {"architecture": "test"}, "tools": {"cmake": "test"}, "runs": [lane]}
+    if profile is not None:
+        record.update(evidence_profile=profile, amendment_sha256=a.contract.ACTIVE_AMENDMENT_SHA256,
+                      active_contract_identity_sha256=a.contract.ACTIVE_CONTRACT_IDENTITY_SHA256)
     record["sha256"] = a.digest(record)
     return {"schema": 1, "collections": [record], "disposition": "unqualified",
             "phase_disposition": "GAPS_FOUND", "blockers": ["review pending"]}
@@ -64,7 +83,182 @@ def rehash(document):
     record["sha256"] = a.digest({key: value for key, value in record.items() if key != "sha256"})
 
 
+def current_review(record, revision="a" * 40):
+    attestation = a.identity_binding(record, revision) | {
+        "schema": 1, "independent_non_author": True, "hardware_saved_pc": "unknown",
+        "prior_findings": {name: {"disposition": "superseded", "evidence": "exact bounded control/source reassessment"}
+                           for name in a.PRIOR_FINDINGS}}
+    section = "\n".join("## " + heading + "\n" + (revision if index == 0 else "explicit evidence")
+                        for index, heading in enumerate(a.REVIEW_HEADINGS))
+    section += ("\nIndependent reviewer: separate non-author agent\nAuthored runtime/collector/tests: no\n"
+                "Disposition: clean\n```json\n" + json.dumps(attestation) + "\n```\n")
+    return ("Historical F14-03 HIGH open retained\n<!-- owned-cpu-current-review:start -->\n" +
+            section + "<!-- owned-cpu-current-review:end -->\n")
+
+
+def current_security(record, revision="a" * 40):
+    attestation = a.identity_binding(record, revision) | {
+        "schema": 1, "asvs_level": 1, "block_on": "high", "independent_non_author": True,
+        "status": "verified", "open_high_or_critical": 0}
+    return ("Historical T-01-15-03 HIGH/open remains dated\n<!-- owned-cpu-current-security:start -->\n"
+            "```json\n" + json.dumps(attestation) + "\n```\n<!-- owned-cpu-current-security:end -->\n")
+
+
 class AcceptanceControls(unittest.TestCase):
+    def test_deferred_seal_binds_review_security_and_never_admits(self):
+        document = document_fixture(a.PROFILE)
+        record = document["collections"][0]
+        for lane in a.MANDATORY[1:]:
+            row = copy.deepcopy(record["runs"][0])
+            row["preset"] = lane
+            row["steps"] = [step | {"command": command} for step, command in zip(row["steps"], a.lane_commands(lane))]
+            row["configuration"] = a.lane_configuration(lane)
+            row["artifacts"] = {path: "a" * 64 for path in a.lane_artifacts(lane)}
+            row["diagnostic_cost"]["command"] = [f"$REPO/build/{lane}/experiments/owned_cpu/owned_cpu_diagnostic"]
+            record["runs"].append(row)
+        rehash(document)
+        review_text, security_text = current_review(record), current_security(record)
+        budget = {"status": "pass", "active_seconds": 40000, "runtime_churn_added_deleted": 1221,
+                  "test_tool_churn_added_deleted": 6500}
+        requirements = (ROOT / ".planning/REQUIREMENTS.md").read_bytes()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "experiments/owned_cpu").mkdir(parents=True)
+            results = root / "experiments/owned_cpu/acceptance-results.json"
+            review = root / "experiments/owned_cpu/REVIEW.md"
+            security = root / "SECURITY.md"
+            results.write_text(json.dumps(document))
+            review.write_text(review_text)
+            security.write_text(security_text)
+            with patch.object(a, "ROOT", root), patch.object(a, "RESULTS", results), \
+                    patch.object(a, "git", return_value="a" * 40), \
+                    patch.object(a, "snapshot", return_value=record["source_hashes"]), \
+                    patch.object(a.contract, "validate", return_value={"active_candidate_contract": {"amendment_sha256": a.contract.ACTIVE_AMENDMENT_SHA256}}), \
+                    patch.object(a.contract, "validate_budget", return_value=budget), \
+                    patch.object(a.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "", "")):
+                for path in (None, root / "missing.md"):
+                    before = results.read_bytes()
+                    with self.assertRaises((a.EvidenceError, OSError)):
+                        a.seal(defer_admission=True, security=path)
+                    self.assertEqual(before, results.read_bytes())
+                with self.assertRaises(a.EvidenceError):
+                    a.seal(require_accepted=True, defer_admission=True, security=security)
+                security.write_text(security_text.replace('"verified"', '"blocked"'))
+                with self.assertRaises(a.EvidenceError):
+                    a.seal(defer_admission=True, security=security)
+                security.write_text(security_text)
+                result = a.seal(defer_admission=True, security=security)
+                self.assertEqual({"disposition": "unqualified", "blockers": ["phase-goal-verification-pending"]}, result)
+                sealed = json.loads(results.read_text())
+                self.assertEqual("GAPS_FOUND", sealed["phase_disposition"])
+                self.assertEqual(document["collections"], sealed["collections"])
+                self.assertEqual(a.inventory.sha256(security), sealed["seal"]["security"]["sha256"])
+                self.assertEqual("pass", a.verify(sealed)["status"])
+                for path, original, match in ((review, review_text, "review"), (security, security_text, "security")):
+                    path.write_text(original + "\nAudit bytes changed\n")
+                    with self.assertRaisesRegex(a.EvidenceError, match):
+                        a.verify(sealed)
+                    path.write_text(original)
+                for field, value in (("disposition", "accepted"), ("phase_disposition", "complete"), ("blockers", [])):
+                    mutated = copy.deepcopy(sealed)
+                    mutated[field] = value
+                    with self.assertRaises(a.EvidenceError):
+                        a.verify(mutated)
+                modified = copy.deepcopy(sealed)
+                modified["seal"]["security"]["attestation"]["open_high_or_critical"] = 1
+                with self.assertRaises(a.EvidenceError):
+                    a.verify(modified, False)
+                modified = copy.deepcopy(sealed)
+                modified["seal"]["review"]["attestation"]["source_map_sha256"] = "0" * 64
+                with self.assertRaises(a.EvidenceError):
+                    a.verify(modified, False)
+        self.assertEqual(requirements, (ROOT / ".planning/REQUIREMENTS.md").read_bytes())
+
+    def test_immutable_real_legacy_and_new_profile_counts(self):
+        path = ROOT / "experiments/owned_cpu/acceptance-results.json"
+        before = path.read_bytes()
+        legacy = json.loads(before)
+        self.assertEqual("pass", a.verify(legacy, False)["status"])
+        self.assertEqual(before, path.read_bytes())
+        current = document_fixture(a.PROFILE)
+        self.assertEqual("pass", a.verify(current, False)["status"])
+        counts = current["collections"][0]["runs"][0]["counts"]
+        self.assertEqual((13, 6, 13, 78), (counts["ctest_observed"], counts["negative_controls"],
+                                       counts["state_checkpoints"], counts["continuation_run_calls"]))
+        self.assertEqual(25, counts["unity"]["owned_cpu_timing"])
+
+    def test_rehashed_current_amendment_and_control_spoofs(self):
+        original = document_fixture(a.PROFILE)
+        for field in ("amendment_sha256", "active_contract_identity_sha256"):
+            document = copy.deepcopy(original)
+            document["collections"][0][field] = "0" * 64
+            rehash(document)
+            with self.assertRaisesRegex(a.EvidenceError, "amendment"):
+                a.verify(document, False)
+        original_log = log_fixture(a.PROFILE)
+        for old, new in (("canonical_unsupported", "ILLEGAL_entry"), ("continuation_run_calls=78", "continuation_run_calls=0"),
+                         ("wrong canonical unsupported status", "wrong unrelated status"),
+                         ("25 Tests", "23 Tests"), ("TRAP_entry,", ""),
+                         ("user_mode_privileged_instructions_raise_vector_eight:PASS", "fake_case:PASS")):
+            document = copy.deepcopy(original)
+            lane = document["collections"][0]["runs"][0]
+            lane["test_log"] = original_log.replace(old, new)
+            lane["test_log_sha256"] = hashlib.sha256(lane["test_log"].encode()).hexdigest()
+            rehash(document)
+            with self.subTest(old=old), self.assertRaises(a.EvidenceError):
+                a.verify(document, False)
+
+    def test_current_source_requires_current_profile(self):
+        document = document_fixture()
+        with patch.object(a, "snapshot", return_value=document["collections"][0]["source_hashes"]):
+            with self.assertRaisesRegex(a.EvidenceError, "current qualification requires"):
+                a.verify(document)
+
+    def test_current_review_bounds_crosswalk_and_identities(self):
+        record = document_fixture(a.PROFILE)["collections"][0]
+        text = current_review(record)
+        self.assertEqual("clean", a.review_text(text, "a" * 40, record)["status"])
+        for broken in (text + text, text.replace("review:end", "review:missing"),
+                       text.replace("review:start", "review:missing"),
+                       text.replace('"F14-03":', '"missing":'), text.replace('"superseded"', '"open"'),
+                       text.replace('"unknown"', '"selected"'), text.replace(record["sha256"], "0" * 64),
+                       text.replace("Disposition: clean", "Disposition: clean\nHIGH finding open"),
+                       text.replace("Disposition: clean", "Disposition: clean\nopen HIGH finding"),
+                       text.replace("Disposition: clean", "Disposition: clean\n### New finding\nSeverity: HIGH\nStatus: open"),
+                       text.replace("Disposition: clean", "Disposition: clean\n### New finding\n**Severity:** CRITICAL\n**Status:** open"),
+                       text.replace("Disposition: clean", "Disposition: clean\nDisposition: clean"),
+                       text.replace('"schema": 1', '"schema": true'),
+                       text.replace('"independent_non_author": true', '"independent_non_author": false'),
+                       text.replace('"evidence": "exact bounded control/source reassessment"', '"evidence": ""')):
+            with self.subTest(broken=broken[-120:]), self.assertRaises(a.EvidenceError):
+                a.review_text(broken, "a" * 40, record)
+
+    def test_security_rejects_missing_duplicate_malformed_stale_and_blocked(self):
+        record = document_fixture(a.PROFILE)["collections"][0]
+        text = current_security(record)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "SECURITY.md"
+            path.write_text(text)
+            self.assertEqual("verified", a.security_check(path, "a" * 40, record)["attestation"]["status"])
+            for broken in ("", text + text, text.replace("security:end", "security:missing"),
+                           text.replace('"schema": 1', '"schema":'),
+                           text.replace('"schema": 1', '"schema": 1, "schema": 1'),
+                           text.replace('"schema": 1', '"schema": true'),
+                           text.replace('"asvs_level": 1', '"asvs_level": true'),
+                           text.replace('"asvs_level": 1', '"asvs_level": 2'),
+                           text.replace('"block_on": "high"', '"block_on": "critical"'),
+                           text.replace('"independent_non_author": true', '"independent_non_author": false'),
+                           text.replace('"verified"', '"blocked"'),
+                           text.replace('"open_high_or_critical": 0', '"open_high_or_critical": 1'),
+                           text.replace('"open_high_or_critical": 0', '"open_high_or_critical": false'),
+                           text.replace(record["sha256"], "0" * 64),
+                           text.replace(record["amendment_sha256"], "0" * 64),
+                           text.replace(a.digest(record["source_hashes"]), "0" * 64),
+                           text.replace("a" * 40, "b" * 40)):
+                path.write_text(broken)
+                with self.subTest(broken=broken[-120:]), self.assertRaises(a.EvidenceError):
+                    a.security_check(path, "a" * 40, record)
+
     def test_current_profile_rejects_unknown_and_legacy_relabel(self):
         for profile in ("unknown", "owned-p01-c14-1", None):
             document = document_fixture()
