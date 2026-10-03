@@ -236,7 +236,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "tests/owned_cpu/test_acceptance.py",
-      "sha256": "339a289db5ce8525a9a16b50be194362973c6011b0d4c6e19756c5c81516ed51",
+      "sha256": "d29bb78233a130c9e511f69bcff9c19fbfb0eafe6c0daee6cdc108c1470643f1",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -416,7 +416,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "tools/owned_cpu/acceptance.py",
-      "sha256": "b71f5a7c72f61881c72cec0df8ff4444fdf33b40beb56ea44a597e323dbf7710",
+      "sha256": "e0838b72ed62dc3861716710ff420e2427f12530af8e38c5ba142eef65cf9228",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },

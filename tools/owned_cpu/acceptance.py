@@ -159,13 +159,41 @@ def classify_optional(step):
     return step["status"]
 
 
+def lane_commands(lane):
+    return [["cmake", "--preset", lane], ["cmake", "--build", "--preset", lane, "--parallel", "2"],
+            ["ctest", "--preset", lane, "--output-on-failure", "--no-tests=error"]]
+
+
+def lane_configuration(lane):
+    release = lane in ("owned-release", "owned-tsan")
+    return {"CMAKE_BUILD_TYPE": "Release" if release else "Debug", "GLUEYNEO_CPU_EXPERIMENT": "OFF",
+            "GLUEYNEO_OWNED_CPU_EXPERIMENT": "ON", "GLUEYNEO_OWNED_CPU_OPTIMIZATION": "RELEASE" if release else "NONE",
+            "GLUEYNEO_OWNED_CPU_SANITIZER": {"owned-asan-ubsan": "ADDRESS_UNDEFINED", "owned-tsan": "THREAD"}.get(lane, "NONE")}
+
+
+def lane_artifacts(lane):
+    return {"build/" + lane + "/" + path for path in (
+        "CMakeCache.txt", "build.ninja", "compile_commands.json", "experiments/owned_cpu/libowned_cpu.a",
+        *("experiments/owned_cpu/" + target for target in inventory.EXECUTABLE_TARGETS))}
+
+
+def verify_step(step, successful=False):
+    require(step.get("command") and step.get("output_sha256") == hashlib.sha256(step.get("output", "").encode()).hexdigest(),
+            "corrupted command output")
+    if successful:
+        require(step.get("status") == "pass" and step.get("exit") == 0, "false successful lane")
+
+
+def historical_blockers(document):
+    return any(row["status"] in ("fail", "unknown", "skipped")
+               for record in document["collections"] for row in record["runs"])
+
+
 def collect_lane(lane, optional):
     require(lane in LANES and (not optional or lane == "owned-tsan"), "unapproved preset")
     build = ROOT / "build" / lane
     receipt = {"preset": lane, "optional": optional, "steps": [], "status": "unknown"}
-    commands = [["cmake", "--preset", lane], ["cmake", "--build", "--preset", lane, "--parallel", "2"],
-                ["ctest", "--preset", lane, "--output-on-failure", "--no-tests=error"]]
-    for command in commands:
+    for command in lane_commands(lane):
         step = run(command)
         receipt["steps"].append(step)
         if step["status"] != "pass":
@@ -183,10 +211,7 @@ def collect_lane(lane, optional):
         receipt["configuration"] = {key: cache.get(key) for key in (
             "CMAKE_BUILD_TYPE", "GLUEYNEO_CPU_EXPERIMENT", "GLUEYNEO_OWNED_CPU_EXPERIMENT",
             "GLUEYNEO_OWNED_CPU_OPTIMIZATION", "GLUEYNEO_OWNED_CPU_SANITIZER")}
-        expected_mode = "RELEASE" if lane in ("owned-release", "owned-tsan") else "NONE"
-        expected_sanitizer = {"owned-asan-ubsan": "ADDRESS_UNDEFINED", "owned-tsan": "THREAD"}.get(lane, "NONE")
-        require(cache.get("GLUEYNEO_CPU_EXPERIMENT") == "OFF" and cache.get("GLUEYNEO_OWNED_CPU_EXPERIMENT") == "ON" and
-                cache.get("GLUEYNEO_OWNED_CPU_OPTIMIZATION") == expected_mode and cache.get("GLUEYNEO_OWNED_CPU_SANITIZER") == expected_sanitizer,
+        require(receipt["configuration"] == lane_configuration(lane),
                 "actual preset configuration differs")
         receipt["compiler"] = run([cache["CMAKE_C_COMPILER"], "--version"])
         compiler_output = receipt["compiler"]["output"]
@@ -277,13 +302,24 @@ def verify(document, current=True):
         for row in record["runs"]:
             require(row.get("status") in ("pass", "fail", "unsupported", "unknown", "skipped"), "invalid lane status")
             require(row.get("steps"), "missing commands")
+            require([step.get("command") for step in row["steps"]] == lane_commands(row["preset"])[:len(row["steps"])],
+                    "unexpected lane commands")
             for step in row["steps"]:
-                require(step.get("command") and step.get("output_sha256") == hashlib.sha256(step.get("output", "").encode()).hexdigest(), "corrupted command output")
+                verify_step(step, row["status"] == "pass")
             if row["status"] == "pass":
                 require(len(row["steps"]) == 3 and all(step.get("exit") == 0 for step in row["steps"]), "false successful lane")
                 require(row.get("counts") == test_counts(row.get("test_log", "")), "wrong recorded counts")
                 require(row.get("test_log_sha256") == hashlib.sha256(row["test_log"].encode()).hexdigest(), "corrupted test log")
                 require(row.get("artifacts") and row.get("configuration") and row.get("compiler", {}).get("status") == "pass", "missing build identities")
+                require(row["configuration"] == lane_configuration(row["preset"]), "actual preset configuration differs")
+                require(set(row["artifacts"]) == lane_artifacts(row["preset"]) and
+                        all(isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) for value in row["artifacts"].values()),
+                        "missing/corrupted artifact identities")
+                verify_step(row["compiler"], True)
+                require(len(row["compiler"]["command"]) == 2 and row["compiler"]["command"][1] == "--version", "unexpected compiler command")
+                verify_step(row.get("diagnostic_cost", {}), True)
+                require(row["diagnostic_cost"]["command"] == ["$REPO/build/" + row["preset"] + "/experiments/owned_cpu/owned_cpu_diagnostic"],
+                        "unexpected diagnostic command")
             elif row["status"] == "unsupported":
                 require(row.get("optional") is True and row["preset"] == "owned-tsan" and len(row["steps"]) == 1 and classify_optional(row["steps"][0]) == "unsupported", "false unsupported classification")
     latest = document["collections"][-1]
@@ -294,6 +330,7 @@ def verify(document, current=True):
     blockers = ["required lane unqualified: " + lane for lane in MANDATORY if lane not in runs or runs[lane]["status"] != "pass"]
     if document.get("disposition") == "accepted":
         require(not blockers, "accepted with unqualified lane")
+        require(not historical_blockers(document), "earlier collection failure/unknown requires independent disposition")
         require(document.get("seal", {}).get("review", {}).get("status") == "clean", "accepted without review")
         require(document.get("seal", {}).get("collection_sha256") == latest["sha256"], "seal collection mismatch")
         if current:
@@ -320,7 +357,7 @@ def seal(require_accepted=False):
     except EvidenceError as error:
         blockers.append(str(error))
     # An earlier failed collection is never silently replaced by a later green run.
-    if any(row["status"] in ("fail", "unknown", "skipped") for record in document["collections"] for row in record["runs"]):
+    if historical_blockers(document):
         blockers.append("earlier collection failure/unknown requires independent disposition")
     document.update({"disposition": "unqualified" if blockers else "accepted", "phase_disposition": "GAPS_FOUND",
                      "blockers": blockers, "seal": {"revision": git("rev-parse", "HEAD"), "review": review,

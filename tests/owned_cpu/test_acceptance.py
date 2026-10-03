@@ -38,10 +38,20 @@ def document_fixture():
     log = log_fixture()
     step = {"command": ["cmake", "--preset", "owned-debug"], "exit": 0,
             "status": "pass", "output": "", "output_sha256": hashlib.sha256(b"").hexdigest()}
-    lane = {"preset": "owned-debug", "optional": False, "status": "pass", "steps": [copy.deepcopy(step) for _ in range(3)],
+    steps = [copy.deepcopy(step) for _ in range(3)]
+    steps[1]["command"] = ["cmake", "--build", "--preset", "owned-debug", "--parallel", "2"]
+    steps[2]["command"] = ["ctest", "--preset", "owned-debug", "--output-on-failure", "--no-tests=error"]
+    lane = {"preset": "owned-debug", "optional": False, "status": "pass", "steps": steps,
             "test_log": log, "test_log_sha256": hashlib.sha256(log.encode()).hexdigest(),
-            "counts": a.test_counts(log), "artifacts": {"binary": "a" * 64},
-            "configuration": {"sanitizer": "NONE"}, "compiler": {"status": "pass"}}
+            "counts": a.test_counts(log), "artifacts": {
+                "build/owned-debug/" + path: "a" * 64 for path in (
+                    "CMakeCache.txt", "build.ninja", "compile_commands.json", "experiments/owned_cpu/libowned_cpu.a",
+                    *("experiments/owned_cpu/" + name for name in a.inventory.EXECUTABLE_TARGETS))},
+            "configuration": {"CMAKE_BUILD_TYPE": "Debug", "GLUEYNEO_CPU_EXPERIMENT": "OFF",
+                              "GLUEYNEO_OWNED_CPU_EXPERIMENT": "ON", "GLUEYNEO_OWNED_CPU_OPTIMIZATION": "NONE",
+                              "GLUEYNEO_OWNED_CPU_SANITIZER": "NONE"},
+            "compiler": step | {"command": ["cc", "--version"]},
+            "diagnostic_cost": step | {"command": ["$REPO/build/owned-debug/experiments/owned_cpu/owned_cpu_diagnostic"]}}
     record = {"revision": "a" * 40, "source_hashes": {"cpu.c": "a" * 64},
               "host": {"architecture": "test"}, "tools": {"cmake": "test"}, "runs": [lane]}
     record["sha256"] = a.digest(record)
@@ -70,6 +80,53 @@ class AcceptanceControls(unittest.TestCase):
         for document in ({"schema": 1, "collections": []}, {"schema": 1, "collections": [{"sha256": "0" * 64}]}):
             with self.assertRaises(a.EvidenceError):
                 a.verify(document, False)
+
+    def test_rehashed_real_asan_configuration_and_command_cannot_false_green(self):
+        original = json.loads((ROOT / "experiments/owned_cpu/acceptance-results.json").read_text())
+        for mutation in ("sanitizer", "command", "build_command", "test_command", "build_type", "status",
+                         "compiler_output", "diagnostic_exit", "diagnostic_output", "artifact_missing", "artifact_digest"):
+            document = copy.deepcopy(original)
+            lane = next(row for row in document["collections"][0]["runs"] if row["preset"] == "owned-asan-ubsan")
+            if mutation == "sanitizer": lane["configuration"]["GLUEYNEO_OWNED_CPU_SANITIZER"] = "NONE"
+            elif mutation == "command": lane["steps"][0]["command"] = ["true"]
+            elif mutation == "build_command": lane["steps"][1]["command"] = ["true"]
+            elif mutation == "test_command": lane["steps"][2]["command"] = ["true"]
+            elif mutation == "build_type": lane["configuration"]["CMAKE_BUILD_TYPE"] = "Release"
+            elif mutation == "status": lane["steps"][0]["status"] = "unknown"
+            elif mutation == "compiler_output": lane["compiler"]["output"] += "tampered"
+            elif mutation == "diagnostic_exit": lane["diagnostic_cost"]["exit"] = 1
+            elif mutation == "diagnostic_output": lane["diagnostic_cost"]["output"] += "tampered"
+            elif mutation == "artifact_missing": lane["artifacts"].pop(next(iter(lane["artifacts"])))
+            else: lane["artifacts"][next(iter(lane["artifacts"]))] = "not a digest"
+            rehash(document)
+            with self.subTest(mutation=mutation), self.assertRaises(a.EvidenceError):
+                a.verify(document, False)
+
+    def test_accepted_history_cannot_silently_replace_failure(self):
+        document = document_fixture()
+        latest = document["collections"][0]
+        for name in a.MANDATORY[1:]:
+            row = copy.deepcopy(latest["runs"][0])
+            row["preset"] = name
+            row["artifacts"] = {path.replace("owned-debug", name): value for path, value in row["artifacts"].items()}
+            for step in row["steps"]:
+                step["command"] = [name if item == "owned-debug" else item for item in step["command"]]
+            row["configuration"].update({"CMAKE_BUILD_TYPE": "Release" if name == "owned-release" else "Debug",
+                                         "GLUEYNEO_OWNED_CPU_OPTIMIZATION": "RELEASE" if name == "owned-release" else "NONE",
+                                         "GLUEYNEO_OWNED_CPU_SANITIZER": "ADDRESS_UNDEFINED" if name == "owned-asan-ubsan" else "NONE"})
+            row["diagnostic_cost"]["command"] = [f"$REPO/build/{name}/experiments/owned_cpu/owned_cpu_diagnostic"]
+            latest["runs"].append(row)
+        rehash(document)
+        document.update(disposition="accepted", seal={"review": {"status": "clean"}, "collection_sha256": latest["sha256"]})
+        a.verify(document, False)
+        for status in ("fail", "unknown", "skipped"):
+            mutated = copy.deepcopy(document)
+            historical = copy.deepcopy(latest)
+            historical["runs"][0]["status"] = status
+            historical["sha256"] = a.digest({key: value for key, value in historical.items() if key != "sha256"})
+            mutated["collections"].insert(0, historical)
+            with self.subTest(status=status), self.assertRaisesRegex(a.EvidenceError, "earlier collection"):
+                a.verify(mutated, False)
 
     def test_wrong_empty_and_duplicate_counts(self):
         log = log_fixture()
