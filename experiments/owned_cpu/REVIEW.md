@@ -124,3 +124,184 @@ Plan 01-16 independent disposition: F14-01 and F14-02 remain fixed; their fresh 
 Applying the hardware/oracle, C/host-safety, test-reliability, evidence, maintenance and product lenses yields one recommendation: preserve unchanged implementation and explicit unqualified/GAPS_FOUND pending authoritative original-MC68000 4AFC saved-PC adjudication that addresses the trap/group wording. A reviewable derivation accepted for the bounded architecture contract could reopen the finding; alternatively a minimal identified silicon capture or explicit user-directed scope/claim revision and replanning could do so. No hardware capture is asserted or automatically required. Premature mutation risks concealing the wrong assumption; continued ambiguity blocks admission without proving a C defect. CPU-01–05 remain Pending, Phase 01 open and Phase 02 gated. No new high/critical finding or unauthorized repair arose in this bounded review.
 
 F14-01/F14-02 are resolved by regression-backed repairs and fresh independent re-review. F14-03 remains an admission blocker outside Plan 14 repair scope. Required native tests and prior state fixes pass within recorded scope. CPU-01–04 stay Pending, Phase 01 stays open and Phase 02 gated. No budget cap, historical charge or phase verification changes here; a resource threshold is not CPU rejection.
+
+<!-- owned-cpu-current-review:start -->
+
+# Plan 01-21 independent P01-C-14 candidate review
+
+## Reviewed revision:
+
+Reviewed source/report revision: `a3cec086a75c3c7783bcde610f6e8c4234354eeb`.
+Collection revision: `7411a33bf63428516a3efee289c393e1a8418b28`;
+collection SHA-256 `53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e`;
+profile `owned-p01-c14-1`;
+source-map SHA-256 `e63834b8585912d81f99e82e2dd9070139fbc8acc25854e23274105d8cad861b`;
+manifest SHA-256 `02a276b37a73cc36508801bbb079297cfd3a7dff6014ca9b399fd6a365850560`.
+The 39 included identities equal current bytes. All five prior/current collections
+remain equal to the Plan 20 committed collection array. All 44 lane build-artifact
+identities independently match current files. Metadata-only future rebinding must
+preserve these source and collection identities; it is not another behavioral run.
+
+Frozen contract SHA-256
+`6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73`;
+additive amendment content SHA-256
+`3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad`;
+active candidate identity SHA-256
+`27af8df79b55f83bffdef63981defc23984fff6b4e0002d10e99621310340419`.
+Runtime SHA-256 `b03d3458c99012e7d20a21b408ea1b5e72ae4fa6ac2f36ac5078d349b0d953b8`
+equals the private continuation identity. Input fixture SHA-256
+`3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d`;
+owned oracle SHA-256 `c95fe0ed27fe09fdfccde465b494dff14686cfd8f8b39357edc7666dd197961e`;
+timing test SHA-256 `606f7c2d2b08c368a65def9b25b0f36eb9122f0e751bd37c9ae5666d5493bbce`;
+state test SHA-256 `b8ceb6be17b209f661f5a55699460776f879f78dad8e395c9f973e6502edaae1`.
+
+```json
+{
+  "schema": 1,
+  "independent_non_author": true,
+  "hardware_saved_pc": "unknown",
+  "evidence_revision": "a3cec086a75c3c7783bcde610f6e8c4234354eeb",
+  "collection_sha256": "53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e",
+  "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+  "source_map_sha256": "e63834b8585912d81f99e82e2dd9070139fbc8acc25854e23274105d8cad861b",
+  "prior_findings": {
+    "F14-01": {
+      "disposition": "resolved",
+      "evidence": "Exact command/configuration/artifact/output guards retained; independent normal and optimized acceptance regressions pass 21/21 each."
+    },
+    "F14-02": {
+      "disposition": "resolved",
+      "evidence": "Shared historical failure guard retained and independently exercised under normal and optimized acceptance tests; five collection prefix preserved."
+    },
+    "F14-03": {
+      "disposition": "superseded",
+      "evidence": "Candidate claim only: owner-approved exact 0x4AFC exclusion supersedes disputed supported ILLEGAL behavior via additive P01-C-14. Independent native zero-effect and retained-event controls pass; registry closure remains conditional on separate Task 2 security gate. Original-silicon saved PC remains unknown."
+    }
+  }
+}
+```
+
+## Reviewer independence:
+
+Independent reviewer: fresh separate non-author agent `/root/phase01_plan21/independent_review`.
+Authored runtime/collector/tests: no
+
+Sole repository write ownership is this report; no implementation, tests, receipt,
+inventory or ledger changes and no reviewer commit. The project-root pin passed
+before writing. The reviewer configured and compiled a new ignored
+`build/owned-review21` directory independently; executor-built binaries do not
+serve as the independent rebuild. This is an automated agent assessment, not a
+human signoff or physical capture.
+
+## Prior findings:
+
+| Finding/observation | Current bounded disposition |
+|---|---|
+| F14-01 command/configuration receipts | Resolved; exact lane guards and mutation controls pass in both Python modes. |
+| F14-02 historical failure guard | Resolved; accepted/deferred paths share historical blockers; failure/unknown/skipped mutations reject. |
+| F14-03 canonical ILLEGAL discrepancy | Superseded for the revised candidate claim only; recommend candidate-scope closure after independent security passes. Registry disposition is pending that gate. |
+| BL-01 state destination initialization | Resolved; destination is zeroed before fresh creation and restore; independent fresh-owner continuation passes. |
+| WR-01 impossible instruction count | Resolved for the reported invariant; mismatch rejection retains destination/bus atomicity. Validator does not prove every record reachable. |
+| Restore-over-ready | Remains unclaimed; required fresh-owner path is tested, permissive ready-destination implementation is not promoted. |
+| Musashi shifts/division/generator defects | Outside owned runtime closure; historical rejected engine and ten frozen hashes preserved. |
+| Optimized assertions / relative path receipts | Explicit exceptions survive optimized Python; current receipts use sanitized root-relative commands. |
+
+Historical sections and former severities/dispositions above are immutable review
+history. T-01-15-03 is reserved for the separate security assessor. Silicon
+uncertainty is retained independently of candidate-scope disposition.
+
+## Evidence runs and denominators:
+
+Reviewer executed on the reviewed source, all exit 0:
+
+- Independent configure: `cmake -S . -B build/owned-review21 -G Ninja -DGLUEYNEO_CPU_EXPERIMENT=OFF -DGLUEYNEO_OWNED_CPU_EXPERIMENT=ON -DCMAKE_BUILD_TYPE=Debug -DGLUEYNEO_OWNED_CPU_OPTIMIZATION=NONE -DGLUEYNEO_OWNED_CPU_SANITIZER=NONE`; `cmake --build build/owned-review21 -j2`, 22 build steps.
+- `ctest --test-dir build/owned-review21 -R '^owned_cpu_(timing|unsupported_negative|semantics|state)$' --output-on-failure --no-tests=error`: 4/4. Direct independent binaries: semantics 17/17, timing 25/25, state 5/5 Unity cases, zero failures/ignored.
+- Private state: 13 named checkpoints, six continuation calls each (78); original source destroyed and overwritten; 15 invalid records, four null inputs, counter mismatch, active/reentrant and terminal checks preserve destination/bus atomicity.
+- `PYTHONDONTWRITEBYTECODE=1 python3 [-O] -m unittest discover -s tests/owned_cpu -p test_contract.py`: 23/23 separately in normal and optimized modes. Amendment omission/order/root/archive/history/hardware-selection mutations and unchanged caps/history/pending gates are exercised.
+- Same normal/optimized command for `test_acceptance.py`: 21/21 each. Legacy/current profile, exact named unsupported/continuation controls, stale/duplicate/multiline review and security bindings, command/configuration history guards all execute.
+- `python3 -O tools/owned_cpu/acceptance.py self-test`: six rejection and two classification controls; normal self-test also executes inside acceptance tests.
+- `python3 tools/owned_cpu/inventory.py check --build-dir build/owned-review21`: 26 owned fields / 10 compiled source files, no mutable runtime globals or callback-owner mutation.
+- Required preset targeted CTest command above with `--preset owned-debug`: 4/4, separately labeled execution of collector-built binaries.
+- Read-only `acceptance.verify`, `snapshot`, `contract.validate`, strict frozen archive and historical checks: five collections, exact 39-file source snapshot, 44/44 lane artifacts, 10/10 frozen Musashi hashes; 24 contract markers. Budget before reviewer charge: pass, 41,335 seconds / 31 records, runtime churn 1,221 and test/tool churn 6,126; accounting remains executor-owned.
+
+The independent build archive SHA-256 is
+`109939880fb7d7e009a496f2645595ebad6de0f60cc74b918991b9d04b3a8552`;
+semantics binary `d5bf5f95adddc359fb2426f4cfeacb6ac337533683cbd9d63da6675ad7d537f1`;
+timing binary `424471b972fe23810285db29e22a0f84b46f8768ba6be63363e9ab24fd02e31f`;
+state binary `6b3b6c0a93e226441bba152a588c96ba057c8cc697de1dcd8e092e47654fc24e`.
+Reviewer build is Debug without sanitizers, Apple Clang 21.0.0.21000101, C17,
+CMake 4.4.3, Ninja 1.13.2, Darwin arm64. All build output remains ignored.
+
+Plan 20 collection evidence, independently reconciled but not independently
+rebuilt in all lanes by this reviewer: Debug, Release/O2, ASan+UBSan and TSan
+each 13/13 CTests (52 total), with diagnostic2/semantics17/timing25/isolation4/
+faults5/state5 Unity counts, 13 boundaries/78 calls, 32 interleaved pairs,
+32 concurrent pairs, 16 fresh cold processes/two instances, six named controls.
+Recorded whole-lane build directories were reused; cold process checks are a
+different observation. Exact CMake 3.20 and other platforms remain unknown.
+
+## Oracle ancestry:
+
+No new source acquisition or repeated finite search was performed. Reviewed
+Plan 17 adjudication remains ambiguous: original-MC68000 silicon saved PC for
+exact `4AFC` is unknown. The stronger fault-PC inference (`$100`) combines UM
+pre-execution detection, next-unexecuted-PC language and tracing distinction;
+it retains the premise that the general rule applies to deliberately encoded
+canonical ILLEGAL. The competing sequential-PC inference (`$102`) imports
+trap/following-PC selection through UM §6.3.6 group/trap wording and the frozen
+specific table. Shared frame structure does not prove identical PC selection,
+but rejecting the analogy still requires the reserved interpretive judgment.
+Neither inference is selected here.
+
+Reopening requires an applicable original-MC68000 instruction-specific vendor
+sentence/correction addressing the analogy, or a legitimately accessible silicon
+receipt binding CPU/revision, exact opcode/address, frame bytes, capture method
+and oracle ancestry; a reviewed derivation that defeats the competing premise
+could also reopen the existing standard. Emulator consensus, derivative manuals,
+local fixtures and absence of errata do not settle this question.
+
+Authored arithmetic/store expectations and candidate capability assertions share
+project ancestry with implementation; they enforce a declared contract rather
+than independently measure silicon. Retained IRQ/privilege/address-error/TRAP/RTE
+recipes retain cited manual ancestry and functional bus/timing limits. This
+amendment excludes candidate ILLEGAL support; it does not change MC68000 vector4
+or claim hardware has no frame.
+
+## Findings and dispositions:
+
+Disposition: clean
+
+No unresolved implementation/evidence finding was reproduced within this bounded
+candidate scope. Exact `0x4AFC` succeeds only at opcode fetch, records logical
+fault PC/IR and returns unsupported before event preflight. Tests assert exactly
+one successful read, no vector4/frame accesses, unchanged observation/memory,
+zero dispatch/charge, repeated rejection and odd/inaccessible stack independence.
+Prior reset40, IRQ44 and NOP4 retain their completed charges; failed fetch is
+terminal host fault, and odd fetch retains address-error handling. Retained
+privilege, TRAP/RTE and IRQ controls pass without widening instruction scope.
+
+The core has opaque per-instance state, explicit host bindings, unsigned bounded
+arithmetic, defined byte order and checked event counters. No new runtime
+dependency, public ABI, ambient I/O/time/network service or mutable global is
+introduced. Callback failures retain completed writes and prohibit recursive
+exception retry. Fresh restoration stages named fields, rejects invalid records
+without bus access, preserves destination bindings and continues real execution.
+Same-instance concurrency and cross-build/persistent state remain unsupported.
+
+The amendment pins one additive exclusion, preserves strict archived contract
+bytes and every historical reconciliation field, and does not select silicon PC.
+Receipt verification is an internal consistency control, not cryptographic proof
+against an actor fabricating every identity/result consistently. Candidate
+consumer documentation clearly states intentional ILLEGAL incompatibility and
+explicit caller recovery. Text scan of all 39 included files found no personal
+home paths; provenance retains MIT original work, pinned Unity test-only notices,
+and original fixtures without commercial media or manufacturer PDF distribution.
+
+Recommendation: candidate-scope F14-03 closure is eligible only after separate
+independent security and final exact binding gates pass. This clean source-review
+result does not itself close F14-03/T-01-15-03, admit the backend, finish phase
+verification, or complete CPU-01–05. The final seal must remain deferred,
+unqualified/GAPS_FOUND; Phase 01 is incomplete, Phase 02 gated, and all nine
+specless flags remain unresolved.
+
+<!-- owned-cpu-current-review:end -->
