@@ -261,19 +261,115 @@ static void trap_stacks_next_pc_then_addq_rte_resumes_stop(void) {
     TEST_ASSERT_EQUAL_UINT64(1u, result.instructions);
 }
 
-static void illegal_uses_the_canonical_word_and_faulting_pc(void) {
+static void canonical_unsupported_has_only_opcode_fetch(void) {
     create_machine();
     put_vector(4u, UINT32_C(0x180));
     const uint8_t program[] = {0x4a, 0xfc};
     install_program(program, sizeof(program));
     run_reset_event();
 
-    owned_cpu_run_result result = owned_cpu_run(cpu, UINT64_C(1));
-    TEST_ASSERT_EQUAL_UINT64(34u, result.elapsed_cycles);
-    TEST_ASSERT_EQUAL_UINT64(1u, result.instructions);
+    for (unsigned reg = 0u; reg < 8u; ++reg) {
+        TEST_ASSERT_EQUAL(OWNED_CPU_OK,
+                          owned_cpu_test_seed_data_register(cpu, reg, 0x12345678u + reg));
+    }
+    /* Neither vector 4 nor an inaccessible/odd exception stack may be used. */
+    memory.fail_read = 1;
+    memory.fail_read_address = 0x10u;
+    memory.fail_write = 1;
+    memory.fail_write_address = 0x2ffcu;
+    for (unsigned odd_stack = 0u; odd_stack < 2u; ++odd_stack) {
+        TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_test_seed_execution_state(
+            cpu, 0x2700u, 0x3800u, 0x3000u + odd_stack, 0x100u));
+        owned_cpu_observation before, after;
+        observe(&before);
+        uint8_t bytes_before[MEMORY_SIZE];
+        memcpy(bytes_before, memory.bytes, sizeof(bytes_before));
+        for (unsigned repeat = 0u; repeat < 2u; ++repeat) {
+            clear_trace();
+            owned_cpu_run_result result = owned_cpu_run(cpu, UINT64_C(1));
+            TEST_ASSERT_EQUAL(OWNED_CPU_UNSUPPORTED_OPCODE, result.reason);
+            TEST_ASSERT_EQUAL_HEX32(0x100u, result.pc);
+            TEST_ASSERT_EQUAL_HEX32(0x100u, result.fault_pc);
+            TEST_ASSERT_EQUAL_HEX16(0x4afcu, result.instruction_register);
+            TEST_ASSERT_EQUAL_UINT64(0u, result.elapsed_cycles);
+            TEST_ASSERT_EQUAL_UINT64(0u, result.overshoot_cycles);
+            TEST_ASSERT_EQUAL_UINT64(0u, result.instructions);
+            TEST_ASSERT_EQUAL_UINT(1u, memory.accesses);
+            TEST_ASSERT_EQUAL_HEX32(0x100u, memory.events[0].address);
+            TEST_ASSERT_EQUAL_HEX16(0x4afcu, memory.events[0].value);
+            TEST_ASSERT_EQUAL_UINT8(0u, memory.events[0].write);
+            TEST_ASSERT_EQUAL_UINT8(1u, memory.events[0].success);
+            observe(&after);
+            TEST_ASSERT_EQUAL_MEMORY(&before, &after, sizeof(before));
+            TEST_ASSERT_EQUAL_MEMORY(bytes_before, memory.bytes, sizeof(bytes_before));
+        }
+    }
+}
+
+static void canonical_rejection_retains_prior_reset_irq_and_instruction_charges(void) {
+    create_machine();
+    const uint8_t program[] = {0x4a, 0xfc};
+    install_program(program, sizeof(program));
+    owned_cpu_run_result result = owned_cpu_run(cpu, 41u);
+    TEST_ASSERT_EQUAL(OWNED_CPU_UNSUPPORTED_OPCODE, result.reason);
+    TEST_ASSERT_EQUAL_UINT64(40u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(0u, result.instructions);
+    TEST_ASSERT_EQUAL_UINT64(0u, result.overshoot_cycles);
+    put_vector(31u, 0x180u);
+    put_word(0x180u, 0x4afcu);
+    TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_set_irq(cpu, 7u));
+    clear_trace();
+    result = owned_cpu_run(cpu, 45u);
+    TEST_ASSERT_EQUAL(OWNED_CPU_UNSUPPORTED_OPCODE, result.reason);
+    TEST_ASSERT_EQUAL_UINT64(44u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(0u, result.instructions);
     TEST_ASSERT_EQUAL_HEX32(0x180u, result.pc);
-    TEST_ASSERT_EQUAL_HEX16(0x2700u, get_word(0x2ffau));
-    TEST_ASSERT_EQUAL_HEX32(0x100u, get_long(0x2ffcu));
+    TEST_ASSERT_EQUAL_HEX32(0x180u, result.fault_pc);
+    TEST_ASSERT_EQUAL_UINT(6u, memory.accesses);
+    TEST_ASSERT_EQUAL_HEX32(0x180u, memory.events[5].address);
+    owned_cpu_observation after_irq;
+    observe(&after_irq);
+    TEST_ASSERT_EQUAL_UINT64(44u, after_irq.exception_cycles);
+    TEST_ASSERT_EQUAL_UINT64(84u, after_irq.total_cycles);
+    TEST_ASSERT_EQUAL_UINT8(31u, after_irq.last_exception_vector);
+    put_word(0x180u, 0x4e71u);
+    put_word(0x182u, 0x4afcu);
+    result = owned_cpu_run(cpu, 5u);
+    TEST_ASSERT_EQUAL(OWNED_CPU_UNSUPPORTED_OPCODE, result.reason);
+    TEST_ASSERT_EQUAL_UINT64(4u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(1u, result.instructions);
+    TEST_ASSERT_EQUAL_HEX32(0x182u, result.fault_pc);
+    observe(&after_irq);
+    TEST_ASSERT_EQUAL_UINT64(88u, after_irq.total_cycles);
+    TEST_ASSERT_EQUAL_UINT64(4u, after_irq.instruction_cycles);
+    TEST_ASSERT_EQUAL_UINT64(44u, after_irq.exception_cycles);
+}
+
+static void canonical_failed_opcode_fetch_remains_a_host_fault(void) {
+    create_machine();
+    const uint8_t program[] = {0x4a, 0xfc};
+    install_program(program, sizeof(program));
+    run_reset_event();
+    memory.fail_read = 1;
+    memory.fail_read_address = 0x100u;
+    owned_cpu_run_result result = owned_cpu_run(cpu, 1u);
+    TEST_ASSERT_EQUAL(OWNED_CPU_HOST_FAULT, result.reason);
+    TEST_ASSERT_EQUAL_UINT64(0u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT(1u, memory.accesses);
+    TEST_ASSERT_EQUAL_UINT8(0u, memory.events[0].success);
+    result = owned_cpu_run(cpu, 1u);
+    TEST_ASSERT_EQUAL(OWNED_CPU_HOST_FAULT, result.reason);
+    TEST_ASSERT_EQUAL_UINT(1u, memory.accesses);
+}
+
+static void canonical_unsupported_wrong_status_expectation(void) {
+    create_machine();
+    const uint8_t program[] = {0x4a, 0xfc};
+    install_program(program, sizeof(program));
+    run_reset_event();
+    owned_cpu_run_result result = owned_cpu_run(cpu, 1u);
+    TEST_ASSERT_EQUAL_MESSAGE(OWNED_CPU_BUDGET, result.reason,
+                              "canonical unsupported result-status assertion");
 }
 
 static void move_word_absolute_long_loads_every_data_register(void) {
@@ -769,6 +865,12 @@ static void independent_counter_boundaries_do_not_block_other_event_kinds(void) 
 
 int main(int argc, char **argv) {
     UNITY_BEGIN();
+    if (argc == 2 && strcmp(argv[1], "--mutate-unsupported") == 0) {
+        RUN_TEST(canonical_unsupported_wrong_status_expectation);
+        int failures = UNITY_END();
+        puts("Unity denominator: expected=1 observed=1");
+        return failures;
+    }
     if (argc == 2 && strcmp(argv[1], "--mutate-cycle") == 0) {
         RUN_TEST(address_error_wrong_cycle_expectation);
         int failures = UNITY_END();
@@ -778,7 +880,9 @@ int main(int argc, char **argv) {
     RUN_TEST(reset_debt_is_consumed_once_and_nop_executes);
     RUN_TEST(reset_instruction_is_distinct_and_observable);
     RUN_TEST(trap_stacks_next_pc_then_addq_rte_resumes_stop);
-    RUN_TEST(illegal_uses_the_canonical_word_and_faulting_pc);
+    RUN_TEST(canonical_unsupported_has_only_opcode_fetch);
+    RUN_TEST(canonical_rejection_retains_prior_reset_irq_and_instruction_charges);
+    RUN_TEST(canonical_failed_opcode_fetch_remains_a_host_fault);
     RUN_TEST(move_word_absolute_long_loads_every_data_register);
     RUN_TEST(odd_word_source_stacks_manual_derived_address_error_frame);
     RUN_TEST(odd_long_destination_stacks_a_write_address_error);
