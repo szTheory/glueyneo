@@ -180,7 +180,7 @@ completes a CPU requirement or phase admission.
 | 01-20-02 | `acceptance.py verify`; `inventory.py check`; lane artifact SHA-256 and historical prefix comparisons; `contract.py budget` | Failed/unknown/skipped lane promoted, missing instrumented object/artifact, changed historical prefix or budget pause | T-01-38,T-01-40 | EXECUTED in Plan20: four lanes13/13 each,52 total; assessor reconciles all44 artifacts and histories, does not rerun four lanes |
 | 01-21-01 | Independent review-check against recorded `a3cec086a75c3c7783bcde610f6e8c4234354eeb`; independent reviewer Debug build/native/control evidence | Current review stale/ambiguous/not independent or unresolved high finding | T-01-41 | EXECUTED: reviewer own build22 steps/native4/4 plus normal/-O suites; assessor review-check clean; Task1 commit metadata source equality verified |
 | 01-21-02 | `contract.py validate`; `acceptance.py verify`; `inventory.py check`; assessor direct native/control runs and bounded security-binding validation | Changed claim/source/state/receipt, unsupported mitigation or missing task/threat map | T-01-42,T-01-15-03 | EXECUTED: applicable native L1/block-high, zero current high/critical; candidate mitigation supersedes original withheld mitigation only within P01-C-14 |
-| 01-21-03 | Live `review-check --revision HEAD`, `seal --defer-admission --security .planning/phases/01-cpu-acceptance-experiment/01-SECURITY.md`, read-only `verify` and `contract.py budget` | Final binding stale, high finding, backend admitted, history changed or cap pause | T-01-43,T-01-44 | BLOCKED final gate: verify at33c2f48 fails stale sealed security document; reseal preflight rejects existing stale receipt. Initial6357146 clean review/deferred seal and budget44,170s/34 pass remain historical; final audit hash is not successfully sealed |
+| 01-21-03 | Live `review-check --revision HEAD`, `seal --defer-admission --security .planning/phases/01-cpu-acceptance-experiment/01-SECURITY.md`, read-only `verify` and `contract.py budget` | Final binding stale, high finding, backend admitted, history changed or cap pause | T-01-43,T-01-44 | Historical final gate BLOCKED at33c2f48; authorized derived recovery at931e2f0 preserves complete failed seal and passes unsealed verify. New exact deferred seal/independent final read-only confirmation PENDING; initial6357146 passes retained |
 
 Assessor independently executed88 Python method runs (contract23 and
 acceptance21, each normal/-O), targeted10/10 CTests across two commands,
@@ -221,3 +221,19 @@ executed failure evidence and is incomplete. The claimed clean closeout above
 is superseded by this final failure, not rerun away. Original silicon remains
 unknown, nine specless flags unresolved, requirements Pending and Phase01/
 Phase02 gates unchanged. Gap repair and independent final binding are required.
+
+### Authorized recovery and remaining exact Task3 gate
+
+At `931e2f07e85a17a9360d74b1b98ed6e1b89e340f`, the explicitly authorized
+derived recovery preserves the complete stale seal in additive superseded_seals
+and clears its active binding; all five collections and earlier fields remain.
+The assessor independently verifies exact stale-seal equality, current39
+committed source equality and passing unsealed/unqualified receipt verify plus
+contract/history/budget controls. Current security staging assessment is
+verified/high0, superseding the historical blocked active binding above.
+
+Task21.3 still requires the executor's new exact deferred seal and this
+assessor's final read-only confirmation. The final actual outcome belongs in
+Plan21 SUMMARY; this document will remain unchanged after sealing to avoid
+another audit-hash change. No pending gate is counted as complete here, no
+native rerun is invented, and any final failed gate blocks clean completion.

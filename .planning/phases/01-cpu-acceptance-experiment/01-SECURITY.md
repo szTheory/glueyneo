@@ -127,7 +127,7 @@ Same-instance callback reentry remains unsupported by contract; guards specifica
 <!-- owned-cpu-current-security:start -->
 ## P01-C-14 reassessment — 2026-10-03
 
-Evidence revision: `635714631770a6450e1f2e46bef6a377571aabd5`.
+Evidence revision: `931e2f07e85a17a9360d74b1b98ed6e1b89e340f`.
 Independent assessor: separate non-author agent `/root/phase01_plan21/security_assessor`.
 Authored runtime/collector/tests/receipts/ledger: no. Sole write ownership is
 this report and the appended validation audit; executor owns accounting and
@@ -140,9 +140,9 @@ C/evidence ASVS L1 assessment with block_on high, not web certification.
   "asvs_level": 1,
   "block_on": "high",
   "independent_non_author": true,
-  "status": "blocked",
-  "open_high_or_critical": 1,
-  "evidence_revision": "635714631770a6450e1f2e46bef6a377571aabd5",
+  "status": "verified",
+  "open_high_or_critical": 0,
+  "evidence_revision": "931e2f07e85a17a9360d74b1b98ed6e1b89e340f",
   "collection_sha256": "53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e",
   "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
   "source_map_sha256": "e63834b8585912d81f99e82e2dd9070139fbc8acc25854e23274105d8cad861b"
@@ -201,7 +201,7 @@ in the stated candidate scope; a pending live closeout is identified separately.
 | T-01-40 | high | Append-only explicit agent interval sums and failed/reverted churn, frozen limits and unqualified/GAPS_FOUND receipt | CLOSED |
 | T-01-41 | high | Separate REVIEW-only non-author reviewer, independent Debug build22 steps and direct native4/4; exact clean review-check passed against its recorded revision | CLOSED |
 | T-01-42 | high | Separate assessor, source/controls independently read/run, this evidence-bound high-blocking native reassessment and unchanged historical reports | CLOSED |
-| T-01-43 | high | Initial deferred seal passed; audit metadata then changed; actual final receipt verify fails with stale sealed security document; reseal preflight rejects the existing stale receipt | HIGH/open final binding; initial pass retained below |
+| T-01-43 | high | Historical stale-seal failure preserved below; authorized derived recovery retains complete superseded seal, clears stale active seal, verifies unchanged collection/source and unqualified staging | CLOSED recovery/control assessment; final live closure contingent on exact resulting seal |
 | T-01-44 | high | Frozen summed budget, contract pending requirement/phase gate checks; actual seal unqualified/GAPS_FOUND with only phase-goal-verification-pending and budget44,170s/34 records below frozen caps | CLOSED; live Task3 gate passed |
 
 ### Assessor-executed evidence
@@ -267,7 +267,8 @@ Initial assessment verified zero candidate high/critical findings. Sixteen new d
 controls plus the original T-01-15-03 candidate reassessment are substantiated;
 the older67 closed controls and historical one-open audit remain unchanged.
 Task3 initial live seal/accounting passed as recorded below; final binding later
-failed and current status is blocked with one HIGH/open threat. Original silicon
+failed with one HIGH/open threat; the authorized derived recovery assessment
+below supersedes that blocked active-binding status. Original silicon
 saved PC, functional-versus-pin timing, other platforms/CMake3.20 execution,
 full ISA, BIOS/games, public ABI and durable/cross-build continuation remain
 unknown/excluded. No physical evidence or finite silicon search was acquired
@@ -296,7 +297,7 @@ the final audit-document hash and rerun read-only verification; an earlier seal
 cannot authorize changed audit bytes. The evidence revision and all source/
 collection/amendment identities stay fixed at the audited closure above.
 
-### Final binding gate failure — current disposition
+### Final binding gate failure — historical blocked disposition
 
 At `33c2f480bd19f7008723ef9e6523284cf9b622f4`, the assessor independently
 reproduced `python3 tools/owned_cpu/acceptance.py verify`: nonzero outcome,
@@ -318,4 +319,36 @@ and unknown silicon saved PC have not changed. No backend, requirement or
 phase admission is permitted. No code, receipt or accounting was modified by
 the assessor. Preserve this reproducer in gap planning and refresh affected
 review/security bindings only after a separately owned bounded repair.
+
+### Authorized derived recovery — current assessment
+
+The parent explicitly authorized a metadata-only recovery without code or
+behavior changes. The assessor independently checked the actual unsealed
+staging document at `931e2f07e85a17a9360d74b1b98ed6e1b89e340f` against
+the committed stale receipt at33c2f48. All five collections are exactly equal;
+every pre-existing field except the explicitly replaced active seal/blockers
+is unchanged. The complete stale seal is preserved as an exact equal `seal`
+object in additive `superseded_seals`, with reason and superseding revision.
+Only its active binding was cleared. No prior failed attempt is erased, no
+native collection is relabeled and no verification guard is weakened.
+
+Read-only `acceptance.py verify` passes unsealed/unqualified with five
+collections/no lane blockers. `contract.py validate` passes pending CPU-01–05,
+Phase02 gated, frozen archive/Musashi/caps and budget44,170s/34 records with
+no pause. All39 committed source inputs independently equal current snapshot
+and collection source map. Collection/amendment/map identities are identical
+to the audited ones above. This is derived report/receipt recovery, not another
+behavioral qualification. One read-only comparison invocation had a Python
+syntax error; its corrected invocation actually executed and passed.
+
+The current attestation is rebound to931e2f0 and verified with zero current
+high/critical findings for this recovered staging/control assessment. The
+historical HIGH/open stale-binding failure above remains evidence, while the
+active stale seal causing it has been removed with complete provenance. Final
+T-01-43 live closure and final F14-03/T-01-15-03 candidate reconciliation remain
+contingent on the executor producing a new exact deferred seal and this
+assessor independently verifying it. No clean final Task3 completion is claimed
+by an unsealed document. Final confirmation will be read-only and reported to
+the executor for SUMMARY, so this security document remains unchanged after
+sealing. Any final failure reopens the high finding and blocks closeout.
 <!-- owned-cpu-current-security:end -->

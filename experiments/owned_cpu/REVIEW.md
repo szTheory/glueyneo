@@ -131,7 +131,7 @@ F14-01/F14-02 are resolved by regression-backed repairs and fresh independent re
 
 ## Reviewed revision:
 
-Reviewed source/report revision: `635714631770a6450e1f2e46bef6a377571aabd5`.
+Reviewed source/report revision: `931e2f07e85a17a9360d74b1b98ed6e1b89e340f`.
 Task 3 independent final confirmation: the original source review was performed
 at `a3cec086a75c3c7783bcde610f6e8c4234354eeb`. Comparing that revision to this
 final revision finds no included-source change; all 39 snapshot entries and all
@@ -143,6 +143,24 @@ the same collection/amendment/source-map; it preserves the withheld historical
 frame mitigation and unknown silicon result. Its initial assessment revision is
 `0e2003fe8fdb4a1e804fb6a5fe92c618b909b43a`; assessor-owned final rebinding must
 confirm this same final revision before the deferred seal.
+
+Task 3 bounded recovery confirmation: the initially created deferred seal at
+`635714631770a6450e1f2e46bef6a377571aabd5` later failed read-only verification
+after security report metadata changed, making its recorded document hash stale.
+The failure was preserved at `931e2f0`; it is not a behavioral test failure or
+a passing final receipt. Executor recovery preserves the entire prior seal
+exactly in additive `superseded_seals[0]`, with reason/revision, and removes only
+its active-seal designation. Independent comparison to the seal committed at
+`33c2f48` confirms exact object equality. All five collections still equal the
+preplan array, all 39 included hashes equal current bytes, and ten frozen
+historical file hashes pass. No implementation or test changed.
+Unsealed verification passes as unqualified/GAPS_FOUND; that result does not
+replace the live final seal gate. Both independent reports must rebind to this
+recovery revision before a fresh deferred receipt, then remain frozen while
+exact receipt verification runs. No native rerun or silicon conclusion is
+claimed. The separate assessor owns current security outcome; live T-01-43
+closure remains contingent on fresh exact-document seal verification.
+
 Collection revision: `7411a33bf63428516a3efee289c393e1a8418b28`;
 collection SHA-256 `53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e`;
 profile `owned-p01-c14-1`;
@@ -171,7 +189,7 @@ state test SHA-256 `b8ceb6be17b209f661f5a55699460776f879f78dad8e395c9f973e6502ed
   "schema": 1,
   "independent_non_author": true,
   "hardware_saved_pc": "unknown",
-  "evidence_revision": "635714631770a6450e1f2e46bef6a377571aabd5",
+  "evidence_revision": "931e2f07e85a17a9360d74b1b98ed6e1b89e340f",
   "collection_sha256": "53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e",
   "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
   "source_map_sha256": "e63834b8585912d81f99e82e2dd9070139fbc8acc25854e23274105d8cad861b",

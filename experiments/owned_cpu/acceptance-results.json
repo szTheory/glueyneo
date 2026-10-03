@@ -3029,7 +3029,7 @@
       "attestation": {
         "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
         "collection_sha256": "53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e",
-        "evidence_revision": "635714631770a6450e1f2e46bef6a377571aabd5",
+        "evidence_revision": "931e2f07e85a17a9360d74b1b98ed6e1b89e340f",
         "hardware_saved_pc": "unknown",
         "independent_non_author": true,
         "prior_findings": {
@@ -3049,26 +3049,91 @@
         "schema": 1,
         "source_map_sha256": "e63834b8585912d81f99e82e2dd9070139fbc8acc25854e23274105d8cad861b"
       },
-      "revision": "635714631770a6450e1f2e46bef6a377571aabd5",
-      "sha256": "774e70d2afd0c840847e599bad85cec41c5f8f9e8b1a493e42be2ec38b9645ff",
+      "revision": "931e2f07e85a17a9360d74b1b98ed6e1b89e340f",
+      "sha256": "8066d4e2b7e59a301b9f0d1f78ddcc84bcd940c8e5e1106df9741d5710f315ef",
       "status": "clean"
     },
-    "revision": "635714631770a6450e1f2e46bef6a377571aabd5",
+    "revision": "931e2f07e85a17a9360d74b1b98ed6e1b89e340f",
     "security": {
       "attestation": {
         "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
         "asvs_level": 1,
         "block_on": "high",
         "collection_sha256": "53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e",
-        "evidence_revision": "635714631770a6450e1f2e46bef6a377571aabd5",
+        "evidence_revision": "931e2f07e85a17a9360d74b1b98ed6e1b89e340f",
         "independent_non_author": true,
         "open_high_or_critical": 0,
         "schema": 1,
         "source_map_sha256": "e63834b8585912d81f99e82e2dd9070139fbc8acc25854e23274105d8cad861b",
         "status": "verified"
       },
-      "sha256": "a7bee1df1cf95de27680f6932c25b5c421c9124c1a6e076d447ff4a0203a1f22"
+      "sha256": "d0fdb6b44290433a89f7d0b53a74e01d298429e4602bba5e4f738b902172b329"
     },
     "security_path": ".planning/phases/01-cpu-acceptance-experiment/01-SECURITY.md"
-  }
+  },
+  "superseded_seals": [
+    {
+      "reason": "Final audit metadata changed after initially passing deferred seal; stale active binding preserved for metadata-only recovery",
+      "seal": {
+        "budget": {
+          "active_seconds": 44170,
+          "diagnostic_gate_seconds": 2565,
+          "pause": null,
+          "phase_disposition": "not-admitted",
+          "records": 34,
+          "runtime_churn_added_deleted": 1221,
+          "status": "pass",
+          "test_tool_churn_added_deleted": 6126
+        },
+        "collection_sha256": "53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e",
+        "defer_admission": true,
+        "review": {
+          "attestation": {
+            "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+            "collection_sha256": "53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e",
+            "evidence_revision": "635714631770a6450e1f2e46bef6a377571aabd5",
+            "hardware_saved_pc": "unknown",
+            "independent_non_author": true,
+            "prior_findings": {
+              "F14-01": {
+                "disposition": "resolved",
+                "evidence": "Exact command/configuration/artifact/output guards retained; independent normal and optimized acceptance regressions pass 21/21 each."
+              },
+              "F14-02": {
+                "disposition": "resolved",
+                "evidence": "Shared historical failure guard retained and independently exercised under normal and optimized acceptance tests; five collection prefix preserved."
+              },
+              "F14-03": {
+                "disposition": "superseded",
+                "evidence": "Candidate claim only: owner-approved exact 0x4AFC exclusion supersedes disputed supported ILLEGAL behavior via additive P01-C-14. Independent native zero-effect and retained-event controls passed; separate Task 2 non-author ASVS L1/block-high security gate verified zero current candidate high/critical findings. Task 3 confirmed unchanged exact source/collection. Final deferred seal remains required; original-silicon saved PC stays unknown."
+              }
+            },
+            "schema": 1,
+            "source_map_sha256": "e63834b8585912d81f99e82e2dd9070139fbc8acc25854e23274105d8cad861b"
+          },
+          "revision": "635714631770a6450e1f2e46bef6a377571aabd5",
+          "sha256": "774e70d2afd0c840847e599bad85cec41c5f8f9e8b1a493e42be2ec38b9645ff",
+          "status": "clean"
+        },
+        "revision": "635714631770a6450e1f2e46bef6a377571aabd5",
+        "security": {
+          "attestation": {
+            "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+            "asvs_level": 1,
+            "block_on": "high",
+            "collection_sha256": "53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e",
+            "evidence_revision": "635714631770a6450e1f2e46bef6a377571aabd5",
+            "independent_non_author": true,
+            "open_high_or_critical": 0,
+            "schema": 1,
+            "source_map_sha256": "e63834b8585912d81f99e82e2dd9070139fbc8acc25854e23274105d8cad861b",
+            "status": "verified"
+          },
+          "sha256": "a7bee1df1cf95de27680f6932c25b5c421c9124c1a6e076d447ff4a0203a1f22"
+        },
+        "security_path": ".planning/phases/01-cpu-acceptance-experiment/01-SECURITY.md"
+      },
+      "superseded_at_revision": "931e2f07e85a17a9360d74b1b98ed6e1b89e340f"
+    }
+  ]
 }
