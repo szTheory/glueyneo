@@ -1,60 +1,83 @@
-# Independent review — Phase 01, Plan 01-12 Task 1
+# Independent final owned CPU review — Plan 01-14
 
 ## Reviewed revision:
 
-`1e451ac283cf625d2ddebc8a750f09524b41d58b` (captured before review). The initial worktree was clean. The principal owned-core source identity is SHA-256 `c4eaac805176cf6120dc8fd887e0096cfd34fe2047b9651087c9fe2e8e2e4f0d`; `cpu.h` is `3eac455ea9b07e48c5d3e792788bc2c6a2bd955632e2928d0cb1f4b4222dd457`. The continuation fixture under review is `tests/owned_cpu/test_state.c`, SHA-256 `a43fcb4eea57b8e1ffe438966764ac6c504194cae2eb9c49341925280ac274e4`.
+Initial reviewed HEAD: `8e26d7c3ffc8dd31b7741cfe2f4ed8d55b248b82`; starting tree clean. Collection revision: `dfd281091626b05c40c4e90789442e7c19fd97c2`. Source hashes match the current manifest exactly. Canonical JSON source-map SHA-256: `601e1b27a96b8ee1c9238e133bab34041f1ad946498e991b19b244181bc016ed`; manifest SHA-256: `013d53c42c0070fcc791724d2e304728c202b6e370e058476df66510ffde487c`; collection SHA-256: `a96c08b486ee48e960b98b058bb763d3c6b5067dd33b85c00e193897d9536fc9`. Runtime `cpu.c`: `8ac6ded7859184651f6eb3fff8a87c073f8e24a98d66175b64c3d86f69cbd15f`; header: `afdc50cbfdce47cdb17f881fed6fe47b72d919e3220b9c599f6262f868d50eee`; state fixture: `25b12a79f08049cd7eb0bdf8af2f97ca74ba1798184397bccc90fa1cff308b31`.
 
-Reviewed the owned compiled closure (10 translation units), `CMakeLists.txt`, owned CPU tests and controls, `ORACLE.md`, `CONTRACT.md`, `SUBSET.md`, state inventory, budget ledger, Phase 01 requirements/context/methodology, and the prior review. `inventory.py check --build-dir build/owned-cpu` reports 26 owned fields, 10 compiled sources, zero runtime mutable globals, and zero callback-owner mutation findings. CMake's owned archive target contains only `cpu.c`; the compile closure lists no CPU generator or imported emulator core. CMake applies required C17, disables extensions, and compiles the listed targets with `-Wall -Wextra -Werror`. This is evidence for this configuration on AppleClang 21.0.0 / arm64-apple-darwin25.6.0, not a portability claim.
-
-Unity's pinned source and MIT license hashes match `third_party/unity/PROVENANCE.md` and pin `b6763fbd9cedfacaa89e2ad9fd00d615a234e355`. The Unity code is compiled as a test-only library, not into `libowned_cpu.a`. Provenance and hashes were checked; this review does not claim a complete line-by-line behavioral audit of the 4,876 lines of vendored Unity source.
+Scope: private runtime/header, target CMake closure/presets, source/state inventories, fixture and semantic/timing/isolation/fault/state tests, controls, collector, contract, provenance, manual oracle and historical receipts. The manifest has 36 distributed inputs and 10 compiled translation units; only `cpu.c` enters the runtime archive. Unity is test-only at immutable MIT pin `b6763fbd9cedfacaa89e2ad9fd00d615a234e355`; pinned source/notice hashes match. This bounded source review is not a formal proof or a full behavioral audit of Unity.
 
 ## Reviewer independence:
 
-This was a separate review agent with sole write ownership of this report. No implementation, test, build, planning, or evidence file was edited. The review was bound to committed HEAD, and prior findings were used only as prompts. No claim of personal/human reviewer identity independence is made.
+Independent reviewer: fresh separate non-author review agent, with sole write ownership of this report.
+Authored runtime/collector/tests: no
+
+The reviewer changes no implementation, tests, inventory, accounting or results. Reproducers mutate receipts only in memory. Repairs belong to a separate fixer/executor. Independence concerns implementation authorship; no human review or physical hardware measurement is asserted.
 
 ## Prior findings:
 
-The six prior blockers concern Musashi variable-shift range handling, signed remainder shifting in division, signed bit-31 shifts, and three Musashi generator defects (argument overflow, EOF sentinel, and array-capacity boundary). None is evidenced in the current owned closure: those instruction families are outside the declared subset and no generator is compiled or invoked. The prior two warnings concern historical budget assertions under optimization and a relative-path replay issue; neither is in the owned runtime closure. These dispositions do not reuse historical receipts as current evidence.
+The actual Plan 12 artifact is `REVIEW.md`, preserved at `39f8a43`, SHA-256 `c88cca6f9e79e7c824e8d6eb3eda70b954603df69b2085855c2c16da1e2d7c52`, corroborated by `01-12-SUMMARY.md`; no `SOURCE_REVIEW.md` exists.
+
+| Finding | Current disposition |
+|---|---|
+| BL-01: indeterminate state-test destination | Fixed: destination is zeroed before binding allocator. Fresh ASan+UBSan full suite 12/12; state repeat 10/10. |
+| WR-01: impossible instruction counter accepted | Fixed for the reported case: `state_instruction_count_valid` rejects nonzero instruction clocks with zero dispatches. Fresh state and counter control pass with destination/bus atomicity. This conservative invariant is not a reconstruction of every reachable history. |
+| Restore-over-ready observation | Still inconclusive, no promoted claim: runtime permits ready nonfaulted destinations; contract says fresh destination. Required fresh-owner continuation is exercised. |
+| Musashi variable-shift range defect | Absent from owned runtime; variable shifts outside subset. |
+| Musashi signed division remainder shift | Absent; division outside subset. |
+| Musashi signed bit-31 shift | Absent; current runtime uses unsigned bounded shifts. UBSan and expected-result boundaries pass. |
+| Generator argument overflow | Not applicable: no generator in compiled/invoked owned closure. |
+| Generator EOF sentinel | Not applicable: no generator in closure. |
+| Generator array capacity | Not applicable: no generator in closure. |
+| Historical optimized assertion warning | Current explicit exceptions work under `-O`; existing tests miss new receipt-binding defects below. |
+| Historical relative-path replay warning | Current preset invocation is from repo root with sanitized recorded paths; old receipts are historical only. |
+
+Independent `contract.check_history` matched all 10 frozen historical hashes: Musashi ledger, acceptance/review/results, prior acceptance/review, both attempt receipts, patch and recovery history. No historical bytes or charges changed. These matches reconcile documents; they are not fresh Musashi qualification.
 
 ## Evidence runs and denominators:
 
-- Native: `cmake --build build/owned-cpu --parallel 2 && ctest --test-dir build/owned-cpu --output-on-failure --no-tests=error` — 12/12 CTest cases passed. Unity denominators include diagnostic 2/2, semantics 17/17, timing 23/23, isolation 4/4, faults 5/5, and state 4/4. The native state binary SHA-256 is `1a02da76a413d8adf0650b73bc8a0bb129e2ef550281c2a27f7198564127e0d1`.
-- ASan+UBSan: corresponding build and full CTest run — 11/12 CTest cases passed; `owned_cpu_state` failed, with Unity reporting 4 tests and 1 failure at `test_state.c:542`. `ctest --test-dir build/owned-cpu-asan -R '^owned_cpu_state$' --repeat until-fail:10 --output-on-failure` failed again on the first repetition at the same assertion. State binary SHA-256: `d2f874f85ccb0f7af45d46f7558a6d32183c308794752cdcc3437fea4f0c1ef5`.
-- TSan / optimized: corresponding build and full CTest run — 12/12 passed. State binary SHA-256: `85a3b1c7f4e1b676f4803e30a605cb44aa915b5d335359dbdd03db9e0e6aed16`.
-- The native negative diagnostic control reports that mutating expected D0 from 10 to 11 fails only the named guest arithmetic/store assertion; isolation and timing negative controls also passed. The CTest inventory check passed. These controls support test sensitivity but do not qualify hardware behavior.
-- Build identities: native `CMakeCache.txt` SHA-256 `9122ef4cb48e4e903f3fc3f305dc0ee9b9d885c1999fd9d8970674330b1d8d3b`, compile database `9ec056bca4335738576e4d0e3285f81ac1025e7f62aabd4cd6ac775bdedea838`; ASan cache `66a2c79a355c79e5c9720d31928299192df4a4023d0792f5723a41c2ac811869`, compile database `3031937f4ddafdf3fc09cbe0806e784e5e9538f28b766faa6af9a09d81625a86`; TSan cache `48fcc61b78aad2d16a6124c4aa286fe7509100bb5d37fc0db91a47d250fb81ad`, compile database `21ebfda190320dd92e2db5a0ea6d76bb2232515f97cd1c86b8c7aa06b3f56719`.
-- Budget snapshot from `python3 tools/owned_cpu/contract.py budget --require-diagnostic-gate`: pass; 16,396 active seconds, diagnostic gate 2,565 seconds, runtime churn 1,194, test/tool churn 4,472, five records; phase disposition remains `not-admitted`. This is the ledger state observed during review and does not include a separate post-review ledger update.
+Fresh reviewer execution on the reviewed source, using existing collector-built binaries:
+
+- `ctest --preset owned-debug --output-on-failure --no-tests=error`: 12/12 passed.
+- Same command for `owned-release`, `owned-asan-ubsan` and `owned-tsan`: each 12/12 passed.
+- `ctest --test-dir build/owned-asan-ubsan -R '^owned_cpu_state$' --repeat until-fail:10 --output-on-failure --no-tests=error`: 10/10 repetitions passed, five state tests each.
+- `python3 -O tools/owned_cpu/acceptance.py self-test`: six rejection plus two classification controls passed.
+- `python3 -m unittest discover -s tests/owned_cpu -p test_acceptance.py`: 12/12 passed. Existing controls miss F14-01/F14-02.
+- Both in-memory false-qualification reproducers below executed; actual receipts untouched.
+
+Each lane contains diagnostic 2, semantics 17, timing 23, isolation 4, faults 5 and state 5 Unity cases. Continuation exercises 13 checkpoints with six continuation calls each (78); isolation 32 interleaved and 32 concurrent pairs; cold supervision 16 fresh processes with two concurrent instances each. Five named negative controls run. Inventory checks cover 26 owned fields and 10 compiled sources. This review reran tests, not configure/build; build/binary identities are reconciled with collector receipts and actual inventory checks. Apple Clang 21 / Darwin arm64 is the only measured host. Exact CMake 3.20 execution and other platforms remain unknown.
+
+Architecture/decode review found opaque per-instance ownership, explicit caller allocator/bus bindings, no mutable runtime global or ambient clock/filesystem/network/device/process service. Same-instance overlap remains unsupported; `active` is not a concurrency lock. Masks select the declared instruction forms. Unsigned sign extension/modulo arithmetic and bounded shifts avoid the historical UB mechanisms; ADDQ flags and word-MOVE preservation have expected-result boundary cases under UBSan. Odd accesses precede bus callbacks; partial writes persist on terminal host faults; nested frame/vector faults do not recurse. IRQ/reset/instruction/idle are separate whole events. Capture/restore stage named fields and retain destination host bindings; tests destroy/overwrite source owners and continue actual execution. The continuation validator intentionally establishes only stated conservative invariants. No public CPU ABI, durable state, arbitrary partition equivalence or full ISA is qualified.
+
+Current closure/receipt textual privacy scans found no personal home path, private email, credentials or private media. Ignored caches/logs stay local. This is a bounded textual scan, not proof about arbitrary future tool output. The original MIT fixture bytes are authored; no commercial ROM/BIOS or manual PDF bytes enter the distribution.
 
 ## Oracle ancestry:
 
-`tests/owned_cpu/ORACLE.md` cites Motorola/NXP *MC68000 User's Manual*, Rev. 9.1 (2006-01-25), and the *M68000 Programmer's Reference Manual* (2000-07-01), with instruction, exception, timing, and interrupt claims tied to named tables/sections. The four-instruction diagnostic expected values are authorial, checked against the documented operations and timing. Ordered callback traces and partial bus-failure effects are the project's explicit functional-bus contract, not hardware captures. Address-error saved-PC choice is expressly implementation-defined because the manual calls it unpredictable. Emulator outputs (including Musashi/MAME comparisons) are comparisons, not hardware truth. There is no physical-silicon capture or independent board oracle in this evidence set; instruction coverage remains the exact narrow subset in `SUBSET.md`.
+Authored original fixture/assertions ground diagnostic arithmetic/store values. Official [MC68000 User's Manual](https://www.nxp.com/docs/en/reference-manual/MC68000UM.pdf), ninth edition (locally cited Rev. 9.1 / 2006-01-25), supplies IRQ/frame/exception/timing evidence; official [M68000 Programmer's Reference Manual](https://www.nxp.com/docs/en/reference-manual/M68000PRM.pdf), NXP-hosted 1992 manual, supplies operations/encodings. Local publication/retrieval-date differences do not establish a hardware revision. This review reopened the official PDFs, including UM §§6.2.4–6.3.7, Table 8-14 and PRM ILLEGAL printed p.4-107.
+
+UM §6.3.2 supports level-7 transition and comparison. §6.3.7 explicitly saves the privilege-offending instruction address. §§6.2.4/6.2.5 describe the next unexecuted instruction, which is not uniformly the following sequential instruction. The specific ILLEGAL contract discrepancy below remains unresolved; the manual does not justify silently changing the frozen contract or calling all observations compliant. Address-error saved-PC selection is local, not a restart guarantee. Functional callback order/host-fault handling are project contracts, not per-pin captures. MAME/Musashi/SingleStepTests/Rocket68 comparisons share ancestry and cannot establish hardware truth. No silicon/board capture, BIOS/game support, full ISA, Neo Geo timing or gameplay-performance claim is established.
 
 ## Findings and dispositions:
 
-### BL-01 — BLOCKER — Uninitialized state-test destination makes the sanitizer result unreliable
+### F14-01 — HIGH — open — Successful receipts lack command/configuration binding
 
-**File/line:** `tests/owned_cpu/test_state.c:518-525` (failure at 542; helper at 209-214; allocator counter at 120-125).
+Location: `tools/owned_cpu/acceptance.py`, initial `verify` lines280–291. Scope: repairable within Plan 14 Task 2.
 
-**Reproducer / evidence:** `malformed_and_incompatible_records_reject_atomically()` declares `state_machine destination` without initialization and calls `machine_create_fresh()`, which only constructs bus/allocator bindings and does not clear the fixture. `state_allocate()` increments the indeterminate `live_allocations`; the malformed-record helper also reads other fixture fields, including `event_count`. The ASan+UBSan state executable failed the final zero-allocation assertion (`Expected 0 Was 1`) and repeated with the same failure. This is a test-fixture defect; it prevents treating that state sanitizer path as green.
+Executed reproducer: deepcopy the real result; replace the `owned-asan-ubsan` lane configuration with `{'GLUEYNEO_OWNED_CPU_SANITIZER': 'NONE'}` and test command with `['true']`; rehash collection using `digest` excluding `sha256`; `verify(document, False)` returns pass with no lane blockers. Preserved logs/counts suffice. Successful rows require only nonempty commands/configuration and zero exits, without exact command/configuration/status binding. Even the positive unit fixture repeats configure three times with an unrelated configuration key.
 
-**Affected claim:** atomic rejection / sanitizer-clean continuation state validation. The current ASan+UBSan full-suite result is 11/12, not a passing gate.
+Impact: read-only verification qualifies a required sanitizer lane despite contradictory recorded identity. The normal collector constructs correct commands, but validation is an explicit integrity boundary. Repair requires exact per-lane configure/build/test sequence/configuration, coherent statuses, and direct mutation regressions. Preserve the first real receipt.
 
-**Narrow repair/test path:** initialize the entire destination fixture before binding it (or make the fresh helper initialize its fixture under a documented ownership rule); rerun the four state tests under ASan+UBSan, repeat the state test, and rerun its native and negative-control cases.
+### F14-02 — HIGH — open — Accepted verification omits historical failure guard
 
-**Oracle ancestry:** test fixture and allocator bookkeeping only; no CPU-manual oracle. The failure is directly observed in the current sanitizer run.
+Location: `tools/owned_cpu/acceptance.py`, accepted `verify` branch versus `seal`. Scope: repairable within Plan 14 Task 2.
 
-### WR-01 — WARNING — Restore accepts an impossible diagnostic-counter state
+Executed reproducer: prepend to a deepcopy of real results a rehashed collection whose first lane is `unknown`; set disposition `accepted` plus clean review/collection binding sufficient for `verify(..., False)`. Result: pass, accepted, two collections, no lane blockers. `seal` refuses earlier fail/unknown/skipped lanes, but `verify` omits the guard. Share the guard and regress all three statuses. No current recorded lane failed; this is an integrity counterexample, not a native CPU failure.
 
-**File/line:** `experiments/owned_cpu/cpu.c:889-900`; the existing mutation is `tests/owned_cpu/test_state.c:401-403`.
+### F14-03 — HIGH — open — Canonical ILLEGAL requirement disagrees with tested frame PC
 
-**Reproducer / evidence:** Starting from a post-instruction captured state, set only `instructions = 0` while retaining nonzero `instruction_cycles` and the existing total. `state_valid()` checks the aggregate cycle sum and reset-pending counters but does not relate the completed-instruction counter to event history/counters; `owned_cpu_restore_state()` accepts the candidate. The test itself performs this mutation as `OMIT_INSTRUCTION_COUNTER`. Per `SUBSET.md:119-125`, `instructions` counts completed dispatches while `instruction_cycles` records instruction clocks, so this produces a restored diagnostic state that cannot describe the preceding execution.
+Location: `experiments/owned_cpu/CONTRACT.md:61`, `cpu.c:478–487`, `tests/owned_cpu/test_timing.c:264`, and oracle. Scope: outside the five authorized repair paths; preserve GAPS_FOUND for user-directed reconciliation.
 
-**Affected claim:** continuation record validation and truthful counter continuation. Architectural execution may continue, but post-restore counters can misreport prior completed work; current omission control normalizes this invalid state as acceptable.
+The specific canonical table requires ILLEGAL to stack old SR and next PC. Runtime passes `instruction_pc` to vector4; named test/oracle require `$100` for ILLEGAL at `$100`, instead of following sequential `$102`. Fresh timing execution passes that fault-PC assertion. The later next-unexecuted wording can accommodate an offending instruction not executed, but leaves the table's specific wording contradictory. This is a contract/evidence disagreement, not a demonstrated C safety or CPU semantic defect. It prevents asserting every canonical observation is satisfied. Do not modify runtime to follow disputed wording or mutate the frozen contract/hash within Plan 14. Authorize primary-source contract reconciliation and refresh affected evidence without rewriting history.
 
-**Narrow repair/test path:** define and enforce conservative counter consistency invariants for the supported event model; convert the omission control into a malformed-record rejection control or construct its test state through a controlled valid transition. Add a rejection-atomicity assertion for the counter mismatch and keep manual-derived cycle expectations separate from this local counter invariant.
+Disposition: GAPS_FOUND
 
-**Oracle ancestry:** counter meanings are the local `SUBSET.md` policy and `ORACLE.md` event accounting; Motorola tables ground instruction cycles but do not define this private record format.
-
-**Inconclusive observation:** `CONTRACT.md:20-27` describes restore into a fresh destination, while `cpu.c:916-928` rejects active/faulted destinations but permits a ready destination. Existing tests cover only newly created destinations, and the phrase's status as a mandatory precondition is ambiguous. No finding is raised without a test or stricter contract clarifying whether restore-over-ready is unsupported.
-
-**Disposition:** BL-01 blocks admission because the required ASan+UBSan state run fails. WR-01 remains open. No other instruction-semantic defect was established in the reviewed narrow subset; unsupported opcodes, board-cycle behavior, hardware equivalence, public ABI, durable snapshots, cross-build state compatibility, and ASVS-style certification remain unsupported claims.
+F14-01/F14-02 require in-scope regression-backed repair and independent re-review. F14-03 remains an admission blocker. Required native tests and prior state fixes pass within recorded scope. CPU-01–04 stay Pending, Phase 01 stays open and Phase 02 gated. No budget cap, historical charge or phase verification changes here; a resource threshold is not CPU rejection.

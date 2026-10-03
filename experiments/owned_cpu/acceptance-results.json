@@ -1,6 +1,7 @@
 {
   "blockers": [
-    "independent current-source review and bounded decision pending in Plan 01-14"
+    "Plan 01-14 initial independent review: command/configuration false-green and accepted-history guard require repair and independent re-review",
+    "Frozen CONTRACT.md requires ILLEGAL next PC; implementation, SUBSET and oracle assert faulting PC. Canonical reconciliation remains outside Plan 01-14 repair scope"
   ],
   "collections": [
     {
