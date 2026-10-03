@@ -98,3 +98,29 @@ The official Musashi repository describes a C 680x0 engine and includes the MIT 
 Recommended next planning direction: evaluate an owned C17 CPU implementation behind the private whole-core seam, starting with the exact v0.1 diagnostic contract. Define a separate effort budget and stop/review gate; do not reuse or alter the spent Musashi adaptation caps. First reconcile the old candidate-specific CPU requirements, identify unsupported behavior, and preserve a route toward broader 68000 coverage.
 
 The developer's direction is a planning decision: create a gap-closure plan for an owned C17 CPU core behind a private whole-CPU seam, beginning with the exact diagnostic subset. It is not an implementation authorization or claim of backend acceptance. The user then explicitly approved following this recommendation, including the stated correctness, delivery-efficiency, ownership, and small-dependency-tree priorities. Canonical requirements and roadmap reconciliation, a separate bounded effort budget, and executable acceptance criteria belong in the gap plan; all historical Musashi charges and caps remain unchanged.
+
+---
+
+## ILLEGAL `0x4AFC` support boundary discussion — 2026-10-03
+
+**Area discussed:** Whether the owned candidate should continue to claim exact canonical `0x4AFC` while its saved-PC interpretation remains unresolved.
+
+The user requested a broad, project-tailored pass across relevant stakeholder and technical roles, adversarial tradeoffs, anti-patterns and primary sources where useful. Hardware/evidence, product/API, C runtime, testing/oracle, security, provenance, maintenance and delivery lenses were considered. UI/rendering, distributed-system and unrelated language/framework roles were not applicable to this headless C CPU decision. The web check found the same official Motorola M68000 manual already present in Plan 01-17's evidence; it added no decisive authority. A CPU32+ manual was considered only as a derivative comparison, not as evidence of base MC68000 behavior.
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Exclude exact `0x4AFC` as unsupported | Remove only this opcode from the owned candidate's qualified subset; return `OWNED_CPU_UNSUPPORTED_OPCODE` with fault PC/IR, without guest vector-4 entry or its bus/cycle effects. This is a candidate boundary, not silicon behavior. | ✓ |
+| Keep it required; preserve unknown | Keep the existing claim unchanged and leave F14-03/admission blocked pending new applicable evidence or another explicit owner decision. | |
+| Keep it required; choose a bounded PC assumption | Adopt `$100` or `$102` for this private experiment while documenting that original-silicon correctness remains unverified. | |
+
+**User's choice:** “follow ur recs” — selected the recommended candidate-only exclusion of exact `0x4AFC`.
+
+**Synthesis:** Exclusion avoids asserting either saved-PC value and leaves the original diagnostic guest and other selected exception cases intact. It is a real compatibility reduction because software intentionally executing `ILLEGAL` will receive a host-visible unsupported result rather than a guest vector-4 exception. Future planning must reconcile the current contract, subset, dispatch, active tests/oracle/acceptance evidence and security disposition while preserving Plan 01-17's adjudication and P01-C-13 as history. The choice does not itself close F14-03/T-01-15-03 or admit the backend. Next step is `$gsd-plan-phase 01 --gaps`.
+
+## the agent's Discretion
+
+The user prefers future consequential discussions to use broad but domain-relevant role analysis, adversarial pros/cons and footguns, reputable primary sources where useful, and one synthesized recommendation. Omit irrelevant role lenses. The support boundary and its explicit unsupported result are owner-selected; implementation details remain for research/planning.
+
+## Deferred Ideas
+
+None.

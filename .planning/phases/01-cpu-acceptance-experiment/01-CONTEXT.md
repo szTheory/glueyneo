@@ -1,7 +1,7 @@
 # Phase 1: CPU acceptance experiment - Context
 
 **Gathered:** 2026-10-02
-**Status:** Developer approved the owned C-core direction for gap-closure planning; backend implementation is not accepted.
+**Status:** Developer approved the owned C-core direction for gap-closure planning; the owner has now excluded exact `0x4AFC` from the candidate's qualified subset. Backend implementation is still not accepted.
 
 Stable Phase 01 decision references remain `P01-C-##`; bold `D1-##` labels are aliases for the installed GSD decision-coverage parser only. `P01-R-##` refers to dated Phase 1 research decisions; `PREP-D-##` refers to the project preparation register.
 
@@ -22,7 +22,7 @@ Plan 01-14's F14-03 remains HIGH/open: frozen `experiments/owned_cpu/CONTRACT.md
 
 Read `experiments/owned_cpu/REVIEW.md`, `experiments/owned_cpu/ACCEPTANCE.md`, `experiments/owned_cpu/acceptance-results.json`, `.planning/phases/01-cpu-acceptance-experiment/01-14-SUMMARY.md` and Plans 01-15/01-16 for exact findings, identities, outcomes and budget. This dated handoff supplements the 2026-10-02 planning context; it does not change the phase contract, declare F14-03 resolved, or accept the backend.
 
-## Current Phase Handoff — 2026-10-03 (after Plan 01-17 decision)
+## Prior Phase Handoff — 2026-10-03 (after Plan 01-17 decision; superseded below)
 
 Plan 01-17 completed its bounded source acquisition and independent adjudication, then stopped at a blocking-human checkpoint with an **ambiguous** verdict. The user has now selected **preserve unknown**. This answers the checkpoint and authorizes gap planning; it does not resolve F14-03 or finish Plan 01-17. The stronger fault-PC derivation remains unverified; the frozen contract still says “next PC,” while the runtime/fixture exercise the faulting PC. Do not declare either value accepted or change the frozen contract, runtime, subset, fixture, or oracle.
 
@@ -32,7 +32,15 @@ Role synthesis for the disposition: the hardware/source lens says the bounded se
 
 **Gap-planning result — 2026-10-03:** `$gsd-plan-phase 01 --gaps` returned `PLANNING INCONCLUSIVE` and created no Plan 01-18. Existing tests already cover shared frame structure, bus order, stack switching, fault containment and continuation; more invariant checks would not settle saved-PC semantics and would not close the blocker. This is consistent with P01-C-13 and avoids a process-only plan.
 
-If the owner wants to consider narrowing the supported claim/subset, the specific next workflow is `$gsd-discuss-phase 01`; it must begin as a separate explicit discussion and does not imply the revision is selected. If preserve-unknown remains unchanged, no GSD command advances the phase until genuinely applicable primary authority or a qualified exact-silicon capture becomes available. After such evidence is obtained and recorded, use `$gsd-plan-phase 01 --gaps` again. Phase 01 remains GAPS_FOUND/open; do not start Phase 02.
+At the time this handoff was written, narrowing the supported claim still required a separate owner decision. The owner has since made that decision in P01-C-14; its current scope and next step are recorded in the latest handoff below.
+
+## Latest Phase Handoff — 2026-10-03 (after support-boundary discussion)
+
+The owner followed the recommendation to exclude only exact canonical `0x4AFC` from the owned candidate's qualified subset. For this candidate, the planned outcome is `OWNED_CPU_UNSUPPORTED_OPCODE` with the rejected opcode's fault PC and IR; it must not enter guest vector 4, read the vector, write an exception frame, commit an instruction, or charge guest instruction/exception cycles. This is a candidate capability boundary. It does not mean original MC68000 treats its architecturally defined `ILLEGAL` instruction as unsupported.
+
+Retain the existing supported TRAP, privilege, address-error, IRQ, RTE, and other selected exception cases. The original diagnostic guest does not execute `0x4AFC`; excluding it does reduce compatibility for software that intentionally uses `ILLEGAL` and must be explicit in the candidate contract and support documentation. Do not select `$100` or `$102` as original-silicon behavior. P01-C-13 remains the historical saved-PC decision; P01-C-14 supersedes it only as to whether this candidate must qualify `0x4AFC`.
+
+P01-C-14 authorizes planning the contract/subset reconciliation and corresponding runtime, test, oracle, acceptance-evidence, inventory, and documentation changes. No implementation or verification occurred during discussion. F14-03 and T-01-15-03 remain HIGH/open pending the planned reconciliation, fresh qualification, independent review and security reassessment. CPU-01–05 remain Pending; Phase 01 remains GAPS_FOUND/open; Phase 02 remains gated. Plan 01-17 remains incomplete at its answered evidence checkpoint. The concrete next command is `$gsd-plan-phase 01 --gaps`; do not begin it in this discussion step.
 
 </domain>
 
@@ -60,6 +68,7 @@ If the owner wants to consider narrowing the supported claim/subset, the specifi
 - **D1-11:** (stable reference P01-C-11). Use the Motorola MC68000 manuals and original, independently justified guest expectations for documented CPU behavior. The existing original guest demonstrates a small starting slice (MOVEQ, ADDQ.L, MOVE.L, STOP, reset vectors, and selected IRQ/exception cases); it does not prove complete coverage or hardware behavior.
 - **D1-12:** (stable reference P01-C-12). Treat Musashi, MAME, Rocket68, and emulator-generated corpora as useful for finding disagreements, with source and test ancestry recorded. Agreement among implementations with shared ancestry is not an independent oracle. Where feasible, add board captures only with exact board/revision/setup provenance; CPU manuals alone do not establish Neo Geo board timing.
 - **D1-13:** (stable reference P01-C-13). Preserve the original-MC68000 `ILLEGAL 0x4AFC` saved-PC behavior as unknown under the unchanged claim. No value, implementation, contract, fixture, oracle, supported-subset, mitigation, or admission change is selected. Do not repeat the exhausted bounded source acquisition. Reopen only on genuinely applicable primary authority, a qualified exact-silicon capture, or a separately explicit owner decision to revise the supported claim.
+- **D1-14:** (stable reference P01-C-14, owner decision 2026-10-03). Exclude only exact canonical `0x4AFC` from the owned candidate's qualified subset. Plan for it to return `OWNED_CPU_UNSUPPORTED_OPCODE` with the faulting opcode PC and IR, without guest vector-4 entry, vector reads, exception-frame writes, completed-instruction state, or guest-cycle charges. This is an implementation boundary, not a claim that original MC68000 hardware rejects `ILLEGAL`. Retain the other selected exception interactions. Preserve P01-C-13 and the ambiguous hardware adjudication as history; do not repeat its bounded search or claim a saved-PC value, mitigation, admission, or phase completion. This decision supersedes P01-C-13 only on the candidate support boundary and authorizes same-phase gap planning to reconcile the contract and evidence.
 
 ### Decisions the gap plan must make explicit before implementation
 
@@ -98,6 +107,15 @@ Recommend concrete module boundaries, test organization, supported-opcode report
 - .planning/phases/01-cpu-acceptance-experiment/01-12-SUMMARY.md, 01-13-SUMMARY.md, and 01-14-SUMMARY.md — state review/fix, fresh qualification, and final independent decision.
 - third_party/musashi/PROVENANCE.md — exact local source provenance; upstream descriptions do not establish local qualification.
 
+### Current support-boundary reconciliation
+- `.planning/phases/01-cpu-acceptance-experiment/01-17-PLAN.md` — bounded acquisition/adjudication scope and terminal checkpoint.
+- `.planning/phases/01-cpu-acceptance-experiment/01-17-SUMMARY.md` — evidence checkpoint and preserved unresolved status.
+- `.planning/phases/01-cpu-acceptance-experiment/01-17-ILLEGAL-ADJUDICATION.md` and `.planning/phases/01-cpu-acceptance-experiment/01-17-ILLEGAL-EVIDENCE.json` — competing saved-PC readings, evidence ancestry, and explicit uncertainty.
+- `.planning/phases/01-cpu-acceptance-experiment/01-SECURITY.md` — current HIGH/open threat disposition requiring reassessment after scope change.
+- `experiments/owned_cpu/CONTRACT.md`, `experiments/owned_cpu/SUBSET.md`, `experiments/owned_cpu/ACCEPTANCE.md`, and `experiments/owned_cpu/REVIEW.md` — active candidate contract, subset, evidence summary, and F14-03 finding to reconcile.
+- `experiments/owned_cpu/cpu.c` and `experiments/owned_cpu/state-inventory.json` — current opcode dispatch and continuation evidence identity/inventory affected by implementation changes.
+- `tests/owned_cpu/ORACLE.md`, `tests/owned_cpu/test_timing.c`, `tests/owned_cpu/test_semantics.c`, and `tests/owned_cpu/test_state.c` — current ILLEGAL frame, opcode, cycle, and continuation expectations to revise without rewriting historical adjudication.
+
 ### Existing experimental shape and independent fixture
 - experiments/cpu/cpu_adapter.h and experiments/cpu/cpu_adapter.c — private cpu_instance, bus, bounded run, IRQ, observation, and private state-codec shape; implementation is Musashi-specific.
 - experiments/cpu/state-inventory.json — the current candidate's mutable-state and callback inventory; not a future core inventory.
@@ -126,6 +144,7 @@ Recommend concrete module boundaries, test organization, supported-opcode report
 ### Reusable Assets
 - experiments/cpu/cpu_adapter.h: an opaque per-instance handle with explicit bus callbacks, lifecycle/reset, bounded run result, IRQ input, and private inspection/state calls. Reuse the stable conceptual seam, not the embedded Musashi context, raw state layout, or claim of acceptance.
 - tests/cpu/guest_fixture.c and tests/cpu/ORACLE.md: original MIT fixture with manual-derived register/store assertions and a negative control; a useful first vertical slice.
+- The owned-CPU unsupported-opcode result path already reports fault PC and instruction register; it can express the selected `0x4AFC` candidate boundary without conflating it with guest ILLEGAL exception behavior.
 - Existing CMake/CTest and pinned Unity setup under experiments/cpu/ and third_party/unity/: research/planning can assess which parts remain useful after the backend changes.
 
 ### Established Patterns
@@ -142,7 +161,7 @@ Recommend concrete module boundaries, test organization, supported-opcode report
 <specifics>
 ## Specific Ideas
 
-The developer wants to build as much of the emulator as practical, especially where reuse would create a flawed foundation, while preserving correctness and efficient delivery. A strangler-style migration is welcome. The developer approved planning an owned C17 core behind a thin private whole-CPU seam, starting with an explicit SDK-diagnostic slice and expanding after measured evidence. This is not implementation authorization or a backend acceptance claim.
+The developer wants to build as much of the emulator as practical, especially where reuse would create a flawed foundation, while preserving correctness and efficient delivery. A strangler-style migration is welcome. The developer approved planning an owned C17 core behind a thin private whole-CPU seam, starting with an explicit SDK-diagnostic slice and expanding after measured evidence. For consequential discussions, the user prefers broad, relevant stakeholder and technical-role analysis, adversarial pros/cons and footguns, primary-source research where useful, and one synthesized recommendation tailored to the project. Omit role lenses that do not apply to the actual domain. This is not implementation authorization or a backend acceptance claim.
 
 </specifics>
 
@@ -157,4 +176,4 @@ The developer wants to build as much of the emulator as practical, especially wh
 ---
 
 *Phase: 01-cpu-acceptance-experiment*
-*Context gathered: 2026-10-02*
+*Context first gathered: 2026-10-02; updated: 2026-10-03*
