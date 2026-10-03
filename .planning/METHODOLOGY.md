@@ -121,7 +121,11 @@ critical path and runner-minutes before expanding CI.
 During verify-work, auto-resolve a UAT row only from passing deterministic
 evidence that directly covers it at the current relevant source identity. Do
 not ask the user to confirm machine-observable results already established by
-that evidence. Hand off only the residual human-only checks or true blockers.
+that evidence. Treat a completed UAT as closed for its covered source and
+acceptance scope: do not restart it on a later verify-work call unless relevant
+source files or acceptance criteria changed after its recorded revision. When
+they do change, rerun only affected checks and preserve prior results. Hand off
+only residual human-only checks or true blockers.
 This preference does not remove the separate pause after each named GSD step
 for review and model selection. In the installed OpenGSD 1.14.0 configuration,
 `workflow.human_verify_mode` controls checkpoint timing (`mid-flight` or
