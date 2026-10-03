@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 0
+open_count: 1
 waived_count: 1
 fixed_count: 6
-total_count: 7
-last_updated: 2026-10-01T21:07:56.583Z
+total_count: 8
+last_updated: 2026-10-03T01:37:56.782Z
 ---
 
 # Broken Windows Ledger
@@ -22,6 +22,7 @@ last_updated: 2026-10-01T21:07:56.583Z
 | 5 | 01 | deviation | experiments/cpu/evidence/plan-01-02/sanitizer-counterexample.json |  | UBSan test-bus pointer arithmetic repaired; fatal diagnostics enabled and affected lanes rerun clean | fixed |  | 2026-10-01T18:01:36.231Z | 2026-10-01T18:01:36.386Z |
 | 6 | 01 | deviation | experiments/cpu/evidence/plan-01-03/reset-counterexamples.md |  | Reset debt, stale NMI and BSD address-error boundary counterexamples repaired within the final frozen attempt | fixed |  | 2026-10-01T18:25:33.135Z | 2026-10-01T18:25:33.314Z |
 | 7 | 01 | deviation | experiments/cpu/evidence/plan-01-03/state-review-counterexamples.md |  | Inconsistent reset records and zero-request counter guard repaired with atomicity and no-op regressions | fixed |  | 2026-10-01T18:25:33.491Z | 2026-10-01T18:25:33.655Z |
+| 8 | 01 | unmet-truth | experiments/owned_cpu/CONTRACT.md | 61 | F14-03: frozen ILLEGAL next-PC contract conflicts with implemented and tested fault-PC frame; user-directed canonical reconciliation required | open |  | 2026-10-03T01:37:56.782Z |  |
 
 ````json
 [
@@ -114,6 +115,19 @@ last_updated: 2026-10-01T21:07:56.583Z
     "reason": "",
     "recorded_at": "2026-10-01T18:25:33.491Z",
     "resolved_at": "2026-10-01T18:25:33.655Z",
+    "milestone": "v0.1"
+  },
+  {
+    "id": 8,
+    "kind": "unmet-truth",
+    "phase": "01",
+    "file": "experiments/owned_cpu/CONTRACT.md",
+    "line": 61,
+    "description": "F14-03: frozen ILLEGAL next-PC contract conflicts with implemented and tested fault-PC frame; user-directed canonical reconciliation required",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-03T01:37:56.782Z",
+    "resolved_at": null,
     "milestone": "v0.1"
   }
 ]

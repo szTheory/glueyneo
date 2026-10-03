@@ -4,17 +4,17 @@ milestone: v0.1
 milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
-status: executing
-stopped_at: Completed 01-13-PLAN.md
-last_updated: "2026-10-03T01:22:59.109Z"
+status: gaps_found
+stopped_at: Completed 01-14-PLAN.md; execute-phase boundary, F14-03 reconciliation pending
+last_updated: "2026-10-03T01:52:42.938Z"
 last_activity: 2026-10-03
-last_activity_desc: Plan 01-13 completed source and rights closure, collector controls and four exact-revision native qualification lanes; Plan 14 review and admission remain pending
-state_head: 89fa40e7508faa2dc62ba033ceafdd14b8754677
+last_activity_desc: Plan 01-14 completed independent review, receipt repairs and unqualified seal; F14-03 canonical ILLEGAL contract discrepancy remains open
+state_head: e83df14d5764e10f4b61e0e32437959855eb8ece
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
   percent: 0
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — GAP CLOSURE EXECUTING
-Plan: 13 of 14 complete; next is 01-14
-Status: Plan 01-13 source/rights inventory and collector controls pass. Debug, Release/O2, ASan+UBSan and optional TSan each pass 12/12 CTest cases at the collected revision. Plan 14 independent review and bounded decision remain pending. The core has not been accepted. CPU-01–05 remain Pending; Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
-Last activity: 2026-10-03 — Closed Plan 01-13 with exact-source receipts, portable schema-2 presets, four native qualification lanes and append-only accounting; exact CMake 3.20 execution remains unknown.
+Phase: 01 (CPU acceptance experiment) — OPEN / GAPS_FOUND
+Plan: 14 of 14 complete; execute-phase workflow boundary
+Status: Plan 01-14 independently repaired and re-reviewed F14-01/02. Final four lanes pass48/48 CTest cases; ordinary seal and read-only verify preserve unqualified/GAPS_FOUND. F14-03 remains HIGH/open: frozen ILLEGAL next-PC contract conflicts with tested fault-PC behavior. User-directed canonical reconciliation is required. CPU-01–05 remain Pending; Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
+Last activity: 2026-10-03 — Completed Plan 01-14 with exact-source review, preserved counterexamples and append-only charges. CMake3.20 execution remains unknown; no phase verification ran.
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -45,15 +45,15 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 
 **Velocity:**
 
-- Total plans completed: 13
-- Average recorded duration: 45.3min
-- Total recorded execution time: 589min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
+- Total plans completed: 14
+- Average recorded duration: 44.2min
+- Total recorded execution time: 619min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 13 | 589min | 45.3min |
+| 01 | 14 | 619min | 44.2min |
 
 **Recent Trend:**
 
@@ -77,6 +77,7 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 | Phase 01 P11 | 79min | 2 tasks | 11 files |
 | Phase 01 P12 | 119min | 4 tasks | 8 files |
 | Phase 01 P13 | 23min | 3 tasks | 9 files |
+| Phase 01 P14 | 30min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -110,10 +111,11 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - [Phase 01]: Bind source-review findings to an exact pre-repair revision and verify fixes separately — The independent review is an evidence artifact for the reviewed source identity; repaired code and regressions are recorded in the plan summary and must be independently reviewed again in Plan 14.
 - [Phase 01]: Keep restore-over-ready semantics unclaimed until its destination precondition is clarified — The review found contract wording ambiguity while implementation accepts ready destinations. No behavior is promoted to supported without a direct requirement or test contract.
 - [Phase 01]: Preserve the earlier state audit while the current distribution manifest owns refreshed source identities; four native preset lanes pass, with admission pending independent Plan 14 review.
+- [Phase 01]: Plan 01-14 sealed unqualified/GAPS_FOUND after independent repair re-review; F14-03 frozen ILLEGAL contract discrepancy requires user-directed reconciliation; CPU-01–05 Pending, Phase 01 open and Phase 02 gated.
 
 ### Pending Todos
 
-- Thirteen plans are complete; Plan 01-14 remains in the active gaps-only execution chain for independent final review and bounded disposition. Preserve budget for targeted repair and re-review. Phase 02 remains gated.
+- Fourteen plans are complete. Pause at the named execute-phase boundary; user-directed F14-03 primary-source contract reconciliation is next. Phase01 remains open/GAPS_FOUND and Phase02 gated.
 
 ### Blockers/Concerns
 
@@ -138,6 +140,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-03T01:22:59.090Z
-Stopped at: Completed 01-13-PLAN.md
+Last session: 2026-10-03T01:52:42.919Z
+Stopped at: Completed 01-14-PLAN.md; execute-phase boundary, F14-03 reconciliation pending
 Resume file: None
