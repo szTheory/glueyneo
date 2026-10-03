@@ -90,3 +90,85 @@ Security config is enabled, ASVS-level1, block_onhigh. Every plan has a concrete
 | Testing/adversarial | Consequential wrong behavior/ownership/state and stale/empty/cap controls | Shared-emulator vectors find disagreement but can confirm common bugs | Correlated ancestry, untested boundaries, weak control, false-green exit or uncounted work rejects |
 
 Confidence is bounded: private seam/scope follows accepted direction; correctness, portability, source size and32-hour feasibility remain unmeasured. No “perfect one-shot” certainty is asserted. Tests/builds/implementation were not run during planning.
+
+## Additive F14-03 coverage — Plan 01-15
+
+This section preserves every earlier row. Plans 01-07–01-14 are completed
+receipts, not current acceptance. The 2026-10-01 VERIFICATION preflight gaps
+are historical: Plan 01-05 corrected the canonical story and explicitly
+rejected/deferred Musashi. Latest STATE/CONTEXT/01-14 evidence identifies only
+F14-03 as the active blocker. No fresh phase verification is claimed here;
+RESEARCH/PATTERNS/VALIDATION remain superseded where their earlier assumptions
+conflict with current source and decisions.
+
+Plan 01-15 targets the canonical ILLEGAL saved-PC discrepancy without choosing
+its behavior during planning. It has five sequential tasks, explicitly
+authorized by the orchestrator to keep one focused gap plan and at most five
+modified paths per task: source interpretation/tracer; contract/freeze
+supersession; conditional direct behavioral reconciliation; dependent identity
+and qualification refresh; independent review and seal. Conditional ownership
+is explicit. All artifacts are reachable from existing guest fixtures,
+contract validators, inventory tooling and collector; no new framework,
+external API/service, schema or platform is introduced. Installed calibration
+reports factor 1, applied false, sample_count 0, confidence low; raw/calibrated
+projection is 44,000 tokens for five tasks. No implementation tests or runtime
+changes were made during planning.
+
+| Source | ID | Current required outcome/constraint | Plan/task | Status |
+|---|---|---|---|---|
+| GOAL | story/SC1–SC5 | Reproducible bounded CPU evidence with explicit source, state, isolation and timing limits | Existing 07–14 plus 15.1–15.5 narrowly reconcile F14-03 | COVERED; no admission claim |
+| REQ | CPU-01 | Exact changed source/tool/report closure and historical provenance | 15.2,15.4,15.5; retained 07–14 receipts | COVERED; Pending |
+| REQ | CPU-02 | Retain independent-instance/cold/fault evidence; requalify affected runtime identity | 15.3–15.5; retained 10–14 receipts | COVERED; Pending |
+| REQ | CPU-03 | Precisely justified ILLEGAL frame rule, bounded event and direct control | 15.1,15.3–15.5 | COVERED; Pending |
+| REQ | CPU-04 | Preserve state ownership/inventory; refresh private identity and continuation if runtime changes | 15.3–15.5; retained 10–14 receipts | COVERED; Pending |
+| REQ | CPU-05 | Append-only effort/churn, unchanged freeze/caps, repair or explicit unresolved decision | 15.2,15.4,15.5 | COVERED; Pending |
+| RESEARCH | source/closure, original budgets, mutable state, timing/exception, oracles and evidence | Applicable constraints remain in completed 07–14; exact source interpretation and affected identity refresh added | 15.1–15.5 | COVERED; obsolete Musashi-only/empty-tree proposals are superseded, not new work |
+| CONTEXT | P01-C-01,P01-C-02 | Owned diagnostic scope and frozen consumed Musashi accounting | 15.2,15.4,15.5 | COVERED |
+| CONTEXT | P01-C-03,P01-C-04 | No unapproved imported replacement, C17 and small dependencies | 15.2,15.3 | COVERED; no adoption/install |
+| CONTEXT | P01-C-05,P01-C-06 | Private instance seam and distinct fresh fixture/claim boundaries | 15.3,15.4 | COVERED |
+| CONTEXT | P01-C-07,P01-C-08 | Whole static CPU, no mixed handlers/live conversion | 15.3 | COVERED |
+| CONTEXT | P01-C-09,P01-C-10 | Exact supported diagnostic behavior and concrete architecture | 15.2,15.3 | COVERED |
+| CONTEXT | P01-C-11,P01-C-12 | Exact primary-source rule and honest correlated-oracle/hardware limits | 15.1,15.3–15.5 | COVERED |
+| CONTEXT | current handoff F14-03 | Resolve primary-source/contract discrepancy or retain HIGH/open with exact evidence need | 15.1–15.5 | COVERED |
+
+The unchanged frozen `code_start.contract_sha256` currently gates budget
+validation against active CONTRACT bytes. Plan 15.2 therefore requires a
+separate validated append-only supersession chain rooted in preserved original
+bytes before changing canonical wording; it never replaces the code-start
+identity or pretends a post-implementation change happened before the freeze.
+Runtime repair is conditional on the primary-source result. Exact affected
+private state/header, inventory, manifest, review and collection identities
+must be refreshed, preserving all prior evidence. Ambiguous sources leave the
+finding HIGH/open and GAPS_FOUND; no silicon claim or physical capture is
+invented. Resource thresholds pause repair/replanning and establish no CPU
+correctness verdict.
+
+### Spec-less probe accounting
+
+No Phase 01 SPEC Edge Coverage/Prohibitions exists. The current requirement-text
+probe supplied applicable=9, resolved=0, unresolved=9. All nine rows are
+authored verbatim in intent as `must_haves.flagged_assumptions` in Plan 01-15;
+none is dismissed, resolved via backstop, or converted into a fabricated
+acceptance criterion:
+
+| Requirement | Shape | Disposition |
+|---|---|---|
+| CPU-01 | concurrency | flagged unresolved |
+| CPU-02 | unclassified | flagged unresolved |
+| CPU-03 | unclassified | flagged unresolved |
+| CPU-04 | unclassified | flagged unresolved |
+| CPU-05 | boundary | flagged unresolved |
+| CPU-05 | adjacency | flagged unresolved |
+| CPU-05 | empty | flagged unresolved |
+| CPU-05 | ordering | flagged unresolved |
+| CPU-05 | precision | flagged unresolved |
+
+No-silent-drop equality: nine surfaced = nine flagged assumptions + zero new
+resolved predicates. These flags do not expand this gap beyond F14-03 or
+qualify the pending CPU requirements. Prohibition recall keeps no new item:
+commercial-media redistribution and unsupported silicon/performance/ABI claims
+are already forbidden by current canonical decisions; ordinary security
+constraints are owned by the concrete STRIDE register. Existing no-external-API
+coverage declaration remains valid for the first-party private in-process CPU
+seam. Assumption-delta detected=false; no schema paths/push task; ASVS L1 is a
+workflow level, not native-C certification. Deferred ideas remain excluded.
