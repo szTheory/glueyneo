@@ -82,7 +82,7 @@ Three collections are preserved. The final one passes 12/12 CTest cases in each 
 Commands/results:
 
 - `acceptance.py self-test` normal and `python3 -O`: pass, six rejection/two classification controls.
-- `python3 [-O] -m unittest discover -s tests/owned_cpu -p test_acceptance.py`: pass14/14 in each mode.
+- Normal and optimized unittest discovery for the collector: pass14/14 in each mode.
 - `acceptance.py collect --preset owned-debug --preset owned-release --preset owned-asan-ubsan --optional-preset owned-tsan`: all lanes pass on each refreshed source closure.
 - `inventory.py check --build-dir build/owned-debug`: pass26 fields,10 compiled sources,37 final distribution entries, runtime archive only authored CPU.
 - `acceptance.py review-check --review experiments/owned_cpu/REVIEW.md --revision 3cd2d7d`: intentionally fails `blocking review finding`; F14-03 is open. It does not sign off acceptance.
