@@ -14,6 +14,14 @@ The developer approved the owned C17-core direction behind a private whole-CPU s
 
 This context supersedes the earlier Musashi-only implementation preference where it conflicts with the direction below. The earlier experiment, source identities, failures, and accounting remain historical evidence in the linked receipts and summaries.
 
+## Current Phase Handoff — 2026-10-03
+
+All 14 Phase 01 plans are complete; the phase itself is still open / GAPS_FOUND. The final bounded CPU decision is unqualified, CPU-01–05 remain Pending, and Phase 02 is gated. The installed GSD progress route is `$gsd-plan-phase 01 --gaps`.
+
+Plan 01-14's F14-03 remains HIGH/open: frozen `experiments/owned_cpu/CONTRACT.md:61` specifies ILLEGAL saving next PC, while `experiments/owned_cpu/cpu.c`, `experiments/owned_cpu/SUBSET.md`, `tests/owned_cpu/ORACLE.md` and `tests/owned_cpu/test_timing.c` exercise the faulting PC. The independent review cites the Motorola User Manual §§6.2.4–6.2.5, §6.3.7 and Programmer's Reference Manual ILLEGAL entry; it concludes that the specific wording is unresolved. This is a contract/evidence discrepancy, not a demonstrated silicon or C defect. Preserve all prior receipts and hashes; do not silently prefer the implementation, test oracle or frozen contract. Reconcile the primary-source interpretation and canonical requirement through the next user-directed gap-planning step before changing runtime behavior or claiming acceptance.
+
+Read `experiments/owned_cpu/REVIEW.md`, `experiments/owned_cpu/ACCEPTANCE.md`, `experiments/owned_cpu/acceptance-results.json` and `.planning/phases/01-cpu-acceptance-experiment/01-14-SUMMARY.md` for exact findings, identities, outcomes and budget. This dated handoff supplements the 2026-10-02 planning context; it does not change the phase contract or declare the blocker resolved.
+
 </domain>
 
 <decisions>
@@ -73,6 +81,8 @@ Recommend concrete module boundaries, test organization, supported-opcode report
 - .planning/phases/01-cpu-acceptance-experiment/01-VERIFICATION.md — prior preflight refusal, CPU admission gaps, and separate MVP format blocker.
 - .planning/phases/01-cpu-acceptance-experiment/01-REVIEW.md — independent phase-source review.
 - experiments/cpu/ACCEPTANCE.md, experiments/cpu/REVIEW.md, and experiments/cpu/budget-ledger.json — current candidate disposition, blockers, and frozen effort/patch accounting.
+- experiments/owned_cpu/ACCEPTANCE.md, REVIEW.md, acceptance-results.json, source-manifest.json, and budget-ledger.json — current owned-core decision, independent findings, exact evidence identities, source closure and accounting.
+- .planning/phases/01-cpu-acceptance-experiment/01-12-SUMMARY.md, 01-13-SUMMARY.md, and 01-14-SUMMARY.md — state review/fix, fresh qualification, and final independent decision.
 - third_party/musashi/PROVENANCE.md — exact local source provenance; upstream descriptions do not establish local qualification.
 
 ### Existing experimental shape and independent fixture
