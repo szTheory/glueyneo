@@ -1,145 +1,154 @@
 ---
 phase: 01-cpu-acceptance-experiment
-reviewed: 2026-10-01T22:01:37Z
+reviewed: 2026-10-03T21:34:39Z
 depth: standard
-files_reviewed: 44
+files_reviewed: 40
 files_reviewed_list:
+  - AGENTS.md
   - CMakeLists.txt
-  - experiments/cpu/CMakeLists.txt
-  - experiments/cpu/cpu_adapter.c
-  - experiments/cpu/cpu_adapter.h
-  - experiments/cpu/test_bus.c
-  - experiments/cpu/test_bus.h
-  - tests/cpu/guest_fixture.c
-  - tests/cpu/guest_fixture.h
-  - tests/cpu/isolation_fixture.h
-  - tests/cpu/isolation_negative.py
-  - tests/cpu/negative.py
-  - tests/cpu/state_negative.py
-  - tests/cpu/test_acceptance.py
-  - tests/cpu/test_audit.py
-  - tests/cpu/test_cold.c
-  - tests/cpu/test_faults.c
-  - tests/cpu/test_guest.c
-  - tests/cpu/test_inventory.py
-  - tests/cpu/test_isolation.c
-  - tests/cpu/test_state.c
-  - tests/cpu/test_timing.c
-  - third_party/musashi/m68k.h
-  - third_party/musashi/m68k_in.c
-  - third_party/musashi/m68kconf.h
-  - third_party/musashi/m68kcpu.c
-  - third_party/musashi/m68kcpu.h
-  - third_party/musashi/m68kmake.c
-  - third_party/unity/src/unity.c
-  - third_party/unity/src/unity.h
-  - third_party/unity/src/unity_internals.h
-  - tools/cpu/acceptance.py
-  - tools/cpu/adapt.py
-  - tools/cpu/audit.py
-  - tools/cpu/record_attempt.py
-  - tools/cpu/record_safety.py
-  - tools/cpu/red.py
-  - tools/cpu/state_inventory.py
-  - experiments/cpu/evidence/recovery-accounting/classify.py
-  - experiments/cpu/evidence/recovery-accounting/replay.py
-  - experiments/cpu/evidence/recovery-accounting/tighten_core_semantics.py
-  - experiments/cpu/evidence/recovery-accounting/stage-0/adapt.py
-  - experiments/cpu/evidence/recovery-accounting/stage-1/adapt.py
-  - experiments/cpu/evidence/recovery-accounting/stage-2/adapt.py
-  - experiments/cpu/evidence/recovery-accounting/stage-3/adapt.py
+  - CMakePresets.json
+  - README.md
+  - experiments/cpu/ACCEPTANCE.md
+  - experiments/cpu/REVIEW.md
+  - experiments/cpu/acceptance-results.json
+  - experiments/cpu/evidence/plan-01-05/prior-REVIEW.md
+  - experiments/cpu/evidence/plan-01-05/prior-acceptance-results.json
+  - experiments/owned_cpu/ACCEPTANCE.md
+  - experiments/owned_cpu/CMakeLists.txt
+  - experiments/owned_cpu/CONTRACT.md
+  - experiments/owned_cpu/PROVENANCE.md
+  - experiments/owned_cpu/REVIEW.md
+  - experiments/owned_cpu/SUBSET.md
+  - experiments/owned_cpu/acceptance-results.json
+  - experiments/owned_cpu/budget-ledger.json
+  - experiments/owned_cpu/cpu.c
+  - experiments/owned_cpu/cpu.h
+  - experiments/owned_cpu/illegal-reconciliation.json
+  - experiments/owned_cpu/source-manifest.json
+  - experiments/owned_cpu/state-inventory.json
+  - tests/owned_cpu/ORACLE.md
+  - tests/owned_cpu/cold.py
+  - tests/owned_cpu/isolation_fixture.h
+  - tests/owned_cpu/negative.py
+  - tests/owned_cpu/negative_timing.py
+  - tests/owned_cpu/test_acceptance.py
+  - tests/owned_cpu/test_cold.c
+  - tests/owned_cpu/test_contract.py
+  - tests/owned_cpu/test_diagnostic.c
+  - tests/owned_cpu/test_faults.c
+  - tests/owned_cpu/test_inventory.py
+  - tests/owned_cpu/test_isolation.c
+  - tests/owned_cpu/test_semantics.c
+  - tests/owned_cpu/test_state.c
+  - tests/owned_cpu/test_timing.c
+  - tools/owned_cpu/acceptance.py
+  - tools/owned_cpu/contract.py
+  - tools/owned_cpu/inventory.py
 findings:
-  critical: 6
+  critical: 2
   warning: 2
   info: 0
-  total: 8
+  total: 4
 status: issues_found
 ---
 
 # Phase 01: Code Review Report
 
-**Reviewed:** 2026-10-01T22:01:37Z
+**Reviewed:** 2026-10-03T21:34:39Z
+**Revision:** `2e237a73c986cbb1cbc16a2e3a982874913303cb`
+**Diff base:** `6f38c21d61825bfd14c8f84293247aaa301821d5`
 **Depth:** standard
-**Files Reviewed:** 44
+**Files Reviewed:** 40
 **Status:** issues_found
 
 ## Summary
 
-Three defects in the compiled 68000 instruction handlers invoke undefined C behavior on legal guest operands. Three additional defects affect the host opcode generator's argument and template handling. Historical budget validation and failed-attempt reproduction also have robustness defects. These findings contradict the earlier acceptance review's absence of blocking source findings; the submitted passing cases do not exercise the affected arithmetic and bit instructions.
+The resolved scope contains the owned C17 runtime, build configuration, tests, evidence validators, provenance and retained rejection history. Findings concern loss of continuation at a reachable supported instruction boundary, bypass of cumulative churn enforcement, inconsistent resource limits and incorrect current documentation. The existing passing receipts and Plan 01-21 clean assessment do not cover these counterexamples.
 
-Scope was reconciled from all four plan summaries, their corresponding plans, the source manifest, and the changes from the first summary's recorded `plan_head_before` (`3977c3bfbfdc752e1b43443aa3911c7012678177`) through the current checkout. Summary `key-files` lists alone omit source changes, including the acceptance collector. Generated `m68kops.c` and `m68kops.h` were excluded from the handwritten source count and inspected as supporting evidence that the affected template handlers reach the compiled runtime. Project instructions, oracle/provenance documents, state/source/fixture manifests, budget ledger, acceptance receipt and earlier review were consulted as evidence. No structural pre-pass was supplied.
-
-This is a source review. No builds, tests, sanitizers or new runtime reproductions were run, and no implementation or tests were modified. Runtime consequences below follow from the current expressions, operand domains, generated handlers and sanitizer build configuration. The review does not establish an exhaustive hardware conformance result or qualify additional platforms.
-
-**Scope limitation:** The adapter, current audit/acceptance tools and experiment tests were traced in context. The large imported instruction template, core helper header, generator and Unity files were inspected at their relevant configuration, execution, arithmetic, parser and assertion surfaces; this report does not claim a complete line-by-line audit of every imported function. Historical adaptation copies were consulted for provenance/replay behavior rather than requalified as runtime implementations. Uninspected imported branches remain **unknown**, and the 44-file list records the files examined, not exhaustive coverage of every branch. The confirmed blockers are sufficient to prevent a clean review result.
+Project instructions and current project/phase contracts were read. No project skill directories were present; the configured agent-skills map was empty. No structural pre-pass or external reviewer evidence was supplied. File citations below are complete repository-relative paths to preserve public repository hygiene.
 
 ## Narrative Findings (AI reviewer)
 
-## Critical Issues
+### Critical Issues
 
-### CR-01: Register shift counts reach undefined shifts before their range checks
-
-**Classification:** BLOCKER
-**File:** `third_party/musashi/m68k_in.c:1984-1987`, `2040`, `2093`, `2224`, `2262`, `2300`, `5351`, `5389`, `5427`, `5536`, `5574`, `5612`
-**Issue:** The register-count ASR, ASL, LSR and LSL templates compute `shift = DX & 0x3f`, then immediately evaluate `src >> shift` or `src << shift`. Their later operand-width branches do not protect that evaluation. On the admitted native configuration, `uint` is a 32-bit unsigned int (`m68kcpu.h:75-79`), so counts 32 through 63 invoke undefined behavior. This affects byte and word variants too because their C operands are still `uint`. A legal `ASR.L D1,D0` with D1=32 reaches the expression in generated `m68kops.c:3631-3635`; its 68000 dispatch entry is present at `m68kops.c:34952`. Equivalent generated left/logical handlers are also compiled. With `-fsanitize=undefined -fno-sanitize-recover=all` this can terminate the host instead of returning a guest result or bounded adapter status. The current selected guest/timing tests contain no large-count shift cases.
-**Fix:** Move each shift calculation into the branch where the count is known to be less than the guest operand width. Handle zero, equal-width and greater-width counts explicitly, preserving the existing carry/extend, sign-fill and cycle rules. For example, initialize `res = src` for zero and evaluate `src >> shift` only inside `if (shift > 0 && shift < operand_bits)`. Apply the change through `adapt.py` to the template and regenerate; add boundary cases for 0, 7/8, 15/16, 31/32 and 63 in the actual UBSan runtime lane before rebinding acceptance.
-
-### CR-02: DIVS shifts a negative signed remainder
+### CR-01: Continuation rejects reachable state after a supported RTE
 
 **Classification:** BLOCKER
-**File:** `third_party/musashi/m68k_in.c:4446`, `4484`
-**Issue:** Both signed division templates declare `remainder` as signed `sint`, compute it with signed `%`, and pack it using `(remainder << 16)`. For a negative dividend with a nonzero remainder, such as D0=-7 and a divisor of 3, the quotient fits the 16-bit result and remainder=-1 reaches this expression. Left-shifting a negative signed value is undefined in C17. Generated `m68kops.c:12136-12164` contains the actual register handler, and `m68kops.c:34711` assigns it a nonzero 68000 dispatch/cycle entry. The same expression propagates to every generated memory/immediate DIVS form. The configured nonrecovering UBSan lane can terminate the host on this legal instruction.
-**Fix:** Convert and mask the remainder before shifting, e.g. `((uint)(uint16)remainder << 16) | ((uint)quotient & 0xffffu)`. Make the template change reproducible through the adaptation recipe and regenerate all affected handlers. Add negative-dividend, nonzero-remainder cases through register and memory/immediate operands, and refresh actual sanitizer evidence and the independent acceptance review.
+**Severity:** Critical
+**Status:** open
+**File:** `experiments/owned_cpu/cpu.c:887-894`
+**Related:** `experiments/owned_cpu/cpu.c:432-436`, `experiments/owned_cpu/cpu.c:295-307`, `experiments/owned_cpu/cpu.c:919`, `experiments/owned_cpu/SUBSET.md:24-32`, `tests/owned_cpu/test_state.c:486`
 
-### CR-03: Bit 31 masks shift a signed int into its sign bit
+**Issue:** The state validator requires an even PC, although supported RTE commits the PC from a short frame without that restriction. A normal guest short frame containing SR `0x2700` and return PC `0x101` therefore leaves a ready, idle, nonterminal instance which can be observed and run, but cannot be captured or restored. The next run enters the already implemented odd-fetch address-error path. Capturing between these two events is necessary to preserve that continuation; a destination cannot reproduce it through the state API. The analogous active-stack alignment restriction can also reject a deferred stack fault after an accepted stack-bank switch. Treating an odd PC as malformed in the state tests encodes the mismatch rather than proving that such a boundary is unreachable.
 
-**Classification:** BLOCKER
-**File:** `third_party/musashi/m68k_in.c:2407`, `2428`, `2449`, `2470`, `3190`, `3211`, `3269`, `3281`
-**Issue:** Longword BCHG, BCLR, BSET and BTST use literal `1` in `1 << (bit & 0x1f)`. Literal `1` has signed-int type, and the legal bit number 31 produces a value not representable as the admitted 32-bit signed int. Assigning the result to `uint` afterward does not make the shift defined. Both register-specified and immediate bit numbers reach this path. Generated `m68kops.c:4865-4868` and the corresponding BCLR/BSET/BTST handlers retain these expressions. These are compiled 68000 handlers, so testing or changing a register's high bit can invoke undefined behavior and abort the nonrecovering sanitizer build.
-**Fix:** Use an unsigned mask base (`1u`, or an explicit `uint32` value) before shifting in every applicable template expression. Preserve the modulo-32 bit selection and existing Z behavior. Regenerate via the recipe and add immediate/register bit-31 cases for all four operations in the actual runtime sanitizer lane.
+**Evidence:** A temporary C17 harness compiled the current `cpu.c` with private hooks, using ordinary reset and bus callbacks and a six-byte RTE frame. It executed reset debt and requested one event at a time. The independently observed output was:
 
-### CR-04: Generator path arguments can overflow buffers or read before them
+```text
+RTE reason=8 pc=101 clocks=20 capture=1 ready_observe=0
+next reason=8 pc=180 clocks=50 capture=0
+```
 
-**Classification:** BLOCKER
-**File:** `third_party/musashi/m68kmake.c:1248-1255`
-**Issue:** The compiled host generator copies argv[1] into the 1024-byte `output_path` and argv[2] into the 1024-byte `g_input_filename` using unchecked `strcpy`. An overlong argument writes beyond the buffer. An output path that exactly fills the available bytes can also overflow during the subsequent slash append. An empty output-path argument reaches `output_path[strlen(output_path)-1]`, accessing outside the buffer. The generator is a separate host executable (`experiments/cpu/CMakeLists.txt:9-10`), so this finding concerns host tooling, not an ambient service inside the CPU library. Valid nested filesystem paths can exceed the generator's private limit.
-**Fix:** Reject empty output paths and paths that cannot fit their terminator plus an optional appended slash before any copy. Check the input path length independently, use bounded copies/formatting and check formatting results. Exercise empty, exact-limit and one-over arguments as generator controls; retain the pinned template and generator separation.
+Here `8` is `OWNED_CPU_BUDGET`, `1` is `OWNED_CPU_INVALID_ARGUMENT`, and `0` is `OWNED_CPU_OK`. No execution-state seed was needed. This is a candidate API/continuation defect; it makes no claim about ILLEGAL saved PC or silicon restart fidelity.
 
-### CR-05: Unsigned EOF sentinel bypasses generator error handling
+**Fix:** Allow reachable odd PC and stack-pointer values in the private continuation record while retaining the S-selected A7/bank consistency check. Preserve them exactly so the next run performs the same address-error or terminal-stack-fault event. Replace the unconditional odd-PC corruption expectation with genuinely invalid metadata checks and add fresh-owner continuation after RTE returning an odd PC, including subsequent frame bytes, ordered bus effects and cycle/result comparisons. If these boundaries are intentionally excluded, explicitly restrict the accepted execution/continuation contract and report the capability limit at that boundary rather than presenting the returned state as ordinarily capturable.
 
-**Classification:** BLOCKER
-**File:** `third_party/musashi/m68kmake.c:594-599`, `1171-1176`, `1184-1202`
-**Issue:** `fgetline` returns `size_t` and returns `-1` on EOF/read failure. This becomes `SIZE_MAX`. Callers throughout the generator test its result with `< 0`, which is always false for that unsigned type. A template truncated immediately after an insert header reaches `read_insert`, bypasses the intended EOF rejection, performs `ptr += SIZE_MAX`, then writes a newline through the resulting invalid pointer. Other scanning loops can repeatedly process stale contents after EOF. The current pinned complete template avoids this path; a truncated or unreadable input to the documented custom-input generator does not fail safely.
-**Fix:** Give line reading a distinct failure result that callers actually check: use a signed length type with a checked conversion, or retain `size_t` and test explicitly for `SIZE_MAX` before using the length. Update every caller, not only `read_insert`. Add truncated-template and I/O-failure controls which must return an error promptly without publishing usable output or writing outside buffers.
-
-### CR-06: Generator array guards permit the first out-of-bounds entry
+### CR-02: Earlier exceeded churn can disappear behind a lower final entry
 
 **Classification:** BLOCKER
-**File:** `third_party/musashi/m68kmake.c:795-801`, `1020-1026`
-**Issue:** The output table contains `MAX_OPCODE_OUTPUT_TABLE_LENGTH` entries and the handler body contains `MAX_BODY_LENGTH` rows (`m68kmake.c:208,271`). Their pre-write guards use `>` instead of `>=`. A handler body with a 301st row reaches `body->body[300]`, and a template expanding beyond 3000 entries reaches `g_opcode_output_table[3000]`; both writes are outside their arrays. Rejection happens only on the following iteration. These are host generator input failures, distinct from the CPU runtime; the submitted template stays below the limits but the declared capacity checks are incorrect.
-**Fix:** Change both pre-write capacity guards to `>=`, check capacity before every entry/terminator write, and define whether closing braces/terminators count toward each capacity. Add exact-capacity and one-over template controls that establish rejection before an out-of-bounds access. Preserve the admitted generated outputs until a complete successful generation.
+**Severity:** Critical
+**Status:** open
+**File:** `tools/owned_cpu/contract.py:346-355`
+**Related:** `tools/owned_cpu/contract.py:368-376`, `experiments/owned_cpu/CONTRACT.md:133-142`
 
-## Warnings
+**Issue:** `validate_budget` checks that every cumulative churn value is a nonnegative integer, but never checks that the four cumulative fields are nondecreasing. It then evaluates thresholds only against the final entry. An earlier entry can exceed the frozen runtime/test-tool threshold and a later lower value can remove the crossing without an explicit owner scope review. This violates the contract's cumulative, no-refund accounting and pause-on-crossing policy. Both scope validation and acceptance budget gates consume this result, so an internally inconsistent ledger can be presented as passing and unpaused. The submitted ledger is currently monotonic; the finding concerns the enforcement failure, not an accusation that its actual charges were refunded.
 
-### WR-01: Python optimization removes historical budget validation
+**Evidence:** A read-only in-memory substitution of the current ledger changed only the penultimate entry's `runtime_added` to `6001`, leaving its existing deletions and the final entry intact. Actual `validate_budget()` returned:
+
+```text
+status=pass
+runtime_churn_added_deleted=1221
+pause=None
+```
+
+The earlier cumulative runtime churn exceeded 6,000, but was ignored. No receipt or ledger file was modified.
+
+**Fix:** Track the preceding cumulative values and reject decreases in every added/deleted category with a named error. Evaluate threshold crossings throughout the entry sequence and require the explicit authorized pause/resolution record for a historical crossing. Add controls for a decreased category, an earlier crossing followed by an under-threshold final record, and a legitimate monotonic history. Keep current historical bytes and charges intact.
+
+### Warnings
+
+### WR-01: Sealing rejects resource totals allowed by the frozen validator
 
 **Classification:** WARNING
-**File:** `experiments/cpu/evidence/recovery-accounting/replay.py:19`, `31-57`; caller `tools/cpu/audit.py:139`
-**Issue:** Historical replay validates subprocess outcomes, pristine/adapted hashes, per-transition churn, recipe identities and final totals exclusively with Python `assert`. `audit.budget()` launches it with `sys.executable` and the inherited environment. When `PYTHONOPTIMIZE=1` is set, Python removes these assertions, including expressions that perform the actual `churn(...)` comparisons. Replay still prints a hardcoded passing receipt with `all_four_source_stages_replayed: true`. Thus the budget audit can claim successful historical replay without checking the facts that support its cumulative source accounting. The current receipt does not establish that optimization was enabled; this is an environment-dependent validation gap.
-**Fix:** Replace evidence assertions with explicit checked conditions that raise on mismatch regardless of optimization. Check subprocess statuses explicitly and derive the printed receipt from validated totals. Verify that altered history/recipe/hash subjects reject with both normal Python and `PYTHONOPTIMIZE=1`; do not solve this only by asserting that optimization is disabled.
+**Severity:** Warning
+**Status:** open
+**File:** `tools/owned_cpu/acceptance.py:411-416`
+**Related:** `tools/owned_cpu/contract.py:350-351`, `tools/owned_cpu/contract.py:368-369`, `tests/owned_cpu/test_acceptance.py:272-277`
 
-### WR-02: Relative pristine paths produce unreplayable failed-attempt patches
+**Issue:** `budget_check` requires effort and both churn totals to be strictly less than their caps. `validate_budget` permits effort equal to 115,200 seconds and pauses churn only when it is greater than 6,000/8,000. A total exactly at an authorized limit therefore passes the canonical validator but cannot be sealed, even with `status: pass`. This introduces an undocumented stricter limit and an unnecessary pause/replan. The existing acceptance unit test explicitly expects this inconsistent rejection.
+
+**Evidence:** Direct in-memory calls to `budget_check` with otherwise passing nonzero totals rejected effort exactly `EFFORT_CAP_SECONDS` with `budget requires pause/replan`, and runtime churn exactly `RUNTIME_CHURN_CAP` with `churn threshold requires pause/replan`.
+
+**Fix:** Use inclusive upper bounds consistent with the frozen contract and retain rejection when the canonical validator reports a pause. Share the boundary policy or constants through one validator. Change the boundary controls to accept the exact authorized limits and reject limit-plus-one and explicit paused status. Do not alter the frozen cap values.
+
+### WR-02: README says the implemented owned runtime does not exist
 
 **Classification:** WARNING
-**File:** `tools/cpu/record_attempt.py:35-46`
-**Issue:** The recorder accepts a relative pristine directory, but normalizes the old patch path with `"a" + str(pristine)`. For an absolute pristine path, Git's `a/tmp/...` header matches that spelling. For a relative `pristine/m68k.h`, Git emits `a/pristine/m68k.h` while the replacement searches for `apristine/m68k.h`, so it does not replace the old path. The emitted patch also retains the relative directory in its `---` header. `verify_recipe` and historical replay reverse-apply patches in a scratch directory containing only the six basename files (`audit.py:102-116`; `replay.py:24-31`), so a receipt reproduced with an otherwise valid relative pristine path cannot be replayed using the documented process.
-**Fix:** Resolve the pristine directory before generating patches and normalize every diff header consistently, or generate the patch from controlled scratch paths whose basenames are known. Check the generated patch by reverse-applying it to an independent scratch tree and checking all pristine hashes before publishing the receipt. Cover both relative and absolute pristine-directory inputs.
+**Severity:** Warning
+**Status:** open
+**File:** `README.md:5-9`
 
-## Required disposition
+**Issue:** The current repository entry point says “no owned CPU runtime has been implemented” and describes Plans 01-07–01-14 as upcoming gap closure. The scoped `cpu.c`, native tests and current Plan 01-21 receipt establish an implemented private candidate, with phase admission still pending. The statement conflates implementation with admission and prevents a fresh contributor from discovering the actual candidate and its current evidence. This violates the project's requirement to update stale instructions when behavior changes; it is a factual status defect rather than a wording preference.
 
-The three runtime findings are reachable through compiled 68000 handlers, independent of the explicitly unsupported board/BIOS/game and bus-error features. They require repair or explicit candidate rejection/defer within the frozen adaptation limits. Generator fixes concern a separate host executable. Any source repair invalidates the source manifest, regeneration/state identities, acceptance evidence and independent-review binding as applicable; update those through the existing bounded process rather than preserving the old accepted seal.
+**Fix:** State that an owned private diagnostic runtime is implemented but remains unadmitted, link the current subset/acceptance record and explain that Phase 01 verification remains pending. Describe the active frozen contract plus P01-C-14 amendment, retaining the exact `0x4AFC` capability exclusion and unknown silicon saved PC. Remove the outdated implementation claim and completed-plan instructions without promoting any public SDK or hardware qualification.
+
+## Review evidence and limits
+
+Full source review covered the resolved scope and relevant called validators, private state hooks and build/test contracts. Focused reproductions were the temporary compiled RTE harness and read-only in-memory budget probes above. Existing CTest suites and sanitizer lanes were not rerun; submitted passing results remain historical evidence, not evidence against these new boundary cases. The temporary harness and its binary were removed automatically. No tracked source, test, receipt, ledger or planning-state file was modified; only this report was replaced. No commit was made.
+
+Exact canonical `0x4AFC` remains excluded under P01-C-14. The prior Musashi rejection and original-MC68000 saved-PC uncertainty remain historical, unchanged findings outside the revised candidate claim. This report establishes neither silicon truth, backend admission, phase completion nor Phase 02 readiness.
 
 ---
 
-_Reviewer: gsd-code-reviewer_
-_Depth: standard; source inspection only, no tests executed_
+_Reviewed: 2026-10-03T21:34:39Z_
+_Reviewer: the agent (gsd-code-reviewer), independent of implementation_
+_Depth: standard_
