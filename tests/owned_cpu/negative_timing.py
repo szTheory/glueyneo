@@ -4,6 +4,7 @@
 import re
 import subprocess
 import sys
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 
@@ -30,12 +31,26 @@ def self_test():
 
 
 def main(arguments: list[str]) -> int:
-    if len(arguments) != 2:
-        print("FAIL: usage: negative_timing.py PATH_TO_OWNED_TIMING", file=sys.stderr)
+    unsupported = len(arguments) == 3 and arguments[1] == "--unsupported"
+    if len(arguments) != 2 and not unsupported:
+        print("FAIL: usage: negative_timing.py [--unsupported] PATH_TO_OWNED_TIMING", file=sys.stderr)
         return 1
+    mode = "--mutate-unsupported" if unsupported else "--mutate-cycle"
+    exact = "address_error_wrong_cycle_expectation:FAIL: Expected 49 Was 50"
+    if unsupported:
+        # The deliberate harness expects BUDGET; cpu.h owns numeric enum values.
+        header = (Path(__file__).resolve().parents[2] / "experiments/owned_cpu/cpu.h").read_text()
+        enum = re.search(r"typedef enum \{(.*?)\} owned_cpu_status;", header, re.S)
+        if enum is None:
+            print("FAIL: private status enum missing", file=sys.stderr)
+            return 1
+        names = re.findall(r"\bOWNED_CPU_[A-Z_]+\b", enum.group(1))
+        exact = ("canonical_unsupported_wrong_status_expectation:FAIL: Expected " +
+                 str(names.index("OWNED_CPU_BUDGET")) + " Was " +
+                 str(names.index("OWNED_CPU_UNSUPPORTED_OPCODE")))
     try:
         child = subprocess.run(
-            [arguments[1], "--mutate-cycle"],
+            [arguments[-1], mode],
             capture_output=True,
             text=True,
             errors="replace",
@@ -46,15 +61,15 @@ def main(arguments: list[str]) -> int:
         print(f"FAIL: mutated timing case did not finish normally: {error}", file=sys.stderr)
         return 1
     output = child.stdout + child.stderr
-    exact = "address_error_wrong_cycle_expectation:FAIL: Expected 49 Was 50"
     if (child.returncode != 1 or exact not in output or
             re.search(r"(?m)^1 Tests 1 Failures 0 Ignored\s*$", output) is None or
             output.count(":FAIL:") != 1 or
             "Unity denominator: expected=1 observed=1" not in output):
-        print("FAIL: timing mutation was not the one exact expected cycle assertion", file=sys.stderr)
+        print("FAIL: timing mutation was not the one exact expected assertion", file=sys.stderr)
         print(output, file=sys.stderr)
         return 1
-    print("PASS: wrong address-error cycle expectation produced one exact assertion")
+    print("PASS: " + ("wrong canonical unsupported status" if unsupported else "wrong address-error cycle") +
+          " expectation produced one exact assertion")
     return 0
 
 
