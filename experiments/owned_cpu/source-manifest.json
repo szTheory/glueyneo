@@ -55,6 +55,18 @@
       "license": "MIT",
       "notice": "LICENSE",
       "origin": "authored",
+      "path": "experiments/owned_cpu/ACCEPTANCE.md",
+      "sha256": "16211d0001164ef74723bbea60107b2cf4657dec6debd3c0e8472d73c60f0a59",
+      "source": "Glueyneo original; exact bytes identified by SHA-256",
+      "update_owner": "Glueyneo maintainers"
+    },
+    {
+      "compiled": false,
+      "distributed": true,
+      "host_calls": "host-side build/test/evidence only; not runtime",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "origin": "authored",
       "path": "experiments/owned_cpu/CMakeLists.txt",
       "sha256": "990848e89ffbff684df06ba60414db7722078aed92e4c3431a96039f31b585a3",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
