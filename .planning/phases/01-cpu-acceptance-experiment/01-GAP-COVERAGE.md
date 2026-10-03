@@ -290,3 +290,114 @@ flagged. Their meaning and evidence need are unchanged; duplicating flags in
 the dependent plan does not add criteria or resolve any row. Historical Plan
 01-15 versions remain in Git as provenance; this table is the active plan-set
 mapping.
+
+## Later independent review reconciliation — Plans 01-22–01-25
+
+Planning inspection on 2026-10-03 confirms the canonical ROADMAP story passes
+the installed grammar validator. The current Plan21 receipt is an exact deferred
+seal at931e2f0 with five collections, unchanged included source hashes,
+unqualified disposition and only phase-goal-verification-pending. Plan21's
+derived-record recovery succeeded; its earlier transient T-01-43 failure is not
+an unimplemented repair. UAT records39/39 passed and no new UAT issue.
+
+However, the later independent `01-REVIEW.md`, reviewed at2e237a73 at21:34:39Z,
+supplies additional concrete counterexamples outside that earlier clean scope.
+Current source inspection confirms their cited conditions remain: state_valid
+unconditionally rejects odd PC/active stack although supported RTE/SR switching
+can produce ready deferred-fault boundaries (CR-01); validate_budget does not
+check cumulative category monotonicity (CR-02); budget_check excludes exact
+frozen limits that canonical validation permits (WR-01); README says no owned
+runtime exists and lists completed work as upcoming (WR-02). No test or new
+behavioral reproducer was run during this planning. Prior passing receipts and
+UAT are retained as evidence for their actual coverage and cannot dismiss these
+later counterexamples. This is concrete repair/evidence work, not a filler plan
+to rerun phase verification.
+
+### Current role synthesis and adversarial outcome
+
+Reuse the context's hardware, ownership, deterministic time, maintenance,
+resource, evidence and product lenses. The recommended continuation repair
+preserves reachable guest state and lets the subsequent existing execution
+path handle the deferred fault; a narrower continuation claim would abandon
+the current contract and was rejected. Monotonic category enforcement protects
+all failed/reverted work; merely checking final totals cannot protect a ledger
+with decreases. Inclusive frozen limits remove an unintended stricter seal
+policy without raising a cap. A new explicit evidence profile protects older
+denominators while identifying expanded coverage. Independent reproduction
+and review are necessary because both previous reviewers and the test matrix
+missed these boundaries. Documentation distinguishes implementation from
+admission. No package choice, hardware search, ISA expansion, public ABI,
+platform claim or new architecture is reopened. Original0x4AFC silicon saved
+PC stays unknown; exact candidate exclusion and all other selected exception
+interactions remain. Confidence in repair disposition awaits execution and
+independent reassessment; source inspection alone is not a repair result.
+
+### Four-source coverage audit
+
+| Source | ID | Required outcome/constraint | Plan/task | Status |
+|---|---|---|---|---|
+| GOAL | story/SC1 | Reproducible C closure and source/rights evidence | Retained07–21;23.2,24.1–2,25 | COVERED; grammar valid, admission pending |
+| GOAL | SC2 | Independent instances and safe explicit host ownership | Retained10–21;22.1,24.2,25.1–2 | COVERED; old and fresh owners distinguishable |
+| GOAL | SC3 | Actual bounded execution with selected event/fault timing | Retained09–21;22.1,24.1–2,25.1–2 | COVERED; no silicon restart inference |
+| GOAL | SC4 | Complete state inventory and actual fresh continuation | 22.1–2,24.1–2,25.1–2 | COVERED; reachable deferred-fault boundary repaired |
+| GOAL | SC5 | Frozen resources, independent review and reproducible decision | 23.1–2,24.2,25.1–3 | COVERED; phase verification remains separate |
+| REQ | CPU-01 | Exact source/build/license/host closure | 23.2,24.1–2,25.1–3 | COVERED; Pending |
+| REQ | CPU-02 | Independent lifecycle/ownership/baselines | 22.1,24.2,25.1–2; retained isolation/cold/fault cases | COVERED; Pending |
+| REQ | CPU-03 | Supported progress/stop/exception/fault semantics | 22.1,24.1–2,25.1–2 | COVERED; Pending |
+| REQ | CPU-04 | Complete private state and fresh-owner continuation | 22.1–2,24.1–2,25.1–2 | COVERED; Pending |
+| REQ | CPU-05 | Cumulative no-refund resource gates and bounded decision | 23.1–2,24.2,25.1–3 | COVERED; Pending |
+| RESEARCH | source/rights/closure | Current owned authored C17 closure; historical imported proposals superseded | Retained07–21;24.1–2,25.1 | COVERED; no new research/install |
+| RESEARCH | instance/state/callback inventory | Explicit independent owners and actual continuation | 22.1–2,24.1–2,25.1–2 | COVERED |
+| RESEARCH | timing/exceptions/oracle ancestry | Existing exact selected events, bounded functional bus observations and manual limits | 22.1,24.1–2,25.1–2 | COVERED; original silicon unknown |
+| RESEARCH | evidence/security/resources | Nonempty exact evidence, preserved history, independent high-blocking review and limits | 22.2,23.1–2,24.2,25 | COVERED |
+| CONTEXT | D1-01/P01-C-01 | Owned diagnostic core | 22.1,24.1,25.1 | COVERED |
+| CONTEXT | D1-02/P01-C-02 | Frozen consumed Musashi attempts and no refunds/cap increase | 22.1,23.1,24.2,25.3 | COVERED |
+| CONTEXT | D1-03/P01-C-03 | No imported core adoption without separate decision | 23.2,25.1 | COVERED; no adoption |
+| CONTEXT | D1-04/P01-C-04 | C17, small tree, no public plugin/framework | 23.2,24.1,25.1 | COVERED |
+| CONTEXT | D1-05/P01-C-05 | Private explicit per-instance seam | 22.1,25.1 | COVERED |
+| CONTEXT | D1-06/P01-C-06 | Separate fresh guests/owners and architectural/bus/cycle observations | 22.1,24.2,25.1 | COVERED |
+| CONTEXT | D1-07/P01-C-07 | No mixed engines/live conversion | 23.2,25.1 | COVERED |
+| CONTEXT | D1-08/P01-C-08 | Static whole backend | 23.2,25.1 | COVERED |
+| CONTEXT | D1-09/P01-C-09 | Exact diagnostic supported scope and unsupported status | 22.1,24.1,25.1 | COVERED |
+| CONTEXT | D1-10/P01-C-10 | Concrete architecture and incremental evidenced growth | 22.1,25.1 | COVERED |
+| CONTEXT | D1-11/P01-C-11 | Primary/manual and original guest expectations | 24.1,25.1 | COVERED |
+| CONTEXT | D1-12/P01-C-12 | Correlated emulator output is not hardware truth | 24.1,25.1 | COVERED |
+| CONTEXT | D1-13/P01-C-13 | Unknown silicon saved PC; exhausted search unrepeated | 22.1,23.2,24.1,25.1–3 | COVERED |
+| CONTEXT | D1-14/P01-C-14 | Exact0x4AFC candidate-only exclusion; retained other events | 22.1–2,23.2,24.1–2,25.1–3 | COVERED |
+| LATER REVIEW | CR-01 | Reachable odd-PC/stack continuation | 22.1–2,24.1–2,25.1–3 | COVERED; repair not yet executed |
+| LATER REVIEW | CR-02 | Nondecreasing cumulative category enforcement | 23.1,25.1–3 | COVERED; repair not yet executed |
+| LATER REVIEW | WR-01 | Inclusive frozen limits and pause rejection | 23.2,25.1–3 | COVERED; repair not yet executed |
+| LATER REVIEW | WR-02 | Accurate implementation/admission status | 23.2,25.1 | COVERED; repair not yet executed |
+
+No applicable source item is omitted. Deferred context ideas and requirements
+assigned to later phases remain excluded. Nine historical specless flags remain
+unresolved: CPU-01 concurrency; CPU-02/03/04 unclassified; CPU-05 boundary,
+adjacency, empty, ordering and precision. New targeted tests are explicit
+current-contract defect regressions, not an automatic resolution of those flags.
+
+### Dependency, ownership and estimates
+
+| Plan | Wave/dependency | Creates for next plan | Tasks/max modified paths per task | Estimate raw/calibrated |
+|---|---|---|---|---|
+| 01-22 | 22;01-21 | Repaired continuation and distinct profile; preserved legacy parsing | 2/4 | 24000/24000 |
+| 01-23 | 23;01-22 | Monotonic/inclusive resource gates and current README | 2/4 | 20000/20000 |
+| 01-24 | 24;01-23 | Exact repaired closure and appended native qualification | 2/5 | 18000/18000 |
+| 01-25 | 25;01-24 | Independent later-finding/security dispositions and deferred seal | 3/3 | 26000/26000 |
+
+Serial waves follow real acceptance.py/ledger/source coupling; no same-wave
+file conflict exists. Reviewer owns both review reports only, separate assessor
+owns SECURITY/VALIDATION, executor owns receipts/accounting. Calibration factor1,
+appliedfalse, sample_count0, confidencelow applies to every plan. No external
+API/SDK integration, new schema, UI or dependency enters scope. Existing C17,
+CTest/Unity, Python controls, collector and inventory commands supply direct
+checks; no scaffolding-only wave is invented. Discovery remains Level0 current
+pattern confirmation; --gaps skips research. Project skill directories are
+absent and graphify is disabled. All command paths are checkout-relative.
+
+These additive plans keep all previous plans/summaries and unknown hardware
+adjudication unchanged. Planning ran no runtime/test qualification and changed
+no source or real receipt. After plan checks, the execution command is
+`$gsd-execute-phase 01 --gaps-only` for Plans22–25. Only after clean executed
+repair/qualification/review/security may the next separate step be
+`$gsd-verify-work 01`. Phase01 remains incomplete/GAPS_FOUND and CPU-01–05 Pending;
+the historical verifier is not silently replaced by planning or passing UAT.
