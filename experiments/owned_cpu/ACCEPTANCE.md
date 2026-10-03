@@ -6,7 +6,86 @@ is gated. CPU-01–04 remain Pending. CPU-05 has a reproducible bounded outcome,
 but its canonical requirement remains Pending while the contract finding is
 unresolved. A resource threshold alone neither accepts nor rejects the core.
 
-## Exact reviewed and executed identities
+## Current candidate scope — 2026-10-03, Plan 01-20
+
+This section supersedes the active support and reproduction wording below;
+all earlier observations, counts, findings and collection identifiers remain
+historical evidence. The active candidate contract is the unchanged frozen
+`CONTRACT.md` baseline SHA-256
+`6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73`
+plus the single additive P01-C-14 / D1-14 amendment in
+`illegal-reconciliation.json`, content SHA-256
+`3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad`
+and active identity
+`27af8df79b55f83bffdef63981defc23984fff6b4e0002d10e99621310340419`.
+The frozen baseline and its archived bytes are preserved, not regenerated.
+
+Exact `0x4AFC`, after a successful opcode fetch, returns
+`OWNED_CPU_UNSUPPORTED_OPCODE` with logical opcode PC/fault PC and fetched IR.
+There is no vector-4 read, exception frame write, completed dispatch or guest
+instruction/exception charge. Registers, SR, stack banks, previous PC, vector
+marker, guest memory and event counters remain unchanged. Completed preceding
+reset, IRQ and instruction events retain their separate charges. Failed opcode
+fetch retains the terminal host-fault policy; odd fetch retains address-error
+policy. Repeated rejection does not dispatch or advance past the opcode;
+recovery requires an explicit caller action under the private API, never an
+invented ILLEGAL exception or implicit resume.
+
+Original MC68000 defines canonical ILLEGAL and vector 4; candidate exclusion is
+a capability limit, not a hardware reinterpretation. Intentional ILLEGAL users
+are incompatible with this candidate. D1-09/11/12/13/14 govern: original-silicon
+saved PC remains unknown, with neither `$100` nor `$102` selected. F14-03 and
+T-01-15-03 remain HIGH/open pending independent scope reconciliation review.
+
+Retained selected forms are MOVEQ, ADDQ.L to Dn, MOVE.L Dn to absolute-long,
+STOP, NOP, RESET, RTE short frame, TRAP #0, immediate MOVE to SR and
+absolute-long MOVE.W to Dn, plus the named privilege, address-error, IRQ masking
+and level-7 behavior in `SUBSET.md`. The original diagnostic stores remain
+10 and 16, instruction clocks 36 and separate reset40. Private continuation
+requires identical included source identity, cloned guest memory and fresh
+destination bus/memory ownership; it does not promise cross-build restoration.
+Same-instance overlap is unsupported; independent-instance evidence remains
+bounded to the recorded cases.
+
+The manifest identifies authored inputs and their MIT notice, pinned copied
+Unity test sources/notices and fixture/oracle ancestry. Only authored `cpu.c`
+belongs to the runtime archive. No source acquisition, imported dependency,
+commercial media or manual bytes are added. Native-host evidence is limited to
+the exact receipt's compiler/OS/architecture/configuration. CMake 3.20 execution,
+other platforms, silicon/board/pin timing, full ISA, BIOS/game compatibility,
+public ABI, public snapshot/replay/save compatibility and gameplay performance
+remain unknown or excluded. Original expectation recipes and primary manual
+references retain their documented ancestry; emulator agreement is not silicon
+truth.
+
+Current reproduction uses the committed manifest closure and the profile
+`owned-p01-c14-1`:
+
+```sh
+python3 tools/owned_cpu/contract.py validate
+python3 tools/owned_cpu/contract.py budget
+python3 tools/owned_cpu/acceptance.py collect --preset owned-debug --preset owned-release --preset owned-asan-ubsan --optional-preset owned-tsan
+python3 tools/owned_cpu/acceptance.py verify
+python3 tools/owned_cpu/inventory.py check --build-dir build/owned-debug
+```
+
+Collection appends exact source/build/input/output identities and clears any
+superseded seal. Inspect every mandatory status and actual nonzero denominator;
+process exit alone does not qualify a lane. Optional TSan is unsupported only
+after its exact capability probe. Existing build directories are reused, so
+these whole-lane runs are not claimed as cold builds. The bounded cold-process
+test remains a separate observation. Fresh-owner continuation covers thirteen
+boundaries with six calls each; six named controls include exact unsupported
+status. Current required counts are validated by the versioned collector.
+
+Plan 01-21 owns independent source review/security, bound to the exact latest
+collection and amendment. Only its valid deferred seal may follow; ordinary
+historical seal instructions below do not apply to this profile. Phase-goal
+verification is a separate workflow. Results remain unqualified/GAPS_FOUND,
+CPU-01–05 Pending, Phase 01 open and Phase 02 gated. No recursive containing
+collection digest is embedded in this included report.
+
+## Historical exact reviewed and executed identities
 
 The core/evidence repair revision is
 `ca79b00f368120a4087705d669eaa10de7e930ab`. Its initial repaired collection digest

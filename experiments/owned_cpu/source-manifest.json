@@ -56,7 +56,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "experiments/owned_cpu/ACCEPTANCE.md",
-      "sha256": "2a1b9f656a9142d48beb5ff62c1bed38516f04b1b11af5766ed5617cb0a42e64",
+      "sha256": "98c84fecdb7c1448123cdb52f45e76829b3a7ba4a3cc58295a22a9e82eec7917",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -68,7 +68,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "experiments/owned_cpu/CMakeLists.txt",
-      "sha256": "990848e89ffbff684df06ba60414db7722078aed92e4c3431a96039f31b585a3",
+      "sha256": "57f96d4a16b708f0db9eddba953654551b7f089a70694eea1faa6e791e1db9fb",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -104,7 +104,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "experiments/owned_cpu/SUBSET.md",
-      "sha256": "435d0c1a8e991b32c59e732b590bc0d9ae23be2983e0d14eaaadd126e20d078d",
+      "sha256": "a620b8ab1aa90ab38e87313c890bf745ef9956274cb7f19f390e090845be0885",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -116,7 +116,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "experiments/owned_cpu/cpu.c",
-      "sha256": "8ac6ded7859184651f6eb3fff8a87c073f8e24a98d66175b64c3d86f69cbd15f",
+      "sha256": "b03d3458c99012e7d20a21b408ea1b5e72ae4fa6ac2f36ac5078d349b0d953b8",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -128,7 +128,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "experiments/owned_cpu/cpu.h",
-      "sha256": "afdc50cbfdce47cdb17f881fed6fe47b72d919e3220b9c599f6262f868d50eee",
+      "sha256": "df547f6291c6085eda4c8a195c16f46296c0ae91beae2e6daa9422733c20eedc",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -140,7 +140,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "experiments/owned_cpu/illegal-reconciliation.json",
-      "sha256": "03130a6b9499c176842ce489ed12ab92afa81e682a45182914baefda8f32fee4",
+      "sha256": "b6118fe7b4f846784ac06497509934e58481a5135f9116b6f99cf8eea2588298",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -152,7 +152,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "experiments/owned_cpu/state-inventory.json",
-      "sha256": "d8972b1b359f3c9b260865251cc00e4b7f3ae820d065e8e46c4fed5e98d0d9f2",
+      "sha256": "cd84dd8bd69c6bb13b4df060c9a156a1995417ad76dd78296d2f60352dd052b4",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -200,7 +200,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "tests/owned_cpu/ORACLE.md",
-      "sha256": "e5ef2662a2eb5c30e4d6b1127a55c58c82ab34f76f8c5750b2d4e2807d116c7d",
+      "sha256": "c95fe0ed27fe09fdfccde465b494dff14686cfd8f8b39357edc7666dd197961e",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -248,7 +248,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "tests/owned_cpu/negative_timing.py",
-      "sha256": "9cbce720b2e429fb7d3682bb31b0c3517878bb175da930489ca89c561cb59502",
+      "sha256": "60de0df46d1ae4b4a695c172d3fdede765f5b0c3bfe3d4f971108deb8ea1583f",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -260,7 +260,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "tests/owned_cpu/test_acceptance.py",
-      "sha256": "d29bb78233a130c9e511f69bcff9c19fbfb0eafe6c0daee6cdc108c1470643f1",
+      "sha256": "9c593b0b86b659a3423d6b2c270cff612b4ce55b75e4960961975d05c18793a2",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -284,7 +284,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "tests/owned_cpu/test_contract.py",
-      "sha256": "c584dce3be9a3f7ce25b73c01dd47b9740b5c0428be618a1c8b0781cfc3d6a14",
+      "sha256": "4d33394a74e8deaa8c609e38dacaa44eff495de3d9a487cbff55fb29f87a3b68",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -344,7 +344,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "tests/owned_cpu/test_semantics.c",
-      "sha256": "33102065bd511e8f5721b5d645b72cc00cad1ef98bd46ef99324fc1d2c123301",
+      "sha256": "871a7ff936d0a38cccba0a0e601a90bac37377f4fc62d2e687b8e5b76316e25f",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -356,7 +356,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "tests/owned_cpu/test_state.c",
-      "sha256": "25b12a79f08049cd7eb0bdf8af2f97ca74ba1798184397bccc90fa1cff308b31",
+      "sha256": "b8ceb6be17b209f661f5a55699460776f879f78dad8e395c9f973e6502edaae1",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -368,7 +368,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "tests/owned_cpu/test_timing.c",
-      "sha256": "7747995fa198148e941b84130a409cc2a4a9ce688ec5cd64b5f7ccd24fc3b0e4",
+      "sha256": "606f7c2d2b08c368a65def9b25b0f36eb9122f0e751bd37c9ae5666d5493bbce",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -440,7 +440,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "tools/owned_cpu/acceptance.py",
-      "sha256": "e0838b72ed62dc3861716710ff420e2427f12530af8e38c5ba142eef65cf9228",
+      "sha256": "f59bf40db2af521ae84a4c0e9507b8600aef0363899eb9e73e3d5892e149a8ad",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -452,7 +452,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "tools/owned_cpu/contract.py",
-      "sha256": "f8164b1573fe1ce873cdcebb466316bc23e6d9e3b71df864bce20ac855d9ad50",
+      "sha256": "578e1da7bf574d10822c4b20b938c13d2cdf476e7815708eb7b3fc3b7a3454e3",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
