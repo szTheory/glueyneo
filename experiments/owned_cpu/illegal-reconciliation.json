@@ -1,0 +1,285 @@
+{
+  "schema": 1,
+  "finding": "F14-03",
+  "recorded_date": "2026-10-03",
+  "resolution": "unresolved",
+  "saved_pc_rule": {
+    "status": "unresolved",
+    "opcode": "0x4afc",
+    "model": "original MC68000",
+    "instruction_address": "0x100",
+    "fault_pc_candidate": "0x100",
+    "sequential_pc_candidate": "0x102",
+    "selected": null,
+    "observed_runtime": "faulting instruction address",
+    "frozen_contract": "next PC",
+    "scope": "No saved-PC compliance or silicon claim."
+  },
+  "sources": [
+    {
+      "url": "https://www.nxp.com/docs/en/reference-manual/MC68000UM.pdf",
+      "document": "MC68000UM",
+      "printed_identity": "Motorola, Ninth Edition, copyright 1993; Freescale watermark",
+      "retrieved_date": "2026-10-03",
+      "sha256": "89b690b1923f8a3cff508567090bcab0bcd07511c2deff8ffa393a08efda18e1",
+      "retrieval": "success; exact bytes independently hashed",
+      "historical_label_caution": "Local Rev 9.1 / 2006-01-25 is not the edition printed in these bytes.",
+      "references": [
+        {
+          "section": "6.2.2 / Table 6-3",
+          "printed_page": "6-8",
+          "pdf_index": 92,
+          "claim": "Illegal is group 1 and detected before execution."
+        },
+        {
+          "section": "6.2.4",
+          "printed_page": "6-9",
+          "pdf_index": 93,
+          "claim": "Saved PC denotes the next instruction after exception processing."
+        },
+        {
+          "section": "Figure 6-5",
+          "printed_page": "6-10",
+          "pdf_index": 94,
+          "claim": "MC68000 short frame contains SR and PC without MC68010 format word."
+        },
+        {
+          "section": "6.2.5",
+          "printed_page": "6-11",
+          "pdf_index": 95,
+          "claim": "PC usually denotes the next unexecuted instruction."
+        },
+        {
+          "section": "6.3.5",
+          "printed_page": "6-13",
+          "pdf_index": 97,
+          "claim": "Instruction traps save the following instruction address."
+        },
+        {
+          "section": "6.3.6",
+          "printed_page": "6-14",
+          "pdf_index": 98,
+          "claim": "4AFC is customer ILLEGAL; processing is analogous to traps and mentions group 2."
+        },
+        {
+          "section": "6.3.7",
+          "printed_page": "6-15",
+          "pdf_index": 99,
+          "claim": "Privilege saves the offending instruction address explicitly."
+        },
+        {
+          "section": "6.3.8",
+          "printed_page": "6-15",
+          "pdf_index": 99,
+          "claim": "An illegal instruction is not executed for trace processing."
+        },
+        {
+        "section": "Table 8-14",
+        "printed_page": "8-11",
+        "pdf_index": 126,
+          "claim": "Illegal instruction event is 34 clocks."
+        }
+      ],
+      "applicability": "Original MC68000 architecture; no board/pin qualification.",
+      "uncertainty": "Illegal-specific PC is not explicit; group-1 classification and group-2 description complicate the trap analogy.",
+      "oracle_ancestry": "Primary vendor documentation; inference is identified; no emulator output used to adjudicate."
+    },
+    {
+      "url": "https://www.nxp.com/docs/en/reference-manual/M68000PRM.pdf",
+      "document": "M68000PRM",
+      "printed_identity": "Motorola family Programmer's Reference Manual, includes CPU32, copyright 1992; no independently inspected revision label on cover",
+      "retrieved_date": "2026-10-03",
+      "sha256": "06e4864b78da0e815054cead9326b7ec9914661f240fd39a455f2061ff47c4e8",
+      "retrieval": "success; exact bytes independently hashed",
+      "historical_label_caution": "2000-07-01 local catalog date does not prove printed edition.",
+      "references": [
+        {
+          "section": "1.1.3",
+          "printed_page": "1-3",
+          "pdf_index": 13,
+          "claim": "PC identifies the current instruction, with increments during execution and exception processing."
+        },
+        {
+          "section": "ILLEGAL",
+          "printed_page": "4-107",
+          "pdf_index": 210,
+          "claim": "Exact 4AFC selects vector 4 and stacks PC then SR; original MC68000 omits format/vector word."
+        }
+      ],
+      "applicability": "Entry covers family, explicitly distinguishes MC68000 frame.",
+      "uncertainty": "Entry never specifies whether stacked PC is the opcode address or its successor.",
+      "oracle_ancestry": "Vendor operation/encoding source; generic PC definition does not resolve instruction-specific timing."
+    }
+  ],
+  "errata": [
+    {
+      "url": "https://www.nxp.com/docs/en/reference-manual/M68000PRMER.pdf",
+      "document": "M68000PRMER",
+      "printed_identity": "Freescale, Rev. 1, 03/2007",
+      "retrieved_date": "2026-10-03",
+      "sha256": "8ae8228b3e2e54169a4e50310eafcbc14531740c57638b8c419c9751f4e88dc9",
+      "retrieval": "success; all four pages inspected",
+      "references": [
+        {
+          "section": "identity/applicability",
+          "printed_page": "1",
+          "pdf_index": 0
+        },
+        {
+          "section": "Table 1 / Table 2",
+          "printed_page": "2",
+          "pdf_index": 1
+        }
+      ],
+      "claim": "Listed corrections address FDBcc, FMOD, FMOVE and FRESTORE; none addresses ILLEGAL PC.",
+      "applicability": "Errata names PRM Revision 1; that revision label is not independently printed on downloaded PRM cover.",
+      "uncertainty": "Silence is not evidence for either PC interpretation. No MC68000UM-specific corrective erratum was established in this run.",
+      "oracle_ancestry": "Vendor errata, not silicon capture."
+    }
+  ],
+  "alternatives": [
+    {
+      "rule": "fault PC $100",
+      "strength": "Pre-execution detection plus next-unexecuted rule; privilege analogy and tracing distinction favor retaining observed behavior.",
+      "challenge": "Applying the general rule to canonical ILLEGAL still requires interpreting its trap analogy."
+    },
+    {
+      "rule": "sequential PC $102",
+      "strength": "Frozen row plus ILLEGAL-specific trap/group-2 wording can support a deliberate instruction trap reading.",
+      "challenge": "Trap analogy may concern frame structure only; pre-execution classification disputes the premise."
+    },
+    {
+      "rule": "unresolved",
+      "strength": "Preserves exact evidence and both competing claims for independent review.",
+      "cost": "Blocks admission; more authoritative instruction-specific evidence or an explicit scope decision is needed."
+    }
+  ],
+  "methodology": {
+    "goal": "Resolve only exact 4AFC frame rule within frozen owned C17 diagnostic scope.",
+    "lenses": [
+      {
+        "role": "hardware/oracle",
+        "recommendation": "Do not convert an inference into an unqualified silicon claim."
+      },
+      {
+        "role": "C implementation",
+        "recommendation": "Keep current private dispatch until source disposition resolves."
+      },
+      {
+        "role": "test reliability",
+        "recommendation": "Passing existing $100 assertion establishes current implementation only; wrong-PC control is withheld."
+      },
+      {
+        "role": "evidence provenance",
+        "recommendation": "Use downloaded byte hashes and printed identifiers; preserve historical dates as labels."
+      },
+      {
+        "role": "maintenance",
+        "recommendation": "No canonical revision or validator infrastructure without resolved need."
+      },
+      {
+        "role": "product/documentation",
+        "recommendation": "Expose HIGH/open discrepancy and keep CPU-01–05 Pending, Phase 01 open/GAPS_FOUND and Phase 02 gated."
+      }
+    ],
+    "adversarial_synthesis": "Neither local contract/test agreement nor an emulator consensus settles silicon truth. Both readings depend on interpreting general versus instruction-specific language.",
+    "recommendation": "unresolved",
+    "strongest_alternative": "Retain fault PC as the stronger documented inference, explicitly subject to independent adjudication.",
+    "confidence": "High confidence in documenting ambiguity; no selected architectural rule.",
+    "risks": [
+      "Premature canonical correction could conceal a wrong hardware assumption.",
+      "Unresolved source blocks admission despite selected native tests passing."
+    ],
+    "validation": "Plan 01-16 independently challenges these sources and preserves unqualified closeout unless a justified disposition is established."
+  },
+  "reopening_evidence": [
+    "An authoritative original-MC68000 instruction-specific statement or correction giving the PC stacked for exact 4AFC, explaining the UM group/trap wording.",
+    "An independently reviewable derivation accepted as sufficient under the existing diagnostic architecture contract, with the competing reading explicitly addressed.",
+    "If documentary adjudication still cannot settle the necessary claim: a minimal identified original-MC68000 capture of vector-4 SR/PC for 4AFC at known address; no hardware capture is asserted or mandated by this run.",
+    "Alternatively an explicit user-directed scope/claim revision and replanning; no automatic permission or acceptance."
+  ],
+  "unresolved_need": {
+    "reason": "Required canonical and observed saved-PC rules disagree; retrieved documents leave an instruction-specific interpretation gap.",
+    "missing": "Authoritative adjudication distinguishing opcode address from sequential address for canonical 4AFC on original MC68000.",
+    "finding_status": "HIGH/open",
+    "phase_status": "GAPS_FOUND",
+    "canonical_transition": "withheld",
+    "runtime_repair": "withheld",
+    "direct_pc_control": "withheld",
+    "requirements": "CPU-01–05 Pending",
+    "phase_02": "gated"
+  },
+  "frozen_contract": {
+    "path": "experiments/owned_cpu/CONTRACT.md",
+    "git_revision": "2e3a44f75ed6c5c9053672eda69dc9dab823fe7d",
+    "sha256": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73",
+    "encoding": "base64",
+    "bytes_base64": "IyBPd25lZCBNQzY4MDAwIGRpYWdub3N0aWMgY29udHJhY3QKClN0YXR1czogKipwcm9wb3NlZCBhY2NlcHRhbmNlIGNvbnRyYWN0OyBubyBvd25lZCBpbXBsZW1lbnRhdGlvbiBpcyBhZG1pdHRlZCoqLgpUaGlzIGlzIHRoZSBvbmx5IGN1cnJlbnQgb3duZWQtY29yZSBzY29wZS4gSXQgc3VwZXJzZWRlcyB0aGUgYWN0aXZlCk11c2FzaGktb25seSBkaXJlY3Rpb24gZm9yIHJlcGxhY2VtZW50IHBsYW5uaW5nOyB0aGUgTXVzYXNoaSBzb3VyY2UsIHJlY2VpcHRzLApmYWlsdXJlcyBhbmQgYWNjb3VudGluZyByZW1haW4gaGlzdG9yaWNhbCBhbmQgaW1tdXRhYmxlLgoKIyMgUHJvZHVjdCBhbmQgYmFja2VuZCBib3VuZGFyeQoKSW1wbGVtZW50IGFuIG93bmVkIEMxNyBNQzY4MDAwIHN1YnNldCBmb3IgdGhlIGV4aXN0aW5nIG9yaWdpbmFsIGRpYWdub3N0aWMsCmJlaGluZCBvbmUgcHJpdmF0ZSB3aG9sZS1DUFUgc2VhbS4gVGhlIG1vZGVsIGlzIHRoZSBvcmlnaW5hbCBNQzY4MDAwIHdpdGggaXRzCjE2LWJpdCBleHRlcm5hbCBkYXRhIGJ1cyBhbmQgMjQtYml0IHBoeXNpY2FsIGFkZHJlc3MgYnVzLiBTZWxlY3QgdGhlIGNvbXBsZXRlCmJhY2tlbmQgc3RhdGljYWxseSBmb3IgYSBidWlsZC90ZXN0IHJ1bi4gRG8gbm90IGRpc3BhdGNoIGluZGl2aWR1YWwgb3Bjb2RlcyB0bwphbm90aGVyIGVuZ2luZSwgY29udmVydCBsaXZlIGJhY2tlbmQgc3RhdGUsIG9yIGV4cG9zZSBhIHB1YmxpYyBDUFUvcGx1Z2luIEFCSS4KRWFjaCBpbnN0YW5jZSBvd25zIGV2ZXJ5IG11dGFibGUgQ1BVIGZpZWxkIGFuZCByZWNlaXZlcyBpdHMgYnVzLCBpbnRlcnJ1cHQKaW5wdXRzLCBhbmQgYm91bmRlZCBleGVjdXRpb24gcmVxdWVzdCBleHBsaWNpdGx5LiBObyBwcm9jZXNzLWdsb2JhbCBjdXJyZW50Cmluc3RhbmNlLCBUTFMgcm91dGluZywgZ2xvYmFsIGV4ZWN1dGlvbiBsb2NrLCBmaWxlc3lzdGVtLCBlbnZpcm9ubWVudCwgY2xvY2ssCm5ldHdvcmssIGhvc3QgcHJvY2VzcyBleGl0LCBjb21wdWxzb3J5IHRocmVhZCwgb3IgZGV2aWNlIGNhbGxiYWNrIGlzIGFsbG93ZWQuCgpUaGUgcHJpdmF0ZSBpbnRlcmZhY2UgbXVzdCBjb3ZlciBjcmVhdGUvZGVzdHJveSwgcmVzZXQgZnJvbSBndWVzdCB2ZWN0b3JzLApib3VuZGVkIHJ1biwgSVJRIGxldmVsL2VkZ2UgaW5wdXQsIGV4cGxpY2l0IHJlc3VsdC9lcnJvciByZXBvcnRpbmcsIHRlc3Qtb25seQpvYnNlcnZhdGlvbiwgYW5kIHByaXZhdGUgc3RhdGUgc2F2ZS9yZXN0b3JlIGludG8gYSBmcmVzaCBkZXN0aW5hdGlvbi4gQSBydW4KbXVzdCBtYWtlIGJvdW5kZWQgaW5zdHJ1Y3Rpb24tYm91bmRhcnkgcHJvZ3Jlc3Mgb3IgcmV0dXJuIGEgbmFtZWQgc3RhdHVzLgpTdGF0ZSBpbnZlbnRvcnkgbXVzdCBpbmNsdWRlIGFsbCBpbnN0YW5jZS1vd25lZCBhbmQgdHJhbnNpZW50IGV4ZWN1dGlvbiBzdGF0ZTsKY29udGludWF0aW9uIG11c3QgYmUgZXhlcmNpc2VkIGFmdGVyIHJlc3RvcmF0aW9uIGFuZCBpbmRlcGVuZGVudC1pbnN0YW5jZQpiZWhhdmlvciBtdXN0IGJlIHRlc3RlZC4gSG9zdCBwb2ludGVycyBhbmQgaG9zdC1vbmx5IGJvb2trZWVwaW5nIGFyZSBub3QgZ3Vlc3QKc3RhdGUuCgojIyBGaXJzdCBleGVjdXRhYmxlIGRpYWdub3N0aWMKClJ1biB0aGUgYnl0ZS1mb3ItYnl0ZSBpbnN0cnVjdGlvbiByZWNpcGUgaW4gYHRlc3RzL2NwdS9ndWVzdF9maXh0dXJlLmNgOyBkbyBub3QKY29weSBvciBhZGFwdCBpdHMgc291cmNlLiBSZXNldCB2ZWN0b3JzIGxvYWQgU1NQIGAweDAwMDAyMDAwYCBhbmQgUEMgYDB4MDAwMDAxMDBgLgpUaGUgaW5pdGlhbCBpbnN0cnVjdGlvbiBzdWJzZXQgaXMgZXhhY3RseToKCnwgSW5zdHJ1Y3Rpb24gfCBTdXBwb3J0ZWQgZW5jb2RpbmcvYWRkcmVzc2luZyBmb3JtIHwgQXJjaGl0ZWN0dXJhbCByZXN1bHQgfAp8LS0tfC0tLXwtLS18CnwgYE1PVkVRICNpbW04LERuYCB8IGAwMTExIGRkZCAwIGlpaWlpaWlpYDsgYWxsIEQw4oCTRDcsIHNpZ25lZCA4LWJpdCBpbW1lZGlhdGUgc2lnbi1leHRlbmRlZCB0byAzMiBiaXRzIHwgU2V0IE4vWiBmcm9tIDMyLWJpdCByZXN1bHQsIGNsZWFyIFYvQywgcHJlc2VydmUgWC4gfAp8IGBBRERRLkwgIzEuLjgsRG5gIHwgYDAxMDEgcXFxIDAgMTAgMDAwIGRkZGA7IGRhdGEtcmVnaXN0ZXIgZGlyZWN0IGRlc3RpbmF0aW9uIG9ubHk7IGVuY29kZWQgYHFxcT0wMDBgIG1lYW5zIDggfCBBZGQgbW9kdWxvIDJeMzI7IHNldCBOL1ovVi9DIGFuZCBYIGFjY29yZGluZyB0byAzMi1iaXQgYWRkaXRpb24uIHwKfCBgTU9WRS5MIERuLChhYnMuTClgIHwgYDAwMTAgMDAxIDExMSAwMDAgZGRkYDsgRDDigJNENyBzb3VyY2UgaW4gYGRkZGAsIGFic29sdXRlLWxvbmcgZGVzdGluYXRpb24gb25seTsgdHdvIGV4dGVuc2lvbiB3b3JkcyB8IFN0b3JlIGhpZ2ggd29yZCBiZWZvcmUgbG93IHdvcmQ7IHByZXNlcnZlIERuOyBzZXQgTi9aIGZyb20gdmFsdWUsIGNsZWFyIFYvQywgcHJlc2VydmUgWC4gfAp8IGBTVE9QICNpbW0xNmAgfCBPcGNvZGUgYDB4NGU3MmAsIG9uZSBpbW1lZGlhdGUgd29yZDsgc3VwZXJ2aXNvci1vbmx5IHwgTG9hZCB0aGUgc3BlY2lmaWVkIFNSIGFuZCBlbnRlciBzdG9wcGVkIHN0YXRlLiBBIHF1YWxpZnlpbmcgaW50ZXJydXB0IG1heSB3YWtlIHRoZSBpbnN0YW5jZS4gfAoKU2NlbmFyaW8gQSBjb21wdXRlcyAxMCBhbmQgc3RvcmVzIGJpZy1lbmRpYW4gYDAwIDAwIDAwIDBhYCBhdCBgMHgxMDAwYC4KU2NlbmFyaW8gQiBjb21wdXRlcyAxNiBhbmQgc3RvcmVzIGAwMCAwMCAwMCAxMGAgYXQgYDB4MTAwNGAuIEFmdGVyIHRoZSBmb3VyCmNvbXBsZXRlZCBpbnN0cnVjdGlvbnMsIFBDIGlzIGAweDEwZWAsIHRoZSBpbnN0YW5jZSBpcyBzdG9wcGVkLCBhbmQgaW5zdHJ1Y3Rpb24KY3ljbGVzIHRvdGFsIDM2OyByZXNldCBjeWNsZXMgYXJlIHJlY29yZGVkIHNlcGFyYXRlbHkgYW5kIGV4Y2x1ZGVkIGZyb20gMzYuClRoZSBuYW1lZCB3cm9uZy1iZWhhdmlvciBjb250cm9sIG11dGF0ZXMgdGhlIG9yaWdpbmFsIGZpeHR1cmUncyBmaXJzdAppbW1lZGlhdGUsIGFuZCBtdXN0IGZhaWwgdGhlIGV4YWN0IGV4cGVjdGVkIHN0b3JlIGFzc2VydGlvbi4KCiMjIFJlcXVpcmVkIGFkbWlzc2lvbiBjYXNlcyBhZnRlciB0aGUgZmlyc3QgZGlhZ25vc3RpYwoKVGhlIGZpcnN0IGRpYWdub3N0aWMgaXMgbm90IHRoZSBhZG1pc3Npb24gc3VpdGUuIEJlZm9yZSBDUFUtMDHigJMwNCBjYW4gYmUKY29uc2lkZXJlZCBjb21wbGV0ZSwgaW1wbGVtZW50IGFuZCB0ZXN0IHRoZXNlIGFkZGl0aW9uYWwgZXhhY3Qgb3BlcmF0aW9ucyBhbmQKYm91bmRhcmllczoKCnwgQ2FzZSB8IFJlcXVpcmVkIHNjb3BlIHwKfC0tLXwtLS18CnwgYE5PUGAgfCBFeGFjdCBvcGNvZGUgYDB4NGU3MWA7IG5vIHJlZ2lzdGVyL1NSIGNoYW5nZTsgNCBpbnN0cnVjdGlvbiBjeWNsZXMuIHwKfCBgUkVTRVRgIGluc3RydWN0aW9uIHwgRXhhY3Qgb3Bjb2RlIGAweDRlNzBgOyBzdXBlcnZpc29yLW9ubHk7IDEzMiBpbnN0cnVjdGlvbiBjeWNsZXM7IG5hbWVkIHJlc2V0IHNpZGUgZWZmZWN0IGFuZCBidXMgb2JzZXJ2YXRpb24gbXVzdCBiZSBleHBsaWNpdC4gfAp8IGBSVEVgIHwgRXhhY3Qgb3Bjb2RlIGAweDRlNzNgOyBzdXBlcnZpc29yLW9ubHk7IHJlc3RvcmUgU1IgYW5kIFBDIGZyb20gdGhlIE1DNjgwMDAgc2hvcnQgZnJhbWUsIGluY2x1ZGluZyBVU1AvU1NQIHN3aXRjaGluZzsgMjAgaW5zdHJ1Y3Rpb24gY3ljbGVzIGZvciB0aGUgc3VwcG9ydGVkIHNob3J0IGZyYW1lLiB8CnwgYFRSQVAgIzBgIHwgRXhhY3Qgb3Bjb2RlIGAweDRlNDBgOyB2ZWN0b3IgMzI7IHN0YWNrIG9sZCBTUiBhbmQgbmV4dCBQQyBvbiBzdXBlcnZpc29yIHN0YWNrOyBlbnRlciBzdXBlcnZpc29yIG1vZGUgYW5kIGZldGNoIGhhbmRsZXIgUEMuIHwKfCBgSUxMRUdBTGAgfCBFeGFjdCBjYW5vbmljYWwgaWxsZWdhbCBpbnN0cnVjdGlvbiB3b3JkIGAweDRhZmNgOyB2ZWN0b3IgNDsgc3RhY2sgb2xkIFNSIGFuZCBuZXh0IFBDLiBPdGhlciB1bnN1cHBvcnRlZCBlbmNvZGluZ3MgbXVzdCByZXBvcnQgYFVOU1VQUE9SVEVEX09QQ09ERWAsIG5vdCBiZSB0cmVhdGVkIGFzIHRoaXMgaW5zdHJ1Y3Rpb24uIHwKfCBgTU9WRS5XICNpbW0xNixTUmAgfCBFeGFjdCBvcGNvZGUgYDB4NDZmY2AgYW5kIG9uZSBpbW1lZGlhdGUgd29yZDsgc3VwZXJ2aXNvci1vbmx5OyByZXBsYWNlIFNSIGFuZCBzd2l0Y2ggYWN0aXZlIHN0YWNrIGNvcnJlY3RseS4gfAp8IGBNT1ZFLlcgKGFicy5MKSxEbmAgfCBgMDAxMSBkZGQgMDAwIDExMSAwMDFgOyBEMOKAk0Q3IGRlc3RpbmF0aW9uIGluIGBkZGRgLCBmb2xsb3dlZCBieSBhIGxvbmcgYWJzb2x1dGUgYWRkcmVzcyBleHRlbnNpb247IHJlcGxhY2Ugb25seSB0aGUgbG93IHdvcmQgYW5kIHNldCBOL1osIGNsZWFyIFYvQywgcHJlc2VydmUgWC4gT2RkIG9wZXJhbmQgYWRkcmVzcyB0YWtlcyBhZGRyZXNzLWVycm9yIGV4Y2VwdGlvbi4gfAp8IExldmVsLTMgSVJRIG1hc2tpbmcgfCBBIGxldmVsLTMgcmVxdWVzdCBpcyBub3QgYWNjZXB0ZWQgd2hpbGUgU1IgbWFzayBpcyAzIG9yIGhpZ2hlcjsgYWNjZXB0YW5jZSBvY2N1cnMgYXQgYW4gaW5zdHJ1Y3Rpb24gYm91bmRhcnkgd2hlbiB1bm1hc2tlZDsgdmVjdG9yIGlzIGF1dG92ZWN0b3IgMjcuIHwKfCBMZXZlbC03IGVkZ2UgSVJRIHwgQSB0cmFuc2l0aW9uIGZyb20gYSBsb3dlciByZXF1ZXN0IGxldmVsIHRvIDcgaXMgYWNjZXB0ZWQgcmVnYXJkbGVzcyBvZiBTUiBtYXNrOyBpZiB0aGUgcmVxdWVzdCByZW1haW5zIGF0IDcsIHRoZSBsZXZlbCBjb21wYXJpc29uIGFsc28gYWNjZXB0cyBpdCB3aGVuIHNvZnR3YXJlIGxvd2VycyB0aGUgbWFzayBiZWxvdyA3OyB2ZWN0b3IgaXMgYXV0b3ZlY3RvciAzMS4gfAp8IFByaXZpbGVnZSB2aW9sYXRpb24gfCBVc2VyLW1vZGUgZXhlY3V0aW9uIG9mIGBTVE9QYCwgYFJFU0VUYCwgYFJURWAsIG9yIGBNT1ZFLlcgI2ltbSxTUmAgcmFpc2VzIHZlY3RvciA4IGJlZm9yZSB0aGUgcHJpdmlsZWdlZCBvcGVyYXRpb24gdGFrZXMgZWZmZWN0LiB8CnwgQWRkcmVzcyBlcnJvciB8IE9kZCB3b3JkL2xvbmcgZGF0YSBhY2Nlc3MgYW5kIG9kZCBpbnN0cnVjdGlvbiBmZXRjaCBhcmUgY2hlY2tlZCBiZWZvcmUgaW52b2tpbmcgYW4gYWxpZ25lZCBidXMgdHJhbnNhY3Rpb24uIFVzZSB0aGUgTUM2ODAwMCBhZGRyZXNzLWVycm9yIGZyYW1lIGFuZCBoYWx0IG9uIGEgbmVzdGVkIGV4Y2VwdGlvbi1mcmFtZSBmYXVsdC4gRG8gbm90IGNsYWltIHJlc3RhcnQgZmlkZWxpdHk6IHRoZSBNQzY4MDAwIG1hbnVhbCBjYWxscyB0aGUgc2F2ZWQgUEMgZm9yIGJ1cy9hZGRyZXNzIGVycm9yIHVucHJlZGljdGFibGUuIHwKCmBSRVNFVGAsIGBUUkFQYCwgYElMTEVHQUxgLCBgUlRFYCwgcHJpdmlsZWdlLCBhZGRyZXNzLWVycm9yLCBhbmQgbGV2ZWwtNwppbnRlcnJ1cHQgb3V0Y29tZXMgYXJlIGRlcml2ZWQgZnJvbSB0aGUgTUM2ODAwMCBtYW51YWwgcmVmZXJlbmNlcyBiZWxvdy4KTGV2ZWwgNyBpcyB0cmFuc2l0aW9uLXRyaWdnZXJlZCB3aGVuIHRoZSByZXF1ZXN0IGNoYW5nZXMgZnJvbSBhIGxvd2VyIGxldmVsIHRvCjcgYW5kIGlzIG5vdCBtYXNrYWJsZTsgd2hpbGUgaXQgcmVtYWlucyBhc3NlcnRlZCwgaXQgaXMgYWxzbyBhY2NlcHRlZCB3aGVuIHRoZQpjdXJyZW50IFNSIHByaW9yaXR5IGlzIGxvd2VyZWQgYmVsb3cgNy4gU2F2ZSBvbGQgU1IgYmVmb3JlIGNoYW5naW5nCnN1cGVydmlzb3IvdHJhY2UvaW50ZXJydXB0IGJpdHMuIEdyb3VwLTEvMiBleGNlcHRpb24gZnJhbWVzIHNhdmUgdGhlIG5leHQKdW5leGVjdXRlZCBQQyBmb3IgdGhlIG5hbWVkIGluc3RydWN0aW9uIGV4Y2VwdGlvbnMuIFRoZSBhZGRyZXNzLWVycm9yIGZyYW1lCnJlY29yZHMgdGhlIG1hbnVhbC1kZXNjcmliZWQgY29udGV4dDsgaXQgZG9lcyBub3QgcHJvbWlzZSBhbiBhZGRyZXNzLWVycm9yCnJlc3RhcnQgYWRkcmVzcy4gTm8gZ3Vlc3QgYnVzLWVycm9yIGZyYW1lLCBwcmVmZXRjaCBmaWRlbGl0eSwgd2FpdCBzdGF0ZXMsCmFyYml0cmFyeSBtaWQtaW5zdHJ1Y3Rpb24gYnVzIHN1c3BlbnNpb24sIG9yIGJvYXJkLWN5Y2xlIGNsYWltIGlzIGluIHNjb3BlLgoKIyMgQnVzLCB0aW1lLCBlcnJvcnMsIGFuZCBvYnNlcnZhdGlvbnMKCkd1ZXN0IGFkZHJlc3MgYXJpdGhtZXRpYyBpcyBjaGVja2VkIGJlZm9yZSBhcHBseWluZyB0aGUgTUM2ODAwMCAyNC1iaXQgYnVzCm1hc2suIEd1ZXN0IHdvcmRzIGFyZSBiaWctZW5kaWFuIDE2LWJpdCBidXMgdHJhbnNmZXJzLiBMb25nIHJlYWRzIGFuZCB3cml0ZXMKYXJlIGhpZ2gtd29yZCBmaXJzdCwgdGhlbiBsb3ctd29yZCwgd2l0aCBlYWNoIG9ic2VydmVkIDE2LWJpdCB0cmFuc2ZlciBrZXB0IGluCm9yZGVyLiBUaGUgb3JkaW5hcnkgdHJhbnNhY3Rpb24gc2VxdWVuY2UgaXMgdGhpcyBpbXBsZW1lbnRhdGlvbidzIGV4cGxpY2l0CmNvbnRyYWN0OyBhZ3JlZW1lbnQgd2l0aCBNdXNhc2hpL01BTUUgaXMgYSBjb21wYXJpc29uIHJlc3VsdCwgbm90IGhhcmR3YXJlCnRydXRoLiBPZGQgd29yZC9sb25nIGd1ZXN0IGFkZHJlc3NlcyB0YWtlIHRoZSBkb2N1bWVudGVkIGFkZHJlc3MtZXJyb3IgcGF0aCwKbmV2ZXIgaG9zdCB1bmRlZmluZWQgYmVoYXZpb3Igb3IgYSByb3VuZGVkIGFkZHJlc3MuCgpFYWNoIHJ1biBhY2NlcHRzIGEgZmluaXRlIGN5Y2xlL2luc3RydWN0aW9uIGJ1ZGdldCBhbmQgcmV0dXJucyBlbGFwc2VkIGd1ZXN0CmN5Y2xlcywgY29tcGxldGVkIGluc3RydWN0aW9uIGNvdW50LCBmaW5hbCBQQywgc3RvcC9lcnJvciByZWFzb24sIGFuZCBmYXVsdCBQQwphbmQgSVIgd2hlbiBkZWNvZGUgZmFpbHMuIEFuIHVuc3VwcG9ydGVkIG1vZGVsL2NvbmZpZ3VyYXRpb24gaXMgcmVqZWN0ZWQgYmVmb3JlCmV4ZWN1dGlvbi4gVW5zdXBwb3J0ZWQgb3Bjb2RlIG9yIGFkZHJlc3NpbmcgZm9ybSByZXR1cm5zCmBVTlNVUFBPUlRFRF9PUENPREVgIHdpdGggdGhlIGZhdWx0aW5nIFBDIGFuZCBJUjsgaXQgbXVzdCBub3QgbWFzcXVlcmFkZSBhcwpndWVzdCBgSUxMRUdBTGAsIE5PUCwgYSBjb21wbGV0ZWQgaW5zdHJ1Y3Rpb24sIG9yIHN1Y2Nlc3MuIEludmFsaWQgaG9zdAphcmd1bWVudHMsIGluYWNjZXNzaWJsZSBob3N0IGJ1ZmZlcnMsIGFuZCBuZXN0ZWQgZXhjZXB0aW9uIGZhdWx0cyByZXR1cm4KZXhwbGljaXQgaG9zdC1zYWZlIGVycm9ycyB3aXRob3V0IHByb2Nlc3MgdGVybWluYXRpb24gb3Igb3V0LW9mLWJvdW5kcyBhY2Nlc3MuCgpBcmNoaXRlY3R1cmFsIHN0YXRlLCBvcmRlcmVkIGJ1cyBlZmZlY3RzLCBhbmQgZ3Vlc3QgY3ljbGUgY291bnRzIGFyZSBzZXBhcmF0ZQpvYnNlcnZhdGlvbnMuIEN5Y2xlIHByZWNpc2lvbiBpcyBpbnN0cnVjdGlvbi1ib3VuZGFyeSBvbmx5LiBUaGUgZmlyc3QKZGlhZ25vc3RpYydzIDM2IGN5Y2xlcyBhcmUgY29tcGFyZWQgdG8gaXRzIGV4YWN0IHJlY2lwZTsgY3ljbGUgYWNjdXJhY3kgaXMgbm90CmluZmVycmVkIGZyb20gYW5vdGhlciBlbXVsYXRvcidzIGNvYWxlc2NlZCBjYWxsYmFja3MgYW5kIGlzIG5vdCBhIE5lbyBHZW8gYm9hcmQKdGltaW5nIHJlc3VsdC4KCiMjIEV4cGxpY2l0IGV4Y2x1c2lvbnMKCk5vIGNvbW1lcmNpYWwgUk9NIG9yIEJJT1MsIEZQVSwgU29mdEZsb2F0LCBNTVUsIHJ1bnRpbWUgb3Bjb2RlIGdlbmVyYXRvciwKZ2VuZXJhdGVkIHJ1bnRpbWUgc291cmNlLCBpbXBvcnRlZCBydW50aW1lIENQVSwgZXh0ZXJuYWwgZW5naW5lLCBKSVQsIGR5bmFtaWMKbG9hZGVyLCBnZW5lcmFsIENQVSBmcmFtZXdvcmssIGZ1bGwgaW5zdHJ1Y3Rpb24tc2V0IGNsYWltLCBib2FyZCBidXMtZXJyb3IKcmVjb3ZlcnksIHByZWZldGNoIGZpZGVsaXR5LCBhcmJpdHJhcnkgd2FpdC1zdGF0ZSBzdXNwZW5zaW9uLCBvciBOZW8gR2VvCmhhcmR3YXJlIHRpbWluZyBjbGFpbS4gS2VlcCBydW50aW1lIGRlcGVuZGVuY2llcyBpbiBDMTcgYW5kIGRvIG5vdCBhZGQgYSBuZXcKcnVudGltZSBkZXBlbmRlbmN5LiBQcmVzZXJ2ZSBVbml0eSBhcyBhIHRlc3Qtb25seSBwaW5uZWQgZGVwZW5kZW5jeS4KCiMjIEV2aWRlbmNlIGFuZCBvcmFjbGUgYW5jZXN0cnkKClByaW1hcnkgcmVmZXJlbmNlcyBhcmUgTW90b3JvbGEvTlhQICpNNjgwMDAgOC0vMTYtLzMyLUJpdCBNaWNyb3Byb2Nlc3NvcnMKVXNlcidzIE1hbnVhbCosIGRvY3VtZW50IE1DNjgwMDBVTSwgUmV2IDkuMSAoMjAwNi0wMS0yNSksIGVzcGVjaWFsbHkgwqfCpzIsIDUsCmFuZCA2LjMgKGVzcGVjaWFsbHkgwqc2LjMuMiBhbmQgwqc2LjMuMTApIGFuZCBGaWd1cmVzIDYtNSBhbmQgNi03OyBhbmQgTW90b3JvbGEgKk02ODAwMCBGYW1pbHkgUHJvZ3JhbW1lcidzClJlZmVyZW5jZSBNYW51YWwqLCBkb2N1bWVudCBNNjgwMDBQUk0gKDIwMDAtMDctMDEpLCBpbnN0cnVjdGlvbiBkZXNjcmlwdGlvbnMKYW5kIGVuY29kaW5nIHRhYmxlcyBmb3IgTU9WRVEsIEFERFEsIE1PVkUsIFNUT1AsIE5PUCwgUkVTRVQsIFJURSwgVFJBUCwgSUxMRUdBTCwKYW5kIFNSIG9wZXJhdGlvbnMuIENoZWNrIHRoZSA2OEsgUHJvZ3JhbW1lcidzIFJlZmVyZW5jZSBNYW51YWwgRXJyYXRhLApNNjgwMDBQUk1FUiAoMjAwNy0wMy0yNiksIHdoZXJlIGFwcGxpY2FibGUuIE9mZmljaWFsIGRvY3VtZW50czoKW01DNjgwMDBVTV0oaHR0cHM6Ly93d3cubnhwLmNvbS9kb2NzL2VuL3JlZmVyZW5jZS1tYW51YWwvTUM2ODAwMFVNLnBkZiksCltNNjgwMDBQUk1dKGh0dHBzOi8vd3d3Lm54cC5jb20vZG9jcy9lbi9yZWZlcmVuY2UtbWFudWFsL002ODAwMFBSTS5wZGYpLCBhbmQKW002ODAwMFBSTUVSXShodHRwczovL3d3dy5ueHAuY29tL2RvY3MvZW4vcmVmZXJlbmNlLW1hbnVhbC9NNjgwMDBQUk1FUi5wZGYpLgpUaGVzZSBtYW51YWxzIGRlZmluZSBDUFUgYmVoYXZpb3IsIG5vdCBOZW8gR2VvIGJvYXJkIGJlaGF2aW9yLgoKVGhlIG9yaWdpbmFsIGd1ZXN0IGlucHV0IGFuZCBhc3NlcnRlZCB2YWx1ZXMgYXJlIHRyYWNrZWQgaW4KYHRlc3RzL2NwdS9PUkFDTEUubWRgOyB0aGF0IGZpeHR1cmUncyBhdXRob3JpYWwgcmVjaXBlIGFuZCBtYW51YWwtZGVyaXZlZApleHBlY3RhdGlvbnMgYXJlIHRoZSBwcmltYXJ5IG9yYWNsZSBmb3IgdGhlIGZpcnN0IHNsaWNlLiBNdXNhc2hpLCBNQU1FLApTaW5nbGVTdGVwVGVzdHMgYW5kIGVtdWxhdG9yLWdlbmVyYXRlZCBvdXRwdXRzIG1heSBsb2NhdGUgZGlzYWdyZWVtZW50cyBidXQKdGhlaXIgc2hhcmVkIGFuY2VzdHJ5IG11c3QgYmUgcmVjb3JkZWQgYW5kIGNhbm5vdCBpbmRlcGVuZGVudGx5IGVzdGFibGlzaAp0cnV0aC4gUGluIGV4YWN0IGxvY2FsIHNvdXJjZS9maXh0dXJlL3Rvb2wgaWRlbnRpdGllcyBpbiBsYXRlciBldmlkZW5jZS4KCiMjIEZyb3plbiBlZmZvcnQsIGRpYWdub3N0aWMsIGFuZCBjaHVybiBnYXRlcwoKVGhlIHNlcGFyYXRlIG93bmVkLWNvcmUgYnVkZ2V0IGlzIDMyIGN1bXVsYXRpdmUgYWN0aXZlIGhvdXJzIGFjcm9zcyBhbGwgYWdlbnRzLAppbmNsdWRpbmcgdGhpcyBnb3Zlcm5hbmNlIHBsYW4sIGltcGxlbWVudGF0aW9uLCBkZWJ1Z2dpbmcsIHF1YWxpZmljYXRpb24sCmluZGVwZW5kZW50IHJldmlld3MsIHJlcGFpcnMsIHJldGVzdHMsIGFuZCBkb2N1bWVudGF0aW9uLiBDb3VudCBjb25jdXJyZW50CmFnZW50cyBieSBzdW1tZWQgYWN0aXZlIGludGVydmFscy4gQ2hhcmdlIGZhaWxlZCBhbmQgcmV2ZXJ0ZWQgd29yazsgdGhlcmUgYXJlCm5vIHJlZnVuZHMgYW5kIG5vIHN1YnN0YW50aXZlLWF0dGVtcHQgY291bnRlci4gVGhlIGZpcnN0IG93bmVkIHJ1bnRpbWUgb3IKYmVoYXZpb3JhbC10ZXN0IGNoYW5nZSBzdGFydHMgYSBzZXBhcmF0ZSA4LWhvdXIgZGlhZ25vc3RpYyBnYXRlLiBJdCBzdG9wcyBvbmx5CmFmdGVyIHRoZSBvcmlnaW5hbCBndWVzdCBhbmQgaXRzIG5hbWVkIHdyb25nLWJlaGF2aW9yIGNvbnRyb2wgYm90aCBleGVjdXRlLgpQbGFuIDAxLTA3IGVmZm9ydCBiZWxvbmdzIGluIHRoZSAzMi1ob3VyIGJ1ZGdldCBidXQgbm90IHRoZSBkaWFnbm9zdGljIGNsb2NrLgoKUmV2aWV3IHRocmVzaG9sZHMgYXJlIDYsMDAwIGN1bXVsYXRpdmUgYWRkZWQvZGVsZXRlZCBub25ibGFuayBhdXRob3JlZCBydW50aW1lCmxpbmVzIGFuZCA4LDAwMCBjdW11bGF0aXZlIGFkZGVkL2RlbGV0ZWQgbm9uYmxhbmsgdGVzdC90b29sIGxpbmVzLiBSZWNvcmQgdGhlCmV4YWN0IGNhdGVnb3J5IGFuZCBjaHVybi4gQ3Jvc3NpbmcgYSB0aHJlc2hvbGQgcGF1c2VzIG11dGF0aW9uIGFuZCByZXF1aXJlcwp1c2VyLWNvbnRyb2xsZWQgc2NvcGUgcmV2aWV3OyBhIHRocmVzaG9sZCBhbG9uZSBkb2VzIG5vdCBhY2NlcHQgb3IgcmVqZWN0IHRoZQpjb3JlLiBSZXNlcnZlIGVmZm9ydCBmb3IgaW5kZXBlbmRlbnQgcmV2aWV3LCBpbi1zY29wZSByZXBhaXIsIHJlZ3Jlc3Npb25zLCBhbmQKcmUtcmV2aWV3LiBPdmVyLWNhcCwgb3Zlci10aHJlc2hvbGQsIG9yIHVuc3VwcG9ydGVkIG91dGNvbWVzIHJlbWFpbiBleHBsaWNpdApgR0FQU19GT1VORGA7IG5vIGF1dG9tYXRpYyBidWRnZXQgaW5jcmVhc2Ugb3IgYmFja2VuZCBzdWJzdGl0dXRpb24gaXMgYWxsb3dlZC4KCmB0b29scy9vd25lZF9jcHUvY29udHJhY3QucHlgIHN1cHBsaWVzIGB2YWxpZGF0ZWAsIGBidWRnZXRgLCBgcmVjb3JkYCwgYW5kCmBzZWxmLXRlc3RgLiBJdHMgY2hlY2tzIHVzZSBleHBsaWNpdCBjb25kaXRpb25zIGFuZCBuYW1lZCBmYWlsdXJlcywgbmV2ZXIKUHl0aG9uIGBhc3NlcnRgIGZvciBmYWN0dWFsIHZhbGlkYXRpb24uIGByZWNvcmQgLS1zdGFnZSBOQU1FIC0tYnVpbGQtZGlyIFBBVEhgCmFsc28gcmVxdWlyZXMgZXhwbGljaXQgYWdlbnQgaW50ZXJ2YWxzOyBpdCByZWNvcmRzIHN1bW1lZCBhY3RpdmUgZWZmb3J0LApjdW11bGF0aXZlIEdpdCBhZGRlZC9kZWxldGVkIG5vbmJsYW5rIGNodXJuIGJ5IGNhdGVnb3J5LCBleGFjdCBjb21taXQvYnVpbGQvCmZpeHR1cmUgaWRlbnRpdGllcywgYW5kIG5vbmVtcHR5IGFjdHVhbCBzdGFnZSB0ZXN0IHJlc3VsdHMuIFRoZSB2YWxpZGF0b3IKY2hlY2tzIGltbXV0YWJsZSBoaXN0b3JpY2FsIGhhc2hlcyBhbmQgY29udHJhY3QgZmllbGRzIHVzZWQgYnkgYWRtaXNzaW9uOyBpdApkb2VzIG5vdCBjaGFuZ2Ugc2NvcGUuIEVmZm9ydCBsb2dzIGFyZSBtYWludGFpbmVyIGV2aWRlbmNlLCBub3QgaW5kZXBlbmRlbnRseQpwcm92YWJsZSBjbG9jayB0cnV0aCwgc28gY29uc2VydmF0aXZlIGNoYXJnZXMgYW5kIGluZGVwZW5kZW50IHJldmlldyByZW1haW4KcmVxdWlyZWQuCgojIyBDaGFuZ2UgY29udHJvbAoKVGhpcyBjb250cmFjdCBkb2VzIG5vdCBhY2NlcHQgYW4gaW1wbGVtZW50YXRpb24uIEtlZXAgQ1BVLTAxIHRocm91Z2ggQ1BVLTA0ClBlbmRpbmcgYW5kIFBoYXNlIDAyIGdhdGVkIHVudGlsIGZyZXNoIGV2aWRlbmNlIGFuZCBwaGFzZSB2ZXJpZmljYXRpb24gYWRtaXQKdGhlIHJlcGxhY2VtZW50LiBDaGFuZ2luZyB0aGUgc3VwcG9ydGVkIG9wY29kZSBzZXQsIG1vZGVsLCBob3N0IGJvdW5kYXJ5LApkZXBlbmRlbmN5IHNldCwgZWZmb3J0IGNhcCwgb3IgY2h1cm4gbGltaXRzIHJlcXVpcmVzIGEgbmV3IHVzZXItcmV2aWV3ZWQKZGVjaXNpb24gYmVmb3JlIG11dGF0aW9uLgo="
+  },
+  "observed_provenance": {
+    "git_revision": "2e3a44f75ed6c5c9053672eda69dc9dab823fe7d",
+    "hashes": {
+      "experiments/owned_cpu/CONTRACT.md": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73",
+      "experiments/owned_cpu/SUBSET.md": "435d0c1a8e991b32c59e732b590bc0d9ae23be2983e0d14eaaadd126e20d078d",
+      "experiments/owned_cpu/cpu.c": "8ac6ded7859184651f6eb3fff8a87c073f8e24a98d66175b64c3d86f69cbd15f",
+      "experiments/owned_cpu/cpu.h": "afdc50cbfdce47cdb17f881fed6fe47b72d919e3220b9c599f6262f868d50eee",
+      "tests/owned_cpu/test_timing.c": "7747995fa198148e941b84130a409cc2a4a9ce688ec5cd64b5f7ccd24fc3b0e4",
+      "tests/owned_cpu/ORACLE.md": "e5ef2662a2eb5c30e4d6b1127a55c58c82ab34f76f8c5750b2d4e2807d116c7d",
+      "tools/owned_cpu/contract.py": "f8164b1573fe1ce873cdcebb466316bc23e6d9e3b71df864bce20ac855d9ad50",
+      "tests/owned_cpu/test_contract.py": "c584dce3be9a3f7ce25b73c01dd47b9740b5c0428be618a1c8b0781cfc3d6a14",
+      "experiments/owned_cpu/state-inventory.json": "d8972b1b359f3c9b260865251cc00e4b7f3ae820d065e8e46c4fed5e98d0d9f2",
+      "experiments/owned_cpu/REVIEW.md": "fb622bdaaedbea8f9a52ec6d6f0eaa72b34742b913e664cc01804be8df3c8b27",
+      "experiments/owned_cpu/acceptance-results.json": "f060a73fa9ca5ddfca7f2530af45d40809e5fa9f07fa8e921e82f78b11d5976f",
+      "experiments/owned_cpu/source-manifest.json": "b4800575f955afd9177ae55c780b96a7330469a034b097921016a11cd4ec836b"
+    },
+    "subset": {
+      "path": "experiments/owned_cpu/SUBSET.md",
+      "line": 61,
+      "sha256": "435d0c1a8e991b32c59e732b590bc0d9ae23be2983e0d14eaaadd126e20d078d",
+      "status": "read-only observed-behavior provenance; no adjudicated supersession"
+    }
+  },
+  "pre_mutation_execution": {
+    "command": "ctest --preset owned-debug -R '^owned_cpu_timing$' --output-on-failure --no-tests=error",
+    "exit": 0,
+    "ctest": {
+      "expected": 1,
+      "observed": 1,
+      "passed": 1
+    },
+    "unity_cases": 23,
+    "case": "illegal_uses_the_canonical_word_and_faulting_pc",
+    "status": "pass; source adjudication not implied",
+    "trace": {
+      "program": "4A FC at $100",
+      "reset": "SSP $3000; PC $100; SR $2700; reset event 40 clocks",
+      "dispatch": "execute_one passes instruction_pc $100 to enter_short_exception vector4",
+      "frame": "$2ffa=SR $2700, $2ffc=PC high $0000, $2ffe=PC low $0100",
+      "handler": "vector4 words at $10/$12 select PC $180",
+      "event": "34 clocks, one dispatch",
+      "callback_sequence": "source-traced: opcode read $100; PC high/low writes $2ffc/$2ffe; SR write $2ffa; vector high/low reads $10/$12",
+      "limits": "Existing fixture asserts frame/result/timing; callback sequence is traced from source, not a new ILLEGAL bus-order assertion or pin capture."
+    }
+  },
+  "preservation": {
+    "canonical_changed": false,
+    "validator_changed": false,
+    "runtime_changed": false,
+    "fixture_changed": false,
+    "oracle_changed": false,
+    "contract_revisions_added": false,
+    "accounting": "Append charges only; preserve all 12 prior entries, code_start, freeze fields/amendments, caps, historical hashes and consumed Musashi attempts.",
+    "qualification": "No fresh source collection, review/seal or phase verification in this plan; preceding receipts remain historical.",
+    "handoff": "Plan 01-16 must include new authored reconciliation record in source distribution manifest before collection/review. Runtime/state inventory source hashes need no semantic refresh because runtime/header bytes are unchanged."
+  },
+  "independent_challenge": {
+    "role": "read-only non-author primary-source challenger",
+    "disposition": "unresolved",
+    "active_interval": {
+      "start": "2026-10-03T13:17:20Z",
+      "end": "2026-10-03T13:18:36Z",
+      "seconds": 76
+    },
+    "separation": "Authored no runtime/contract/test/reconciliation edits; Plan 01-16 final independent review remains required."
+  }
+}
