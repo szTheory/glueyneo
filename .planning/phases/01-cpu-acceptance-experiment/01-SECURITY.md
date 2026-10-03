@@ -140,8 +140,8 @@ C/evidence ASVS L1 assessment with block_on high, not web certification.
   "asvs_level": 1,
   "block_on": "high",
   "independent_non_author": true,
-  "status": "verified",
-  "open_high_or_critical": 0,
+  "status": "blocked",
+  "open_high_or_critical": 1,
   "evidence_revision": "635714631770a6450e1f2e46bef6a377571aabd5",
   "collection_sha256": "53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e",
   "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
@@ -201,7 +201,7 @@ in the stated candidate scope; a pending live closeout is identified separately.
 | T-01-40 | high | Append-only explicit agent interval sums and failed/reverted churn, frozen limits and unqualified/GAPS_FOUND receipt | CLOSED |
 | T-01-41 | high | Separate REVIEW-only non-author reviewer, independent Debug build22 steps and direct native4/4; exact clean review-check passed against its recorded revision | CLOSED |
 | T-01-42 | high | Separate assessor, source/controls independently read/run, this evidence-bound high-blocking native reassessment and unchanged historical reports | CLOSED |
-| T-01-43 | high | Deferred seal/source/review/security byte binding and stale-audit regressions exercised in acceptance21; current snapshot unchanged; actual exact-revision deferred seal independently verified | CLOSED; live Task3 gate passed |
+| T-01-43 | high | Initial deferred seal passed; audit metadata then changed; actual final receipt verify fails with stale sealed security document; reseal preflight rejects the existing stale receipt | HIGH/open final binding; initial pass retained below |
 | T-01-44 | high | Frozen summed budget, contract pending requirement/phase gate checks; actual seal unqualified/GAPS_FOUND with only phase-goal-verification-pending and budget44,170s/34 records below frozen caps | CLOSED; live Task3 gate passed |
 
 ### Assessor-executed evidence
@@ -263,10 +263,11 @@ not independence from a fully malicious fabricated producer.
 
 ### Current result and remaining limits
 
-Verified: zero current candidate high/critical findings. Sixteen new declared
+Initial assessment verified zero candidate high/critical findings. Sixteen new declared
 controls plus the original T-01-15-03 candidate reassessment are substantiated;
 the older67 closed controls and historical one-open audit remain unchanged.
-Task3 live seal/accounting subsequently passed as recorded below. Original silicon
+Task3 initial live seal/accounting passed as recorded below; final binding later
+failed and current status is blocked with one HIGH/open threat. Original silicon
 saved PC, functional-versus-pin timing, other platforms/CMake3.20 execution,
 full ISA, BIOS/games, public ABI and durable/cross-build continuation remain
 unknown/excluded. No physical evidence or finite silicon search was acquired
@@ -274,7 +275,7 @@ or repeated. All nine specless flags remain unresolved. CPU-01–05 stay Pending
 Phase01 open/GAPS_FOUND, Phase02 gated. This current native assessment supersedes
 the former blocked candidate disposition only within P01-C-14's changed scope.
 
-### Final live closeout confirmation
+### Initial live closeout confirmation — historical observation
 
 Executor ran the exact Task3 review-check/seal/verify/budget chain against
 `635714631770a6450e1f2e46bef6a377571aabd5`. The assessor independently ran
@@ -294,4 +295,27 @@ This appended outcome changes only audit metadata. The executor must reseal
 the final audit-document hash and rerun read-only verification; an earlier seal
 cannot authorize changed audit bytes. The evidence revision and all source/
 collection/amendment identities stay fixed at the audited closure above.
+
+### Final binding gate failure — current disposition
+
+At `33c2f480bd19f7008723ef9e6523284cf9b622f4`, the assessor independently
+reproduced `python3 tools/owned_cpu/acceptance.py verify`: nonzero outcome,
+`{"status": "fail", "reason": "stale sealed security document"}`. The initial
+seal at6357146 bound the prior audit document; the subsequent appended live
+outcome changed its bytes. `acceptance.seal` calls `verify(document)` before
+resealing, so a second seal cannot refresh this changed document through the
+current implementation. The Task3 commit contains that stale receipt. Earlier
+native/qualification controls and the initial exact seal pass remain actual
+historical observations; they do not establish final binding.
+
+T-01-43 is HIGH/open for missing reproducible final report/receipt binding.
+Current schema attestation is blocked with open_high_or_critical1. T-01-44
+budget/pending-admission controls remain evidenced; clean final closeout and
+F14-03/T-01-15-03 final candidate registry reconciliation are withheld until
+the binding gate is repaired and independently reverified. The changed
+capability mitigation remains supported; its original withheld frame repair
+and unknown silicon saved PC have not changed. No backend, requirement or
+phase admission is permitted. No code, receipt or accounting was modified by
+the assessor. Preserve this reproducer in gap planning and refresh affected
+review/security bindings only after a separately owned bounded repair.
 <!-- owned-cpu-current-security:end -->
