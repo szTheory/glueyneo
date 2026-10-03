@@ -31,6 +31,41 @@ All collections remain append-only, including the first collection digest
 `a96c08b486ee48e960b98b058bb763d3c6b5067dd33b85c00e193897d9536fc9`.
 No historical Musashi files, failed receipts or charges have been rewritten.
 
+## Plan 01-15 unresolved reconciliation and Plan 01-16 qualification
+
+The actual reconciliation branch is **unresolved**. Plan 01-15's authored
+`illegal-reconciliation.json` records exact vendor PDF hashes, printed editions,
+retrieval date, competing interpretations and the missing adjudication. Its
+embedded base64 archive preserves the original contract bytes and code-start
+SHA-256 `6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73`.
+No canonical supersession or runtime, validator, fixture or oracle repair was
+justified. `SUBSET.md:61`, SHA-256
+`435d0c1a8e991b32c59e732b590bc0d9ae23be2983e0d14eaaadd126e20d078d`,
+remains read-only observed-behavior provenance, with no adjudicated supersession.
+
+The preceding source reconciliation task revision is
+`6a54e2c0b2747861276853c8e036bd3f2a42ed04`. Runtime, header and state inventory
+retain their recorded exact hashes; private same-build state identity is
+unchanged. Plan 01-16 includes the reconciliation record and this report in
+the exact distributed closure and collects fresh native lanes for unchanged
+behavior. These observations do not resolve the source rule or establish
+silicon compliance. Final collection, independent review, seal revision and
+budget identities live in the machine-readable receipts and `REVIEW.md`;
+historical identities above remain historical.
+
+The UM ninth edition/copyright1993 general pre-execution and next-unexecuted
+language favors fault PC `$100`. Its ILLEGAL-specific trap/group wording leaves
+a competing sequential-PC `$102` reading. PRM copyright1992 does not explicitly
+select that saved value; PRMER Rev1/03-2007 lists no ILLEGAL correction, whose
+absence proves neither interpretation. Historical catalog/retrieval labels
+are not printed editions. Independent review must retain HIGH/open unless an
+authoritative instruction-specific adjudication addresses the competing reading.
+The new wrong-PC control and canonical repair remain withheld in this branch;
+existing controls qualify only their named observations. All nine flagged
+planning assumptions remain unresolved. CPU-01–05 remain Pending, Phase 01
+open/GAPS_FOUND and Phase 02 gated. The next workflow command for retained
+ambiguity is `$gsd-plan-phase 01 --gaps`; this plan runs no phase verification.
+
 ## Remaining blocker and next decision
 
 **F14-03 remains open:** the frozen canonical `CONTRACT.md` requires ILLEGAL to

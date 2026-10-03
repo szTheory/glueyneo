@@ -56,7 +56,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "experiments/owned_cpu/ACCEPTANCE.md",
-      "sha256": "16211d0001164ef74723bbea60107b2cf4657dec6debd3c0e8472d73c60f0a59",
+      "sha256": "2a1b9f656a9142d48beb5ff62c1bed38516f04b1b11af5766ed5617cb0a42e64",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
@@ -129,6 +129,18 @@
       "origin": "authored",
       "path": "experiments/owned_cpu/cpu.h",
       "sha256": "afdc50cbfdce47cdb17f881fed6fe47b72d919e3220b9c599f6262f868d50eee",
+      "source": "Glueyneo original; exact bytes identified by SHA-256",
+      "update_owner": "Glueyneo maintainers"
+    },
+    {
+      "compiled": false,
+      "distributed": true,
+      "host_calls": "host-side build/test/evidence only; not runtime",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "origin": "authored",
+      "path": "experiments/owned_cpu/illegal-reconciliation.json",
+      "sha256": "03130a6b9499c176842ce489ed12ab92afa81e682a45182914baefda8f32fee4",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     },
