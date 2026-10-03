@@ -17,6 +17,16 @@ def self_test():
             child = subprocess.CompletedProcess([], 1, output, "")
             with patch.object(subprocess, "run", return_value=child):
                 self.assertEqual(0, main(["wrapper", "--unsupported", "binary"]))
+            for broken in (output + "2 Tests 0 Failures 0 Ignored\n",
+                           output + "Unity denominator: expected=1 observed=1\n",
+                           output.replace("Was 6", "Was 60"),
+                           output.replace("canonical_unsupported", "not_canonical_unsupported"),
+                           output.replace("1 Tests", "2 Tests"),
+                           output.replace("0 Ignored", "1 Ignored"),
+                           output.replace("expected=1 observed=1", "expected=1 observed=0"),
+                           output + output):
+                with self.subTest(broken=broken), patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 1, broken, "")):
+                    self.assertEqual(1, main(["wrapper", "--unsupported", "binary"]))
 
         def test_unrelated_failures_crashes_and_empty_pass_cannot_qualify(self):
             for code, output in ((-11, "crash"), (0, "PASS"), (1, "unrelated:FAIL"),
@@ -61,10 +71,11 @@ def main(arguments: list[str]) -> int:
         print(f"FAIL: mutated timing case did not finish normally: {error}", file=sys.stderr)
         return 1
     output = child.stdout + child.stderr
-    if (child.returncode != 1 or exact not in output or
-            re.search(r"(?m)^1 Tests 1 Failures 0 Ignored\s*$", output) is None or
+    if (child.returncode != 1 or
+            len(re.findall(r"(?m)(?:^|:)" + re.escape(exact) + r"(?:\s*$|:)", output)) != 1 or
+            re.findall(r"(?m)^(\d+) Tests (\d+) Failures (\d+) Ignored\s*$", output) != [("1", "1", "0")] or
             output.count(":FAIL:") != 1 or
-            "Unity denominator: expected=1 observed=1" not in output):
+            re.findall(r"(?m)^Unity denominator: expected=(\d+) observed=(\d+)\s*$", output) != [("1", "1")]):
         print("FAIL: timing mutation was not the one exact expected assertion", file=sys.stderr)
         print(output, file=sys.stderr)
         return 1
