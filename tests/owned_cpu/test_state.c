@@ -54,8 +54,7 @@ typedef enum {
 
 typedef enum {
     OMIT_NONE = 0,
-    OMIT_IRQ7_PENDING,
-    OMIT_INSTRUCTION_COUNTER
+    OMIT_IRQ7_PENDING
 } omission_kind;
 
 void setUp(void) {}
@@ -368,12 +367,6 @@ static uint32_t machine_data_register(state_machine *machine, unsigned index) {
     return observation.data_registers[index];
 }
 
-static uint64_t machine_instruction_count(state_machine *machine) {
-    owned_cpu_observation observation;
-    if (owned_cpu_observe(machine->cpu, &observation) != OWNED_CPU_OK) return UINT64_MAX;
-    return observation.instructions;
-}
-
 static void state_copy_for_test(const owned_cpu_state *source, owned_cpu_state *target);
 
 static void continue_scenario(state_case which, omission_kind omission) {
@@ -399,7 +392,6 @@ static void continue_scenario(state_case which, omission_kind omission) {
     memcpy(destination.memory, source.memory, sizeof(destination.memory));
     TEST_ASSERT_EQUAL_UINT(0u, destination.event_count);
     if (omission == OMIT_IRQ7_PENDING) captured.irq7_pending = 0u;
-    if (omission == OMIT_INSTRUCTION_COUNTER) captured.instructions = 0u;
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_restore_state(destination.cpu, &captured));
     TEST_ASSERT_EQUAL_UINT(0u, destination.event_count);
     if (omission == OMIT_NONE) {
@@ -441,11 +433,6 @@ static void continue_scenario(state_case which, omission_kind omission) {
                                          "pending IRQ7 baseline handler result");
         TEST_ASSERT_EQUAL_UINT32_MESSAGE(1u, machine_data_register(&destination, 1u),
                                          "state omission pending level7 changed D1");
-    } else if (omission == OMIT_INSTRUCTION_COUNTER) {
-        TEST_ASSERT_EQUAL_UINT64_MESSAGE(4u, machine_instruction_count(&baseline),
-                                         "instruction counter baseline after STOP");
-        TEST_ASSERT_EQUAL_UINT64_MESSAGE(4u, machine_instruction_count(&destination),
-                                         "state omission instruction counter");
     }
     machine_destroy(&baseline);
     machine_destroy(&destination);
@@ -514,10 +501,38 @@ static void expect_rejected_without_mutation(state_machine *destination,
     TEST_ASSERT_EQUAL_UINT(events_before, destination->event_count);
 }
 
+static void instruction_counter_mismatch_rejects_atomically(void) {
+    state_machine source;
+    state_machine destination;
+    owned_cpu_state valid;
+    owned_cpu_state missing_counter;
+    memset(&destination, 0, sizeof(destination));
+    TEST_ASSERT_TRUE(machine_create_and_reset(&source, CASE_DIAGNOSTIC_MOVEQ));
+    TEST_ASSERT_TRUE(prepare_checkpoint(&source, CASE_DIAGNOSTIC_MOVEQ));
+    TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_capture_state(source.cpu, &valid));
+    TEST_ASSERT_EQUAL_UINT64(1u, valid.instructions);
+    TEST_ASSERT_EQUAL_UINT64(4u, valid.instruction_cycles);
+
+    TEST_ASSERT_TRUE(machine_create_fresh(&destination));
+    memcpy(destination.memory, source.memory, sizeof(destination.memory));
+    TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_restore_state(destination.cpu, &valid));
+    state_copy_for_test(&valid, &missing_counter);
+    missing_counter.instructions = 0u;
+    expect_rejected_without_mutation(&destination, &missing_counter,
+                                    OWNED_CPU_INVALID_ARGUMENT);
+
+    machine_destroy(&source);
+    machine_destroy(&destination);
+    TEST_ASSERT_EQUAL_UINT(0u, source.live_allocations);
+    TEST_ASSERT_EQUAL_UINT(0u, destination.live_allocations);
+    puts("state_instruction_counter_mismatch_rejected=1 atomic_destination_and_bus=1");
+}
+
 static void malformed_and_incompatible_records_reject_atomically(void) {
     state_machine source;
     state_machine destination;
     owned_cpu_state valid;
+    memset(&destination, 0, sizeof(destination));
     TEST_ASSERT_TRUE(machine_create_and_reset(&source, CASE_RESET_DEBT));
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_capture_state(source.cpu, &valid));
     TEST_ASSERT_TRUE(machine_create_fresh(&destination));
@@ -628,7 +643,7 @@ static void pending_irq_omission_control(void) {
 }
 
 static void instruction_counter_omission_control(void) {
-    continue_scenario(CASE_DIAGNOSTIC_MOVEQ, OMIT_INSTRUCTION_COUNTER);
+    instruction_counter_mismatch_rejects_atomically();
 }
 
 int main(int argc, char **argv) {
@@ -646,6 +661,7 @@ int main(int argc, char **argv) {
     } else {
         RUN_TEST(every_named_boundary_restores_and_continues_in_a_fresh_owner);
         RUN_TEST(malformed_and_incompatible_records_reject_atomically);
+        RUN_TEST(instruction_counter_mismatch_rejects_atomically);
         RUN_TEST(reentrant_capture_and_restore_reject_while_active);
         RUN_TEST(terminal_instance_rejects_restore_without_bus_activity);
     }

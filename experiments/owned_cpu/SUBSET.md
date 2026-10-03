@@ -123,6 +123,14 @@ instruction clocks, including RESET; `exception_cycles` counts instruction
 exceptions, IRQ entry, and address-error entry; `idle_cycles` counts stopped
 time; and `total_cycles` includes reset debt, instruction, exception, and idle
 events. `reset_cycles` records the fixed 40-cycle reset measurement separately.
+The private continuation validator requires nonzero ordinary instruction
+clocks to have at least one completed dispatch, and conservatively limits the
+completed instruction count to one dispatch per four counted instruction or
+exception clocks. Four clocks is the minimum in this exact supported subset;
+exception clocks also include IRQ and address-error events, so this bound may
+allow fewer historical details than the other captured fields establish. It
+rejects counter combinations that cannot describe even a minimum-cost
+completed dispatch, without using the validator as a timing oracle.
 An ordinary instruction can overshoot by at most 131 clocks; larger named
 events have their own fixed bounds. No arbitrary partition-equivalence claim
 is made.

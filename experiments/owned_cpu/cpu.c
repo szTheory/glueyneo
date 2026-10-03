@@ -16,6 +16,7 @@
 #define SR_ARITHMETIC_FLAGS (SR_X | SR_N | SR_Z | SR_V | SR_C)
 #define SR_MOVE_FLAGS (SR_N | SR_Z | SR_V | SR_C)
 #define RESET_EVENT_CYCLES UINT64_C(40)
+#define MINIMUM_COUNTED_INSTRUCTION_CYCLES UINT64_C(4)
 
 typedef enum {
     STEP_INSTRUCTION = 0,
@@ -869,6 +870,15 @@ static int state_counter_sum(const owned_cpu_state *state, uint64_t *sum) {
     return 1;
 }
 
+static int state_instruction_count_valid(const owned_cpu_state *state) {
+    if (state->instruction_cycles != 0u && state->instructions == 0u) return 0;
+    if (state->instruction_cycles > UINT64_MAX - state->exception_cycles) return 0;
+    uint64_t counted_instruction_cycles =
+        state->instruction_cycles + state->exception_cycles;
+    return state->instructions <=
+           counted_instruction_cycles / MINIMUM_COUNTED_INSTRUCTION_CYCLES;
+}
+
 static int state_valid(const owned_cpu_state *state) {
     if (state->size != (uint32_t)sizeof(*state) ||
         state->version != OWNED_CPU_STATE_VERSION ||
@@ -891,6 +901,7 @@ static int state_valid(const owned_cpu_state *state) {
         state->total_cycles != expected_total) {
         return 0;
     }
+    if (!state_instruction_count_valid(state)) return 0;
     if (state->reset_pending != 0u &&
         (state->instructions != 0u || state->instruction_cycles != 0u ||
          state->exception_cycles != 0u || state->idle_cycles != 0u ||

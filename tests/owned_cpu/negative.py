@@ -61,7 +61,6 @@ def diagnostic_control(executable: str) -> int:
 def state_omission_controls(executable: str) -> int:
     controls = (
         ("--omit-irq7", "Expected 1 Was 0:state omission pending level7 changed D1"),
-        ("--omit-instruction-counter", "Expected 4 Was 3:state omission instruction counter"),
     )
     for option, expected_assertion in controls:
         try:
@@ -83,6 +82,31 @@ def state_omission_controls(executable: str) -> int:
                 summary is None or len(re.findall(r":FAIL:", output)) != 1):
             return fail(f"state omission {option} did not produce its one named assertion", output)
         print(f"PASS: {option} was caught by its exact continuation assertion")
+
+    option = "--omit-instruction-counter"
+    try:
+        child = subprocess.run(
+            [executable, option], capture_output=True, text=True,
+            errors="replace", timeout=20, check=False
+        )
+    except subprocess.TimeoutExpired as error:
+        output = error.stdout or ""
+        if isinstance(output, bytes):
+            output = output.decode("utf-8", errors="replace")
+        return fail(f"state counter control {option} timed out", output)
+    except OSError as error:
+        return fail(f"cannot execute state counter control {option}: {error}")
+
+    output = child.stdout + child.stderr
+    summary = re.search(r"(?m)^1 Tests 0 Failures 0 Ignored\s*$", output)
+    counter_rejected = (
+        "state_instruction_counter_mismatch_rejected=1 atomic_destination_and_bus=1" in output
+    )
+    if (child.returncode != 0 or not counter_rejected or
+            "Unity denominator: expected=1 observed=1" not in output or
+            summary is None or re.search(r"(?m)^.*:FAIL:", output)):
+        return fail(f"state counter mismatch {option} was not rejected atomically", output)
+    print("PASS: instruction-counter mismatch was rejected without destination or bus mutation")
     return 0
 
 

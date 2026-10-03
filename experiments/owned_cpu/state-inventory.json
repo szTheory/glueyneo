@@ -23,20 +23,20 @@
   ],
   "source_hashes": {
     "experiments/owned_cpu/CMakeLists.txt": "990848e89ffbff684df06ba60414db7722078aed92e4c3431a96039f31b585a3",
-    "experiments/owned_cpu/cpu.c": "c4eaac805176cf6120dc8fd887e0096cfd34fe2047b9651087c9fe2e8e2e4f0d",
-    "experiments/owned_cpu/cpu.h": "3eac455ea9b07e48c5d3e792788bc2c6a2bd955632e2928d0cb1f4b4222dd457",
+    "experiments/owned_cpu/cpu.c": "8ac6ded7859184651f6eb3fff8a87c073f8e24a98d66175b64c3d86f69cbd15f",
+    "experiments/owned_cpu/cpu.h": "afdc50cbfdce47cdb17f881fed6fe47b72d919e3220b9c599f6262f868d50eee",
     "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
     "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c",
     "tests/owned_cpu/cold.py": "4f0687b793cb04a4c61b31dc917ec7d08233e9a272bf2c0e41b274d06d604f84",
     "tests/owned_cpu/isolation_fixture.h": "95ca205b077d7459edd2af0194dc9af79954be011fe9c39e8f1efa7da5eb474d",
-    "tests/owned_cpu/negative.py": "39d0514dabcdab1625c4acbb9de636d158f02e1ac8d937999c4f3569ecf348de",
+    "tests/owned_cpu/negative.py": "2f2cf4a75ba8078e09d5a7eae98181f574c5add8a030b58ab8aa741a9a3f863e",
     "tests/owned_cpu/test_cold.c": "e2bcb33eea1a24cdc8c0a5340928e4b5d3705b4f0649b6299c370d5560e26d63",
     "tests/owned_cpu/test_diagnostic.c": "a3d7b2e60f2f0e4fd49042b069dc8729a268816c8bbfd42bfa3a34ed3121937a",
     "tests/owned_cpu/test_faults.c": "71e09309af7c556b907563229ae6e176958ee91dbe7ddad5ceff124fabe071fa",
     "tests/owned_cpu/test_inventory.py": "dc6f4e6e00079165009e1c9a06ff5d983395ce9e778432ddfa5b2e401e0d5ba7",
     "tests/owned_cpu/test_isolation.c": "35a5a515e1df3798bcae4a190387e32c4ea6ce6a0aa2ac628789111d85d7e155",
     "tests/owned_cpu/test_semantics.c": "33102065bd511e8f5721b5d645b72cc00cad1ef98bd46ef99324fc1d2c123301",
-    "tests/owned_cpu/test_state.c": "a43fcb4eea57b8e1ffe438966764ac6c504194cae2eb9c49341925280ac274e4",
+    "tests/owned_cpu/test_state.c": "25b12a79f08049cd7eb0bdf8af2f97ca74ba1798184397bccc90fa1cff308b31",
     "tests/owned_cpu/test_timing.c": "7747995fa198148e941b84130a409cc2a4a9ce688ec5cd64b5f7ccd24fc3b0e4",
     "third_party/unity/src/unity.c": "a6cc4b143075a03317d72c760b5ed67a4a12eeda1242f575464ad23f34042275",
     "third_party/unity/src/unity.h": "b30ba4db1e0be1a1f6c862d359d73c91025a114977e41d3dad17103363804334",
@@ -324,7 +324,7 @@
         "owned_cpu_run"
       ],
       "reset_disposition": "zero on reset; overflow checked before event commit",
-      "capture_disposition": "owned_cpu_state.instructions"
+      "capture_disposition": "owned_cpu_state.instructions; validated against ordinary and exception clocks using the four-cycle minimum for this subset"
     },
     {
       "name": "instruction_cycles",
