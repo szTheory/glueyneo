@@ -4,17 +4,17 @@ milestone: v0.1
 milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
-status: executing
-stopped_at: Completed 01-15-PLAN.md; unresolved branch ready for dependent 01-16
-last_updated: "2026-10-03T13:25:07.632Z"
+status: gaps_found
+stopped_at: Completed 01-16-PLAN.md; unresolved F14-03 remains; execute-phase orchestrator owns phase tail
+last_updated: "2026-10-03T13:40:37.565Z"
 last_activity: 2026-10-03
 last_activity_desc: Phase 01 execution started
-state_head: 6a54e2c0b2747861276853c8e036bd3f2a42ed04
+state_head: c42081986b052ec39ca6126fe2af76d956529953
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 16
-  completed_plans: 15
+  completed_plans: 16
   percent: 0
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — EXECUTING
-Plan: 16 of 16 — next dependent plan; 01-15 complete through unresolved branch
-Status: Executing Phase 01; F14-03 HIGH/open
-Last activity: 2026-10-03 — Plan 01-15 source reconciliation complete; independent Plan 01-16 closeout remains
+Phase: 01 (CPU acceptance experiment) — OPEN / GAPS_FOUND
+Plan: 16 of 16 — all plans executed; no phase admission
+Status: Plan 01-16 complete; F14-03 HIGH/open; Phase 01 remains open
+Last activity: 2026-10-03 — Exact-source qualification, independent unresolved review and unqualified seal complete; orchestrator owns phase tail
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -45,15 +45,15 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 
 **Velocity:**
 
-- Total plans in phase: 16; executed: 15
-- Average recorded duration: 42.1min
-- Total recorded execution time: 631min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
+- Total plans in phase: 16; executed: 16
+- Average recorded duration: 40.4min
+- Total recorded execution time: 646min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 15 of 16 | 631min | 42.1min |
+| 01 | 16 of 16 | 646min | 40.4min |
 
 **Recent Trend:**
 
@@ -79,6 +79,7 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 | Phase 01 P13 | 23min | 3 tasks | 9 files |
 | Phase 01 P14 | 30min | 3 tasks | 7 files |
 | Phase 01 P15 | 12min | 2 tasks | 2 files |
+| Phase 01 P16 | 15min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -114,10 +115,11 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - [Phase 01]: Preserve the earlier state audit while the current distribution manifest owns refreshed source identities; four native preset lanes pass, with admission pending independent Plan 14 review.
 - [Phase 01]: Plan 01-14 sealed unqualified/GAPS_FOUND after independent repair re-review; F14-03 frozen ILLEGAL contract discrepancy requires user-directed reconciliation; CPU-01–05 Pending, Phase 01 open and Phase 02 gated.
 - [Phase 01]: Plan 01-15 leaves F14-03 HIGH/open after exact UM/PRM/errata interpretation; canonical/runtime/fixture/oracle unchanged, CPU-01–05 Pending, Plan 01-16 owns independent unresolved closeout.
+- [Phase 01]: Plan 01-16 freshly qualified exact unchanged behavior and independently retained F14-03 HIGH/open; seal unqualified/GAPS_FOUND, CPU-01–05 Pending and Phase 02 gated.
 
 ### Pending Todos
 
-- Plans 01-01 through 01-14 are executed. Plans 01-15 and 01-16 are planned and independently checked; Phase 01 remains `gaps_found`, open, and Phase 02 gated. Next command: `$gsd-execute-phase 01 --gaps-only` (executes only the two gap-closure plans in dependency order, then runs the fresh phase-goal verifier). Follow that workflow's reported status and exact next command; do not start Phase 02 unless Phase 01 passes its admission gate.
+- Plans 01-01 through 01-16 are executed. Exact-source independent review retains F14-03 HIGH/open and the latest seal unqualified/GAPS_FOUND; CPU-01–05 remain Pending, Phase 01 open and Phase 02 gated. This executor ran no fresh phase verification; execute-phase orchestrator owns its phase tail. Next separate workflow for retained source ambiguity: `$gsd-plan-phase 01 --gaps`. Follow the orchestrator's returned boundary status and command; no Phase 02 admission follows from plan completion.
 
 ### Blockers/Concerns
 
@@ -142,6 +144,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-03T13:25:07.604Z
-Stopped at: Completed 01-15-PLAN.md; unresolved branch ready for dependent 01-16
+Last session: 2026-10-03T13:40:37.514Z
+Stopped at: Completed 01-16-PLAN.md; unresolved F14-03 remains; execute-phase orchestrator owns phase tail
 Resume file: None

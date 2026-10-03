@@ -38,12 +38,12 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit owned-core decision, commands and results against finite effort/churn limits fixed before implementation; failed work and findings are preserved, actionable issues receive budgeted repair, and resource thresholds trigger review/replanning rather than automatic backend rejection. (CPU-05)
 
-**Plans**: 15/16 plans executed. Plan 01-15 retrieved exact UM/PRM/errata identities, preserved original contract bytes and documented the unresolved $100/$102 saved-PC interpretation; canonical/runtime/fixture/oracle remain unchanged. F14-03 remains HIGH/open. Dependent Plan 01-16 owns source-manifest refresh, independent review and honest unresolved sealing. Phase 01 remains open / GAPS_FOUND and Phase 02 gated. CPU-01–05 remain Pending; no fresh phase verification ran.
+**Plans**: 16/16 plans executed. Plan 01-15 retrieved exact UM/PRM/errata identities, preserved original contract bytes and documented the unresolved $100/$102 saved-PC interpretation; canonical/runtime/fixture/oracle remain unchanged. Plan 01-16 refreshed the 38-input source closure, collected fresh four-lane observations, independently reviewed exact primary sources and sealed unqualified/GAPS_FOUND. F14-03 remains HIGH/open. Phase 01 remains open / GAPS_FOUND and Phase 02 gated; CPU-01–05 remain Pending. This executor ran no fresh phase verification; execute-phase orchestrator owns its phase tail. Next separate workflow for retained ambiguity: `$gsd-plan-phase 01 --gaps`.
 
 Plans:
 
 - [x] 01-15-PLAN.md
-- [ ] 01-16-PLAN.md
+- [x] 01-16-PLAN.md
 
 **Wave 1**
 
@@ -107,7 +107,7 @@ Plans:
 
 **Wave 16** *(F14-03 gap closure; depends on Wave 15; qualification and review)*
 
-- [ ] 01-16-PLAN.md — Refresh affected identities, qualify the exact closure, independently review and seal a supported or explicitly unresolved disposition.
+- [x] 01-16-PLAN.md — Exact identities and fresh lanes independently reviewed; F14-03 HIGH/open, sealed unqualified/GAPS_FOUND.
 
 Planning guidance: Plans 01-07–01-14 completed the owned-core experiment and sealed an explicit unqualified outcome; their evidence does not complete Phase 01 requirements. Plans 01-15 and 01-16 address the sole active finding F14-03 through primary-source reconciliation followed by dependent identity refresh, bounded qualification and independent review. Preserve all Musashi history and consumed attempts. A source ambiguity, failed repair or resource pause remains HIGH/open and GAPS_FOUND. After these plans execute, execute-phase runs a fresh phase-goal verifier that must reassess CPU-01–05; no new requirement is complete merely because the plan closes the finding. Follow its reported status and exact next command. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
 
@@ -157,7 +157,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 15/16 | In Progress|  |
+| 1. CPU acceptance experiment | v0.1 | 16/16 | In Progress|  |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
