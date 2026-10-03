@@ -25,7 +25,7 @@ actuals:
   tokens: 65615
   tasks: 3
   commits: 5
-  active_seconds: 2651
+  active_seconds: 2771
 plan_head_before: 8e26d7c3ffc8dd31b7741cfe2f4ed8d55b248b82
 coverage:
   - id: D1
@@ -103,6 +103,9 @@ Required review-check commands ran and honestly failed for the open contract blo
 
 Final metadata tranche charges another870 seconds through01:53:00Z, giving
 2,651 Plan14 agent-seconds and34,376 cumulative seconds, with11 entries.
+An additional conservative120-second administration allowance through01:55:00Z
+charges final state/commit/reporting, giving2,771 Plan14 and34,496 cumulative
+seconds with12 entries; this is an explicit allowance, not an exact spawn clock.
 Final nonblank churn remains1,206 runtime and5,252 tooling. The earlier
 seal budget is a dated snapshot; final ledger validation remains authoritative.
 
