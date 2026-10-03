@@ -1460,6 +1460,47 @@
         "status": "pass"
       },
       "working_tree_dirty": true
+    },
+    {
+      "active_seconds": 180,
+      "agent_intervals": [
+        {
+          "agent": "executor-final-metadata-conservative180s",
+          "end": "2026-10-03T20:55:50Z",
+          "start": "2026-10-03T20:52:50Z"
+        }
+      ],
+      "build_dir": "build/owned-debug",
+      "build_identity": {
+        "build_ninja_sha256": "22e9fad5c86b1e9bc48708c054e98ec0d2582afde79cb5d4e205620d44c0ce57",
+        "cmake_cache_sha256": "ed9275b4e3884b1cc8dc26a699d60bdc50c8be8b34fd7b201be1630a78c9602e"
+      },
+      "commit": "4edcd12b30ec97682de4c76acd33fbd83ea18e33",
+      "cumulative_churn": {
+        "runtime_added": 1160,
+        "runtime_deleted": 61,
+        "test_tool_added": 5991,
+        "test_tool_deleted": 135
+      },
+      "diagnostic_gate": false,
+      "fixture_sha256": {
+        "tests/cpu/ORACLE.md": "8a1f9c113ea4fe7608a41b2fedd856c69533a1009b07f9dda6dafd276dc93ade",
+        "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
+        "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c"
+      },
+      "recorded_at": "2026-10-03T20:53:32.023266Z",
+      "stage": "plan-01-19-final-metadata",
+      "test_results": {
+        "cases": [
+          "owned_cpu_unsupported_negative",
+          "owned_cpu_timing_negative"
+        ],
+        "expected": 2,
+        "log_sha256": "ec92e41d903ae3d190e758af067c8de602039f452e2ae18b906696531f585d9f",
+        "observed": 2,
+        "status": "pass"
+      },
+      "working_tree_dirty": true
     }
   ],
   "freeze_amendments": [
