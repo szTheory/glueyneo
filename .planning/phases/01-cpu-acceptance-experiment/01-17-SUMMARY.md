@@ -38,13 +38,17 @@ coverage:
     description: Finite exact-source acquisition and preserved history
     human_judgment: false
     verification:
-      - {kind: other, ref: "Plan 01-17 evidence structural checks 9/9 and protected hashes 181/181", status: pass}
+      - kind: other
+        ref: "Plan 01-17 evidence structural checks 9/9 and protected hashes 181/181"
+        status: pass
   - id: D2
     description: Independent authority judgment and reserved human scope decision
     human_judgment: true
     rationale: "No explicit original-MC68000 4AFC saved-PC authority or qualified capture defeats the competing interpretation; assumption requires explicit approval."
     verification:
-      - {kind: other, ref: "Plan 01-17 adjudication binding/preservation checks 8/8", status: pass}
+      - kind: other
+        ref: "Plan 01-17 adjudication binding/preservation checks 8/8"
+        status: pass
 ---
 
 # Phase 01 Plan 17: Bounded ILLEGAL authority search Summary

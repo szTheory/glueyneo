@@ -66,7 +66,7 @@ The local repository began with preparation only. No remote repository, hosted C
 - **Delivery:** Branches/PRs, independent review, current-revision required checks, protected green main and qualifying automatic merges/releases under standing user authorization. No bypasses or stale check approvals. Keep one local CI entrypoint in parity with hosted workflows when CI is introduced; stage complete, traceable releases before publication.
 - **Privacy/security:** No personal paths, private emails, machine identifiers, private account/repository URLs, credentials, commercial media or private captures in tracked content or release artifacts. Use established public/noreply author identity. Local automation may use ignored .env.local; CI secrets and nonsecret variables stay distinct. Other research repositories are read-only.
 - **Cost/clarity:** Small concrete modules, readable control flow and proportionate tests. Measure CI critical path/runner-minutes and bound parallelism; preserve cold paths. Optimize demonstrated bottlenecks rather than construct speculative frameworks.
-- **Planning:** Detail the current deliverable, outline the next milestone and keep the longer horizon revisable. Pause between named GSD steps for user direction and model selection. Apply METHODOLOGY.md to discussion and dependency decisions. Ship a truthful small alpha without allowing automation setup to displace emulation.
+- **Planning:** Detail the current deliverable, outline the next milestone and keep the longer horizon revisable. Pause between named GSD steps for user direction and model selection. Apply METHODOLOGY.md to discussion, dependency choices and shift-left verification. Ship a truthful small alpha without allowing automation setup to displace emulation.
 
 ## Key Decisions
 
@@ -81,6 +81,7 @@ The local repository began with preparation only. No remote repository, hosted C
 | PROJECT-D-27–33: Source-qualified diagnostics and measurement before optimization | Prevents correlated oracle errors and unsupported performance claims | — No baseline measured |
 | PROJECT-D-34–40: Small CI, reviewed PRs, release-please and complete draft publication | Makes frequent delivery repeatable while binding artifacts to tested commits | — Remote authority/event qualification pending |
 | PROJECT-D-41–44: One current contract and rolling milestones | Preserves provenance without freezing speculative designs | — Adopted for planning; implementation unverified |
+| PROJECT-D-45: Shift-left automated acceptance; human handoff only for irreducibly human or external evidence | Removes repeat UAT toil while keeping unknowns honest and CI proportional | — Default for planning and verification; apply per-phase |
 
 ## Evolution
 

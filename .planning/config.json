@@ -51,8 +51,8 @@
     "tdd_mode": false,
     "ui_review": false,
     "_auto_chain_active": false,
-    "build_command": "cmake --build build/cpu",
-    "test_command": "ctest --test-dir build/cpu -L cpu --output-on-failure --no-tests=error"
+    "build_command": "cmake --preset owned-debug && cmake --build --preset owned-debug",
+    "test_command": "ctest --preset owned-debug"
   },
   "ship": {
     "pr_body_sections": [

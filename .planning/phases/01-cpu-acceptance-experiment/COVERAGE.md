@@ -1,4 +1,4 @@
-No external API integration: the current gap scope builds a private in-process owned C CPU and local harness; detector signals such as “CPU API,” “SDK integration,” and “external API integration” refer to internal boundaries or general product language, not a vendor service or endpoint. The deterministic scan was refreshed on 2026-10-03 across current Phase 01 plans; current source coverage and the F14-03 plan split are in 01-GAP-COVERAGE.md.
+No external API integration: Phase 01 builds a private C CPU and local harness; API/SDK terms refer to internal boundaries, not vendor services or endpoints.
 
 # Phase 1 Source Coverage
 

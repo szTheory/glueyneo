@@ -5,10 +5,10 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: ready_for_verification
-stopped_at: Completed 01-21-PLAN.md; Phase 01 incomplete/GAPS_FOUND; next $gsd-verify-work 01
-last_updated: "2026-10-03T21:26:05.677Z"
+stopped_at: Phase 01 automated UAT complete (39/39); Phase 01 incomplete/GAPS_FOUND; next $gsd-plan-phase 01 --gaps
+last_updated: "2026-10-03T23:23:37Z"
 last_activity: 2026-10-03
-last_activity_desc: Plan 01-21 complete; exact candidate gates pass; Phase 01 incomplete/GAPS_FOUND pending separate verification.
+last_activity_desc: Phase 01 UAT automated at 39/39; current canonical verification remains GAPS_FOUND; next plan the remaining gaps.
 state_head: 1034e058c23e129846619aaeccdf347d1eea7ece
 progress:
   total_phases: 3
@@ -22,7 +22,7 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-02)
+See: .planning/PROJECT.md (updated 2026-10-03)
 
 **Core value:** Trustworthy Neo Geo emulation that other software can embed easily.
 **Current focus:** Phase 01 — CPU acceptance experiment
@@ -32,8 +32,8 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 
 Phase: 01 (CPU acceptance experiment) — OPEN / GAPS_FOUND
 Plan: 21 of 21
-Status: Plan 01-21 complete; ready for separate phase verification
-Last activity: 2026-10-03 — Plan 01-21 final exact independent source/security/receipt gates pass after preserved derived recovery. Next: `$gsd-verify-work 01`.
+Status: Plan 01-21 complete; Phase 01 UAT complete with 39/39 automated results; phase verifier remains GAPS_FOUND.
+Last activity: 2026-10-03 — Re-ran the owned-core Debug, Release, ASan/UBSan and TSan lanes (52/52 CTests), Python contract/acceptance checks (54/54 normal and optimized), and exact receipt checks. UAT required no human confirmation. Next: `$gsd-plan-phase 01 --gaps`.
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -42,6 +42,8 @@ GSD's frontmatter `progress.completed_plans` counts matching summary files and i
 Historical task-level evidence exists for CPU-01 through CPU-05 (5/27 v1 requirements), but the later source review disputes clean backend admission. The current verification is `gaps_found`; Phase 1 remains open and Phase 2 stays gated.
 
 Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending current admission; the full verifier refused grammar preflight without concluding all four behaviors failed. CPU-05 then awaited the Musashi decision. Current consolidated CPU-05 remains Pending for the owned-core decision; both original Musashi attempts remain consumed and no further adaptation is authorized.
+
+Shift-left verification preference (PROJECT-D-45): deterministic acceptance should be automated at the earliest useful test seam, with CI added only for recurring value. Current owned-core acceptance has a completed machine-evidenced UAT; original-silicon 0x4AFC saved PC remains explicitly unknown and the candidate remains not admitted. See METHODOLOGY.md and 01-UAT.md.
 
 ## Performance Metrics
 
@@ -158,6 +160,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-03T21:26:05.638Z
-Stopped at: Completed 01-21-PLAN.md; Phase 01 incomplete/GAPS_FOUND; next $gsd-verify-work 01
+Last session: 2026-10-03T23:23:37Z
+Stopped at: Phase 01 automated UAT complete (39/39); Phase 01 remains incomplete/GAPS_FOUND; next $gsd-plan-phase 01 --gaps
 Resume file: None

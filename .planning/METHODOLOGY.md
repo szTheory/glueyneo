@@ -89,6 +89,49 @@ source identity, applicable tests and an update strategy.
   CI entrypoint and check its workflow parity. Add content scanning before
   public artifacts, and state the scanner's known blind spots.
 
+## Shift-left verification and minimal human handoff
+
+Default to zero human UAT when deterministic evidence can establish the
+acceptance criteria. For each phase, map each observable claim to the earliest
+useful check: boundary/unit tests, public API or module-seam tests, integration
+and headless end-to-end tests, then package/startup smoke tests. Add regression
+tests for reproducible defects and run relevant checks against the exact current
+revision during execution or verification. A green command is evidence only
+when its assertions directly cover the claim and its input, configuration,
+oracle, denominator and revision are recorded.
+
+Describe automated acceptance in plans before implementation and in SUMMARY
+`coverage` entries after execution. Keep coverage YAML in the installed
+classifier's supported form and run `gsd_run query uat.classify-coverage` before
+phase verification; normalize formatting errors without changing historical
+evidence. Keep current-revision machine evidence separate from historical
+receipts and from hardware truth. An unavailable
+oracle, physical measurement, private credential/account, legal right, external
+approval or genuinely subjective judgment remains `unknown`, `blocked` or
+human-needed as appropriate; never convert it to a pass to avoid a handoff.
+State the narrow unresolved claim and concrete evidence needed, then continue
+independent work.
+
+Add a check to local CI or hosted CI only when it prevents a recurring class of
+fault or materially improves repeatability. Prefer one local entrypoint shared
+with CI; avoid duplicate lanes and disproportionate runner cost. Preserve cold
+build/package/startup paths where they catch distinct failures, and measure
+critical path and runner-minutes before expanding CI.
+
+During verify-work, auto-resolve a UAT row only from passing deterministic
+evidence that directly covers it at the current relevant source identity. Do
+not ask the user to confirm machine-observable results already established by
+that evidence. Hand off only the residual human-only checks or true blockers.
+This preference does not remove the separate pause after each named GSD step
+for review and model selection. In the installed OpenGSD 1.14.0 configuration,
+`workflow.human_verify_mode` controls checkpoint timing (`mid-flight` or
+`end-of-phase`); it is not an off switch for verification. Keep the current
+end-of-phase setting and satisfy the preference through evidence and coverage,
+not by disabling a gate or relabeling an unknown as passed. Check command
+support against the installed GSD runtime when workflow prose and the CLI
+disagree; record the supported validation path instead of repeating a rejected
+flag.
+
 ## Decision namespaces
 
 Use stable prefixes in cross-document references: `PROJECT-D-##` for current
