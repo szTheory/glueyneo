@@ -23,8 +23,8 @@
   ],
   "source_hashes": {
     "experiments/owned_cpu/CMakeLists.txt": "990848e89ffbff684df06ba60414db7722078aed92e4c3431a96039f31b585a3",
-    "experiments/owned_cpu/cpu.c": "8ac6ded7859184651f6eb3fff8a87c073f8e24a98d66175b64c3d86f69cbd15f",
-    "experiments/owned_cpu/cpu.h": "afdc50cbfdce47cdb17f881fed6fe47b72d919e3220b9c599f6262f868d50eee",
+    "experiments/owned_cpu/cpu.c": "b03d3458c99012e7d20a21b408ea1b5e72ae4fa6ac2f36ac5078d349b0d953b8",
+    "experiments/owned_cpu/cpu.h": "df547f6291c6085eda4c8a195c16f46296c0ae91beae2e6daa9422733c20eedc",
     "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
     "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c",
     "tests/owned_cpu/cold.py": "4f0687b793cb04a4c61b31dc917ec7d08233e9a272bf2c0e41b274d06d604f84",
@@ -33,15 +33,15 @@
     "tests/owned_cpu/test_cold.c": "e2bcb33eea1a24cdc8c0a5340928e4b5d3705b4f0649b6299c370d5560e26d63",
     "tests/owned_cpu/test_diagnostic.c": "a3d7b2e60f2f0e4fd49042b069dc8729a268816c8bbfd42bfa3a34ed3121937a",
     "tests/owned_cpu/test_faults.c": "71e09309af7c556b907563229ae6e176958ee91dbe7ddad5ceff124fabe071fa",
-    "tests/owned_cpu/test_inventory.py": "dc6f4e6e00079165009e1c9a06ff5d983395ce9e778432ddfa5b2e401e0d5ba7",
+    "tests/owned_cpu/test_inventory.py": "247cf3edf0bb528b9fc6a3198846f7e759f1b147c5b1807761ad9a4c29af383f",
     "tests/owned_cpu/test_isolation.c": "35a5a515e1df3798bcae4a190387e32c4ea6ce6a0aa2ac628789111d85d7e155",
-    "tests/owned_cpu/test_semantics.c": "33102065bd511e8f5721b5d645b72cc00cad1ef98bd46ef99324fc1d2c123301",
-    "tests/owned_cpu/test_state.c": "25b12a79f08049cd7eb0bdf8af2f97ca74ba1798184397bccc90fa1cff308b31",
-    "tests/owned_cpu/test_timing.c": "7747995fa198148e941b84130a409cc2a4a9ce688ec5cd64b5f7ccd24fc3b0e4",
+    "tests/owned_cpu/test_semantics.c": "871a7ff936d0a38cccba0a0e601a90bac37377f4fc62d2e687b8e5b76316e25f",
+    "tests/owned_cpu/test_state.c": "b8ceb6be17b209f661f5a55699460776f879f78dad8e395c9f973e6502edaae1",
+    "tests/owned_cpu/test_timing.c": "606f7c2d2b08c368a65def9b25b0f36eb9122f0e751bd37c9ae5666d5493bbce",
     "third_party/unity/src/unity.c": "a6cc4b143075a03317d72c760b5ed67a4a12eeda1242f575464ad23f34042275",
     "third_party/unity/src/unity.h": "b30ba4db1e0be1a1f6c862d359d73c91025a114977e41d3dad17103363804334",
     "third_party/unity/src/unity_internals.h": "35bffad23ebc533977291e7a848c646027513572268fbfa9bd03d5ec21ee818a",
-    "tools/owned_cpu/inventory.py": "8ac89bc33f5169f9095ab97d81f46b287a8bec165e8eec44e28a4e08129b7e76"
+    "tools/owned_cpu/inventory.py": "763785aef1b7497bcabaf304bcaeee2bbeadba1e573ab1e9b2b6e228ff34a0bf"
   },
   "build_contract": {
     "language": "C17, required, C extensions disabled",
@@ -1241,11 +1241,16 @@
       "pending level-7 edge after pin deassertion",
       "IRQ entry",
       "TRAP entry",
-      "ILLEGAL entry",
+      "canonical unsupported rejection (P01-C-14); six repeatable fresh-owner calls",
       "privilege exception entry",
       "address-error entry",
       "RTE completion"
     ],
     "compatibility_limit": "same compiled source build only; no public ABI, cross-build compatibility, durable snapshot, replay or save format is provided"
+  },
+  "candidate_reconciliation": {
+    "decision": "P01-C-14",
+    "hardware_saved_pc": "unknown per P01-C-13",
+    "prior_audit_context": "Historical dispositions remain dated evidence; runtime/header/state-source hashes above bind the amended candidate. No private runtime or record fields were added; rejected opcode keeps fault_pc and instruction_register, with no dispatch/exception cycles. Host bindings remain destination owned."
   }
 }

@@ -353,10 +353,18 @@ static void unsupported_modes_and_illegal_word_report_pc_and_ir(void) {
     const uint8_t guest_illegal[] = {0x4a, 0xfc};
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, reset_with_program(guest_illegal, sizeof(guest_illegal)));
     result = owned_cpu_run(cpu, UINT64_C(4));
-    TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, result.reason);
-    TEST_ASSERT_EQUAL_UINT64(34u, result.elapsed_cycles);
-    TEST_ASSERT_EQUAL_UINT64(1u, result.instructions);
-    TEST_ASSERT_EQUAL_HEX32(0u, result.pc);
+    TEST_ASSERT_EQUAL(OWNED_CPU_UNSUPPORTED_OPCODE, result.reason);
+    TEST_ASSERT_EQUAL_UINT64(0u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(0u, result.instructions);
+    TEST_ASSERT_EQUAL_HEX32(0x100u, result.pc);
+    TEST_ASSERT_EQUAL_HEX32(0x100u, result.fault_pc);
+    TEST_ASSERT_EQUAL_HEX16(0x4afcu, result.instruction_register);
+    TEST_ASSERT_EQUAL_UINT(0u, memory.write_attempts);
+    owned_cpu_observation rejected;
+    TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_observe(cpu, &rejected));
+    TEST_ASSERT_EQUAL_UINT8(0u, rejected.last_exception_vector);
+    TEST_ASSERT_EQUAL_UINT64(0u, rejected.exception_cycles);
+    TEST_ASSERT_EQUAL_HEX32(0x2000u, rejected.address_registers[7]);
 
     const uint8_t unsupported_moveq[] = {0x71, 0x00};
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, reset_with_program(unsupported_moveq, sizeof(unsupported_moveq)));

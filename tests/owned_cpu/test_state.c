@@ -46,7 +46,7 @@ typedef enum {
     CASE_PENDING_IRQ7,
     CASE_IRQ_ENTRY,
     CASE_TRAP_ENTRY,
-    CASE_ILLEGAL_ENTRY,
+    CASE_CANONICAL_UNSUPPORTED,
     CASE_PRIVILEGE_ENTRY,
     CASE_ADDRESS_ERROR_ENTRY,
     CASE_RTE
@@ -182,7 +182,7 @@ static void configure_case(state_machine *machine, state_case which) {
             }
             break;
         }
-        case CASE_ILLEGAL_ENTRY: {
+        case CASE_CANONICAL_UNSUPPORTED: {
             const uint8_t illegal[] = {0x4au, 0xfcu, 0x4eu, 0x71u,
                                        0x4eu, 0x71u, 0x4eu, 0x71u,
                                        0x4eu, 0x71u, 0x4eu, 0x71u};
@@ -262,10 +262,16 @@ static int prepare_checkpoint(state_machine *machine, state_case which) {
             result = run_one(machine);
             return result.reason == OWNED_CPU_BUDGET && result.elapsed_cycles == 44u;
         case CASE_TRAP_ENTRY:
-        case CASE_ILLEGAL_ENTRY:
         case CASE_ADDRESS_ERROR_ENTRY:
             result = run_one(machine);
             return result.reason == OWNED_CPU_BUDGET && result.pc == UINT32_C(0x180);
+        case CASE_CANONICAL_UNSUPPORTED:
+            result = run_one(machine);
+            return result.reason == OWNED_CPU_UNSUPPORTED_OPCODE &&
+                   result.pc == UINT32_C(0x100) && result.fault_pc == UINT32_C(0x100) &&
+                   result.instruction_register == UINT16_C(0x4afc) &&
+                   result.elapsed_cycles == 0u && result.instructions == 0u &&
+                   machine->event_count == 1u && machine->events[0].write == 0u;
         case CASE_PRIVILEGE_ENTRY:
             if (owned_cpu_test_seed_execution_state(machine->cpu, 0u,
                                                       UINT32_C(0x2800),
@@ -406,6 +412,17 @@ static void continue_scenario(state_case which, omission_kind omission) {
         clear_events(&destination);
         owned_cpu_run_result expected = run_one(&baseline);
         owned_cpu_run_result actual = run_one(&destination);
+        if (which == CASE_CANONICAL_UNSUPPORTED) {
+            TEST_ASSERT_EQUAL(OWNED_CPU_UNSUPPORTED_OPCODE, actual.reason);
+            TEST_ASSERT_EQUAL_HEX32(0x100u, actual.pc);
+            TEST_ASSERT_EQUAL_HEX32(0x100u, actual.fault_pc);
+            TEST_ASSERT_EQUAL_HEX16(0x4afcu, actual.instruction_register);
+            TEST_ASSERT_EQUAL_UINT64(0u, actual.elapsed_cycles);
+            TEST_ASSERT_EQUAL_UINT64(0u, actual.instructions);
+            TEST_ASSERT_EQUAL_UINT(1u, destination.event_count);
+            TEST_ASSERT_EQUAL_UINT8(0u, destination.events[0].write);
+            TEST_ASSERT_EQUAL_HEX32(0x100u, destination.events[0].address);
+        }
         if (omission == OMIT_NONE) {
             TEST_ASSERT_TRUE_MESSAGE(run_result_equal(&expected, &actual),
                                      "run result, elapsed, overshoot and stop reason continue identically");
@@ -444,7 +461,7 @@ static void every_named_boundary_restores_and_continues_in_a_fresh_owner(void) {
     static const char *const names[STATE_CASE_COUNT] = {
         "reset_debt", "diagnostic_MOVEQ", "diagnostic_ADDQ", "diagnostic_MOVE_store",
         "STOP", "masked_IRQ", "IRQ7_edge_pending_after_deassertion", "IRQ_entry",
-        "TRAP_entry", "ILLEGAL_entry", "privilege_entry", "address_error_entry", "RTE"};
+        "TRAP_entry", "canonical_unsupported", "privilege_entry", "address_error_entry", "RTE"};
     for (unsigned which = 0u; which < STATE_CASE_COUNT; ++which) {
         continue_scenario((state_case)which, OMIT_NONE);
     }
