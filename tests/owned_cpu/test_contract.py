@@ -1,6 +1,7 @@
 """Controls for the proposed owned-core contract, budget, and frozen history."""
 
 import json
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -14,6 +15,8 @@ class ContractControls(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory(prefix="owned-cpu-contract-test-")
         self.root = Path(self.temporary.name)
         contract._copy_subject(self.root)
+        target = self.root / "experiments/owned_cpu/illegal-reconciliation.json"
+        shutil.copyfile(contract.ROOT / "experiments/owned_cpu/illegal-reconciliation.json", target)
 
     def tearDown(self):
         self.temporary.cleanup()
@@ -23,6 +26,12 @@ class ContractControls(unittest.TestCase):
 
     def write_ledger(self, ledger):
         contract._write_json(self.root / contract.LEDGER_PATH, ledger)
+
+    def test_current_candidate_requires_active_amendment(self):
+        record = json.loads((self.root / "experiments/owned_cpu/illegal-reconciliation.json")
+                            .read_text(encoding="utf-8"))
+        self.assertIn("candidate_contract_amendments", record,
+                      "P01-C-14 active candidate must carry its amendment")
 
     def test_frozen_subject_and_pending_gate_validate(self):
         contract.check_contract(self.root)
