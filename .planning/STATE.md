@@ -5,11 +5,11 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: GAPS_FOUND
-stopped_at: "Phase 01 discussion complete; P01-C-14 excludes exact 0x4AFC from the candidate subset. Next: -plan-phase 01 --gaps."
-last_updated: "2026-10-03T17:04:08.258Z"
+stopped_at: "Phase 01 discussion complete; P01-C-14 excludes exact 0x4AFC from the candidate subset. Next: $gsd-plan-phase 01 --gaps."
+last_updated: "2026-10-03T17:04:36.630Z"
 last_activity: 2026-10-03
 last_activity_desc: Phase 01 discussion recorded P01-C-14, excluding exact 0x4AFC from the candidate subset while preserving unknown original-silicon behavior; same-phase gap planning is next.
-state_head: 532b5565330ca15fc8f59ae2ff57abc9072bcf7e
+state_head: f051dedef22caa2afce21a25c89b3a18d78fb5aa
 progress:
   total_phases: 3
   completed_phases: 0
@@ -148,6 +148,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-03T17:04:08.233Z
-Stopped at: Phase 01 discussion complete; P01-C-14 excludes exact 0x4AFC from the candidate subset. Next: -plan-phase 01 --gaps.
+Last session: 2026-10-03T17:04:36.604Z
+Stopped at: Phase 01 discussion complete; P01-C-14 excludes exact 0x4AFC from the candidate subset. Next: $gsd-plan-phase 01 --gaps.
 Resume file: .planning/phases/01-cpu-acceptance-experiment/01-CONTEXT.md
