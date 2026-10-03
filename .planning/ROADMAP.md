@@ -38,7 +38,7 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit owned-core decision, commands and results against finite effort/churn limits fixed before implementation; failed work and findings are preserved, actionable issues receive budgeted repair, and resource thresholds trigger review/replanning rather than automatic backend rejection. (CPU-05)
 
-**Plans**: 19/21 execution-complete. Plan 01-15 preserved the original contract and documented the unresolved $100/$102 saved-PC interpretation; Plan 01-16 refreshed identities, collected fresh four-lane observations and sealed unqualified/GAPS_FOUND. Plan 01-17 reached an answered `checkpoint:decision` but remains incomplete; its stronger fault-PC derivation does not settle original MC68000 silicon, as preserved by P01-C-13. P01-C-14 selects a candidate-only boundary: exclude exact `0x4AFC` from the qualified subset and report it unsupported, without a silicon claim. Four additive gap plans (01-18–01-21) now cover that boundary, fresh qualification, independent review and security reassessment. All 21 plans pass structural validation; the independent checker and 132-command probes reported no blockers or warnings, and the GSD post-planning gate covers all 5 requirements and 14 decisions. Plan 01-18 now implements the exact candidate rejection and validated additive amendment; timing25/25 and contract23/23 in both Python modes pass. Plan 01-19 now supplies 13/13 continuation boundaries, both exact negative controls and 21/21 receipt/review/security regressions in both Python modes. Plan 01-20 now supplies source-bound amended qualification: Debug, Release/O2, ASan+UBSan and optional TSan pass 13/13 CTests each, with immutable history and unqualified/GAPS_FOUND disposition. Plan 01-17 remains incomplete; Plan 01-21 remains unexecuted. F14-03/T-01-15-03 remain open, backend admission is unresolved, CPU-01–05 remain Pending, and Phase 02 remains gated. Next command: `$gsd-execute-phase 01 --gaps-only`. See `01-17-SUMMARY.md`, `01-17-ILLEGAL-ADJUDICATION.md`, `01-CONTEXT.md`, and `01-GAP-COVERAGE.md` for the evidence and current decision.
+**Plans**: 20/21 execution-complete. Plan01-17 remains incomplete at its answered checkpoint; original-silicon saved PC stays unknown. Plans01-18–01-21 implemented the owner-approved exact0x4AFC unsupported candidate boundary, direct controls, immutable source qualification and independent review/security. Plan01-20's four lanes pass13/13 CTests each; Plan01-21's final exact deferred seal passes after preserving and recovering stale derived metadata. F14-03/T-01-15-03 are reconciled only for candidate scope, with exact final T-01-43 binding verified. CPU-01–05 remain Pending, Phase01 incomplete/GAPS_FOUND, Phase02 gated. Next separate command: `$gsd-verify-work 01`. Historical evidence and saved-PC uncertainty remain unchanged.
 
 Plans:
 - [x] 01-17-PLAN.md (answered checkpoint; incomplete)
@@ -49,11 +49,11 @@ Plans:
 **Wave 19** *(complete)*
 - [x] 01-19-PLAN.md
 
-**Wave 20** *(ready; follows completed Wave 19)*
+**Wave 20** *(complete)*
 - [x] 01-20-PLAN.md
 
-**Wave 21** *(blocked on Wave 20 completion)*
-- [ ] 01-21-PLAN.md
+**Wave 21** *(complete; admission deferred)*
+- [x] 01-21-PLAN.md — Tasks1/2 passed; final post-audit seal failed, T-01-43 HIGH/open. Next: `$gsd-plan-phase 01 --gaps`.
 
 - [x] 01-15-PLAN.md
 - [x] 01-16-PLAN.md
@@ -174,7 +174,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 20/21 | In Progress|  |
+| 1. CPU acceptance experiment | v0.1 | 20/21 execution-complete; 21 summaries | In Progress | |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
