@@ -5,11 +5,12 @@ status: validated
 nyquist_compliant: true
 wave_0_complete: true
 created: "2026-10-01"
+updated: "2026-10-03"
 ---
 
 # Phase 01 — Validation Strategy
 
-This audit reconciles the four executable plans with the implemented tests and retained Phase 01 evidence. All eight plan tasks and CPU-01 through CPU-05 have automated coverage. No tests were rerun during this audit.
+The original map below records the historical Plan 01-01–01-04 candidate evidence. The current plan set and its per-task commands are covered by the 2026-10-03 audit at the end of this file. Validation coverage does not establish backend admission; CPU-01–05 remain Pending while F14-03 is unresolved.
 
 ## Test Infrastructure
 
@@ -82,3 +83,39 @@ No physical hardware, commercial media or account action is required for this lo
 | Tests rerun during audit | 0 |
 
 The original `Pending`/`Missing` entries were stale planning metadata. The final Plan 01-04 summary records 30/30 native CTests, 8/8 ASan/UBSan tests, and 18/18 TSan tests; the retained pre-acceptance collection log records 28 native CTests before the two acceptance CTests were included. Unsupported platform and hardware claims remain explicitly outside this phase's scope.
+
+## Current Execution Validation Audit 2026-10-03
+
+The current phase plan set contains 38 tasks across 16 plans. Each task has at least one nonempty automated verification command (105 command declarations total); exact commands and failure conditions remain in each plan's `<verify>` block, and outcomes are recorded in the corresponding SUMMARY. No tests were added or rerun during this audit. The original Plan 01-01–01-06 receipts remain historical and do not qualify the owned-core admission decision.
+
+| Plan | Tasks | Automated checks per task | Validation record |
+|------|-------|---------------------------|-------------------|
+| 01-01 | 2 | 3, 2 | Historical candidate checks; not current admission evidence |
+| 01-02 | 2 | 2, 8 | Historical candidate checks; not current admission evidence |
+| 01-03 | 2 | 2, 4 | Historical candidate checks; not current admission evidence |
+| 01-04 | 2 | 4, 2 | Historical candidate decision; current rejection remains authoritative |
+| 01-05 | 3 | 2, 1, 5 | Scope/admission reconciliation recorded in SUMMARY |
+| 01-06 | 1 | 1 | Developer direction checkpoint recorded in SUMMARY |
+| 01-07 | 3 | 1, 1, 1 | Freeze/governance checks recorded in SUMMARY |
+| 01-08 | 2 | 3, 4 | Original diagnostic and negative control recorded in SUMMARY |
+| 01-09 | 2 | 2, 3 | Timing/exception checks recorded in SUMMARY |
+| 01-10 | 2 | 2, 6 | Isolation, fault and inventory checks recorded in SUMMARY |
+| 01-11 | 2 | 2, 4 | Continuation checks recorded in SUMMARY |
+| 01-12 | 4 | 1, 2, 2, 2 | Bounded repair and regression checks recorded in SUMMARY |
+| 01-13 | 3 | 1, 5, 3 | Inventory, preset and fresh-run checks recorded in SUMMARY |
+| 01-14 | 3 | 1, 1, 1 | Independent review and unqualified seal recorded in SUMMARY |
+| 01-15 | 2 | 6, 4 | Archive/validator/timing checks passed; rule remains unresolved, so behavior repair was withheld |
+| 01-16 | 3 | 4, 1, 6 | Four fresh lanes passed 12/12 each; independent review retains F14-03 HIGH/open |
+
+### Current Owned-Core Test Evidence
+
+- Plan 01-15's normal and optimized validator suites passed 13/13 each; the direct timing target passed 23 Unity cases. These checks validate archive integrity, ledger preservation and observed fixture behavior; they do not establish the hardware saved-PC rule for `ILLEGAL` `0x4AFC`.
+- Plan 01-16's four fresh qualification lanes each passed 12/12 cases. Its final receipt checks passed, while `review-check` returned its expected blocking result for F14-03.
+- The independent primary-source review could not resolve the competing fault-PC and next-PC readings. That is a documented evidence limitation and phase blocker, not a missing test suite. No CPU requirement is promoted to complete.
+
+| Metric | Count |
+|--------|-------|
+| Current plan tasks with automated verification | 38/38 |
+| Declared automated verification commands | 105 |
+| Nyquist coverage gaps | 0 |
+| Tests rerun during this audit | 0 |
