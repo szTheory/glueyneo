@@ -65,6 +65,16 @@ def rehash(document):
 
 
 class AcceptanceControls(unittest.TestCase):
+    def test_current_profile_rejects_unknown_and_legacy_relabel(self):
+        for profile in ("unknown", "owned-p01-c14-1", None):
+            document = document_fixture()
+            record = document["collections"][0]
+            record["evidence_profile"] = profile
+            record["amendment_sha256"] = a.contract.ACTIVE_AMENDMENT_SHA256
+            rehash(document)
+            with self.subTest(profile=profile), self.assertRaises(a.EvidenceError):
+                a.verify(document, False)
+
     def test_budget_and_churn_pause_cannot_accept(self):
         good = {"status": "pass", "active_seconds": 30000, "runtime_churn_added_deleted": 1206, "test_tool_churn_added_deleted": 4538}
         a.budget_check(good)
