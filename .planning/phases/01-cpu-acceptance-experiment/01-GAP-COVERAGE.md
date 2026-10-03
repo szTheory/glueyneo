@@ -195,6 +195,96 @@ dependent qualification and review; the independent reviewer edits only
 closure. `budget-ledger.json` remains append-only across the ordered plans.
 No plan marks CPU-01–05 complete, closes Phase 01, or opens Phase 02.
 
+## P01-C-14 Additive Gap Plans — 2026-10-03
+
+Current CONTEXT/ROADMAP and owned-core source govern this four-plan addition.
+RESEARCH/PATTERNS/VALIDATION predate P01-C-14; their Musashi/empty-tree and
+canonical-ILLEGAL qualification statements are dated provenance, not the active
+candidate claim. Historical preflight was not a behavioral failure count.
+Plans 01-01–01-17 and all summaries/adjudication/source receipts remain unchanged.
+Plan 01-17 has a checkpoint summary and is not scheduled for another acquisition.
+P01-C-14 supplies the separate owner decision; P01-C-13 still preserves unknown
+original-silicon saved PC. Planning itself executes no native test or qualification.
+
+| Source | ID | Required outcome/constraint | Plan/task | Status |
+|---|---|---|---|---|
+| GOAL | story/SC1 | Reproducible C candidate and rights/source closure | 18.2,20.1–2,21.1–3 | COVERED; admission pending |
+| GOAL | SC2 | Distinct isolated/interleaved/concurrent/cold/fault-safe owners | Retained 08–14 cases,19.1,20.2,21.1 | COVERED; fresh qualification planned |
+| GOAL | SC3 | Actual bounded progress and retained exception/timing limits | 18.1,19.1–2,20.2,21.1–2 | COVERED |
+| GOAL | SC4 | Complete private state and fresh-owner continuation | 18.1,19.1,20.2,21.1 | COVERED |
+| GOAL | SC5 | Frozen resource gates, independent evidence/review/decision | 18.2,19.3,20.2,21.1–3 | COVERED; Pending |
+| REQ | CPU-01 | Exact C17 source/build/notice/host-call closure | 18.2,19.3,20.1–2,21 | COVERED; Pending |
+| REQ | CPU-02 | Independent instances/cold/failing lifecycle against isolated baselines | 19.1,20.2,21.1–2 plus retained tests | COVERED; Pending |
+| REQ | CPU-03 | Exact unsupported and retained selected event semantics | 18.1,19.1–2,20.2,21.1–2 | COVERED; Pending |
+| REQ | CPU-04 | Inventory/private identity and actual fresh continuation | 18.1,19.1,20.2,21.1–2 | COVERED; Pending |
+| REQ | CPU-05 | Unchanged active effort/churn, actual outcomes and honest closeout | 18.2,19.3,20.2,21.3 | COVERED; Pending |
+| RESEARCH | pin/source/rights/host closure | Owned authored closure and pinned Unity, no runtime dependency install | 18.1,20.1–2,21.1–2 | COVERED; obsolete Musashi implementation is historical |
+| RESEARCH | mutable/callback state and stress | Explicit owners, cold/concurrent/fault and fresh continuation | 19.1,20.2,21.1 | COVERED; existing cases retained |
+| RESEARCH | timing/exceptions/faults | Whole-event bounded time, retained IRQ/TRAP/privilege/address-error/RTE | 18.1,19.1,20.2,21.1–2 | COVERED; exact 4AFC qualification superseded by P01-C-14 |
+| RESEARCH | oracle and negative controls | Manual/fixture ancestry and exact consequential rejection control | 18.1,19.2–3,20.2,21.1 | COVERED |
+| RESEARCH | evidence/budgets/security | Exact profile/receipt histories, resource enforcement and native high blocking | 18.2,19.3,20,21 | COVERED |
+| CONTEXT | D1-01/P01-C-01 | Owned C17 diagnostic whole core | 18.1,20.2,21.1 | COVERED |
+| CONTEXT | D1-02/P01-C-02 | Preserve consumed Musashi attempts and frozen charges/caps | 18.1–2,20.2,21.3 | COVERED |
+| CONTEXT | D1-03/P01-C-03 | No unapproved imported-core adoption | 18.1,21.1 | COVERED; no comparison/adoption added |
+| CONTEXT | D1-04/P01-C-04 | C17, small tree, no public plugin ABI/framework | 18.1,19.2,20.1,21.1 | COVERED |
+| CONTEXT | D1-05/P01-C-05 | Private explicit per-instance result and state boundary | 18.1,19.1,21.1 | COVERED |
+| CONTEXT | D1-06/P01-C-06 | Fresh equivalent guests/owners and separate architectural/cycle/trace claims | 19.1,20.2,21.1 | COVERED |
+| CONTEXT | D1-07/P01-C-07 | No mixed opcode engines/live-state conversion | 18.1,21.1 | COVERED |
+| CONTEXT | D1-08/P01-C-08 | Static whole backend, no shipping selection claim | 18.1,21.1 | COVERED |
+| CONTEXT | D1-09/P01-C-09 | Exact diagnostic subset and explicit unsupported result | 18.1–2,19,20.1–2 | COVERED |
+| CONTEXT | D1-10/P01-C-10 | Concrete architecture/selected behavior, no speculative engine framework | 18.1,19.1,21.1 | COVERED |
+| CONTEXT | D1-11/P01-C-11 | Primary manual/original guest scope, no full coverage inference | 18.1,19.3,20.1,21.1 | COVERED |
+| CONTEXT | D1-12/P01-C-12 | Correlated emulator ancestry is not hardware authority | 18.1,19.3,20.1,21.1 | COVERED |
+| CONTEXT | D1-13/P01-C-13 | Original silicon PC remains unknown; exhausted search not repeated | All four, especially18/21 | COVERED; superseded only for candidate boundary |
+| CONTEXT | D1-14/P01-C-14 | Only exact4AFC excluded; zero vector/frame/dispatch/cycles, retained others | 18.1–2,19,20,21 | COVERED |
+
+### Dependency/ownership and sizing
+
+| Plan | Wave/needs | Produces | Tasks/max paths per task | Checkpoint |
+|---|---|---|---|---|
+| 01-18 | 18;01-17 evidence/answered separate claim | Runnable tracer and frozen-root additive candidate amendment | 2/5 | None; P01-C-14 already selected |
+| 01-19 | 19;01-18 private behavior/amendment | Semantics/continuation/control and receipt/review policy | 3/4 | None |
+| 01-20 | 20;01-19 current evidence profile | Current report/closure and fresh native receipt | 2/3 | None |
+| 01-21 | 21;01-20 exact qualification | Non-author source review, separate security assessment and deferred seal | 3/3 | None; genuine independent gates |
+
+Serial ordering follows shared evidence/ledger/source coupling, not arbitrary
+chaining. Reviewer owns REVIEW only; separate assessor owns SECURITY/VALIDATION;
+executor owns ledger/result writes and cannot overwrite independent judgments.
+Calibration returned factor1, appliedfalse, sample_count0, confidencelow.
+Four plans instead of the coarse default avoid tasks exceeding five paths and
+separate actual qualification from its independent judgments. Discovery is
+existing-source pattern confirmation with no new package/architecture research.
+
+### Edge-probe and hook accounting
+
+All nine supplied rows are copied as unresolved flagged assumptions in 01-18
+must_haves: CPU-01 concurrency; CPU-02/03/04 unclassified; CPU-05 boundary,
+adjacency, empty, ordering, precision. Applicable9=unresolved9+resolved0;
+unclassified3. No new acceptance predicate is invented for these flags.
+Ordinary direct candidate tests implement P01-C-14, not automatic probe resolution.
+
+No external API integration: this scope is the existing private in-process C
+core and local harness. Preserve COVERAGE.md's declaration; SDK/API prose does
+not introduce an external vendor capability. Core/backend identity: no-change;
+historical Plan01-17 “additional applicable original-MC68000 evidence” explains
+the pluralization false positive. No platform/backend/tenant/truth authority,
+ORM/schema work, UI, new dependency or public ABI enters the plan set.
+
+### Limits and exact historical protection
+
+CONTRACT.md stays byte-identical at original code_start digest. The existing
+reconciliation's frozen_contract archive and every old key/value remain intact;
+an additive candidate_contract_amendments array records only authorized scope
+supersession, not a silicon decision or pre-freeze rewrite. New receipts use an
+explicit current profile and amendment digest; old collections retain their
+own denominator/profile and bytes. Plan01-17 evidence/adjudication/summary are
+read-only. F14-03/T-01-15-03 stay HIGH/open during planning and until actual
+reconciliation, fresh qualification, independent review and security gates pass.
+Deferred-admission sealing keeps CPU-01–05 Pending, Phase01 open/GAPS_FOUND and
+Phase02 gated even if the candidate discrepancy is later dispositioned. A
+separate current phase-goal verification is required. Deferred context ideas
+and later-phase work remain excluded, not missing source items.
+
 All nine previously unresolved spec-less probe rows remain unresolved and
 flagged. Their meaning and evidence need are unchanged; duplicating flags in
 the dependent plan does not add criteria or resolve any row. Historical Plan

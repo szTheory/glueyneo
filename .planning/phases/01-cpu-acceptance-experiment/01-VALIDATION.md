@@ -123,3 +123,37 @@ The user selected P01-C-13 after Plan 01-17's bounded acquisition and independen
 | Declared automated verification commands | 105 |
 | Nyquist coverage gaps | 0 |
 | Tests rerun during this audit | 0 |
+
+## P01-C-14 Planning Reconciliation — 2026-10-03
+
+The owner separately selected P01-C-14 after preserve-unknown P01-C-13.
+P01-C-14 changes only the owned candidate's exact-0x4AFC supported boundary;
+original-silicon saved PC remains unknown. All previous audit sections and
+denominators are preserved as historical evidence. Their covered/validated
+labels do not qualify the changed candidate. Plans 01-18–01-21 add ten tasks;
+their automated commands and adjacent failure conditions are declarations for
+execution, with no native build/test, qualification, review or security audit
+performed by this planning reconciliation. Existing infrastructure supplies the
+commands; no scaffolding wave, package, external API or schema push is needed.
+
+| Task | Planned evidence | Threat refs | Status |
+|---|---|---|---|
+| 01-18-01 | Direct exact unsupported PC/IR/trace/counters and retained timing | T-01-29,T-01-32 | PLANNED |
+| 01-18-02 | Immutable root/archive, additive amendment and normal/optimized controls | T-01-30,T-01-31 | PLANNED |
+| 01-19-01 | Semantic/fresh-owner continuation and complete inventory | T-01-33 | PLANNED |
+| 01-19-02 | One-case exact unsupported-status negative control | T-01-34 | PLANNED |
+| 01-19-03 | Legacy/current profiles, current review, security binding/deferred seal | T-01-35,T-01-36 | PLANNED |
+| 01-20-01 | Current candidate documentation and licensed source closure | T-01-37,T-01-39 | PLANNED |
+| 01-20-02 | Exact fresh native/sanitizer qualification and preserved histories | T-01-38,T-01-40 | PLANNED |
+| 01-21-01 | Independent exact-current source/control review | T-01-41 | PLANNED |
+| 01-21-02 | Independent ASVS L1 high-blocking reassessment and actual task map | T-01-42,T-01-15-03 | PLANNED |
+| 01-21-03 | Final exact review/security/receipt/accounting, admission deferred | T-01-43,T-01-44 | PLANNED |
+
+All nine supplied specless assumption flags remain unresolved (including
+three unclassified rows); planning creates no resolution or new acceptance
+predicate. F14-03/T-01-15-03 remain HIGH/open until actual reconciliation,
+fresh qualification, independent review and security gates pass. CPU-01–05
+remain Pending, Phase01 open/GAPS_FOUND, Phase02 gated. The earlier Nyquist
+sign-off is historical, not a fresh audit of these changed claims. Execution's
+01-21-02 must append actual commands, denominators and outcomes without
+overwriting these planning declarations or the retained audits.

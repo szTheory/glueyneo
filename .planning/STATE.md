@@ -5,15 +5,15 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: GAPS_FOUND
-stopped_at: "Phase 01 discussion complete; P01-C-14 excludes exact 0x4AFC from the candidate subset. Next: $gsd-plan-phase 01 --gaps."
-last_updated: "2026-10-03T17:04:36.630Z"
+stopped_at: "Phase 01 gap planning complete and independently checked. Next: $gsd-execute-phase 01 --gaps-only."
+last_updated: "2026-10-03T17:53:04.241Z"
 last_activity: 2026-10-03
-last_activity_desc: Phase 01 discussion recorded P01-C-14, excluding exact 0x4AFC from the candidate subset while preserving unknown original-silicon behavior; same-phase gap planning is next.
-state_head: f051dedef22caa2afce21a25c89b3a18d78fb5aa
+last_activity_desc: Four additive Phase 01 gap plans passed independent plan checking; implementation and execution evidence remain pending.
+state_head: 7726c470aca1293c95d5995d40f6f350564acf1f
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 17
+  total_plans: 21
   completed_plans: 17
   percent: 0
 ---
@@ -30,14 +30,14 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment)
-Plan: 17 of 17 (checkpoint; not complete)
+Phase: 01 (CPU acceptance experiment) — READY TO EXECUTE
+Plan: 18 of 21 is next; Plans 01-18 through 01-21 are planned and unexecuted.
 Status: GAPS_FOUND
-Last activity: 2026-10-03 — gap planning returned PLANNING INCONCLUSIVE with no Plan 01-18; preserve-unknown remains active and the earlier execute pointer is marked superseded.
+Last activity: 2026-10-03 — Plans 01-18 through 01-21 passed the independent checker; all implementation, qualification, review and phase-verification work remains pending.
 
 Progress: [░░░░░░░░░░] 0%
 
-GSD's frontmatter `progress.completed_plans` counts summary files and includes the Plan 01-17 checkpoint summary. It is not the execution-completion count: 16/17 plans are complete; Plan 01-17 remains at an answered checkpoint.
+GSD's frontmatter `progress.completed_plans` counts matching summary files and is 17, including Plan 01-17's answered checkpoint summary. It is not the execution-completion count: Plans 01-01 through 01-16 are complete; Plan 01-17 remains incomplete at its answered checkpoint, and Plans 01-18 through 01-21 have not executed.
 
 Historical task-level evidence exists for CPU-01 through CPU-05 (5/27 v1 requirements), but the later source review disputes clean backend admission. The current verification is `gaps_found`; Phase 1 remains open and Phase 2 stays gated.
 
@@ -47,7 +47,7 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 
 **Velocity:**
 
-- Total plans in phase: 17; completed: 16; Plan 01-17 is at an answered decision checkpoint but remains incomplete
+- Total plans in phase: 21; execution-complete: 16; Plan 01-17 remains at an answered decision checkpoint; Plans 01-18 through 01-21 are planned only
 - Average recorded duration: 40.4min across the 16 completed plans
 - Total recorded execution time: 646min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
 
@@ -55,7 +55,7 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 16 of 17 | 646min | 40.4min |
+| 01 | 16 of 21 | 646min | 40.4min |
 
 **Recent Trend:**
 

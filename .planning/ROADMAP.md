@@ -38,10 +38,18 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit owned-core decision, commands and results against finite effort/churn limits fixed before implementation; failed work and findings are preserved, actionable issues receive budgeted repair, and resource thresholds trigger review/replanning rather than automatic backend rejection. (CPU-05)
 
-**Plans**: 16/17 plans complete. Plan 01-15 preserved the original contract and documented the unresolved $100/$102 saved-PC interpretation; Plan 01-16 refreshed identities, collected fresh four-lane observations and sealed unqualified/GAPS_FOUND. Plan 01-17 completed its bounded evidence tasks and reached an ambiguous `checkpoint:decision`; the fault-PC derivation is stronger but not conclusive for original MC68000 silicon. P01-C-13 preserved that hardware uncertainty. A later Phase 01 discussion recorded P01-C-14: exclude only exact `0x4AFC` from the owned candidate's qualified subset and report it as unsupported, without making a silicon claim. This selects a candidate boundary; it does not close F14-03 or T-01-15-03, accept the backend, complete Phase 01, or admit Phase 02. Plan 01-17 remains incomplete at its checkpoint. The earlier `$gsd-plan-phase 01 --gaps` returned `PLANNING INCONCLUSIVE` before P01-C-14; the new boundary now warrants same-phase gap planning for contract/runtime/test/evidence reconciliation, fresh qualification, independent review, and security reassessment. Next command: `$gsd-plan-phase 01 --gaps`. Phase 01 remains open / GAPS_FOUND; CPU-01–05 remain Pending and Phase 02 remains gated. See `01-17-SUMMARY.md`, `01-17-ILLEGAL-ADJUDICATION.md`, and `01-CONTEXT.md` for the preserved ambiguity and current decision.
+**Plans**: 16/21 execution-complete. Plan 01-15 preserved the original contract and documented the unresolved $100/$102 saved-PC interpretation; Plan 01-16 refreshed identities, collected fresh four-lane observations and sealed unqualified/GAPS_FOUND. Plan 01-17 reached an answered `checkpoint:decision` but remains incomplete; its stronger fault-PC derivation does not settle original MC68000 silicon, as preserved by P01-C-13. P01-C-14 selects a candidate-only boundary: exclude exact `0x4AFC` from the qualified subset and report it unsupported, without a silicon claim. Four additive gap plans (01-18–01-21) now cover that boundary, fresh qualification, independent review and security reassessment. All 21 plans pass structural validation; the independent checker and 132-command probes reported no blockers or warnings, and the GSD post-planning gate covers all 5 requirements and 14 decisions. No implementation or tests ran. Plan 01-17 remains incomplete; Plans 01-18–01-21 remain unexecuted. F14-03/T-01-15-03 remain open, backend admission is unresolved, CPU-01–05 remain Pending, and Phase 02 remains gated. Next command: `$gsd-execute-phase 01 --gaps-only`. See `01-17-SUMMARY.md`, `01-17-ILLEGAL-ADJUDICATION.md`, `01-CONTEXT.md`, and `01-GAP-COVERAGE.md` for the evidence and current decision.
 
 Plans:
-- [ ] 01-17-PLAN.md
+- [ ] 01-17-PLAN.md (answered checkpoint; incomplete)
+**Wave 18** *(gap closure; follows the answered Wave 17 checkpoint)*
+- [ ] 01-18-PLAN.md
+**Wave 19** *(blocked on Wave 18 completion)*
+- [ ] 01-19-PLAN.md
+**Wave 20** *(blocked on Wave 19 completion)*
+- [ ] 01-20-PLAN.md
+**Wave 21** *(blocked on Wave 20 completion)*
+- [ ] 01-21-PLAN.md
 
 - [x] 01-15-PLAN.md
 - [x] 01-16-PLAN.md
@@ -110,11 +118,11 @@ Plans:
 
 - [x] 01-16-PLAN.md — Exact identities and fresh lanes independently reviewed; F14-03 HIGH/open, sealed unqualified/GAPS_FOUND.
 
-**Wave 17** *(F14-03 gap closure; depends on Wave 16; primary-source adjudication)*
+**Wave 17** *(F14-03 gap closure; depends on Wave 16; answered decision checkpoint, still incomplete)*
 
-- [ ] 01-17-PLAN.md — Acquire and independently adjudicate additional applicable original-MC68000 evidence; preserve HIGH/open and stop at a decision checkpoint if unresolved. The owner preserved hardware uncertainty (P01-C-13), then selected a candidate-only `0x4AFC` unsupported boundary in separate discussion (P01-C-14); gap planning must reconcile the changed claim without rewriting this evidence record.
+- [ ] 01-17-PLAN.md — Acquire and independently adjudicate additional applicable original-MC68000 evidence; preserve HIGH/open and stop at a decision checkpoint if unresolved. The owner preserved hardware uncertainty (P01-C-13); P01-C-14 later selected a candidate-only `0x4AFC` unsupported boundary. Plans 01-18–01-21 reconcile that claim without rewriting this evidence record.
 
-Planning guidance: Plans 01-07–01-14 completed the owned-core experiment and sealed an explicit unqualified outcome; their evidence does not complete Phase 01 requirements. Plans 01-15–01-17 investigated F14-03; Plan 01-17 remains evidence-only and incomplete at its answered checkpoint. P01-C-14 authorizes planning the candidate-only exclusion of exact `0x4AFC`; the saved-PC hardware question remains unknown and outside that candidate claim. Preserve all Musashi history and consumed attempts. The next `$gsd-plan-phase 01 --gaps` must reconcile active contract/subset/test/oracle/evidence expectations, retain other selected exception cases, and schedule fresh qualification, independent review and security reassessment. F14-03 stays HIGH/open until those gates are satisfied; no requirement is complete merely because a plan closes. Only fresh phase-goal verification may pass Phase 01 and permit Phase 02. Follow the resulting artifact's exact next command. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
+Planning guidance: Plans 01-07–01-14 completed the owned-core experiment and sealed an explicit unqualified outcome; their evidence does not complete Phase 01 requirements. Plans 01-15–01-17 investigated F14-03; Plan 01-17 remains evidence-only and incomplete at its answered checkpoint. P01-C-14 authorizes the candidate-only exclusion of exact `0x4AFC`; the saved-PC hardware question remains unknown and outside that candidate claim. Plans 01-18–01-21 are the approved reconciliation, qualification, review and security sequence. Preserve all Musashi history and consumed attempts. F14-03 stays HIGH/open until those gates are satisfied; no requirement is complete merely because a plan closes. Only fresh phase-goal verification may pass Phase 01 and permit Phase 02. The next command after planning is `$gsd-execute-phase 01 --gaps-only`. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
 
 **Admission gate:** CPU-01–04 remain Pending for current admission. Historical task evidence exists; the phase verifier refused grammar preflight rather than establish that all four behaviors failed. Plan 01-05 completed only the historical Musashi CPU-05 decision; the owned-core CPU-05 decision is still pending. Both Musashi adaptation attempts are consumed, and no further Musashi adaptation is authorized. Plans 01-07–01-14 carry the separately budgeted owned-core work; Plans 01-15–01-17 document the F14-03 mismatch and bounded adjudication. P01-C-14 changes the candidate support boundary but does not implement mitigation or establish admission. Planning or a non-admitting disposition does not satisfy CPU-01–04. The historical 01-04 accepted receipt is contradicted for current admission by six later source blockers. Phase 01 remains open with `gaps_found`, and Phase 02 stays gated until the revised candidate claim is implemented, freshly qualified, independently reviewed, security reassessed and phase-verified. Plan 01-06 records an earlier direction checkpoint; current owner-approved scope is in Phase 01 CONTEXT and PROJECT/REQUIREMENTS. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
 
@@ -162,7 +170,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 16/17 | In Progress|  |
+| 1. CPU acceptance experiment | v0.1 | 16/21 | In Progress|  |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
