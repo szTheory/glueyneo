@@ -5,16 +5,16 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: executing
-stopped_at: Completed 01-12-PLAN.md
-last_updated: "2026-10-03T01:00:38.049Z"
-last_activity: 2026-10-02
-last_activity_desc: Plan 01-12 completed an independent exact-revision review, repaired two private state-path findings, and passed native, ASan+UBSan, inventory and effort gates; Phase 01 remains open / GAPS_FOUND
-state_head: 8678438ec414a46101b83c662df019299dc0d0f6
+stopped_at: Completed 01-13-PLAN.md
+last_updated: "2026-10-03T01:22:59.109Z"
+last_activity: 2026-10-03
+last_activity_desc: Plan 01-13 completed source and rights closure, collector controls and four exact-revision native qualification lanes; Plan 14 review and admission remain pending
+state_head: 89fa40e7508faa2dc62ba033ceafdd14b8754677
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
   percent: 0
 ---
 
@@ -31,9 +31,9 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 ## Current Position
 
 Phase: 01 (CPU acceptance experiment) — GAP CLOSURE EXECUTING
-Plan: 12 of 14 complete; next is 01-13
-Status: Plan 01-12 reviewed the owned CPU at an exact pre-repair revision and repaired the sanitizer fixture and impossible private instruction-counter restore. Native, ASan+UBSan, inventory and budget checks pass on the repaired revision. The core has not been accepted. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
-Last activity: 2026-10-02 — Closed Plan 01-12 with an independent review, two regression-backed state fixes, native and sanitizer evidence, source inventory and cumulative budget check.
+Plan: 13 of 14 complete; next is 01-14
+Status: Plan 01-13 source/rights inventory and collector controls pass. Debug, Release/O2, ASan+UBSan and optional TSan each pass 12/12 CTest cases at the collected revision. Plan 14 independent review and bounded decision remain pending. The core has not been accepted. CPU-01–05 remain Pending; Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
+Last activity: 2026-10-03 — Closed Plan 01-13 with exact-source receipts, portable schema-2 presets, four native qualification lanes and append-only accounting; exact CMake 3.20 execution remains unknown.
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -45,19 +45,19 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 
 **Velocity:**
 
-- Total plans completed: 12
-- Average recorded duration: 47.2min
-- Total recorded execution time: 566min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
+- Total plans completed: 13
+- Average recorded duration: 45.3min
+- Total recorded execution time: 589min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 12 | 566min | 47.2min |
+| 01 | 13 | 589min | 45.3min |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-08, 01-09, 01-10, 01-11, 01-12
+- Last 5 plans: 01-09, 01-10, 01-11, 01-12, 01-13
 - Trend: Not established
 
 **Per-Plan Metrics:**
@@ -76,6 +76,7 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 | Phase 01 P10 | 37min | 2 tasks | 10 files |
 | Phase 01 P11 | 79min | 2 tasks | 11 files |
 | Phase 01 P12 | 119min | 4 tasks | 8 files |
+| Phase 01 P13 | 23min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -108,10 +109,11 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - [Phase 01]: Validate private continuation counters against the supported dispatch minimum — A captured completed-dispatch count must be consistent with instruction and exception clocks. The four-clock bound is conservative for this subset and does not serve as a timing oracle.
 - [Phase 01]: Bind source-review findings to an exact pre-repair revision and verify fixes separately — The independent review is an evidence artifact for the reviewed source identity; repaired code and regressions are recorded in the plan summary and must be independently reviewed again in Plan 14.
 - [Phase 01]: Keep restore-over-ready semantics unclaimed until its destination precondition is clarified — The review found contract wording ambiguity while implementation accepts ready destinations. No behavior is promoted to supported without a direct requirement or test contract.
+- [Phase 01]: Preserve the earlier state audit while the current distribution manifest owns refreshed source identities; four native preset lanes pass, with admission pending independent Plan 14 review.
 
 ### Pending Todos
 
-- Ten plans are complete; reviewed gap plans 01-11–01-14 remain in the active gaps-only execution chain. Plan 01-11 owns fresh-destination state continuation. Preserve budget for independent review and regression-backed repair. Phase 02 remains gated.
+- Thirteen plans are complete; Plan 01-14 remains in the active gaps-only execution chain for independent final review and bounded disposition. Preserve budget for targeted repair and re-review. Phase 02 remains gated.
 
 ### Blockers/Concerns
 
@@ -136,6 +138,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-03T00:59:51.286Z
-Stopped at: Completed 01-12-PLAN.md
+Last session: 2026-10-03T01:22:59.090Z
+Stopped at: Completed 01-13-PLAN.md
 Resume file: None
