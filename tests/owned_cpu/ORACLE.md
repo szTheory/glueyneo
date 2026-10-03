@@ -37,7 +37,8 @@ restart guarantee.
 | RTE | 20 | UM Table 8-12, printed p. 8-10 |
 | STOP | 4 | UM Table 8-12, printed p. 8-10 |
 | MOVE.W absolute-long to Dn | 16 | UM Table 8-2, absolute-long source / data-register destination |
-| TRAP, ILLEGAL, privilege exception | 34 | UM Table 8-14, printed p. 8-11 |
+| TRAP, privilege exception | 34 | UM Table 8-14, printed p. 8-11 |
+| Exact `0x4afc` candidate rejection | 0 | P01-C-14 owner-defined capability boundary, not hardware timing |
 | autovector IRQ | 44 | UM Table 8-14, printed p. 8-11 |
 | address error | 50 | UM Table 8-14, printed p. 8-11 |
 | MOVE.W immediate to SR | 12 | UM Table 8-12, printed p. 8-10 |
@@ -58,7 +59,9 @@ reset40 + MOVEQ4 + ADDQ.L8 + MOVE.L20 + STOP4.
 | `reset_and_four_named_guest_instructions_total_seventy_six_cycles` | MOVEQ gives D0=10, ADDQ gives16, stored long is `$00000010`, STOP PC `$10e` | MOVE.L writes high word then low word | reset40 + instruction36 = total76; four dispatches |
 | `reset_instruction_is_distinct_and_observable` | RESET advances PC `$100` to `$102`, SR stays `$2700` | Only opcode fetch; one reset-signal event is observed without a device callback | RESET132, one dispatch |
 | `trap_stacks_next_pc_then_addq_rte_resumes_stop` | TRAP vector32 to `$180`; handler increments D1, RTE restores PC `$102` and supervisor SP | Short frame at `$2ffa`: SR `$2700`, PC `$102`; exception entry writes PC high/low then SR, reads vector high/low | TRAP34, ADDQ8, RTE20, STOP4 |
-| `illegal_uses_the_canonical_word_and_faulting_pc` | Exact `$4afc` selects vector4 | Short frame saves SR `$2700` and local fault PC `$100`; other encodings are not treated as this ILLEGAL word | 34 clocks, one dispatch |
+| `canonical_unsupported_has_only_opcode_fetch` | Exact `$4afc` returns unsupported with logical PC/fault PC `$100` and fetched IR | Exactly one successful opcode read; all observation fields and memory unchanged, even with failing vector/stack and odd stack; repeatable | Zero clocks, overshoot and completed dispatches |
+| `canonical_rejection_retains_prior_reset_irq_and_instruction_charges` | Rejection after reset, IRQ and NOP retains their completed work | IRQ frame/vector effects belong to the preceding IRQ; rejection has only its fetch | reset40, IRQ44, NOP4 remain separately charged |
+| `canonical_failed_opcode_fetch_remains_a_host_fault` | Inaccessible opcode remains terminal host fault | One failed read; later run adds no callback | Zero clocks |
 | `move_to_sr_switches_to_user_stack` | MOVE.W `#$0000,SR` switches S=1 to S=0 and activates USP `$3800` | Immediate word follows opcode; SSP `$3000` retained | 12 clocks |
 | `rte_restores_user_stack_bank_from_short_frame` | RTE restores user SR0/PC`$200`, switches to USP `$3800`, retains SSP`$3006` | Reads opcode `$100`, then SR/PC words at `$3000/$3002/$3004` | 20 clocks |
 | `move_word_absolute_long_loads_every_data_register` | All D0–D7 retain their high word and receive low word `$8001`; N set, V/C clear, X retained | Opcode, two address extension words, then one data word at `$200` | 16 clocks and one dispatch each |
@@ -79,6 +82,18 @@ reset40 + MOVEQ4 + ADDQ.L8 + MOVE.L20 + STOP4.
 | `odd_exception_stack_fault_is_terminal_without_recursive_entry` | Odd stack blocks exception entry and returns host fault | Opcode fetch is the only aligned bus callback; no recursive vector/frame attempt | No guest exception event is committed |
 
 ## Deliberate wrong-cycle control
+
+P01-C-14 supersedes the historical canonical ILLEGAL frame assertion and its
+local fault-PC choice, preserved through Git. P01-C-13 and Plan 01-17 retain
+unknown original-silicon saved PC; this candidate exclusion does not resolve it.
+The frozen CONTRACT and additive amendment define candidate scope. Current
+timing tests do not qualify downstream semantic fixtures, continuation or the
+full backend. Plans 01-19–01-21 own that remaining evidence.
+
+`--mutate-unsupported` runs only `canonical_unsupported_wrong_status_expectation`,
+which deliberately expects the former `OWNED_CPU_BUDGET` success status. It must
+fail exactly the named result-status assertion, with one case and one failure.
+Plan 01-19 supplies the consequential-control verifier.
 
 The C harness's `--mutate-cycle` branch expects 49 instead of the documented
 address-error 50 clocks. `negative_timing.py` requires the exact

@@ -474,14 +474,11 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
         if ((value & UINT16_C(0x8000)) != 0u) cpu->sr = (uint16_t)(cpu->sr | SR_N);
         *cycles = UINT64_C(16);
     } else if (*opcode == UINT16_C(0x4afc)) {
-        status = preflight_event(cpu, STEP_INSTRUCTION_EXCEPTION, UINT64_C(34), 1u, 0u);
-        if (status != OWNED_CPU_OK) return status;
-        status = enter_short_exception(cpu, 4u, cpu->sr, instruction_pc, 0u);
-        if (status != OWNED_CPU_OK) return status;
-        *next_pc = cpu->pc;
-        *kind = STEP_INSTRUCTION_EXCEPTION;
-        *cycles = UINT64_C(34);
-        return OWNED_CPU_OK;
+        /* P01-C-14: candidate capability boundary, not silicon behavior.
+         * Successful fetch rejects before exception preflight or bus effects. */
+        cpu->fault_pc = instruction_pc;
+        cpu->instruction_register = *opcode;
+        return OWNED_CPU_UNSUPPORTED_OPCODE;
     } else if (*opcode == UINT16_C(0x4e40)) {
         status = preflight_event(cpu, STEP_INSTRUCTION_EXCEPTION, UINT64_C(34), 1u, 0u);
         if (status != OWNED_CPU_OK) return status;

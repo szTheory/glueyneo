@@ -32,13 +32,15 @@ guest memory separately. `ready` is reconstructed on success; `active` and
 terminal `faulted` state are not stored. The full field disposition is in
 [`state-inventory.json`](state-inventory.json).
 
-Continuation is exercised after reset debt, each of the four original
+Historical continuation evidence predates P01-C-14 and is exercised after reset debt, each of the four original
 diagnostic instructions (including STOP), a masked IRQ input, a pending level-7
 edge after the pin is deasserted, IRQ entry, TRAP entry, ILLEGAL entry,
 privilege-exception entry, address-error entry and RTE completion. For each
 checkpoint, the test clones guest memory, restores into a separately bound
 instance, destroys and overwrites the source owner, then compares six
-instruction-boundary run calls against the uninterrupted baseline. It checks
+instruction-boundary run calls against the uninterrupted baseline. Exact-4AFC
+rejection continuation and refreshed full qualification remain downstream work
+in Plans 01-19–01-21. The historical ILLEGAL checkpoint is superseded. It checks
 named CPU fields, every guest-memory byte, ordered bus calls, run results,
 elapsed/overshoot cycles and stop reasons.
 
@@ -58,7 +60,7 @@ compatibility, emulator snapshot, replay, durable save or guest-memory format.
 | `RESET` | Exact opcode `0x4e70`; supervisor only; records one external-reset-signal event, with no device callback | 132 |
 | `RTE` | Exact opcode `0x4e73`; supervisor only; restores SR/PC from a six-byte short frame and switches USP/SSP when S changes | 20 |
 | `TRAP #0` | Exact opcode `0x4e40`; vector 32; saves next PC and old SR on supervisor stack | 34 |
-| `ILLEGAL` | Exact canonical word `0x4afc`; vector 4; saves faulting PC and old SR | 34 |
+| Exact `0x4afc` candidate exclusion | `OWNED_CPU_UNSUPPORTED_OPCODE`; retains logical opcode PC and fetched IR, without vector-4 reads or frame writes | 0 |
 | `MOVE.W #imm16,SR` | Exact opcode `0x46fc`; supervisor only; replaces SR and switches stack banks when S changes | 12 |
 | `MOVE.W (abs.L),Dn` | D0–D7 destination; replaces only low word; N/Z from 16-bit result, V/C clear, X preserved | 16 |
 | `STOP #imm16` | Exact opcode `0x4e72`; supervisor only; loads SR and enters stopped state | 4 |
@@ -68,7 +70,19 @@ before the privileged operation takes effect. These instruction-triggered
 exceptions count one completed dispatch and charge their 34 clocks to the
 exception counter, not the ordinary instruction-cycle counter. Other valid
 but unsupported encodings return `OWNED_CPU_UNSUPPORTED_OPCODE`; they are not
-aliased to the canonical `ILLEGAL` instruction.
+aliased to guest exception entry. P01-C-14 excludes only exact canonical
+`0x4afc` from candidate support. A successful opcode fetch reports its logical
+PC and IR with no completed dispatch, register/SR/stack/vector-marker/memory
+change or guest-cycle charge; repeated calls may fetch and reject it again.
+Reset recovery, IRQ entry or instructions completed earlier in a request retain
+their separate charges. Fetch failure remains a terminal host fault; odd fetch
+retains address-error handling. Software deliberately using ILLEGAL is unsupported.
+
+This candidate boundary supersedes the former local fault-PC/vector-4 row,
+preserved in Git. Original MC68000 ILLEGAL encoding and vector semantics remain
+hardware facts; its saved-PC selection remains unknown under P01-C-13. No
+silicon PC value is selected. The frozen CONTRACT plus the P01-C-14 amendment
+in `illegal-reconciliation.json` defines active scope; admission remains pending.
 
 ## Interrupts, frames, and bus effects
 
