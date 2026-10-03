@@ -38,7 +38,7 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit owned-core decision, commands and results against finite effort/churn limits fixed before implementation; failed work and findings are preserved, actionable issues receive budgeted repair, and resource thresholds trigger review/replanning rather than automatic backend rejection. (CPU-05)
 
-**Plans**: 11/14 plans executed; reviewed gap plans 01-10–01-14 are executing in dependency order. Phase 01 remains open / GAPS_FOUND and Phase 02 gated. CPU-01–05 remain Pending until current evidence and phase verification support a disposition.
+**Plans**: 12/14 plans executed; reviewed gap plans 01-10–01-14 are executing in dependency order. Phase 01 remains open / GAPS_FOUND and Phase 02 gated. CPU-01–05 remain Pending until current evidence and phase verification support a disposition.
 
 Plans:
 **Wave 1**
@@ -87,7 +87,7 @@ Plans:
 
 **Wave 12** *(blocked on Waves 8–11; independent qualification)*
 
-- [ ] 01-12-PLAN.md — Independently review the owned implementation and fix findings within a bounded source/test tranche.
+- [x] 01-12-PLAN.md — Independently review the owned implementation and fix findings within a bounded source/test tranche.
 
 **Wave 13** *(blocked on Wave 12; source inventory and fresh evidence)*
 
@@ -145,7 +145,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 11/14 | In Progress|  |
+| 1. CPU acceptance experiment | v0.1 | 12/14 | In Progress|  |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 

@@ -5,16 +5,16 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: executing
-stopped_at: Completed 01-11-PLAN.md
-last_updated: "2026-10-02T22:53:17.142Z"
+stopped_at: Completed 01-12-PLAN.md
+last_updated: "2026-10-03T01:00:38.049Z"
 last_activity: 2026-10-02
-last_activity_desc: Plan 01-11 passed 13 private state continuation checkpoints, malformed-state rejection, inventory and effort gates; Phase 01 remains open / GAPS_FOUND
-state_head: 99fb18d870e6efbf7c877bc90fe1ccf2b34a748c
+last_activity_desc: Plan 01-12 completed an independent exact-revision review, repaired two private state-path findings, and passed native, ASan+UBSan, inventory and effort gates; Phase 01 remains open / GAPS_FOUND
+state_head: 8678438ec414a46101b83c662df019299dc0d0f6
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 14
-  completed_plans: 11
+  completed_plans: 12
   percent: 0
 ---
 
@@ -31,9 +31,9 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 ## Current Position
 
 Phase: 01 (CPU acceptance experiment) — GAP CLOSURE EXECUTING
-Plan: 11 of 14 complete; next is 01-12
-Status: Plan 01-11 proved private same-build CPU continuation at 13 named boundaries, plus atomic malformed-record rejection and consequential omission controls. The core has not been accepted. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
-Last activity: 2026-10-02 — Closed Plan 01-11 with passing native state/negative tests, source inventory and cumulative budget checks.
+Plan: 12 of 14 complete; next is 01-13
+Status: Plan 01-12 reviewed the owned CPU at an exact pre-repair revision and repaired the sanitizer fixture and impossible private instruction-counter restore. Native, ASan+UBSan, inventory and budget checks pass on the repaired revision. The core has not been accepted. Phase 01 remains open / GAPS_FOUND and Phase 02 gated.
+Last activity: 2026-10-02 — Closed Plan 01-12 with an independent review, two regression-backed state fixes, native and sanitizer evidence, source inventory and cumulative budget check.
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -45,19 +45,19 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 
 **Velocity:**
 
-- Total plans completed: 11
-- Average recorded duration: 40.6min
-- Total recorded execution time: 447min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
+- Total plans completed: 12
+- Average recorded duration: 47.2min
+- Total recorded execution time: 566min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 11 | 447min | 40.6min |
+| 01 | 12 | 566min | 47.2min |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-07, 01-08, 01-09, 01-10, 01-11
+- Last 5 plans: 01-08, 01-09, 01-10, 01-11, 01-12
 - Trend: Not established
 
 **Per-Plan Metrics:**
@@ -75,6 +75,7 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 | Phase 01 P09 | 59min | 2 tasks | 14 files |
 | Phase 01 P10 | 37min | 2 tasks | 10 files |
 | Phase 01 P11 | 79min | 2 tasks | 11 files |
+| Phase 01 P12 | 119min | 4 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,9 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - [Phase 01, Plan 01-10]: Added 32 interleaved and 32 barrier-started concurrent instance pairs plus 16 supervised cold processes; the complete native 11-case suite and six safety cases each under ASan+UBSan and TSan passed on Apple Clang 21 / Darwin arm64. A 26-field, nine-source inventory and named corruption controls pass. Same-instance overlap and other platforms remain unsupported or untested; CPU-01–05 stay Pending.
 - [Phase 01]: Keep the continuation record behind OWNED_CPU_TEST_HOOKS and make no public persistence claim. — The codec is bounded to the exact cpu.c source identity and the reviewed acceptance scope remains private.
 - [Phase 01]: Restore keeps destination bus and allocator bindings while the caller clones guest memory. — This preserves owner isolation and ensures validation and restore make no guest bus callbacks.
+- [Phase 01]: Validate private continuation counters against the supported dispatch minimum — A captured completed-dispatch count must be consistent with instruction and exception clocks. The four-clock bound is conservative for this subset and does not serve as a timing oracle.
+- [Phase 01]: Bind source-review findings to an exact pre-repair revision and verify fixes separately — The independent review is an evidence artifact for the reviewed source identity; repaired code and regressions are recorded in the plan summary and must be independently reviewed again in Plan 14.
+- [Phase 01]: Keep restore-over-ready semantics unclaimed until its destination precondition is clarified — The review found contract wording ambiguity while implementation accepts ready destinations. No behavior is promoted to supported without a direct requirement or test contract.
 
 ### Pending Todos
 
@@ -132,6 +136,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-02T22:53:17.126Z
-Stopped at: Completed 01-11-PLAN.md
+Last session: 2026-10-03T00:59:51.286Z
+Stopped at: Completed 01-12-PLAN.md
 Resume file: None
