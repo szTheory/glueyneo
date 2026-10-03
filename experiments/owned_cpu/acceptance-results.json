@@ -1,6 +1,6 @@
 {
   "blockers": [
-    "independent current-candidate review/security and phase-goal verification pending"
+    "phase-goal-verification-pending"
   ],
   "collections": [
     {
@@ -3011,5 +3011,64 @@
     "sha256": "fb622bdaaedbea8f9a52ec6d6f0eaa72b34742b913e664cc01804be8df3c8b27"
   },
   "phase_disposition": "GAPS_FOUND",
-  "schema": 1
+  "schema": 1,
+  "seal": {
+    "budget": {
+      "active_seconds": 44170,
+      "diagnostic_gate_seconds": 2565,
+      "pause": null,
+      "phase_disposition": "not-admitted",
+      "records": 34,
+      "runtime_churn_added_deleted": 1221,
+      "status": "pass",
+      "test_tool_churn_added_deleted": 6126
+    },
+    "collection_sha256": "53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e",
+    "defer_admission": true,
+    "review": {
+      "attestation": {
+        "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+        "collection_sha256": "53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e",
+        "evidence_revision": "635714631770a6450e1f2e46bef6a377571aabd5",
+        "hardware_saved_pc": "unknown",
+        "independent_non_author": true,
+        "prior_findings": {
+          "F14-01": {
+            "disposition": "resolved",
+            "evidence": "Exact command/configuration/artifact/output guards retained; independent normal and optimized acceptance regressions pass 21/21 each."
+          },
+          "F14-02": {
+            "disposition": "resolved",
+            "evidence": "Shared historical failure guard retained and independently exercised under normal and optimized acceptance tests; five collection prefix preserved."
+          },
+          "F14-03": {
+            "disposition": "superseded",
+            "evidence": "Candidate claim only: owner-approved exact 0x4AFC exclusion supersedes disputed supported ILLEGAL behavior via additive P01-C-14. Independent native zero-effect and retained-event controls passed; separate Task 2 non-author ASVS L1/block-high security gate verified zero current candidate high/critical findings. Task 3 confirmed unchanged exact source/collection. Final deferred seal remains required; original-silicon saved PC stays unknown."
+          }
+        },
+        "schema": 1,
+        "source_map_sha256": "e63834b8585912d81f99e82e2dd9070139fbc8acc25854e23274105d8cad861b"
+      },
+      "revision": "635714631770a6450e1f2e46bef6a377571aabd5",
+      "sha256": "774e70d2afd0c840847e599bad85cec41c5f8f9e8b1a493e42be2ec38b9645ff",
+      "status": "clean"
+    },
+    "revision": "635714631770a6450e1f2e46bef6a377571aabd5",
+    "security": {
+      "attestation": {
+        "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+        "asvs_level": 1,
+        "block_on": "high",
+        "collection_sha256": "53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e",
+        "evidence_revision": "635714631770a6450e1f2e46bef6a377571aabd5",
+        "independent_non_author": true,
+        "open_high_or_critical": 0,
+        "schema": 1,
+        "source_map_sha256": "e63834b8585912d81f99e82e2dd9070139fbc8acc25854e23274105d8cad861b",
+        "status": "verified"
+      },
+      "sha256": "a7bee1df1cf95de27680f6932c25b5c421c9124c1a6e076d447ff4a0203a1f22"
+    },
+    "security_path": ".planning/phases/01-cpu-acceptance-experiment/01-SECURITY.md"
+  }
 }

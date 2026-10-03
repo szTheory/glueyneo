@@ -180,7 +180,7 @@ completes a CPU requirement or phase admission.
 | 01-20-02 | `acceptance.py verify`; `inventory.py check`; lane artifact SHA-256 and historical prefix comparisons; `contract.py budget` | Failed/unknown/skipped lane promoted, missing instrumented object/artifact, changed historical prefix or budget pause | T-01-38,T-01-40 | EXECUTED in Plan20: four lanes13/13 each,52 total; assessor reconciles all44 artifacts and histories, does not rerun four lanes |
 | 01-21-01 | Independent review-check against recorded `a3cec086a75c3c7783bcde610f6e8c4234354eeb`; independent reviewer Debug build/native/control evidence | Current review stale/ambiguous/not independent or unresolved high finding | T-01-41 | EXECUTED: reviewer own build22 steps/native4/4 plus normal/-O suites; assessor review-check clean; Task1 commit metadata source equality verified |
 | 01-21-02 | `contract.py validate`; `acceptance.py verify`; `inventory.py check`; assessor direct native/control runs and bounded security-binding validation | Changed claim/source/state/receipt, unsupported mitigation or missing task/threat map | T-01-42,T-01-15-03 | EXECUTED: applicable native L1/block-high, zero current high/critical; candidate mitigation supersedes original withheld mitigation only within P01-C-14 |
-| 01-21-03 | Planned live `review-check --revision HEAD`, `seal --defer-admission --security ...`, read-only `verify` and `contract.py budget` | Final binding stale, high finding, backend admitted, history changed or cap pause | T-01-43,T-01-44 | PENDING live closeout; implemented guard regressions pass; final audit/source rebind/accounting and real seal not yet executed |
+| 01-21-03 | Live `review-check --revision HEAD`, `seal --defer-admission --security .planning/phases/01-cpu-acceptance-experiment/01-SECURITY.md`, read-only `verify` and `contract.py budget` | Final binding stale, high finding, backend admitted, history changed or cap pause | T-01-43,T-01-44 | EXECUTED: exact6357146 clean review/deferred seal; assessor independently verifies5 collections/no lane blockers, unqualified/GAPS_FOUND and only phase-goal-verification-pending; budget44,170s/34 records passes; final audit hash requires reseal after this metadata append |
 
 Assessor independently executed88 Python method runs (contract23 and
 acceptance21, each normal/-O), targeted10/10 CTests across two commands,
@@ -196,3 +196,14 @@ CPU-02/03/04 unclassified; CPU-05 boundary, adjacency, empty, ordering, precisio
 None is reclassified as resolved by the candidate amendment or green tests.
 Original-silicon saved PC stays unknown; intentional ILLEGAL users remain
 incompatible. CPU-01–05 Pending, Phase01 incomplete/GAPS_FOUND and Phase02 gated.
+
+Final metadata confirmation binds `635714631770a6450e1f2e46bef6a377571aabd5`:
+the same assessor verified all39 committed inputs equal the current snapshot
+and collection source map before rebinding SECURITY. Following the executor's
+real Task3 seal, the assessor independently executed read-only receipt verify,
+budget and exact seal/source/security equality checks. All pass with the same
+collection/amendment identities. Ten new tasks now have executed evidence;
+the current report append requires final audit-hash resealing rather than a
+new behavioral qualification. Earlier PLANNED and historical audits remain
+unaltered. This closes the candidate evidence tasks while phase verification
+and backend admission remain pending.

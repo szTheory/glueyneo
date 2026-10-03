@@ -131,7 +131,18 @@ F14-01/F14-02 are resolved by regression-backed repairs and fresh independent re
 
 ## Reviewed revision:
 
-Reviewed source/report revision: `a3cec086a75c3c7783bcde610f6e8c4234354eeb`.
+Reviewed source/report revision: `635714631770a6450e1f2e46bef6a377571aabd5`.
+Task 3 independent final confirmation: the original source review was performed
+at `a3cec086a75c3c7783bcde610f6e8c4234354eeb`. Comparing that revision to this
+final revision finds no included-source change; all 39 snapshot entries and all
+five collection records are identical. This is metadata rebinding after review,
+security, validation and append-only accounting commits, with no native rerun
+claimed. The security assessor's bounded attestation independently reports
+ASVS L1/block-high, verified, zero current candidate high/critical findings and
+the same collection/amendment/source-map; it preserves the withheld historical
+frame mitigation and unknown silicon result. Its initial assessment revision is
+`0e2003fe8fdb4a1e804fb6a5fe92c618b909b43a`; assessor-owned final rebinding must
+confirm this same final revision before the deferred seal.
 Collection revision: `7411a33bf63428516a3efee289c393e1a8418b28`;
 collection SHA-256 `53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e`;
 profile `owned-p01-c14-1`;
@@ -160,7 +171,7 @@ state test SHA-256 `b8ceb6be17b209f661f5a55699460776f879f78dad8e395c9f973e6502ed
   "schema": 1,
   "independent_non_author": true,
   "hardware_saved_pc": "unknown",
-  "evidence_revision": "a3cec086a75c3c7783bcde610f6e8c4234354eeb",
+  "evidence_revision": "635714631770a6450e1f2e46bef6a377571aabd5",
   "collection_sha256": "53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e",
   "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
   "source_map_sha256": "e63834b8585912d81f99e82e2dd9070139fbc8acc25854e23274105d8cad861b",
@@ -175,7 +186,7 @@ state test SHA-256 `b8ceb6be17b209f661f5a55699460776f879f78dad8e395c9f973e6502ed
     },
     "F14-03": {
       "disposition": "superseded",
-      "evidence": "Candidate claim only: owner-approved exact 0x4AFC exclusion supersedes disputed supported ILLEGAL behavior via additive P01-C-14. Independent native zero-effect and retained-event controls pass; registry closure remains conditional on separate Task 2 security gate. Original-silicon saved PC remains unknown."
+      "evidence": "Candidate claim only: owner-approved exact 0x4AFC exclusion supersedes disputed supported ILLEGAL behavior via additive P01-C-14. Independent native zero-effect and retained-event controls passed; separate Task 2 non-author ASVS L1/block-high security gate verified zero current candidate high/critical findings. Task 3 confirmed unchanged exact source/collection. Final deferred seal remains required; original-silicon saved PC stays unknown."
     }
   }
 }
@@ -199,7 +210,7 @@ human signoff or physical capture.
 |---|---|
 | F14-01 command/configuration receipts | Resolved; exact lane guards and mutation controls pass in both Python modes. |
 | F14-02 historical failure guard | Resolved; accepted/deferred paths share historical blockers; failure/unknown/skipped mutations reject. |
-| F14-03 canonical ILLEGAL discrepancy | Superseded for the revised candidate claim only; recommend candidate-scope closure after independent security passes. Registry disposition is pending that gate. |
+| F14-03 canonical ILLEGAL discrepancy | Superseded for the revised candidate claim only following independently passed source/control and Task 2 security gates; exact deferred seal remains the final gate. |
 | BL-01 state destination initialization | Resolved; destination is zeroed before fresh creation and restore; independent fresh-owner continuation passes. |
 | WR-01 impossible instruction count | Resolved for the reported invariant; mismatch rejection retains destination/bus atomicity. Validator does not prove every record reachable. |
 | Restore-over-ready | Remains unclaimed; required fresh-owner path is tested, permissive ready-destination implementation is not promoted. |
@@ -207,7 +218,8 @@ human signoff or physical capture.
 | Optimized assertions / relative path receipts | Explicit exceptions survive optimized Python; current receipts use sanitized root-relative commands. |
 
 Historical sections and former severities/dispositions above are immutable review
-history. T-01-15-03 is reserved for the separate security assessor. Silicon
+history. The separate security assessor supersedes T-01-15-03 for the amended
+candidate capability scope only after its independently executed controls. Silicon
 uncertainty is retained independently of candidate-scope disposition.
 
 ## Evidence runs and denominators:
@@ -297,10 +309,13 @@ explicit caller recovery. Text scan of all 39 included files found no personal
 home paths; provenance retains MIT original work, pinned Unity test-only notices,
 and original fixtures without commercial media or manufacturer PDF distribution.
 
-Recommendation: candidate-scope F14-03 closure is eligible only after separate
-independent security and final exact binding gates pass. This clean source-review
-result does not itself close F14-03/T-01-15-03, admit the backend, finish phase
-verification, or complete CPU-01–05. The final seal must remain deferred,
+Final recommendation: independent source/control and separate security gates
+substantiate the candidate-scope supersession of F14-03/T-01-15-03. The historical
+discrepancy and withheld frame mitigation remain preserved; original silicon
+saved PC is still unknown. Task 3 independently confirms unchanged identities
+at the final revision, with final assessor metadata binding and deferred seal
+still required. This does not admit the backend, finish phase verification,
+or complete CPU-01–05. The final seal must remain deferred,
 unqualified/GAPS_FOUND; Phase 01 is incomplete, Phase 02 gated, and all nine
 specless flags remain unresolved.
 

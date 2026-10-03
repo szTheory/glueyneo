@@ -127,7 +127,7 @@ Same-instance callback reentry remains unsupported by contract; guards specifica
 <!-- owned-cpu-current-security:start -->
 ## P01-C-14 reassessment — 2026-10-03
 
-Evidence revision: `0e2003fe8fdb4a1e804fb6a5fe92c618b909b43a`.
+Evidence revision: `635714631770a6450e1f2e46bef6a377571aabd5`.
 Independent assessor: separate non-author agent `/root/phase01_plan21/security_assessor`.
 Authored runtime/collector/tests/receipts/ledger: no. Sole write ownership is
 this report and the appended validation audit; executor owns accounting and
@@ -142,7 +142,7 @@ C/evidence ASVS L1 assessment with block_on high, not web certification.
   "independent_non_author": true,
   "status": "verified",
   "open_high_or_critical": 0,
-  "evidence_revision": "0e2003fe8fdb4a1e804fb6a5fe92c618b909b43a",
+  "evidence_revision": "635714631770a6450e1f2e46bef6a377571aabd5",
   "collection_sha256": "53ea6a7162902edea4e4372e85b3713ad4092f0522501c33a59115573101337e",
   "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
   "source_map_sha256": "e63834b8585912d81f99e82e2dd9070139fbc8acc25854e23274105d8cad861b"
@@ -171,6 +171,14 @@ of the 39 included source inputs is identical at that review revision, this
 assessment revision and collected source `7411a33bf63428516a3efee289c393e1a8418b28`.
 Task 3 must rebind both independent reports to its final exact revision.
 
+Task 3 metadata rebinding: independently confirmed at
+`635714631770a6450e1f2e46bef6a377571aabd5` that all39 included inputs equal
+the committed bytes and current collection source map, with the same collection
+and amendment identities. The Task2 commit changed reports/accounting only.
+The attestation revision above is rebound to that exact closure; this does not
+invent another native/sanitizer execution or resolve silicon evidence. Final
+live seal/accounting controls were subsequently verified below.
+
 ### Reassessment threat crosswalk
 
 All rows use disposition mitigate. CLOSED means present and concretely checked
@@ -193,8 +201,8 @@ in the stated candidate scope; a pending live closeout is identified separately.
 | T-01-40 | high | Append-only explicit agent interval sums and failed/reverted churn, frozen limits and unqualified/GAPS_FOUND receipt | CLOSED |
 | T-01-41 | high | Separate REVIEW-only non-author reviewer, independent Debug build22 steps and direct native4/4; exact clean review-check passed against its recorded revision | CLOSED |
 | T-01-42 | high | Separate assessor, source/controls independently read/run, this evidence-bound high-blocking native reassessment and unchanged historical reports | CLOSED |
-| T-01-43 | high | Deferred seal/source/review/security byte binding and stale-audit regressions exercised in acceptance21; current snapshot unchanged | CLOSED control implementation; live Task3 seal PENDING |
-| T-01-44 | high | Frozen summed budget, contract pending requirement/phase gate checks; no accepted profile or phase completion permitted by deferred-seal regressions | CLOSED control implementation; final charges/live Task3 gate PENDING |
+| T-01-43 | high | Deferred seal/source/review/security byte binding and stale-audit regressions exercised in acceptance21; current snapshot unchanged; actual exact-revision deferred seal independently verified | CLOSED; live Task3 gate passed |
+| T-01-44 | high | Frozen summed budget, contract pending requirement/phase gate checks; actual seal unqualified/GAPS_FOUND with only phase-goal-verification-pending and budget44,170s/34 records below frozen caps | CLOSED; live Task3 gate passed |
 
 ### Assessor-executed evidence
 
@@ -258,11 +266,32 @@ not independence from a fully malicious fabricated producer.
 Verified: zero current candidate high/critical findings. Sixteen new declared
 controls plus the original T-01-15-03 candidate reassessment are substantiated;
 the older67 closed controls and historical one-open audit remain unchanged.
-Final seal and accounting are still pending Task3 execution. Original silicon
+Task3 live seal/accounting subsequently passed as recorded below. Original silicon
 saved PC, functional-versus-pin timing, other platforms/CMake3.20 execution,
 full ISA, BIOS/games, public ABI and durable/cross-build continuation remain
 unknown/excluded. No physical evidence or finite silicon search was acquired
 or repeated. All nine specless flags remain unresolved. CPU-01–05 stay Pending,
 Phase01 open/GAPS_FOUND, Phase02 gated. This current native assessment supersedes
 the former blocked candidate disposition only within P01-C-14's changed scope.
+
+### Final live closeout confirmation
+
+Executor ran the exact Task3 review-check/seal/verify/budget chain against
+`635714631770a6450e1f2e46bef6a377571aabd5`. The assessor independently ran
+`python3 tools/owned_cpu/acceptance.py verify`, `python3 tools/owned_cpu/contract.py budget`
+and read-only equality checks on the actual seal/revision/current snapshot and
+`security_check` result. All passed: five collections, no lane blockers,
+defer_admission true, unqualified/GAPS_FOUND and exactly
+`["phase-goal-verification-pending"]`. The rebound clean independent review
+SHA-256 is `774e70d2afd0c840847e599bad85cec41c5f8f9e8b1a493e42be2ec38b9645ff`.
+Final charged budget is44,170 active seconds/34 records, diagnostic2,565,
+runtime churn1,221 and test/tool churn6,126; no cap change or pause. Source39,
+current collection/amendment/map identities and historical prefixes remain
+unchanged. Candidate-scope F14-03/T-01-15-03 reconciliation is substantiated;
+their former disputed frame mitigation did not run and silicon remains unknown.
+
+This appended outcome changes only audit metadata. The executor must reseal
+the final audit-document hash and rerun read-only verification; an earlier seal
+cannot authorize changed audit bytes. The evidence revision and all source/
+collection/amendment identities stay fixed at the audited closure above.
 <!-- owned-cpu-current-security:end -->
