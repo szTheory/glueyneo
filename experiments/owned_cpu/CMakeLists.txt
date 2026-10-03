@@ -143,6 +143,12 @@ add_test(NAME owned_cpu_timing_negative
 set_tests_properties(owned_cpu_timing_negative PROPERTIES
   LABELS "owned-cpu;owned-timing-control"
   TIMEOUT 30)
+add_test(NAME owned_cpu_unsupported_negative
+  COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/owned_cpu/negative_timing.py
+          --unsupported $<TARGET_FILE:owned_cpu_timing>)
+set_tests_properties(owned_cpu_unsupported_negative PROPERTIES
+  LABELS "owned-cpu;owned-timing-control"
+  TIMEOUT 30)
 add_test(NAME owned_cpu_isolation COMMAND owned_cpu_isolation)
 set_tests_properties(owned_cpu_isolation PROPERTIES
   LABELS "owned-cpu;owned-safety"
