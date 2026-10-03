@@ -5,11 +5,11 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: GAPS_FOUND
-stopped_at: "Plan 01-17 is at a blocking-human decision checkpoint: preserve the unknown (recommended), explicitly approve the bounded fault-PC assumption and claim reduction, or identify an authoritative source/qualified existing capture. No GSD command should run before that decision. After an explicit claim decision or resolved authority, run $gsd-plan-phase 01 --gaps. Phase 01 remains GAPS_FOUND; F14-03/T-01-15-03 HIGH/open; CPU-01–05 Pending; Phase 02 gated."
-last_updated: "2026-10-03T15:55:51.337Z"
+stopped_at: Plan 01-17 ambiguous checkpoint answered with preserve-unknown (P01-C-13); -plan-phase 01 --gaps planning in progress. Phase 01 remains GAPS_FOUND; F14-03/T-01-15-03 HIGH/open; CPU-01–05 Pending; Phase 02 gated.
+last_updated: "2026-10-03T16:23:38.512Z"
 last_activity: 2026-10-03
 last_activity_desc: Plan 01-17 reached a blocking-human decision checkpoint after both evidence tasks; source interpretation remains ambiguous. No saved-PC assumption selected.
-state_head: 082ed4e555e8332b5aae160fc8fdcf7c5b4a70f9
+state_head: c6d482f21cf5f993cbe61a4467b59f9c6094a79f
 progress:
   total_phases: 3
   completed_phases: 0
@@ -31,9 +31,9 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 ## Current Position
 
 Phase: 01 (CPU acceptance experiment)
-Plan: 17 of 17
+Plan: 17 of 17 (checkpoint; not complete)
 Status: GAPS_FOUND
-Last activity: 2026-10-03 — Plan 01-17 reached a blocking-human decision checkpoint after both evidence tasks; source interpretation remains ambiguous. No saved-PC assumption selected.
+Last activity: 2026-10-03 — Plan 01-17's ambiguous checkpoint was answered with preserve-unknown (P01-C-13); same-phase gap planning is in progress. The saved-PC interpretation remains ambiguous.
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -45,7 +45,7 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 
 **Velocity:**
 
-- Total plans in phase: 17; completed: 16; Plan 01-17 is at a blocking-human checkpoint
+- Total plans in phase: 17; completed: 16; Plan 01-17 is at an answered decision checkpoint but remains incomplete
 - Average recorded duration: 40.4min across the 16 completed plans
 - Total recorded execution time: 646min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
 
@@ -116,14 +116,15 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - [Phase 01]: Plan 01-14 sealed unqualified/GAPS_FOUND after independent repair re-review; F14-03 frozen ILLEGAL contract discrepancy requires user-directed reconciliation; CPU-01–05 Pending, Phase 01 open and Phase 02 gated.
 - [Phase 01]: Plan 01-15 leaves F14-03 HIGH/open after exact UM/PRM/errata interpretation; canonical/runtime/fixture/oracle unchanged, CPU-01–05 Pending, Plan 01-16 owns independent unresolved closeout.
 - [Phase 01]: Plan 01-16 freshly qualified exact unchanged behavior and independently retained F14-03 HIGH/open; seal unqualified/GAPS_FOUND, CPU-01–05 Pending and Phase 02 gated.
+- [Phase 01, P01-C-13, user decision 2026-10-03]: Preserve the original-MC68000 `ILLEGAL 0x4AFC` saved-PC behavior as unknown under the unchanged claim. The bounded source search and independent adjudication remain ambiguous. Do not select `$100` or `$102`, alter runtime/contract/oracle/subset, repeat the finite search, or claim mitigation/admission. F14-03 and T-01-15-03 remain HIGH/open; CPU-01–05 Pending; Phase 01 GAPS_FOUND/open; Phase 02 gated. Gap planning is authorized; any supported-subset change remains a separate owner decision.
 
 ### Pending Todos
 
-- Plan 01-17 performed both bounded evidence tasks and reached a blocking-human decision checkpoint. Its independent verdict is ambiguous; fault PC is the stronger derivation but remains unverified under the unchanged claim. Preserve-unknown is recommended. The exact choices and evidence are in `01-17-SUMMARY.md`. No follow-on GSD command is ready until the decision is answered. After an explicit claim decision or resolved authoritative source, run `$gsd-plan-phase 01 --gaps` for separate same-phase repair planning. Phase 01 remains open / GAPS_FOUND; F14-03/T-01-15-03 remain HIGH/open; CPU-01–05 remain Pending; Phase 02 gated.
+- Plan 01-17 completed its bounded acquisition and independent adjudication but remains at an answered checkpoint, not complete. The user selected preserve-unknown (P01-C-13); the hardware behavior and F14-03 remain unresolved. The active command is `$gsd-plan-phase 01 --gaps`. Do not repeat the finite search, accept either PC in tests, or change scope/implementation/contract/oracle. If planning yields a viable plan and independent checker passes, pause with `$gsd-execute-phase 01 --gaps-only` as the concrete next command; otherwise record the precise missing trigger. Phase 01 remains GAPS_FOUND/open; CPU-01–05 Pending; Phase 02 gated.
 
 ### Blockers/Concerns
 
-- Plan 01-17's blocking-human checkpoint is the current stop. Do not select a saved-PC assumption, revise the frozen claim, start repair, verify the phase or advance to Phase 02 before an explicit user decision or resolved authority.
+- F14-03 remains HIGH/open because the frozen contract says “next PC” while runtime/fixture behavior exercises the faulting PC, and available original-MC68000 evidence is ambiguous. Do not select a saved-PC assumption, revise the supported claim, claim mitigation, verify the phase or advance to Phase 02. Reopen the hardware question only on genuinely applicable primary authority or a qualified exact-silicon capture; any scope reduction requires a separate explicit owner decision.
 - No per-core GUI is in scope. Each core repository targets a library, headless diagnostic runner and thin libretro adapter; RetroArch remains the interactive frontend until a shared Playstead/external host is ready.
 - UI-phase/review and AI-integration gates are disabled for this C-only, non-AI project. Keep API coverage enabled for phases that integrate external APIs/SDKs such as libretro; the installed gate is conditional on those integrations.
 
@@ -144,6 +145,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-03T15:55:51.309Z
-Stopped at: Plan 01-17 is at a blocking-human decision checkpoint: preserve the unknown (recommended), explicitly approve the bounded fault-PC assumption and claim reduction, or identify an authoritative source/qualified existing capture. No GSD command should run before that decision. After an explicit claim decision or resolved authority, run $gsd-plan-phase 01 --gaps. Phase 01 remains GAPS_FOUND; F14-03/T-01-15-03 HIGH/open; CPU-01–05 Pending; Phase 02 gated.
+Last session: 2026-10-03T16:23:38.484Z
+Stopped at: Plan 01-17 ambiguous checkpoint answered with preserve-unknown (P01-C-13); -plan-phase 01 --gaps planning in progress. Phase 01 remains GAPS_FOUND; F14-03/T-01-15-03 HIGH/open; CPU-01–05 Pending; Phase 02 gated.
 Resume file: None
