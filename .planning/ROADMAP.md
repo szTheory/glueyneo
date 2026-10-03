@@ -38,9 +38,10 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit owned-core decision, commands and results against finite effort/churn limits fixed before implementation; failed work and findings are preserved, actionable issues receive budgeted repair, and resource thresholds trigger review/replanning rather than automatic backend rejection. (CPU-05)
 
-**Plans**: 16/16 plans executed. Plan 01-15 retrieved exact UM/PRM/errata identities, preserved original contract bytes and documented the unresolved $100/$102 saved-PC interpretation; canonical/runtime/fixture/oracle remain unchanged. Plan 01-16 refreshed the 38-input source closure, collected fresh four-lane observations, independently reviewed exact primary sources and sealed unqualified/GAPS_FOUND. F14-03 remains HIGH/open. Phase 01 remains open / GAPS_FOUND and Phase 02 gated; CPU-01–05 remain Pending. This executor ran no fresh phase verification; execute-phase orchestrator owns its phase tail. Next separate workflow for retained ambiguity: `$gsd-plan-phase 01 --gaps`.
+**Plans**: 16/17 plans executed. Plan 01-15 preserved the original contract and documented the unresolved $100/$102 saved-PC interpretation; Plan 01-16 refreshed identities, collected fresh four-lane observations and sealed unqualified/GAPS_FOUND. Plan 01-17 is planned but not executed: it performs a bounded primary-source search and independent adjudication of the original MC68000 `$4AFC` saved-PC conflict. It does not mitigate F14-03 by itself. Phase 01 remains open / GAPS_FOUND; F14-03 and T-01-15-03 remain HIGH/open; CPU-01–05 remain Pending; Phase 02 stays gated. The next command is `$gsd-execute-phase 01 --gaps-only`. If Plan 01-17 resolves the source question, its verdict leads to a separate `$gsd-plan-phase 01 --gaps` repair plan; if it remains ambiguous or unavailable, stop at the recorded blocking decision checkpoint.
 
 Plans:
+- [ ] 01-17-PLAN.md
 
 - [x] 01-15-PLAN.md
 - [x] 01-16-PLAN.md
@@ -109,9 +110,13 @@ Plans:
 
 - [x] 01-16-PLAN.md — Exact identities and fresh lanes independently reviewed; F14-03 HIGH/open, sealed unqualified/GAPS_FOUND.
 
-Planning guidance: Plans 01-07–01-14 completed the owned-core experiment and sealed an explicit unqualified outcome; their evidence does not complete Phase 01 requirements. Plans 01-15 and 01-16 address the sole active finding F14-03 through primary-source reconciliation followed by dependent identity refresh, bounded qualification and independent review. Preserve all Musashi history and consumed attempts. A source ambiguity, failed repair or resource pause remains HIGH/open and GAPS_FOUND. After these plans execute, execute-phase runs a fresh phase-goal verifier that must reassess CPU-01–05; no new requirement is complete merely because the plan closes the finding. Follow its reported status and exact next command. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
+**Wave 17** *(F14-03 gap closure; depends on Wave 16; primary-source adjudication)*
 
-**Admission gate:** CPU-01–04 remain Pending for current admission. Historical task evidence exists; the phase verifier refused grammar preflight rather than establish that all four behaviors failed. Plan 01-05 completed only the historical Musashi CPU-05 decision; the owned-core CPU-05 decision is still pending. Both Musashi adaptation attempts are consumed, and no further Musashi adaptation is authorized. Plans 01-07–01-14 carry the separately budgeted owned-core work; Plans 01-15–01-16 address only F14-03. Planning or a non-admitting disposition does not satisfy CPU-01–04. The historical 01-04 accepted receipt is contradicted for current admission by six later source blockers. Phase 01 remains open with `gaps_found`, and Phase 02 stays gated until accepted evidence and fresh phase verification or an explicitly reconciled roadmap revision. Plan 01-06 records an earlier direction checkpoint; current owner-approved scope is in Phase 01 CONTEXT and PROJECT/REQUIREMENTS. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
+- [ ] 01-17-PLAN.md — Acquire and independently adjudicate additional applicable original-MC68000 evidence; preserve HIGH/open and stop at a decision checkpoint if unresolved.
+
+Planning guidance: Plans 01-07–01-14 completed the owned-core experiment and sealed an explicit unqualified outcome; their evidence does not complete Phase 01 requirements. Plans 01-15–01-17 investigate the sole active finding F14-03; Plan 01-17 is evidence-only and cannot close the finding. Preserve all Musashi history and consumed attempts. A source ambiguity, failed repair or resource pause remains HIGH/open and GAPS_FOUND. After a source verdict, use a separate same-phase gap plan for any required repair; only after mitigation, qualification, security reassessment and fresh phase-goal verification may Phase 01 pass and Phase 02 start. No new requirement is complete merely because a plan closes. Follow the resulting artifact's exact next command. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
+
+**Admission gate:** CPU-01–04 remain Pending for current admission. Historical task evidence exists; the phase verifier refused grammar preflight rather than establish that all four behaviors failed. Plan 01-05 completed only the historical Musashi CPU-05 decision; the owned-core CPU-05 decision is still pending. Both Musashi adaptation attempts are consumed, and no further Musashi adaptation is authorized. Plans 01-07–01-14 carry the separately budgeted owned-core work; Plans 01-15–01-17 address only F14-03, and Plan 01-17 acquires evidence without implementing the HIGH/open mitigation. Planning or a non-admitting disposition does not satisfy CPU-01–04. The historical 01-04 accepted receipt is contradicted for current admission by six later source blockers. Phase 01 remains open with `gaps_found`, and Phase 02 stays gated until accepted evidence and fresh phase verification or an explicitly reconciled roadmap revision. Plan 01-06 records an earlier direction checkpoint; current owner-approved scope is in Phase 01 CONTEXT and PROJECT/REQUIREMENTS. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
 
 ### Phase 2: Executable diagnostic SDK
 
@@ -157,7 +162,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 16/16 | In Progress|  |
+| 1. CPU acceptance experiment | v0.1 | 16/17 | In Progress|  |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
