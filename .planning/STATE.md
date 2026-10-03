@@ -5,11 +5,11 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: GAPS_FOUND
-stopped_at: Plan 01-17 decision checkpoint answered with preserve-unknown (P01-C-13); $gsd-plan-phase 01 --gaps in progress. Phase 01 remains GAPS_FOUND; F14-03/T-01-15-03 HIGH/open; CPU-01–05 Pending; Phase 02 gated.
-last_updated: "2026-10-03T16:27:41.901Z"
+stopped_at: Plan 01-17 checkpoint answered with preserve-unknown (P01-C-13); gap planning returned PLANNING INCONCLUSIVE and produced no Plan 01-18. To consider narrowing the supported claim, next command is $gsd-discuss-phase 01. Otherwise wait for decisive evidence. Phase 01 remains GAPS_FOUND; F14-03/T-01-15-03 HIGH/open; CPU-01–05 Pending; Phase 02 gated.
+last_updated: "2026-10-03T16:35:27.861Z"
 last_activity: 2026-10-03
-last_activity_desc: Plan 01-17 checkpoint answered by preserve-unknown (P01-C-13); gap planning is in progress and source semantics remain ambiguous.
-state_head: 622e9c5c4597bf7de2e6d19dee159e3e56d1bb2a
+last_activity_desc: gap planning returned PLANNING INCONCLUSIVE with no Plan 01-18; the preserve-unknown disposition remains active.
+state_head: 027cd4e8b489c598bfd64f50693b11291ecc61f5
 progress:
   total_phases: 3
   completed_phases: 0
@@ -33,9 +33,11 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 Phase: 01 (CPU acceptance experiment)
 Plan: 17 of 17 (checkpoint; not complete)
 Status: GAPS_FOUND
-Last activity: 2026-10-03 — Plan 01-17 checkpoint answered by preserve-unknown (P01-C-13); gap planning is in progress and source semantics remain ambiguous.
+Last activity: 2026-10-03 — gap planning returned PLANNING INCONCLUSIVE with no Plan 01-18; the preserve-unknown disposition remains active.
 
 Progress: [░░░░░░░░░░] 0%
+
+GSD's frontmatter `progress.completed_plans` counts summary files and includes the Plan 01-17 checkpoint summary. It is not the execution-completion count: 16/17 plans are complete; Plan 01-17 remains at an answered checkpoint.
 
 Historical task-level evidence exists for CPU-01 through CPU-05 (5/27 v1 requirements), but the later source review disputes clean backend admission. The current verification is `gaps_found`; Phase 1 remains open and Phase 2 stays gated.
 
@@ -120,7 +122,7 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 
 ### Pending Todos
 
-- Plan 01-17 completed its bounded acquisition and independent adjudication but remains at an answered checkpoint, not complete. The user selected preserve-unknown (P01-C-13); the hardware behavior and F14-03 remain unresolved. The active command is `$gsd-plan-phase 01 --gaps`. Do not repeat the finite search, accept either PC in tests, or change scope/implementation/contract/oracle. If planning yields a viable plan and independent checker passes, pause with `$gsd-execute-phase 01 --gaps-only` as the concrete next command; otherwise record the precise missing trigger. Phase 01 remains GAPS_FOUND/open; CPU-01–05 Pending; Phase 02 gated.
+- Plan 01-17 completed its bounded acquisition and independent adjudication but remains at an answered checkpoint, not complete. The user selected preserve-unknown (P01-C-13); the hardware behavior and F14-03 remain unresolved. `$gsd-plan-phase 01 --gaps` returned PLANNING INCONCLUSIVE; no Plan 01-18 was justified because existing invariant coverage cannot resolve the saved PC. If the owner wants to consider a supported-claim/subset revision, run `$gsd-discuss-phase 01` as a separate step. If preserve-unknown remains selected, wait for genuinely applicable authority or a qualified exact-silicon capture; after evidence is recorded, run `$gsd-plan-phase 01 --gaps`. Phase 01 remains GAPS_FOUND/open; CPU-01–05 Pending; Phase 02 gated.
 
 ### Blockers/Concerns
 
@@ -145,6 +147,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-03T16:23:38.484Z
-Stopped at: Plan 01-17 decision checkpoint answered with preserve-unknown (P01-C-13); $gsd-plan-phase 01 --gaps in progress. Phase 01 remains GAPS_FOUND; F14-03/T-01-15-03 HIGH/open; CPU-01–05 Pending; Phase 02 gated.
+Last session: 2026-10-03T16:35:11.770Z
+Stopped at: Plan 01-17 checkpoint answered with preserve-unknown (P01-C-13); gap planning returned PLANNING INCONCLUSIVE and produced no Plan 01-18. To consider narrowing the supported claim, next command is $gsd-discuss-phase 01. Otherwise wait for decisive evidence. Phase 01 remains GAPS_FOUND; F14-03/T-01-15-03 HIGH/open; CPU-01–05 Pending; Phase 02 gated.
 Resume file: None
