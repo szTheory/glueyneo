@@ -77,6 +77,22 @@ class InventoryControls(unittest.TestCase):
         self.assertEqual(set(self.document["compiled_sources"]),
                          inventory.EXPECTED_COMPILED_SOURCES)
 
+    def test_manifest_corruption_controls(self):
+        import copy
+        document = inventory.make_manifest(ROOT)
+        self.assertEqual([], inventory.manifest_errors(ROOT, document))
+        for kind in ("missing", "duplicate", "stale", "forbidden"):
+            broken = copy.deepcopy(document)
+            if kind == "missing":
+                broken["files"].pop()
+            elif kind == "duplicate":
+                broken["files"].append(broken["files"][0])
+            elif kind == "stale":
+                broken["files"][0]["sha256"] = "0" * 64
+            else:
+                broken["files"].append({"path": "third_party/musashi/m68kcpu.c"})
+            self.assertTrue(any(kind in error for error in inventory.manifest_errors(ROOT, broken)), kind)
+
 
 if __name__ == "__main__":
     unittest.main()

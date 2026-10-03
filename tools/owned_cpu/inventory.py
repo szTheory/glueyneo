@@ -68,6 +68,69 @@ EXECUTABLE_TARGETS = {
     "owned_cpu_faults",
     "owned_cpu_state",
 }
+MANIFEST_PATH = Path("experiments/owned_cpu/source-manifest.json")
+
+
+def closure_paths(root: Path) -> set[str]:
+    """Source distribution scope; derived receipts are deliberately excluded."""
+    paths = {"CMakeLists.txt", "LICENSE", "third_party/unity/LICENSE.txt",
+             "third_party/unity/PROVENANCE.md", "tests/cpu/guest_fixture.c",
+             "tests/cpu/guest_fixture.h", "tests/cpu/ORACLE.md"}
+    if (root / "CMakePresets.json").is_file():
+        paths.add("CMakePresets.json")
+    for directory in ("experiments/owned_cpu", "tests/owned_cpu", "tools/owned_cpu",
+                      "third_party/unity/src"):
+        for path in (root / directory).iterdir():
+            if path.is_file() and path.suffix in (".c", ".h", ".py", ".md", ".txt", ".json"):
+                if path.name not in ("source-manifest.json", "acceptance-results.json", "budget-ledger.json", "REVIEW.md"):
+                    paths.add(path.relative_to(root).as_posix())
+    return paths
+
+
+def make_manifest(root: Path) -> dict[str, Any]:
+    files = []
+    for name in sorted(closure_paths(root)):
+        copied = name.startswith("third_party/unity/")
+        files.append({"path": name, "sha256": sha256(root / name),
+                      "origin": "copied" if copied else "authored",
+                      "source": "Unity b6763fbd9cedfacaa89e2ad9fd00d615a234e355" if copied else "Glueyneo original; exact bytes identified by SHA-256",
+                      "license": "MIT", "notice": "third_party/unity/LICENSE.txt" if copied else "LICENSE",
+                      "update_owner": "Glueyneo maintainers; audit upstream pin changes" if copied else "Glueyneo maintainers",
+                      "compiled": name in EXPECTED_COMPILED_SOURCES,
+                      "distributed": True,
+                      "host_calls": "explicit allocator/bus callbacks and C memory functions only" if name == RUNTIME_PATH.as_posix() else "host-side build/test/evidence only; not runtime"})
+    return {"schema": 1, "files": files, "generated_runtime": [],
+            "runtime_archive_sources": [RUNTIME_PATH.as_posix()],
+            "compiled_sources": sorted(EXPECTED_COMPILED_SOURCES),
+            "oracle": "tests/owned_cpu/ORACLE.md; tests/cpu/ORACLE.md; manuals primary, emulator agreement is not hardware truth",
+            "fixture": {"recipe": "tests/cpu/guest_fixture.c", "sha256": sha256(root / "tests/cpu/guest_fixture.c"),
+                        "outputs": {"scenario_a": "0000000a", "scenario_b": "00000010"},
+                        "output_sha256": {"scenario_a": hashlib.sha256(bytes.fromhex("0000000a")).hexdigest(),
+                                          "scenario_b": hashlib.sha256(bytes.fromhex("00000010")).hexdigest()}}}
+
+
+def manifest_errors(root: Path, manifest: dict[str, Any]) -> list[str]:
+    errors = []
+    if manifest.get("schema") != 1:
+        errors.append("invalid source manifest schema")
+    rows = manifest.get("files", [])
+    names = [row.get("path", "") for row in rows]
+    if len(names) != len(set(names)):
+        errors.append("duplicate source manifest record")
+    expected = make_manifest(root)
+    wanted = {row["path"]: row for row in expected["files"]}
+    for name in sorted(set(wanted) - set(names)):
+        errors.append(f"missing source manifest record: {name}")
+    for row in rows:
+        name = row.get("path", "")
+        if name not in wanted:
+            errors.append(f"forbidden source manifest record: {name}")
+        elif row != wanted[name]:
+            errors.append(f"stale source manifest record: {name}")
+    for key in ("generated_runtime", "runtime_archive_sources", "compiled_sources", "oracle", "fixture"):
+        if manifest.get(key) != expected[key]:
+            errors.append(f"source manifest closure mismatch: {key}")
+    return errors
 
 
 class InventoryError(Exception):
@@ -378,7 +441,13 @@ def check_inventory(root: Path, build_dir: Path, inventory: dict[str, Any]) -> l
     errors.extend(field_errors(inventory.get("fields", []), runtime))
     errors.extend(state_record_errors(root, inventory))
     errors.extend(runtime_global_errors(runtime))
-    errors.extend(hash_errors(root, inventory.get("source_hashes", {})))
+    manifest = json.loads((root / MANIFEST_PATH).read_text(encoding="utf-8"))
+    errors.extend(manifest_errors(root, manifest))
+    # Preserve the earlier state audit; the current distribution manifest owns
+    # current hashes for files since changed by inventory/collector work.
+    current = {row["path"]: row["sha256"] for row in manifest["files"]}
+    errors.extend(hash_errors(root, {name: current.get(name, digest)
+                                    for name, digest in inventory.get("source_hashes", {}).items()}))
     errors.extend(file_scope_errors(root, inventory.get("file_scope_objects", [])))
     errors.extend(compile_errors(root, build_dir, inventory.get("compiled_sources", [])))
     fixture = (root / FIXTURE_PATH).read_text(encoding="utf-8")
@@ -441,16 +510,32 @@ def run_self_test(root: Path, inventory: dict[str, Any]) -> int:
 
     if len(actual_fields) != len(inventory["fields"]):
         raise InventoryError("self-test baseline field inventory count differs")
+    manifest = make_manifest(root)
+    for kind in ("missing", "duplicate", "stale", "forbidden"):
+        broken = copy.deepcopy(manifest)
+        if kind == "missing":
+            broken["files"].pop()
+        elif kind == "duplicate":
+            broken["files"].append(broken["files"][0])
+        elif kind == "stale":
+            broken["files"][0]["sha256"] = "0" * 64
+        else:
+            broken["files"].append({"path": "third_party/musashi/m68kcpu.c"})
+        if not any(kind in error for error in manifest_errors(root, broken)):
+            raise InventoryError(f"manifest control missed {kind}")
     print("PASS: missing/extra fields, stale hashes, hidden globals and callback-owner mutation rejected")
     return 0
 
 
 def main(arguments: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("check", "self-test"))
+    parser.add_argument("command", choices=("check", "self-test", "refresh-manifest"))
     parser.add_argument("--build-dir", type=Path, default=Path("build/owned-cpu"))
     options = parser.parse_args(arguments)
     try:
+        if options.command == "refresh-manifest":
+            (ROOT / MANIFEST_PATH).write_text(json.dumps(make_manifest(ROOT), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            return 0
         inventory = json.loads((ROOT / INVENTORY_PATH).read_text(encoding="utf-8"))
         if options.command == "self-test":
             return run_self_test(ROOT, inventory)
