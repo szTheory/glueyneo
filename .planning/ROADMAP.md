@@ -38,11 +38,11 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit owned-core decision, commands and results against finite effort/churn limits fixed before implementation; failed work and findings are preserved, actionable issues receive budgeted repair, and resource thresholds trigger review/replanning rather than automatic backend rejection. (CPU-05)
 
-**Plans**: 14/16 plans executed. Plan 01-14 repaired and independently re-reviewed two receipt-integrity findings, then sealed an explicit unqualified outcome. F14-03 remains HIGH/open: the frozen ILLEGAL next-PC contract conflicts with tested fault-PC behavior. Plans 01-15 and 01-16 are the bounded source/behavior and dependent qualification/review closure; both passed independent plan checking, and requirement/decision coverage passed. Phase 01 remains open / GAPS_FOUND and Phase 02 gated. CPU-01–05 remain Pending; no fresh phase verification ran.
+**Plans**: 15/16 plans executed. Plan 01-15 retrieved exact UM/PRM/errata identities, preserved original contract bytes and documented the unresolved $100/$102 saved-PC interpretation; canonical/runtime/fixture/oracle remain unchanged. F14-03 remains HIGH/open. Dependent Plan 01-16 owns source-manifest refresh, independent review and honest unresolved sealing. Phase 01 remains open / GAPS_FOUND and Phase 02 gated. CPU-01–05 remain Pending; no fresh phase verification ran.
 
 Plans:
 
-- [ ] 01-15-PLAN.md
+- [x] 01-15-PLAN.md
 - [ ] 01-16-PLAN.md
 
 **Wave 1**
@@ -103,7 +103,7 @@ Plans:
 
 **Wave 15** *(F14-03 gap closure; source and direct behavior reconciliation)*
 
-- [ ] 01-15-PLAN.md — Reconcile the ILLEGAL saved-PC rule from primary evidence, then make only a justified narrow direct behavior change.
+- [x] 01-15-PLAN.md — Exact-source interpretation completed through unresolved branch; original freeze and behavior preserved, F14-03 HIGH/open.
 
 **Wave 16** *(F14-03 gap closure; depends on Wave 15; qualification and review)*
 
@@ -157,7 +157,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 14/16 | In Progress|  |
+| 1. CPU acceptance experiment | v0.1 | 15/16 | In Progress|  |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 

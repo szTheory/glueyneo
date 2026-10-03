@@ -4,17 +4,17 @@ milestone: v0.1
 milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
-status: gaps_found
-stopped_at: Plans 01-15 and 01-16 planned and independently checked; next command `$gsd-execute-phase 01 --gaps-only`
-last_updated: "2026-10-03T11:32:55.684Z"
+status: executing
+stopped_at: Completed 01-15-PLAN.md; unresolved branch ready for dependent 01-16
+last_updated: "2026-10-03T13:25:07.632Z"
 last_activity: 2026-10-03
-last_activity_desc: Planned F14-03 gap-closure Plans 01-15 and 01-16; plan, decision, requirement and post-planning coverage checks passed
-state_head: ffa8d6387a36a0b69da5cc16cc7e26e9b23d6207
+last_activity_desc: Phase 01 execution started
+state_head: 6a54e2c0b2747861276853c8e036bd3f2a42ed04
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
   percent: 0
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — READY TO EXECUTE
-Plan: 14 of 16 executed; gap-closure Plans 01-15 and 01-16 are ready to execute in dependency order
-Status: Plan 01-14 independently repaired and re-reviewed F14-01/02. Final four lanes pass48/48 CTest cases; ordinary seal and read-only verify preserve unqualified/GAPS_FOUND. F14-03 remains HIGH/open: frozen ILLEGAL next-PC contract conflicts with tested fault-PC behavior. Plans 01-15/01-16 now cover source reconciliation, direct behavior, dependent qualification and review. CPU-01–05 remain Pending; Phase 01 remains open / GAPS_FOUND and Phase 02 gated. No fresh phase verification ran.
-Last activity: 2026-10-03 — Planned and independently checked gap-closure Plans 01-15 and 01-16; 12/12 decisions and 17/17 requirement/decision coverage items are covered. CMake3.20 execution remains unknown.
+Phase: 01 (CPU acceptance experiment) — EXECUTING
+Plan: 16 of 16 — next dependent plan; 01-15 complete through unresolved branch
+Status: Executing Phase 01; F14-03 HIGH/open
+Last activity: 2026-10-03 — Plan 01-15 source reconciliation complete; independent Plan 01-16 closeout remains
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -45,15 +45,15 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 
 **Velocity:**
 
-- Total plans in phase: 16; executed: 14
-- Average recorded duration: 44.2min
-- Total recorded execution time: 619min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
+- Total plans in phase: 16; executed: 15
+- Average recorded duration: 42.1min
+- Total recorded execution time: 631min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 14 of 16 | 619min | 44.2min |
+| 01 | 15 of 16 | 631min | 42.1min |
 
 **Recent Trend:**
 
@@ -78,6 +78,7 @@ Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending c
 | Phase 01 P12 | 119min | 4 tasks | 8 files |
 | Phase 01 P13 | 23min | 3 tasks | 9 files |
 | Phase 01 P14 | 30min | 3 tasks | 7 files |
+| Phase 01 P15 | 12min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,7 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - [Phase 01]: Keep restore-over-ready semantics unclaimed until its destination precondition is clarified — The review found contract wording ambiguity while implementation accepts ready destinations. No behavior is promoted to supported without a direct requirement or test contract.
 - [Phase 01]: Preserve the earlier state audit while the current distribution manifest owns refreshed source identities; four native preset lanes pass, with admission pending independent Plan 14 review.
 - [Phase 01]: Plan 01-14 sealed unqualified/GAPS_FOUND after independent repair re-review; F14-03 frozen ILLEGAL contract discrepancy requires user-directed reconciliation; CPU-01–05 Pending, Phase 01 open and Phase 02 gated.
+- [Phase 01]: Plan 01-15 leaves F14-03 HIGH/open after exact UM/PRM/errata interpretation; canonical/runtime/fixture/oracle unchanged, CPU-01–05 Pending, Plan 01-16 owns independent unresolved closeout.
 
 ### Pending Todos
 
@@ -140,6 +142,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-03T11:32:55Z
-Stopped at: Plans 01-15 and 01-16 planned and checked; next command is `$gsd-execute-phase 01 --gaps-only`
+Last session: 2026-10-03T13:25:07.604Z
+Stopped at: Completed 01-15-PLAN.md; unresolved branch ready for dependent 01-16
 Resume file: None
