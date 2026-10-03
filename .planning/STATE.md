@@ -6,10 +6,10 @@ current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: GAPS_FOUND
 stopped_at: Plan 01-17 checkpoint answered with preserve-unknown (P01-C-13); gap planning returned PLANNING INCONCLUSIVE and produced no Plan 01-18. To consider narrowing the supported claim, next command is $gsd-discuss-phase 01. Otherwise wait for decisive evidence. Phase 01 remains GAPS_FOUND; F14-03/T-01-15-03 HIGH/open; CPU-01–05 Pending; Phase 02 gated.
-last_updated: "2026-10-03T16:35:27.861Z"
+last_updated: "2026-10-03T16:38:06.037Z"
 last_activity: 2026-10-03
-last_activity_desc: gap planning returned PLANNING INCONCLUSIVE with no Plan 01-18; the preserve-unknown disposition remains active.
-state_head: 027cd4e8b489c598bfd64f50693b11291ecc61f5
+last_activity_desc: gap planning returned PLANNING INCONCLUSIVE with no Plan 01-18; preserve-unknown remains active and the earlier execute pointer is marked superseded.
+state_head: 3bc11c366ebae74567e5a2ecb7092419cdfcd7e9
 progress:
   total_phases: 3
   completed_phases: 0
@@ -33,7 +33,7 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 Phase: 01 (CPU acceptance experiment)
 Plan: 17 of 17 (checkpoint; not complete)
 Status: GAPS_FOUND
-Last activity: 2026-10-03 — gap planning returned PLANNING INCONCLUSIVE with no Plan 01-18; the preserve-unknown disposition remains active.
+Last activity: 2026-10-03 — gap planning returned PLANNING INCONCLUSIVE with no Plan 01-18; preserve-unknown remains active and the earlier execute pointer is marked superseded.
 
 Progress: [░░░░░░░░░░] 0%
 
