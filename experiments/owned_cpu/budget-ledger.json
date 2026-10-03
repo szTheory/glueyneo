@@ -1015,6 +1015,50 @@
         "status": "pass"
       },
       "working_tree_dirty": true
+    },
+    {
+      "active_seconds": 527,
+      "agent_intervals": [
+        {
+          "agent": "plan17-evidence-author-including-initial-read-and-failed-pending-gate-check",
+          "end": "2026-10-03T15:33:54Z",
+          "start": "2026-10-03T15:25:07Z"
+        }
+      ],
+      "build_dir": "build/owned-debug",
+      "build_identity": {
+        "build_ninja_sha256": "22e9fad5c86b1e9bc48708c054e98ec0d2582afde79cb5d4e205620d44c0ce57",
+        "cmake_cache_sha256": "ed9275b4e3884b1cc8dc26a699d60bdc50c8be8b34fd7b201be1630a78c9602e"
+      },
+      "commit": "f0af6bc3815d35c52c06db3c04cf75da6f147991",
+      "cumulative_churn": {
+        "runtime_added": 1154,
+        "runtime_deleted": 52,
+        "test_tool_added": 5173,
+        "test_tool_deleted": 79
+      },
+      "diagnostic_gate": false,
+      "fixture_sha256": {
+        "tests/cpu/ORACLE.md": "8a1f9c113ea4fe7608a41b2fedd856c69533a1009b07f9dda6dafd276dc93ade",
+        "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
+        "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c"
+      },
+      "inherited_identity_status": "Historical build/fixture identities copied from Plan16; not freshly built/tested. Churn unchanged; only evidence and accounting added.",
+      "recorded_at": "2026-10-03T15:33:54Z",
+      "stage": "plan17-document-acquisition",
+      "test_results": {
+        "cases": [
+          "evidence-schema-nine-checks",
+          "protected-file-hashes",
+          "frozen-contract-archive"
+        ],
+        "expected": 193,
+        "kind": "document-integrity; no native execution",
+        "log_sha256": "52794351aeba837b0db4f058ecca303ad1a1d6e5d0f2065a686e2f2a201568d7",
+        "observed": 193,
+        "status": "pass"
+      },
+      "working_tree_dirty": true
     }
   ],
   "freeze_amendments": [

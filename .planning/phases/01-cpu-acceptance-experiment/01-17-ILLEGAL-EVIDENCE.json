@@ -1,0 +1,729 @@
+{
+  "schema": 1,
+  "finding": "F14-03",
+  "model": "original MC68000",
+  "opcode": "0x4afc",
+  "baseline": {
+    "revision": "f0af6bc3815d35c52c06db3c04cf75da6f147991",
+    "files": {
+      ".planning/phases/01-cpu-acceptance-experiment/.continue-here.md": "9daee9acad4b78f5ee9a2348e12fbcb37c095ad28dccb636e28003c9cf8cb4d9",
+      ".planning/phases/01-cpu-acceptance-experiment/01-01-PLAN.md": "eb3bf939643cbb4fbd25dcec4e1e75fbb9b553b5b9fec550a1165a6ff0695813",
+      ".planning/phases/01-cpu-acceptance-experiment/01-01-RECOVERY.md": "3659bbd6955a04b6924abfbcf61e1b383723304d3a4a53e971e52cc94e629b5d",
+      ".planning/phases/01-cpu-acceptance-experiment/01-01-SUMMARY.md": "b1bb0c05db904888b31696629db3e7e689b0487d3476e828c59a3ea9f11bbdcb",
+      ".planning/phases/01-cpu-acceptance-experiment/01-02-PLAN.md": "b1fac24743f5111b0c481ee29b546cf0dfbcee362eb98d5bf6391d464b2e11ee",
+      ".planning/phases/01-cpu-acceptance-experiment/01-02-SUMMARY.md": "d50a735fb9ca1415f4e869fdbf354e91a9c2e4ad1634bce70196ccabad9ef632",
+      ".planning/phases/01-cpu-acceptance-experiment/01-03-PLAN.md": "2509f0eb7b70005094d0129d2f1819b9b82bd3c859c705f53ab5c156d2b1517d",
+      ".planning/phases/01-cpu-acceptance-experiment/01-03-SUMMARY.md": "33b4026ab86f31d3dc94c3b5f344bba3292769eafd7d06a5a998f1351870d607",
+      ".planning/phases/01-cpu-acceptance-experiment/01-04-PLAN.md": "14ab5b218c0f92bae79a2fbcb31332b23ef3549dccc40109bf843570418df462",
+      ".planning/phases/01-cpu-acceptance-experiment/01-04-SUMMARY.md": "a0f0b1d702c9cf094336c2d4b87e4edc9f6d658fd1e05e1cdaf70c350a9c6a08",
+      ".planning/phases/01-cpu-acceptance-experiment/01-05-PLAN.md": "557b55f39b19c61f74fc2813f02f5cd1adc07cb178afbdb44472ecfde9eee9d2",
+      ".planning/phases/01-cpu-acceptance-experiment/01-05-SUMMARY.md": "4590714395ef10d06b5136baf72dd34be94acf2c25a4bb6b11ebdf79e3d92603",
+      ".planning/phases/01-cpu-acceptance-experiment/01-06-DIRECTION.md": "d07bae64179bdb6427913392768cce8ce8d443d62b87bfcf95e18b48fefb2253",
+      ".planning/phases/01-cpu-acceptance-experiment/01-06-PLAN.md": "df3159fc3b1184ad9931bbd1795832e348e43af309146f83b9986bc7e193e66d",
+      ".planning/phases/01-cpu-acceptance-experiment/01-06-SUMMARY.md": "c50cab767577a3173b222ea8661b017b69e6e47e9308a453e683ea36fe751853",
+      ".planning/phases/01-cpu-acceptance-experiment/01-07-PLAN.md": "3bf21363e2c77f45bc7836772714ed33450b400341c285d6fad80616a7f0c09e",
+      ".planning/phases/01-cpu-acceptance-experiment/01-07-SUMMARY.md": "65804a66a7ae1fb5bcd113652440b6b535df58a17f47c1785dc24d167e3c862c",
+      ".planning/phases/01-cpu-acceptance-experiment/01-08-PLAN.md": "a22af829bb411e96d6fefaaf0f8d3f7940d188bca79505d25aed95fc8c477920",
+      ".planning/phases/01-cpu-acceptance-experiment/01-08-SUMMARY.md": "f0d753dfb934aa5bc1e2802058ad859ed5d2137b1fed0de4a58aacd7b9f728ed",
+      ".planning/phases/01-cpu-acceptance-experiment/01-09-PLAN.md": "753713c7e69b9177787011fb1f9ace1dca957e044cb690b46f1b751b0c9ab34b",
+      ".planning/phases/01-cpu-acceptance-experiment/01-09-SUMMARY.md": "fa6b9311a7a6faf368e5d20427ab81d84b2677b4c07fb2ad8b328db677f87ee4",
+      ".planning/phases/01-cpu-acceptance-experiment/01-10-PLAN.md": "add19ec4624b433c31b00b9b353a72773e4bac40c3a3b305b9c77986ee0bacd0",
+      ".planning/phases/01-cpu-acceptance-experiment/01-10-SUMMARY.md": "9fd42dcae9bcdaa1bda4997f6be5c5092540b3c18ae53506d32c32d402d47935",
+      ".planning/phases/01-cpu-acceptance-experiment/01-11-PLAN.md": "cee9660b4d53d331affde2c39f5542ca1b9acda5b6d53d20c3086b6802fad8e2",
+      ".planning/phases/01-cpu-acceptance-experiment/01-11-RED.json": "6076d973e9999d987725511ba20a0af0c5a8ee5cf004bb683d9782c49f589ee6",
+      ".planning/phases/01-cpu-acceptance-experiment/01-11-SUMMARY.md": "a66a5b98d87b11d35305dcade61999ee92cffb66fbd831291ea0945511f9a172",
+      ".planning/phases/01-cpu-acceptance-experiment/01-12-PLAN.md": "5dadcd9c71b9b69f66d8348e2c47036c5a9e16417016a720e02f71314d8d88ab",
+      ".planning/phases/01-cpu-acceptance-experiment/01-12-SUMMARY.md": "b434d5aebf6155eb9d8d0ff5a6cff6bb07c2d625feecc25382483b91b98ae030",
+      ".planning/phases/01-cpu-acceptance-experiment/01-13-PLAN.md": "31efe765b83e6bafa32fc2e2cb4716a81a9ece0d41014fc706badb07e5f2d0ba",
+      ".planning/phases/01-cpu-acceptance-experiment/01-13-SUMMARY.md": "6ada123029665816fcd40c34c7a96c5532bfc460a6d48eb14c66622022d125af",
+      ".planning/phases/01-cpu-acceptance-experiment/01-14-PLAN.md": "939658ccc3898c8283cde826aa0b683ebc5072bc66d9d086cec2e63baf4edccc",
+      ".planning/phases/01-cpu-acceptance-experiment/01-14-SUMMARY.md": "cec6e95bb97969fb630a3bcf2eed255e04944fc916e6ed459d0dd926816a5e4e",
+      ".planning/phases/01-cpu-acceptance-experiment/01-15-PLAN.md": "d2d21940168a7f8785dcdbb3a6f5c6d8601258afcbcfe63fedeb71a00f26c787",
+      ".planning/phases/01-cpu-acceptance-experiment/01-15-SUMMARY.md": "7e5937fa04f42c3946d660900bc37dc49f280e9c4f09910ae5990a21002668a8",
+      ".planning/phases/01-cpu-acceptance-experiment/01-16-PLAN.md": "f70e2601d8a5256d8e74f754782fc48f6bb3457d30122ddcb5cc3e4426bcbfab",
+      ".planning/phases/01-cpu-acceptance-experiment/01-16-SUMMARY.md": "8233111643ef5a3e6a7a96552b52cf8ff45357f6da160f852a3988beacc6aa40",
+      ".planning/phases/01-cpu-acceptance-experiment/01-17-PLAN.md": "202fa83837f848877f562f215132ebe41e25e3745185e0d47ca4667915aec645",
+      ".planning/phases/01-cpu-acceptance-experiment/01-CONTEXT.md": "fa09fde8367ab18ae87ad39a807d6061e6e11776368aca0ca5ead8085e945c67",
+      ".planning/phases/01-cpu-acceptance-experiment/01-DISCUSSION-LOG.md": "10b9a6e6d29f1cfa4ba0afc3a641027a9491403ee4cde1dae0c3d921a848bb66",
+      ".planning/phases/01-cpu-acceptance-experiment/01-GAP-COVERAGE.md": "5c9e69e07ec77b7d6af67e18125123548014311ca59b126bd36ecfda7400a449",
+      ".planning/phases/01-cpu-acceptance-experiment/01-PATTERNS.md": "ac38839613ef544088a2bd6340bada635de36f4cf9f8430a052debc9aee4b771",
+      ".planning/phases/01-cpu-acceptance-experiment/01-RESEARCH.md": "cbddd5914aa3d4ea6fa8ad7e366c4f13f974df618d63545656970f7613c6aa31",
+      ".planning/phases/01-cpu-acceptance-experiment/01-REVIEW.md": "1053bbb02ca79c24fbf83d59174a7eb0820c122ad40e10db3e190717fb0b46c4",
+      ".planning/phases/01-cpu-acceptance-experiment/01-SECURITY.md": "316abd97911754199550e190455aea6c89399bc131da2287887ad7f0fbc007c6",
+      ".planning/phases/01-cpu-acceptance-experiment/01-UI-REVIEW.md": "a55a8d03cf5435490da098ea9cdebb228cc6f734a08cc3b79509471ad44bf188",
+      ".planning/phases/01-cpu-acceptance-experiment/01-VALIDATION.md": "f74e06b6f51800b97b0fa02c2b328e4edd4b2946ec2858fa67a78cd1c38ba7b7",
+      ".planning/phases/01-cpu-acceptance-experiment/01-VERIFICATION.md": "81c48b19b5f5fd639748c9c96088dee87b82255c0a75373f38f56fa21d97710f",
+      ".planning/phases/01-cpu-acceptance-experiment/COVERAGE.md": "5f954112363ca3a040314d80a4674541da7483df06da561eb2ff310572f029b6",
+      ".planning/phases/01-cpu-acceptance-experiment/SKELETON.md": "09beb15470ddb93bd990af2b54b8f461bc652a823b7d9a521c275cdb85ab3273",
+      "experiments/cpu/ACCEPTANCE.md": "00b2da4548384c78e921d0085ced2147f0ec7eca30635a2961f49279dcd6cf3b",
+      "experiments/cpu/CMakeLists.txt": "349585577e104272e6eb39c09a68e566a4469cfcf8d2068c45a2ec5126359817",
+      "experiments/cpu/REVIEW.md": "35bf8e3a849d05e90e7291c9868cffcae014ada4d1607ad3542de7f912e9be6e",
+      "experiments/cpu/acceptance-results.json": "6e5efacd1ec655d803b4edb56570615ea8b8a81f89deda725ffc551a17bc3641",
+      "experiments/cpu/budget-ledger.json": "62266377e31f81cba19526c78fb23390bb21448181c06cdea1c77d385da43800",
+      "experiments/cpu/cpu_adapter.c": "71745c08b1954685c64a3b7bae4b7a89070a2c1fb29c7093c883efc7bb6fb110",
+      "experiments/cpu/cpu_adapter.h": "e4d3f67daea476bec85ff104c6b32319217857d98afe6142dc0f0c84b822849a",
+      "experiments/cpu/evidence/attempt-1/2026-10-01-halted-summary.md": "aa8b6d353822cb099a4baf447dcf130f04e2d1d443a5c1ea642321e19d5cd421",
+      "experiments/cpu/evidence/attempt-1/build-failure.txt": "1e9e026035591a61b3362adcfda3905b860d0d065be60e645a3503343372ad13",
+      "experiments/cpu/evidence/attempt-1/receipt.json": "c63d0fcfb2588498f7f0672a3a4d00d7f823a35fec6a575ea72163281a9fa721",
+      "experiments/cpu/evidence/attempt-1/source.patch": "b69a0c887e92cd588892c024c33ebebe58e2031cac26ec83bb6175fea36772ce",
+      "experiments/cpu/evidence/attempt-2/audit-control-path-failure.txt": "dd5ca6d6946af2b6a4c732a0a5140b44637e0fab98a1f7cdd3ffcc8663959133",
+      "experiments/cpu/evidence/attempt-2/closure-first.json": "692b2f76d19a731f166510e4e61ccb490c482aa62492f68320fa591554a3d466",
+      "experiments/cpu/evidence/attempt-2/closure-second.json": "d2bb16100348a3cd050ceeb4f74e8e565057122abe59cdd26e6f7169f30cb05a",
+      "experiments/cpu/evidence/attempt-2/compiler-1.patch": "c74ae9e898f3cc0dbb1e967eca915c362af5f7798bf9b48d7cdd5c298c62d10b",
+      "experiments/cpu/evidence/attempt-2/compiler-1.txt": "9deb2195977e5f55b5eef772537c627fb10d121a8b7a2ba1cf4f0e4764104b99",
+      "experiments/cpu/evidence/attempt-2/qualification.json": "fffc599d92dea0a401651f8e323805ce471cb26b54140c8876b0e7f74eb7ca55",
+      "experiments/cpu/evidence/attempt-2/tracer.json": "ede9172aa7df8d442b4acc1a794c2a56053a1c53ff6df6d4998fdeb9f8de82bb",
+      "experiments/cpu/evidence/plan-01-02/cpu-asan.log": "e010a3848bcbbdee82063cec5f28370d64aca38a66c0344cd26e866cc22b5e95",
+      "experiments/cpu/evidence/plan-01-02/cpu-tsan.log": "a53e1d5f3abb23d4dd99116eb5d5c0fe36ac0392099b0214bb30750769817bc2",
+      "experiments/cpu/evidence/plan-01-02/cpu.log": "a2ae4d3b76597de946dbafc2318cf97fcc29d28845514ba21c7af47da7cfe366",
+      "experiments/cpu/evidence/plan-01-02/irq-fault-counterexample.json": "199998e80b171a6ba99054a3702e0f2c539158a4e6127f4093be5a3419ecfe2e",
+      "experiments/cpu/evidence/plan-01-02/qualification.json": "e5439185f09547f555443066f2b23141f7e7ec8abb86e09176356f383ab39a57",
+      "experiments/cpu/evidence/plan-01-02/sanitizer-counterexample.json": "e4aaad63aab7a37916ff914e4a93ef54e09205e0263712738c9a2ea07ec1d2e3",
+      "experiments/cpu/evidence/plan-01-03/budget.json": "c647908006986f53ead3ac86b32119697c2c9e4297e6ddd5c0a75d206ce6c9ee",
+      "experiments/cpu/evidence/plan-01-03/cpu-asan.log": "37f587e26045aff42b6fe1a8840ec924f7c1193f9e5e4a4decf91c7da456c5dd",
+      "experiments/cpu/evidence/plan-01-03/cpu-tsan.log": "bb39a296b7b923efc3c30aced774f55c095d2e99f0a373b6895d752f59b07211",
+      "experiments/cpu/evidence/plan-01-03/cpu.log": "2eee37ba377ba24631c07e39725b1766fbea9a47eb530f68fadd6bfc892c145c",
+      "experiments/cpu/evidence/plan-01-03/qualification.json": "91dc2d1d2d0a4d91ebbd2d212d0e6ffca2a6c752ad8d8b025a2879d7135fb465",
+      "experiments/cpu/evidence/plan-01-03/regeneration.json": "02164bc5ff17e507a34bd79cb6fc2c17b67fcc18729525a4944ae93db9213df0",
+      "experiments/cpu/evidence/plan-01-03/reset-counterexamples.md": "4dd29acf99a4fec1d804c116aec4140af28d4f1df67f2a1e1e1e7af8d1dc10d7",
+      "experiments/cpu/evidence/plan-01-03/review.md": "abfbbfb78a4df188be0611dd8832c545aab3edb8b6adb3fcacec678f35a2d342",
+      "experiments/cpu/evidence/plan-01-03/state-red.json": "1a0f60c95d84935488d5340f9de1f7dc56b69a12a157329030c99d2b4daf094e",
+      "experiments/cpu/evidence/plan-01-03/state-review-counterexamples.md": "52d94e1811f4d909754fa3de557462837f06768df507b014b3763c5fe67c62f2",
+      "experiments/cpu/evidence/plan-01-03/timing-red.json": "4744737cbecbbd05a8ce30d8cc03e5bd09697ecfcdae0801bc6495fcfb101ccd",
+      "experiments/cpu/evidence/plan-01-04/acceptance-controls.log": "c9454f81ea70fb739c7f09b90eb99cc03a8a1da3afa9a3f95948eeb0c66ff0a2",
+      "experiments/cpu/evidence/plan-01-04/acceptance-red.json": "377c512fff4a7c2d3738f37e9ed71a4fbab50bad4634fae95384fc982ade98fb",
+      "experiments/cpu/evidence/plan-01-04/asan-ubsan-build.log": "1a3c4c9bb0747cb3b05b7082f6f9ed1ed852b8e1bcf973fa7a166388e83c475e",
+      "experiments/cpu/evidence/plan-01-04/asan-ubsan-configure.log": "7cf75d87b5f9bba2be20b4b3226b0e8cea06bb2393e33c9275196c60070b158d",
+      "experiments/cpu/evidence/plan-01-04/asan-ubsan-ctest.log": "930b1b1a6e554413bab2e51fa8f780361876d15a81a9711c9bb4ccd4ba33b4b1",
+      "experiments/cpu/evidence/plan-01-04/collection-1-diagnosis.md": "876751cbc421bea15bc40bd9e8c2387fc2e0a0a57fabf303f2ce0951bc515869",
+      "experiments/cpu/evidence/plan-01-04/collection-1-failure.json": "bccbd921ab190c16b72da21e7f4bbaf8b73cb3a793e6b9d4972790e7955eb365",
+      "experiments/cpu/evidence/plan-01-04/collection-2-diagnosis.md": "a50d1aa01aeac8935b104b181074d24274fb69b05aaeeadb206b986d0faeca2a",
+      "experiments/cpu/evidence/plan-01-04/collection-2-failure.json": "79f53e5a28af9d16ccba52ae61bab9e7be538fc4d58ad2f7676a89a4600e99ea",
+      "experiments/cpu/evidence/plan-01-04/native-build.log": "59817eff5ef17cf12c5a62a143f7645de06f5a46eaa3226bf26466afbcdfdde4",
+      "experiments/cpu/evidence/plan-01-04/native-configure.log": "e351c9370d765746a79bb95533729406cabd3a85510aa0a1bb707d56f4c81396",
+      "experiments/cpu/evidence/plan-01-04/native-ctest.log": "c0d76682d0a8c1f6bca0104c0b3b49c56af690ac68494c0ab85353db338267b6",
+      "experiments/cpu/evidence/plan-01-04/tsan-build.log": "6fcbd34f31c3007b4878e2173de875f59c4211350c668be5131813dc9973a1be",
+      "experiments/cpu/evidence/plan-01-04/tsan-configure.log": "8d18a6595ce2373ed4bbf98d24bb9403c0192e02b46f96b0e163869bbecc3f6d",
+      "experiments/cpu/evidence/plan-01-04/tsan-ctest.log": "26e5b16e3e1d91e5103e4d588aa2ebc8098561c392f00ee24faab9b682ebcc9b",
+      "experiments/cpu/evidence/plan-01-05/prior-REVIEW.md": "254fae71bfdb3a468dec1126bfd4f8b4e73f8c194b6cc594945219243b17c649",
+      "experiments/cpu/evidence/plan-01-05/prior-acceptance-results.json": "3b9d6a736fb7ac8e647aed77f1ca9c10cc17233b3f1991c2d3be13ae25f9a2d3",
+      "experiments/cpu/evidence/recovery-accounting/classify.py": "cfac0403b76e2d4067cc65cdb75305842023f205cdaf00a5dafbec801468e72b",
+      "experiments/cpu/evidence/recovery-accounting/core-semantic-refinement.json": "4b76137d896d9afb37436c08b51812f4cac5a5bef3eb6b312a5f027d60e263b3",
+      "experiments/cpu/evidence/recovery-accounting/history.json": "27879b678585ba229303620469fa22cb25f1716412c4090e1962b53efcf1f3c4",
+      "experiments/cpu/evidence/recovery-accounting/replay.py": "b4774f805c6ca9c9edaa09702d3cab4548c7d4762442a6fb756667a725bfaa48",
+      "experiments/cpu/evidence/recovery-accounting/semantic-residuals.txt": "b73dd70cc65856df01b4c7ac3a6036e0ebad3a8d7a5af8186435e3c4f6cc1d99",
+      "experiments/cpu/evidence/recovery-accounting/stage-0/adapt.py": "87eba7ae943cab624db72e00505678fc47c344aadf99ea71cdc208b79431dc71",
+      "experiments/cpu/evidence/recovery-accounting/stage-0/recipe.patch": "1263bea9881edb22ca7131ce6e16df9db41b3f017608c0a6060b0975aca69557",
+      "experiments/cpu/evidence/recovery-accounting/stage-0/transition.patch": "053c5a09a70a4d7484167db723de8ed1657965efee5a3371fb6f9b09ac16f53d",
+      "experiments/cpu/evidence/recovery-accounting/stage-1/adapt.py": "c4c00cc47ef407b6407647a6005fc0f511dab3947d38beefe5bcbbce698d1b0b",
+      "experiments/cpu/evidence/recovery-accounting/stage-1/recipe.patch": "8b2b78add51fe2e104a2da619bd685986dd16047150ddc2b01d986de63da6dbd",
+      "experiments/cpu/evidence/recovery-accounting/stage-1/transition.patch": "3c9beb8cde6325e6501ef9319fb486e940394f609a9f0444e6d05f8cbbb1917f",
+      "experiments/cpu/evidence/recovery-accounting/stage-2/adapt.py": "d950ba7a0d442135dad8a7e1dcd4238904fe0bf30cb5b1373d2858f6c4a9056f",
+      "experiments/cpu/evidence/recovery-accounting/stage-2/recipe.patch": "af7b9e8271ecd7b222a71da7b3b2bf4b30eec0da35f04400573013a737ebe049",
+      "experiments/cpu/evidence/recovery-accounting/stage-2/transition.patch": "dea4126175dd6cd721a071babeb100a095fe4809c79a3a2f7d02f995c29c1969",
+      "experiments/cpu/evidence/recovery-accounting/stage-3/adapt.py": "402a4478afa7359862156bf31a1fc714366de97e77c634a044445dc89ed86a4c",
+      "experiments/cpu/evidence/recovery-accounting/stage-3/recipe.patch": "92ba52e18fd4dfe6092bc3e8e40182e267da122da7af1bc38470756dbc6a1e74",
+      "experiments/cpu/evidence/recovery-accounting/stage-3/transition.patch": "b326ec0c0eb016c63a397e4dd5d8f4b4908465b4176daf14f1f5bbb9db6c5ee7",
+      "experiments/cpu/evidence/recovery-accounting/tighten_core_semantics.py": "7e670b5e928009e199042f274fd9c6da68be34c072b67f6eed6cdbf346ac4049",
+      "experiments/cpu/state-inventory.json": "493d86054ba8dfc33514fdf918036384ad66e5009a859f6cb7b41ea8462c165f",
+      "experiments/cpu/test_bus.c": "2b682a9d3fd24d0991ddfd22ea2d1d4c00888a6d497842831bb3afe0aa6aa980",
+      "experiments/cpu/test_bus.h": "e37ba87dc4dfc038bf47cc2824d2ed549297c6b38ae464bfe22363727f0ef624",
+      "experiments/owned_cpu/ACCEPTANCE.md": "2a1b9f656a9142d48beb5ff62c1bed38516f04b1b11af5766ed5617cb0a42e64",
+      "experiments/owned_cpu/CMakeLists.txt": "990848e89ffbff684df06ba60414db7722078aed92e4c3431a96039f31b585a3",
+      "experiments/owned_cpu/CONTRACT.md": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73",
+      "experiments/owned_cpu/PROVENANCE.md": "14a9178963cb773b8331668223bc14272d009a9edacecd1e80f2083726fa1ce8",
+      "experiments/owned_cpu/REVIEW.md": "a783a6b19144219744401dcea0219ca684520cd80d9fbe7e6bc75d795f837658",
+      "experiments/owned_cpu/SUBSET.md": "435d0c1a8e991b32c59e732b590bc0d9ae23be2983e0d14eaaadd126e20d078d",
+      "experiments/owned_cpu/acceptance-results.json": "0bd5a8ece637ec26136ea2af8fe7aec6bf55dc66cf7fb0bb0bb64af3982031bb",
+      "experiments/owned_cpu/cpu.c": "8ac6ded7859184651f6eb3fff8a87c073f8e24a98d66175b64c3d86f69cbd15f",
+      "experiments/owned_cpu/cpu.h": "afdc50cbfdce47cdb17f881fed6fe47b72d919e3220b9c599f6262f868d50eee",
+      "experiments/owned_cpu/illegal-reconciliation.json": "03130a6b9499c176842ce489ed12ab92afa81e682a45182914baefda8f32fee4",
+      "experiments/owned_cpu/source-manifest.json": "10c00df7a0733c9d620a6da43e8d2be3426e2a276f03831972d6b8f2c4499da0",
+      "experiments/owned_cpu/state-inventory.json": "d8972b1b359f3c9b260865251cc00e4b7f3ae820d065e8e46c4fed5e98d0d9f2",
+      "tests/cpu/ORACLE.md": "8a1f9c113ea4fe7608a41b2fedd856c69533a1009b07f9dda6dafd276dc93ade",
+      "tests/cpu/audit-red-evidence.json": "e07a691f294baca90d0d1ff916cd65bb02551a2ffea15f965cfd5411476df62d",
+      "tests/cpu/faults-red-evidence.json": "f4abb74a45b6566b26b72306de585b8a66bbc169c4e7b4f3140144cbd6f2f520",
+      "tests/cpu/fixture-manifest.json": "015cbbca8b6898228164ca768629c39ccaa5c2f624c79f0206a0ac0d62ae3bba",
+      "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
+      "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c",
+      "tests/cpu/isolation-red-evidence.json": "2f2fe2cace4fd274e8ba3c21317592e208f000d1b260cffeff2b06011e57f940",
+      "tests/cpu/isolation_fixture.h": "f53554e48a270accd9cdba59e7fbd588f2097afe1d9f961f7d4ab02606acfab8",
+      "tests/cpu/isolation_negative.py": "5a0b31976529e26f585cbfcf4944e4f573732ff4bbe2bacc382c8fe7c645a627",
+      "tests/cpu/negative.py": "c9cdd4cb61843021a4441d09f3bf677fc7206d6782f1655c85dfda250b2c0492",
+      "tests/cpu/red-evidence.json": "948ac3d908b41d1b1a71724a5cd78896f554738ae8c7e6077c6f0f02839b1d78",
+      "tests/cpu/state_negative.py": "ae97fab2cd24b5db404572340c484a044ae48b4f0f36445ba8f2ea9d0dc485f8",
+      "tests/cpu/test_acceptance.py": "74ede54f86d2ded465b33b0a0f4a3f1fd043f23edb3d3fa56c7443b9936ba3a7",
+      "tests/cpu/test_audit.py": "7b0092e0e8c54e8e26cdc294fde4ce9863a06a0506e55eb02ce5d1f8268f1ef4",
+      "tests/cpu/test_cold.c": "e13a9e00b446fb4b699bf837c1516f3496dfec58360ee54f50547ac3d55dd2dd",
+      "tests/cpu/test_faults.c": "1654cf9c1b50d4997aeb08a27ea281f2ce1151297cf466681da207d8f7b612c2",
+      "tests/cpu/test_guest.c": "e63bcd7d187bc21dce01cd8513f4b490e7e6aa2bb2d2f91454037ad829e5ebe0",
+      "tests/cpu/test_inventory.py": "56f423a0f95679fb55092ca71bcfe5799e60e3a94cb07325c131223b8f01664b",
+      "tests/cpu/test_isolation.c": "727cf747b83a49ef6afa822222c3bf0bc20f5fedfacc978a1a0de5db63d8e41a",
+      "tests/cpu/test_state.c": "8bd118e1c9a73e0bc7380d01308648b67e57b5ecfb22d1b84d81f055eadb88b5",
+      "tests/cpu/test_timing.c": "a957e08916ab8bd0f1020c93bea6fd3fced85336868722d3dd783bbf14bfa5e0",
+      "tests/owned_cpu/ORACLE.md": "e5ef2662a2eb5c30e4d6b1127a55c58c82ab34f76f8c5750b2d4e2807d116c7d",
+      "tests/owned_cpu/cold.py": "4f0687b793cb04a4c61b31dc917ec7d08233e9a272bf2c0e41b274d06d604f84",
+      "tests/owned_cpu/isolation_fixture.h": "95ca205b077d7459edd2af0194dc9af79954be011fe9c39e8f1efa7da5eb474d",
+      "tests/owned_cpu/negative.py": "2f2cf4a75ba8078e09d5a7eae98181f574c5add8a030b58ab8aa741a9a3f863e",
+      "tests/owned_cpu/negative_timing.py": "9cbce720b2e429fb7d3682bb31b0c3517878bb175da930489ca89c561cb59502",
+      "tests/owned_cpu/test_acceptance.py": "d29bb78233a130c9e511f69bcff9c19fbfb0eafe6c0daee6cdc108c1470643f1",
+      "tests/owned_cpu/test_cold.c": "e2bcb33eea1a24cdc8c0a5340928e4b5d3705b4f0649b6299c370d5560e26d63",
+      "tests/owned_cpu/test_contract.py": "c584dce3be9a3f7ce25b73c01dd47b9740b5c0428be618a1c8b0781cfc3d6a14",
+      "tests/owned_cpu/test_diagnostic.c": "a3d7b2e60f2f0e4fd49042b069dc8729a268816c8bbfd42bfa3a34ed3121937a",
+      "tests/owned_cpu/test_faults.c": "71e09309af7c556b907563229ae6e176958ee91dbe7ddad5ceff124fabe071fa",
+      "tests/owned_cpu/test_inventory.py": "247cf3edf0bb528b9fc6a3198846f7e759f1b147c5b1807761ad9a4c29af383f",
+      "tests/owned_cpu/test_isolation.c": "35a5a515e1df3798bcae4a190387e32c4ea6ce6a0aa2ac628789111d85d7e155",
+      "tests/owned_cpu/test_semantics.c": "33102065bd511e8f5721b5d645b72cc00cad1ef98bd46ef99324fc1d2c123301",
+      "tests/owned_cpu/test_state.c": "25b12a79f08049cd7eb0bdf8af2f97ca74ba1798184397bccc90fa1cff308b31",
+      "tests/owned_cpu/test_timing.c": "7747995fa198148e941b84130a409cc2a4a9ce688ec5cd64b5f7ccd24fc3b0e4",
+      "tools/cpu/acceptance.py": "276ad07449fad4386d0e2890950e6e50c16594416063dff633d533ce08de5c7a",
+      "tools/cpu/adapt.py": "9ce4d9ee0534f421e1012629eeafb1936ea08633a5120b34a972eba78dddf659",
+      "tools/cpu/audit.py": "338315bcd59b4f27374638c58c8c4027e6f69a9cf8fa99c64bae384c429d36f3",
+      "tools/cpu/record_attempt.py": "0c6d14294f48e8855a1d89d6b7f9e715da4850814a8ed63c897e9624ed2649f0",
+      "tools/cpu/record_safety.py": "62bf98cf326f52cf84ddbb3da4ac178fe5c75242ceabfbb574c7a74fc88b08e3",
+      "tools/cpu/red.py": "cf02b581564bc600a26d68d867d75c67715f1b206e0b00497cb156eceb7d922f",
+      "tools/cpu/source-manifest.json": "9fdda93a3d811e5b42e192092b70a72a3507bfc71b0e0f0e7ccd57668edf507d",
+      "tools/cpu/state_inventory.py": "e933fead71da86a54ee0806f22cf7ceba88367af69ebe1eb9bfb7f4689e02477",
+      "tools/owned_cpu/acceptance.py": "e0838b72ed62dc3861716710ff420e2427f12530af8e38c5ba142eef65cf9228",
+      "tools/owned_cpu/contract.py": "f8164b1573fe1ce873cdcebb466316bc23e6d9e3b71df864bce20ac855d9ad50",
+      "tools/owned_cpu/inventory.py": "763785aef1b7497bcabaf304bcaeee2bbeadba1e573ab1e9b2b6e228ff34a0bf"
+    },
+    "ledger_sha256": "7c4d47c31d173c7874835cae8f5743b652344163cf77f14f91a8f8132f334b09",
+    "ledger_entry_count": 19,
+    "started_at": "2026-10-03T15:28:07.599802+00:00"
+  },
+  "question": "At opcode address $100 does exact4AFC stack $100 or sequential $102?",
+  "preceding_record": {
+    "path": "experiments/owned_cpu/illegal-reconciliation.json",
+    "sha256": "03130a6b9499c176842ce489ed12ab92afa81e682a45182914baefda8f32fee4",
+    "unchanged": true,
+    "root_contract_archive_sha256": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73"
+  },
+  "source_records": [
+    {
+      "id": "UM",
+      "url": "https://www.nxp.com/docs/en/reference-manual/MC68000UM.pdf",
+      "status": "inspected",
+      "sha256": "89b690b1923f8a3cff508567090bcab0bcd07511c2deff8ffa393a08efda18e1",
+      "bytes": 2318145,
+      "extraction_exit": 0,
+      "elapsed_seconds": 1.24,
+      "author": "Motorola",
+      "printed_identity": "Ninth Edition; copyright 1993; Freescale watermark",
+      "printed_revision": "unknown unless stated in printed_identity",
+      "retrieved_date": "2026-10-03",
+      "references": [
+        {
+          "pdf_index": 92,
+          "printed_page": "6-8",
+          "section": "6.2.3"
+        },
+        {
+          "pdf_index": 93,
+          "printed_page": "6-9",
+          "section": "Table 6-3 / 6.2.4"
+        },
+        {
+          "pdf_index": 95,
+          "printed_page": "6-11",
+          "section": "6.2.5"
+        },
+        {
+          "pdf_index": 97,
+          "printed_page": "6-13",
+          "section": "6.3.5"
+        },
+        {
+          "pdf_index": 98,
+          "printed_page": "6-14",
+          "section": "6.3.6"
+        },
+        {
+          "pdf_index": 99,
+          "printed_page": "6-15",
+          "section": "6.3.7 / 6.3.8"
+        }
+      ],
+      "supported_claim": "Verified section heading 6.2.3 at printed 6-8, PDF92; Table6-3 is on printed6-9, PDF93, not6-8. Illegal detected before execution; shared group1/2 short frame; usually next-unexecuted PC; actual TRAP following PC; ILLEGAL group2 frame analogy.",
+      "model_applicability": "original MC68000; also family variants",
+      "uncertainty": "General rule and instruction-specific analogy do not explicitly select ILLEGAL saved address; neither classification nor common frame layout alone supplies PC selection.",
+      "oracle_ancestry": "Manufacturer-authored primary document; not silicon measurement",
+      "rights": "Copyright retained by source owner; no PDF/raw extraction redistributed"
+    },
+    {
+      "id": "PRM",
+      "url": "https://www.nxp.com/docs/en/reference-manual/M68000PRM.pdf",
+      "status": "inspected",
+      "sha256": "06e4864b78da0e815054cead9326b7ec9914661f240fd39a455f2061ff47c4e8",
+      "bytes": 4725896,
+      "extraction_exit": 0,
+      "elapsed_seconds": 1.519,
+      "author": "Motorola",
+      "printed_identity": "copyright 1992; printed revision unknown",
+      "printed_revision": "unknown unless stated in printed_identity",
+      "retrieved_date": "2026-10-03",
+      "references": [
+        {
+          "pdf_index": 13,
+          "printed_page": "1-3",
+          "section": "1.1.3"
+        },
+        {
+          "pdf_index": 210,
+          "printed_page": "4-107",
+          "section": "ILLEGAL"
+        }
+      ],
+      "supported_claim": "ILLEGAL encoding 4AFC, vector4 and PC/SR stacking; generic PC definition.",
+      "model_applicability": "family instruction entry with explicit original-MC68000 frame exclusion",
+      "uncertainty": "No instruction-specific saved-PC value; unchanged previously inspected authority.",
+      "oracle_ancestry": "Manufacturer-authored primary document; not silicon measurement",
+      "rights": "Copyright retained by source owner; no PDF/raw extraction redistributed"
+    },
+    {
+      "id": "PRMER",
+      "url": "https://www.nxp.com/docs/en/reference-manual/M68000PRMER.pdf",
+      "status": "inspected",
+      "sha256": "8ae8228b3e2e54169a4e50310eafcbc14531740c57638b8c419c9751f4e88dc9",
+      "bytes": 72169,
+      "extraction_exit": 0,
+      "elapsed_seconds": 0.38,
+      "author": "Freescale",
+      "printed_identity": "Rev.1, 03/2007",
+      "printed_revision": "unknown unless stated in printed_identity",
+      "retrieved_date": "2026-10-03",
+      "references": [
+        {
+          "pdf_index": 0,
+          "printed_page": "1",
+          "section": "identity"
+        },
+        {
+          "pdf_index": 1,
+          "printed_page": "2",
+          "section": "Tables1/2"
+        }
+      ],
+      "supported_claim": "Correction tables cover floating-point instructions and no ILLEGAL saved-PC correction.",
+      "model_applicability": "PRM Revision1 errata; not a UM erratum",
+      "uncertainty": "Silence cannot select PC or prove exhaustiveness of all vendor errata.",
+      "oracle_ancestry": "Manufacturer-authored primary document; not silicon measurement",
+      "rights": "Copyright retained by source owner; no PDF/raw extraction redistributed"
+    },
+    {
+      "id": "UMAD",
+      "url": "https://www.nxp.com/docs/en/reference-manual/M68000UMAD.pdf",
+      "status": "inspected",
+      "sha256": "269a7543362ac2dba88e8fe1f9e6f674ad0008be352ab05d2f4ccc2692b2870c",
+      "bytes": 496182,
+      "extraction_exit": 0,
+      "elapsed_seconds": 0.492,
+      "author": "Motorola",
+      "printed_identity": "August7,1997; copyright1997; addendum to M68000UM/AD Revision8",
+      "printed_revision": "unknown unless stated in printed_identity",
+      "retrieved_date": "2026-10-03",
+      "references": [
+        {
+          "pdf_index": 0,
+          "printed_page": "unnumbered cover",
+          "section": "Overview"
+        },
+        {
+          "pdf_index": 4,
+          "printed_page": "4",
+          "section": "bus operation"
+        },
+        {
+          "pdf_index": 7,
+          "printed_page": "7",
+          "section": "bus arbitration"
+        }
+      ],
+      "supported_claim": "26 pages inspected: adds variant specifications and electrical/bus details; no ILLEGAL entry or saved-PC clarification.",
+      "model_applicability": "MC68HC000/HC001/EC000/SEC000; instruction details deferred to PRM",
+      "uncertainty": "Catalog May2000/Rev0 differs from printed date. Exception keyword appearances concern bus behavior; silence is not a PC rule.",
+      "oracle_ancestry": "Manufacturer-authored primary document; not silicon measurement",
+      "rights": "Copyright retained by source owner; no PDF/raw extraction redistributed"
+    },
+    {
+      "id": "MCUMAD",
+      "url": "https://www.nxp.com/docs/en/reference-manual/MC68000UMAD.pdf",
+      "status": "inspected",
+      "sha256": "1736b083d91ea67e5aee377f4e849868d67b0d24896d49c01ee7360e22e931f0",
+      "bytes": 81682,
+      "extraction_exit": 0,
+      "elapsed_seconds": 0.185,
+      "author": "Freescale",
+      "printed_identity": "copyright2004; printed revision unknown; M68000UMAD/AD",
+      "printed_revision": "unknown unless stated in printed_identity",
+      "retrieved_date": "2026-10-03",
+      "references": [
+        {
+          "pdf_index": 0,
+          "printed_page": "1",
+          "section": "correction list"
+        },
+        {
+          "pdf_index": 1,
+          "printed_page": "2",
+          "section": "continuation"
+        },
+        {
+          "pdf_index": 2,
+          "printed_page": "3",
+          "section": "pin data"
+        },
+        {
+          "pdf_index": 3,
+          "printed_page": "4",
+          "section": "vendor contact"
+        }
+      ],
+      "supported_claim": "Four-page addendum corrects PC abbreviation, bus-arbitration figure, package/pin data and contains vendor contact page; no exception saved-PC correction.",
+      "model_applicability": "corrections to family user manual",
+      "uncertainty": "Catalog Dec1994/Rev1 does not match printed copyright identity; no selection by silence.",
+      "oracle_ancestry": "Manufacturer-authored primary document; not silicon measurement",
+      "rights": "Copyright retained by source owner; no PDF/raw extraction redistributed"
+    },
+    {
+      "id": "EC000",
+      "url": "https://www.nxp.com/docs/en/reference-manual/EC000UM.pdf",
+      "status": "inspected",
+      "sha256": "7d1aa05639541888de8b2ca45d6b34f4c75d3c963d9abc092e522d32d4b04929",
+      "bytes": 1379577,
+      "extraction_exit": 0,
+      "elapsed_seconds": 0.568,
+      "author": "Motorola",
+      "printed_identity": "copyright1995; printed edition/revision unknown; EC000 Core Processor SCM68000 User Manual",
+      "printed_revision": "unknown unless stated in printed_identity",
+      "retrieved_date": "2026-10-03",
+      "references": [
+        {
+          "pdf_index": 13,
+          "printed_page": "1-1",
+          "section": "Overview"
+        },
+        {
+          "pdf_index": 14,
+          "printed_page": "1-2",
+          "section": "compatibility limits"
+        },
+        {
+          "pdf_index": 97,
+          "printed_page": "4-13",
+          "section": "4.2.3"
+        },
+        {
+          "pdf_index": 105,
+          "printed_page": "4-21",
+          "section": "4.3.3 / 4.3.4"
+        }
+      ],
+      "supported_claim": "Overview calls it MC68000 core implementation and delegates instruction details to UM. Sections4.3.3/4.3.4 repeat following-PC for traps and group2-frame analogy for ILLEGAL.",
+      "model_applicability": "SCM68000 EC000 core implementation, not qualified original MC68000 silicon",
+      "uncertainty": "Core relationship and user-mode upward compatibility support comparison, not identical original-silicon exception PC semantics. No transfer of a selected rule.",
+      "oracle_ancestry": "Manufacturer-authored primary document; not silicon measurement",
+      "rights": "Copyright retained by source owner; no PDF/raw extraction redistributed"
+    },
+    {
+      "id": "REV8",
+      "url": "https://www.bitsavers.org/components/motorola/68000/68000/M68000UM_AD_M68000_Microprocessor_Users_Manual_Rev8_1993.pdf",
+      "status": "inspected",
+      "sha256": "e41cbe7e14dc7cb853f1185adb1dcd7043d2a2a3f43cdc909e0f6c146007a8e5",
+      "bytes": 11152468,
+      "extraction_exit": 0,
+      "elapsed_seconds": 2.621,
+      "author": "Motorola",
+      "printed_identity": "Ninth Edition; copyright1993 despite archive filename Rev8",
+      "printed_revision": "unknown unless stated in printed_identity",
+      "retrieved_date": "2026-10-03",
+      "references": [
+        {
+          "pdf_index": 0,
+          "printed_page": "cover",
+          "section": "printed edition"
+        },
+        {
+          "pdf_index": 3,
+          "printed_page": "title",
+          "section": "copyright"
+        },
+        {
+          "pdf_index": 100,
+          "printed_page": "6-8",
+          "section": "6.2.3"
+        },
+        {
+          "pdf_index": 101,
+          "printed_page": "6-9",
+          "section": "Table6-3 / 6.2.4"
+        },
+        {
+          "pdf_index": 103,
+          "printed_page": "6-11",
+          "section": "6.2.5"
+        },
+        {
+          "pdf_index": 106,
+          "printed_page": "6-14",
+          "section": "6.3.6"
+        }
+      ],
+      "supported_claim": "Scanned older archive copy retains group1 and group2/frame analogy and usual next-unexecuted wording.",
+      "model_applicability": "same original MC68000/family manual wording",
+      "uncertainty": "Archive name is not printed edition; correlated same-edition wording is no independent resolution.",
+      "oracle_ancestry": "Manufacturer-authored primary document; not silicon measurement",
+      "rights": "Copyright retained by source owner; no PDF/raw extraction redistributed"
+    },
+    {
+      "id": "APR83",
+      "url": "https://www.bitsavers.org/components/motorola/68000/68000/MC68000_16-Bit_Microprocessor_Apr83.pdf",
+      "status": "inspected",
+      "sha256": "10352b5c90cd4674384adcc3771526511d4b16244e47ab0671e0972eec829d88",
+      "bytes": 3513267,
+      "extraction_exit": 0,
+      "elapsed_seconds": 1.454,
+      "author": "Motorola",
+      "printed_identity": "APRIL1983; copyright1983; ADI-814-R4 Advance Information",
+      "printed_revision": "unknown unless stated in printed_identity",
+      "retrieved_date": "2026-10-03",
+      "references": [
+        {
+          "pdf_index": 0,
+          "printed_page": "cover",
+          "section": "identity"
+        },
+        {
+          "pdf_index": 56,
+          "printed_page": "5-5",
+          "section": "5.2.3 / Figure5-4"
+        },
+        {
+          "pdf_index": 57,
+          "printed_page": "5-6",
+          "section": "5.2.4"
+        },
+        {
+          "pdf_index": 60,
+          "printed_page": "5-9",
+          "section": "5.3.5 / 5.3.6"
+        },
+        {
+          "pdf_index": 61,
+          "printed_page": "5-10",
+          "section": "5.3.6 / 5.3.8"
+        }
+      ],
+      "supported_claim": "Earlier direct-model source: next-unexecuted PC usually, group1 pre-execution illegal detection, 4AFC illegal trap, and no trace for illegal instruction.",
+      "model_applicability": "explicit original MC68000 16-bit microprocessor",
+      "uncertainty": "Stronger fault-PC derivation but no explicit saved-PC statement for exact4AFC; earlier omission of later trap analogy is not a correction of it.",
+      "oracle_ancestry": "Manufacturer-authored primary document; not silicon measurement",
+      "rights": "Copyright retained by source owner; no PDF/raw extraction redistributed"
+    },
+    {
+      "id": "ELECTRELIC",
+      "url": "https://electrelic.com/electrelic/node/1625",
+      "status": "inspected",
+      "sha256": "3237de931cffb5ea0dd36e3f0973a3e5e401c3eb68476dfeb2479082c66f7d84",
+      "bytes": 64300,
+      "elapsed_seconds": 1.623,
+      "author": "H. Asano",
+      "printed_identity": "2021-03-20 webpage; not vendor documentation",
+      "printed_revision": "unknown unless stated in printed_identity",
+      "retrieved_date": "2026-10-03",
+      "references": [
+        {
+          "pdf_index": null,
+          "printed_page": "webpage",
+          "section": "breakpoint / common handler"
+        }
+      ],
+      "supported_claim": "Existing breakpoint article identifies4AFC and saved-register handler code.",
+      "model_applicability": "article describes MC68000/8 and MC68010 exception handlers",
+      "uncertainty": "No qualified exact original CPU/mask, opcode-site plus raw frame capture provenance; source code narrative is not a silicon receipt.",
+      "oracle_ancestry": "Existing public candidate only; disqualified as qualified silicon receipt",
+      "rights": "Copyright retained by source owner; no PDF/raw extraction redistributed"
+    },
+    {
+      "id": "CPUTEST",
+      "url": "https://raw.githubusercontent.com/tonioni/WinUAE/master/cputest/readme.txt",
+      "status": "inspected",
+      "sha256": "10dfbbd56a16a2e080c8b2f9f2d5e7089afd7eca89fbfe7c6227baf61f73a514",
+      "bytes": 12240,
+      "elapsed_seconds": 0.162,
+      "author": "WinUAE contributors",
+      "printed_identity": "mutable master retrieved2026-10-03; exact bytes hashed",
+      "printed_revision": "unknown unless stated in printed_identity",
+      "retrieved_date": "2026-10-03",
+      "references": [
+        {
+          "pdf_index": null,
+          "printed_page": "README",
+          "section": "ancestry / testing notes"
+        }
+      ],
+      "supported_claim": "README says generated CPU logic comes from UAE and can check exception stack frames on targets.",
+      "model_applicability": "test tool supports68000 and later models",
+      "uncertainty": "No attached exact4AFC identified original-silicon frame receipt; emulator-generated expectations are correlated oracle, not hardware truth.",
+      "oracle_ancestry": "Existing public candidate only; disqualified as qualified silicon receipt",
+      "rights": "Copyright retained by source owner; no PDF/raw extraction redistributed"
+    }
+  ],
+  "tracer": {
+    "document_id": "UM",
+    "exact_bytes_match_preceding_record": true,
+    "claim_lineage": "Reopened primary bytes -> verified headings/pages -> original summaries -> opposing derivations -> frozen row versus observed implementation; no native or silicon claim.",
+    "citation_corrections": "6.2.3 is correct grouping heading at6-8/PDF92; Table6-3 lies6-9/PDF93. Earlier6.2.2/Table6-3@6-8 citation preserved historically, corrected only in new record.",
+    "frozen": "CONTRACT:61 next PC, interpreted $102 in prior reconciliation",
+    "observed": "SUBSET:61 and prior test_timing fixture retain fault PC $100; source-traced only in this run",
+    "conflict": "Group classification affects pre-execution interpretation; group2 frame wording can describe layout shared with group1. Actual trap following-PC rule cannot be transferred solely from similar processing. Source wording does not explicitly disambiguate4AFC."
+  },
+  "new_evidence_delta": "Four additional official/archive documents UMAD, MCUMAD, EC000 and archive-scanned Ninth Edition plus direct-model April1983 primary and two disqualified existing receipt candidates. New heading/Table location correction. No new qualified silicon result or exact ILLEGAL-PC statement.",
+  "search_routes": [
+    {
+      "name": "manufacturer-catalogs",
+      "status": "inspected",
+      "queries": [
+        "site:nxp.com MC68000UM errata addendum illegal instruction MC68EC000",
+        "site:nxp.com \"MC68EC000\" \"addendum\""
+      ],
+      "catalog_url": "https://www.nxp.com/products/MC68000?tab=Buy_Parametric_Tab",
+      "candidate_ids": [
+        "UM",
+        "EC000",
+        "UMAD",
+        "MCUMAD"
+      ],
+      "reason": "Catalog Rev9.1/date separated from printed NinthEdition1993. EC000 explicitly compared with transfer limit."
+    },
+    {
+      "name": "older-motorola-archives",
+      "status": "inspected",
+      "queries": [
+        "Motorola M68000 1982 user manual illegal instruction stacked program counter",
+        "site:bitsavers.org \"68000\" \"1982\" \"Users\""
+      ],
+      "candidate_ids": [
+        "REV8",
+        "APR83"
+      ],
+      "reason": "Manufacturer authorship and printed title/date checked; archive filename Rev8 fails printed-edition identity; April1983 genuinely earlier."
+    },
+    {
+      "name": "vendor-errata-application-notes",
+      "status": "inspected",
+      "queries": [
+        "site:nxp.com \"MC68000UM\" \"errata\"",
+        "site:nxp.com \"illegal instruction\" \"program counter\" \"68000\" errata"
+      ],
+      "candidate_ids": [
+        "PRMER",
+        "UMAD",
+        "MCUMAD"
+      ],
+      "reason": "Actual official addenda inspected; no applicable exact4AFC saved-PC clarification located. LaterMC68060 search hit excluded by model; no later rule transferred. This finite result does not prove no erratum exists."
+    },
+    {
+      "name": "existing-original-silicon-receipts",
+      "status": "unavailable",
+      "queries": [
+        "MC68000 4afc hardware illegal instruction stacked PC capture",
+        "original 68000 silicon illegal 4afc exception stacked PC hardware test"
+      ],
+      "candidate_ids": [
+        "ELECTRELIC",
+        "CPUTEST"
+      ],
+      "reason": "Both accessible candidates inspected, neither supplies sufficient CPU/mask/opcode/address/frame/capture/ancestry identity. No existing qualifying receipt acquired; no new capture requested."
+    }
+  ],
+  "candidate_derivations": [
+    {
+      "saved_pc": "$100 fault instruction",
+      "type": "primary-source derivation, not explicit ILLEGAL saved-PC statement",
+      "premises": [
+        "UM6.2.3 pre-execution group1 detection",
+        "UM6.2.5 usual next-unexecuted PC",
+        "UM6.3.8 no execution for illegal trace",
+        "APR83 same direct-model pre-execution/trace rules"
+      ],
+      "opposing_specific_wording": "UM6.3.6 group2 frame and trap similarity remain; shared layout is consistent with fault PC but does not itself establish address.",
+      "unresolved_premise": "Does usual next-unexecuted PC apply to reserved customer4AFC without instruction-specific exception? Earlier source supports inference but does not explicitly defeat later contrary reading."
+    },
+    {
+      "saved_pc": "$102 following word",
+      "type": "instruction-specific analogy derivation, not explicit ILLEGAL saved-PC statement",
+      "premises": [
+        "UM6.3.6 calls customer4AFC take-illegal-trap and uses group2 frame similarity",
+        "UM6.3.5 actual traps save following address"
+      ],
+      "opposing_general_wording": "UM6.2.3 classifies illegal as pre-execution group1; group1/2 share frame so group2 frame need not import PC semantics; APR83 trace confirms illegal not executed.",
+      "unresolved_premise": "Does similarity to traps import saved-PC selection, or only exception sequence and shared frame layout? No explicit authority acquired."
+    }
+  ],
+  "search_bounds": {
+    "distinct_documents_max": 10,
+    "distinct_documents_actual": 10,
+    "response_bytes_max": 16777216,
+    "largest_response_bytes": 11152468,
+    "network_timeout_seconds": 30,
+    "attempts_per_candidate": 1,
+    "acquisition_active_seconds_max": 5400,
+    "review_active_seconds_max": 1800,
+    "tool_installations": 0,
+    "native_executions": 0,
+    "download_elapsed_seconds": 10.244,
+    "actual_active_intervals": [
+      {
+        "agent": "plan17-evidence-author-including-initial-read-and-failed-pending-gate-check",
+        "start": "2026-10-03T15:25:07Z",
+        "end": "2026-10-03T15:33:54Z"
+      }
+    ],
+    "actual_summed_seconds": 527,
+    "interval_uncertainty": "180-second conservative initial-read charge before recorded baseline; includes failed validation. Final task handoff/commit charged separately in Task2 author closeout."
+  },
+  "document_checks": {
+    "download_and_extraction_command": "python3 acquire.py; python3 extra.py using existing urllib.request and pdftotext; 30-second network/extraction timeout, 16MiB read limit",
+    "retrieved_hashed": 10,
+    "pdf_extractions_passed": 8,
+    "protected_hashes_passed": 181,
+    "strict_archive_checks_passed": 3,
+    "structural_checks_expected": 9,
+    "structural_checks_status": "pass9/9; exact committed-plan command exit0",
+    "initial_budget": {
+      "exit": 0,
+      "status": "pass",
+      "active_seconds": 36507,
+      "records": 19,
+      "pause": null
+    },
+    "first_contract_validate": {
+      "exit": 1,
+      "reason": "pending_gate; orchestrator-owned ROADMAP admission wording; initially misattributed to STATE, corrected by orchestrator",
+      "classification": "pre-existing orchestration metadata; no source repair; rerun after orchestrator corrects it"
+    },
+    "evidence_json_parse": {
+      "exit": 0,
+      "status": "pass"
+    },
+    "contract_validate_after_orchestration_correction": {
+      "exit": 0,
+      "status": "pass",
+      "markers": 24,
+      "historical_hashes": 10,
+      "CPU-01\u201305": "Pending",
+      "Phase02": "gated"
+    },
+    "budget_after_author_charge": {
+      "exit": 0,
+      "status": "pass",
+      "pause": null,
+      "active_seconds": 37034,
+      "records": 20
+    }
+  },
+  "terminal_search_status": "ambiguous",
+  "recommendation": "Keep unknown until independent adjudication. Fault-PC derivation is stronger but neither value selected as hardware truth. If reviewer remains ambiguous, present explicit bounded scope revision or identified additional authority decision.",
+  "remaining_decision": "Independent reviewer must challenge both readings; unresolved standard requires blocking-human choice. F14-03/T-01-15-03 HIGH/open, CPU-01\u201305 Pending, Phase01 open/GAPS_FOUND, Phase02 gated."
+}
