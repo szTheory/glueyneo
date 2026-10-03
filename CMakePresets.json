@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "cmakeMinimumRequired": {"major": 3, "minor": 20, "patch": 0},
+  "configurePresets": [
+    {"name": "owned-debug", "generator": "Ninja", "binaryDir": "${sourceDir}/build/owned-debug", "cacheVariables": {"GLUEYNEO_CPU_EXPERIMENT": "OFF", "GLUEYNEO_OWNED_CPU_EXPERIMENT": "ON", "CMAKE_BUILD_TYPE": "Debug", "GLUEYNEO_OWNED_CPU_OPTIMIZATION": "NONE", "GLUEYNEO_OWNED_CPU_SANITIZER": "NONE"}},
+    {"name": "owned-release", "inherits": "owned-debug", "binaryDir": "${sourceDir}/build/owned-release", "cacheVariables": {"CMAKE_BUILD_TYPE": "Release", "GLUEYNEO_OWNED_CPU_OPTIMIZATION": "RELEASE"}},
+    {"name": "owned-asan-ubsan", "inherits": "owned-debug", "binaryDir": "${sourceDir}/build/owned-asan-ubsan", "cacheVariables": {"GLUEYNEO_OWNED_CPU_SANITIZER": "ADDRESS_UNDEFINED"}},
+    {"name": "owned-tsan", "inherits": "owned-release", "binaryDir": "${sourceDir}/build/owned-tsan", "cacheVariables": {"GLUEYNEO_OWNED_CPU_SANITIZER": "THREAD"}}
+  ],
+  "buildPresets": [
+    {"name": "owned-debug", "configurePreset": "owned-debug", "jobs": 2},
+    {"name": "owned-release", "configurePreset": "owned-release", "jobs": 2},
+    {"name": "owned-asan-ubsan", "configurePreset": "owned-asan-ubsan", "jobs": 2},
+    {"name": "owned-tsan", "configurePreset": "owned-tsan", "jobs": 2}
+  ],
+  "testPresets": [
+    {"name": "owned-debug", "configurePreset": "owned-debug", "output": {"outputOnFailure": true}, "execution": {"jobs": 2, "noTestsAction": "error"}},
+    {"name": "owned-release", "configurePreset": "owned-release", "output": {"outputOnFailure": true}, "execution": {"jobs": 2, "noTestsAction": "error"}},
+    {"name": "owned-asan-ubsan", "configurePreset": "owned-asan-ubsan", "output": {"outputOnFailure": true}, "execution": {"jobs": 2, "noTestsAction": "error"}},
+    {"name": "owned-tsan", "configurePreset": "owned-tsan", "output": {"outputOnFailure": true}, "execution": {"jobs": 2, "noTestsAction": "error"}}
+  ]
+}

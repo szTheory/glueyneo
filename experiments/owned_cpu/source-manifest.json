@@ -31,6 +31,18 @@
       "license": "MIT",
       "notice": "LICENSE",
       "origin": "authored",
+      "path": "CMakePresets.json",
+      "sha256": "d0ae026871d4bee5479e17f664bd8a27a939a71129d637d6fb19667d65030ded",
+      "source": "Glueyneo original; exact bytes identified by SHA-256",
+      "update_owner": "Glueyneo maintainers"
+    },
+    {
+      "compiled": false,
+      "distributed": true,
+      "host_calls": "host-side build/test/evidence only; not runtime",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "origin": "authored",
       "path": "LICENSE",
       "sha256": "9dad75e7582e12fb43b0d1deeca3e3469757f94f0225b798cb659c1980661ec7",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
@@ -217,6 +229,18 @@
       "update_owner": "Glueyneo maintainers"
     },
     {
+      "compiled": false,
+      "distributed": true,
+      "host_calls": "host-side build/test/evidence only; not runtime",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "origin": "authored",
+      "path": "tests/owned_cpu/test_acceptance.py",
+      "sha256": "339a289db5ce8525a9a16b50be194362973c6011b0d4c6e19756c5c81516ed51",
+      "source": "Glueyneo original; exact bytes identified by SHA-256",
+      "update_owner": "Glueyneo maintainers"
+    },
+    {
       "compiled": true,
       "distributed": true,
       "host_calls": "host-side build/test/evidence only; not runtime",
@@ -391,6 +415,18 @@
       "license": "MIT",
       "notice": "LICENSE",
       "origin": "authored",
+      "path": "tools/owned_cpu/acceptance.py",
+      "sha256": "b71f5a7c72f61881c72cec0df8ff4444fdf33b40beb56ea44a597e323dbf7710",
+      "source": "Glueyneo original; exact bytes identified by SHA-256",
+      "update_owner": "Glueyneo maintainers"
+    },
+    {
+      "compiled": false,
+      "distributed": true,
+      "host_calls": "host-side build/test/evidence only; not runtime",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "origin": "authored",
       "path": "tools/owned_cpu/contract.py",
       "sha256": "f8164b1573fe1ce873cdcebb466316bc23e6d9e3b71df864bce20ac855d9ad50",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
@@ -404,7 +440,7 @@
       "notice": "LICENSE",
       "origin": "authored",
       "path": "tools/owned_cpu/inventory.py",
-      "sha256": "fbd8a51ad6eea97f17468c8b3df5a7721f423e25f98da09826d32f622044c216",
+      "sha256": "763785aef1b7497bcabaf304bcaeee2bbeadba1e573ab1e9b2b6e228ff34a0bf",
       "source": "Glueyneo original; exact bytes identified by SHA-256",
       "update_owner": "Glueyneo maintainers"
     }

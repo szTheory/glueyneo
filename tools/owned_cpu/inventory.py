@@ -130,6 +130,14 @@ def manifest_errors(root: Path, manifest: dict[str, Any]) -> list[str]:
     for key in ("generated_runtime", "runtime_archive_sources", "compiled_sources", "oracle", "fixture"):
         if manifest.get(key) != expected[key]:
             errors.append(f"source manifest closure mismatch: {key}")
+    pins = {
+        "src/unity.c": "a6cc4b143075a03317d72c760b5ed67a4a12eeda1242f575464ad23f34042275",
+        "src/unity.h": "b30ba4db1e0be1a1f6c862d359d73c91025a114977e41d3dad17103363804334",
+        "src/unity_internals.h": "35bffad23ebc533977291e7a848c646027513572268fbfa9bd03d5ec21ee818a",
+        "LICENSE.txt": "ec6cf55f05ba2aa538b9677b2481b9ac14a87c63594fce8a0677d4f71c583980"}
+    for name, expected_hash in pins.items():
+        if sha256(root / "third_party/unity" / name) != expected_hash:
+            errors.append(f"Unity immutable pin mismatch: {name}")
     return errors
 
 
@@ -408,6 +416,20 @@ def compile_errors(root: Path, build_dir: Path, expected: list[str]) -> list[str
         errors.append(f"missing compiled source: {source}")
     for source in sorted(compiled - expected_set):
         errors.append(f"extra compiled source: {source}")
+
+    ninja_path = shutil.which("ninja")
+    if ninja_path is None or not (build_dir / "build.ninja").is_file():
+        errors.append("runtime archive closure requires Ninja and build.ninja")
+    else:
+        archive = subprocess.run([ninja_path, "-C", str(build_dir), "-t", "commands", "owned_cpu"],
+                                 text=True, capture_output=True, check=False)
+        lines = [line for line in archive.stdout.splitlines() if " qc " in line and "libowned_cpu.a" in line]
+        if archive.returncode != 0 or len(lines) != 1:
+            errors.append("cannot inspect owned runtime archive closure")
+        else:
+            objects = re.findall(r"\S+\.o(?:\s|$)", lines[0])
+            if len(objects) != 1 or "owned_cpu.dir/cpu.c.o" not in objects[0]:
+                errors.append("forbidden object in owned runtime archive")
 
     sanitizer = cache.get("GLUEYNEO_OWNED_CPU_SANITIZER", "NONE")
     if sanitizer != "NONE":
