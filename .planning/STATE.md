@@ -115,7 +115,7 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 
 ### Pending Todos
 
-- Plans 01-01 through 01-14 are executed. Plans 01-15 and 01-16 are planned and independently checked; Phase 01 remains `gaps_found`, open, and Phase 02 gated. Next command: `$gsd-execute-phase 01 --gaps-only` (executes only the two gap-closure plans in dependency order). Fresh phase verification is a separate later step.
+- Plans 01-01 through 01-14 are executed. Plans 01-15 and 01-16 are planned and independently checked; Phase 01 remains `gaps_found`, open, and Phase 02 gated. Next command: `$gsd-execute-phase 01 --gaps-only` (executes only the two gap-closure plans in dependency order, then runs the fresh phase-goal verifier). Follow that workflow's reported status and exact next command; do not start Phase 02 unless Phase 01 passes its admission gate.
 
 ### Blockers/Concerns
 
