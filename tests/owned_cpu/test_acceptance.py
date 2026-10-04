@@ -14,6 +14,14 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from tools.owned_cpu import acceptance as a
 
+LEGACY_C14_PROFILE = "owned-p01-c14-1"
+CONTINUATION_PROFILE = "owned-p01-c14-continuation-2"
+LEGACY_C14_BOUNDARIES = (
+    "reset_debt", "diagnostic_MOVEQ", "diagnostic_ADDQ", "diagnostic_MOVE_store",
+    "STOP", "masked_IRQ", "IRQ7_edge_pending_after_deassertion", "IRQ_entry",
+    "TRAP_entry", "canonical_unsupported", "privilege_entry", "address_error_entry", "RTE")
+CONTINUATION_BOUNDARIES = LEGACY_C14_BOUNDARIES + ("RTE_odd_PC", "SR_switch_odd_USP")
+
 
 def log_fixture(profile=None):
     blocks = []
@@ -25,10 +33,14 @@ def log_fixture(profile=None):
             output += f"{unity[name]} Tests 0 Failures 0 Ignored\n"
         if name == "owned_cpu_state":
             output += "state_checkpoints=13 continuation_run_calls=91\n"
-            if profile is not None:
+            if profile == LEGACY_C14_PROFILE:
                 output = ("5 Tests 0 Failures 0 Ignored\n"
                           "state_checkpoints=13 continuation_run_calls=78 source_destroyed_and_overwritten=1\n"
-                          "state_boundary_names=" + ",".join(a.BOUNDARIES) + "\n")
+                          "state_boundary_names=" + ",".join(LEGACY_C14_BOUNDARIES) + "\n")
+            elif profile == CONTINUATION_PROFILE:
+                output = ("5 Tests 0 Failures 0 Ignored\n"
+                          "state_checkpoints=15 continuation_run_calls=90 source_destroyed_and_overwritten=1\n"
+                          "state_boundary_names=" + ",".join(CONTINUATION_BOUNDARIES) + "\n")
         if name == "owned_cpu_isolation":
             output += "interleaved_pairs=32 boundaries_per_instance=6\nconcurrent_pairs=32 boundaries_per_instance=6\n"
         if name == "owned_cpu_cold":
@@ -186,6 +198,42 @@ class AcceptanceControls(unittest.TestCase):
         self.assertEqual((13, 6, 13, 78), (counts["ctest_observed"], counts["negative_controls"],
                                        counts["state_checkpoints"], counts["continuation_run_calls"]))
         self.assertEqual(25, counts["unity"]["owned_cpu_timing"])
+
+    def test_continuation_profile_keeps_the_old_denominator_and_rejects_rehashed_spoofs(self):
+        old_log = log_fixture(LEGACY_C14_PROFILE)
+        old_counts = a.test_counts(old_log, LEGACY_C14_PROFILE)
+        self.assertEqual((13, 78), (old_counts["state_checkpoints"], old_counts["continuation_run_calls"]))
+        new_log = log_fixture(CONTINUATION_PROFILE)
+        new_counts = a.test_counts(new_log, CONTINUATION_PROFILE)
+        self.assertEqual((13, 15, 90), (new_counts["ctest_observed"], new_counts["state_checkpoints"],
+                                        new_counts["continuation_run_calls"]))
+        self.assertEqual(list(CONTINUATION_BOUNDARIES), new_counts["state_boundary_names"])
+
+        for mutated in (
+                new_log.replace("RTE_odd_PC,", "", 1),
+                new_log.replace("RTE_odd_PC", "RTE", 1),
+                new_log.replace("SR_switch_odd_USP", "foreign_boundary", 1),
+                new_log.replace("continuation_run_calls=90", "continuation_run_calls=78", 1)):
+            with self.subTest(mutated=mutated[-180:]), self.assertRaises(a.EvidenceError):
+                a.test_counts(mutated, CONTINUATION_PROFILE)
+
+        old = document_fixture(LEGACY_C14_PROFILE)
+        lane = old["collections"][0]["runs"][0]
+        lane["test_log"] = new_log
+        lane["test_log_sha256"] = hashlib.sha256(new_log.encode()).hexdigest()
+        lane["counts"] = new_counts
+        old["collections"][0]["evidence_profile"] = CONTINUATION_PROFILE
+        rehash(old)
+        self.assertEqual("pass", a.verify(old, False)["status"])
+        relabeled = copy.deepcopy(old)
+        relabeled["collections"][0]["runs"][0]["test_log"] = new_log.replace(
+            "RTE_odd_PC", "", 1).replace("SR_switch_odd_USP", "", 1)
+        relabeled["collections"][0]["runs"][0]["test_log_sha256"] = hashlib.sha256(
+            relabeled["collections"][0]["runs"][0]["test_log"].encode()).hexdigest()
+        relabeled["collections"][0]["sha256"] = a.digest({
+            key: value for key, value in relabeled["collections"][0].items() if key != "sha256"})
+        with self.assertRaises(a.EvidenceError):
+            a.verify(relabeled, False)
 
     def test_rehashed_current_amendment_and_control_spoofs(self):
         original = document_fixture(a.PROFILE)

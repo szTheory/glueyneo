@@ -1,0 +1,9 @@
+{
+  "command": "python3 $TMP/glueyneo_tdd_unittest_tap.py",
+  "exitCode": 1,
+  "output": "TAP version 13\n1..1\nnot ok 1 - test_acceptance.AcceptanceControls.test_continuation_profile_keeps_the_old_denominator_and_rejects_rehashed_spoofs\n# Traceback (most recent call last):\n#   File \"$REPO/tests/owned_cpu/test_acceptance.py\", line 207, in test_continuation_profile_keeps_the_old_denominator_and_rejects_rehashed_spoofs\n#     new_counts = a.test_counts(new_log, CONTINUATION_PROFILE)\n#   File \"$REPO/tools/owned_cpu/acceptance.py\", line 143, in test_counts\n#     require(profile in (None, PROFILE), \"unknown evidence profile\")\n#     ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n#   File \"$REPO/tools/owned_cpu/acceptance.py\", line 65, in require\n#     raise EvidenceError(reason)\n# tools.owned_cpu.acceptance.EvidenceError: unknown evidence profile\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0",
+  "targetTest": "test_acceptance.AcceptanceControls.test_continuation_profile_keeps_the_old_denominator_and_rejects_rehashed_spoofs",
+  "targetFile": "tests/owned_cpu/test_acceptance.py",
+  "expected": "The expanded receipt profile accepts fifteen exact continuation boundaries and ninety run calls while the prior profile remains at thirteen/seventy-eight.",
+  "actual": "The target assertion cannot obtain counts for owned-p01-c14-continuation-2 because the collector accepts only the legacy profile and raises EvidenceError: unknown evidence profile."
+}
