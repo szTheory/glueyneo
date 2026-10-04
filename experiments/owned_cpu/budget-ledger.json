@@ -2176,6 +2176,54 @@
         "status": "pass"
       },
       "working_tree_dirty": true
+    },
+    {
+      "accounting_notes": "Root interval conservatively charges elapsed orchestration and command/tool time. Reviewer intervals are 767 seconds plus a separate 71-second README follow-up. Assessor reported 830 active seconds excluding 60 seconds of explicit waits; this ledger charges the full 890-second elapsed interval as a conservative allowance. The first draft declared 4,066 seconds; contract.py budget rejected that draft because the explicit intervals sum to 4,028 seconds. Corrected to the exact interval sum before commit; the failed validation is retained here.",
+      "active_seconds": 4028,
+      "agent_intervals": [
+        {
+          "agent": "codex",
+          "end": "2026-10-04T06:46:35Z",
+          "start": "2026-10-04T06:08:15Z"
+        },
+        {
+          "agent": "plan25-independent-reviewer",
+          "end": "2026-10-04T06:24:44Z",
+          "start": "2026-10-04T06:11:57Z"
+        },
+        {
+          "agent": "plan25-independent-reviewer",
+          "end": "2026-10-04T06:29:40Z",
+          "start": "2026-10-04T06:28:29Z"
+        },
+        {
+          "agent": "plan25-security-assessor",
+          "end": "2026-10-04T06:27:47Z",
+          "start": "2026-10-04T06:12:57Z"
+        }
+      ],
+      "commit": "9fba16b864cf74e3b8a9c97047bb27a5db544b59",
+      "cumulative_churn": {
+        "runtime_added": 1164,
+        "runtime_deleted": 64,
+        "test_tool_added": 6355,
+        "test_tool_deleted": 185
+      },
+      "diagnostic_gate": false,
+      "recorded_at": "2026-10-04T06:46:35Z",
+      "stage": "plan-01-25-independent-assessment-and-four-UAT-outcomes",
+      "test_results": {
+        "cases": [
+          "CR-01",
+          "CR-02",
+          "WR-01",
+          "WR-02"
+        ],
+        "expected": 4,
+        "observed": 4,
+        "status": "pass"
+      },
+      "working_tree_dirty": true
     }
   ],
   "freeze_amendments": [

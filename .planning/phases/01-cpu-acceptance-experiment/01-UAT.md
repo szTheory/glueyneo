@@ -1,16 +1,29 @@
 ---
 status: complete
 phase: 01-cpu-acceptance-experiment
+source: "01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md, 01-04-SUMMARY.md, 01-05-SUMMARY.md, 01-06-SUMMARY.md, 01-07-SUMMARY.md, 01-08-SUMMARY.md, 01-09-SUMMARY.md, 01-10-SUMMARY.md, 01-11-SUMMARY.md, 01-12-SUMMARY.md, 01-13-SUMMARY.md, 01-14-SUMMARY.md, 01-15-SUMMARY.md, 01-16-SUMMARY.md, 01-17-SUMMARY.md, 01-18-SUMMARY.md, 01-19-SUMMARY.md, 01-20-SUMMARY.md, 01-21-SUMMARY.md, 01-22-SUMMARY.md, 01-23-SUMMARY.md, 01-24-SUMMARY.md, 01-25-SUMMARY.md"
+started: 2026-10-03T23:16:26Z
+updated: 2026-10-04T06:38:30Z
+---
+
+### Historical Plan 01-21 frontmatter (preserved verbatim)
+
+```yaml
+status: complete
+phase: 01-cpu-acceptance-experiment
 source: "01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md, 01-04-SUMMARY.md, 01-05-SUMMARY.md, 01-06-SUMMARY.md, 01-07-SUMMARY.md, 01-08-SUMMARY.md, 01-09-SUMMARY.md, 01-10-SUMMARY.md, 01-11-SUMMARY.md, 01-12-SUMMARY.md, 01-13-SUMMARY.md, 01-14-SUMMARY.md, 01-15-SUMMARY.md, 01-16-SUMMARY.md, 01-17-SUMMARY.md, 01-18-SUMMARY.md, 01-19-SUMMARY.md, 01-20-SUMMARY.md, 01-21-SUMMARY.md"
 started: 2026-10-03T23:16:26Z
 updated: 2026-10-03T23:23:37Z
----
+```
 
 ## Current Test
 
-[testing complete]
+[Plan 01-25 scoped execution complete; deferred seal is an executor closeout gate]
 
 ## Tests
+
+
+Historical Plan 01-21 scope: Rows 1–39 and their original evidence below are retained verbatim and apply only to the source ending at Plan 01-21. The former 39/39 complete and no-new-issues statements do not cover Plans 01-22–01-25 or establish success for CR-01, CR-02, WR-01, or WR-02.
 
 ### 1. Plan 01-01 D1 — Original guest and bounded private adapter (historical candidate)
 expected: The active implementation and fresh behavioral evidence refer to the owned C17 core; imported-candidate results are not reused as proof of owned behavior.
@@ -229,7 +242,50 @@ result: pass
 source: automated
 coverage_id: D2
 
+### 40. Plan 01-25 CR-01 — Fresh-owner odd-PC/stack continuation
+expected: The 15 named guest-reachable odd-PC/stack boundaries restore into fresh owners and continue with matching state, memory, frames, ordered bus events, and cycles; malformed, null, active, and terminal state guards remain atomic.
+result: pass
+source_revision: 9fba16b864cf74e3b8a9c97047bb27a5db544b59
+command: `cmake -S . -B build/owned-review25 -G Ninja -DGLUEYNEO_CPU_EXPERIMENT=OFF -DGLUEYNEO_OWNED_CPU_EXPERIMENT=ON -DCMAKE_BUILD_TYPE=Debug -DGLUEYNEO_OWNED_CPU_OPTIMIZATION=NONE -DGLUEYNEO_OWNED_CPU_SANITIZER=NONE && cmake --build build/owned-review25 -j2 && ctest --test-dir build/owned-review25 -R '^owned_cpu_(timing|unsupported_negative|semantics|state)$' --output-on-failure --no-tests=error && build/owned-review25/experiments/owned_cpu/owned_cpu_state --continuation-only`
+denominator: Independent reviewer build 22/22 steps; focused CTest 4/4; direct state 5/5 and continuation-only 1/1 with 15 boundaries/90 calls; malformed 15, null 4, counter mismatch 1. Separate assessor: targeted CTest 4/4, continuation-only 1/1 with 15/90, state 5/5.
+evidence: `experiments/owned_cpu/REVIEW.md` (fresh `build/owned-review25`, collection `cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738`, profile `owned-p01-c14-continuation-2`); `.planning/phases/01-cpu-acceptance-experiment/01-SECURITY.md` (separate `build/security-audit-plan25`); `.planning/phases/01-cpu-acceptance-experiment/01-22-SUMMARY.md`; `.planning/phases/01-cpu-acceptance-experiment/01-24-SUMMARY.md`.
+
+### 41. Plan 01-25 CR-02 — Cumulative effort cannot decrease or erase threshold crossings
+expected: Each cumulative churn category is monotonic and a prior cap crossing cannot be hidden by a lower later total; equality and increasing histories pass.
+result: pass
+source_revision: 9fba16b864cf74e3b8a9c97047bb27a5db544b59
+command: `python3 -m unittest discover -s tests/owned_cpu -p test_contract.py && python3 -O -m unittest discover -s tests/owned_cpu -p test_contract.py && python3 tools/owned_cpu/contract.py budget`
+denominator: Contract controls 27/27 normal and 27/27 under `-O`; four cumulative decrease probes rejected; prior-threshold/lower-final probe rejected; budget gate passed with no pause.
+evidence: `experiments/owned_cpu/REVIEW.md` (independent normal/optimized controls and temporary-root reproducers); `.planning/phases/01-cpu-acceptance-experiment/01-23-SUMMARY.md`; `.planning/phases/01-cpu-acceptance-experiment/01-24-SUMMARY.md`; `experiments/owned_cpu/budget-ledger.json` (42-entry prefix before Plan 01-25 closeout).
+
+### 42. Plan 01-25 WR-01 — Inclusive caps and active-pause rejection
+expected: Exact frozen caps pass inclusively; cap-plus-one, invalid totals, active pause, and pause-for-review controls reject in both interpreter modes.
+result: pass
+source_revision: 9fba16b864cf74e3b8a9c97047bb27a5db544b59
+command: `python3 -m unittest discover -s tests/owned_cpu -p test_acceptance.py && python3 -O -m unittest discover -s tests/owned_cpu -p test_acceptance.py && python3 tools/owned_cpu/contract.py validate`
+denominator: Acceptance controls 22/22 normal and 22/22 under `-O`; all three exact category caps pass; each cap-plus-one and active-pause/invalid-total control rejects; contract validation passes.
+evidence: `experiments/owned_cpu/REVIEW.md` (fresh normal/optimized suite and direct exact/plus-one probes); `.planning/phases/01-cpu-acceptance-experiment/01-23-SUMMARY.md`; `.planning/phases/01-cpu-acceptance-experiment/01-24-SUMMARY.md`; `.planning/phases/01-cpu-acceptance-experiment/01-SECURITY.md` (T-01-49).
+
+### 43. Plan 01-25 WR-02 — README status and local navigation
+expected: README accurately states unadmitted implementation, pending CPU requirements, open Phase 01, gated Phase 02, unknown original-silicon saved PC, and the separate next verification step; all local Markdown links resolve and the stale gap-resume instruction is absent.
+result: pass
+source_revision: 9fba16b864cf74e3b8a9c97047bb27a5db544b59
+command: `python3 -c 'from pathlib import Path; import re; s=Path("README.md").read_text(); links=re.findall(r"\[[^\]]+\]\(([^)]+)\)",s); local=[x for x in links if not re.match(r"(?:https?:|mailto:)",x) and not x.startswith("#")]; missing=[x for x in local if not Path(x.split("#",1)[0]).exists()]; good=(len(links)==19 and len(local)==19 and not missing and "$gsd-verify-work 01" in s and "$gsd-execute-phase 01 --gaps-only" not in s and "CPU-01–05 remain Pending" in s and "saved PC remains unknown" in s); print({"markdown_links":len(links),"local_resolved":len(local)-len(missing),"missing":missing,"next_step_present":"$gsd-verify-work 01" in s,"stale_gap_resume_absent":"$gsd-execute-phase 01 --gaps-only" not in s,"valid":good}); raise SystemExit(0 if good else 1)'`
+denominator: 19/19 local Markdown links resolve; README control returns `valid: true`; independent reviewer separately resolves 19/19 local links; `git diff --check` passes.
+evidence: `README.md` working-tree document inspection after update; `.planning/phases/01-cpu-acceptance-experiment/01-REVIEW.md` (WR-02 follow-up); `experiments/owned_cpu/REVIEW.md` (independent updated-README check); `.planning/phases/01-cpu-acceptance-experiment/01-SECURITY.md` (T-01-50).
+
 ## Summary
+
+Current Plan 01-25 aggregate (43 rows):
+
+total: 43
+passed: 43
+issues: 0
+pending: 0
+skipped: 0
+blocked: 0
+
+Historical Plan 01-21 aggregate (rows 1–39, preserved):
 
 total: 39
 passed: 39
@@ -238,7 +294,15 @@ pending: 0
 skipped: 0
 blocked: 0
 
-## Verification Evidence
+## Current Verification Evidence
+
+- Native independent reviewer: fresh Debug build `build/owned-review25` completed 22/22 build steps; full CTest passed 13/13 and focused timing/unsupported/semantics/state CTest passed 4/4. Direct continuation-only passed 1/1 with 15 boundaries/90 calls; full state passed 5/5 with malformed 15, null 4, counter mismatch 1. The independent assessor used separate `build/security-audit-plan25` and independently passed its targeted 4/4 CTest and direct continuation/state/timing/semantics/fault denominators.
+- Fresh Python evidence: contract controls 27/27 normal and optimized; acceptance controls 22/22 normal and optimized. Four churn-decrease probes, prior-crossing/lower-final control, exact caps, plus-one and active-pause controls have the outcomes recorded in rows 41–42.
+- WR-02 checks the updated README in the working tree: 19 Markdown links and 19 local links resolved, status and next-step assertions passed, stale gap-resume instruction absent. The independent reviewer repeated the local link scan and `git diff --check`.
+- Reviewer build/source identity: base source commit `9fba16b864cf74e3b8a9c97047bb27a5db544b59`, current profile `owned-p01-c14-continuation-2`, collection `cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738`, map `be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d`, amendment `3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad`. Review/security final revision binding and deferred seal remain the executor-owned closeout gate.
+- Candidate disposition stays unqualified and not admitted. CPU-01–05 remain Pending, Phase 01 remains GAPS_FOUND/incomplete, Phase 02 remains gated, and original-silicon saved PC for `0x4AFC` remains unknown.
+
+## Historical Plan 01-21 Verification Evidence (preserved verbatim)
 
 - Tested workspace base revision: `5ab5e41e50f55fd67d304b1a121f3325ea624942`. Changes during this run were limited to `.planning` documentation/configuration; owned C sources and tests were not modified.
 - `cmake --preset owned-debug`, `owned-release`, `owned-asan-ubsan`, and `owned-tsan`; each matching `cmake --build --preset ...` and `ctest --preset ...` completed successfully: 13/13 per lane, 52/52 total.
@@ -248,6 +312,6 @@ blocked: 0
 - The receipt reports `unqualified` and `not-admitted`; CPU-01–05 remain pending and Phase 02 remains gated. The original-silicon saved PC for 0x4AFC remains unknown. No broad CPU, board, BIOS, game, or cross-platform claim is made.
 - The nine historical imported-candidate rows are evaluated only for the current observable contract: they are not reused as owned-core evidence. The unavailable original-silicon oracle is recorded as unknown, and the owner-approved candidate exclusion is directly tested.
 
-## Gaps
+## Historical Plan 01-21 Gaps
 
 No new UAT issues were observed. The canonical phase verifier remains `gaps_found`; this UAT result does not admit the backend or complete Phase 01.
