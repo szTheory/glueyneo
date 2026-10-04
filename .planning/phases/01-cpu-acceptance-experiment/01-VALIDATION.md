@@ -281,3 +281,21 @@ budget checks, and independent post-seal comparison of all 18 assertions. No
 implementation or acceptance criterion changed during this audit. Earlier test
 denominators, failures, unsupported results and the explicit hardware unknown stay
 in their original records.
+
+## Plan 01-26 execution validation audit — 2026-10-04
+
+| Metric | Count |
+|--------|-------|
+| Plan tasks mapped | 2/2 |
+| Required automated checks passing after environment correction | 3 |
+| New tests required | 0 |
+
+| Task | Automated verification | Outcome | Status |
+|------|-------------------------|---------|--------|
+| 01-26-01 | `python3 tests/owned_cpu/test_contract.py ContractControls.test_frozen_subject_and_pending_gate_validate` | The initial invocation exited during import before test discovery (`ModuleNotFoundError: No module named 'tools'`). With transient `PYTHONPATH=.`, the same target ran 1/1 and passed. The initial failure remains recorded in SUMMARY. | COVERED |
+| 01-26-02 | `python3 tools/owned_cpu/contract.py validate`; `python3 tools/owned_cpu/acceptance.py verify` | Both exact read-only commands exited 0. The frozen contract and canonical Pending gate validate; the receipt remains unqualified, admission deferred and `GAPS_FOUND`. | COVERED |
+
+These checks cover the plan's documentation and decision-reproduction tasks only.
+They do not complete CPU-01–05 or replace fresh phase-goal verification. No source
+or test file changed during this audit; the passing existing regression and the
+two read-only validators provide the required coverage.
