@@ -41,6 +41,7 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
 **Plans**: 24/25 execution-complete. Plan 01-17 remains incomplete at its answered evidence checkpoint; original-silicon saved PC stays unknown. Plans 01-18–01-25 completed their scoped candidate boundary, direct controls, independent review/security and later CR-01/CR-02/WR-01/WR-02 dispositions. The current receipt is unqualified with admission deferred. UAT is complete at 44/44; the existing phase-goal report is marked stale because it is a 2026-10-01 preflight-only refusal and does not assess later evidence. The latest gap-planning attempt found no new executable remediation plan. CPU-01–05 remain Pending; Phase 01 is incomplete and Phase 02 gated. Next separate command: `$gsd-execute-phase 01`, which resumes at the verification gates because all existing plans have summaries. Historical evidence and saved-PC uncertainty remain unchanged.
 
 Plans:
+- [ ] 01-26-PLAN.md — Reconcile the canonical gate wording and reproduce the read-only decision checks
 - [x] 01-17-PLAN.md (answered checkpoint; incomplete)
 
 **Wave 18** *(gap closure; follows the answered Wave 17 checkpoint)*
@@ -186,7 +187,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 24/25 | In Progress — phase-goal verification stale |  |
+| 1. CPU acceptance experiment | v0.1 | 25/26 | In Progress|  |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
