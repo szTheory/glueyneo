@@ -327,7 +327,11 @@ def validate_budget(root: Path = ROOT) -> dict:
             "required_records", "first entry must charge 01-07 governance outside the diagnostic clock")
     total_effort = 0
     diagnostic_effort = 0
-    for entry in entries:
+    churn_keys = ("runtime_added", "runtime_deleted", "test_tool_added", "test_tool_deleted")
+    previous_churn = {key: 0 for key in churn_keys}
+    crossed_runtime = False
+    crossed_tooling = False
+    for entry_number, entry in enumerate(entries, start=1):
         require(isinstance(entry, dict), "ledger_schema", "ledger entry must be an object")
         intervals = entry.get("agent_intervals")
         require(isinstance(intervals, list) and intervals, "agent_intervals",
@@ -345,8 +349,17 @@ def validate_budget(root: Path = ROOT) -> dict:
             diagnostic_effort += recorded
         churn = entry.get("cumulative_churn")
         require(isinstance(churn, dict), "required_records", "cumulative churn record is required")
-        for key in ("runtime_added", "runtime_deleted", "test_tool_added", "test_tool_deleted"):
-            _integer(churn.get(key), "cumulative_churn." + key)
+        current_churn = {}
+        for key in churn_keys:
+            current = _integer(churn.get(key), "cumulative_churn." + key)
+            require(current >= previous_churn[key], "cumulative_decrease",
+                    f"{key} decreased at entry {entry_number}: {current} < {previous_churn[key]}")
+            current_churn[key] = current
+            previous_churn[key] = current
+        crossed_runtime = crossed_runtime or (
+            current_churn["runtime_added"] + current_churn["runtime_deleted"] > RUNTIME_CHURN_CAP)
+        crossed_tooling = crossed_tooling or (
+            current_churn["test_tool_added"] + current_churn["test_tool_deleted"] > TEST_TOOL_CHURN_CAP)
     require(total_effort <= EFFORT_CAP_SECONDS, "effort_cap", "32-hour cumulative effort cap exceeded")
     require(diagnostic_effort <= DIAGNOSTIC_CAP_SECONDS, "diagnostic_cap",
             "8-hour diagnostic effort gate exceeded")
@@ -365,8 +378,8 @@ def validate_budget(root: Path = ROOT) -> dict:
     else:
         require(not diagnostic_entries, "diagnostic_gate",
                 "a recorded diagnostic stage must close as passed")
-    over_runtime = runtime_churn > RUNTIME_CHURN_CAP
-    over_tooling = tooling_churn > TEST_TOOL_CHURN_CAP
+    over_runtime = crossed_runtime
+    over_tooling = crossed_tooling
     pause = ledger.get("pause")
     paused = over_runtime or over_tooling or (isinstance(pause, dict) and pause.get("active") is True)
     if over_runtime or over_tooling:
