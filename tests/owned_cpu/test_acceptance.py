@@ -337,12 +337,35 @@ class AcceptanceControls(unittest.TestCase):
             with self.subTest(profile=profile), self.assertRaises(a.EvidenceError):
                 a.verify(document, False)
 
-    def test_budget_and_churn_pause_cannot_accept(self):
-        good = {"status": "pass", "active_seconds": 30000, "runtime_churn_added_deleted": 1206, "test_tool_churn_added_deleted": 4538}
-        a.budget_check(good)
-        for key, value in (("active_seconds", 115200), ("runtime_churn_added_deleted", 6000), ("test_tool_churn_added_deleted", 8000), ("status", "pause-for-review")):
-            with self.assertRaises(a.EvidenceError):
+    def test_budget_check_includes_exact_limits_and_rejects_overages_or_pause(self):
+        good = {"status": "pass", "active_seconds": 30000,
+                "runtime_churn_added_deleted": 1206, "test_tool_churn_added_deleted": 4538,
+                "pause": None}
+        limits = {"active_seconds": a.contract.EFFORT_CAP_SECONDS,
+                  "runtime_churn_added_deleted": a.contract.RUNTIME_CHURN_CAP,
+                  "test_tool_churn_added_deleted": a.contract.TEST_TOOL_CHURN_CAP}
+        for key, value in limits.items():
+            with self.subTest(exact_limit=key):
                 a.budget_check(good | {key: value})
+        a.budget_check(good | limits)
+
+        for key, value in limits.items():
+            with self.subTest(over_limit=key), self.assertRaises(a.EvidenceError):
+                a.budget_check(good | {key: value + 1})
+        paused = good | {"status": "pause-for-review",
+                         "pause": {"active": True, "reason": "runtime-churn-threshold"}}
+        with self.assertRaises(a.EvidenceError):
+            a.budget_check(paused)
+        inconsistent_active_pause = good | {
+            "pause": {"active": True, "reason": "scope-review"}}
+        with self.assertRaises(a.EvidenceError):
+            a.budget_check(inconsistent_active_pause)
+
+        for key, invalid in (("active_seconds", 0), ("active_seconds", True),
+                             ("runtime_churn_added_deleted", 1.5),
+                             ("test_tool_churn_added_deleted", "8000")):
+            with self.subTest(invalid=(key, invalid)), self.assertRaises(a.EvidenceError):
+                a.budget_check(good | {key: invalid})
     def test_positive_fixture_has_nonzero_counts(self):
         document = document_fixture()
         self.assertEqual("pass", a.verify(document, False)["status"])

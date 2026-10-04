@@ -1,0 +1,9 @@
+{
+  "command": "python3 $TMP/glueyneo_tdd_runner.py test_acceptance.AcceptanceControls.test_budget_check_includes_exact_limits_and_rejects_overages_or_pause",
+  "exitCode": 1,
+  "output": "TAP version 13\n1..1\nnot ok 1 - test_acceptance.AcceptanceControls.test_budget_check_includes_exact_limits_and_rejects_overages_or_pause\n# Traceback (most recent call last):\n#   File \"$REPO/tests/owned_cpu/test_acceptance.py\", line 349, in test_budget_check_includes_exact_limits_and_rejects_overages_or_pause\n#     a.budget_check(good | {key: value})\n#     ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^\n#   File \"$REPO/tools/owned_cpu/acceptance.py\", line 429, in budget_check\n#     require(budget.get(\"status\") == \"pass\" and 0 < budget.get(\"active_seconds\", 0) < contract.EFFORT_CAP_SECONDS,\n#     ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n#             \"budget requires pause/replan\")\n#             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n#   File \"$REPO/tools/owned_cpu/acceptance.py\", line 70, in require\n#     raise EvidenceError(reason)\n# tools.owned_cpu.acceptance.EvidenceError: budget requires pause/replan\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0",
+  "targetTest": "test_acceptance.AcceptanceControls.test_budget_check_includes_exact_limits_and_rejects_overages_or_pause",
+  "targetFile": "tests/owned_cpu/test_acceptance.py",
+  "expected": "budget_check accepts each exact frozen limit separately and together, while rejecting each plus-one value and an active pause.",
+  "actual": "The target regression fails at active_seconds=115200 because budget_check uses a strict less-than comparison and raises EvidenceError: budget requires pause/replan."
+}
