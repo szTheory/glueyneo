@@ -5,7 +5,7 @@ status: validated
 nyquist_compliant: true
 wave_0_complete: true
 created: "2026-10-01"
-updated: "2026-10-03"
+updated: "2026-10-04"
 ---
 
 # Phase 01 — Validation Strategy
@@ -237,3 +237,31 @@ assessor's final read-only confirmation. The final actual outcome belongs in
 Plan21 SUMMARY; this document will remain unchanged after sealing to avoid
 another audit-hash change. No pending gate is counted as complete here, no
 native rerun is invented, and any final failed gate blocks clean completion.
+
+## Continuation and resource validation audit — 2026-10-04
+
+Independent assessor: separate non-author native security reviewer.
+Initial native execution revision: 9fba16b864cf74e3b8a9c97047bb27a5db544b59.
+Current collection cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738,
+profile owned-p01-c14-continuation-2, source map
+be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d. These
+rows preserve executor lane receipts separately from fresh assessor runs.
+
+| Task | Actual command/control and denominator | Nearest failure condition; threat refs | Actual outcome |
+|---|---|---|---|
+| 22.1 | Executor CTest owned_cpu_state and direct continuation-only runner; assessor fresh build in build/security-audit-plan25 and targeted state CTest. Direct continuation 1/1 Unity case, 15 boundaries/90 calls; full state 5/5, malformed 15, null inputs 4. | Odd RTE PC or selected stack cannot be restored, following event/frame/bus/cycles differ, destination binding changes, or zero cases; T-01-45/46, CR-01. | EXECUTED: PASS |
+| 22.2 | Normal and optimized test_acceptance.py, profile/relabel controls, contract.py validate. Acceptance 22/22 each mode; full Python suite 59/59 each mode. | Old denominator/profile identity is relabeled, omitted, or accepted under optimized Python; T-01-47. | EXECUTED: PASS |
+| 23.1 | Normal and optimized test_contract.py, contract.py budget, four-category in-memory decreasing-history controls. Contract 27/27 each mode; all four cumulative decrease probes rejected. | Any cumulative category decrease passes or a prior threshold crossing disappears behind a lower final value; T-01-48, CR-02. | EXECUTED: PASS |
+| 23.2 | Normal and optimized test_acceptance.py, contract.py validate, and README Markdown link/status control. Acceptance 22/22 each mode; exact caps pass, each plus-one and pause control rejects; README links 19/19 resolve. | Exact cap rejects, plus-one/pause passes, README misstates admission or a local target is missing; T-01-49/50, WR-01/02. | EXECUTED: PASS |
+| 24.1 | Executor owned-debug build/inventory/contract commands; assessor inventory.py check --build-dir build/security-audit-plan25 and contract.py validate. Inventory: 26 owned fields, 10 compiled sources, zero mutable runtime globals, zero callback owner mutations. | Stale manifest/core identity, changed frozen contract/history, or selected silicon saved PC; T-01-51/53. | EXECUTED: PASS |
+| 24.2 | Executor four-preset collection and normal/optimized full Python suite; assessor acceptance.py verify, source snapshot and artifact/history hash comparison. Four lanes each pass 13/13 CTests; assessor matched 39 source inputs, 44 artifact hashes, five collection-prefix objects, 34 ledger entries and preserved seal. | Failed/unknown lane promoted, identity mismatch, or historical prefix altered; T-01-51/52. | EXECUTED: PASS |
+| 25.1 | Independent reviewer Debug build and controls; exact command `python3 tools/owned_cpu/acceptance.py review-check --review experiments/owned_cpu/REVIEW.md --revision HEAD`. Final clean binding is revision 780c720c4e20ac8e9b61eff40da02fbe601a6f38; report SHA-256 e0a4aba91f4a9e21b2c382dbed9b1b74de1cf19484a7a7a45cd69ecd2e797a78. The initial 9fba check failed for missing independence metadata; a pre-rebind 780c720 check detected the then-stale 9fba attestation; both were retained and corrected by the reviewer. | Stale/non-independent report, missing CR/WR crosswalk, current high/critical finding, or misleading README status/links; T-01-50/54. | EXECUTED: PASS after both metadata corrections; both failures retained |
+| 25.2 | Assessor configured build/security-audit-plan25 from owned-debug, built 22 steps with two jobs, ran timing/semantics/state/faults CTest 4/4, direct continuation 1/1 with 15/90, state 5/5, timing 25/25, semantics 17/17, faults 5/5, Python suites normal/optimized, and contract/acceptance/inventory gates. | Continuation, restore ownership, malformed/terminal guard, budget/history, or exact identity control fails; T-01-45–53, T-01-55–57. | EXECUTED: PASS; current open high/critical 0 |
+| 25.3 | UAT preservation and report bindings are prepared; exact deferred seal, post-seal verify/budget and independent final read-only confirmation remain executor closeout gates. | Stale report/receipt binding, active pause, changed history, or accidental admission; T-01-56/57. | PENDING executor closeout gate; final result belongs in SUMMARY |
+
+The initial review-check failure is retained, not removed. These current audit
+rows do not resolve the nine historical specless flags, establish hardware
+truth, complete a CPU requirement, or admit the backend. Original-silicon
+saved PC remains unknown; CPU-01–05 remain Pending and Phase 02 gated. Row
+25.3's eventual executor outcome belongs in the Plan 01-25 summary; freeze this
+validation report before the final seal.

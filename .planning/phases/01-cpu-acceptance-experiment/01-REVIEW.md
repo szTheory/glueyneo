@@ -152,3 +152,137 @@ Exact canonical `0x4AFC` remains excluded under P01-C-14. The prior Musashi reje
 _Reviewed: 2026-10-03T21:34:39Z_
 _Reviewer: the agent (gsd-code-reviewer), independent of implementation_
 _Depth: standard_
+
+## Additive Plan 01-25 independent later-finding disposition
+
+This section appends fresh evidence for the repaired Plan 01-24 source and does
+not alter the original frontmatter, timestamps, counterexamples, or findings
+above. The previous four open labels and all original reproductions remain
+historical. Final reviewed source revision:
+`780c720c4e20ac8e9b61eff40da02fbe601a6f38`. Receipt identity: profile
+`owned-p01-c14-continuation-2`, collection
+`cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738`, source-map
+`be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d`, amendment
+`3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad`. Before
+rebinding, exact current snapshot equality passed for all 39 source hashes;
+the recorded/current source-map digest, collection hash, profile, and amendment
+also match. This is a metadata-only rebind to the committed UAT+README revision,
+not another native run. Rebind interval: `2026-10-04T06:48:27Z`–
+`2026-10-04T06:50:22Z` UTC (115 active seconds); the exact-source review gate
+was rerun after the final report edit.
+
+### CR-01: Continuation rejects reachable state after a supported RTE — resolved within the candidate contract
+
+The independent build command used the Plan 01-21 recipe with the distinct
+ignored `build/owned-review25` directory, Debug C17 flags, and `-j2`. It built
+in 22 steps; full CTest passed 13/13, including `owned_cpu_state`. Direct
+`owned_cpu_state --continuation-only` passed 1/1 and reported 15 named
+checkpoints, 90 fresh-owner continuation calls, and source destruction plus
+overwrite. The complete state runner passed 5/5 Unity cases. Its malformed
+record controls rejected 15 invalid/incompatible records and four null inputs
+atomically; instruction-counter, active-operation and terminal guards also
+passed without destination mutation or extra bus callbacks.
+
+The former counterexample is reproduced at the guest boundary: a supported
+RTE returns PC `$101`, which is captured and restored into a fresh owner. The
+next odd fetch enters the local vector-3 address-error event and returns to
+`$180`: seven ordered frame writes, vector reads `$000c/$000e`, 50 clocks, zero
+completed instructions. Full run result, CPU state, memory and bus events
+match the uninterrupted instance over the whole event and subsequent calls.
+The companion `SR_switch_odd_USP` checkpoint carries user SR `$0000`, active
+odd USP/A7 `$2801`, even inactive SSP `$3000`, and PC `$104`; its next
+privileged MOVE-to-SR selects vector 8 on the even supervisor stack (34 clocks,
+old SR `$0000`, PC `$104`). It does not access the odd USP and does not show an
+odd-stack address error/host fault. Original-silicon saved PC remains unknown.
+
+### CR-02: Earlier exceeded churn can disappear behind a lower final entry — resolved
+
+Normal and optimized `test_contract.py` passed 27/27 each. The
+`test_cumulative_churn_cannot_refund_penultimate_threshold_crossing`,
+`test_all_cumulative_churn_categories_reject_decreases`,
+`test_equal_and_increasing_cumulative_churn_pass`, and combined-limit controls
+exercise the earlier-crossing/lower-final counterexample. An additional
+temporary-root probe set each of `runtime_added`, `runtime_deleted`,
+`test_tool_added`, and `test_tool_deleted` above its cap in one entry, followed
+by a lower value. Each rejected with `cumulative_decrease`; the actual ledger
+was not changed. No prior charges or thresholds were rewritten.
+
+### WR-01: Sealing rejects resource totals allowed by the frozen validator — resolved
+
+Normal and optimized `test_acceptance.py` passed 22/22 each. Its
+`test_budget_check_includes_exact_limits_and_rejects_overages_or_pause`
+accepts each exact limit and their combined exact values, rejects each
+plus-one value, and rejects an active pause or invalid total. Direct normal
+and `-O` probes reproduced all three inclusive exact caps (115,200 active
+seconds; 6,000 runtime churn; 8,000 test/tool churn) and rejected each cap plus
+one. Contract validation separately preserves the 28,800-second diagnostic
+cap and requires pause on an actual cumulative crossing.
+
+### WR-02: README says the implemented owned runtime does not exist — resolved at the reviewed source identity
+
+The historical README at the earlier reviewed revision contains the quoted
+false statement that no owned CPU runtime has been implemented. At this
+reviewed source revision README describes the private C17 diagnostic runtime
+as implemented but unadmitted, links its current contract/subset/amendment/
+acceptance/review/receipt, states exact `0x4AFC` exclusion and unknown silicon
+saved PC, and keeps CPU requirements Pending / Phase 01 open / Phase 02 gated.
+A read-only link scan checked 19 Markdown links; all 19 local targets resolve.
+No public SDK, game, board, platform, timing, or performance qualification is
+claimed.
+
+The six Unity runner denominators were diagnostic 2/2, semantics 17/17,
+timing 25/25, isolation 4/4, faults 5/5, and state 5/5. Python totals were
+49/49 in each mode: contract 27/27 and acceptance 22/22 normally, and the same
+under `-O`. Executor collection remains separate: four owned lanes passed
+13/13 CTests each; it is not counted as reviewer execution. Independent Debug
+archive SHA-256 is
+`aa27f496ef8981966b100a1d27a4d3e01c8ac4a3f5140aca5d5da0a3f4b9bda5`.
+
+### D1-01 through D1-14 crosswalk
+
+| Decision | Bounded current disposition |
+|---|---|
+| D1-01 | Owned C17 CPU and private diagnostic slice are present; no production acceptance is inferred. |
+| D1-02 | Two rejected Musashi attempts, frozen charges and caps remain preserved; no third adaptation/refund/cap increase. |
+| D1-03 | No imported CPU adoption; Unity remains test-only. |
+| D1-04 | Small C17 tree; no public CPU ABI, dynamic loader, C++ runtime, or generic framework. |
+| D1-05 | Private per-instance state, explicit callback ownership, and fresh destination continuation are bounded by the named tests. |
+| D1-06 | Fifteen same-build named boundaries compare architectural state, whole-event results, memory and ordered bus traces; no cross-build claim. |
+| D1-07 | Whole static CPU implementation; no mixed opcode handlers or live state conversion. |
+| D1-08 | No shipping backend selector or admitted production engine. |
+| D1-09 | Exact subset and explicit unsupported result retained. |
+| D1-10 | Concrete instruction/event architecture; no unmeasured generator, micro-op framework, or optimization. |
+| D1-11 | Primary manual and authored guest ancestry cover named expectations only, not the full ISA or silicon. |
+| D1-12 | Correlated emulator output remains comparison evidence, not hardware truth. |
+| D1-13 | Original-silicon saved PC for exact `0x4AFC` remains unknown; neither candidate PC inference is selected and the finite search was not repeated. |
+| D1-14 | Candidate exclusion is exact numeric `0x4AFC`; retained exception cases remain tested. This is no claim that original hardware rejects ILLEGAL. |
+
+Within this bounded current review, CR-01, CR-02, WR-01 and WR-02 have no
+unresolved high/critical finding (0). This is only their candidate-scoped
+source/reproduction disposition. It is not a security attestation, hardware
+adjudication, final seal, phase verification, requirement completion, or SDK
+admission.
+
+### WR-02 README follow-up after owner update
+
+I re-read the changed README in the current worktree. It now describes Plans
+01-22 through 01-25 as closing the later review findings with only unqualified,
+deferred evidence; names `$gsd-verify-work 01` as the next GSD step; and says
+Phase 01 remains open / GAPS_FOUND until verification passes. CPU-01–05 remain
+Pending, Phase 02 remains gated, the original-silicon saved PC remains unknown,
+and the stale `$gsd-execute-phase 01 --gaps-only` resume instruction is absent.
+The first paragraph continues to distinguish an implemented private owned C17
+diagnostic runtime from backend admission, a public SDK, and a complete playable
+emulator.
+
+Read-only link checking found 19 Markdown links: all 19 are local targets, all
+exist, none are external, and none are missing. `git diff --check -- README.md`
+returned success. This follow-up interval was 2026-10-04T06:28:29Z through
+2026-10-04T06:29:40Z, 71 active seconds. Worktree HEAD remained the provisional
+`9fba16b864cf74e3b8a9c97047bb27a5db544b59`; README was dirty and uncommitted.
+No build or test was run. The current review report remains provisionally
+bound to the prior source receipt and will be rebound only after the UAT+README
+commit, as requested. The later final metadata-only rebind is recorded above;
+the 19-link outcome and README status conclusions remain unchanged. The final
+owned-review gate passed at committed HEAD `780c720c4e20ac8e9b61eff40da02fbe601a6f38`;
+its latest report SHA and exact command output were returned to the executor.

@@ -2224,6 +2224,91 @@
         "status": "pass"
       },
       "working_tree_dirty": true
+    },
+    {
+      "accounting_notes": "Measured intervals cover executor report reconciliation, the reviewer final rebind (115 seconds), and assessor final metadata rebind (24 seconds). The pre-rebind review-check at 780c720 detected stale current attestation identities and was corrected by the reviewer; this intermediate failure remains in SECURITY/VALIDATION. A report-edit precondition assertion also failed because a provisional revision occurred once rather than twice; it changed no files and is recorded here. The original ledger draft duration mismatch and rejected budget check remain in the prior entry note. Prepaid conservative 900-second allowance reserves executor final seal/verify/budget, independent post-seal read-only confirmation, summary/state/roadmap updates, and final commit/reporting. It is charged whether or not fully used and is not refunded; if closeout exceeds the reserved window, append actual excess time before final budget reporting.",
+      "active_seconds": 1635,
+      "agent_intervals": [
+        {
+          "agent": "codex",
+          "end": "2026-10-04T06:56:31Z",
+          "start": "2026-10-04T06:46:35Z"
+        },
+        {
+          "agent": "plan25-independent-reviewer",
+          "end": "2026-10-04T06:50:22Z",
+          "start": "2026-10-04T06:48:27Z"
+        },
+        {
+          "agent": "plan25-security-assessor",
+          "end": "2026-10-04T06:53:38Z",
+          "start": "2026-10-04T06:53:14Z"
+        },
+        {
+          "agent": "codex-conservative-closeout-allowance",
+          "end": "2026-10-04T07:11:31Z",
+          "start": "2026-10-04T06:56:31Z"
+        }
+      ],
+      "commit": "780c720c4e20ac8e9b61eff40da02fbe601a6f38",
+      "cumulative_churn": {
+        "runtime_added": 1164,
+        "runtime_deleted": 64,
+        "test_tool_added": 6355,
+        "test_tool_deleted": 185
+      },
+      "diagnostic_gate": false,
+      "recorded_at": "2026-10-04T06:56:31Z",
+      "stage": "plan-01-25-final-report-rebind-and-closeout-reserve",
+      "test_results": {
+        "cases": [
+          "final-independent-review-rebind"
+        ],
+        "expected": 1,
+        "observed": 1,
+        "status": "pass"
+      },
+      "working_tree_dirty": true
+    },
+    {
+      "accounting_notes": "Charged the full executor interval from the end of the prepaid allowance through 07:20:35, including coordination/wait time, plus the assessor-reported 1,337-second read-only interval. The assessor pass recorded acceptance verify, review-check, contract validation and budget checks on the previous 65,353-second snapshot; it stopped before raw receipt/security/source hash comparison, so that budget snapshot is superseded by this charge. A new 600-second conservative allowance covers the refresh seal, final independent identity comparison, summary/state/roadmap update and final commit. It is non-refundable; if exceeded, append actual excess before final budget reporting.",
+      "active_seconds": 2481,
+      "agent_intervals": [
+        {
+          "agent": "codex",
+          "end": "2026-10-04T07:20:35Z",
+          "start": "2026-10-04T07:11:31Z"
+        },
+        {
+          "agent": "plan25-security-assessor",
+          "end": "2026-10-04T07:20:35Z",
+          "start": "2026-10-04T06:58:18Z"
+        },
+        {
+          "agent": "codex-conservative-final-closeout-allowance",
+          "end": "2026-10-04T07:30:35Z",
+          "start": "2026-10-04T07:20:35Z"
+        }
+      ],
+      "commit": "780c720c4e20ac8e9b61eff40da02fbe601a6f38",
+      "cumulative_churn": {
+        "runtime_added": 1164,
+        "runtime_deleted": 64,
+        "test_tool_added": 6355,
+        "test_tool_deleted": 185
+      },
+      "diagnostic_gate": false,
+      "recorded_at": "2026-10-04T07:20:35Z",
+      "stage": "plan-01-25-budget-reserve-overrun-and-postseal-checkpoint",
+      "test_results": {
+        "cases": [
+          "intermediate-postseal-acceptance-verify"
+        ],
+        "expected": 1,
+        "observed": 1,
+        "status": "pass"
+      },
+      "working_tree_dirty": true
     }
   ],
   "freeze_amendments": [

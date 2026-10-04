@@ -125,7 +125,9 @@ Applying the hardware/oracle, C/host-safety, test-reliability, evidence, mainten
 
 F14-01/F14-02 are resolved by regression-backed repairs and fresh independent re-review. F14-03 remains an admission blocker outside Plan 14 repair scope. Required native tests and prior state fixes pass within recorded scope. CPU-01–04 stay Pending, Phase 01 stays open and Phase 02 gated. No budget cap, historical charge or phase verification changes here; a resource threshold is not CPU rejection.
 
-<!-- owned-cpu-current-review:start -->
+## Historical Plan 01-21 current review (full prior section preserved)
+
+<!-- owned-cpu-historical-review:start -->
 
 # Plan 01-21 independent P01-C-14 candidate review
 
@@ -336,5 +338,318 @@ still required. This does not admit the backend, finish phase verification,
 or complete CPU-01–05. The final seal must remain deferred,
 unqualified/GAPS_FOUND; Phase 01 is incomplete, Phase 02 gated, and all nine
 specless flags remain unresolved.
+
+<!-- owned-cpu-historical-review:end -->
+
+<!-- owned-cpu-current-review:start -->
+
+# Plan 01-25 independent review of the repaired candidate
+
+## Reviewed revision:
+
+Final reviewed source revision: `780c720c4e20ac8e9b61eff40da02fbe601a6f38`.
+This is the committed Plan 01-25 UAT+README revision. Its inclusion does not
+change the collected 39-file source map; exact current source bytes, profile,
+collection, map, and amendment were rechecked before this metadata-only rebind.
+The native collection remains the executor's earlier collection at
+`bd390a7f5f6ede0a69df42f8df1fc98905d171ea`; no reviewer native run is being
+rebound or newly claimed here. Final metadata-rebind interval was
+`2026-10-04T06:48:27Z`–`2026-10-04T06:50:22Z` (115 active seconds), including
+the identity comparison, binding edits, and first final-revision review gate.
+
+Current receipt identity: collection
+`cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738`, source-map
+`be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d`, profile
+`owned-p01-c14-continuation-2`, amendment
+`3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad`, frozen
+contract `6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73`,
+active candidate identity
+`27af8df79b55f83bffdef63981defc23984fff6b4e0002d10e99621310340419`, and
+source-manifest SHA-256
+`ae481ac75ac88dd40cc86de52fa827a4941280ca3ce6f4e0952c71ecf3a47eab`. The
+receipt binds 39 source files and records all four lanes passing 13/13 CTests
+each. Those are the executor's lane results; they are distinct from the fresh
+reviewer build and tests below. No seal was created by this reviewer. The
+receipt remains unqualified, and original-silicon saved PC remains unknown.
+
+## Reviewer independence:
+
+Reviewer: fresh Plan 01-25 non-author agent. I authored none of the runtime,
+collector, tests, manifest, collection, or budget ledger. I did not alter those
+files and did not commit. The independent build used a separate ignored
+`build/owned-review25` directory, not the executor's lane directories. This is
+an automated source and regression review, not a human signoff, silicon
+measurement, or hardware qualification.
+
+Independent reviewer: fresh separate non-author Plan 01-25 reviewer.
+Authored runtime/collector/tests: no
+
+UTC execution interval: `2026-10-04T06:11:57Z` through
+`2026-10-04T06:24:44Z`; active effort: 767 seconds. This includes independent
+review and report drafting through the provisional review-check pass. Final
+metadata-rebind work is separately timed below and must be charged by the
+executor.
+
+## Prior findings:
+
+| Finding | Current bounded disposition |
+|---|---|
+| F14-01 — false-green lane command/configuration receipt | Resolved in the earlier repair/re-review. Current acceptance-control suite passes 22/22 normally and under `-O`; no contradictory lane record was found in the bound six-collection receipt. |
+| F14-02 — accepted history could omit a prior failure | Resolved in the earlier repair/re-review. Current acceptance-control suite passes 22/22 normally and under `-O`; the six-collection prefix remains present and unqualified. |
+| F14-03 — frozen ILLEGAL saved-PC contract disagreed with the candidate observation | Superseded only for the candidate's exact `0x4AFC` support boundary by P01-C-14. Exact `0x4AFC` is explicitly unsupported and has zero vector/frame side effects. Original-MC68000 saved PC is still unknown under P01-C-13; neither `$100` nor `$102` is selected. |
+
+The complete prior Plan 01-21 current section, including its full F14 history,
+all evidence, and limitations, remains in the labelled historical block above.
+This crosswalk does not erase its original open disposition or reuse its
+historical pass as evidence for the new continuation profile.
+
+## Evidence runs and denominators:
+
+### Independent configure/build and native controls
+
+Plan 01-21's proven configure recipe was repeated in an ignored reviewer-owned
+directory, with no more than two build jobs:
+
+```sh
+cmake -S . -B build/owned-review25 -G Ninja -DGLUEYNEO_CPU_EXPERIMENT=OFF -DGLUEYNEO_OWNED_CPU_EXPERIMENT=ON -DCMAKE_BUILD_TYPE=Debug -DGLUEYNEO_OWNED_CPU_OPTIMIZATION=NONE -DGLUEYNEO_OWNED_CPU_SANITIZER=NONE
+cmake --build build/owned-review25 -j2
+ctest --test-dir build/owned-review25 --output-on-failure --no-tests=error
+```
+
+Configure passed; the fresh C17 build completed all 22 steps; CTest passed
+13/13. The required focused command
+`ctest --test-dir build/owned-review25 -R '^owned_cpu_(timing|unsupported_negative|semantics|state)$' --output-on-failure --no-tests=error`
+also passed 4/4. Direct reviewer binaries passed diagnostic 2/2, semantics
+17/17, timing 25/25, isolation 4/4, faults 5/5, and state 5/5 Unity cases.
+The six runner denominators sum to 58/58 Unity assertions/cases, with zero
+failures or ignored cases. `owned_cpu_state --continuation-only` passed its
+single continuation test and printed exactly 15 named boundaries / 90
+continuation calls, with the source owner destroyed and overwritten.
+
+Direct state controls report 15 malformed/incompatible records, four null
+inputs, one instruction-counter mismatch, active-operation capture/restore
+rejection, and terminal restore rejection. Destination state and bus activity
+remain atomic; active/terminal attempts produced zero restore callbacks or
+additional callbacks. The full 5/5 state runner also passed. CTest includes
+the exact-`0x4AFC` unsupported mutation control and wrong-address-error-cycle
+control; the timing suite includes `canonical_unsupported_has_only_opcode_fetch`
+and named retained IRQ/TRAP/privilege/address-error/RTE cases.
+
+`python3 tools/owned_cpu/inventory.py check --build-dir build/owned-review25`
+passed: 26 owned fields, 10 compiled source files, zero mutable runtime globals,
+and zero callback-owner mutations. `contract.py validate` and `contract.py
+budget` passed; current totals are 59,690 active seconds, 2,565 diagnostic
+seconds, 1,228 runtime-churn lines, and 6,540 test/tool-churn lines, with no
+active pause. `acceptance.py verify` passed with six collections, disposition
+unqualified, and zero lane blockers. These checks preserve, rather than waive,
+the frozen limits.
+
+Fresh Python commands and observed counts:
+
+```sh
+python3 -m unittest discover -s tests/owned_cpu -p test_contract.py
+python3 -O -m unittest discover -s tests/owned_cpu -p test_contract.py
+python3 -m unittest discover -s tests/owned_cpu -p test_acceptance.py
+python3 -O -m unittest discover -s tests/owned_cpu -p test_acceptance.py
+```
+
+Contract controls passed 27/27 in each mode; acceptance controls passed 22/22
+in each mode (49/49 per mode total). CR-02's `test_cumulative_churn_cannot_refund_penultimate_threshold_crossing`,
+`test_all_cumulative_churn_categories_reject_decreases`,
+`test_equal_and_increasing_cumulative_churn_pass`, and
+`test_combined_churn_limits_are_inclusive_and_crossings_require_active_pause`
+exercise the original false-green shape and all four added/deleted counters.
+WR-01's `test_budget_check_includes_exact_limits_and_rejects_overages_or_pause`
+accepts each exact cap and the combined exact caps, rejects each cap-plus-one,
+rejects active pause and invalid totals in both interpreter modes.
+
+The first provisional `acceptance.py review-check --review
+experiments/owned_cpu/REVIEW.md --revision HEAD` returned `fail` with reason
+`review independence not recorded`; the report lacked the parser's required
+literal independence metadata. After adding `Independent reviewer:` and
+`Authored runtime/collector/tests: no`, the same command passed at revision
+`9fba16b864cf74e3b8a9c97047bb27a5db544b59` with status `clean` and report
+SHA-256 `a13de062807a4ff62773edb9772f19404cb8f2aba7fd11d2bbfc2b5b39c39740`.
+That is preserved as the first repaired provisional pass. After the committed
+UAT+README revision, the final report binding is
+`780c720c4e20ac8e9b61eff40da02fbe601a6f38`; the exact-source review gate was
+rerun after this final metadata edit. The final read-only gate passed `clean`;
+its command output and current report SHA are returned to the executor.
+
+A separate temporary-root CR-02 reproduction set a prior cumulative category
+above its cap, left the next record below it, and called `validate_budget`.
+Each of `runtime_added`, `runtime_deleted`, `test_tool_added`, and
+`test_tool_deleted` rejected with `cumulative_decrease` at entry 3 (runtime
+crossing 6,001; test/tool crossing 8,001). The actual ledger was not edited.
+Separate direct normal and `-O` calls to `acceptance.budget_check` accepted all
+three exact caps and rejected all three plus-one values.
+
+### Independent artifact identities
+
+The reviewer build used AppleClang 21.0.0, C17, Debug `-O0 -g`,
+`-Wall -Wextra -Werror`, CMake 4.4.3 and Ninja 1.13.2 on Darwin arm64. Sanitizers
+were disabled for this independent Debug build. The 22-step configure/build
+command and target CTest results above are reviewer-run, not executor receipts.
+The fresh archive SHA-256 is
+`aa27f496ef8981966b100a1d27a4d3e01c8ac4a3f5140aca5d5da0a3f4b9bda5`; binary
+identities are:
+
+| Independent artifact | SHA-256 |
+|---|---|
+| `owned_cpu_state` | `d22a27af79b47601218f1ff06314afa1a460bb82b2b22ff5020634426d720df0` |
+| `owned_cpu_semantics` | `c1084def7a6e73fc365a068b2c2d86d56b289d2c0cdaed88c019d82b0d5dcfab` |
+| `owned_cpu_timing` | `eb12b66360b980be406955713f6830598c22528be008381f4898f7f8d1443f08` |
+| `owned_cpu_diagnostic` | `7bf2e916c254e0b5b57f2c14785dbb5c1e2fa6ccaf5c4e3295a716cd21e0adb2` |
+| `owned_cpu_isolation` | `9d02cd7bbdecc60a17213db0338f623a849277fe7ed23be5aac838de94c74c50` |
+| `owned_cpu_faults` | `d6c0abffc2e38bafdefad6f6e6428491d7eccac9d1797424dfdad9faea0233a1` |
+
+The independent build is one Darwin arm64 Debug observation. It does not add
+platform support or replace the executor's four-lane results.
+
+## Oracle ancestry:
+
+The diagnostic's 10/16 outputs are from the authored original guest and remain
+bounded to the named instruction subset. Exception frame values and timing
+expectations cite the Motorola User's Manual; the Programmer's Reference
+Manual supports instruction encodings. Callback order is an explicit
+functional-bus contract, not a pin trace. Emulator-derived comparisons retain
+their documented shared ancestry and do not establish hardware truth. No
+original-silicon capture or full-coverage claim was found or inferred.
+
+For the disputed PC question, the existing P01-C-13 record retains the
+competing manual readings and the exhausted source-search limit. This review
+does not repeat that search, decide a hardware PC value, or use candidate
+behavior as hardware evidence.
+
+## Findings and dispositions:
+
+### CR-01 — fixed for private candidate continuation; no silicon claim
+
+The prior reproducer reached a ready boundary after a supported RTE with PC
+`$101`, then `state_valid` rejected its capture for alignment. At the reviewed
+source, the validator preserves guest-reachable odd addresses and still checks
+the SR-selected A7/USP/SSP bank relationship. Fresh guest-derived
+`RTE_odd_PC` capture, fresh-owner restore, source destruction/overwrite and
+six subsequent calls match the uninterrupted owner: whole run results,
+architecture/private state, memory and ordered callbacks. The next odd fetch
+enters local vector 3, writes the asserted frame in seven ordered writes,
+reads vector `$0c/$0e`, charges 50 clocks and completes zero instructions.
+Original silicon's saved PC remains unknown.
+
+`SR_switch_odd_USP` reaches user SR zero with active A7/USP `$2801` and inactive
+SSP `$3000`; it can be captured and restored. The actual following privileged
+MOVE-to-SR enters vector 8 on the even supervisor stack, costs 34 clocks, and
+stores old SR zero / PC `$104`. This fixture does not access the odd USP, and
+does not demonstrate an odd-stack address error or host fault. The former
+counterexample is fixed at the state-acceptance/continuation boundary without
+overstating the next event.
+
+### CR-02 — fixed; cumulative charges cannot decrease
+
+The earlier false-green shape (an over-limit cumulative value followed by a
+lower final value) now fails before threshold interpretation. All four
+added/deleted counters reject decreases; equal/increasing histories pass. The
+unchanged contract still requires an active named pause for an actual crossing.
+No entry, frozen charge or cap was rewritten.
+
+### WR-01 — fixed; exact caps inclusive, plus-one blocked
+
+Canonical budget and seal checks now agree at exact values: 115,200 active
+seconds, 6,000 runtime added/deleted lines, and 8,000 test/tool added/deleted
+lines pass if no active pause is present. Every cap-plus-one, active pause,
+invalid type and zero effort case remains rejected. The separate 28,800-second
+diagnostic gate remains unchanged and is checked by contract validation.
+
+### WR-02 — fixed at the reviewed source identity
+
+The historical README at the original review revision said that no owned CPU
+runtime had been implemented. The current README says the private C17 runtime
+and diagnostic subset are implemented but unadmitted; it links the active
+subset/contract/amendment/acceptance/review/receipt and names the exact
+`0x4AFC` exclusion, unknown original-silicon saved PC, Pending CPU requirements,
+open Phase 01 and gated Phase 02. A read-only link scan found 19 Markdown links,
+all local and all resolving. It makes no public SDK, game, board, platform, or
+performance qualification claim. Its Plan 01-25 “continue” wording describes
+the state at this bound Plan 01-24 source revision, where Plan 01-25 was still
+pending.
+
+**Independent README recheck after owner update:** the current worktree text
+now says Plans 01-22 through 01-25 close later review findings into unqualified,
+deferred candidate evidence, and names `$gsd-verify-work 01` as the next GSD
+step. It keeps CPU-01–05 Pending, Phase 01 open / GAPS_FOUND, Phase 02 gated,
+and the original-silicon saved PC unknown. The stale
+`$gsd-execute-phase 01 --gaps-only` resume instruction is absent. A fresh scan
+again found 19 Markdown links, all 19 local targets present, zero external links,
+and no missing local target; `git diff --check -- README.md` returned success.
+This read-only review ran 2026-10-04T06:28:29Z–06:29:40Z (71 active seconds),
+at worktree HEAD `9fba16b864cf74e3b8a9c97047bb27a5db544b59` with the README
+change uncommitted. It performed no build/test and does not change the
+provisional source-revision binding; final rebinding waits for the UAT+README
+commit. The later committed revision and metadata-only rebind are recorded in
+the final binding section above; the README review outcome and 19-link result
+are unchanged.
+
+Disposition: clean
+
+Bounded current review residual: zero unresolved Critical/high findings among
+CR-01, CR-02, WR-01 and WR-02. The independent security reassessment and
+separate phase-goal verification are distinct gates; this report does not
+claim their completion or backend admission. D1-13 and D1-14 remain scoped as
+stated below.
+
+### D1-01 through D1-14 decision crosswalk
+
+| Decision | Independent bounded assessment |
+|---|---|
+| D1-01 | Consistent: runtime is authored C17 and exercised as a private whole-CPU diagnostic slice. No accepted production backend is implied. |
+| D1-02 | Consistent: both substantive Musashi attempts, frozen history, charges and original caps remain preserved; no third adaptation, refund or increase is authorized. |
+| D1-03 | Consistent: the runtime closure contains authored `cpu.c`; no imported CPU core was adopted. Unity is a pinned test-only dependency. |
+| D1-04 | Consistent: C17 and a small dependency tree; no public CPU plugin ABI, loader, C++ engine or generalized backend framework was found. |
+| D1-05 | Consistent within the private seam: state and bus/allocator bindings are per instance; fresh destination ownership is retained by restore. |
+| D1-06 | Supported for named tests only: equivalent source/baseline and restored owners compare architectural state, whole-event results, memory and callback traces at 15 checkpoints/90 calls. Cross-build restoration is not claimed. |
+| D1-07 | Consistent: the whole static owned backend is used; no mixed opcode engine or live state conversion is present. |
+| D1-08 | Consistent: selection is build/test scoped; no production runtime selector, shipped backend or accepted integration is asserted. |
+| D1-09 | Consistent: exact supported diagnostic/exception subset and explicit unsupported result are documented; exact `0x4AFC` is excluded. |
+| D1-10 | Consistent: concrete registers, bus, exceptions, counters and selected instruction forms; no generator, micro-op layer or unprofiled optimization was added. |
+| D1-11 | Bounded: cited primary manual rules and authored guest assertions ground named expectations; they do not establish full ISA coverage or original-silicon behavior. |
+| D1-12 | Preserved: MAME/Musashi/other emulator agreement remains comparison evidence with ancestry, never hardware truth. |
+| D1-13 | Explicit unknown retained: original-MC68000 saved PC for exact `0x4AFC` remains unknown; neither `$100` nor `$102` is selected and the finite search is not repeated. |
+| D1-14 | Exact candidate exclusion retained: only numeric opcode `0x4AFC` is unsupported by this decision; its candidate rejection has no vector/frame/dispatch/cycle effect, while other selected exceptions remain tested. This is not a claim that hardware rejects ILLEGAL. |
+
+The evidence supports only this candidate-scoped disposition. CPU-01–05 remain
+Pending, Phase 01 remains GAPS_FOUND until its separate verification, Phase 02
+is gated, and no SDK admission follows from this report.
+
+```json
+{
+  "schema": 1,
+  "independent_non_author": true,
+  "hardware_saved_pc": "unknown",
+  "evidence_revision": "780c720c4e20ac8e9b61eff40da02fbe601a6f38",
+  "collection_sha256": "cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738",
+  "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+  "source_map_sha256": "be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d",
+  "prior_findings": {
+    "F14-01": {
+      "disposition": "resolved",
+      "evidence": "Earlier non-author regression repair retained; current normal and optimized acceptance controls pass 22/22 and the six-collection record has no lane blocker."
+    },
+    "F14-02": {
+      "disposition": "resolved",
+      "evidence": "Earlier shared historical blocker repair retained; current normal and optimized acceptance controls pass 22/22 and collection history remains preserved."
+    },
+    "F14-03": {
+      "disposition": "superseded",
+      "evidence": "Only the candidate obligation to support exact 0x4AFC is superseded by P01-C-14; independent timing/state controls retain its zero-vector/frame unsupported result. P01-C-13 original-silicon saved PC remains unknown, and no hardware truth or admission is claimed."
+    }
+  }
+}
+```
+
+---
+
+_Reviewed: 2026-10-04T06:24:44Z; final 780c720 metadata rebind completed 2026-10-04T06:50:22Z_
+_Reviewer: the agent (Plan 01-25 independent non-author)_
+_Depth: deep_
 
 <!-- owned-cpu-current-review:end -->

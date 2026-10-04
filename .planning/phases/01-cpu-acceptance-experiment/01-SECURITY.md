@@ -1,11 +1,25 @@
 ---
 phase: "01"
 slug: "cpu-acceptance-experiment"
+status: verified
+threats_open: 0
+asvs_level: 1
+created: "2026-10-01"
+updated: "2026-10-04"
+---
+
+## Historical frontmatter (Plan 01-21)
+
+The previous current assessment's original metadata is retained verbatim here.
+
+```yaml
+phase: "01"
+slug: "cpu-acceptance-experiment"
 status: blocked
 threats_open: 1
 asvs_level: 1
 created: "2026-10-01"
----
+```
 
 # Phase 01 — Security
 
@@ -124,7 +138,9 @@ Same-instance callback reentry remains unsupported by contract; guards specifica
 
 **Approval:** blocked 2026-10-03; resolve the declared ILLEGAL frame mitigation, then rerun `$gsd-secure-phase 01`.
 
-<!-- owned-cpu-current-security:start -->
+### Historical current security assessment (superseded scope; original bytes retained)
+
+<!-- owned-cpu-historical-security:start -->
 ## P01-C-14 reassessment — 2026-10-03
 
 Evidence revision: `931e2f07e85a17a9360d74b1b98ed6e1b89e340f`.
@@ -351,4 +367,128 @@ assessor independently verifying it. No clean final Task3 completion is claimed
 by an unsealed document. Final confirmation will be read-only and reported to
 the executor for SUMMARY, so this security document remains unchanged after
 sealing. Any final failure reopens the high finding and blocks closeout.
+<!-- owned-cpu-historical-security:end -->
+
+<!-- owned-cpu-current-security:start -->
+## P01-C-14 continuation and resource reassessment — 2026-10-04
+
+**Independent assessor:** fresh separate non-author.
+Authored runtime/collector/tests/receipts/ledger: no. Native C/evidence ASVS L1,
+block_on high.
+Current profile: owned-p01-c14-continuation-2. This assessment verifies the
+current owned candidate and evidence controls. It does not qualify hardware
+behavior or backend admission.
+
+```json
+{
+  "schema": 1,
+  "asvs_level": 1,
+  "block_on": "high",
+  "independent_non_author": true,
+  "status": "verified",
+  "open_high_or_critical": 0,
+  "evidence_revision": "780c720c4e20ac8e9b61eff40da02fbe601a6f38",
+  "collection_sha256": "cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738",
+  "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+  "source_map_sha256": "be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d",
+  "hardware_saved_pc": "unknown",
+  "review_sha256": "e0a4aba91f4a9e21b2c382dbed9b1b74de1cf19484a7a7a45cd69ecd2e797a78"
+}
+```
+
+### Current threat crosswalk
+
+| Threat | Severity | Result | Evidence |
+|---|---|---|---|
+| T-01-45 | high | CLOSED | state_valid preserves guest-reachable odd PC and selected stack values while retaining active A7/S-bank validation. Fresh-owner RTE_odd_PC and SR_switch_odd_USP comparisons cover 15 boundaries/90 calls, results, state, memory, frames, ordered bus events and cycles. |
+| T-01-46 | high | CLOSED | test_state.c destroys and overwrites the source after restore; restore makes zero bus callbacks, destination bindings remain owned by the destination, and malformed, active and terminal cases retain atomicity. |
+| T-01-47 | high | CLOSED | Current owned-p01-c14-continuation-2 requires 15 named boundaries/90 calls; historical 13/78 and absent-profile behavior remain. Normal and optimized profile/relabel controls pass. |
+| T-01-48 | high | CLOSED | Contract regressions reject decreases in all four cumulative churn categories and the penultimate crossing/lower-final counterexample; monotonic equal/increasing records pass. |
+| T-01-49 | high | CLOSED | Acceptance regressions accept each exact cap and reject plus-one, invalid totals, pause-for-review and active-pause records. Frozen caps are unchanged. |
+| T-01-50 | medium | CLOSED | Updated README distinguishes implementation from admission, keeps CPU-01–05 Pending and Phase 02 gated, preserves unknown silicon saved PC, points to separate phase verification and removes the stale gap-execution instruction. All 19 local links resolve. |
+| T-01-51 | high | CLOSED | Current collection, profile, source map and source snapshot agree. Four executor lanes pass 13/13 CTests each; all 44 recorded artifact hashes match actual bytes. |
+| T-01-52 | high | CLOSED | Five historical collection objects and 34 ledger entries/non-entry fields match their prior prefix. The prior active seal is preserved exactly inside superseded_seals[1].seal; frozen contract and Plan 01-17 evidence remain unchanged. |
+| T-01-53 | medium | CLOSED | Inventory validates the 39-file source closure and pinned test-only Unity; the 39 collected inputs contain no personal home paths. No package was installed or runtime dependency added. |
+| T-01-54 | high | CLOSED | Fresh non-author review binds revision 780c720, exact collection/profile/map, and preserved crosswalks. Final `review-check --revision HEAD` passes clean; reviewer report SHA-256 is e0a4aba91f4a9e21b2c382dbed9b1b74de1cf19484a7a7a45cd69ecd2e797a78. |
+| T-01-55 | high | CLOSED | Separate assessor rebuilt and ran changed native state, continuation, malformed-record, terminal and cumulative-resource controls; no current high/critical residual remains. |
+| T-01-56 | high | CLOSED | Acceptance guards bind review/security attestations to exact revision, collection, amendment, source map and report bytes; normal/optimized tests exercise deferred sealing and reject stale/tampered reports. Final seal remains an executor-owned gate. |
+| T-01-57 | high | CLOSED | Before Plan 01-25 closeout charges, budget passed at 59,690 active seconds, 2,565 diagnostic seconds, 1,228 runtime churn lines and 6,540 test/tool churn lines, with no pause. Frozen caps remain unchanged; final closeout totals are checked by the executor. |
+| T-01-SC | high | CLOSED | No package installation or dependency expansion; Unity remains pinned and test-only, with original notices retained. |
+
+CR-01 crosswalks to T-01-45/46; CR-02 to T-01-48/49. Both are resolved
+within the candidate continuation and accounting scope. T-01-15-03's historical
+failure remains preserved: P01-C-14 supersedes only the candidate requirement
+to support exact 0x4AFC; original-silicon saved PC remains unknown. T-01-43's
+stale-seal failure and later recovery remain preserved. This assessor does not
+claim a final seal.
+
+### Assessor execution and identities
+
+A separate ignored Debug build used build/security-audit-plan25, configured
+from owned-debug and built with two jobs: 22/22 Ninja steps passed. Cache
+configuration was Debug, owned CPU enabled, other CPU experiment disabled,
+optimization and sanitizer set to NONE. Fresh CTest for timing, semantics,
+state and faults passed 4/4. Direct runners passed: continuation-only 1/1
+Unity test with 15 boundaries/90 calls; full state 5/5, including 15 malformed
+records, four null inputs, active and terminal guards; timing 25/25; semantics
+17/17; faults 5/5.
+
+The full Python suite passed 59/59 normally and 59/59 with python3 -O.
+This includes contract controls 27/27 and acceptance controls 22/22 in each
+mode. contract.py validate, contract.py budget, acceptance.py verify, and
+inventory.py check --build-dir build/security-audit-plan25 passed. Inventory
+reported 26 owned fields, 10 compiled sources, zero runtime mutable globals
+and zero callback owner mutations.
+
+The collected source snapshot contains 39 inputs and matches the manifest.
+Collection SHA-256 is
+cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738;
+source-map SHA-256 is
+be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d.
+All 44 executor-recorded lane artifact hashes match their files. This hash
+reconciliation is distinct from my fresh Debug build and native/Python runs;
+I did not rerun the four qualification lanes.
+
+The updated README link check resolved 19/19 links. The exact candidate
+amendment identity is
+3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad.
+The current receipt has six collections, no lane blockers, remains
+unqualified/GAPS_FOUND, and has no active seal. The nine historical specless
+flags remain unresolved. Original-silicon saved PC, unsupported platforms,
+public state and hardware-wide claims remain unknown or outside scope.
+
+Audit interval: 2026-10-04 06:12:57 UTC–06:27:47 UTC
+Active time: 830 seconds, excluding 60 seconds of explicit waits.
+
+The reviewer's first provisional review-check failed with review independence
+not recorded; the reviewer corrected the metadata and the exact-current check
+passed. That failure is retained in this report and the validation audit. The
+updated README was separately checked after its navigation update; its local
+link scan remains 19/19.
+
+Unregistered flags: none found in the current Plan 01-24 summary. The nine
+historical specless flags remain unresolved.
+
+
+### Final pre-seal metadata rebind — 2026-10-04
+
+The reviewer rebound both owned reports to committed revision
+`780c720c4e20ac8e9b61eff40da02fbe601a6f38`. The exact-current
+`review-check --revision HEAD` passed clean; `experiments/owned_cpu/REVIEW.md`
+SHA-256 is `e0a4aba91f4a9e21b2c382dbed9b1b74de1cf19484a7a7a45cd69ecd2e797a78`.
+I independently reconfirmed 39/39 collected source hashes, profile
+`owned-p01-c14-continuation-2`, the six-collection receipt, collection/source-map/
+amendment identities, and the 19/19 README local links and status controls.
+The final ledger check passes with 43 records and 63,718 active seconds,
+2,565 diagnostic seconds, 1,228 runtime churn lines, 6,540 test/tool churn
+lines, and no pause. No native rerun was performed during this metadata rebind.
+
+A pre-rebind check at the new commit failed with `stale current attestation
+identities` because the reviewer report still carried the provisional `9fba`
+binding. The reviewer then rebound both reports and the final exact-current
+check passed. This intermediate binding failure remains recorded; it is not
+reclassified as a behavioral test result.
+
+Final assessor rebind interval: 2026-10-04 06:53:14–06:53:38 UTC; 24 active
+seconds.
 <!-- owned-cpu-current-security:end -->

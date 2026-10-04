@@ -1,6 +1,6 @@
 {
   "blockers": [
-    "independent current-candidate review/security and phase-goal verification pending"
+    "phase-goal-verification-pending"
   ],
   "collections": [
     {
@@ -3699,6 +3699,67 @@
   },
   "phase_disposition": "GAPS_FOUND",
   "schema": 1,
+  "seal": {
+    "budget": {
+      "active_seconds": 67834,
+      "diagnostic_gate_seconds": 2565,
+      "pause": null,
+      "phase_disposition": "not-admitted",
+      "records": 45,
+      "runtime_churn_added_deleted": 1228,
+      "status": "pass",
+      "test_tool_churn_added_deleted": 6540
+    },
+    "collection_sha256": "cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738",
+    "defer_admission": true,
+    "review": {
+      "attestation": {
+        "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+        "collection_sha256": "cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738",
+        "evidence_revision": "780c720c4e20ac8e9b61eff40da02fbe601a6f38",
+        "hardware_saved_pc": "unknown",
+        "independent_non_author": true,
+        "prior_findings": {
+          "F14-01": {
+            "disposition": "resolved",
+            "evidence": "Earlier non-author regression repair retained; current normal and optimized acceptance controls pass 22/22 and the six-collection record has no lane blocker."
+          },
+          "F14-02": {
+            "disposition": "resolved",
+            "evidence": "Earlier shared historical blocker repair retained; current normal and optimized acceptance controls pass 22/22 and collection history remains preserved."
+          },
+          "F14-03": {
+            "disposition": "superseded",
+            "evidence": "Only the candidate obligation to support exact 0x4AFC is superseded by P01-C-14; independent timing/state controls retain its zero-vector/frame unsupported result. P01-C-13 original-silicon saved PC remains unknown, and no hardware truth or admission is claimed."
+          }
+        },
+        "schema": 1,
+        "source_map_sha256": "be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d"
+      },
+      "revision": "780c720c4e20ac8e9b61eff40da02fbe601a6f38",
+      "sha256": "e0a4aba91f4a9e21b2c382dbed9b1b74de1cf19484a7a7a45cd69ecd2e797a78",
+      "status": "clean"
+    },
+    "revision": "780c720c4e20ac8e9b61eff40da02fbe601a6f38",
+    "security": {
+      "attestation": {
+        "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+        "asvs_level": 1,
+        "block_on": "high",
+        "collection_sha256": "cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738",
+        "evidence_revision": "780c720c4e20ac8e9b61eff40da02fbe601a6f38",
+        "hardware_saved_pc": "unknown",
+        "independent_non_author": true,
+        "open_high_or_critical": 0,
+        "review_sha256": "e0a4aba91f4a9e21b2c382dbed9b1b74de1cf19484a7a7a45cd69ecd2e797a78",
+        "schema": 1,
+        "source_map_sha256": "be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d",
+        "status": "verified"
+      },
+      "sha256": "a2ffd1aea37e9d5d0b4f31a1c017126127bbe34beded3049658f9673640285c6"
+    },
+    "security_path": ".planning/phases/01-cpu-acceptance-experiment/01-SECURITY.md"
+  },
   "superseded_seals": [
     {
       "reason": "Final audit metadata changed after initially passing deferred seal; stale active binding preserved for metadata-only recovery",
