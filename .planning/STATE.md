@@ -5,15 +5,15 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: executing
-stopped_at: "Completed $gsd-plan-phase 01 --gaps with PLANNING INCONCLUSIVE; no plan created. Phase 01 remains open. Next separate step: $gsd-execute-phase 01."
-last_updated: "2026-10-04T17:11:51.874Z"
+stopped_at: "Completed $gsd-plan-phase 01 --gaps; Plan 01-26 passed scoped review and coverage gates. Phase 01 remains open. Next separate step: $gsd-execute-phase 01 --gaps-only."
+last_updated: "2026-10-04T19:31:11.725Z"
 last_activity: 2026-10-04
-last_activity_desc: Phase 01 execution started
-state_head: 7a78865687644cf1d213d25150c88e4565b7e557
+last_activity_desc: Phase 01 gap plan 01-26 ready to execute
+state_head: e187c4a42f6370736c30297ae48ac8d651e0ab8b
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 25
+  total_plans: 26
   completed_plans: 25
   percent: 0
 ---
@@ -30,14 +30,14 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — EXECUTING
-Plan: 1 of 25
-Status: Executing Phase 01
-Last activity: 2026-10-04 — Phase 01 execution started
+Phase: 01 (CPU acceptance experiment) — READY TO EXECUTE
+Plan: 26 of 26 (new gap-closure plan)
+Status: Ready to execute
+Last activity: 2026-10-04 — Phase 01 gap plan 01-26 ready to execute
 
 Progress: [░░░░░░░░░░] 0%
 
-GSD frontmatter progress.completed_plans counts matching summary files and is 25, including Plan 01-17's answered checkpoint summary. Execution-complete plans are 01-01 through 01-16 and 01-18–01-25 (24); Plan 01-17 remains incomplete at its answered checkpoint. The GSD execution index sees 25 plans with summaries and zero runnable plans. Phase 01 remains incomplete; its only canonical verification report is now marked stale because it records a 2026-10-01 preflight-only refusal.
+GSD frontmatter progress.completed_plans counts matching summary files and is 25, including Plan 01-17's answered checkpoint summary. Execution-complete plans are 01-01 through 01-16 and 01-18–01-25 (24); Plan 01-17 remains incomplete at its answered checkpoint. Plan 01-26 is the new unexecuted gap-closure plan, bringing the phase total to 26. Phase 01 remains incomplete; its only canonical verification report records a current 2026-10-04 gap and must be refreshed after execution.
 
 Historical task-level evidence exists for CPU-01 through CPU-05 (5/27 v1 requirements). Plans 01-22–01-25 close the later bounded candidate, resource-control and documentation findings, but do not admit the backend. Current phase-goal verification must be refreshed; Phase 1 remains open and Phase 2 stays gated.
 
@@ -49,7 +49,7 @@ Shift-left verification preference (PROJECT-D-45): deterministic acceptance shou
 
 **Velocity:**
 
-- Total plans in phase: 25; execution-complete: 24; Plan 01-17 remains at an answered decision checkpoint; Plans 01-24–01-25 are complete
+- Total plans in phase: 26; execution-complete: 24; Plan 01-17 remains at an answered decision checkpoint; Plans 01-24–01-25 are complete; Plan 01-26 is planned and unexecuted
 - Average recorded duration: 43.4min across 24 execution-complete plans
 - Total recorded execution time: 1,042min; exact owned-core active effort/churn remain in experiments/owned_cpu/budget-ledger.json; Phase 01 remains open pending verification
 
@@ -57,7 +57,7 @@ Shift-left verification preference (PROJECT-D-45): deterministic acceptance shou
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 24 of 25 | 1,042min | 43.4min |
+| 01 | 24 of 26 | 1,042min | 43.4min |
 
 **Recent Trend:**
 
@@ -142,7 +142,7 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 
 ### Pending Todos
 
-- Plan 01-17 preserves the answered checkpoint and unknown original-silicon saved PC; do not repeat the finite search. Plans 01-18–01-25 completed their scoped candidate boundary, controls, qualification, later-finding repairs, independent reassessment and deferred seal. Phase 01 UAT is complete at 44/44 automated checks with no issues. All CPU requirements remain Pending, Phase 01 is open with stale phase-goal verification, and Phase 02 is gated. Next separate command: `$gsd-execute-phase 01`; all plans have summaries, so this resumes at phase verification gates.
+- Plan 01-17 preserves the answered checkpoint and unknown original-silicon saved PC; do not repeat the finite search. Plans 01-18–01-25 completed their scoped candidate boundary, controls, qualification, later-finding repairs, independent reassessment and deferred seal. Phase 01 UAT is complete at 44/44 automated checks with no issues. Plan 01-26 plans the current ROADMAP wording gap without changing admission. All CPU requirements remain Pending, Phase 01 is open with current phase-goal verification still required after gap execution, and Phase 02 is gated. Next separate command: `$gsd-execute-phase 01 --gaps-only`.
 
 ### Blockers/Concerns
 
@@ -169,5 +169,5 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 ## Session Continuity
 
 Last session: 2026-10-04T16:34:48.799Z
-Stopped at: Completed $gsd-plan-phase 01 --gaps with PLANNING INCONCLUSIVE; no plan created. Phase 01 remains open. Next separate step: $gsd-execute-phase 01.
+Stopped at: Completed $gsd-plan-phase 01 --gaps; Plan 01-26 passed scoped review and coverage gates. Phase 01 remains open. Next separate step: $gsd-execute-phase 01 --gaps-only.
 Resume file: None
