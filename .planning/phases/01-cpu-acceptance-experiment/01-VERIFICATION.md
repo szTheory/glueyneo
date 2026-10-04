@@ -1,7 +1,7 @@
 ---
 phase: 01-cpu-acceptance-experiment
 verified: 2026-10-01T22:08:27Z
-status: gaps_found
+status: stale
 verification_scope: preflight_only
 score: 0/5 must-haves verified
 score_note: "Verification refused by MVP format guard; zero is not a claim that all five implementation truths failed."
@@ -32,9 +32,12 @@ gaps:
     missing:
       - "Disposition the findings through bounded repair and renewed source/runtime evidence and independent review, or explicit rejection/defer with SDK admission blocked."
       - "Preserve the frozen cumulative budget and consumed attempt count; do not silently increase caps."
+
 ---
 
 # Phase 1: CPU acceptance experiment Verification Report
+
+> **Current lifecycle note — 2026-10-04:** The frontmatter status is now `stale`. This report is a preserved 2026-10-01 preflight-only refusal; its then-current `gaps_found` result and 0/5 score do not assess the later owned-core plans or the corrected roadmap goal. The original findings below remain historical evidence. Run `$gsd-execute-phase 01` to resume at the verification gates and refresh canonical phase-goal verification; `$gsd-verify-work` cannot rewrite a stale report.
 
 **Phase Goal:** As a maintainer, I can reproduce acceptance of a C 68000 backend so I can build the diagnostic SDK on independent instances with explicit state and timing limits.
 **Verified:** 2026-10-01T22:08:27Z
@@ -123,4 +126,3 @@ Run `/gsd mvp-phase 1` to establish the canonical goal, then rerun verification.
 
 ---
 _Verifier: gsd-verifier; pre-flight refusal and bounded source triage only._
-

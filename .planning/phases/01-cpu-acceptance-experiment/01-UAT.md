@@ -3,8 +3,10 @@ status: complete
 phase: 01-cpu-acceptance-experiment
 source: "01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md, 01-04-SUMMARY.md, 01-05-SUMMARY.md, 01-06-SUMMARY.md, 01-07-SUMMARY.md, 01-08-SUMMARY.md, 01-09-SUMMARY.md, 01-10-SUMMARY.md, 01-11-SUMMARY.md, 01-12-SUMMARY.md, 01-13-SUMMARY.md, 01-14-SUMMARY.md, 01-15-SUMMARY.md, 01-16-SUMMARY.md, 01-17-SUMMARY.md, 01-18-SUMMARY.md, 01-19-SUMMARY.md, 01-20-SUMMARY.md, 01-21-SUMMARY.md, 01-22-SUMMARY.md, 01-23-SUMMARY.md, 01-24-SUMMARY.md, 01-25-SUMMARY.md"
 started: 2026-10-03T23:16:26Z
-updated: 2026-10-04T15:44:51Z
+updated: 2026-10-04T16:34:48Z
 ---
+
+**Routing supersession — 2026-10-04:** Row 44 preserves the README route check at its recorded source revision, when gap planning was the next step. That gap-planning attempt returned `PLANNING INCONCLUSIVE`; the old verification report is now marked stale. The current next step is `$gsd-execute-phase 01`, which resumes at verification because all plan summaries are present. Row 44 remains historical evidence for its recorded revision.
 
 ### Historical Plan 01-21 frontmatter (preserved verbatim)
 
@@ -307,9 +309,9 @@ blocked: 0
 - Native independent reviewer: fresh Debug build `build/owned-review25` completed 22/22 build steps; full CTest passed 13/13 and focused timing/unsupported/semantics/state CTest passed 4/4. Direct continuation-only passed 1/1 with 15 boundaries/90 calls; full state passed 5/5 with malformed 15, null 4, counter mismatch 1. The independent assessor used separate `build/security-audit-plan25` and independently passed its targeted 4/4 CTest and direct continuation/state/timing/semantics/fault denominators.
 - Fresh Python evidence: contract controls 27/27 normal and optimized; acceptance controls 22/22 normal and optimized. Four churn-decrease probes, prior-crossing/lower-final control, exact caps, plus-one and active-pause controls have the outcomes recorded in rows 41–42.
 - WR-02 checks the README at the Plan 01-25 source identity: 19 Markdown links and 19 local links resolved, status and then-current next-step assertions passed. The independent reviewer repeated the local link scan and `git diff --check`.
-- Test 44 reruns the README link/status check after this verify-work step and confirms the current `$gsd-plan-phase 01 --gaps` routing. This updates navigation only; the phase-goal report remains `gaps_found`.
+- Test 44 reran the README link/status check at its recorded revision and confirmed `$gsd-plan-phase 01 --gaps` as the next route at that time. This updated navigation only; the phase-goal report then remained `gaps_found`. The later gap-planning attempt returned inconclusive, so that route is superseded by the stale-verification gate documented above.
 - Reviewer build/source identity: base source commit `9fba16b864cf74e3b8a9c97047bb27a5db544b59`, current profile `owned-p01-c14-continuation-2`, collection `cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738`, map `be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d`, amendment `3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad`. Review/security final revision binding and deferred seal pass; candidate admission remains deferred pending phase-goal verification.
-- Candidate disposition stays unqualified and not admitted. CPU-01–05 remain Pending, Phase 01 remains GAPS_FOUND/incomplete, Phase 02 remains gated, and original-silicon saved PC for `0x4AFC` remains unknown.
+- Candidate disposition stays unqualified and not admitted. CPU-01–05 remain Pending, Phase 01 remains incomplete with stale phase-goal verification, Phase 02 remains gated, and original-silicon saved PC for `0x4AFC` remains unknown.
 
 ## Historical Plan 01-21 Verification Evidence (preserved verbatim)
 
