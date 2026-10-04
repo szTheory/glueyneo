@@ -227,6 +227,27 @@ class ContractControls(unittest.TestCase):
         self.assertEqual(result["status"], "pause-for-review")
         self.assertEqual(result["phase_disposition"], "GAPS_FOUND")
 
+    def test_cumulative_churn_cannot_refund_penultimate_threshold_crossing(self):
+        ledger = self.read_ledger()
+        penultimate_entry = json.loads(json.dumps(ledger["entries"][-1]))
+        penultimate_entry["stage"] = "synthetic-penultimate-crossing"
+        penultimate_entry["cumulative_churn"]["runtime_added"] = contract.RUNTIME_CHURN_CAP + 1
+        final_entry = json.loads(json.dumps(ledger["entries"][-1]))
+        final_entry["stage"] = "synthetic-final-under-limit"
+        final_entry["cumulative_churn"] = {key: 0 for key in penultimate_entry["cumulative_churn"]}
+        ledger["entries"].extend((penultimate_entry, final_entry))
+        penultimate = ledger["entries"][-2]["cumulative_churn"]
+        final = ledger["entries"][-1]["cumulative_churn"]
+        self.assertLess(final["runtime_added"], contract.RUNTIME_CHURN_CAP + 1)
+        self.assertEqual(penultimate["runtime_added"], contract.RUNTIME_CHURN_CAP + 1)
+        self.write_ledger(ledger)
+
+        with self.assertRaises(contract.ContractError) as caught:
+            contract.validate_budget(self.root)
+        self.assertEqual(caught.exception.reason, "cumulative_decrease")
+        self.assertIn("runtime_added", str(caught.exception))
+        self.assertIn(f"entry {len(ledger['entries']) - 1}", str(caught.exception))
+
     def test_record_measures_intervals_build_fixture_churn_and_ctest(self):
         subprocess.run(["git", "init", "--quiet"], cwd=self.root, check=True)
         subprocess.run(["git", "config", "user.name", "Contract Test"], cwd=self.root, check=True)

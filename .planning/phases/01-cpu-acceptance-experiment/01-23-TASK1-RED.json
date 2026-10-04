@@ -1,0 +1,9 @@
+{
+  "command": "python3 $TMP/glueyneo_tdd_runner.py test_contract.ContractControls.test_cumulative_churn_cannot_refund_penultimate_threshold_crossing",
+  "exitCode": 1,
+  "output": "TAP version 13\n1..1\nnot ok 1 - test_contract.ContractControls.test_cumulative_churn_cannot_refund_penultimate_threshold_crossing\n# Traceback (most recent call last):\n#   File \"$REPO/tests/owned_cpu/test_contract.py\", line 245, in test_cumulative_churn_cannot_refund_penultimate_threshold_crossing\n#     with self.assertRaises(contract.ContractError) as caught:\n#          ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\n# AssertionError: ContractError not raised\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0",
+  "targetTest": "test_contract.ContractControls.test_cumulative_churn_cannot_refund_penultimate_threshold_crossing",
+  "targetFile": "tests/owned_cpu/test_contract.py",
+  "expected": "validate_budget rejects the penultimate runtime_added=6001 value even though the final cumulative value is lower and the final totals have no active pause.",
+  "actual": "The in-memory penultimate-threshold counterexample returns without ContractError; only final cumulative values are checked."
+}
