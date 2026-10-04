@@ -36,13 +36,18 @@ UNITY = {"owned_cpu_diagnostic": 2, "owned_cpu_semantics": 17,
          "owned_cpu_timing": 23, "owned_cpu_isolation": 4,
          "owned_cpu_faults": 5, "owned_cpu_state": 5}
 # Absent profile means the immutable pre-amendment 12-case/five-control policy.
-PROFILE = "owned-p01-c14-1"
+# P01-C-14-1 remains historical; only the continuation profile describes the
+# repaired source and may qualify current evidence.
+PROFILE_V1 = "owned-p01-c14-1"
+PROFILE = "owned-p01-c14-continuation-2"
+CANDIDATE_PROFILES = frozenset((PROFILE_V1, PROFILE))
 CURRENT_CASES = CASES | {"owned_cpu_unsupported_negative"}
 # 25 ordinary RUN_TEST declarations in test_timing.c, excluding its two modes.
 CURRENT_UNITY = UNITY | {"owned_cpu_timing": 25}
-BOUNDARIES = ("reset_debt", "diagnostic_MOVEQ", "diagnostic_ADDQ", "diagnostic_MOVE_store",
-              "STOP", "masked_IRQ", "IRQ7_edge_pending_after_deassertion", "IRQ_entry",
-              "TRAP_entry", "canonical_unsupported", "privilege_entry", "address_error_entry", "RTE")
+PROFILE_V1_BOUNDARIES = ("reset_debt", "diagnostic_MOVEQ", "diagnostic_ADDQ", "diagnostic_MOVE_store",
+                         "STOP", "masked_IRQ", "IRQ7_edge_pending_after_deassertion", "IRQ_entry",
+                         "TRAP_entry", "canonical_unsupported", "privilege_entry", "address_error_entry", "RTE")
+BOUNDARIES = PROFILE_V1_BOUNDARIES + ("RTE_odd_PC", "SR_switch_odd_USP")
 CONTROLS = {
     "owned_cpu_negative": (
         "mutation changed 10 to 11; only the named guest arithmetic/store assertion failed",
@@ -140,7 +145,7 @@ def validate_presets(document):
 
 
 def test_counts(content, profile=None):
-    require(profile in (None, PROFILE), "unknown evidence profile")
+    require(profile is None or profile in CANDIDATE_PROFILES, "unknown evidence profile")
     cases, unity = (CASES, UNITY) if profile is None else (CURRENT_CASES, CURRENT_UNITY)
     blocks = list(re.finditer(r"(?m)^\d+/\d+ Testing:\s+(.+?)\s*$", content))
     require(len(blocks) == len(cases), "empty/wrong CTest denominator")
@@ -156,11 +161,17 @@ def test_counts(content, profile=None):
             require(summaries == [(str(unity[name]), "0", "0")], "wrong Unity denominator: " + name)
             counts[name] = unity[name]
         if name == "owned_cpu_state":
-            require("state_checkpoints=13 " in block, "missing continuation checkpoints")
-            if profile == PROFILE:
-                require(re.findall(r"(?m)^state_boundary_names=(.+)$", block) == [",".join(BOUNDARIES)],
+            if profile is None:
+                checkpoints, calls, boundaries = 13, None, None
+            elif profile == PROFILE_V1:
+                checkpoints, calls, boundaries = 13, 78, PROFILE_V1_BOUNDARIES
+            else:
+                checkpoints, calls, boundaries = 15, 90, BOUNDARIES
+            require(f"state_checkpoints={checkpoints} " in block, "missing continuation checkpoints")
+            if profile in CANDIDATE_PROFILES:
+                require(re.findall(r"(?m)^state_boundary_names=(.+)$", block) == [",".join(boundaries)],
                         "wrong named continuation boundaries")
-                require("state_checkpoints=13 continuation_run_calls=78 source_destroyed_and_overwritten=1" in block,
+                require(f"state_checkpoints={checkpoints} continuation_run_calls={calls} source_destroyed_and_overwritten=1" in block,
                         "wrong fresh-owner continuation denominator")
         if name == "owned_cpu_isolation":
             require("interleaved_pairs=32 " in block and "concurrent_pairs=32 " in block, "missing isolation denominator")
@@ -170,10 +181,10 @@ def test_counts(content, profile=None):
             require(block.count("PASS:") == 3, "missing diagnostic/state controls")
         if name in ("owned_cpu_isolation_negative", "owned_cpu_timing_negative"):
             require(block.count("PASS:") == 1, "missing named negative control")
-        if profile == PROFILE and name in CONTROLS:
+        if profile in CANDIDATE_PROFILES and name in CONTROLS:
             require(re.findall(r"(?m)^PASS: (.+)$", block) == list(CONTROLS[name]),
                     "wrong named negative control: " + name)
-        if profile == PROFILE and name == "owned_cpu_timing":
+        if profile in CANDIDATE_PROFILES and name == "owned_cpu_timing":
             for case in ("trap_stacks_next_pc_then_addq_rte_resumes_stop",
                          "canonical_unsupported_has_only_opcode_fetch",
                          "canonical_rejection_retains_prior_reset_irq_and_instruction_charges",
@@ -185,11 +196,17 @@ def test_counts(content, profile=None):
                          "rte_restores_user_stack_bank_from_short_frame"):
                 require(len(re.findall(r":" + re.escape(case) + r":PASS\s*$", block, re.M)) == 1,
                         "missing retained native case: " + case)
+    if profile is None:
+        checkpoints, calls, boundaries = 13, None, None
+    elif profile == PROFILE_V1:
+        checkpoints, calls, boundaries = 13, 78, PROFILE_V1_BOUNDARIES
+    else:
+        checkpoints, calls, boundaries = 15, 90, BOUNDARIES
     result = {"ctest_expected": len(cases), "ctest_observed": len(blocks), "unity": counts,
-            "state_checkpoints": 13, "interleaved_pairs": 32, "concurrent_pairs": 32,
+            "state_checkpoints": checkpoints, "interleaved_pairs": 32, "concurrent_pairs": 32,
             "cold_processes": 16, "negative_controls": 5 if profile is None else 6}
-    if profile == PROFILE:
-        result.update(state_boundary_names=list(BOUNDARIES), continuation_run_calls=78,
+    if profile in CANDIDATE_PROFILES:
+        result.update(state_boundary_names=list(boundaries), continuation_run_calls=calls,
                       negative_control_names=[control for rows in CONTROLS.values() for control in rows])
     return result
 
@@ -352,7 +369,7 @@ def check_binding(attestation, record, revision):
 
 
 def review_text(text, revision, record=None):
-    current = record is not None and record.get("evidence_profile") == PROFILE
+    current = record is not None and record.get("evidence_profile") in CANDIDATE_PROFILES
     if current:
         text = bounded_section(text, "review")
         attestation = section_attestation(text)
@@ -423,8 +440,8 @@ def verify(document, current=True):
         require(re.fullmatch(r"[0-9a-f]{40}", record.get("revision", "")) is not None, "missing revision")
         require(record.get("source_hashes") and record.get("host") and record.get("tools"), "missing identities")
         profile = record.get("evidence_profile")
-        require("evidence_profile" not in record or profile == PROFILE, "unknown evidence profile")
-        if profile == PROFILE:
+        require("evidence_profile" not in record or profile in CANDIDATE_PROFILES, "unknown evidence profile")
+        if profile in CANDIDATE_PROFILES:
             require(record.get("amendment_sha256") == contract.ACTIVE_AMENDMENT_SHA256 and
                     record.get("active_contract_identity_sha256") == contract.ACTIVE_CONTRACT_IDENTITY_SHA256,
                     "wrong active amendment identity")
@@ -459,14 +476,15 @@ def verify(document, current=True):
     latest = document["collections"][-1]
     if current:
         require(latest["source_hashes"] == snapshot(), "stale collected source")
-        require(latest.get("evidence_profile") == PROFILE, "current qualification requires P01-C-14 profile")
+        require(latest.get("evidence_profile") == PROFILE,
+                "current qualification requires P01-C-14 continuation profile")
         require(latest["amendment_sha256"] == contract.validate(ROOT)["active_candidate_contract"]["amendment_sha256"],
                 "stale active amendment")
         require(subprocess.run(["git", "merge-base", "--is-ancestor", latest["revision"], "HEAD"], cwd=ROOT).returncode == 0, "collected revision not current ancestor")
     runs = {row["preset"]: row for row in latest["runs"]}
     blockers = ["required lane unqualified: " + lane for lane in MANDATORY if lane not in runs or runs[lane]["status"] != "pass"]
     sealed = document.get("seal", {})
-    if latest.get("evidence_profile") == PROFILE and sealed:
+    if latest.get("evidence_profile") in CANDIDATE_PROFILES and sealed:
         require(sealed.get("defer_admission") is True and document.get("disposition") == "unqualified" and
                 document.get("phase_disposition") == "GAPS_FOUND" and
                 "phase-goal-verification-pending" in document.get("blockers", []),
@@ -485,7 +503,7 @@ def verify(document, current=True):
             require(sealed.get("security") == security_check(security_path, sealed["revision"], latest),
                     "stale sealed security document")
             budget_check(contract.validate_budget(ROOT))
-    if latest.get("evidence_profile") == PROFILE:
+    if latest.get("evidence_profile") in CANDIDATE_PROFILES:
         require(document.get("disposition") != "accepted", "phase admission not supplied by candidate profile")
     if document.get("disposition") == "accepted":
         require(not blockers, "accepted with unqualified lane")
@@ -526,7 +544,8 @@ def seal(require_accepted=False, defer_admission=False, security=None):
         write(document)
         verify(document)
         return {"disposition": "unqualified", "blockers": document["blockers"]}
-    require(record.get("evidence_profile") != PROFILE, "current candidate requires --defer-admission and --security")
+    require(record.get("evidence_profile") not in CANDIDATE_PROFILES,
+            "current candidate requires --defer-admission and --security")
     review = None
     try:
         review = review_check(ROOT / "experiments/owned_cpu/REVIEW.md", "HEAD")

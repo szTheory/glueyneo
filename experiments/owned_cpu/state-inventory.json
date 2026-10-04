@@ -1245,7 +1245,55 @@
       "canonical unsupported rejection (P01-C-14); six repeatable fresh-owner calls",
       "privilege exception entry",
       "address-error entry",
-      "RTE completion"
+      "RTE completion",
+      "RTE_odd_PC: ordinary RTE returns to an odd PC; capture/restore preserves it before deferred address error",
+      "SR_switch_odd_USP: supported SR transition selects an odd inactive USP; capture/restore preserves it before deferred fault behavior"
+    ],
+    "continuation_evidence_profiles": [
+      {
+        "profile": "owned-p01-c14-1",
+        "status": "historical",
+        "state_checkpoints": 13,
+        "continuation_run_calls": 78,
+        "boundary_names": [
+          "reset_debt",
+          "diagnostic_MOVEQ",
+          "diagnostic_ADDQ",
+          "diagnostic_MOVE_store",
+          "STOP",
+          "masked_IRQ",
+          "IRQ7_edge_pending_after_deassertion",
+          "IRQ_entry",
+          "TRAP_entry",
+          "canonical_unsupported",
+          "privilege_entry",
+          "address_error_entry",
+          "RTE"
+        ]
+      },
+      {
+        "profile": "owned-p01-c14-continuation-2",
+        "status": "current",
+        "state_checkpoints": 15,
+        "continuation_run_calls": 90,
+        "boundary_names": [
+          "reset_debt",
+          "diagnostic_MOVEQ",
+          "diagnostic_ADDQ",
+          "diagnostic_MOVE_store",
+          "STOP",
+          "masked_IRQ",
+          "IRQ7_edge_pending_after_deassertion",
+          "IRQ_entry",
+          "TRAP_entry",
+          "canonical_unsupported",
+          "privilege_entry",
+          "address_error_entry",
+          "RTE",
+          "RTE_odd_PC",
+          "SR_switch_odd_USP"
+        ]
+      }
     ],
     "compatibility_limit": "same compiled source build only; no public ABI, cross-build compatibility, durable snapshot, replay or save format is provided"
   },

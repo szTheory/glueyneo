@@ -195,9 +195,21 @@ class AcceptanceControls(unittest.TestCase):
         current = document_fixture(a.PROFILE)
         self.assertEqual("pass", a.verify(current, False)["status"])
         counts = current["collections"][0]["runs"][0]["counts"]
-        self.assertEqual((13, 6, 13, 78), (counts["ctest_observed"], counts["negative_controls"],
+        self.assertEqual((13, 6, 15, 90), (counts["ctest_observed"], counts["negative_controls"],
                                        counts["state_checkpoints"], counts["continuation_run_calls"]))
         self.assertEqual(25, counts["unity"]["owned_cpu_timing"])
+        previous = document_fixture(LEGACY_C14_PROFILE)
+        previous_counts = previous["collections"][0]["runs"][0]["counts"]
+        self.assertEqual((13, 13, 78), (previous_counts["ctest_observed"],
+                                        previous_counts["state_checkpoints"],
+                                        previous_counts["continuation_run_calls"]))
+        self.assertEqual("pass", a.verify(previous, False)["status"])
+        old_log = log_fixture(LEGACY_C14_PROFILE)
+        for mutated in (old_log.replace(",RTE\n", "\n", 1),
+                        old_log.replace("RTE", "TRAP_entry", 1),
+                        old_log.replace("continuation_run_calls=78", "continuation_run_calls=90", 1)):
+            with self.subTest(old_profile_mutation=mutated[-180:]), self.assertRaises(a.EvidenceError):
+                a.test_counts(mutated, LEGACY_C14_PROFILE)
 
     def test_continuation_profile_keeps_the_old_denominator_and_rejects_rehashed_spoofs(self):
         old_log = log_fixture(LEGACY_C14_PROFILE)
@@ -225,6 +237,14 @@ class AcceptanceControls(unittest.TestCase):
         old["collections"][0]["evidence_profile"] = CONTINUATION_PROFILE
         rehash(old)
         self.assertEqual("pass", a.verify(old, False)["status"])
+        with patch.object(a, "snapshot", return_value=old["collections"][0]["source_hashes"]):
+            with self.assertRaisesRegex(a.EvidenceError, "current qualification requires"):
+                a.verify(document_fixture(LEGACY_C14_PROFILE))
+        relabelled_old = document_fixture(LEGACY_C14_PROFILE)
+        relabelled_old["collections"][0]["evidence_profile"] = CONTINUATION_PROFILE
+        rehash(relabelled_old)
+        with self.assertRaises(a.EvidenceError):
+            a.verify(relabelled_old, False)
         relabeled = copy.deepcopy(old)
         relabeled["collections"][0]["runs"][0]["test_log"] = new_log.replace(
             "RTE_odd_PC", "", 1).replace("SR_switch_odd_USP", "", 1)
@@ -244,7 +264,7 @@ class AcceptanceControls(unittest.TestCase):
             with self.assertRaisesRegex(a.EvidenceError, "amendment"):
                 a.verify(document, False)
         original_log = log_fixture(a.PROFILE)
-        for old, new in (("canonical_unsupported", "ILLEGAL_entry"), ("continuation_run_calls=78", "continuation_run_calls=0"),
+        for old, new in (("canonical_unsupported", "ILLEGAL_entry"), ("continuation_run_calls=90", "continuation_run_calls=0"),
                          ("wrong canonical unsupported status", "wrong unrelated status"),
                          ("25 Tests", "23 Tests"), ("TRAP_entry,", ""),
                          ("user_mode_privileged_instructions_raise_vector_eight:PASS", "fake_case:PASS")):
