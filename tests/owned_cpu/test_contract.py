@@ -27,6 +27,20 @@ class ContractControls(unittest.TestCase):
     def write_ledger(self, ledger):
         contract._write_json(self.root / contract.LEDGER_PATH, ledger)
 
+    def ledger_with_churn_rows(self, rows, pause=None):
+        ledger = self.read_ledger()
+        seed = ledger["entries"][0]
+        entries = []
+        for index, values in enumerate(rows):
+            entry = json.loads(json.dumps(seed))
+            if index:
+                entry["stage"] = f"synthetic-churn-{index}"
+            entry["cumulative_churn"] = dict(values)
+            entries.append(entry)
+        ledger["entries"] = entries
+        ledger["pause"] = pause
+        return ledger
+
     def test_current_candidate_requires_active_amendment(self):
         record = json.loads((self.root / "experiments/owned_cpu/illegal-reconciliation.json")
                             .read_text(encoding="utf-8"))
@@ -246,7 +260,57 @@ class ContractControls(unittest.TestCase):
             contract.validate_budget(self.root)
         self.assertEqual(caught.exception.reason, "cumulative_decrease")
         self.assertIn("runtime_added", str(caught.exception))
-        self.assertIn(f"entry {len(ledger['entries']) - 1}", str(caught.exception))
+        self.assertIn(f"entry {len(ledger['entries'])}", str(caught.exception))
+
+    def test_all_cumulative_churn_categories_reject_decreases(self):
+        keys = ("runtime_added", "runtime_deleted", "test_tool_added", "test_tool_deleted")
+        zero = {key: 0 for key in keys}
+        for key in keys:
+            middle, final = dict(zero), dict(zero)
+            middle[key], final[key] = 2, 1
+            self.write_ledger(self.ledger_with_churn_rows((zero, middle, final)))
+            with self.subTest(category=key):
+                with self.assertRaises(contract.ContractError) as caught:
+                    contract.validate_budget(self.root)
+                self.assertEqual(caught.exception.reason, "cumulative_decrease")
+                self.assertIn(key, str(caught.exception))
+                self.assertIn("entry 3", str(caught.exception))
+
+    def test_equal_and_increasing_cumulative_churn_pass(self):
+        keys = ("runtime_added", "runtime_deleted", "test_tool_added", "test_tool_deleted")
+        zero = {key: 0 for key in keys}
+        equal = {key: 2 for key in keys}
+        increasing = {key: 3 for key in keys}
+        self.write_ledger(self.ledger_with_churn_rows((zero, equal, equal, increasing)))
+        self.assertEqual("pass", contract.validate_budget(self.root)["status"])
+
+    def test_combined_churn_limits_are_inclusive_and_crossings_require_active_pause(self):
+        keys = ("runtime_added", "runtime_deleted", "test_tool_added", "test_tool_deleted")
+        zero = {key: 0 for key in keys}
+        exact = {"runtime_added": 3000, "runtime_deleted": 3000,
+                 "test_tool_added": 4000, "test_tool_deleted": 4000}
+        self.write_ledger(self.ledger_with_churn_rows((zero, exact)))
+        self.assertEqual("pass", contract.validate_budget(self.root)["status"])
+
+        over = exact | {"runtime_deleted": 3001}
+        self.write_ledger(self.ledger_with_churn_rows((zero, over)))
+        with self.assertRaises(contract.ContractError) as caught:
+            contract.validate_budget(self.root)
+        self.assertEqual(caught.exception.reason, "threshold_outcome")
+
+        arbitrary = {"active": False, "reason": "runtime-churn-threshold",
+                     "disposition": "resolved"}
+        self.write_ledger(self.ledger_with_churn_rows((zero, over), arbitrary))
+        with self.assertRaises(contract.ContractError) as caught:
+            contract.validate_budget(self.root)
+        self.assertEqual(caught.exception.reason, "threshold_outcome")
+
+        authorized = {"active": True, "reason": "runtime-churn-threshold",
+                      "disposition": "pause-for-user-scope-review"}
+        self.write_ledger(self.ledger_with_churn_rows((zero, over), authorized))
+        result = contract.validate_budget(self.root)
+        self.assertEqual("pause-for-review", result["status"])
+        self.assertEqual("GAPS_FOUND", result["phase_disposition"])
 
     def test_record_measures_intervals_build_fixture_churn_and_ctest(self):
         subprocess.run(["git", "init", "--quiet"], cwd=self.root, check=True)
