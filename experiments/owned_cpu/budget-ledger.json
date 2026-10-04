@@ -2309,6 +2309,66 @@
         "status": "pass"
       },
       "working_tree_dirty": true
+    },
+    {
+      "accounting_notes": "Measured executor Task 1/Task 2 wall interval: 365 seconds from 2026-10-04T21:14:00.741794Z through 2026-10-04T21:20:06.693812Z, including archive, expected stale-report reproduction, metadata-only receipt recovery, contract/budget/receipt checks and preservation comparison. A 60-second non-refundable capture-recovery allowance covers the first wrapper attempt whose subprocess streams were not persisted; exact successful reproductions are retained in the archive. A 600-second non-refundable Task 2 allowance covers ledger finalization, its read-only validation, and the checkpoint commit. Task 3 reserves 1800 seconds each for executor closeout, independent review rebinding, and independent security assessment/final comparison. These are conservative estimates, not measured execution. Any measured overrun must be appended before report rebinding/seal.",
+      "active_seconds": 6425,
+      "agent_intervals": [
+        {
+          "agent": "codex-executor-measured-plan27-task1-task2",
+          "end": "2026-10-04T21:20:06.693812Z",
+          "start": "2026-10-04T21:14:00.741794Z"
+        },
+        {
+          "agent": "codex-executor-capture-recovery-allowance",
+          "end": "2026-10-04T21:14:00.741794Z",
+          "start": "2026-10-04T21:13:00.741794Z"
+        },
+        {
+          "agent": "codex-executor-task2-ledger-validation-checkpoint-allowance",
+          "end": "2026-10-04T21:30:06.693812Z",
+          "start": "2026-10-04T21:20:06.693812Z"
+        },
+        {
+          "agent": "codex-executor-final-closeout-allowance",
+          "end": "2026-10-04T22:00:06.693812Z",
+          "start": "2026-10-04T21:30:06.693812Z"
+        },
+        {
+          "agent": "plan27-independent-reviewer-rebinding-allowance",
+          "end": "2026-10-04T22:30:06.693812Z",
+          "start": "2026-10-04T22:00:06.693812Z"
+        },
+        {
+          "agent": "plan27-independent-security-assessor-allowance",
+          "end": "2026-10-04T23:00:06.693812Z",
+          "start": "2026-10-04T22:30:06.693812Z"
+        }
+      ],
+      "commit": "2d84fa9357be02c25a8901c68334f8870162591d",
+      "cumulative_churn": {
+        "runtime_added": 1164,
+        "runtime_deleted": 64,
+        "test_tool_added": 6355,
+        "test_tool_deleted": 185
+      },
+      "diagnostic_gate": false,
+      "recorded_at": "2026-10-04T21:20:06.693812Z",
+      "stage": "plan-01-27-derived-closeout-and-final-reserve",
+      "test_results": {
+        "cases": [
+          "Task 1 contract validate passed",
+          "Task 1 stale sealed security rejection reproduced as expected",
+          "Task 1 six archived byte snapshots verified",
+          "Task 2 unsealed contract validate passed",
+          "Task 2 unsealed acceptance verify passed with six collections and no lane blockers",
+          "Task 2 frozen receipt, collection, superseded history and 45-entry ledger prefix comparison passed"
+        ],
+        "expected": 6,
+        "observed": 6,
+        "status": "pass"
+      },
+      "working_tree_dirty": true
     }
   ],
   "freeze_amendments": [
