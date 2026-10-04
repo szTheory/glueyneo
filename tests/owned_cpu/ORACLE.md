@@ -27,6 +27,40 @@ use the faulting instruction PC in its address-error fixture is local and
 deterministic; the manual calls that saved PC unpredictable, so it is not a
 restart guarantee.
 
+## Current private continuation profile — Plan 01-24
+
+The current `owned-p01-c14-continuation-2` profile adds two guest-reachable
+ready boundaries to the historical 13/78 profile. Each restored instance has
+separately cloned guest memory and fresh bus/allocator ownership; its source
+instance is destroyed and overwritten. For six subsequent run calls, tests
+compare run results, whole-event cycle/overshoot values, CPU fields, guest
+memory and ordered callback traces against an uninterrupted baseline. These are
+project continuation expectations, not independent silicon restart oracles.
+
+| Boundary and following event | Expected result and frame | Functional callback sequence and clocks |
+|---|---|---|
+| `RTE_odd_PC`: restored PC `$101`; odd instruction fetch selects vector 3 | Result reason `OWNED_CPU_BUDGET`, PC `$180`, requested 1 / elapsed 50 / overshoot 49, zero completed instructions. Increasing-address frame at `$2ff2`: SSW `$0016`, fault address `$00000101`, IR `$0000`, SR `$2700`, saved PC `$00000101`. The local saved-PC value is not a hardware restart claim. | Seven frame writes at `$2ffc,$2ffe,$2ffa,$2ff8,$2ff4,$2ff6,$2ff2` in that callback order; vector high/low reads at `$000c,$000e`. No odd-address bus callback. Address-error event 50 clocks. |
+| `SR_switch_odd_USP`: restored user SR `$0000`, USP/A7 `$2801`, SSP `$3000`, PC `$104`; next instruction is privileged MOVE-to-SR and selects vector 8 | Result reason `OWNED_CPU_BUDGET`, PC `$180`, requested 1 / elapsed 34 / overshoot 33, one completed privileged dispatch. Short frame at `$2ffa`: old SR `$0000`, saved PC `$00000104`; odd USP remains preserved. | Opcode/immediate reads at `$0104,$0106`; frame writes PC high/low then SR at `$2ffc,$2ffe,$2ffa`; vector reads at `$0020,$0022`. Privilege event 34 clocks using the even supervisor stack. This tested path does not raise an address error or host fault from the inactive odd USP. |
+
+The test requires the uninterrupted and restored owners to match across each
+whole event and the six-call continuation sequence. For `RTE_odd_PC`, exact
+frame values and callback addresses are asserted directly. For
+`SR_switch_odd_USP`, exact vector/frame state and event duration are asserted,
+while callback order is compared between the two owners; it is not a separate
+silicon trace oracle. The normal hardware uncertainty for saved fault PCs still
+applies, and P01-C-13 retains original-silicon saved PC as unknown.
+
+The validator's removed alignment-only rejection admits values reachable by
+guest execution. Invalid size/version/core hash/field mask, unknown bits,
+invalid booleans and IRQ range, active stack mismatch, inconsistent counter
+invariants and null inputs remain negative cases that must reject atomically
+without destination bus calls. The record remains private, fixed-size and
+same-build only; callers clone memory and restore retains destination bindings.
+
+Historical profile `owned-p01-c14-1` remains 13 checkpoints / 78 calls; older
+receipts without a named profile retain their original interpretation. The
+current profile is 15 / 90 and does not mutate those historical counts.
+
 ## Timing table and accounting limits
 
 | Fixture operation | Expected clocks | Primary source |

@@ -32,17 +32,44 @@ guest memory separately. `ready` is reconstructed on success; `active` and
 terminal `faulted` state are not stored. The full field disposition is in
 [`state-inventory.json`](state-inventory.json).
 
-Historical continuation evidence predates P01-C-14 and is exercised after reset debt, each of the four original
-diagnostic instructions (including STOP), a masked IRQ input, a pending level-7
-edge after the pin is deasserted, IRQ entry, TRAP entry, ILLEGAL entry,
-privilege-exception entry, address-error entry and RTE completion. For each
-checkpoint, the test clones guest memory, restores into a separately bound
-instance, destroys and overwrites the source owner, then compares six
-instruction-boundary run calls against the uninterrupted baseline. Exact-4AFC
-rejection continuation and refreshed full qualification remain downstream work
-in Plans 01-19–01-21. The historical ILLEGAL checkpoint is superseded. It checks
-named CPU fields, every guest-memory byte, ordered bus calls, run results,
-elapsed/overshoot cycles and stop reasons.
+Historical profile `owned-p01-c14-1` retains thirteen checkpoints and 78
+continuation calls, including its prior ILLEGAL checkpoint as historical
+evidence. The current profile `owned-p01-c14-continuation-2` has fifteen
+checkpoints and 90 calls. It adds guest-reachable `RTE_odd_PC` and
+`SR_switch_odd_USP` boundaries. Both are captured at a ready boundary, restored
+into a separately bound owner with cloned guest memory, then continued after
+the source owner is destroyed and overwritten. The comparator checks each of
+six run results, architectural/private fields, all guest-memory bytes, ordered
+callbacks, elapsed/overshoot cycles and stop reasons against an uninterrupted
+baseline.
+
+At `RTE_odd_PC`, the next event is the local vector-3 odd-fetch frame: writes
+SSW/address/IR/SR/PC in the implementation's descending stack sequence, then
+reads vector 3; the increasing-address frame is SSW `$0016`, fault address
+`$101`, IR `$0000`, SR `$2700`, saved PC `$101`. The result is handler PC
+`$180`, 50 clocks and zero completed instructions. The saved PC is a local
+deterministic fixture value, not a silicon restart guarantee.
+
+At `SR_switch_odd_USP`, the checkpoint has user SR `$0000`, selected USP/A7
+`$2801`, supervisor SSP `$3000`, and PC `$104`. The actual next operation is a
+privileged MOVE-to-SR; vector-8 entry uses the even SSP, records old SR `$0000`
+and PC `$104` at `$2ffa`, and preserves the odd USP. It completes the exception
+event in 34 clocks and returns handler PC `$180`. This path does not exercise
+the odd inactive USP as an address-error stack. These project-owned continuation
+expectations preserve guest-reachable state and subsequent behavior; they do
+not establish original-silicon fault restart details. P01-C-13 keeps original
+silicon saved PC unknown, and P01-C-14 continues to exclude only exact `0x4afc`
+from candidate support.
+
+The private restore validator accepts reachable odd PC/selected-stack values
+and still rejects malformed size/version/source identity/presence masks,
+unknown field bits, invalid boolean/IRQ ranges, inconsistent active A7/S-bank
+state and invalid event-counter invariants before mutation. Null inputs reject;
+rejections are atomic and issue no bus callbacks. The state object remains a
+fixed, named-field C record for the exact compiled `cpu.c` identity, not an
+arbitrary-byte parser. It is private and same-build only; guest memory remains
+caller-cloned, destination callbacks/allocator remain destination-owned, and no
+public ABI, cross-build snapshot, replay, or durable save format is provided.
 
 This record is an in-process fixed C object. Its size check does not make an
 arbitrary byte buffer safe to parse. Compatibility is limited to the exact

@@ -6,7 +6,7 @@ is gated. CPU-01–04 remain Pending. CPU-05 has a reproducible bounded outcome,
 but its canonical requirement remains Pending while the contract finding is
 unresolved. A resource threshold alone neither accepts nor rejects the core.
 
-## Current candidate scope — 2026-10-03, Plan 01-20
+## Current candidate scope — 2026-10-04, Plan 01-24
 
 This section supersedes the active support and reproduction wording below;
 all earlier observations, counts, findings and collection identifiers remain
@@ -48,9 +48,10 @@ Same-instance overlap is unsupported; independent-instance evidence remains
 bounded to the recorded cases.
 
 The manifest identifies authored inputs and their MIT notice, pinned copied
-Unity test sources/notices and fixture/oracle ancestry. Only authored `cpu.c`
-belongs to the runtime archive. No source acquisition, imported dependency,
-commercial media or manual bytes are added. Native-host evidence is limited to
+Unity test sources/notices and fixture/oracle ancestry. Unity remains test-only;
+only authored `cpu.c` belongs to the runtime archive. No new source was acquired;
+no imported CPU core, FPU, SoftFloat implementation, generator, commercial
+media or manual bytes enter the closure. Native-host evidence is limited to
 the exact receipt's compiler/OS/architecture/configuration. CMake 3.20 execution,
 other platforms, silicon/board/pin timing, full ISA, BIOS/game compatibility,
 public ABI, public snapshot/replay/save compatibility and gameplay performance
@@ -58,32 +59,94 @@ remain unknown or excluded. Original expectation recipes and primary manual
 references retain their documented ancestry; emulator agreement is not silicon
 truth.
 
+## Repaired continuation evidence and boundaries
+
+The active profile is `owned-p01-c14-continuation-2`: fifteen named
+ready-boundary checkpoints and six fresh-owner continuation calls per checkpoint
+(90 calls). `owned-p01-c14-1` remains the historical 13/78 profile, and
+pre-profile collections retain their original 12-CTest interpretation. The two
+added checkpoints are guest-reachable. The restore validator therefore no
+longer rejects an odd PC or odd selected A7 solely for alignment; it still
+requires the active A7 to agree with the SR-selected USP/SSP and retains the
+format, identity, required-field, range, and counter-invariant checks. The
+malformed-record suite continues to reject invalid size/version/identity/masks,
+invalid boolean or IRQ values, inconsistent active stack and event accounting,
+and null inputs atomically, without bus effects. These checks do not treat a
+reachable deferred-fault value as malformed.
+
+`RTE_odd_PC` resumes from PC `$101`. Its next run detects an odd instruction
+fetch before issuing an odd-address callback, builds the local vector-3 frame,
+and returns to handler PC `$180`: 50 address-error clocks, zero completed
+instructions, requested 1 / elapsed 50 / overshoot 49. The recorded functional
+callback order is seven frame writes at `$2ffc,$2ffe,$2ffa,$2ff8,$2ff4,$2ff6,
+$2ff2`, then vector reads at `$000c,$000e`. Increasing-address frame contents
+are SSW `$0016`, fault address `$00000101`, IR `$0000`, SR `$2700`, and saved PC
+`$00000101`. The source owner and restored fresh owner are compared for the
+complete run result, architectural/private state, guest memory, and ordered
+callbacks. The chosen saved PC is only this deterministic fixture behavior;
+original-silicon saved PC remains unknown under P01-C-13.
+
+`SR_switch_odd_USP` resumes at PC `$104` with user SR `$0000`, odd USP/A7
+`$00002801`, and even inactive SSP `$00003000`. The next instruction is a
+privileged MOVE-to-SR, so the observed next event is vector-8 privilege entry
+using the even supervisor stack, not an address-error or host-fault event. Its
+short frame at `$2ffa` contains old SR `$0000` and saved PC `$00000104`; the
+functional trace fetches the opcode/extension at `$104/$106`, writes PC high,
+PC low, then SR at `$2ffc/$2ffe/$2ffa`, and reads vector 8 at `$0020/$0022`.
+It returns handler PC `$180` after 34 clocks (one completed privileged
+dispatch; requested 1 / elapsed 34 / overshoot 33), preserving the odd USP.
+The uninterrupted and restored owners are compared over the whole event and
+subsequent six-call sequence. This documents continuation of the reachable
+state and its actual next event; it does not claim that the inactive odd USP
+causes a fault on this path or establish hardware restart accuracy.
+
+Plan 01-22 changed no record layout or version and refreshed the private
+`cpu.c` identity to
+`f11a282d5f571a67fff687c08cc90a44f5b6ff54bb5334b9c21bf17a4abcbee7`.
+`state-inventory.json` records the same identity and both historical/current
+profiles. The private fixed C record remains same-build only; guest memory is
+cloned separately, destination bus/allocator bindings remain owned by the new
+instance, and no public ABI, arbitrary-byte parser, cross-build state, snapshot,
+replay, durable save, or same-instance concurrency promise is introduced.
+
+Plans 01-23 repaired CR-02/WR-01 by making the frozen budget validator monotonic across all four
+cumulative churn counters and made budget sealing inclusive at the unchanged
+caps: 115,200 active seconds, 28,800 diagnostic-gate seconds, 6,000 runtime
+added/deleted lines, and 8,000 test/tool added/deleted lines. Exact-limit values
+pass; a crossing, cumulative decrease, invalid value, or required active pause
+does not. Ledger entries append measured or conservative effort and churn;
+reverted work is still charged and never refunded. No threshold is reset or
+raised by this repair.
+
 Current reproduction uses the committed manifest closure and the profile
-`owned-p01-c14-1`:
+`owned-p01-c14-continuation-2`:
 
 ```sh
 python3 tools/owned_cpu/contract.py validate
 python3 tools/owned_cpu/contract.py budget
-python3 tools/owned_cpu/acceptance.py collect --preset owned-debug --preset owned-release --preset owned-asan-ubsan --optional-preset owned-tsan
+python3 tools/owned_cpu/acceptance.py collect --preset owned-debug --preset owned-release --preset owned-asan-ubsan --preset owned-tsan
 python3 tools/owned_cpu/acceptance.py verify
 python3 tools/owned_cpu/inventory.py check --build-dir build/owned-debug
 ```
 
-Collection appends exact source/build/input/output identities and clears any
-superseded seal. Inspect every mandatory status and actual nonzero denominator;
-process exit alone does not qualify a lane. Optional TSan is unsupported only
-after its exact capability probe. Existing build directories are reused, so
-these whole-lane runs are not claimed as cold builds. The bounded cold-process
-test remains a separate observation. Fresh-owner continuation covers thirteen
-boundaries with six calls each; six named controls include exact unsupported
-status. Current required counts are validated by the versioned collector.
+The Plan 01-24 collection attempt is the first run with this new profile; lane
+outcomes and counts belong to its appended receipt and are not implied by this
+procedure. Collection appends exact source/build/input/output identities and
+clears the active derived seal after its complete object is preserved in
+`superseded_seals`. Inspect every lane status and actual nonzero denominator;
+process exit alone does not qualify a lane. Existing build directories are
+reused, so these whole-lane runs are not claimed as cold builds. The bounded
+cold-process test remains a separate observation. Current profile checks fifteen
+boundaries/90 calls, thirteen CTests per lane, five state Unity runners,
+timing25/semantics17, the six named controls, isolation32/32, and cold16. The
+versioned collector validates the applicable denominators.
 
-Plan 01-21 owns independent source review/security, bound to the exact latest
-collection and amendment. Only its valid deferred seal may follow; ordinary
-historical seal instructions below do not apply to this profile. Phase-goal
-verification is a separate workflow. Results remain unqualified/GAPS_FOUND,
-CPU-01–05 Pending, Phase 01 open and Phase 02 gated. No recursive containing
-collection digest is embedded in this included report.
+Plan 01-25 owns the next independent source review/security reassessment, bound
+to the exact latest collection and amendment. Only that plan may produce a new
+deferred seal after its gates. Phase-goal verification is a separate workflow.
+Results remain unqualified/GAPS_FOUND, CPU-01–05 Pending, Phase 01 open and
+Phase 02 gated. No recursive containing collection digest is embedded in this
+included report.
 
 ## Historical exact reviewed and executed identities
 
