@@ -92,7 +92,7 @@
         "resolved_manual_review": {
           "result": "Contract and direct contract test corrected; no runtime code or cap changed.",
           "rule": "Level 7 is transition-triggered from a lower request level and can also be accepted by level comparison when the SR mask is below 7.",
-          "source": "NXP-hosted Motorola MC68000 User's Manual MC68000UM Rev 9.1, \u00a76.3.2",
+          "source": "NXP-hosted Motorola MC68000 User's Manual MC68000UM Rev 9.1, §6.3.2",
           "status": "pass"
         },
         "self_test": {
@@ -2366,6 +2366,57 @@
         ],
         "expected": 6,
         "observed": 6,
+        "status": "pass"
+      },
+      "working_tree_dirty": true
+    },
+    {
+      "accounting_notes": "Measured executor final-closeout overrun after the paid 1800-second reserve: 2431 seconds from 2026-10-04T22:00:06.693812Z through 2026-10-04T22:40:38Z. Separately charges the security assessor reserve excess of 73 seconds, exactly 2026-10-04T22:17:48Z through 22:19:01Z. Adds non-refundable 600-second allowances for reviewer and security rebinds required after this replacement checkpoint, plus a 1800-second executor allowance for final regression, seal, independent read-only seal comparison, summary, closeout hooks and metadata. No cap, collection, source or churn value changes; if any allowance is exceeded, charge it before another seal.",
+      "active_seconds": 5504,
+      "agent_intervals": [
+        {
+          "agent": "codex-executor-measured-final-closeout-overrun",
+          "start": "2026-10-04T22:00:06.693812Z",
+          "end": "2026-10-04T22:40:38Z"
+        },
+        {
+          "agent": "plan27-independent-security-assessor-measured-reserve-overrun",
+          "start": "2026-10-04T22:17:48Z",
+          "end": "2026-10-04T22:19:01Z"
+        },
+        {
+          "agent": "plan27-reviewer-rebind-allowance-after-replacement-checkpoint",
+          "start": "2026-10-04T22:40:38Z",
+          "end": "2026-10-04T22:50:38Z"
+        },
+        {
+          "agent": "plan27-security-rebind-allowance-after-replacement-checkpoint",
+          "start": "2026-10-04T22:50:38Z",
+          "end": "2026-10-04T23:00:38Z"
+        },
+        {
+          "agent": "codex-executor-final-closeout-allowance-after-replacement-checkpoint",
+          "start": "2026-10-04T22:40:38Z",
+          "end": "2026-10-04T23:10:38Z"
+        }
+      ],
+      "commit": "7ac8e65a1fea00b3eac2dee885da3c83c8571441",
+      "cumulative_churn": {
+        "runtime_added": 1164,
+        "runtime_deleted": 64,
+        "test_tool_added": 6355,
+        "test_tool_deleted": 185
+      },
+      "diagnostic_gate": false,
+      "recorded_at": "2026-10-04T22:40:38Z",
+      "stage": "plan-01-27-measured-overrun-and-rebind-reserve",
+      "test_results": {
+        "cases": [
+          "Measured executor overrun charged",
+          "Measured security-assessor reserve overrun charged before replacement report binding"
+        ],
+        "expected": 2,
+        "observed": 2,
         "status": "pass"
       },
       "working_tree_dirty": true
