@@ -128,6 +128,7 @@ Same-instance callback reentry remains unsupported by contract; guards specifica
 |------------|---------------|--------|------|--------|
 | 2026-10-01 | 16 | 16 | 0 | `gsd-security-auditor` (read-only cross-check) |
 | 2026-10-03 | 68 | 67 | 1 | `gsd-security-auditor` (ASVS L1; block_on high) |
+| 2026-10-04 | 105 | 105 | 0 | `gsd-secure-phase` (ASVS L1 register reconciliation) |
 
 ## Sign-Off
 
@@ -413,6 +414,7 @@ behavior or backend admission.
 | T-01-55 | high | CLOSED | Separate assessor rebuilt and ran changed native state, continuation, malformed-record, terminal and cumulative-resource controls; no current high/critical residual remains. |
 | T-01-56 | high | CLOSED | Acceptance guards bind review/security attestations to exact revision, collection, amendment, source map and report bytes; normal/optimized tests exercise deferred sealing and reject stale/tampered reports. Final seal remains an executor-owned gate. |
 | T-01-57 | high | CLOSED | Before Plan 01-25 closeout charges, budget passed at 59,690 active seconds, 2,565 diagnostic seconds, 1,228 runtime churn lines and 6,540 test/tool churn lines, with no pause. Frozen caps remain unchanged; final closeout totals are checked by the executor. |
+| T-01-58 | medium | CLOSED | ROADMAP retains the exact fail-closed admission literal; the targeted frozen-subject regression passes 1/1 with the repository on `PYTHONPATH`, and both read-only contract/receipt validators pass while CPU-01–05 remain Pending and admission stays deferred. |
 | T-01-SC | high | CLOSED | No package installation or dependency expansion; Unity remains pinned and test-only, with original notices retained. |
 
 CR-01 crosswalks to T-01-45/46; CR-02 to T-01-48/49. Both are resolved
