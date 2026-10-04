@@ -87,6 +87,7 @@ status: complete
 - seal --defer-admission — pass; unqualified disposition and sole phase-verification blocker retained.
 - contract.py validate, acceptance.py verify, and contract.py budget — pass; six collections, no lane blockers.
 - Execute-wave schema-drift gate — pass, no drift. Codebase-drift gate skipped because the repository has no STRUCTURE.md.
+- Execute:post advisory code review — clean across the three changed closeout evidence artifacts; prior phase review retained as dated history. No blocker or warning.
 
 No runtime, tool, test or collection source changed, and no native qualification was rerun. The assessor found zero current high/critical residuals in this evidence-integrity scope. Its initial 1,873-second interval exceeded reserve by 73 seconds; executor overrun was also charged before replacement checkpoint C2. Both reports rebound at C2, preserving earlier bindings as history.
 
@@ -95,7 +96,8 @@ No runtime, tool, test or collection source changed, and no native qualification
 1. Task 1 archive and stale reproduction — 2d84fa9.
 2. Task 2 derived metadata recovery and checkpoint C — 7ac8e65.
 3. Task 3 measured overrun charge and replacement checkpoint C2 — e65ea35.
-4. Task 3 report/seal/summary artifact commit — recorded in the final plan closeout commit.
+4. Task 3 report/seal/summary artifact commit — cdcd2e8.
+5. Execute:post advisory code-review report — 38abbf4.
 
 ## Files Created and Modified
 
@@ -105,6 +107,7 @@ No runtime, tool, test or collection source changed, and no native qualification
 - experiments/owned_cpu/REVIEW.md and 01-SECURITY.md — independent metadata/source identity rebinds at C2.
 - 01-27-SUMMARY.md — scoped execution outcome; CPU-05 is not completed.
 - STATE.md and ROADMAP.md — plan progress and next verification position.
+- 01-REVIEW.md — Plan 01-27's advisory post-execution code review; earlier phase review preserved in full.
 
 ## Deviations and Issues
 
