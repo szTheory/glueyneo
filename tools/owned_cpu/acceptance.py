@@ -426,11 +426,19 @@ def validate_security(attestation, revision, record):
 
 
 def budget_check(budget):
-    require(budget.get("status") == "pass" and 0 < budget.get("active_seconds", 0) < contract.EFFORT_CAP_SECONDS,
+    require(isinstance(budget, dict), "budget requires pause/replan")
+    pause = budget.get("pause")
+    require(budget.get("status") == "pass"
+            and not (isinstance(pause, dict) and pause.get("active") is True),
             "budget requires pause/replan")
-    require(0 < budget.get("runtime_churn_added_deleted", 0) < contract.RUNTIME_CHURN_CAP and
-            0 < budget.get("test_tool_churn_added_deleted", 0) < contract.TEST_TOOL_CHURN_CAP,
-            "churn threshold requires pause/replan")
+    limits = (("active_seconds", contract.EFFORT_CAP_SECONDS),
+              ("runtime_churn_added_deleted", contract.RUNTIME_CHURN_CAP),
+              ("test_tool_churn_added_deleted", contract.TEST_TOOL_CHURN_CAP))
+    for field, limit in limits:
+        value = budget.get(field)
+        require(type(value) is int and 0 < value <= limit,
+                "budget requires pause/replan" if field == "active_seconds"
+                else "churn threshold requires pause/replan")
 
 
 def verify(document, current=True):
