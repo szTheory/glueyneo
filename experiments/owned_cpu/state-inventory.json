@@ -1094,6 +1094,7 @@
     "record_kind": "fixed-size, named-field, in-memory continuation record; fields are read and written individually, never serialized as raw struct bytes",
     "version": 1,
     "core_identity": "full SHA-256 of experiments/owned_cpu/cpu.c; format version is checked separately",
+    "core_identity_sha256": "f11a282d5f571a67fff687c08cc90a44f5b6ff54bb5334b9c21bf17a4abcbee7",
     "presence_mask": "all sixteen field-group bits are required; missing groups reject before restore commit",
     "presence_groups": [
       "data_registers",
@@ -1224,7 +1225,7 @@
     ],
     "validation": [
       "exact sizeof, version, full cpu.c SHA-256 identity, and required presence mask",
-      "boolean bytes, IRQ level range, even PC and even selected stack pointer",
+      "boolean bytes and IRQ level range; odd PC or selected stack values are preserved for deferred execution faults",
       "active A7 agrees with the S-selected USP or SSP",
       "reset debt and event-cycle counters satisfy the implementation accounting invariant without overflow"
     ],

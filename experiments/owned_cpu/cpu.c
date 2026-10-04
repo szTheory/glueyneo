@@ -886,11 +886,12 @@ static int state_valid(const owned_cpu_state *state) {
     }
     if (state->stopped > 1u || state->irq7_pending > 1u ||
         state->reset_pending > 1u || state->irq_level > 7u ||
-        state->pc % 2u != 0u || state->reset_cycles != RESET_EVENT_CYCLES) {
+        state->reset_cycles != RESET_EVENT_CYCLES) {
         return 0;
     }
     uint32_t active_stack = (state->sr & SR_S) != 0u ? state->ssp : state->usp;
-    if (state->address_registers[7] != active_stack || active_stack % 2u != 0u) {
+    /* Preserve guest-reachable odd addresses; execution reports deferred faults. */
+    if (state->address_registers[7] != active_stack) {
         return 0;
     }
     uint64_t expected_total = 0u;

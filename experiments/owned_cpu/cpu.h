@@ -85,7 +85,7 @@ owned_cpu_status owned_cpu_observe(const owned_cpu *cpu, owned_cpu_observation *
  * not a public ABI, wire format, emulator snapshot, replay, or durable save. */
 #define OWNED_CPU_STATE_VERSION UINT32_C(1)
 #define OWNED_CPU_STATE_CORE_IDENTITY_SHA256 \
-    "b03d3458c99012e7d20a21b408ea1b5e72ae4fa6ac2f36ac5078d349b0d953b8"
+    "f11a282d5f571a67fff687c08cc90a44f5b6ff54bb5334b9c21bf17a4abcbee7"
 #define OWNED_CPU_STATE_FIELD_DATA_REGISTERS (UINT64_C(1) << 0)
 #define OWNED_CPU_STATE_FIELD_ADDRESS_REGISTERS (UINT64_C(1) << 1)
 #define OWNED_CPU_STATE_FIELD_PC_AND_PREVIOUS_PC (UINT64_C(1) << 2)
