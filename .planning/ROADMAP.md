@@ -38,10 +38,10 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit owned-core decision, commands and results against finite effort/churn limits fixed before implementation; failed work and findings are preserved, actionable issues receive budgeted repair, and resource thresholds trigger review/replanning rather than automatic backend rejection. (CPU-05)
 
-**Plans**: 24/26 execution-complete. Plan 01-17 remains incomplete at its answered evidence checkpoint; original-silicon saved PC stays unknown. Plans 01-18–01-25 completed their scoped candidate boundary, direct controls, independent review/security and later CR-01/CR-02/WR-01/WR-02 dispositions. The current receipt is unqualified with admission deferred. UAT is complete at 44/44. The current `01-VERIFICATION.md` records `gaps_found` at 2026-10-04T17:36:59Z with one reproducible ROADMAP/validator wording gap. Plan 01-26 reconciles that wording and reproduces the read-only decision checks; a separate fresh phase-goal verification must follow execution. CPU-01–05 remain Pending; Phase 01 is incomplete and Phase 02 gated. Current command: `$gsd-execute-phase 01 --gaps-only`. Historical evidence and saved-PC uncertainty remain unchanged.
+**Plans**: 25/26 execution-complete. Plan 01-17 remains incomplete at its answered evidence checkpoint; original-silicon saved PC stays unknown. Plans 01-18–01-25 completed their scoped candidate boundary, direct controls, independent review/security and later CR-01/CR-02/WR-01/WR-02 dispositions. The current receipt is unqualified with admission deferred. UAT is complete at 44/44. The current `01-VERIFICATION.md` records `gaps_found` at 2026-10-04T17:36:59Z with one reproducible ROADMAP/validator wording gap. Plan 01-26 has reconciled that wording and passed the read-only decision checks; a separate fresh phase-goal verification must follow execution. CPU-01–05 remain Pending; Phase 01 is incomplete and Phase 02 gated. Next separate user command: `$gsd-verify-work 01`; execution orchestration must first refresh phase-goal verification. Historical evidence and saved-PC uncertainty remain unchanged.
 
 Plans:
-- [ ] 01-26-PLAN.md — Reconcile the canonical gate wording and reproduce the read-only decision checks
+- [x] 01-26-PLAN.md — Reconcile the canonical gate wording and reproduce the read-only decision checks
 - [x] 01-17-PLAN.md (answered checkpoint; incomplete)
 
 **Wave 18** *(gap closure; follows the answered Wave 17 checkpoint)*
@@ -187,7 +187,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 25/26 | In Progress|  |
+| 1. CPU acceptance experiment | v0.1 | 26/26 | In Progress|  |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 

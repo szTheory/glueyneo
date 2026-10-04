@@ -4,17 +4,17 @@ milestone: v0.1
 milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
-status: executing
-stopped_at: "Completed $gsd-plan-phase 01 --gaps; Plan 01-26 passed scoped review and coverage gates. Phase 01 remains open. Next separate step: $gsd-execute-phase 01 --gaps-only."
-last_updated: "2026-10-04T19:31:11.725Z"
+status: Plan 01-26 complete; awaiting separate fresh phase-goal verification
+stopped_at: Completed 01-26-PLAN.md; Phase 01 remains open / GAPS_FOUND. Separate fresh phase-goal verification required.
+last_updated: "2026-10-04T19:50:42.083Z"
 last_activity: 2026-10-04
-last_activity_desc: Phase 01 gap plan 01-26 ready to execute
-state_head: e187c4a42f6370736c30297ae48ac8d651e0ab8b
+last_activity_desc: Phase 01 execution started
+state_head: 7b4b84958226445e22196125ea8198d810025098
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 26
-  completed_plans: 25
+  completed_plans: 26
   percent: 0
 ---
 
@@ -30,14 +30,14 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — READY TO EXECUTE
-Plan: 26 of 26 (new gap-closure plan)
-Status: Ready to execute
-Last activity: 2026-10-04 — Phase 01 gap plan 01-26 ready to execute
+Phase: 01 (CPU acceptance experiment) — EXECUTING
+Plan: 26 of 26 (execution complete; Phase 01 open / GAPS_FOUND)
+Status: Plan 01-26 complete; awaiting separate fresh phase-goal verification
+Last activity: 2026-10-04 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
-GSD frontmatter progress.completed_plans counts matching summary files and is 25, including Plan 01-17's answered checkpoint summary. Execution-complete plans are 01-01 through 01-16 and 01-18–01-25 (24); Plan 01-17 remains incomplete at its answered checkpoint. Plan 01-26 is the new unexecuted gap-closure plan, bringing the phase total to 26. Phase 01 remains incomplete; its only canonical verification report records a current 2026-10-04 gap and must be refreshed after execution.
+GSD frontmatter progress.completed_plans counts matching summary files and is 26, including Plan 01-17's answered checkpoint summary. Execution-complete plans are 01-01 through 01-16 and 01-18–01-26 (25); Plan 01-17 remains incomplete at its answered checkpoint. Plan 01-26 closed the narrow canonical wording gap and passed both read-only decision checks. Phase 01 remains incomplete/open/GAPS_FOUND; its preserved 2026-10-04 verification report must be refreshed separately.
 
 Historical task-level evidence exists for CPU-01 through CPU-05 (5/27 v1 requirements). Plans 01-22–01-25 close the later bounded candidate, resource-control and documentation findings, but do not admit the backend. Current phase-goal verification must be refreshed; Phase 1 remains open and Phase 2 stays gated.
 
@@ -49,19 +49,19 @@ Shift-left verification preference (PROJECT-D-45): deterministic acceptance shou
 
 **Velocity:**
 
-- Total plans in phase: 26; execution-complete: 24; Plan 01-17 remains at an answered decision checkpoint; Plans 01-24–01-25 are complete; Plan 01-26 is planned and unexecuted
-- Average recorded duration: 43.4min across 24 execution-complete plans
-- Total recorded execution time: 1,042min; exact owned-core active effort/churn remain in experiments/owned_cpu/budget-ledger.json; Phase 01 remains open pending verification
+- Total plans in phase: 26; execution-complete: 25; Plan 01-17 remains at an answered decision checkpoint; Plans 01-24–01-26 are complete
+- Average recorded duration: 41.9min across 25 execution-complete plans
+- Total recorded execution time: 1,048min; exact owned-core active effort/churn remain in experiments/owned_cpu/budget-ledger.json; Phase 01 remains open pending verification
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 24 of 26 | 1,042min | 43.4min |
+| 01 | 25 of 26 | 1,048min | 41.9min |
 
 **Recent Trend:**
 
-- Last 5 plans with execution metrics: 01-21, 01-22, 01-23, 01-24, 01-25
+- Last 5 plans with execution metrics: 01-22, 01-23, 01-24, 01-25, 01-26
 - Trend: Not established
 
 **Per-Plan Metrics:**
@@ -92,6 +92,7 @@ Shift-left verification preference (PROJECT-D-45): deterministic acceptance shou
 | Phase 01 P23 | 44min | 2 tasks | 6 files |
 | Phase 01 P24 | 196min | 2 tasks | 7 files |
 | Phase 01 P25 | 79min | 3 tasks | 10 files |
+| Phase 01 P26 | 6min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,7 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - [Phase 01]: Private continuation preserves guest-reachable odd PCs and selected stack pointers; a distinct receipt profile records the expanded continuation denominator. — Guest-driven RTE and SR-transition regressions showed that rejecting odd values at capture time interrupted a reachable continuation before execution could report its deferred fault. The new owned-p01-c14-continuation-2 profile requires fifteen named checkpoints and ninety calls, while owned-p01-c14-1 retains its historical thirteen/78 interpretation. The exact 0x4AFC exclusion and unknown original-silicon saved PC remain unchanged.
 - [Phase 01]: Keep cumulative resource charges monotonic and make seal limits inclusive at the frozen caps. — validate_budget rejects any decrease in each of the four cumulative churn fields, with category and entry identity; a prior threshold crossing therefore cannot disappear in a later row. budget_check uses the canonical 115200/6000/8000 caps inclusively but rejects a canonical pause-for-review result or any active pause. No ledger history or cap is rewritten.
 - [Phase 01, Plan 01-25]: Independently resolve CR-01/CR-02/WR-01/WR-02 within the exact candidate and documentation scope; preserve all 39 historical UAT rows, append four passing outcomes, and seal only with admission deferred. Final budget is 45 records / 67,834 active seconds with no pause. CPU-01–05 remain Pending, Phase 01 remains GAPS_FOUND, Phase 02 gated, and the original-silicon saved PC remains unknown.
+- [Phase 01]: Plan 01-26 aligned canonical prose with the unchanged fail-closed validator; both read-only commands pass, while CPU-01–05 remain Pending and admission deferred.
 
 ### Pending Todos
 
@@ -168,6 +170,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-04T16:34:48.799Z
-Stopped at: Completed $gsd-plan-phase 01 --gaps; Plan 01-26 passed scoped review and coverage gates. Phase 01 remains open. Next separate step: $gsd-execute-phase 01 --gaps-only.
+Last session: 2026-10-04T19:49:32.903Z
+Stopped at: Completed 01-26-PLAN.md; Phase 01 remains open / GAPS_FOUND. Separate fresh phase-goal verification required.
 Resume file: None

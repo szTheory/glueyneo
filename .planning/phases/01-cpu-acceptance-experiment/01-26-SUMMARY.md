@@ -11,11 +11,11 @@ provides:
   - Current read-only contract and deferred-receipt reproduction results
 affects: [phase-verification]
 actuals:
-  tokens: 3769
+  tokens: 5787
   tasks: 2
-  commits: 1
+  commits: 2
 plan_head_before: 429d007ffe506a02e6ca47b73a825f7e53734b7e
-plan_head_after: 9049567cf5cee47b0bf3d9c0042fa98137b798f8
+plan_head_after: 7b4b84958226445e22196125ea8198d810025098
 tech-stack:
   added: []
   patterns: [canonical-invariant-alignment, deferred-admission]
@@ -64,7 +64,7 @@ status: complete
 - Checks completed: 2026-10-04T19:48:03Z.
 - Tasks: 2.
 - Task artifacts: ROADMAP and this summary; STATE and ROADMAP plan-progress bookkeeping follow through installed GSD handlers.
-- Actual tokens use characters/4 of the realized ROADMAP task diff plus this new summary, rounded upward. The measured commit count and HEAD interval above are captured before committing this summary; subsequent task/metadata commits are listed in the executor handoff.
+- Actual tokens use characters/4 of the realized three-file diff, rounded upward. The measured commit count and HEAD interval above cover both task commits before the final metadata commit, which is listed in the executor handoff.
 
 ## Accomplishments
 
@@ -75,7 +75,7 @@ status: complete
 ## Task Commits
 
 1. **Task 1: Reconcile canonical gate wording to the unchanged validator** — `9049567` (docs).
-2. **Task 2: Reproduce the read-only decision checks and record their results** — this summary's immediate task commit; exact hash is returned in the executor handoff.
+2. **Task 2: Reproduce the read-only decision checks and record their results** — `7b4b849` (docs).
 
 ## Command Results
 
@@ -128,4 +128,3 @@ Task 1's commit exists and changes only ROADMAP. Both declared task artifacts ar
 ---
 *Phase: 01-cpu-acceptance-experiment*
 *Completed: 2026-10-04*
-
