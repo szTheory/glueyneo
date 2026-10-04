@@ -38,7 +38,7 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit owned-core decision, commands and results against finite effort/churn limits fixed before implementation; failed work and findings are preserved, actionable issues receive budgeted repair, and resource thresholds trigger review/replanning rather than automatic backend rejection. (CPU-05)
 
-**Plans**: 20/21 execution-complete. Plan01-17 remains incomplete at its answered checkpoint; original-silicon saved PC stays unknown. Plans01-18–01-21 implemented the owner-approved exact0x4AFC unsupported candidate boundary, direct controls, immutable source qualification and independent review/security. Plan01-20's four lanes pass13/13 CTests each; Plan01-21's final exact deferred seal passes after preserving and recovering stale derived metadata. F14-03/T-01-15-03 are reconciled only for candidate scope, with exact final T-01-43 binding verified. CPU-01–05 remain Pending, Phase01 incomplete/GAPS_FOUND, Phase02 gated. Next separate command: `$gsd-verify-work 01`. Historical evidence and saved-PC uncertainty remain unchanged.
+**Plans**: 20/25 execution-complete. Plan 01-17 remains incomplete at its answered evidence checkpoint; original-silicon saved PC stays unknown. Plans 01-18–01-21 implemented and qualified the owner-approved exact `0x4AFC` candidate boundary, direct controls, and scoped independent review/security with a deferred seal. A later independent phase review at revision `2e237a73` records CR-01 continuation, CR-02 cumulative accounting, WR-01 exact-cap sealing and WR-02 stale README findings. Plans 01-22–01-25 are planned in order to repair and requalify those findings. CPU-01–05 remain Pending; Phase 01 is incomplete/GAPS_FOUND and Phase 02 gated. Next separate command: `$gsd-execute-phase 01 --gaps-only`. Historical evidence and saved-PC uncertainty remain unchanged.
 
 Plans:
 - [x] 01-17-PLAN.md (answered checkpoint; incomplete)
@@ -53,7 +53,19 @@ Plans:
 - [x] 01-20-PLAN.md
 
 **Wave 21** *(complete; admission deferred)*
-- [x] 01-21-PLAN.md — Tasks1/2 passed; final post-audit seal failed, T-01-43 HIGH/open. Next: `$gsd-plan-phase 01 --gaps`.
+- [x] 01-21-PLAN.md — Independent source/security review and exact deferred seal completed after preserving and recovering stale derived metadata. The temporary T-01-43 binding blocker is resolved; later phase-review findings remain open for Plans 01-22–01-25.
+
+**Wave 22** *(gap closure; follows Wave 21)*
+- [ ] 01-22-PLAN.md — Repair CR-01 continuation behavior and bind expanded continuation to a distinct receipt profile; retain unknown silicon behavior.
+
+**Wave 23** *(gap closure; depends on Wave 22)*
+- [ ] 01-23-PLAN.md — Make cumulative churn monotonic, align exact-cap sealing, and correct contributor-facing README status.
+
+**Wave 24** *(gap closure; depends on Wave 23)*
+- [ ] 01-24-PLAN.md — Rebuild and qualify the repaired source across the owned debug, release and sanitizer lanes with exact identities.
+
+**Wave 25** *(gap closure; depends on Wave 24)*
+- [ ] 01-25-PLAN.md — Independently reassess the four findings, update UAT from actual evidence, and seal only a deferred, exact-source result.
 
 - [x] 01-15-PLAN.md
 - [x] 01-16-PLAN.md
@@ -126,9 +138,9 @@ Plans:
 
 - [x] 01-17-PLAN.md — Acquire and independently adjudicate additional applicable original-MC68000 evidence; preserve HIGH/open and stop at a decision checkpoint if unresolved. The owner preserved hardware uncertainty (P01-C-13); P01-C-14 later selected a candidate-only `0x4AFC` unsupported boundary. Plans 01-18–01-21 reconcile that claim without rewriting this evidence record.
 
-Planning guidance: Plans 01-07–01-14 completed the owned-core experiment and sealed an explicit unqualified outcome; their evidence does not complete Phase 01 requirements. Plans 01-15–01-17 investigated F14-03; Plan 01-17 remains evidence-only and incomplete at its answered checkpoint. P01-C-14 authorizes the candidate-only exclusion of exact `0x4AFC`; the saved-PC hardware question remains unknown and outside that candidate claim. Plans 01-18–01-21 are the approved reconciliation, qualification, review and security sequence. Preserve all Musashi history and consumed attempts. F14-03 stays HIGH/open until those gates are satisfied; no requirement is complete merely because a plan closes. Only fresh phase-goal verification may pass Phase 01 and permit Phase 02. The next command after planning is `$gsd-execute-phase 01 --gaps-only`. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
+Planning guidance: Plans 01-07–01-14 completed the owned-core experiment and sealed an explicit unqualified outcome; their evidence does not complete Phase 01 requirements. Plans 01-15–01-17 preserved the F14-03 source uncertainty; Plan 01-17 remains evidence-only and incomplete at its answered checkpoint and its finite search must not be repeated. P01-C-14 authorizes excluding exact `0x4AFC` from this candidate's qualified subset; original-silicon saved-PC behavior remains unknown and outside that claim. Plans 01-18–01-21 reconciled and qualified that candidate boundary only within their assessed scope. The later independent phase review at `2e237a73` adds four current findings, now assigned to Plans 01-22–01-25 in a serial repair, qualification and review sequence. Preserve all Musashi history, consumed attempts, prior receipts and budgets. No requirement is complete merely because a plan closes. Only fresh phase-goal verification may pass Phase 01 and permit Phase 02. The next command after planning is `$gsd-execute-phase 01 --gaps-only`. Inventory future sound candidates only as needed; a Z80/YM2610 port is not admission work for this alpha.
 
-**Admission gate:** CPU-01–04 remain Pending for current admission. Historical task evidence exists; the phase verifier refused grammar preflight rather than establish that all four behaviors failed. Plan 01-05 completed only the historical Musashi CPU-05 decision; the owned-core CPU-05 decision is still pending. Both Musashi adaptation attempts are consumed, and no further Musashi adaptation is authorized. Plans 01-07–01-14 carry the separately budgeted owned-core work; Plans 01-15–01-17 document the F14-03 mismatch and bounded adjudication. P01-C-14 changes the candidate support boundary but does not implement mitigation or establish admission. Planning or a non-admitting disposition does not satisfy CPU-01–04. The historical 01-04 accepted receipt is contradicted for current admission by six later source blockers. Phase 01 remains open / GAPS_FOUND and Phase 02 gated until the revised candidate claim is implemented, freshly qualified, independently reviewed, security reassessed and phase-verified. Plan 01-06 records an earlier direction checkpoint; current owner-approved scope is in Phase 01 CONTEXT and PROJECT/REQUIREMENTS. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
+**Admission gate:** CPU-01–05 remain Pending. Historical task evidence and the old Musashi rejection decision do not qualify current backend admission; both Musashi adaptation attempts are consumed and no further Musashi adaptation is authorized. Plans 01-18–01-21 established a scoped candidate-only `0x4AFC` exclusion and passed their own qualification/review/security gates, but a later independent phase review identified CR-01, CR-02, WR-01 and WR-02 outside that prior assessment. Plans 01-22–01-25 are planned to resolve those current findings; they have not executed. The previous 39/39 UAT result is bounded to its recorded Plans 01-01–01-21 evidence and does not cover these later findings. Phase 01 remains open / GAPS_FOUND and Phase 02 gated until the current findings are dispositioned and fresh phase-goal verification completes. Preserve the original-silicon saved-PC unknown, all historical receipts and frozen budgets. Research prose, a context-shaped stub or a global execution lock does not establish acceptance. Backend continuation here establishes no public board-snapshot contract.
 
 ### Phase 2: Executable diagnostic SDK
 
@@ -174,7 +186,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 20/21 execution-complete; 21 summaries | In Progress | |
+| 1. CPU acceptance experiment | v0.1 | 20/25 execution-complete; 21 summaries | In Progress | |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
