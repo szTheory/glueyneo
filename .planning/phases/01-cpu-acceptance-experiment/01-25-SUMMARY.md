@@ -64,7 +64,7 @@ coverage:
   - id: WR-02
     description: README status and local navigation match the current unadmitted phase state.
     verification:
-      - kind: documentation
+      - kind: other
         ref: "README status assertions pass; 19/19 local links resolve in executor and independent reviewer checks"
         status: pass
     human_judgment: false

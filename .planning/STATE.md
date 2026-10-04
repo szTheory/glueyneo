@@ -5,10 +5,10 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: executing
-stopped_at: Completed 01-25-PLAN.md; Phase 01 remains GAPS_FOUND; next separate step is $gsd-verify-work 01
-last_updated: "2026-10-04T07:28:12.000Z"
+stopped_at: Completed $gsd-verify-work 01; Phase 01 remains GAPS_FOUND; next separate step is $gsd-plan-phase 01 --gaps
+last_updated: "2026-10-04T15:44:51Z"
 last_activity: 2026-10-04
-last_activity_desc: Plan 01-25 complete; all four findings have bounded outcomes and the deferred seal passes; separate phase-goal verification is next
+last_activity_desc: Phase 01 UAT complete at 44/44 automated checks with no issues; phase-goal report remains gaps_found; next separate step is $gsd-plan-phase 01 --gaps
 state_head: 780c720c4e20ac8e9b61eff40da02fbe601a6f38
 progress:
   total_phases: 3
@@ -31,9 +31,9 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 ## Current Position
 
 Phase: 01 (CPU acceptance experiment) — EXECUTING
-Plan: 25 of 25 — execution complete; phase verification remains separate
-Status: Execution complete; verification pending
-Last activity: 2026-10-04 — Plan 01-25 complete; Phase 01 remains GAPS_FOUND
+Plan: 25 of 25 — execution complete; UAT complete; phase-goal gaps remain
+Status: UAT complete; canonical phase verification is gaps_found
+Last activity: 2026-10-04 — Phase 01 UAT complete; next separate step is $gsd-plan-phase 01 --gaps
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -43,7 +43,7 @@ Historical task-level evidence exists for CPU-01 through CPU-05 (5/27 v1 require
 
 Historical Plan 01-05 task 1 checkpoint (superseded): CPU-01–04 were Pending current admission; the full verifier refused grammar preflight without concluding all four behaviors failed. CPU-05 then awaited the Musashi decision. Current consolidated CPU-05 remains Pending for the owned-core decision; both original Musashi attempts remain consumed and no further adaptation is authorized.
 
-Shift-left verification preference (PROJECT-D-45): deterministic acceptance should be automated at the earliest useful test seam, with CI added only for recurring value. Plan 01-21's 39/39 machine-evidenced UAT remains historical and scoped through that plan. Plan 01-25 preserves those rows and records four later passing outcomes; current UAT is 43/43. The deferred seal remains unqualified pending phase-goal verification. Original-silicon 0x4AFC saved PC remains explicitly unknown. See METHODOLOGY.md and 01-UAT.md.
+Shift-left verification preference (PROJECT-D-45): deterministic acceptance should be automated at the earliest useful test seam, with CI added only for recurring value. Plan 01-21's 39/39 machine-evidenced UAT remains historical and scoped through that plan. Plan 01-25 preserves those rows and records four later passing outcomes; current UAT is 44/44, including an automated current-next-step navigation check. The deferred seal remains unqualified pending phase-goal verification. Original-silicon 0x4AFC saved PC remains explicitly unknown. See METHODOLOGY.md and 01-UAT.md.
 
 ## Performance Metrics
 
@@ -142,7 +142,7 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 
 ### Pending Todos
 
-- Plan 01-17 preserves the answered checkpoint and unknown original-silicon saved PC; do not repeat the finite search. Plans 01-18–01-25 completed their scoped candidate boundary, controls, qualification, later-finding repairs, independent reassessment and deferred seal. All CPU requirements remain Pending, Phase 01 open/GAPS_FOUND, and Phase 02 gated. Next separate command: `$gsd-verify-work 01`.
+- Plan 01-17 preserves the answered checkpoint and unknown original-silicon saved PC; do not repeat the finite search. Plans 01-18–01-25 completed their scoped candidate boundary, controls, qualification, later-finding repairs, independent reassessment and deferred seal. Phase 01 UAT is complete at 44/44 automated checks with no issues. All CPU requirements remain Pending, Phase 01 open/GAPS_FOUND, and Phase 02 gated. Next separate command: `$gsd-plan-phase 01 --gaps`.
 
 ### Blockers/Concerns
 
@@ -168,6 +168,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-04T07:28:12.000Z
-Stopped at: Completed 01-25-PLAN.md; Phase 01 remains GAPS_FOUND; next separate step is $gsd-verify-work 01
+Last session: 2026-10-04T15:44:51Z
+Stopped at: Completed $gsd-verify-work 01; Phase 01 remains GAPS_FOUND; next separate step is $gsd-plan-phase 01 --gaps
 Resume file: None

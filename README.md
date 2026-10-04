@@ -8,7 +8,7 @@ Each core repository targets a reusable library, a headless diagnostic runner an
 
 The candidate excludes exactly numeric opcode `0x4AFC` under P01-C-14. The original-MC68000 saved-PC behavior remains unknown under P01-C-13; the candidate does not claim that its behavior is hardware truth. No game, board, BIOS, cross-platform, performance, or public SDK qualification is established. CPU-01–05 remain Pending; Phase 01 is open / GAPS_FOUND and Phase 02 stays gated.
 
-Plans 01-22 through 01-25 close the later bounded review findings and produce only unqualified, deferred candidate evidence. The next GSD step is separate current phase-goal verification with `$gsd-verify-work 01`. Phase 01 remains open and Phase 02 gated until that verification passes; CPU-01–05 remain Pending, and the original-silicon saved PC remains unknown.
+Plans 01-22 through 01-25 close the later bounded review findings and produce only unqualified, deferred candidate evidence. Phase 01 UAT is complete with 44/44 automated checks passing. The canonical phase-goal report remains `gaps_found`; the next separate GSD step is `$gsd-plan-phase 01 --gaps`. Phase 01 remains open and Phase 02 gated; CPU-01–05 remain Pending, and the original-silicon saved PC remains unknown.
 
 The preserved [preparation index](.planning/preparation/README.md), [brief](.planning/preparation/BRIEF.md) and [decision register](.planning/preparation/DECISIONS.md) contain dated hardware sources, engineering recommendations, sibling-project lessons and the rationale behind the plan. They do not establish implemented behavior.
 

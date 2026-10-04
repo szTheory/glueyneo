@@ -3,7 +3,7 @@ status: complete
 phase: 01-cpu-acceptance-experiment
 source: "01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md, 01-04-SUMMARY.md, 01-05-SUMMARY.md, 01-06-SUMMARY.md, 01-07-SUMMARY.md, 01-08-SUMMARY.md, 01-09-SUMMARY.md, 01-10-SUMMARY.md, 01-11-SUMMARY.md, 01-12-SUMMARY.md, 01-13-SUMMARY.md, 01-14-SUMMARY.md, 01-15-SUMMARY.md, 01-16-SUMMARY.md, 01-17-SUMMARY.md, 01-18-SUMMARY.md, 01-19-SUMMARY.md, 01-20-SUMMARY.md, 01-21-SUMMARY.md, 01-22-SUMMARY.md, 01-23-SUMMARY.md, 01-24-SUMMARY.md, 01-25-SUMMARY.md"
 started: 2026-10-03T23:16:26Z
-updated: 2026-10-04T06:38:30Z
+updated: 2026-10-04T15:44:51Z
 ---
 
 ### Historical Plan 01-21 frontmatter (preserved verbatim)
@@ -18,7 +18,7 @@ updated: 2026-10-03T23:23:37Z
 
 ## Current Test
 
-[Plan 01-25 scoped execution complete; deferred seal is an executor closeout gate]
+[testing complete]
 
 ## Tests
 
@@ -274,12 +274,20 @@ command: `python3 -c 'from pathlib import Path; import re; s=Path("README.md").r
 denominator: 19/19 local Markdown links resolve; README control returns `valid: true`; independent reviewer separately resolves 19/19 local links; `git diff --check` passes.
 evidence: `README.md` working-tree document inspection after update; `.planning/phases/01-cpu-acceptance-experiment/01-REVIEW.md` (WR-02 follow-up); `experiments/owned_cpu/REVIEW.md` (independent updated-README check); `.planning/phases/01-cpu-acceptance-experiment/01-SECURITY.md` (T-01-50).
 
+### 44. Current verification routing in README
+expected: README records the completed 44/44 automated UAT, the current `gaps_found` phase-goal status, and `$gsd-plan-phase 01 --gaps` as the next separate step; it no longer points to the completed `$gsd-verify-work 01` step.
+result: pass
+source: automated
+source_revision: 56b6b3a53c553b639d24a9fe5ff3143169161761
+command: `python3 -c 'from pathlib import Path; import re; s=Path("README.md").read_text(); links=re.findall(r"\[[^\]]+\]\(([^)]+)\)",s); local=[x for x in links if not re.match(r"(?:https?:|mailto:)",x) and not x.startswith("#")]; missing=[x for x in local if not Path(x.split("#",1)[0]).exists()]; good=(len(links)==19 and len(local)==19 and not missing and "44/44 automated checks passing" in s and "`$gsd-plan-phase 01 --gaps`" in s and "`$gsd-verify-work 01`" not in s and "CPU-01–05 remain Pending" in s and "saved PC remains unknown" in s); print({"markdown_links":len(links),"local_resolved":len(local)-len(missing),"missing":missing,"current_next_step_present":"`$gsd-plan-phase 01 --gaps`" in s,"completed_verify_step_absent":"`$gsd-verify-work 01`" not in s,"valid":good}); raise SystemExit(0 if good else 1)'`
+denominator: 19/19 local Markdown links and current status/routing assertions.
+
 ## Summary
 
-Current Plan 01-25 aggregate (43 rows):
+Current Plan 01-25 plus verify-work navigation aggregate (44 rows):
 
-total: 43
-passed: 43
+total: 44
+passed: 44
 issues: 0
 pending: 0
 skipped: 0
@@ -298,8 +306,9 @@ blocked: 0
 
 - Native independent reviewer: fresh Debug build `build/owned-review25` completed 22/22 build steps; full CTest passed 13/13 and focused timing/unsupported/semantics/state CTest passed 4/4. Direct continuation-only passed 1/1 with 15 boundaries/90 calls; full state passed 5/5 with malformed 15, null 4, counter mismatch 1. The independent assessor used separate `build/security-audit-plan25` and independently passed its targeted 4/4 CTest and direct continuation/state/timing/semantics/fault denominators.
 - Fresh Python evidence: contract controls 27/27 normal and optimized; acceptance controls 22/22 normal and optimized. Four churn-decrease probes, prior-crossing/lower-final control, exact caps, plus-one and active-pause controls have the outcomes recorded in rows 41–42.
-- WR-02 checks the updated README in the working tree: 19 Markdown links and 19 local links resolved, status and next-step assertions passed, stale gap-resume instruction absent. The independent reviewer repeated the local link scan and `git diff --check`.
-- Reviewer build/source identity: base source commit `9fba16b864cf74e3b8a9c97047bb27a5db544b59`, current profile `owned-p01-c14-continuation-2`, collection `cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738`, map `be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d`, amendment `3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad`. Review/security final revision binding and deferred seal remain the executor-owned closeout gate.
+- WR-02 checks the README at the Plan 01-25 source identity: 19 Markdown links and 19 local links resolved, status and then-current next-step assertions passed. The independent reviewer repeated the local link scan and `git diff --check`.
+- Test 44 reruns the README link/status check after this verify-work step and confirms the current `$gsd-plan-phase 01 --gaps` routing. This updates navigation only; the phase-goal report remains `gaps_found`.
+- Reviewer build/source identity: base source commit `9fba16b864cf74e3b8a9c97047bb27a5db544b59`, current profile `owned-p01-c14-continuation-2`, collection `cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738`, map `be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d`, amendment `3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad`. Review/security final revision binding and deferred seal pass; candidate admission remains deferred pending phase-goal verification.
 - Candidate disposition stays unqualified and not admitted. CPU-01–05 remain Pending, Phase 01 remains GAPS_FOUND/incomplete, Phase 02 remains gated, and original-silicon saved PC for `0x4AFC` remains unknown.
 
 ## Historical Plan 01-21 Verification Evidence (preserved verbatim)

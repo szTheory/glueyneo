@@ -257,11 +257,27 @@ rows preserve executor lane receipts separately from fresh assessor runs.
 | 24.2 | Executor four-preset collection and normal/optimized full Python suite; assessor acceptance.py verify, source snapshot and artifact/history hash comparison. Four lanes each pass 13/13 CTests; assessor matched 39 source inputs, 44 artifact hashes, five collection-prefix objects, 34 ledger entries and preserved seal. | Failed/unknown lane promoted, identity mismatch, or historical prefix altered; T-01-51/52. | EXECUTED: PASS |
 | 25.1 | Independent reviewer Debug build and controls; exact command `python3 tools/owned_cpu/acceptance.py review-check --review experiments/owned_cpu/REVIEW.md --revision HEAD`. Final clean binding is revision 780c720c4e20ac8e9b61eff40da02fbe601a6f38; report SHA-256 e0a4aba91f4a9e21b2c382dbed9b1b74de1cf19484a7a7a45cd69ecd2e797a78. The initial 9fba check failed for missing independence metadata; a pre-rebind 780c720 check detected the then-stale 9fba attestation; both were retained and corrected by the reviewer. | Stale/non-independent report, missing CR/WR crosswalk, current high/critical finding, or misleading README status/links; T-01-50/54. | EXECUTED: PASS after both metadata corrections; both failures retained |
 | 25.2 | Assessor configured build/security-audit-plan25 from owned-debug, built 22 steps with two jobs, ran timing/semantics/state/faults CTest 4/4, direct continuation 1/1 with 15/90, state 5/5, timing 25/25, semantics 17/17, faults 5/5, Python suites normal/optimized, and contract/acceptance/inventory gates. | Continuation, restore ownership, malformed/terminal guard, budget/history, or exact identity control fails; T-01-45–53, T-01-55–57. | EXECUTED: PASS; current open high/critical 0 |
-| 25.3 | UAT preservation and report bindings are prepared; exact deferred seal, post-seal verify/budget and independent final read-only confirmation remain executor closeout gates. | Stale report/receipt binding, active pause, changed history, or accidental admission; T-01-56/57. | PENDING executor closeout gate; final result belongs in SUMMARY |
+| 25.3 | `acceptance.py seal --defer-admission --security .planning/phases/01-cpu-acceptance-experiment/01-SECURITY.md`; read-only `acceptance.py verify` and `contract.py budget`; independent post-seal receipt/report/source comparison. | Stale report/receipt binding, active pause, changed history, or accidental admission; T-01-56/57. | EXECUTED: PASS; exact deferred seal remains unqualified pending phase-goal verification; verify and budget pass; independent final comparison passes 18/18 |
 
 The initial review-check failure is retained, not removed. These current audit
 rows do not resolve the nine historical specless flags, establish hardware
 truth, complete a CPU requirement, or admit the backend. Original-silicon
 saved PC remains unknown; CPU-01–05 remain Pending and Phase 02 gated. Row
-25.3's eventual executor outcome belongs in the Plan 01-25 summary; freeze this
-validation report before the final seal.
+Plan 01-25 records the exact final seal, post-seal verification and budget checks,
+and independent 18/18 read-only comparison. The validation map now reflects that
+completed executor closeout without changing the deferred candidate disposition.
+
+## Verification Post-Hook Audit — 2026-10-04
+
+| Metric | Count |
+|--------|-------|
+| Validation rows reconciled from final execution evidence | 1 |
+| Automated rows passing | 1 |
+| New tests required | 0 |
+
+The only pending map entry, task 25.3, was the executor-owned final closeout gate.
+Plan 01-25 SUMMARY records its exact deferred seal, passing read-only receipt and
+budget checks, and independent post-seal comparison of all 18 assertions. No
+implementation or acceptance criterion changed during this audit. Earlier test
+denominators, failures, unsupported results and the explicit hardware unknown stay
+in their original records.
