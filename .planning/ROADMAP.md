@@ -56,7 +56,7 @@ Plans:
 - [x] 01-21-PLAN.md — Independent source/security review and exact deferred seal completed after preserving and recovering stale derived metadata. The temporary T-01-43 binding blocker is resolved; later phase-review findings remain open for Plans 01-22–01-25.
 
 **Wave 22** *(gap closure; follows Wave 21)*
-- [ ] 01-22-PLAN.md — Repair CR-01 continuation behavior and bind expanded continuation to a distinct receipt profile; retain unknown silicon behavior.
+- [x] 01-22-PLAN.md — Repair CR-01 continuation behavior and bind expanded continuation to a distinct receipt profile; retain unknown silicon behavior.
 
 **Wave 23** *(gap closure; depends on Wave 22)*
 - [ ] 01-23-PLAN.md — Make cumulative churn monotonic, align exact-cap sealing, and correct contributor-facing README status.
@@ -186,7 +186,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 20/25 execution-complete; 21 summaries | In Progress | |
+| 1. CPU acceptance experiment | v0.1 | 22/25 | In Progress |  |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
