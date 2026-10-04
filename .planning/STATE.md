@@ -4,16 +4,16 @@ milestone: v0.1
 milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
-status: Plan 01-26 complete; awaiting separate fresh phase-goal verification
-stopped_at: Completed 01-26-PLAN.md; Phase 01 remains open / GAPS_FOUND. Separate fresh phase-goal verification required.
-last_updated: "2026-10-04T19:50:42.083Z"
+status: Plan 01-27 planned; awaiting gap-only execution, then fresh phase-goal verification
+stopped_at: Planned 01-27-PLAN.md; Phase 01 remains open / GAPS_FOUND. Gap-only execution and separate fresh phase-goal verification remain.
+last_updated: "2026-10-04T20:52:47.507Z"
 last_activity: 2026-10-04
-last_activity_desc: Phase 01 execution started
-state_head: 7b4b84958226445e22196125ea8198d810025098
+last_activity_desc: Phase 01 gap-closure Plan 01-27 planned
+state_head: 84dec332adfe5c02f1cbba9a82654077865c77b2
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 26
+  total_plans: 27
   completed_plans: 26
   percent: 0
 ---
@@ -30,14 +30,14 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — EXECUTING
-Plan: 26 of 26 (execution complete; Phase 01 open / GAPS_FOUND)
-Status: Plan 01-26 complete; awaiting separate fresh phase-goal verification
-Last activity: 2026-10-04 — Phase 01 execution started
+Phase: 01 (CPU acceptance experiment) — READY TO EXECUTE
+Plan: 26 of 27 plans have summaries; 25 are execution-complete, Plan 01-17 remains at its answered checkpoint, and Plan 01-27 is planned
+Status: Plan 01-27 is ready for gap-only execution; Phase 01 remains open / GAPS_FOUND
+Last activity: 2026-10-04 — Planned Phase 01 gap-closure Plan 01-27
 
 Progress: [░░░░░░░░░░] 0%
 
-GSD frontmatter progress.completed_plans counts matching summary files and is 26, including Plan 01-17's answered checkpoint summary. Execution-complete plans are 01-01 through 01-16 and 01-18–01-26 (25); Plan 01-17 remains incomplete at its answered checkpoint. Plan 01-26 closed the narrow canonical wording gap and passed both read-only decision checks. Phase 01 remains incomplete/open/GAPS_FOUND; its preserved 2026-10-04 verification report must be refreshed separately.
+GSD frontmatter progress.completed_plans counts matching summary files and remains 26, including Plan 01-17's answered checkpoint summary. Execution-complete plans are 01-01 through 01-16 and 01-18–01-26 (25); Plan 01-17 remains incomplete at its answered checkpoint and 01-27 is planned, not executed. Plan 01-26 closed the canonical wording gap and passed its read-only checks. Fresh phase-goal verification at 2026-10-04T20:24:36Z found the current deferred receipt's security-report hash no longer matches the independently assessed report. Plan 01-27 is the additive closeout plan; it preserves the failed reproduction and old seal, uses the supported derived-binding recovery, and keeps the exact guard and admission deferred. Phase 01 remains incomplete/open/GAPS_FOUND; refresh phase-goal verification separately after executing the gap plan.
 
 Historical task-level evidence exists for CPU-01 through CPU-05 (5/27 v1 requirements). Plans 01-22–01-25 close the later bounded candidate, resource-control and documentation findings, but do not admit the backend. Current phase-goal verification must be refreshed; Phase 1 remains open and Phase 2 stays gated.
 
@@ -49,7 +49,7 @@ Shift-left verification preference (PROJECT-D-45): deterministic acceptance shou
 
 **Velocity:**
 
-- Total plans in phase: 26; execution-complete: 25; Plan 01-17 remains at an answered decision checkpoint; Plans 01-24–01-26 are complete
+- Total plans in phase: 27; execution-complete: 25; Plan 01-17 remains at an answered decision checkpoint; Plans 01-24–01-26 are complete and 01-27 is planned
 - Average recorded duration: 41.9min across 25 execution-complete plans
 - Total recorded execution time: 1,048min; exact owned-core active effort/churn remain in experiments/owned_cpu/budget-ledger.json; Phase 01 remains open pending verification
 
@@ -57,7 +57,7 @@ Shift-left verification preference (PROJECT-D-45): deterministic acceptance shou
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 25 of 26 | 1,048min | 41.9min |
+| 01 | 25 of 27 | 1,048min | 41.9min |
 
 **Recent Trend:**
 
@@ -170,6 +170,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-04T19:49:32.903Z
-Stopped at: Completed 01-26-PLAN.md; Phase 01 remains open / GAPS_FOUND. Separate fresh phase-goal verification required.
+Last session: 2026-10-04T20:55:05Z
+Stopped at: Planned 01-27-PLAN.md; Phase 01 remains open / GAPS_FOUND. Run `$gsd-execute-phase 01 --gaps-only`, then complete separate fresh phase-goal verification.
 Resume file: None
