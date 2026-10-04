@@ -1,0 +1,9 @@
+{
+  "command": "ctest --preset owned-debug -R '^owned_cpu_state$' --output-on-failure --output-junit /private/tmp/glueyneo-p01-22-task1-red.xml --no-tests=error",
+  "exitCode": 8,
+  "output": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuite name=\"(empty)\"\n\ttests=\"1\"\n\tfailures=\"1\"\n\tdisabled=\"0\"\n\tskipped=\"0\"\n\thostname=\"\"\n\ttime=\"0\"\n\ttimestamp=\"2026-10-03T21:49:44\"\n\t>\n\t<testcase name=\"owned_cpu_state\" classname=\"owned_cpu_state\" time=\"0.002234\" status=\"fail\">\n\t\t<failure message=\"Failed\"/>\n\t\t<properties>\n\t\t\t<property name=\"cmake_labels\" value=\"owned-cpu;owned-state\"/>\n\t\t</properties>\n\t\t<system-out>$REPO/tests/owned_cpu/test_state.c:436:every_named_boundary_restores_and_continues_in_a_fresh_owner:FAIL: Expected 0 Was 1\nstate_invalid_records=15 null_inputs=4 atomic_destination_and_bus=1\n$REPO/tests/owned_cpu/test_state.c:767:malformed_and_incompatible_records_reject_atomically:PASS\nstate_instruction_counter_mismatch_rejected=1 atomic_destination_and_bus=1\n$REPO/tests/owned_cpu/test_state.c:768:instruction_counter_mismatch_rejects_atomically:PASS\nactive_capture_restore_rejected=1 restore_bus_callbacks=0\n$REPO/tests/owned_cpu/test_state.c:769:reentrant_capture_and_restore_reject_while_active:PASS\nterminal_capture_restore_rejected=1 additional_bus_callbacks=0\n$REPO/tests/owned_cpu/test_state.c:770:terminal_instance_rejects_restore_without_bus_activity:PASS\n\n-----------------------\n5 Tests 1 Failures 0 Ignored \nFAIL\n</system-out>\n\t</testcase>\n</testsuite>\n",
+  "targetTest": "owned_cpu_state",
+  "targetFile": "tests/owned_cpu/test_state.c",
+  "expected": "The guest-driven RTE return to odd PC 0x101 is capturable and restorable before the deferred address-error event.",
+  "actual": "The test reached the capture assertion and owned_cpu_capture_state returned OWNED_CPU_INVALID_ARGUMENT (1), not OWNED_CPU_OK (0)."
+}

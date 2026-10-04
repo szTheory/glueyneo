@@ -10,7 +10,7 @@ enum {
     STATE_MEMORY_SIZE = 0x4000,
     STATE_TRACE_CAPACITY = 512,
     STATE_CONTINUATION_CALLS = 6,
-    STATE_CASE_COUNT = 13
+    STATE_CASE_COUNT = 15
 };
 
 typedef struct {
@@ -49,7 +49,9 @@ typedef enum {
     CASE_CANONICAL_UNSUPPORTED,
     CASE_PRIVILEGE_ENTRY,
     CASE_ADDRESS_ERROR_ENTRY,
-    CASE_RTE
+    CASE_RTE,
+    CASE_RTE_ODD_PC,
+    CASE_SR_SWITCH_ODD_USP
 } state_case;
 
 typedef enum {
@@ -68,6 +70,16 @@ static void put_word(state_machine *machine, uint32_t address, uint16_t value) {
 static void put_long(state_machine *machine, uint32_t address, uint32_t value) {
     put_word(machine, address, (uint16_t)(value >> 16));
     put_word(machine, address + 2u, (uint16_t)value);
+}
+
+static uint16_t state_word(const state_machine *machine, uint32_t address) {
+    return (uint16_t)(((uint16_t)machine->memory[address] << 8) |
+                      machine->memory[address + 1u]);
+}
+
+static uint32_t state_long(const state_machine *machine, uint32_t address) {
+    return ((uint32_t)state_word(machine, address) << 16) |
+           (uint32_t)state_word(machine, address + 2u);
 }
 
 static void record_event(state_machine *machine, uint32_t address, uint16_t value,
@@ -171,15 +183,25 @@ static void configure_case(state_machine *machine, state_case which) {
             }
             break;
         case CASE_TRAP_ENTRY:
-        case CASE_RTE: {
+        case CASE_RTE:
+        case CASE_RTE_ODD_PC: {
             const uint8_t trap_program[] = {0x4eu, 0x40u, 0x4eu, 0x71u,
                                             0x4eu, 0x71u, 0x4eu, 0x71u,
                                             0x4eu, 0x71u, 0x4eu, 0x71u};
             memcpy(machine->memory + 0x100u, trap_program, sizeof(trap_program));
-            if (which == CASE_RTE) {
+            if (which == CASE_RTE || which == CASE_RTE_ODD_PC) {
                 const uint8_t rte_handler[] = {0x4eu, 0x73u};
                 memcpy(machine->memory + 0x180u, rte_handler, sizeof(rte_handler));
             }
+            break;
+        }
+        case CASE_SR_SWITCH_ODD_USP: {
+            const uint8_t sr_switch_program[] = {
+                0x46u, 0xfcu, 0x00u, 0x00u, /* MOVE #$0000,SR */
+                0x46u, 0xfcu, 0x27u, 0x00u, /* Privileged MOVE #$2700,SR */
+                0x4eu, 0x71u, 0x4eu, 0x71u};
+            memcpy(machine->memory + 0x100u, sr_switch_program,
+                   sizeof(sr_switch_program));
             break;
         }
         case CASE_CANONICAL_UNSUPPORTED: {
@@ -282,10 +304,35 @@ static int prepare_checkpoint(state_machine *machine, state_case which) {
             result = run_one(machine);
             return result.reason == OWNED_CPU_BUDGET && result.pc == UINT32_C(0x180);
         case CASE_RTE:
+        case CASE_RTE_ODD_PC:
             result = run_one(machine);
             if (result.reason != OWNED_CPU_BUDGET || result.pc != UINT32_C(0x180)) return 0;
+            if (which == CASE_RTE_ODD_PC) {
+                owned_cpu_observation observation;
+                if (owned_cpu_observe(machine->cpu, &observation) != OWNED_CPU_OK ||
+                    observation.ssp > STATE_MEMORY_SIZE - 6u) return 0;
+                /* Change only the guest short frame, not CPU execution state. */
+                put_long(machine, observation.ssp + 2u, UINT32_C(0x00000101));
+            }
             result = run_one(machine);
-            return result.reason == OWNED_CPU_BUDGET && result.pc == UINT32_C(0x102);
+            return result.reason == OWNED_CPU_BUDGET &&
+                   result.pc == (which == CASE_RTE_ODD_PC ? UINT32_C(0x101)
+                                                         : UINT32_C(0x102));
+        case CASE_SR_SWITCH_ODD_USP: {
+            if (owned_cpu_test_seed_execution_state(machine->cpu, UINT16_C(0x2700),
+                                                     UINT32_C(0x00002801),
+                                                     UINT32_C(0x00003000),
+                                                     UINT32_C(0x00000100)) != OWNED_CPU_OK) {
+                return 0;
+            }
+            result = run_one(machine);
+            owned_cpu_observation observation;
+            return result.reason == OWNED_CPU_BUDGET && result.pc == UINT32_C(0x104) &&
+                   owned_cpu_observe(machine->cpu, &observation) == OWNED_CPU_OK &&
+                   observation.sr == 0u && observation.usp == UINT32_C(0x2801) &&
+                   observation.address_registers[7] == UINT32_C(0x2801) &&
+                   observation.ssp == UINT32_C(0x3000);
+        }
         case CASE_RESET_DEBT:
             break;
     }
@@ -412,6 +459,43 @@ static void continue_scenario(state_case which, omission_kind omission) {
         clear_events(&destination);
         owned_cpu_run_result expected = run_one(&baseline);
         owned_cpu_run_result actual = run_one(&destination);
+        if ((which == CASE_RTE_ODD_PC || which == CASE_SR_SWITCH_ODD_USP) &&
+            call == 0u) {
+            TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, expected.reason);
+            TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, actual.reason);
+            TEST_ASSERT_EQUAL_HEX32(0x180u, expected.pc);
+            TEST_ASSERT_EQUAL_HEX32(0x180u, actual.pc);
+            TEST_ASSERT_EQUAL_UINT64(which == CASE_RTE_ODD_PC ? 50u : 34u,
+                                     expected.elapsed_cycles);
+            TEST_ASSERT_EQUAL_UINT64(expected.elapsed_cycles, actual.elapsed_cycles);
+            owned_cpu_observation observation;
+            TEST_ASSERT_EQUAL(OWNED_CPU_OK,
+                              owned_cpu_observe(baseline.cpu, &observation));
+            if (which == CASE_RTE_ODD_PC) {
+                static const uint32_t event_addresses[] = {
+                    0x2ffcu, 0x2ffeu, 0x2ffau, 0x2ff8u, 0x2ff4u,
+                    0x2ff6u, 0x2ff2u, 0x000cu, 0x000eu};
+                TEST_ASSERT_EQUAL_UINT8(3u, observation.last_exception_vector);
+                TEST_ASSERT_EQUAL_UINT(9u, baseline.event_count);
+                TEST_ASSERT_EQUAL_HEX16(0x0016u, state_word(&baseline, 0x2ff2u));
+                TEST_ASSERT_EQUAL_HEX32(0x00000101u, state_long(&baseline, 0x2ff4u));
+                TEST_ASSERT_EQUAL_HEX16(0x0000u, state_word(&baseline, 0x2ff8u));
+                TEST_ASSERT_EQUAL_HEX16(0x2700u, state_word(&baseline, 0x2ffau));
+                TEST_ASSERT_EQUAL_HEX32(0x00000101u, state_long(&baseline, 0x2ffcu));
+                for (size_t event = 0u;
+                     event < sizeof(event_addresses) / sizeof(event_addresses[0]); ++event) {
+                    TEST_ASSERT_EQUAL_HEX32(event_addresses[event],
+                                            baseline.events[event].address);
+                    TEST_ASSERT_EQUAL_UINT8(event < 7u ? 1u : 0u,
+                                            baseline.events[event].write);
+                }
+            } else {
+                TEST_ASSERT_EQUAL_UINT8(8u, observation.last_exception_vector);
+                TEST_ASSERT_EQUAL_HEX32(0x2801u, observation.usp);
+                TEST_ASSERT_EQUAL_HEX16(0x0000u, state_word(&baseline, 0x2ffau));
+                TEST_ASSERT_EQUAL_HEX32(0x00000104u, state_long(&baseline, 0x2ffcu));
+            }
+        }
         if (which == CASE_CANONICAL_UNSUPPORTED) {
             TEST_ASSERT_EQUAL(OWNED_CPU_UNSUPPORTED_OPCODE, actual.reason);
             TEST_ASSERT_EQUAL_HEX32(0x100u, actual.pc);
@@ -461,15 +545,18 @@ static void every_named_boundary_restores_and_continues_in_a_fresh_owner(void) {
     static const char *const names[STATE_CASE_COUNT] = {
         "reset_debt", "diagnostic_MOVEQ", "diagnostic_ADDQ", "diagnostic_MOVE_store",
         "STOP", "masked_IRQ", "IRQ7_edge_pending_after_deassertion", "IRQ_entry",
-        "TRAP_entry", "canonical_unsupported", "privilege_entry", "address_error_entry", "RTE"};
+        "TRAP_entry", "canonical_unsupported", "privilege_entry", "address_error_entry",
+        "RTE", "RTE_odd_PC", "SR_switch_odd_USP"};
     for (unsigned which = 0u; which < STATE_CASE_COUNT; ++which) {
         continue_scenario((state_case)which, OMIT_NONE);
     }
     printf("state_checkpoints=%u continuation_run_calls=%u source_destroyed_and_overwritten=1\n",
            STATE_CASE_COUNT, STATE_CASE_COUNT * STATE_CONTINUATION_CALLS);
-    printf("state_boundary_names=%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-           names[0], names[1], names[2], names[3], names[4], names[5], names[6], names[7],
-           names[8], names[9], names[10], names[11], names[12]);
+    printf("state_boundary_names=");
+    for (unsigned index = 0u; index < STATE_CASE_COUNT; ++index) {
+        printf("%s%s", index == 0u ? "" : ",", names[index]);
+    }
+    putchar('\n');
 }
 
 static void mutate_invalid_state(owned_cpu_state *state, unsigned which) {
@@ -483,7 +570,7 @@ static void mutate_invalid_state(owned_cpu_state *state, unsigned which) {
         case 6u: state->irq_level = 8u; break;
         case 7u: state->irq7_pending = 2u; break;
         case 8u: state->reset_pending = 2u; break;
-        case 9u: state->pc |= 1u; break;
+        case 9u: state->present_fields |= (UINT64_C(1) << 63); break;
         case 10u: state->sr ^= UINT16_C(0x2000); break; /* Active stack bank mismatch. */
         case 11u: state->reset_cycles--; break;
         case 12u: state->total_cycles = UINT64_MAX; break;
