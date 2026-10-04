@@ -370,7 +370,11 @@ the executor for SUMMARY, so this security document remains unchanged after
 sealing. Any final failure reopens the high finding and blocks closeout.
 <!-- owned-cpu-historical-security:end -->
 
-<!-- owned-cpu-current-security:start -->
+
+
+### Historical Plan 01-26 current security assessment — complete prior section preserved verbatim; superseded after 84dec332 report-byte edit
+
+
 ## P01-C-14 continuation and resource reassessment — 2026-10-04
 
 **Independent assessor:** fresh separate non-author.
@@ -493,4 +497,90 @@ reclassified as a behavioral test result.
 
 Final assessor rebind interval: 2026-10-04 06:53:14–06:53:38 UTC; 24 active
 seconds.
+
+
+
+
+
+### Historical Plan 01-27 security assessment bound to checkpoint C — complete section preserved verbatim
+
+
+## Plan 01-27 independent security assessment — 2026-10-04
+
+**Independent assessor:** fresh separate non-author and sole owner of this SECURITY report section. Authored runtime, collector, tests, receipt, ledger, or review: no. ASVS L1; `block_on: high`. This is a metadata/source-identity and evidence-integrity reassessment at frozen checkpoint C. It does not qualify hardware behavior, admit the backend, or complete Phase 01.
+
+```json
+{
+  "schema": 1,
+  "asvs_level": 1,
+  "block_on": "high",
+  "independent_non_author": true,
+  "status": "verified",
+  "open_high_or_critical": 0,
+  "evidence_revision": "7ac8e65a1fea00b3eac2dee885da3c83c8571441",
+  "collection_sha256": "cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738",
+  "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+  "source_map_sha256": "be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d",
+  "hardware_saved_pc": "unknown",
+  "review_sha256": "a95d4c129e63dd36b232047ca7cf3bac0c87c8f6be28f83be866300b05ca9ae7"
+}
+```
+
+### Threat verification
+
+| Threat | Severity | Result | Evidence |
+|---|---|---|---|
+| T-01-59 — report tampering / deferred-seal equality | high | CLOSED | `tools/owned_cpu/acceptance.py:336-368, 410-430, 444-502, 530-554` enforces one bounded current section and unique JSON keys; binds exact revision, collection, amendment, source map, independence fields and report SHA-256; `verify` recomputes and compares complete current review/security seal objects before a seal can be refreshed. Six archived payloads verify (6/6), including stale-failure and old/current SECURITY bytes. Current independently rebound REVIEW SHA-256 is `a95d4c12…`. Existing normal/-O tamper/deferred-admission regression is present; this assessor did not rerun it, so prior dated results remain historical. |
+| T-01-60 — evidence repudiation / admission drift | high | CLOSED | All six collections equal the archive (6/6); both earlier superseded records are unchanged and the former active seal is preserved exactly as record 3; every other pre-repair receipt field is preserved. Ledger prefix/frozen fields match (45/45); the added closeout charge is 6,425 seconds and read-only `contract.py budget` passes at 74,259/115,200 active seconds with unchanged caps and no pause. All 39 included source hashes match current files (39/39), with required collection/profile/amendment/source-map identities. |
+| T-01-SC — package/dependency mutation | high | CLOSED | The current 39-file map includes the source manifest. Its Unity records retain pin `b6763fbd9cedfacaa89e2ad9fd00d615a234e355`, MIT license and notice; no source/dependency file differs from C and no package/runtime dependency was added in closeout. |
+
+The exact 2026-10-04 edit at `84dec332adfe5c02f1cbba9a82654077865c77b2` added the 105/105 audit-trail row and T-01-58 medium/CLOSED crosswalk row. Both are retained above as dated history with the full previous current report. T-01-58's validator-pass statement describes the report bytes/checks at revision `84dec332`; it does not establish that the edited bytes matched the earlier seal. That seal bound SECURITY SHA-256 `a2ffd1aea37e9d5d0b4f31a1c017126127bbe34beded3049658f9673640285c6`; post-edit pre-repair SECURITY was `6f435327a7d74c28f6cc1841d66958faf2fe9bea341754c9fb01586af8b20934`. The preserved reproduction failed closed with `stale sealed security document`. No failed result is erased or described as fresh native execution.
+
+### Current limitations and disposition
+
+No current high/critical residual was found in the declared threats. Nine historical specless flags remain unresolved metadata: CPU-01 concurrency; CPU-02/03/04 unclassified; CPU-05 boundary, adjacency, empty, ordering and precision. `0x4AFC` exclusion is candidate-only; original-silicon saved PC remains `unknown`. CPU-01–05 remain Pending; candidate remains unqualified; Phase 01 remains `GAPS_FOUND`; Phase 02 remains gated. No new unregistered attack surface was observed in this scoped assessment; the executor-owned Plan 01-27 summary is finalized separately.
+
+Disposition: verified; zero blocking high/critical findings.
+
+Audit interval: 2026-10-04T21:47:48Z–2026-10-04T22:19:01Z; 1873 seconds.
+
+
+
+<!-- owned-cpu-current-security:start -->
+## Plan 01-27 independent security rebind — 2026-10-04
+
+**Independent assessor:** fresh separate non-author; sole owner of this SECURITY report. Authored runtime, collector, tests, receipt, ledger, or review: no. ASVS L1; `block_on: high`. This is a report/source-identity rebind at replacement checkpoint C2. It adds no runtime or hardware qualification and does not admit the backend or complete Phase 01.
+
+```json
+{
+  "schema": 1,
+  "asvs_level": 1,
+  "block_on": "high",
+  "independent_non_author": true,
+  "status": "verified",
+  "open_high_or_critical": 0,
+  "evidence_revision": "e65ea35fe36a0d9cbcbd2f938142f247f3bbf3e2",
+  "collection_sha256": "cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738",
+  "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+  "source_map_sha256": "be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d",
+  "hardware_saved_pc": "unknown",
+  "review_sha256": "ecbe3c6fe6767ccfe8eb5b81e12223ac8b25a812bddd0b2b3adc335c5d7049ce"
+}
+```
+
+### Threat verification
+
+| Threat | Severity | Result | Evidence |
+|---|---|---|---|
+| T-01-59 — report tampering / deferred-seal equality | high | CLOSED | `tools/owned_cpu/acceptance.py` enforces one bounded current section, unique JSON keys, exact revision/collection/amendment/source-map binding, required independence fields, and recomputed review/security report hashes when verifying the complete seal. The unsealed receipt is verified before sealing. The six archived payloads remain valid; this rebind changes only the current report identity after the replacement checkpoint. The existing normal/-O tamper/deferred-admission regression was not rerun in this rebind. |
+| T-01-60 — evidence repudiation / admission drift | high | CLOSED | The 45-entry ledger prefix is unchanged and exactly two append-only charges are present (47 records); all six collections and superseded-seal history are preserved; the prior active seal remains exact in superseded history. All 39/39 included source hashes match, with unchanged collection/profile/amendment/source-map identities. `contract.py budget` passes at 79,763/115,200 active seconds, 47 records, unchanged caps/churn and no pause. Added ledger charges total 11,929 seconds (6,425 + 5,504). The second charge records the measured executor closeout overrun of 2,431 seconds and security-assessor overrun of 73 seconds, plus non-refundable 600-second reviewer and 600-second security rebind allowances and a 1,800-second executor final-closeout reserve. No cap, source, collection, or churn value changed. |
+| T-01-SC — package/dependency mutation | high | CLOSED | The current source map includes the dependency manifest; Unity remains pinned to `b6763fbd9cedfacaa89e2ad9fd00d615a234e355` with MIT notice retained. No dependency/source mutation was found in this closeout. |
+
+### Current limitations and disposition
+
+The prior C-bound assessment, including its exact 84dec332 delta treatment and 1,873-second interval, is preserved verbatim immediately above as history. No current high/critical residual was found. Nine historical specless flags remain unresolved metadata: CPU-01 concurrency; CPU-02/03/04 unclassified; CPU-05 boundary, adjacency, empty, ordering, and precision. The `0x4AFC` exclusion is candidate-only; original-silicon saved PC remains `unknown`. CPU-01–05 remain Pending; the candidate remains unqualified, Phase 01 remains `GAPS_FOUND`, and Phase 02 remains gated. No new unregistered attack surface was observed in this scoped rebind.
+
+Disposition: verified; zero blocking high/critical findings.
+
+Audit interval: 2026-10-04T22:44:24Z–2026-10-04T22:46:00Z; 96 seconds.
 <!-- owned-cpu-current-security:end -->

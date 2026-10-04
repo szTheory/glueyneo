@@ -1,6 +1,5 @@
 {
   "blockers": [
-    "independent-report-rebinding-pending",
     "phase-goal-verification-pending"
   ],
   "collections": [
@@ -3700,6 +3699,67 @@
   },
   "phase_disposition": "GAPS_FOUND",
   "schema": 1,
+  "seal": {
+    "budget": {
+      "active_seconds": 79763,
+      "diagnostic_gate_seconds": 2565,
+      "pause": null,
+      "phase_disposition": "not-admitted",
+      "records": 47,
+      "runtime_churn_added_deleted": 1228,
+      "status": "pass",
+      "test_tool_churn_added_deleted": 6540
+    },
+    "collection_sha256": "cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738",
+    "defer_admission": true,
+    "review": {
+      "attestation": {
+        "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+        "collection_sha256": "cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738",
+        "evidence_revision": "e65ea35fe36a0d9cbcbd2f938142f247f3bbf3e2",
+        "hardware_saved_pc": "unknown",
+        "independent_non_author": true,
+        "prior_findings": {
+          "F14-01": {
+            "disposition": "resolved",
+            "evidence": "The Plan 01-25 independent report retains its earlier regression-backed resolution; this report did not rerun the controls."
+          },
+          "F14-02": {
+            "disposition": "resolved",
+            "evidence": "The Plan 01-25 independent report retains its earlier history-guard resolution; this report did not rerun the controls."
+          },
+          "F14-03": {
+            "disposition": "superseded",
+            "evidence": "Only the candidate obligation to support exact 0x4AFC is superseded. Original-silicon saved PC remains unknown, and no hardware truth or admission is claimed."
+          }
+        },
+        "schema": 1,
+        "source_map_sha256": "be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d"
+      },
+      "revision": "e65ea35fe36a0d9cbcbd2f938142f247f3bbf3e2",
+      "sha256": "ecbe3c6fe6767ccfe8eb5b81e12223ac8b25a812bddd0b2b3adc335c5d7049ce",
+      "status": "clean"
+    },
+    "revision": "e65ea35fe36a0d9cbcbd2f938142f247f3bbf3e2",
+    "security": {
+      "attestation": {
+        "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+        "asvs_level": 1,
+        "block_on": "high",
+        "collection_sha256": "cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738",
+        "evidence_revision": "e65ea35fe36a0d9cbcbd2f938142f247f3bbf3e2",
+        "hardware_saved_pc": "unknown",
+        "independent_non_author": true,
+        "open_high_or_critical": 0,
+        "review_sha256": "ecbe3c6fe6767ccfe8eb5b81e12223ac8b25a812bddd0b2b3adc335c5d7049ce",
+        "schema": 1,
+        "source_map_sha256": "be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d",
+        "status": "verified"
+      },
+      "sha256": "27d9974e72c9e58b8131d30883c5555c03665718a32b997bb3d138980d0137e2"
+    },
+    "security_path": ".planning/phases/01-cpu-acceptance-experiment/01-SECURITY.md"
+  },
   "superseded_seals": [
     {
       "reason": "Final audit metadata changed after initially passing deferred seal; stale active binding preserved for metadata-only recovery",

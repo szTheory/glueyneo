@@ -341,7 +341,8 @@ specless flags remain unresolved.
 
 <!-- owned-cpu-historical-review:end -->
 
-<!-- owned-cpu-current-review:start -->
+## Historical Plan 01-25 current review (complete prior current section preserved verbatim)
+
 
 # Plan 01-25 independent review of the repaired candidate
 
@@ -651,5 +652,167 @@ is gated, and no SDK admission follows from this report.
 _Reviewed: 2026-10-04T06:24:44Z; final 780c720 metadata rebind completed 2026-10-04T06:50:22Z_
 _Reviewer: the agent (Plan 01-25 independent non-author)_
 _Depth: deep_
+
+<!-- owned-cpu-current-review:start -->
+
+# Plan 01-27 independent review of the closeout metadata rebind
+
+## Reviewed revision:
+
+Reviewed/evidence revision: `e65ea35fe36a0d9cbcbd2f938142f247f3bbf3e2` (replacement checkpoint C).
+This is a metadata/source-identity reconciliation of the unchanged candidate at
+the frozen closeout checkpoint. The current source set, collection, profile,
+amendment, source map, and frozen contract remain the identities recorded
+below. No runtime or collector change is part of this review.
+
+The report-binding delta is limited to the two SECURITY register rows added at
+`84dec332adfe5c02f1cbba9a82654077865c77b2`: the 2026-10-04 ASVS scan-count
+row and T-01-58 row. The older sealed SECURITY bytes have SHA-256
+`a2ffd1aea37e9d5d0b4f31a1c017126127bbe34beded3049658f9673640285c6`; the
+pre-repair current SECURITY bytes have SHA-256
+`6f435327a7d74c28f6cc1841d66958faf2fe9bea341754c9fb01586af8b20934`.
+The earlier validator-pass statement is evidence about its dated report bytes,
+not a pass for the changed report. The stale seal and failed current
+reproduction remain preserved for the independent security assessor and final
+receipt check.
+
+## Reviewer independence:
+
+Independent reviewer: fresh separate non-author Plan 01-27 reviewer and sole
+write owner of this report. I authored no runtime, collector, tests, source
+manifest, receipt, ledger, or security assessment. This turn performs only
+read-only evidence comparison plus this report's metadata rebind. No tests or
+native executions were run for this report; dated prior native evidence remains
+attributed to the Plan 01-25 report and SUMMARY.
+
+Authored runtime/collector/tests: no
+
+UTC review interval: `2026-10-04T21:23:17Z` through `2026-10-04T21:45:35Z`;
+active time: 1338 seconds.
+
+Metadata rebind interval: `2026-10-04T22:42:32Z` through `2026-10-04T22:43:14Z`; active time:
+42 seconds. At replacement checkpoint C, the 39/39 source hash comparison
+was reconfirmed with zero mismatches; collection and source-map identities are
+unchanged.
+
+## Prior findings:
+
+| Finding | Retained disposition |
+|---|---|
+| F14-01 | Resolved by the earlier regression-backed repair; the Plan 01-25 normal and optimized acceptance-control outcomes remain dated evidence. |
+| F14-02 | Resolved by the earlier history-guard repair; the Plan 01-25 normal and optimized acceptance-control outcomes remain dated evidence. |
+| F14-03 | Superseded only for the candidate's exact `0x4AFC` support boundary. The original-silicon saved PC remains unknown. |
+| CR-01 | Fixed for private candidate continuation only; no silicon claim. |
+| CR-02 | Fixed; cumulative charges cannot decrease. |
+| WR-01 | Fixed; exact caps are inclusive and plus-one remains blocked. |
+| WR-02 | Fixed at the reviewed source identity. |
+
+These statuses are carried forward from the dated Plan 01-25 review. They are
+not new behavioral findings or fresh rerun claims.
+
+## Evidence runs and denominators:
+
+This review compared the immutable closeout archive, current derived metadata,
+and actual included source bytes. It did not run behavioral tests.
+
+- The six archived payloads in `01-27-CLOSEOUT.json` pass strict base64
+  decoding and match their recorded SHA-256 values: 6/6.
+- Before this edit, the archived REVIEW bytes matched the current
+  Plan 01-25 report exactly (SHA-256
+  `e0a4aba91f4a9e21b2c382dbed9b1b74de1cf19484a7a7a45cd69ecd2e797a78`).
+  That complete prior current section is retained verbatim as labelled history
+  outside the parser markers immediately above this section.
+- All six collection objects in the current receipt equal the archived
+  pre-repair collection objects: 6/6. The two earlier superseded-seal records
+  are unchanged, and the archived former active seal is preserved as the third
+  superseded record with its seal object byte-for-byte equal at the JSON-object
+  level.
+- The prior ledger prefix is unchanged: 45/45 entries match the archived
+  prefix; all frozen non-entry ledger fields match. The checkpoint ledger has
+  46 entries including the appended closeout charge.
+- Every included source hash matches the current working-tree file bytes:
+  39/39, zero mismatches. The canonical source-map digest is
+  `be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d`.
+- The collection digest is
+  `cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738`;
+  profile is `owned-p01-c14-continuation-2`; amendment digest is
+  `3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad`.
+  Frozen CONTRACT SHA-256 is
+  `6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73`;
+  source-manifest SHA-256 is
+  `ae481ac75ac88dd40cc86de52fa827a4941280ca3ce6f4e0952c71ecf3a47eab`.
+
+The previous dated native evidence supports only its recorded diagnostic
+subset and continuation profile. This metadata comparison adds no runtime
+qualification, hardware observation, or fresh native result. No backend is
+admitted.
+
+## Oracle ancestry:
+
+The existing oracle ancestry and its limits are unchanged. Dated Plan 01-25
+native observations remain evidence for the named private candidate cases;
+they are not new observations and do not establish original-silicon behavior.
+Manual wording, emulator comparisons, and project-authored expectations retain
+the ancestry and uncertainty recorded in the preserved report.
+
+All nine historical specless flags remain unresolved metadata: CPU-01
+concurrency; CPU-02, CPU-03, and CPU-04 unclassified; and CPU-05 boundary,
+adjacency, empty, ordering, and precision. They are not treated as passes or
+new behavioral predicates.
+
+D1-13 remains unknown for original-silicon saved PC: neither `$100` nor
+`$102` is selected, no silicon capture is claimed, and the finite search is
+not repeated. D1-14 remains limited to the candidate's exact numeric opcode
+`0x4AFC`: the candidate reports unsupported with no vector, frame, dispatch,
+or cycle charge. That is not a claim that hardware rejects ILLEGAL.
+
+## Findings and dispositions:
+
+The narrow metadata/source-identity review found no residual mismatch. Threat
+T-01-59 is addressed within this scope by preservation of the failed binding,
+exact report/source identities, and the unchanged report-binding guard; its
+earlier normal and optimized tamper-control results remain dated evidence and
+were not rerun here. T-01-60 is addressed within this scope by the 6/6 archive,
+6/6 collection, 45/45 ledger-prefix, and 39/39 source comparisons above. The
+historical failure remains recoverable, and no admission or phase outcome is
+promoted by this report.
+
+CPU-01–05 remain Pending. Phase 01 remains open/GAPS_FOUND, Phase 02 remains
+gated, and admission remains deferred. The final security report rebinding and
+exact receipt verification remain separate closeout checks.
+
+Disposition: clean
+
+```json
+{
+  "schema": 1,
+  "independent_non_author": true,
+  "hardware_saved_pc": "unknown",
+  "evidence_revision": "e65ea35fe36a0d9cbcbd2f938142f247f3bbf3e2",
+  "collection_sha256": "cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738",
+  "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+  "source_map_sha256": "be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d",
+  "prior_findings": {
+    "F14-01": {
+      "disposition": "resolved",
+      "evidence": "The Plan 01-25 independent report retains its earlier regression-backed resolution; this report did not rerun the controls."
+    },
+    "F14-02": {
+      "disposition": "resolved",
+      "evidence": "The Plan 01-25 independent report retains its earlier history-guard resolution; this report did not rerun the controls."
+    },
+    "F14-03": {
+      "disposition": "superseded",
+      "evidence": "Only the candidate obligation to support exact 0x4AFC is superseded. Original-silicon saved PC remains unknown, and no hardware truth or admission is claimed."
+    }
+  }
+}
+```
+
+---
+
+_Reviewed: 2026-10-04T22:43:14Z_
+_Reviewer: fresh non-author Plan 01-27 reviewer_
+_Depth: deep metadata/source identity reconciliation_
 
 <!-- owned-cpu-current-review:end -->
