@@ -5,16 +5,16 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: executing
-stopped_at: Completed 01-22-PLAN.md; Plan 01-23 is next; phase remains GAPS_FOUND
-last_updated: "2026-10-04T02:08:30.000Z"
+stopped_at: Completed 01-23-PLAN.md; Plan 01-24 is next; phase remains GAPS_FOUND
+last_updated: "2026-10-04T04:11:41.402Z"
 last_activity: 2026-10-03
-last_activity_desc: Plan 01-22 completed; three ordered gap-closure plans remain
-state_head: 1c98d1abccfd9af01ffd3c99858427a54ec8b3e2
+last_activity_desc: Plan 01-23 completed; Plans 01-24 and 01-25 remain
+state_head: 86e86bc984f62ea92eb9cccddf8f02607e046b1a
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 25
-  completed_plans: 22
+  completed_plans: 23
   percent: 0
 ---
 
@@ -31,13 +31,13 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 ## Current Position
 
 Phase: 01 (CPU acceptance experiment) — EXECUTING
-Plan: 2 of 25
+Plan: 3 of 25
 Status: Ready to execute
-Last activity: 2026-10-03 — Plan 01-22 complete; Plan 01-23 next
+Last activity: 2026-10-03 — Plan 01-23 complete; Plan 01-24 next
 
 Progress: [░░░░░░░░░░] 0%
 
-GSD's frontmatter `progress.completed_plans` counts matching summary files and is 22, including Plan 01-17's answered checkpoint summary. Execution-complete plans are 01-01 through 01-16, 01-18–01-22 (21); Plan 01-17 remains incomplete at its answered checkpoint, and Plans 01-23–01-25 remain. Phase 01 remains incomplete pending gap repair and separate current phase-goal verification.
+GSD's frontmatter `progress.completed_plans` counts matching summary files and is 23, including Plan 01-17's answered checkpoint summary. Execution-complete plans are 01-01 through 01-16, 01-18–01-23 (22); Plan 01-17 remains incomplete at its answered checkpoint, and Plans 01-24–01-25 remain. Phase 01 remains incomplete pending gap repair and separate current phase-goal verification.
 
 Historical task-level evidence exists for CPU-01 through CPU-05 (5/27 v1 requirements), but the later source review disputes clean backend admission. The current verification is `gaps_found`; Phase 1 remains open and Phase 2 stays gated.
 
@@ -49,19 +49,19 @@ Shift-left verification preference (PROJECT-D-45): deterministic acceptance shou
 
 **Velocity:**
 
-- Total plans in phase: 25; execution-complete: 21; Plan 01-17 remains at an answered decision checkpoint; Plans 01-23–01-25 remain
-- Average recorded duration: 34.7min across 21 execution-complete plans
-- Total recorded execution time: 728min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
+- Total plans in phase: 25; execution-complete: 22; Plan 01-17 remains at an answered decision checkpoint; Plans 01-24–01-25 remain
+- Average recorded duration: 35.1min across 22 execution-complete plans
+- Total recorded execution time: 772min; exact owned-core active effort/churn remain in `experiments/owned_cpu/budget-ledger.json`; Phase 01 remains open with gaps
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 21 of 25 | 728min | 34.7min |
+| 01 | 22 of 25 | 772min | 35.1min |
 
 **Recent Trend:**
 
-- Last 5 plans with execution metrics: 01-18, 01-19, 01-20, 01-21, 01-22
+- Last 5 plans with execution metrics: 01-19, 01-20, 01-21, 01-22, 01-23
 - Trend: Not established
 
 **Per-Plan Metrics:**
@@ -89,6 +89,7 @@ Shift-left verification preference (PROJECT-D-45): deterministic acceptance shou
 | Phase 01 P20 | 6min | 2 tasks | 4 files |
 | Phase 01 P21 | 22min | 3 tasks | 5 files |
 | Phase 01 P22 | 23min | 2 tasks | 7 files |
+| Phase 01 P23 | 44min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -134,10 +135,11 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - [Phase 01]: Plan 01-21 recovered only derived seal metadata, preserving the complete stale seal and all5 collections; same reviewer/assessor final exact931e2f0 binding and deferred seal pass. Earlier temporary T01-43 blocker is resolved; Phase01 still incomplete/GAPS_FOUND, CPU01–05 Pending, next separate verify-work01.
 - [Phase 01]: Gap planning created Plans 01-22–01-25 for later independent review findings CR-01/CR-02/WR-01/WR-02. The independent plan checker passed after requiring current UAT outcomes to be appended before final sealing. CPU-01–05 remain Pending, Phase 01 remains incomplete/GAPS_FOUND, and Phase 02 remains gated.
 - [Phase 01]: Private continuation preserves guest-reachable odd PCs and selected stack pointers; a distinct receipt profile records the expanded continuation denominator. — Guest-driven RTE and SR-transition regressions showed that rejecting odd values at capture time interrupted a reachable continuation before execution could report its deferred fault. The new owned-p01-c14-continuation-2 profile requires fifteen named checkpoints and ninety calls, while owned-p01-c14-1 retains its historical thirteen/78 interpretation. The exact 0x4AFC exclusion and unknown original-silicon saved PC remain unchanged.
+- [Phase 01]: Keep cumulative resource charges monotonic and make seal limits inclusive at the frozen caps. — validate_budget rejects any decrease in each of the four cumulative churn fields, with category and entry identity; a prior threshold crossing therefore cannot disappear in a later row. budget_check uses the canonical 115200/6000/8000 caps inclusively but rejects a canonical pause-for-review result or any active pause. No ledger history or cap is rewritten.
 
 ### Pending Todos
 
-- Plan 01-17 preserves the answered checkpoint and unknown original-silicon saved PC; do not repeat the finite search. Plans 01-18–01-22 completed their scoped candidate boundary, controls, qualification, independent deferred seal, and CR-01 continuation repair; three findings remain for Plans 01-23–01-25. All CPU requirements remain Pending, Phase 01 open/GAPS_FOUND, Phase 02 gated. Continue with `$gsd-execute-phase 01 --gaps-only`.
+- Plan 01-17 preserves the answered checkpoint and unknown original-silicon saved PC; do not repeat the finite search. Plans 01-18–01-23 completed their scoped candidate boundary, controls, qualification, independent deferred seal, CR-01 continuation repair, and monotonic/inclusive budget fixes; source/evidence refresh and current independent reassessment remain for Plans 01-24–01-25. All CPU requirements remain Pending, Phase 01 open/GAPS_FOUND, Phase 02 gated. Continue with `$gsd-execute-phase 01 --gaps-only`.
 
 ### Blockers/Concerns
 
@@ -145,12 +147,12 @@ Current decisions: PROJECT.md Key Decisions; dated provenance: preparation/DECIS
 - No per-core GUI is in scope. Each core repository targets a library, headless diagnostic runner and thin libretro adapter; RetroArch remains the interactive frontend until a shared Playstead/external host is ready.
 - UI-phase/review and AI-integration gates are disabled for this C-only, non-AI project. Keep API coverage enabled for phases that integrate external APIs/SDKs such as libretro; the installed gate is conditional on those integrations.
 
-- Earlier plan receipts record the private guest, source closure, FPU/SoftFloat exclusion, selected isolation, timing, host-safety, and fresh-destination continuation evidence. The later independent review found legal-instruction undefined behavior and generator defects; do not treat the old acceptance receipt alone as current SDK admission evidence.
-- Preserve all counterexamples: odd IRQ crash, fixture UBSan, reset accounting/NMI, BSD address-error boundary and malformed-state/zero-request guards. The explicit state codec passes eight continuation checkpoints; raw upstream context-copy APIs remain unsuitable.
+- Earlier plan receipts record the private guest, source closure, FPU/SoftFloat exclusion, selected isolation, timing, host-safety, and fresh-destination continuation evidence. Later independent reviews found additional source/evidence gaps; do not treat an older acceptance receipt alone as current SDK admission evidence.
+- Preserve all counterexamples: odd IRQ crash, fixture UBSan, reset accounting/NMI, BSD address-error boundary and malformed-state/zero-request guards. The current continuation profile covers 15 named fresh-owner checkpoints and 90 run calls; historical owned-p01-c14-1 evidence remains at 13/78. Raw upstream context-copy APIs remain unsuitable.
 - Frozen cumulative charges are 2,614 handwritten, 523 helper and 483 semantic lines, leaving 77 helper and 17 semantic lines. Both attempts are consumed. Charged effort is 20,005 seconds total / 18,859 seconds in the final attempt. Preserve these charges; any future work must remain inside the original limits or be separately replanned.
 - Remote/CI/protection/release authority is not configured; future delivery dependency. Continue independent implementation and artifact preparation; repeat remote triage at setup/shipping.
 - Evidence is limited to the native Apple Clang 21 / Darwin arm64 experiment; no release platform matrix, board/BIOS/game compatibility, public state format, or performance claim is established. Task-level records exist for CPU-01 through CPU-05, but the current phase verification did not certify them; the other 22 v1 requirements remain pending.
-- Both original Musashi adaptation attempts are consumed. Preserve those historical caps/charges and do not start another Musashi attempt automatically. The owned-core evidence remains scoped and unadmitted; current continuation/accounting/seal/documentation findings are assigned to Plans 01-22–01-25. Phase 02 remains gated pending their outcomes and a fresh Phase 01 verification.
+- Both original Musashi adaptation attempts are consumed. Preserve those historical caps/charges and do not start another Musashi attempt automatically. The owned-core evidence remains scoped and unadmitted; source/evidence refresh and current independent reassessment remain assigned to Plans 01-24–01-25. Phase 02 remains gated pending their outcomes and a fresh Phase 01 verification.
 - Resolved temporary Plan01-21 T-01-43 blocker: preserved complete stale seal in superseded history, independently rebound current metadata and generated a fresh verified deferred seal. Current final review/security/source/receipt identities pass; failed attempt and corrective audit remain historical.
 
 ## Deferred Items
@@ -163,6 +165,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-04T02:06:57.729Z
-Stopped at: Completed 01-22-PLAN.md; Plan 01-23 is next; phase remains GAPS_FOUND
+Last session: 2026-10-04T04:11:41.227Z
+Stopped at: Completed 01-23-PLAN.md; Plan 01-24 is next; phase remains GAPS_FOUND
 Resume file: None

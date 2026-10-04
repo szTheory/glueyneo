@@ -59,7 +59,7 @@ Plans:
 - [x] 01-22-PLAN.md — Repair CR-01 continuation behavior and bind expanded continuation to a distinct receipt profile; retain unknown silicon behavior.
 
 **Wave 23** *(gap closure; depends on Wave 22)*
-- [ ] 01-23-PLAN.md — Make cumulative churn monotonic, align exact-cap sealing, and correct contributor-facing README status.
+- [x] 01-23-PLAN.md — Make cumulative churn monotonic, align exact-cap sealing, and correct contributor-facing README status.
 
 **Wave 24** *(gap closure; depends on Wave 23)*
 - [ ] 01-24-PLAN.md — Rebuild and qualify the repaired source across the owned debug, release and sanitizer lanes with exact identities.
@@ -186,7 +186,7 @@ Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 22/25 | In Progress |  |
+| 1. CPU acceptance experiment | v0.1 | 23/25 | In Progress |  |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
