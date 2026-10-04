@@ -5,34 +5,36 @@ titles: json
 findings:
   - id: CR-01
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "Continuation rejects reachable state after a supported RTE"
   - id: CR-02
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "Earlier exceeded churn can disappear behind a lower final entry"
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Sealing rejects resource totals allowed by the frozen validator"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "README says the implemented owned runtime does not exist"
-open: 4
+open: 0
 total: 4
-recorded: 2026-10-03T21:38:27.247Z
+recorded: 2026-10-04T17:28:57Z
 ---
 
 # Phase 01: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | open | - |
-| CR-02 | critical | open | - |
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
+| CR-01 | critical | fixed | 01-22-SUMMARY.md; 01-25-SUMMARY.md (not in the current review) |
+| CR-02 | critical | fixed | 01-23-SUMMARY.md; 01-25-SUMMARY.md (not in the current review) |
+| WR-01 | warning | fixed | 01-23-SUMMARY.md; 01-25-SUMMARY.md (not in the current review) |
+| WR-02 | warning | fixed | 01-23-SUMMARY.md; 01-25-SUMMARY.md (not in the current review) |
+
+Plan 01-22 records the CR-01 continuation repair. Plan 01-23 records the CR-02 accounting and WR-01 cap repairs plus the WR-02 README correction. Plan 01-25 independently reviewed and dispositioned all four within the bounded candidate, resource-accounting and documentation scope. The 2026-10-04 incremental code review of the four Plan 01-25 artifacts is clean with no new findings.
+
+These dispositions do not admit the backend or resolve original-silicon behavior. The exact 0x4AFC candidate exclusion remains bounded, the original-MC68000 saved PC remains unknown, CPU-01–05 remain Pending, and Phase 01 remains open pending phase-goal verification.
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
-Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
-Re-running the gate keeps every row it can. A row the current review no longer reports is kept and its Source cell flagged, so a finding does not leave this record silently. ONE exception: when a finding id is REUSED by a different finding, the earlier decision cannot keep a row — the id is taken — and it is dropped. A RECORDED decision (anything but `open`) is named on the console when that happens; a row still at `open` is replaced silently, because `open` records no decision to lose.
