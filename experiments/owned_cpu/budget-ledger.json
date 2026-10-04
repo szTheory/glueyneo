@@ -1940,6 +1940,46 @@
         "status": "pass"
       },
       "working_tree_dirty": false
+    },
+    {
+      "active_seconds": 2015,
+      "agent_intervals": [
+        {
+          "agent": "codex",
+          "end": "2026-10-04T02:52:17Z",
+          "start": "2026-10-04T02:18:42Z"
+        }
+      ],
+      "build_dir": "build/owned-debug",
+      "build_identity": {
+        "build_ninja_sha256": "22e9fad5c86b1e9bc48708c054e98ec0d2582afde79cb5d4e205620d44c0ce57",
+        "cmake_cache_sha256": "ed9275b4e3884b1cc8dc26a699d60bdc50c8be8b34fd7b201be1630a78c9602e"
+      },
+      "commit": "306500a99152b7b62db06464dafc9711365461ea",
+      "cumulative_churn": {
+        "runtime_added": 1164,
+        "runtime_deleted": 64,
+        "test_tool_added": 6327,
+        "test_tool_deleted": 185
+      },
+      "diagnostic_gate": false,
+      "fixture_sha256": {
+        "tests/cpu/ORACLE.md": "8a1f9c113ea4fe7608a41b2fedd856c69533a1009b07f9dda6dafd276dc93ade",
+        "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
+        "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c"
+      },
+      "recorded_at": "2026-10-04T02:52:23.000233Z",
+      "stage": "plan-01-23-task-2-inclusive-seal-and-readme",
+      "test_results": {
+        "cases": [
+          "owned_cpu_inventory"
+        ],
+        "expected": 1,
+        "log_sha256": "8188f6a939b7cff70a1475c3bc577f74af9022eda8d10136d1e8fa4e3a4c0cf8",
+        "observed": 1,
+        "status": "pass"
+      },
+      "working_tree_dirty": false
     }
   ],
   "freeze_amendments": [
