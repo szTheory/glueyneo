@@ -5,12 +5,12 @@ status: validated
 nyquist_compliant: true
 wave_0_complete: true
 created: "2026-10-01"
-updated: "2026-10-04"
+updated: "2026-10-05"
 ---
 
 # Phase 01 — Validation Strategy
 
-The original map below records the historical Plan 01-01–01-04 candidate evidence. The current plan set and its per-task commands are covered by the 2026-10-03 audit at the end of this file. Validation coverage does not establish backend admission; CPU-01–05 remain Pending while F14-03 is unresolved.
+The original map below records the historical Plan 01-01–01-04 candidate evidence. Dated execution audits below reconcile subsequent plan tasks and their actual commands. Validation coverage does not establish backend admission; CPU-01–05 remain Pending while Phase 01 verification is open, and original-silicon saved PC remains unknown.
 
 ## Test Infrastructure
 
@@ -21,6 +21,7 @@ The original map below records the historical Plan 01-01–01-04 candidate evide
 | Configure | `cmake -S . -B build/cpu-final -G Ninja -DGLUEYNEO_CPU_EXPERIMENT=ON` |
 | Build | `cmake --build build/cpu-final` |
 | Full run | `ctest --test-dir build/cpu-final -L cpu --output-on-failure --no-tests=error` — 30/30, as recorded by Plan 01-04 |
+| Current documentation regression | `PYTHONPATH=. python3 tests/workflow/test_phase01_docs.py` — 5/5 tests and 20/20 local README links, as recorded by Plan 01-28 |
 | Instrumented runs | Plan 01-04 acceptance receipt records 8 ASan/UBSan and 18 TSan passes; unavailable lanes remain explicitly unsupported |
 
 ASan/UBSan uses `build/cpu-asan` with `-DGLUEYNEO_CPU_SANITIZER=ADDRESS_UNDEFINED`; TSan uses `build/cpu-tsan` with `-DGLUEYNEO_CPU_SANITIZER=THREAD`. Both configurations instrument the actual adapted runtime as well as tests. Final sanitizer results are recorded in the acceptance receipt and Plan 01-04 evidence; compiler launch probes alone are not counted as backend sanitizer results. The runnable infrastructure was established in the first tracer, with no separate scaffolding-only execution wave.
@@ -316,3 +317,25 @@ These checks cover the plan's documentation and decision-reproduction tasks only
 They do not complete CPU-01–05 or replace fresh phase-goal verification. No source
 or test file changed during this audit; the passing existing regression and the
 two read-only validators provide the required coverage.
+
+## Plans 01-27–01-28 execution validation audit — 2026-10-05
+
+| Metric | Count |
+|--------|-------|
+| Plan tasks mapped | 5/5 |
+| Automated verification blocks passing | 12/12 |
+| New tests required | 0 |
+
+| Task | Automated verification and retained outcome | Status |
+|------|-----------------------------------------------|--------|
+| 01-27-01 | `01-27-CLOSEOUT.json` archive/hash and stale-binding reproduction assertion; archived six payloads verified and the expected fail-closed reproduction retained | COVERED |
+| 01-27-02 | Contract validation, budget check, acceptance verification, and exact receipt/ledger preservation comparisons | COVERED |
+| 01-27-03 | Normal and optimized deferred-seal regression; review-check, seal, contract, acceptance, budget, and final read-only comparison; all recorded as passing | COVERED |
+| 01-28-01 | Frozen-subject regression 1/1; `contract.py validate`; `acceptance.py verify`; documentation suite 5/5 with 20/20 local links and four detected mutation controls | COVERED |
+| 01-28-02 | `git diff --check` and historical UAT-prefix assertion; both recorded as passing, rows 1–49 preserved and row 50 present | COVERED |
+
+These rows reconcile existing plan evidence and do not replay historical UAT,
+rerun native qualification, or complete any CPU requirement. The bounded
+documentation regression supplies recurring automated checks for the restored
+admission text, canonical STATE navigation and stale-route/link failures. Phase
+01 remains open pending one fresh whole-phase verifier.

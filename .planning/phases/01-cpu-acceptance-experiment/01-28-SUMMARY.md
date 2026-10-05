@@ -132,6 +132,31 @@ The executor tracer protocol requires an end-to-end gate rerun after Task 1, so 
 
 The initial .git ledger write was sandbox-denied and succeeded under reviewed escalation. Normal commits used hooks; no bypass. One malformed patch combining delete/add on the same handoff path was rejected before mutation and replaced with a normal update.
 
+## Post-execution assurance gates — 2026-10-05
+
+The Nyquist audit reconciled all five tasks in Plans 01-27 and 01-28 against
+their recorded automated checks; all 12 plan verification blocks pass and no
+new test is needed. The current Plan 01-28 checks include 5/5 documentation
+tests, 20/20 local README links, and four negative controls.
+
+The Plan 01-28 threat register was checked at ASVS L1 against its recorded
+evidence: T-01-61 (admission-text tampering) CLOSED by the exact restored gate
+and passing contract/acceptance checks; T-01-62 (navigation/status spoofing)
+CLOSED by the resolving STATE pointer, mutation controls and additive row 50;
+T-01-63 (candidate-evidence repudiation) CLOSED by passing read-only receipt
+verification and unchanged sealed inputs; T-01-SC (dependency installation)
+ACCEPTED as low risk by the plan disposition because the change adds no
+dependency, package install, runtime code or network surface. Open high or
+critical findings: 0. CPU-01–05 remain Pending and original-silicon saved PC
+remains unknown.
+
+The current `01-SECURITY.md` bytes are bound by the deferred receipt at SHA-256
+`27d9974e72c9e58b8131d30883c5555c03665718a32b997bb3d138980d0137e2`. Editing
+that report to append this documentation-only crosswalk would make
+`acceptance.py verify` fail with a stale security document and require another
+independent report rebind. The crosswalk is recorded here; the sealed security
+report and receipt remain unchanged.
+
 ## Preservation and Scope
 
 All three pre-existing out-of-scope edited files retain their starting SHA-256 identities: METHODOLOGY, whole-phase VERIFICATION and dated verification-loop preparation evidence. They were not staged. No new dependency, network endpoint, auth path, schema or runtime surface was introduced. No known stub, skipped test or unrun plan verification remains.
