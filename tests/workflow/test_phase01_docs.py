@@ -16,9 +16,9 @@ def markdown_link_targets(markdown):
     links = re.findall(r"\[[^\]]+\]\(([^)]+)\)", markdown)
     definitions = {}
     for label, angle_target, plain_target in re.findall(
-            r"(?m)^[ \t]{0,3}\[([^\]]+)\]:\s*(?:<([^>\n]+)>|(\S+))", markdown):
+                r"(?m)^[ \t]{0,3}\[([^\]]+)\]:\s*(?:<([^>\n]+)>|(\S+))", markdown):
         normalized = " ".join(label.split()).casefold()
-        definitions[normalized] = angle_target or plain_target
+        definitions.setdefault(normalized, angle_target or plain_target)
 
     reference_use = re.compile(r"(?<!!)\[([^\]]+)\](?:\[([^\]]*)\])?")
     for match in reference_use.finditer(markdown):
@@ -82,6 +82,13 @@ class WorkflowDocsControls(unittest.TestCase):
     def test_broken_reference_style_link_is_rejected(self):
         readme = (self.readme + "\n[broken][phase01-broken]\n"
                   "[phase01-broken]: missing-phase01-doc.md\n")
+        with self.assertRaisesRegex(AssertionError, "broken local link"):
+            self.check_navigation(readme, self.roadmap)
+
+    def test_first_duplicate_reference_definition_is_used(self):
+        readme = (self.readme + "\n[broken][phase01-duplicate]\n"
+                  "[phase01-duplicate]: missing-phase01-doc.md\n"
+                  "[PHASE01-DUPLICATE]: README.md\n")
         with self.assertRaisesRegex(AssertionError, "broken local link"):
             self.check_navigation(readme, self.roadmap)
 
