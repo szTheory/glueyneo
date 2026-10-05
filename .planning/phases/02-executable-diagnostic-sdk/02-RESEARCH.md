@@ -502,7 +502,7 @@ Enabled in project config; current source quote: `"nyquist_validation": true`. [
 | Framework | Existing pinned Unity and CTest; Python only supervises controls/collection |
 | Current configuration | Experimental root/owned CPU CMake registration |
 | Current focused command | `ctest --preset owned-debug -L owned-diagnostic --output-on-failure` |
-| Proposed SDK quick command | `ctest --preset sdk-debug -L sdk-contract --output-on-failure` |
+| Planned SDK quick command | `ctest --preset sdk-debug -L sdk-contract --output-on-failure --no-tests=error` (02-01 explicitly registers sdk-contract and sdk-diagnostic) |
 | Proposed full local entrypoint | `python3 tools/verify_sdk.py` driving explicit CTest suites/builds |
 
 Current preset quote: `"name": "owned-debug"`; current test label quote: `LABELS "owned-cpu;owned-diagnostic"`. [VERIFIED: CMakePresets.json:5,11,17] [VERIFIED: experiments/owned_cpu/CMakeLists.txt:125-132]
@@ -610,13 +610,15 @@ These are project-specific threat-model recommendations implementing P02-C-01–
 
 These are implementation choices inside explicitly delegated discretion or unexecuted technical expectations. They require confirmation by planning/execution evidence; they do not reopen the18 locked decisions or add a user approval checkpoint.
 
-## Open Questions
+## Open Questions — RESOLVED
 
-1. **Concrete API layouts/names and caps:** delegated to planner; choose compact explicit widths, bounded descriptor count/storage and a clear capability profile. Compile both C/C++ consumers before treating layouts as public contract.
-2. **Exact CMake3.20/toolchain reach:** current4.4.3 docs/availability do not establish floor execution. Keep floor provisional and report untested combination; Phase03 owns complete qualification.
-3. **libFuzzer toolchain:** local AppleClang link probe failed. Use bounded C fallback with explicit limitations, or select an official matched LLVM installation as a development-only task. This does not block the functional SDK slice.
-4. **Fixture identity:** new recipe has not been built/run. Generate and freeze digests only after independent manual review, public-path checks and named mutation controls.
-5. **Historical gate validator:** preserve old receipts; document its pre-admission reproduction scope and exclude it from current SDK aggregate. Current STATE/ROADMAP/context own routing.
+Resolution here means a concrete planning disposition or an intentional limitation, not executed SDK qualification. The assumptions log retains the execution obligations.
+
+1. **Concrete API layouts/names and caps — RESOLVED (planned choice):** 02-01 selects gn_instance, the ordinary lifecycle/run/observation functions, fixed-width results, two region descriptors and a 1 MiB storage cap; 02-02 exercises validation and ownership. API-01–04 and P02-C-01–08 remain acceptance obligations. C/C++ layouts and installed linkage are not verified until 02-04 runs its consumers (BUILD-02).
+2. **Exact CMake3.20/toolchain reach — RESOLVED (intentional limitation):** retain provisional CMake 3.20 and schema-2 presets in 02-01/02-04 (BUILD-01); record the exact toolchain actually exercised and mark other combinations untested. Available CMake 4.4.3 and documentation do not verify the floor. Complete floor/platform qualification remains Phase 03 BUILD-04 per P02-C-18.
+3. **libFuzzer toolchain — RESOLVED (intentional limitation and selected fallback):** 02-05 selects finite seeded C media/call-sequence mutation, records lower coverage and the missing matched archive, and leaves coverage-guided libFuzzer explicitly unsupported/unrun (EVID-02, P02-C-15). No compiler installation is planned. Actual SDK mutation/sanitizer execution remains pending; trivial startup probes are not acceptance.
+4. **Fixture identity — RESOLVED (planned freeze gate):** 02-01 task 3 reuses the Phase 01 recipe in a dedicated SDK C fixture while preserving the frozen original files, generates canonical build-local bytes and documents fixture/output identities only after independent manual decoding and ordinary-API agreement; 02-03 adds consequential mutation controls and 02-06 writes the machine-readable manifest (DIAG-01/02, EVID-01, P02-C-09–12). The temporary backend probe recorded by 02-01 establishes feasibility only; canonical fixture, runner and installed-consumer qualification remain unexecuted.
+5. **Historical gate validator — RESOLVED (scope disposition):** 02-01/02-06 exclude the source-bound pre-admission checker from the current SDK aggregate, preserve historical receipts and use current STATE/ROADMAP/context for routing (EVID-03, DOC-02, P02-C-13/18). Do not restore stale Pending text or rerun Phase 01 for administrative fingerprint drift.
 
 ## Sources
 
@@ -653,4 +655,3 @@ The installed research-plan selected Context7 for CMake/LLVM and Jina for manual
 **Research date:**2026-10-05
 **Valid until:** Recheck moving tool docs/availability at execution; stable manual/locked decision references remain applicable until their scope changes.
 **Scope limits:** No implementation edited; no Phase01 verifier/UAT replay, hosted CI, publication, private media or hardware measurement performed.
-
