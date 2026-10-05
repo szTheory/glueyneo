@@ -395,14 +395,26 @@ identities: README.md SHA-256 af232fc95070a16ad9cd995820ad0fb46fce6fe96e60caf460
 initial_failure: At base b0b3b7aa123b2b18e0caf651624547b77cb7176c, the contract control ran 1 test with one pending_gate error (exit 1), validate rejected pending_gate (exit 2), acceptance rejected the same admission gate (exit 1), and the newly added docs module ran 5 tests with four failures (exit 1). Isolated in-memory probes also rejected the missing STATE link and stale fixed execution route. After repair, all four mutation controls detect their named defect.
 scope: This row validates documentation and reproduces existing evidence; it grants no CPU admission. CPU-01–05 remain Pending, candidate unqualified/admission deferred, Phase 01 open, Phase 02 gated and original-silicon saved PC unknown.
 
+### 51. Plan 01-28 code-review hardening — Markdown reference links
+expected: The contributor-navigation regression resolves inline and reference-style links, honors case/whitespace-normalized labels and the first matching definition, and rejects broken destinations.
+result: pass
+source: automated
+coverage_id: DOC-REFERENCE-LINKS
+source_revision: 73a422dc7dd7149bb5c7cb8b1cde9528cc20338f
+command: PYTHONPATH=. python3 tests/workflow/test_phase01_docs.py
+denominator: 8/8 tests pass; 20/20 local links in the current README resolve. The suite includes six negative controls, a positive existing reference target, current-document validation, and first-definition duplicate-label behavior.
+identity: tests/workflow/test_phase01_docs.py SHA-256 48f0638aaa2aded2c8c7dd52cd4d9310d1209090a8a76293c26fef27cc29b6c7.
+review: Standard-depth code review is clean; the two reference-link findings and fixes are retained in 01-REVIEW.md.
+scope: This review-driven hardening closes test-coverage defects only. It changes no README, validator, candidate, receipt, security report, CPU requirement or admission state.
+
 ## Current Supersession — 2026-10-05 Plan 01-28
 
-Earlier route statements, including row 49 and prior Current Verification Evidence, are historical at their recorded identities. Rows 1–49 and all earlier aggregates remain verbatim and were not rerun. The 2026-10-05 whole-phase report is 8/9 `gaps_found`, closing the former report-binding gap; its document finding predates this repair. Row 50 records only affected current-revision checks. Follow `.planning/STATE.md` for the next action: one separate fresh whole-phase `gsd-verifier` before more gap planning or admission.
+Earlier route statements, including row 49 and prior Current Verification Evidence, are historical at their recorded identities. Rows 1–49 and all earlier aggregates remain verbatim and were not rerun. The 2026-10-05 whole-phase report is 8/9 `gaps_found`, closing the former report-binding gap; its document finding predates this repair. Row 50 records the initial repair checks; row 51 records the review-driven reference-link regression hardening. Follow `.planning/STATE.md` for the next action: one separate fresh whole-phase `gsd-verifier` before more gap planning or admission.
 
-Active recorded UAT aggregate (50 rows; 49 historical passes plus one current documentation pass):
+Active recorded UAT aggregate (51 rows; 49 historical passes plus two current documentation passes):
 
-total: 50
-passed: 50
+total: 51
+passed: 51
 issues: 0
 pending: 0
 skipped: 0
@@ -410,4 +422,4 @@ blocked: 0
 
 This aggregate is not 50 current-revision checks and does not complete Phase 01.
 
-Final Plan 01-28 bookkeeping follow-up: ROADMAP plan-status/count prose changed after Task 1. On working-tree base ed35fb118cc4f6cb74cd350cd4e14bdfca085f13, the same four affected commands above again exited 0, with unchanged 1/1 contract and 5/5 docs tests, 20/20 resolved links, validate pass and six unqualified collections/no lane blockers. Final ROADMAP SHA-256: f5db0e06851b2b59e48e47b57bbb6fe285922ebb3b2d493b633f20205069b563. README and test SHA-256 identities remain as in row 50; its original tested revision is preserved.
+Final Plan 01-28 bookkeeping follow-up: ROADMAP plan-status/count prose changed after Task 1. On working-tree base ed35fb118cc4f6cb74cd350cd4e14bdfca085f13, the same four affected commands above again exited 0, with unchanged 1/1 contract and 5/5 docs tests, 20/20 resolved links, validate pass and six unqualified collections/no lane blockers. Final ROADMAP SHA-256: f5db0e06851b2b59e48e47b57bbb6fe285922ebb3b2d493b633f20205069b563. README and test SHA-256 identities remain as in row 50; its original tested revision is preserved. Post-review hardening is separately recorded at row 51: the committed regression passes 8/8 at 73a422dc7dd7149bb5c7cb8b1cde9528cc20338f.

@@ -8,7 +8,7 @@ requires:
     provides: independently bound deferred seal
 provides:
   - restored exact admission interface and canonical README navigation
-  - bounded local document regression with four negative controls
+  - bounded local document regression with inline/reference-link controls
   - additive current-revision UAT row and fresh-verifier handoff
 affects: [phase-01-verification, cpu-05]
 tech-stack:
@@ -86,7 +86,7 @@ status: complete
 ## Accomplishments
 
 - Restored exactly `Phase 01 remains open / GAPS_FOUND and Phase 02 gated` without changing frozen validators. ROADMAP describes the fresh 2026-10-05 8/9 verdict, the closed report-binding issue and bounded repair.
-- README now resolves through STATE, retains 49/49 as historical evidence and removes the stale fixed execution route. A standalone unittest under tests/workflow derives its checkout root and checks the actual documents plus four mutations.
+- README now resolves through STATE, retains 49/49 as historical evidence and removes the stale fixed execution route. A standalone unittest under tests/workflow derives its checkout root and checks the actual documents plus mutation controls.
 - Appended row 50 with Task 1 revision and three SHA-256 identities. The active recorded aggregate is 50/50, comprising 49 historical passes plus one current document pass. Historical rows, aggregates and source identities remain verbatim; phase admission is unchanged.
 
 ## Verification
@@ -136,8 +136,9 @@ The initial .git ledger write was sandbox-denied and succeeded under reviewed es
 
 The Nyquist audit reconciled all five tasks in Plans 01-27 and 01-28 against
 their recorded automated checks; all 12 plan verification blocks pass and no
-new test is needed. The current Plan 01-28 checks include 5/5 documentation
-tests, 20/20 local README links, and four negative controls.
+additional coverage gaps remain. Plan 01-28's initial execution recorded 5/5
+documentation tests and four negative controls; the later code-review
+corrections and current 8/8 result are recorded below.
 
 The Plan 01-28 threat register was checked at ASVS L1 against its recorded
 evidence: T-01-61 (admission-text tampering) CLOSED by the exact restored gate
@@ -156,6 +157,23 @@ that report to append this documentation-only crosswalk would make
 `acceptance.py verify` fail with a stale security document and require another
 independent report rebind. The crosswalk is recorded here; the sealed security
 report and receipt remain unchanged.
+
+## Code-review correction — 2026-10-05
+
+The standard-depth review identified two gaps in reference-style Markdown link
+coverage: reference destinations were not extracted, and duplicate normalized
+labels selected the last definition. Commits `e835bf4` and `73a422d` extend
+the existing local regression to resolve reference links and preserve
+CommonMark's first-definition behavior, with positive and negative controls.
+The final committed suite passes 8/8 and resolves all 20/20 current README
+local links. The updated test SHA-256 and exact revision are recorded in UAT
+row 51. The reviewer re-read both files and returned clean with zero findings;
+both earlier findings remain in `01-REVIEW.md` as resolved history.
+
+This correction expands only the automated documentation regression. It adds
+no candidate input, dependency, runtime behavior, CPU qualification or
+admission claim. Plan 01-28's initial 5/5 outcome remains recorded at row 50;
+the later 8/8 result supersedes it for current coverage.
 
 ## Preservation and Scope
 

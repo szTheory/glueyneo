@@ -21,7 +21,7 @@ The original map below records the historical Plan 01-01–01-04 candidate evide
 | Configure | `cmake -S . -B build/cpu-final -G Ninja -DGLUEYNEO_CPU_EXPERIMENT=ON` |
 | Build | `cmake --build build/cpu-final` |
 | Full run | `ctest --test-dir build/cpu-final -L cpu --output-on-failure --no-tests=error` — 30/30, as recorded by Plan 01-04 |
-| Current documentation regression | `PYTHONPATH=. python3 tests/workflow/test_phase01_docs.py` — 5/5 tests and 20/20 local README links, as recorded by Plan 01-28 |
+| Current documentation regression | `PYTHONPATH=. python3 tests/workflow/test_phase01_docs.py` — 8/8 tests and 20/20 local README links after review hardening (UAT row 51) |
 | Instrumented runs | Plan 01-04 acceptance receipt records 8 ASan/UBSan and 18 TSan passes; unavailable lanes remain explicitly unsupported |
 
 ASan/UBSan uses `build/cpu-asan` with `-DGLUEYNEO_CPU_SANITIZER=ADDRESS_UNDEFINED`; TSan uses `build/cpu-tsan` with `-DGLUEYNEO_CPU_SANITIZER=THREAD`. Both configurations instrument the actual adapted runtime as well as tests. Final sanitizer results are recorded in the acceptance receipt and Plan 01-04 evidence; compiler launch probes alone are not counted as backend sanitizer results. The runnable infrastructure was established in the first tracer, with no separate scaffolding-only execution wave.
@@ -339,3 +339,13 @@ rerun native qualification, or complete any CPU requirement. The bounded
 documentation regression supplies recurring automated checks for the restored
 admission text, canonical STATE navigation and stale-route/link failures. Phase
 01 remains open pending one fresh whole-phase verifier.
+
+### Documentation link regression hardening — 2026-10-05
+
+The standard-depth review found and closed two test-coverage defects. The
+committed regression now resolves reference-style links and follows the first
+definition for case/whitespace-normalized duplicate labels. At revision
+`73a422dc7dd7149bb5c7cb8b1cde9528cc20338f`, the focused suite passed 8/8,
+including six negative controls and one positive reference-link control; the
+current README's 20/20 local links resolved. The reviewer re-reviewed both
+files and found zero remaining issues. See UAT row 51 for the exact test hash.
