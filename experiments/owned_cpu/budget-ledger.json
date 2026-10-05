@@ -92,7 +92,7 @@
         "resolved_manual_review": {
           "result": "Contract and direct contract test corrected; no runtime code or cap changed.",
           "rule": "Level 7 is transition-triggered from a lower request level and can also be accepted by level comparison when the SR mask is below 7.",
-          "source": "NXP-hosted Motorola MC68000 User's Manual MC68000UM Rev 9.1, §6.3.2",
+          "source": "NXP-hosted Motorola MC68000 User's Manual MC68000UM Rev 9.1, \u00a76.3.2",
           "status": "pass"
         },
         "self_test": {
@@ -2376,28 +2376,28 @@
       "agent_intervals": [
         {
           "agent": "codex-executor-measured-final-closeout-overrun",
-          "start": "2026-10-04T22:00:06.693812Z",
-          "end": "2026-10-04T22:40:38Z"
+          "end": "2026-10-04T22:40:38Z",
+          "start": "2026-10-04T22:00:06.693812Z"
         },
         {
           "agent": "plan27-independent-security-assessor-measured-reserve-overrun",
-          "start": "2026-10-04T22:17:48Z",
-          "end": "2026-10-04T22:19:01Z"
+          "end": "2026-10-04T22:19:01Z",
+          "start": "2026-10-04T22:17:48Z"
         },
         {
           "agent": "plan27-reviewer-rebind-allowance-after-replacement-checkpoint",
-          "start": "2026-10-04T22:40:38Z",
-          "end": "2026-10-04T22:50:38Z"
+          "end": "2026-10-04T22:50:38Z",
+          "start": "2026-10-04T22:40:38Z"
         },
         {
           "agent": "plan27-security-rebind-allowance-after-replacement-checkpoint",
-          "start": "2026-10-04T22:50:38Z",
-          "end": "2026-10-04T23:00:38Z"
+          "end": "2026-10-04T23:00:38Z",
+          "start": "2026-10-04T22:50:38Z"
         },
         {
           "agent": "codex-executor-final-closeout-allowance-after-replacement-checkpoint",
-          "start": "2026-10-04T22:40:38Z",
-          "end": "2026-10-04T23:10:38Z"
+          "end": "2026-10-04T23:10:38Z",
+          "start": "2026-10-04T22:40:38Z"
         }
       ],
       "commit": "7ac8e65a1fea00b3eac2dee885da3c83c8571441",
@@ -2417,6 +2417,66 @@
         ],
         "expected": 2,
         "observed": 2,
+        "status": "pass"
+      },
+      "working_tree_dirty": true
+    },
+    {
+      "accounting_notes": "Root execution interval is conservatively charged from the recorded STATE handoff at 2026-10-05T18:17:04Z through this entry. The independent reviewer reported a 900-second all-in assessment charge; the security assessment is conservatively charged 600 seconds. Two 120-second independent final-ledger read allowances and a 600-second executor closeout allowance are prepaid and non-refundable. Plan-local checker/test churn is 712 added/deleted nonblank lines across RED, GREEN and preservation-fix commits (counted per-commit); these workflow files are outside the owned-core contract churn globs, so the frozen contract cumulative tool/test counters remain unchanged at 6,540. No runtime or diagnostic work was done.",
+      "active_seconds": 6463,
+      "agent_intervals": [
+        {
+          "agent": "codex-plan01-29-executor-measured-through-ledger",
+          "end": "2026-10-05T19:25:47Z",
+          "start": "2026-10-05T18:17:04Z"
+        },
+        {
+          "agent": "gsd-code-reviewer-plan01-29-conservative-900s-including-closeout-read",
+          "end": "2026-10-05T19:25:47Z",
+          "start": "2026-10-05T19:10:47Z"
+        },
+        {
+          "agent": "gsd-code-reviewer-final-ledger-read-reserve",
+          "end": "2026-10-05T19:27:47Z",
+          "start": "2026-10-05T19:25:47Z"
+        },
+        {
+          "agent": "gsd-security-auditor-plan01-29-conservative-600s",
+          "end": "2026-10-05T19:25:47Z",
+          "start": "2026-10-05T19:15:47Z"
+        },
+        {
+          "agent": "gsd-security-auditor-final-ledger-read-reserve",
+          "end": "2026-10-05T19:27:47Z",
+          "start": "2026-10-05T19:25:47Z"
+        },
+        {
+          "agent": "codex-plan01-29-task2-final-closeout-reserve",
+          "end": "2026-10-05T19:35:47Z",
+          "start": "2026-10-05T19:25:47Z"
+        }
+      ],
+      "commit": "54136cf0ce36a57238debfa0c1e027c6b626c14f",
+      "cumulative_churn": {
+        "runtime_added": 1164,
+        "runtime_deleted": 64,
+        "test_tool_added": 6355,
+        "test_tool_deleted": 185
+      },
+      "diagnostic_gate": false,
+      "plan_tool_test_churn_nonblank_added_deleted": 712,
+      "recorded_at": "2026-10-05T19:25:47Z",
+      "stage": "plan-01-29-independent-admission-and-closeout",
+      "test_results": {
+        "cases": [
+          "Admission controls: normal Python 15/15",
+          "Admission controls: optimized Python 15/15",
+          "contract.py validate passed",
+          "contract.py budget passed",
+          "acceptance.py verify passed"
+        ],
+        "expected": 5,
+        "observed": 5,
         "status": "pass"
       },
       "working_tree_dirty": true

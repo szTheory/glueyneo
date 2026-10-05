@@ -1,0 +1,284 @@
+{
+  "blocker": null,
+  "decision_recorded_at": "2026-10-05T19:25:47Z",
+  "disposition": "accept_recommended",
+  "executor_agent_id": "/root",
+  "hardware_saved_pc": "unknown",
+  "identity": {
+    "acceptance_sha256": "62663275b785137cba2d225f2b4a4572e3696d7ed7245c7cd87dd89432ecf23c",
+    "active_contract_identity_sha256": "27af8df79b55f83bffdef63981defc23984fff6b4e0002d10e99621310340419",
+    "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+    "collection_sha256": "cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738",
+    "contract_sha256": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73",
+    "hardware_saved_pc": "unknown",
+    "old_review_sha256": "ecbe3c6fe6767ccfe8eb5b81e12223ac8b25a812bddd0b2b3adc335c5d7049ce",
+    "old_security_sha256": "27d9974e72c9e58b8131d30883c5555c03665718a32b997bb3d138980d0137e2",
+    "oracle_sha256": "2af54ed3fd35303c68d92b551ce02a65b1fb94f4b42a84779d03734e264771e0",
+    "profile": "owned-p01-c14-continuation-2",
+    "receipt_sha256": "fb14db2af97e7c1c10d8632892bc152189de5db7bae4df104391ce8516c6e7f0",
+    "runtime_sha256": "f11a282d5f571a67fff687c08cc90a44f5b6ff54bb5334b9c21bf17a4abcbee7",
+    "source_manifest_sha256": "ae481ac75ac88dd40cc86de52fa827a4941280ca3ce6f4e0952c71ecf3a47eab",
+    "source_map_sha256": "be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d",
+    "source_revision": "bd390a7f5f6ede0a69df42f8df1fc98905d171ea",
+    "state_inventory_sha256": "42ab974ac633b73a15c7ac10d3ba604dccfdc0aa8453905a03934a54b17acbab",
+    "subset_sha256": "5fc0c0aa872a6a2ec2e39e86b085e8426f4b378cf3c48736317c8f10961efb4c",
+    "unsupported_opcodes": [
+      "0x4AFC"
+    ]
+  },
+  "implementation": {
+    "checker_sha256": "b5e164b758d7b2ddb740af8e3099ca0611e0ad3dde92f4530e5a002b56e5b92c",
+    "tests_sha256": "7b5f6ce1d44a3694213287acc74b69f1d712cb5d649f3973617380066439f2d4"
+  },
+  "phase_admitted": false,
+  "preservation": {
+    "final_ledger_sha256": "2ecf3802a9d7087b485845ecb2416aa3b0307ff7c3202625cdc3c12876dcf848",
+    "identity": {
+      "acceptance_sha256": "62663275b785137cba2d225f2b4a4572e3696d7ed7245c7cd87dd89432ecf23c",
+      "active_contract_identity_sha256": "27af8df79b55f83bffdef63981defc23984fff6b4e0002d10e99621310340419",
+      "amendment_sha256": "3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad",
+      "collection_sha256": "cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738",
+      "contract_sha256": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73",
+      "hardware_saved_pc": "unknown",
+      "old_review_sha256": "ecbe3c6fe6767ccfe8eb5b81e12223ac8b25a812bddd0b2b3adc335c5d7049ce",
+      "old_security_sha256": "27d9974e72c9e58b8131d30883c5555c03665718a32b997bb3d138980d0137e2",
+      "oracle_sha256": "2af54ed3fd35303c68d92b551ce02a65b1fb94f4b42a84779d03734e264771e0",
+      "profile": "owned-p01-c14-continuation-2",
+      "receipt_sha256": "fb14db2af97e7c1c10d8632892bc152189de5db7bae4df104391ce8516c6e7f0",
+      "runtime_sha256": "f11a282d5f571a67fff687c08cc90a44f5b6ff54bb5334b9c21bf17a4abcbee7",
+      "source_manifest_sha256": "ae481ac75ac88dd40cc86de52fa827a4941280ca3ce6f4e0952c71ecf3a47eab",
+      "source_map_sha256": "be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d",
+      "source_revision": "bd390a7f5f6ede0a69df42f8df1fc98905d171ea",
+      "state_inventory_sha256": "42ab974ac633b73a15c7ac10d3ba604dccfdc0aa8453905a03934a54b17acbab",
+      "subset_sha256": "5fc0c0aa872a6a2ec2e39e86b085e8426f4b378cf3c48736317c8f10961efb4c",
+      "unsupported_opcodes": [
+        "0x4AFC"
+      ]
+    },
+    "immutable_files": {
+      ".planning/phases/01-cpu-acceptance-experiment/01-SECURITY.md": "27d9974e72c9e58b8131d30883c5555c03665718a32b997bb3d138980d0137e2",
+      "experiments/owned_cpu/ACCEPTANCE.md": "62663275b785137cba2d225f2b4a4572e3696d7ed7245c7cd87dd89432ecf23c",
+      "experiments/owned_cpu/CONTRACT.md": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73",
+      "experiments/owned_cpu/REVIEW.md": "ecbe3c6fe6767ccfe8eb5b81e12223ac8b25a812bddd0b2b3adc335c5d7049ce",
+      "experiments/owned_cpu/SUBSET.md": "5fc0c0aa872a6a2ec2e39e86b085e8426f4b378cf3c48736317c8f10961efb4c",
+      "experiments/owned_cpu/acceptance-results.json": "fb14db2af97e7c1c10d8632892bc152189de5db7bae4df104391ce8516c6e7f0",
+      "experiments/owned_cpu/illegal-reconciliation.json": "b6118fe7b4f846784ac06497509934e58481a5135f9116b6f99cf8eea2588298",
+      "experiments/owned_cpu/source-manifest.json": "ae481ac75ac88dd40cc86de52fa827a4941280ca3ce6f4e0952c71ecf3a47eab",
+      "experiments/owned_cpu/state-inventory.json": "42ab974ac633b73a15c7ac10d3ba604dccfdc0aa8453905a03934a54b17acbab",
+      "tests/owned_cpu/ORACLE.md": "2af54ed3fd35303c68d92b551ce02a65b1fb94f4b42a84779d03734e264771e0"
+    },
+    "ledger": {
+      "appended": {
+        "count": 1,
+        "sha256": "99b12835000239af3e4181f4080c16640ce7ba8b60abea4c1fa591ce58b5cc70"
+      },
+      "frozen_sha256": "ce79efc146157e3519df995b04433f45081d38ea4627f75e9be7778b742dff44",
+      "prefix_entries": 47,
+      "prefix_sha256": "8de155bd24a2b700ab1a5c86a05f532a951de03e287581635ba1b09e1afb58ea"
+    },
+    "receipt_objects_sha256": "7829bebfdfc612151d197e42980c5dd41ea0be8129d7ba2b68ac3fc00b84524c",
+    "source_hashes": {
+      "CMakeLists.txt": "cdcf97770a240f4e44fd28a618c9b9b5444713d385433cea777ae8d1020b43ff",
+      "CMakePresets.json": "d0ae026871d4bee5479e17f664bd8a27a939a71129d637d6fb19667d65030ded",
+      "LICENSE": "9dad75e7582e12fb43b0d1deeca3e3469757f94f0225b798cb659c1980661ec7",
+      "experiments/owned_cpu/ACCEPTANCE.md": "62663275b785137cba2d225f2b4a4572e3696d7ed7245c7cd87dd89432ecf23c",
+      "experiments/owned_cpu/CMakeLists.txt": "57f96d4a16b708f0db9eddba953654551b7f089a70694eea1faa6e791e1db9fb",
+      "experiments/owned_cpu/CONTRACT.md": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73",
+      "experiments/owned_cpu/PROVENANCE.md": "14a9178963cb773b8331668223bc14272d009a9edacecd1e80f2083726fa1ce8",
+      "experiments/owned_cpu/SUBSET.md": "5fc0c0aa872a6a2ec2e39e86b085e8426f4b378cf3c48736317c8f10961efb4c",
+      "experiments/owned_cpu/cpu.c": "f11a282d5f571a67fff687c08cc90a44f5b6ff54bb5334b9c21bf17a4abcbee7",
+      "experiments/owned_cpu/cpu.h": "f25bc48181c344471e77c3645eb2a75c4ebece0a81014f71bfccd12f4be002a1",
+      "experiments/owned_cpu/illegal-reconciliation.json": "b6118fe7b4f846784ac06497509934e58481a5135f9116b6f99cf8eea2588298",
+      "experiments/owned_cpu/source-manifest.json": "ae481ac75ac88dd40cc86de52fa827a4941280ca3ce6f4e0952c71ecf3a47eab",
+      "experiments/owned_cpu/state-inventory.json": "42ab974ac633b73a15c7ac10d3ba604dccfdc0aa8453905a03934a54b17acbab",
+      "tests/cpu/ORACLE.md": "8a1f9c113ea4fe7608a41b2fedd856c69533a1009b07f9dda6dafd276dc93ade",
+      "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
+      "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c",
+      "tests/owned_cpu/ORACLE.md": "2af54ed3fd35303c68d92b551ce02a65b1fb94f4b42a84779d03734e264771e0",
+      "tests/owned_cpu/cold.py": "4f0687b793cb04a4c61b31dc917ec7d08233e9a272bf2c0e41b274d06d604f84",
+      "tests/owned_cpu/isolation_fixture.h": "95ca205b077d7459edd2af0194dc9af79954be011fe9c39e8f1efa7da5eb474d",
+      "tests/owned_cpu/negative.py": "2f2cf4a75ba8078e09d5a7eae98181f574c5add8a030b58ab8aa741a9a3f863e",
+      "tests/owned_cpu/negative_timing.py": "60de0df46d1ae4b4a695c172d3fdede765f5b0c3bfe3d4f971108deb8ea1583f",
+      "tests/owned_cpu/test_acceptance.py": "92ad36fd9d9b6da9dc58accfc381a72b37c91fdf92705e9ecdc20eb35efde0d9",
+      "tests/owned_cpu/test_cold.c": "e2bcb33eea1a24cdc8c0a5340928e4b5d3705b4f0649b6299c370d5560e26d63",
+      "tests/owned_cpu/test_contract.py": "0d7ca07027b90d7a8655f2d48972e65a194d4b538abd2f1c82ef357dd0a87cfd",
+      "tests/owned_cpu/test_diagnostic.c": "a3d7b2e60f2f0e4fd49042b069dc8729a268816c8bbfd42bfa3a34ed3121937a",
+      "tests/owned_cpu/test_faults.c": "71e09309af7c556b907563229ae6e176958ee91dbe7ddad5ceff124fabe071fa",
+      "tests/owned_cpu/test_inventory.py": "247cf3edf0bb528b9fc6a3198846f7e759f1b147c5b1807761ad9a4c29af383f",
+      "tests/owned_cpu/test_isolation.c": "35a5a515e1df3798bcae4a190387e32c4ea6ce6a0aa2ac628789111d85d7e155",
+      "tests/owned_cpu/test_semantics.c": "871a7ff936d0a38cccba0a0e601a90bac37377f4fc62d2e687b8e5b76316e25f",
+      "tests/owned_cpu/test_state.c": "02f7689a0f2f58d3ef402638c980a70e5d37b0f5da30cdeb7b14a55ae926f5d8",
+      "tests/owned_cpu/test_timing.c": "606f7c2d2b08c368a65def9b25b0f36eb9122f0e751bd37c9ae5666d5493bbce",
+      "third_party/unity/LICENSE.txt": "ec6cf55f05ba2aa538b9677b2481b9ac14a87c63594fce8a0677d4f71c583980",
+      "third_party/unity/PROVENANCE.md": "c6666a2ed5b5f44efc9bc5553a0485fd49a23cdf1e64c33da8810d67362c03ce",
+      "third_party/unity/src/unity.c": "a6cc4b143075a03317d72c760b5ed67a4a12eeda1242f575464ad23f34042275",
+      "third_party/unity/src/unity.h": "b30ba4db1e0be1a1f6c862d359d73c91025a114977e41d3dad17103363804334",
+      "third_party/unity/src/unity_internals.h": "35bffad23ebc533977291e7a848c646027513572268fbfa9bd03d5ec21ee818a",
+      "tools/owned_cpu/acceptance.py": "70e88a0fb525ed20989143b908299d65e84feac129e45a906d7c6f5d2b104f3c",
+      "tools/owned_cpu/contract.py": "ceed2df6d9f0438e9e9981f4e91f4033febc605636006d6e8f3a6267c1e99650",
+      "tools/owned_cpu/inventory.py": "763785aef1b7497bcabaf304bcaeee2bbeadba1e573ab1e9b2b6e228ff34a0bf"
+    },
+    "uat": {
+      "final_rows": 57,
+      "historical_rows": 51,
+      "prefix_bytes": 31268,
+      "prefix_sha256": "5014e42d2e02d96970b978bebe42e615257324486d2aef4805c250e85ca158f9"
+    }
+  },
+  "reports": {
+    "review": {
+      "path": ".planning/phases/01-cpu-acceptance-experiment/01-29-ADMISSION-REVIEW.md",
+      "sha256": "6dacffb2b629d4151beb72a1cbfff755278a77d56cafde0c4329dbc123d39a4a"
+    },
+    "security": {
+      "path": ".planning/phases/01-cpu-acceptance-experiment/01-29-ADMISSION-SECURITY.md",
+      "sha256": "0502b8036d451a1f0672e64ef8797b49772edf5f9b331ffc117be876938a92ca"
+    }
+  },
+  "requirements": {
+    "CPU-01": {
+      "decision": "sufficient",
+      "evidence": [
+        {
+          "claim": "38 per-file origin/license/compiled/distributed records; cpu.c alone is the runtime archive source and generated runtime list is empty.",
+          "denominator": 38,
+          "limitation": "Inventory is bounded to current experiment; generated build products are local outputs and Unity is test-only.",
+          "oracle": "Immutable source inventory plus recorded compile/archive inspection.",
+          "path": "experiments/owned_cpu/source-manifest.json",
+          "sha256": "ae481ac75ac88dd40cc86de52fa827a4941280ca3ce6f4e0952c71ecf3a47eab"
+        },
+        {
+          "claim": "Independent direct read found all persistent mutable fields in owned_cpu, explicit per-owner bus/allocator callbacks, bounded standard C memory operations, and no imported CPU/FPU/generator or direct ambient host services.",
+          "denominator": 1,
+          "limitation": "C17 acceptance is for the recorded native compiler; this does not qualify the CMake 3.20 floor or another platform.",
+          "oracle": "Direct source inspection at assessment commit.",
+          "path": "experiments/owned_cpu/cpu.c",
+          "sha256": "f11a282d5f571a67fff687c08cc90a44f5b6ff54bb5334b9c21bf17a4abcbee7"
+        }
+      ]
+    },
+    "CPU-02": {
+      "decision": "sufficient",
+      "evidence": [
+        {
+          "claim": "Per lane: two distinguishable isolated owners, 32 interleaved pairs and 32 concurrent cold pairs compare observations, guest RAM and ordered callbacks at six boundaries; 16 independent fresh processes also pass.",
+          "denominator": 64,
+          "limitation": "Finite two-owner schedules; no same-instance overlap or arbitrary concurrent caller-supplied bus proof.",
+          "oracle": "Recorded source-bound four-lane fixture observations; project-original recipes and Motorola/NXP manual-derived expectations, not silicon captures.",
+          "path": "experiments/owned_cpu/acceptance-results.json",
+          "sha256": "fb14db2af97e7c1c10d8632892bc152189de5db7bae4df104391ce8516c6e7f0"
+        },
+        {
+          "claim": "Boundary comparator includes distinguishable D0/store/IRQ results; swapped-owner negative control is meaningful and cold pairs compare all six boundaries.",
+          "denominator": 64,
+          "limitation": "Matching baselines alone cannot establish ISA truth.",
+          "oracle": "Project-original isolated baseline oracle; expected guest stores derive from original diagnostic recipe.",
+          "path": "tests/owned_cpu/test_isolation.c",
+          "sha256": "35a5a515e1df3798bcae4a190387e32c4ea6ce6a0aa2ac628789111d85d7e155"
+        },
+        {
+          "claim": "Five named test functions cover invalid creation/allocation, callback reentry, reset fault/recovery, seven execution callback faults and STOP wake; owner release counters remain zero after teardown.",
+          "denominator": 5,
+          "limitation": "One allocation site; caller-provided accessible buffers and correctly aligned allocator storage remain host obligations.",
+          "oracle": "Direct fixture assertions of error reason, callback count, allocation ownership and partial-write preservation.",
+          "path": "tests/owned_cpu/test_faults.c",
+          "sha256": "71e09309af7c556b907563229ae6e176958ee91dbe7ddad5ceff124fabe071fa"
+        }
+      ]
+    },
+    "CPU-03": {
+      "decision": "sufficient",
+      "evidence": [
+        {
+          "claim": "Per lane: two original diagnostic scenarios produce 10 and 16, 17 semantic cases and 25 timing/exception cases pass with exact command/configuration identities and nonzero CTest denominator.",
+          "denominator": 25,
+          "limitation": "Selected instruction/event model only; finite cases do not qualify full ISA, prefetch, pin cycles, wait states or board timing.",
+          "oracle": "Recorded source-bound four-lane fixture observations; project-original recipes and Motorola/NXP manual-derived expectations, not silicon captures.",
+          "path": "experiments/owned_cpu/acceptance-results.json",
+          "sha256": "fb14db2af97e7c1c10d8632892bc152189de5db7bae4df104391ce8516c6e7f0"
+        },
+        {
+          "claim": "Manual references, named result/frame/event assertions and consequential wrong-cycle/unsupported controls describe the bounded timing oracle; this review corrects the SR_switch_odd_USP extension-read sentence.",
+          "denominator": 25,
+          "limitation": "No silicon capture; the SR_switch_odd_USP $106 read sentence is unsupported and superseded by WR-01 below.",
+          "oracle": "MC68000UM Rev 9.1 sections/timing tables and M68000PRM encodings; functional callback order and fault-PC values are project policy.",
+          "path": "tests/owned_cpu/ORACLE.md",
+          "sha256": "2af54ed3fd35303c68d92b551ce02a65b1fb94f4b42a84779d03734e264771e0"
+        },
+        {
+          "claim": "P01-C-14 excludes only exact 0x4AFC; P01-C-13 original-silicon saved PC remains unknown.",
+          "denominator": 1,
+          "limitation": "Intentional ILLEGAL-using guest code is unsupported; no hardware saved-PC value is selected.",
+          "oracle": "Explicit owner-approved capability amendment, not a hardware oracle.",
+          "path": "experiments/owned_cpu/illegal-reconciliation.json",
+          "sha256": "b6118fe7b4f846784ac06497509934e58481a5135f9116b6f99cf8eea2588298"
+        }
+      ]
+    },
+    "CPU-04": {
+      "decision": "sufficient",
+      "evidence": [
+        {
+          "claim": "26 persistent instance fields plus automatic transient state and callbacks have explicit ownership/disposition; private record rebinds host ownership and reconstructs readiness.",
+          "denominator": 26,
+          "limitation": "Conventional-source inventory tooling is not a general C parser; private fixed accessible C record only.",
+          "oracle": "Direct comparison with owned_cpu struct and capture/restore source.",
+          "path": "experiments/owned_cpu/state-inventory.json",
+          "sha256": "42ab974ac633b73a15c7ac10d3ba604dccfdc0aa8453905a03934a54b17acbab"
+        },
+        {
+          "claim": "15 named checkpoint sequences perform fresh destination restore with cloned guest memory, destroy/overwrite source ownership and compare six subsequent results, fields, memory and ordered callback streams.",
+          "denominator": 90,
+          "limitation": "Equivalence cannot certify absolute hardware state; public snapshots, cross-build compatibility and arbitrary byte parsing are excluded.",
+          "oracle": "Project-original uninterrupted-versus-restored owner equivalence plus direct named boundary assertions.",
+          "path": "tests/owned_cpu/test_state.c",
+          "sha256": "02f7689a0f2f58d3ef402638c980a70e5d37b0f5da30cdeb7b14a55ae926f5d8"
+        },
+        {
+          "claim": "Current profile records 15 checkpoints / 90 continuation calls in each of four exercised lanes; older profiles and counterexamples remain separate history.",
+          "denominator": 90,
+          "limitation": "Finite supported ready boundaries; no mid-instruction suspension or terminal-fault serialization.",
+          "oracle": "Recorded source-bound four-lane fixture observations; project-original recipes and Motorola/NXP manual-derived expectations, not silicon captures.",
+          "path": "experiments/owned_cpu/acceptance-results.json",
+          "sha256": "fb14db2af97e7c1c10d8632892bc152189de5db7bae4df104391ce8516c6e7f0"
+        }
+      ]
+    },
+    "CPU-05": {
+      "decision": "sufficient",
+      "evidence": [
+        {
+          "claim": "Frozen 115200-active-second, 28800-diagnostic-second, 6000-runtime-line and 8000-test/tool-line ceilings predate owned implementation and require failed/reverted work with no refunds.",
+          "denominator": 4,
+          "limitation": "Effort logs are maintainer evidence rather than independently provable time; final Plan 01-29 all-agent accounting remains a required executor closeout.",
+          "oracle": "Frozen contract and append-only accounting policy.",
+          "path": "experiments/owned_cpu/CONTRACT.md",
+          "sha256": "6ec5b901efb87618b2a03e348bd3fc068e28ae0fc24665a4c041067a1f0c2f73"
+        },
+        {
+          "claim": "Independent inspection confirms monotonic cumulative churn, inclusive exact caps, named pause outcomes, original diagnostic gate and historical hash checks; fresh read-only budget reports 47 records, 79763 active seconds, 2565 diagnostic seconds, 1228 runtime and 6540 test/tool churn.",
+          "denominator": 47,
+          "limitation": "This assessment does not approve a future crossed threshold. Ledger hash is bound by final decision preservation, not by this pre-append report.",
+          "oracle": "Frozen budget policy with regression-backed historical independent review; current read-only budget output.",
+          "path": "tools/owned_cpu/contract.py",
+          "sha256": "ceed2df6d9f0438e9e9981f4e91f4033febc605636006d6e8f3a6267c1e99650"
+        },
+        {
+          "claim": "Historical F14-01/F14-02 receipt guards and CR-02/WR-01 budget fixes retain dated normal/-O evidence; candidate-specific F14-03 supersession does not select hardware truth.",
+          "denominator": 7,
+          "limitation": "The existing current section was metadata-only; this new full-scope judgment does not convert its old native executions into fresh runs.",
+          "oracle": "Independent dated review and source-backed finding dispositions.",
+          "path": "experiments/owned_cpu/REVIEW.md",
+          "sha256": "ecbe3c6fe6767ccfe8eb5b81e12223ac8b25a812bddd0b2b3adc335c5d7049ce"
+        }
+      ]
+    }
+  },
+  "reviewer_agent_id": "/root/admission_review",
+  "schema": 1,
+  "security": {
+    "open_high_or_critical": 0,
+    "status": "verified"
+  },
+  "security_agent_id": "/root/admission_security"
+}

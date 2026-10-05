@@ -4,17 +4,17 @@ milestone: v0.1
 milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
-status: "Plan 01-29 ready to execute; latest Phase 01 verifier: GAPS_FOUND (9/10); admission remains unqualified"
-stopped_at: "Plan 01-29 planned; Phase 01 remains incomplete; next: $gsd-execute-phase 01 --gaps-only"
-last_updated: "2026-10-05T18:17:04Z"
+status: "Plan 01-29 executed; independent bounded accept recommendation recorded; Phase 01 awaits a separate fresh verifier"
+stopped_at: "Plan 01-29 complete; Phase 01 remains incomplete; next: direct gsd-verifier whole-phase assessment per the handoff"
+last_updated: "2026-10-05T19:34:02Z"
 last_activity: 2026-10-05
-last_activity_desc: "Plan 01-29 accepted with one checker warning; planning bookkeeping is complete and execution is next"
-state_head: 5e9e07dee88fbba34485d37e84f68ee4daf94fde
+last_activity_desc: "Plan 01-29 executed with an independent accept recommendation; execution is complete and fresh phase-goal verification is next"
+state_head: 54136cf0ce36a57238debfa0c1e027c6b626c14f
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 29
-  completed_plans: 28
+  completed_plans: 29
   percent: 0
 ---
 
@@ -30,16 +30,16 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — READY TO EXECUTE
-Plan: 29 of 29 (Plan 01-29 planned, not executed; Plan 01-17 remains an answered incomplete checkpoint)
-Status: latest Phase 01 verifier is GAPS_FOUND (9/10); Plan 01-29 is the bounded admission assessment
-Last activity: 2026-10-05 — Plan 01-29 planning completed after checker decision
+Phase: 01 (CPU acceptance experiment) — AWAITING FRESH VERIFICATION
+Plan: 29 of 29 executed (Plan 01-17 remains an answered incomplete checkpoint)
+Status: latest whole-phase verifier is GAPS_FOUND (9/10) and predates Plan 01-29; the bounded admission recommendation is accept_recommended, but no phase admission has occurred
+Last activity: 2026-10-05 — Plan 01-29 execution and closeout
 
 Progress: [░░░░░░░░░░] 0% (zero of three phases complete)
 
-GSD completed_plans counts SUMMARY files: 28 summaries exist for 29 planned plans, including Plan 01-17’s answered checkpoint. Execution-complete plans are 01-01–01-16 and 01-18–01-28 (27); Plan 01-17 remains incomplete and Plan 01-29 is not yet executed. Plan 01-28 restored the exact ROADMAP admission literal and canonical README navigation, with regression controls outside the sealed candidate closure. Plan 01-27's deferred seal, sources, reports, receipts and ledger remain unchanged.
+GSD completed_plans counts SUMMARY files: 29 summaries exist for 29 planned plans, including Plan 01-17’s answered checkpoint. Execution-complete plans are 01-01–01-16 and 01-18–01-29 (28); Plan 01-17 remains incomplete. Plan 01-28 restored the exact ROADMAP admission literal and canonical README navigation. Plan 01-29 produced an independent recommendation; its separate whole-phase verification is still required. Plan 01-27's deferred seal, sources, reports and receipts remain unchanged; the budget ledger has one append-only Plan 01-29 charge.
 
-At Task 1 revision 612c24558d010eef2cbc14958a7d34e1b8b208ef, contract controls passed 1/1, documentation controls 5/5 and local links 20/20; contract validate and acceptance verify passed with six collections, no lane blockers and an unqualified disposition. Code-review hardening at `73a422dc7dd7149bb5c7cb8b1cde9528cc20338f` expands the docs regression to 8/8 with six negative controls; standard-depth review is clean. UAT records 51/51: 49 historical rows plus two current documentation rows, not a replay of all 51 at the current revision. The earlier 8/9 verifier predates Plan 01-28; the latest fresh whole-phase result is 9/10 `GAPS_FOUND`. Plan 01-29 is the single bounded assessment of the remaining admission outcome; execute it before requesting a fresh phase-goal assessment. Do not repeat the prior verifier or create another plan from the same evidence.
+At Task 1 revision `4945f348cf67777f3f90f87ef8331250a2c7add9`, the admission checker and 14 original controls passed normal and optimized Python. The preservation return-path defect was fixed at `54136cf0ce36a57238debfa0c1e027c6b626c14f`; the suite now passes 15/15 in both modes. Independent CPU and ASVS L1/high-block reports bind the unchanged candidate; CPU-01–05 are assessed sufficient and zero HIGH/CRITICAL security blockers remain. Current admission/contract/budget/acceptance checks pass with the receipt deliberately unqualified. Plan 01-29 adds current automated evidence after historical UAT rows 1–51; it does not replay them. The latest fresh whole-phase report remains 9/10 `GAPS_FOUND` and predates this recommendation. Do not repeat Plan 01-29 or historical UAT; request exactly one separate whole-phase verifier.
 
 CPU-01–05 remain Pending; candidate admission deferred, Phase 01 open, Phase 02 gated and original-silicon saved PC unknown. See PROJECT.md, METHODOLOGY.md, preparation/DECISIONS.md and Phase 01 UAT for scope and provenance.
 
@@ -47,19 +47,19 @@ CPU-01–05 remain Pending; candidate admission deferred, Phase 01 open, Phase 0
 
 **Velocity:**
 
-- Total plans in phase: 29; execution-complete: 27; Plan 01-17 remains at its answered checkpoint; Plan 01-28 is executed; Plan 01-29 is planned
-- Average recorded duration: 43.1min across 27 execution-complete plans
-- Total recorded execution time: 1,164min; exact owned-core active effort/churn remain in experiments/owned_cpu/budget-ledger.json; Phase 01 remains open pending verification
+- Total plans in phase: 29; execution-complete: 28; Plan 01-17 remains at its answered checkpoint; Plans 01-28 and 01-29 are executed
+- Average recorded duration: 44.2min across 28 execution-complete plans
+- Total recorded execution time: 1,237min; exact owned-core active effort/churn remain in experiments/owned_cpu/budget-ledger.json; Phase 01 remains open pending verification
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 27 of 29 | 1,164min | 43.1min |
+| 01 | 28 of 29 | 1,237min | 44.2min |
 
 **Recent Trend:**
 
-- Last 5 plans with execution metrics: 01-24, 01-25, 01-26, 01-27, 01-28
+- Last 5 plans with execution metrics: 01-25, 01-26, 01-27, 01-28, 01-29
 - Trend: Not established
 
 **Per-Plan Metrics:**
@@ -93,6 +93,7 @@ CPU-01–05 remain Pending; candidate admission deferred, Phase 01 open, Phase 0
 | Phase 01 P26 | 6min | 2 tasks | 3 files |
 | Phase 01 P27 | 110min | 3 tasks | 8 files |
 | Phase 01 P28 | 6min | 2 tasks | 7 files |
+| Phase 01 P29 | 73min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -101,11 +102,11 @@ CPU-01–05 remain Pending; candidate admission deferred, Phase 01 open, Phase 0
 - Phase 01 uses a private owned C17 candidate with explicit host-I/O boundaries and frozen Musashi rejection history; see PROJECT.md and preparation/DECISIONS.md.
 - P01-C-14 excludes only exact 0x4AFC from the candidate subset. Original-silicon saved PC remains unknown; do not repeat the finite search or infer hardware truth.
 - The candidate remains unqualified. CPU-01–05 remain Pending and Phase 02 remains gated until acceptance reproduction and fresh phase-goal verification pass.
-- Phase 01 effort/churn limits and all consumed attempts remain frozen in experiments/owned_cpu/budget-ledger.json. Current closeout validates at 79,763 active seconds with no pause.
+- Phase 01 effort/churn limits and all consumed attempts remain frozen in experiments/owned_cpu/budget-ledger.json. Plan 01-29 adds a 6,463-second all-agent charge; final contract totals are 86,226 active seconds and 6,540 contract-measured test/tool churn, with no pause.
 - Plan 01-27 changes only derived report/receipt/accounting metadata. C2 binds the exact independent review/security report bytes; source collection remains unchanged.
 - The initial project branch has no remote base; no main merge or hosted qualification is implied.
 - [Phase 01]: Plan 01-28 routes README through canonical STATE; preserve Pending CPU requirements and pause for a separate fresh whole-phase verifier.
-- [Phase 01]: Fresh 2026-10-05 whole-phase verification is GAPS_FOUND (9/10); Plan 01-28 closed the prior documentation/routing gap. Plan 01-29 is now planned as the single bounded admission assessment; do not repeat the verifier or replan from the same evidence. The final checker found 0 blockers and 1 accepted warning (ROADMAP absent from plan-level `files_modified`). Next: `$gsd-execute-phase 01 --gaps-only`; Phase 02 remains gated and CPU-01–05 remain Pending.
+- [Phase 01]: The fresh 2026-10-05 whole-phase report remains GAPS_FOUND (9/10) and predates Plan 01-29. Plan 01-29 produced an independent accept recommendation for CPU-01–05, with zero applicable HIGH/CRITICAL security findings; it did not admit the receipt or phase. The separate fresh phase verifier is the next workflow boundary. Do not repeat the 9/10 pass, Plan 01-29, historical UAT rows or silicon search. Phase 02 remains gated and CPU-01–05 remain Pending.
 
 ### Pending Todos
 
@@ -116,7 +117,7 @@ None yet.
 - Original-silicon saved PC, unsupported platforms, public persistence formats, board/BIOS compatibility and performance qualification remain unknown or outside scope.
 - Preserve the historical odd-IRQ, fixture-UBSan, reset-accounting/NMI, BSD address-error and malformed-state/zero-request counterexamples.
 - Both original Musashi adaptation attempts are consumed. Do not repeat them automatically.
-- Fresh 2026-10-05 whole-phase verification is 9/10 GAPS_FOUND: Plan 01-28 closed the former documentation/routing gap, but no owned CPU backend is admitted and CPU-01–05 remain Pending. Plan 01-29 is ready to execute as the one current evidence-backed admission assessment; if it yields an exact blocker, hand off that dependency without another same-evidence planning loop. Phase 02 remains gated.
+- Fresh 2026-10-05 whole-phase verification is 9/10 GAPS_FOUND and predates the Plan 01-29 recommendation. No backend or phase is admitted; CPU-01–05 remain Pending and Phase 02 remains gated. The current independent recommendation is accept_recommended with a narrow WR-01 documentation warning; a separate direct gsd-verifier pass must decide the phase goal. If that pass finds a blocker, plan only the distinct missing evidence or repair and do not re-run this same-evidence assessment.
 
 ## Deferred Items
 
@@ -128,6 +129,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-05T18:17:04Z
-Stopped at: Plan 01-29 planning complete; Phase 01 incomplete; next: $gsd-execute-phase 01 --gaps-only
-Resume file: .planning/phases/01-cpu-acceptance-experiment/01-29-PLAN.md
+Last session: 2026-10-05T19:34:02Z
+Stopped at: Plan 01-29 execution and closeout complete; Phase 01 awaits one direct whole-phase gsd-verifier assessment
+Resume file: .planning/phases/01-cpu-acceptance-experiment/.continue-here.md

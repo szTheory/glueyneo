@@ -423,3 +423,66 @@ blocked: 0
 This aggregate is not 50 current-revision checks and does not complete Phase 01.
 
 Final Plan 01-28 bookkeeping follow-up: ROADMAP plan-status/count prose changed after Task 1. On working-tree base ed35fb118cc4f6cb74cd350cd4e14bdfca085f13, the same four affected commands above again exited 0, with unchanged 1/1 contract and 5/5 docs tests, 20/20 resolved links, validate pass and six unqualified collections/no lane blockers. Final ROADMAP SHA-256: f5db0e06851b2b59e48e47b57bbb6fe285922ebb3b2d493b633f20205069b563. README and test SHA-256 identities remain as in row 50; its original tested revision is preserved. Post-review hardening is separately recorded at row 51: the committed regression passes 8/8 at 73a422dc7dd7149bb5c7cb8b1cde9528cc20338f.
+
+
+## Plan 01-29 append-only automated evidence
+
+### 52. Plan 01-29 independent CPU admission review
+expected: An independent non-author reviews every CPU-01–05 predicate against exact current source-bound evidence and reports either one bounded recommendation or one precise blocker.
+result: pass
+source: automated
+coverage_id: CPU-ADMISSION-REVIEW
+source_revision: 4945f348cf67777f3f90f87ef8331250a2c7add9
+command: Independent gsd-code-reviewer assessment; python3 tools/workflow/phase01_admission.py verify --decision .planning/phases/01-cpu-acceptance-experiment/01-29-ADMISSION.json
+denominator: CPU-01–05 sufficient (5/5); one scoped WR-01 documentation warning; no material blocker.
+evidence: .planning/phases/01-cpu-acceptance-experiment/01-29-ADMISSION-REVIEW.md sha256=6dacffb2b629d4151beb72a1cbfff755278a77d56cafde0c4329dbc123d39a4a; decision sha256=9c24dadfda072a4be99e7a4463e521217809bb2a8c17039b41344e0ad981639a
+
+### 53. Plan 01-29 independent security assessment
+expected: Separate ASVS L1 / block-high assessment finds no applicable open HIGH or CRITICAL security issue and preserves the exact candidate boundary.
+result: pass
+source: automated
+coverage_id: CPU-ADMISSION-SECURITY
+source_revision: 4945f348cf67777f3f90f87ef8331250a2c7add9; follow-up fix 54136cf0ce36a57238debfa0c1e027c6b626c14f
+command: Independent gsd-security-auditor assessment; python3 tools/workflow/phase01_admission.py verify --decision .planning/phases/01-cpu-acceptance-experiment/01-29-ADMISSION.json
+denominator: ASVS L1; open HIGH/CRITICAL findings 0; one medium closeout item and one low documentation note remain nonblocking.
+evidence: .planning/phases/01-cpu-acceptance-experiment/01-29-ADMISSION-SECURITY.md sha256=0502b8036d451a1f0672e64ef8797b49772edf5f9b331ffc117be876938a92ca; decision sha256=9c24dadfda072a4be99e7a4463e521217809bb2a8c17039b41344e0ad981639a
+
+### 54. Plan 01-29 terminal-record checker controls
+expected: Current admission decision controls pass in regular and optimized Python, including preservation return-path regression.
+result: pass
+source: automated
+coverage_id: ADMISSION-CHECKER
+source_revision: 54136cf0ce36a57238debfa0c1e027c6b626c14f
+command: python3 -m unittest discover -s tests/workflow -p test_phase01_admission.py; python3 -O -m unittest discover -s tests/workflow -p test_phase01_admission.py
+denominator: 15/15 normal Python and 15/15 optimized Python tests passed.
+evidence: tools/workflow/phase01_admission.py sha256=b5e164b758d7b2ddb740af8e3099ca0611e0ad3dde92f4530e5a002b56e5b92c; tests/workflow/test_phase01_admission.py sha256=7b5f6ce1d44a3694213287acc74b69f1d712cb5d649f3973617380066439f2d4
+
+### 55. Current contract, budget, and candidate receipt prerequisites
+expected: Frozen scope and budget validate, all CPU requirements remain Pending, Phase 02 remains gated, and the candidate receipt remains unqualified without lane blockers.
+result: pass
+source: automated
+coverage_id: ADMISSION-PRECONDITIONS
+source_revision: 54136cf0ce36a57238debfa0c1e027c6b626c14f
+command: python3 tools/owned_cpu/contract.py validate; python3 tools/owned_cpu/contract.py budget; python3 tools/owned_cpu/acceptance.py verify; PYTHONPATH=. python3 tests/workflow/test_phase01_docs.py
+denominator: All four commands exit 0; docs 8/8 and 20/20 local Markdown links resolve; budget 48 records, 86,226 active seconds, 2,565 diagnostic seconds, 1,228 runtime churn, 6,540 contract-measured tool/test churn; six candidate collections, zero lane blockers, disposition unqualified.
+evidence: experiments/owned_cpu/budget-ledger.json sha256=2ecf3802a9d7087b485845ecb2416aa3b0307ff7c3202625cdc3c12876dcf848; experiments/owned_cpu/acceptance-results.json sha256=fb14db2af97e7c1c10d8632892bc152189de5db7bae4df104391ce8516c6e7f0
+
+### 56. Plan 01-29 recommendation and conditional exit
+expected: The exact-bound recommendation validates and its actual --require-recommendation child exits 0 with matching accept_recommended output while leaving phase_admitted false.
+result: pass
+source: automated
+coverage_id: ADMISSION-RECOMMENDATION
+source_revision: 54136cf0ce36a57238debfa0c1e027c6b626c14f
+command: python3 tools/workflow/phase01_admission.py verify --decision .planning/phases/01-cpu-acceptance-experiment/01-29-ADMISSION.json; python3 tools/workflow/phase01_admission.py verify --decision .planning/phases/01-cpu-acceptance-experiment/01-29-ADMISSION.json --check-recommendation-exit
+denominator: Both commands exit 0; child exit 0 returns accept_recommended, phase_admitted=false and blocker=null.
+evidence: .planning/phases/01-cpu-acceptance-experiment/01-29-ADMISSION.json sha256=9c24dadfda072a4be99e7a4463e521217809bb2a8c17039b41344e0ad981639a
+
+### 57. Plan 01-29 append-only history and preservation
+expected: One ledger entry and six automated UAT rows append without changing the original candidate, frozen ledger fields, prior 47 entries, receipt history, source map, prior 51 UAT rows or their bytes.
+result: pass
+source: automated
+coverage_id: ADMISSION-PRESERVATION
+source_revision: 54136cf0ce36a57238debfa0c1e027c6b626c14f
+command: python3 tools/workflow/phase01_admission.py verify --decision .planning/phases/01-cpu-acceptance-experiment/01-29-ADMISSION.json --check-preservation
+denominator: Preserve 10 immutable artifacts, all 39 candidate source-map entries, six collections, three superseded seals, 47/47 historical ledger entries, one validated appended charge, 51/51 historical UAT rows and 57 total current rows.
+evidence: .planning/phases/01-cpu-acceptance-experiment/01-29-ADMISSION.json sha256=9c24dadfda072a4be99e7a4463e521217809bb2a8c17039b41344e0ad981639a; experiments/owned_cpu/budget-ledger.json sha256=2ecf3802a9d7087b485845ecb2416aa3b0307ff7c3202625cdc3c12876dcf848
