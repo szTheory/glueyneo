@@ -6,10 +6,10 @@ current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: executing
 stopped_at: Phase 01 UAT automation is complete; one fresh phase-goal verifier pass remains, with the installed GSD routing workaround recorded.
-last_updated: "2026-10-05T01:54:52Z"
+last_updated: "2026-10-05T02:29:30Z"
 last_activity: 2026-10-04
 last_activity_desc: Diagnosed stale gaps_found routing; recorded bounded gap-closure rule and direct-verifier workaround.
-state_head: 43eec29133b55378299ca8fe153a4c22e3ce3f4f
+state_head: c18233ce14ed8a4bf4535f486f8e08590d4bf452
 progress:
   total_phases: 3
   completed_phases: 0
@@ -37,7 +37,7 @@ Last activity: 2026-10-04 — GSD verification-loop cause and workaround recorde
 
 Progress: [░░░░░░░░░░] 0% (zero of three phases complete)
 
-GSD frontmatter completed_plans counts matching SUMMARY files: 27/27, including Plan 01-17’s answered checkpoint summary. Execution-complete plans are 01-01–01-16 and 01-18–01-27 (26); Plan 01-17 remains incomplete at its answered checkpoint. Plan 01-27 preserved the stale report-binding failure and prior seal, recovered only derived metadata, independently rebound the reports, and reproduced the deferred seal at C2. The current `01-VERIFICATION.md` predates Plan 01-27 and still reports the old binding failure. Installed OpenGSD 1.14.0 routes this `gaps_found` status inconsistently; do not create another gap plan or use `$gsd-execute-phase 01` to refresh it. Dispatch `gsd-verifier` directly once against current evidence, then act only on its fresh findings. The evidence and routing defect are recorded in `.planning/preparation/2026-10-04-gsd-verification-loop.md`.
+GSD frontmatter completed_plans counts matching SUMMARY files: 27/27, including Plan 01-17’s answered checkpoint summary. Execution-complete plans are 01-01–01-16 and 01-18–01-27 (26); Plan 01-17 remains incomplete at its answered checkpoint. Plan 01-27 preserved the stale report-binding failure and prior seal, recovered only derived metadata, independently rebound the reports, and reproduced the deferred seal at C2. The current `01-VERIFICATION.md` predates Plan 01-27 and still reports the old binding failure. Installed OpenGSD 1.15.0 still routes this `gaps_found` status inconsistently; do not create another gap plan or use `$gsd-execute-phase 01` to refresh it. Dispatch `gsd-verifier` directly once against current evidence, then act only on its fresh findings. The evidence and routing defect are recorded in `.planning/preparation/2026-10-04-gsd-verification-loop.md`.
 
 Current UAT is 49/49 automated checks: rows 1–44 retain their recorded scope, rows 45–48 cover Plans 01-26/27 at the current relevant revision, and row 49 checks README routing. No human UAT checkpoint remains for these machine-observable claims. CPU-01–05 remain Pending. The original-silicon saved PC for candidate-only 0x4AFC exclusion remains unknown. See PROJECT.md, METHODOLOGY.md, preparation/DECISIONS.md and phase 01 UAT for the current contracts and provenance.
 

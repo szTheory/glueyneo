@@ -127,7 +127,7 @@ source files or acceptance criteria changed after its recorded revision. When
 they do change, rerun only affected checks and preserve prior results. Hand off
 only residual human-only checks or true blockers.
 This preference does not remove the separate pause after each named GSD step
-for review and model selection. In the installed OpenGSD 1.14.0 configuration,
+for review and model selection. In the installed OpenGSD configuration,
 `workflow.human_verify_mode` controls checkpoint timing (`mid-flight` or
 `end-of-phase`); it is not an off switch for verification. Keep the current
 end-of-phase setting and satisfy the preference through evidence and coverage,
@@ -145,7 +145,7 @@ repair plan changes covered evidence, obtain one fresh whole-phase verifier
 report before planning further repair. Reconcile each old finding against the
 new report and current evidence first.
 
-For installed OpenGSD 1.14.0, the Phase 01 incident exposed a routing defect:
+The Phase 01 incident was rechecked on installed OpenGSD 1.15.0 and the routing defect persists:
 `query verification.status` returns `gaps_found` before checking whether its
 fingerprint is stale, and the no-runnable-plans branch of `$gsd-execute-phase`
 can treat any existing non-`missing` report plus an incomplete roadmap as a
