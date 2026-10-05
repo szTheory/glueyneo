@@ -384,7 +384,7 @@ def check_preservation(root, decision):
     rows = check_uat_prefix(file_bytes(root, UAT), snapshot["uat"])
     return {"immutable_files": len(snapshot["immutable_files"]), "candidate_sources": len(source_hashes),
             "receipt_collections": 6, "superseded_seals": 3, "ledger_prefix_entries": before,
-            "ledger_appended_entries": len(added), "historical_uat_rows": old_uat["historical_rows"],
+            "ledger_appended_entries": len(added), "historical_uat_rows": snapshot["uat"]["historical_rows"],
             "current_uat_rows": rows}
 
 

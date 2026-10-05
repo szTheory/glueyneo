@@ -7,6 +7,7 @@ import json
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -268,6 +269,26 @@ class TerminalControls(unittest.TestCase):
         changed["seal"]["defer_admission"] = False
         with self.assertRaisesRegex(admission.EvidenceError, "receipt collection/seal history changed"):
             admission.check_receipt_history(changed, expected)
+
+    def test_preservation_result_reports_saved_historical_uat_count(self):
+        identity = {"profile": "current"}
+        source_hashes = {"src.c": "source-hash"}
+        snapshot = {"identity": identity, "immutable_files": {"old.md": "old-hash"},
+                    "receipt_objects_sha256": "receipt-hash", "source_hashes": source_hashes,
+                    "ledger": {"prefix_entries": 4, "appended": {"count": 1}},
+                    "final_ledger_sha256": "ledger-hash", "uat": {"historical_rows": 51}}
+        decision = {"identity": identity, "preservation": snapshot}
+        hashes = {"old.md": "old-hash", "src.c": "source-hash", admission.LEDGER: "ledger-hash"}
+        with patch.object(admission, "candidate_identity", return_value=identity), \
+             patch.object(admission, "file_hash", side_effect=lambda _, path: hashes[path]), \
+             patch.object(admission, "json_file", return_value={"collections": [{"source_hashes": source_hashes}]}), \
+             patch.object(admission, "check_receipt_history"), \
+             patch.object(admission, "check_ledger_prefix", return_value=[{"stage": "current"}]), \
+             patch("subprocess.run", return_value=SimpleNamespace(returncode=0, stdout='{"status":"pass"}')), \
+             patch.object(admission, "file_bytes", return_value=b"uat"), \
+             patch.object(admission, "check_uat_prefix", return_value=52):
+            result = admission.check_preservation(ROOT, decision)
+        self.assertEqual(51, result["historical_uat_rows"])
 
     def test_cli_require_mode_returns_exit_two_for_valid_blocker(self):
         blocked, _, _ = blocked_fixture()
