@@ -4,12 +4,12 @@ milestone: v0.1
 milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
-status: awaiting-verification
-stopped_at: Phase 02 discussion complete; next action is one fresh direct whole-phase gsd-verifier for Phase 01; Phase 02 remains gated
-last_updated: "2026-10-05T15:41:34.825Z"
+status: "Phase 01 verifier: GAPS_FOUND (9/10); admission remains unqualified"
+stopped_at: "Phase 01 whole-phase verification complete: GAPS_FOUND (9/10); phase incomplete; next: $gsd-plan-phase 01 --gaps"
+last_updated: "2026-10-05T16:31:14.150Z"
 last_activity: 2026-10-05
-last_activity_desc: Plan 01-28 executed; separate whole-phase verification next
-state_head: 3b9fd8d767b4fde3aa47bc92e18555b4075408f1
+last_activity_desc: "Fresh whole-phase Phase 01 verifier: GAPS_FOUND (9/10); one CPU admission outcome remains unresolved"
+state_head: 6e9a0ca70c83e2c8bca7c64d5ab8ed5f83a87533
 progress:
   total_phases: 3
   completed_phases: 0
@@ -32,8 +32,8 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 
 Phase: 01 (CPU acceptance experiment) — OPEN / GAPS_FOUND
 Plan: 28 of 28 (execution complete; Plan 01-17 remains an answered incomplete checkpoint)
-Status: Plan 01-28 complete; awaiting separate fresh whole-phase verifier
-Last activity: 2026-10-05 — Plan 01-28 documentation repair executed
+Status: Phase 01 verifier: GAPS_FOUND (9/10); admission remains unqualified
+Last activity: 2026-10-05 — fresh Phase 01 whole-phase verification completed
 
 Progress: [░░░░░░░░░░] 0% (zero of three phases complete)
 
@@ -105,6 +105,7 @@ CPU-01–05 remain Pending; candidate admission deferred, Phase 01 open, Phase 0
 - Plan 01-27 changes only derived report/receipt/accounting metadata. C2 binds the exact independent review/security report bytes; source collection remains unchanged.
 - The initial project branch has no remote base; no main merge or hosted qualification is implied.
 - [Phase 01]: Plan 01-28 routes README through canonical STATE; preserve Pending CPU requirements and pause for a separate fresh whole-phase verifier.
+- [Phase 01]: Fresh 2026-10-05 whole-phase verification is GAPS_FOUND (9/10); Plan 01-28 closed the prior documentation/routing gap. The verifier step is complete; do not repeat it before addressing the current admission outcome. Next: $gsd-plan-phase 01 --gaps; Phase 02 remains gated. — Current 01-VERIFICATION.md confirms contract and receipt integrity but no accepted backend; CPU-01–04 remain Pending.
 
 ### Pending Todos
 
@@ -112,10 +113,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- The previous whole-phase verdict is 8/9 GAPS_FOUND; its document gap is repaired by Plan 01-28 but awaits fresh verifier reconciliation. Receipt unqualified and admission deferred; CPU requirements stay Pending. Do not repeat the prior report-binding repair.
 - Original-silicon saved PC, unsupported platforms, public persistence formats, board/BIOS compatibility and performance qualification remain unknown or outside scope.
 - Preserve the historical odd-IRQ, fixture-UBSan, reset-accounting/NMI, BSD address-error and malformed-state/zero-request counterexamples.
 - Both original Musashi adaptation attempts are consumed. Do not repeat them automatically.
+- Fresh 2026-10-05 whole-phase verification is 9/10 GAPS_FOUND: Plan 01-28 closed the former documentation/routing gap, but no owned CPU backend is admitted and CPU-01–04 remain Pending. Next: make a current evidence-backed admission decision or revise the roadmap target; Phase 02 remains gated.
 
 ## Deferred Items
 
@@ -127,6 +128,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-05T15:41:34.789Z
-Stopped at: Phase 02 discussion complete; next action is one fresh direct whole-phase gsd-verifier for Phase 01; Phase 02 remains gated
-Resume file: .planning/phases/02-executable-diagnostic-sdk/02-CONTEXT.md
+Last session: 2026-10-05T16:30:28.150Z
+Stopped at: Phase 01 whole-phase verification complete: GAPS_FOUND (9/10); phase incomplete; next: $gsd-plan-phase 01 --gaps
+Resume file: .planning/phases/01-cpu-acceptance-experiment/01-VERIFICATION.md
