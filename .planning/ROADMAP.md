@@ -164,7 +164,17 @@ Planning guidance: Plans 01-07–01-14 built and assessed the owned-core candida
   4. An integrator builds C17 static/shared libraries offline with target-scoped CMake/CTest and pinned test-only Unity, executes the diagnostic from out-of-tree installed C consumers for both variants, and compiles/links C++ public-header consumers. Compiled getting-started, ownership/error and failure-reproduction guidance matches the artifacts and states the exact supported subset and excluded game/BIOS/video/audio/public-state/persistence claims. (BUILD-01, BUILD-02, DOC-01, DOC-02)
   5. A maintainer can audit every public dependency/fixture's rights, notices, source and recipe, output digest, firmware needs and oracle ancestry; reproduce nonempty machine-readable results with exact identities and distinct outcomes; and reproduce diagnostic execution, memory/allocation, load and build-cost baselines on named hosts with uncertainty and no gameplay or uncalibrated-threshold claims. (EVID-01, EVID-03, EVID-04)
 
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Ordinary API/runner tracer, original fixture and counted Wave 0 verification
+- [ ] 02-02-PLAN.md — Copied transactional media, lifecycle and allocation-failure recovery
+- [ ] 02-03-PLAN.md — Bounded timing, exact controls and independent-instance determinism
+- [ ] 02-04-PLAN.md — Offline static/shared installs, relocated C/C++ consumers and compiled guides
+- [ ] 02-05-PLAN.md — Bounded hostile mutation, retained regressions and supported sanitizers
+- [ ] 02-06-PLAN.md — Exact identities/outcomes, measured local baselines and final aggregate
+
+Execution waves: 1 → 2 → 3 → 4 → 5 → 6. Package checks rebuild the runtime, so they follow source-changing ownership/timing slices. Phase 02 remains unexecuted; separate plan checking precedes execution.
 
 Planning guidance: Slice from opaque lifecycle and bounded media through the real diagnostic and installed consumer; add only its evidenced bus/bootstrap subset. Couple each behavior to its tests, provenance, compiled example and capability statement. Separate diagnostic-oracle research from standard package work. Begin lightweight CI and public-content checks as infrastructure permits; final hosted delivery acceptance belongs to Phase 3.
 
@@ -195,7 +205,7 @@ Execution order: 1 → 2 → 3. Phase 01's bounded backend admission gate is sat
 | Phase | Milestone | Execution-complete plans | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. CPU acceptance experiment | v0.1 | 28/29 (01-17 remains a checkpoint) | Complete | 2026-10-05 |
-| 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
+| 2. Executable diagnostic SDK | v0.1 | 0/6 | Planned; not executed | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
 Coverage: 27/27 current requirements are assigned exactly once; 5 in Phase 1, 15 in Phase 2, and 7 in Phase 3. CPU-01–05 are Complete for Phase 01's bounded backend acceptance. The other 22 remain Pending in [traceability](REQUIREMENTS.md#traceability). Deferred v2 requirements are not allocated to these phases.
