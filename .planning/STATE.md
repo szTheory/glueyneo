@@ -5,11 +5,11 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: awaiting-verification
-stopped_at: Phase 02 context gathered; Phase 01 admission gate remains pending
-last_updated: "2026-10-05T15:37:12.186Z"
+stopped_at: Phase 02 discussion complete; next action is one fresh direct whole-phase gsd-verifier for Phase 01; Phase 02 remains gated
+last_updated: "2026-10-05T15:41:34.825Z"
 last_activity: 2026-10-05
 last_activity_desc: Plan 01-28 executed; separate whole-phase verification next
-state_head: 21e42d1105c879367623be32838fd8000cfc2dd6
+state_head: 3b9fd8d767b4fde3aa47bc92e18555b4075408f1
 progress:
   total_phases: 3
   completed_phases: 0
@@ -108,8 +108,7 @@ CPU-01–05 remain Pending; candidate admission deferred, Phase 01 open, Phase 0
 
 ### Pending Todos
 
-- Plan 01-28 execution is complete; pause at this workflow boundary. Next exact action: dispatch one fresh whole-phase `gsd-verifier` for Phase 01 directly and refresh `01-VERIFICATION.md`, assessing the current Phase 01 goal and CPU-01–05. The installed 1.15.0 router has the documented `gaps_found` defect; `$gsd-verify-work 01` repeats UAT and is not this phase-goal assessment. No verified user CLI command exists for the direct-dispatch workaround.
-- Do not repeat another gap plan from the old verdict, broadly rerun historical UAT, resume the finite silicon search or begin Phase 02. If the fresh verifier passes, finish Phase 01 bookkeeping and propose `$gsd-discuss-phase 02`, then pause.
+None yet.
 
 ### Blockers/Concerns
 
@@ -128,6 +127,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-05T15:37:12.150Z
-Stopped at: Phase 02 context gathered; Phase 01 admission gate remains pending
+Last session: 2026-10-05T15:41:34.789Z
+Stopped at: Phase 02 discussion complete; next action is one fresh direct whole-phase gsd-verifier for Phase 01; Phase 02 remains gated
 Resume file: .planning/phases/02-executable-diagnostic-sdk/02-CONTEXT.md
