@@ -5,11 +5,11 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: awaiting-verification
-stopped_at: Completed Plan 01-28 execution; next is one separate fresh whole-phase gsd-verifier
-last_updated: "2026-10-05T14:40:17.143Z"
+stopped_at: Phase 02 context gathered; Phase 01 admission gate remains pending
+last_updated: "2026-10-05T15:37:12.186Z"
 last_activity: 2026-10-05
 last_activity_desc: Plan 01-28 executed; separate whole-phase verification next
-state_head: ed35fb118cc4f6cb74cd350cd4e14bdfca085f13
+state_head: 21e42d1105c879367623be32838fd8000cfc2dd6
 progress:
   total_phases: 3
   completed_phases: 0
@@ -128,6 +128,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-05T14:38:15.649Z
-Stopped at: Completed Plan 01-28 execution; next is one separate fresh whole-phase gsd-verifier
-Resume file: None
+Last session: 2026-10-05T15:37:12.150Z
+Stopped at: Phase 02 context gathered; Phase 01 admission gate remains pending
+Resume file: .planning/phases/02-executable-diagnostic-sdk/02-CONTEXT.md
