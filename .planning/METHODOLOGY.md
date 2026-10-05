@@ -136,6 +136,40 @@ support against the installed GSD runtime when workflow prose and the CLI
 disagree; record the supported validation path instead of repeating a rejected
 flag.
 
+## Phase-verification freshness and bounded gap closure
+
+`$gsd-verify-work` closes UAT; it does not perform the whole-phase goal
+verification. A `gaps_found` phase report is a verdict about the inputs it
+covered, not a standing instruction to create another `--gaps` plan. After a
+repair plan changes covered evidence, obtain one fresh whole-phase verifier
+report before planning further repair. Reconcile each old finding against the
+new report and current evidence first.
+
+For installed OpenGSD 1.14.0, the Phase 01 incident exposed a routing defect:
+`query verification.status` returns `gaps_found` before checking whether its
+fingerprint is stale, and the no-runnable-plans branch of `$gsd-execute-phase`
+can treat any existing non-`missing` report plus an incomplete roadmap as a
+record that the verification gates already ran and resume at roadmap update,
+skipping a fresh phase-goal assessment. In this state, neither command is a
+reliable way to refresh a failed report. Use the `gsd-verifier` phase-goal
+contract directly once, with all current phase plans/summaries and current implementation
+evidence, then read the newly written report and status. Do not edit status or
+fingerprints to force a route. The dated reproduction and exact observed
+outputs are in [preparation evidence](preparation/2026-10-04-gsd-verification-loop.md).
+
+Only a fresh report may authorize more gap planning. For each remaining gap,
+classify it as (1) an actionable in-scope repository change, (2) external or
+physical evidence unavailable in this environment, (3) an explicit deferral or
+scope mismatch, or (4) a verifier/tooling defect. Make at most one bounded
+repair plan for actionable gaps, with direct acceptance evidence and a clear
+stop condition. If the same gap and evidence recur without a material change,
+do not create another plan or repeat the same search: preserve the blocker and
+state the single concrete evidence or decision needed. Keep independent
+automation moving, and hand off only that irreducible item. Recheck this
+workaround after a GSD runtime upgrade and remove it only when the installed
+router demonstrably refreshes stale `gaps_found` reports and never skips a
+required verifier pass.
+
 ## Decision namespaces
 
 Use stable prefixes in cross-document references: `PROJECT-D-##` for current

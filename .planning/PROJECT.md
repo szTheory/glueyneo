@@ -82,6 +82,7 @@ The local repository began with preparation only. No remote repository, hosted C
 | PROJECT-D-34–40: Small CI, reviewed PRs, release-please and complete draft publication | Makes frequent delivery repeatable while binding artifacts to tested commits | — Remote authority/event qualification pending |
 | PROJECT-D-41–44: One current contract and rolling milestones | Preserves provenance without freezing speculative designs | — Adopted for planning; implementation unverified |
 | PROJECT-D-45: Shift-left automated acceptance; human handoff only for irreducibly human or external evidence | Removes repeat UAT toil while keeping unknowns honest and CI proportional | — Default for planning and verification; apply per-phase |
+| PROJECT-D-46: Refresh a failed phase verdict before planning more gap work | Prevents stale negative reports and status-router behavior from generating repeated plans; only fresh, actionable in-scope gaps justify another bounded repair | — Default; Phase 01 runtime-routing incident and workaround recorded in [preparation evidence](preparation/2026-10-04-gsd-verification-loop.md) |
 
 ## Evolution
 
@@ -103,4 +104,4 @@ After each milestone:
 4. Update the current milestone, next outline and revisable longer horizon.
 
 ---
-*Last updated: 2026-10-02 after owner-directed scope and evidence updates.*
+*Last updated: 2026-10-04 after recording phase-verification loop prevention.*
