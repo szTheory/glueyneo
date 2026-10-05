@@ -409,3 +409,5 @@ skipped: 0
 blocked: 0
 
 This aggregate is not 50 current-revision checks and does not complete Phase 01.
+
+Final Plan 01-28 bookkeeping follow-up: ROADMAP plan-status/count prose changed after Task 1. On working-tree base ed35fb118cc4f6cb74cd350cd4e14bdfca085f13, the same four affected commands above again exited 0, with unchanged 1/1 contract and 5/5 docs tests, 20/20 resolved links, validate pass and six unqualified collections/no lane blockers. Final ROADMAP SHA-256: f5db0e06851b2b59e48e47b57bbb6fe285922ebb3b2d493b633f20205069b563. README and test SHA-256 identities remain as in row 50; its original tested revision is preserved.

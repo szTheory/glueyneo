@@ -4,17 +4,17 @@ milestone: v0.1
 milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 01
 current_phase_name: CPU acceptance experiment
-status: executing
-stopped_at: Plan 01-28 gap planning and independent checks complete; next step is bounded gap-only execution, followed by one fresh whole-phase verifier.
-last_updated: "2026-10-05T14:13:56.640Z"
+status: awaiting-verification
+stopped_at: Completed Plan 01-28 execution; next is one separate fresh whole-phase gsd-verifier
+last_updated: "2026-10-05T14:40:17.143Z"
 last_activity: 2026-10-05
-last_activity_desc: Planned and independently checked bounded Plan 01-28 for the fresh verifier’s ROADMAP/validator and README route findings.
-state_head: 5318efeae1cb3849323841db11a7e462a46c661e
+last_activity_desc: Plan 01-28 executed; separate whole-phase verification next
+state_head: ed35fb118cc4f6cb74cd350cd4e14bdfca085f13
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 28
-  completed_plans: 27
+  completed_plans: 28
   percent: 0
 ---
 
@@ -30,34 +30,36 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 
 ## Current Position
 
-Phase: 01 (CPU acceptance experiment) — READY TO EXECUTE
-Plan: 28 of 28 — Plan 01-28 is checked and ready for gap-only execution
-Status: Phase 01 remains incomplete. The fresh 2026-10-05 whole-phase verdict is 8/9 GAPS_FOUND; Plan 01-28 targets its bounded CPU-05 documentation/validator gap and stale README route.
-Last activity: 2026-10-05 — Plan 01-28 passed independent plan verification; execution is next
+Phase: 01 (CPU acceptance experiment) — OPEN / GAPS_FOUND
+Plan: 28 of 28 (execution complete; Plan 01-17 remains an answered incomplete checkpoint)
+Status: Plan 01-28 complete; awaiting separate fresh whole-phase verifier
+Last activity: 2026-10-05 — Plan 01-28 documentation repair executed
 
 Progress: [░░░░░░░░░░] 0% (zero of three phases complete)
 
-GSD frontmatter completed_plans counts existing SUMMARY files: 27/28 plans currently have summaries, including Plan 01-17’s answered checkpoint summary. Execution-complete plans are 01-01–01-16 and 01-18–01-27 (26); Plan 01-17 remains incomplete at its answered checkpoint, and newly planned Plan 01-28 is ready to execute. Plan 01-27 preserved the stale report-binding failure and prior seal, recovered only derived metadata, independently rebound the reports, and reproduced the deferred seal at C2. The fresh `01-VERIFICATION.md` closes that old binding gap and identifies one new current CPU-05 failure: `contract.py validate` and `acceptance.py verify` reject ROADMAP because its admission sentence no longer matches the frozen validator; README also has a stale `$gsd-execute-phase 01` route. Its 244-file fingerprint matched when the verifier wrote it. The subsequent METHODOLOGY/STATE/handoff edits only synchronize workflow records with that verdict; do not rerun goal verification solely for these administrative updates. Do not repeat Plan 01-27 or the full UAT before addressing the fresh findings. Installed OpenGSD 1.15.0 has the previously recorded `gaps_found` routing defect. The exact bounded repair scope is recorded in the verification report and `.planning/preparation/2026-10-04-gsd-verification-loop.md`.
+GSD completed_plans counts SUMMARY files: 28/28 summaries exist, including Plan 01-17’s answered checkpoint. Execution-complete plans are 01-01–01-16 and 01-18–01-28 (27); Plan 01-17 remains incomplete. Plan 01-28 restored the exact ROADMAP admission literal and canonical README navigation, with regression controls outside the sealed candidate closure. Plan 01-27's deferred seal, sources, reports, receipts and ledger remain unchanged.
 
-The recorded UAT is 49/49 automated checks, but it predates the ROADMAP wording and README route changes identified by the fresh verifier. No human UAT checkpoint remains for these machine-observable claims; rerun only affected current-revision acceptance and route checks after the bounded repair. CPU-01–05 remain Pending. The original-silicon saved PC for candidate-only 0x4AFC exclusion remains unknown. See PROJECT.md, METHODOLOGY.md, preparation/DECISIONS.md and phase 01 UAT for the current contracts and provenance.
+At Task 1 revision 612c24558d010eef2cbc14958a7d34e1b8b208ef, contract controls passed 1/1, documentation controls 5/5 and local links 20/20; contract validate and acceptance verify passed with six collections, no lane blockers and an unqualified disposition. UAT records 50/50 passes: 49 historical rows plus one current document row, not a replay of all 50 at the current revision. The previous 2026-10-05 whole-phase verdict is 8/9 GAPS_FOUND and predates this repair. A separate fresh whole-phase assessment must reconcile it before any more gap planning or phase admission.
+
+CPU-01–05 remain Pending; candidate admission deferred, Phase 01 open, Phase 02 gated and original-silicon saved PC unknown. See PROJECT.md, METHODOLOGY.md, preparation/DECISIONS.md and Phase 01 UAT for scope and provenance.
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans in phase: 28; execution-complete: 26; Plan 01-17 remains at its answered checkpoint; Plan 01-28 is planned but not executed
-- Average recorded duration: 44.5min across 26 execution-complete plans
-- Total recorded execution time: 1,158min; exact owned-core active effort/churn remain in experiments/owned_cpu/budget-ledger.json; Phase 01 remains open pending verification
+- Total plans in phase: 28; execution-complete: 27; Plan 01-17 remains at its answered checkpoint; Plan 01-28 is executed
+- Average recorded duration: 43.1min across 27 execution-complete plans
+- Total recorded execution time: 1,164min; exact owned-core active effort/churn remain in experiments/owned_cpu/budget-ledger.json; Phase 01 remains open pending verification
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 26 of 28 | 1,158min | 44.5min |
+| 01 | 27 of 28 | 1,164min | 43.1min |
 
 **Recent Trend:**
 
-- Last 5 plans with execution metrics: 01-23, 01-24, 01-25, 01-26, 01-27
+- Last 5 plans with execution metrics: 01-24, 01-25, 01-26, 01-27, 01-28
 - Trend: Not established
 
 **Per-Plan Metrics:**
@@ -90,6 +92,7 @@ The recorded UAT is 49/49 automated checks, but it predates the ROADMAP wording 
 | Phase 01 P25 | 79min | 3 tasks | 10 files |
 | Phase 01 P26 | 6min | 2 tasks | 3 files |
 | Phase 01 P27 | 110min | 3 tasks | 8 files |
+| Phase 01 P28 | 6min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -101,14 +104,16 @@ The recorded UAT is 49/49 automated checks, but it predates the ROADMAP wording 
 - Phase 01 effort/churn limits and all consumed attempts remain frozen in experiments/owned_cpu/budget-ledger.json. Current closeout validates at 79,763 active seconds with no pause.
 - Plan 01-27 changes only derived report/receipt/accounting metadata. C2 binds the exact independent review/security report bytes; source collection remains unchanged.
 - The initial project branch has no remote base; no main merge or hosted qualification is implied.
+- [Phase 01]: Plan 01-28 routes README through canonical STATE; preserve Pending CPU requirements and pause for a separate fresh whole-phase verifier.
 
 ### Pending Todos
 
-- Plan 01-17 remains an answered incomplete checkpoint; do not repeat its finite silicon search. Plan 01-27 closed the prior report-seal finding. The fresh 2026-10-05 verifier found one bounded ROADMAP/validator gap and stale README route; Plan 01-28 is checked and ready. CPU-01–05 remain Pending; Phase 01 is open and Phase 02 is gated. Next exact GSD command: `$gsd-execute-phase 01 --gaps-only`. Execute only Plan 01-28, then pause for one fresh whole-phase `gsd-verifier`; do not run UAT broadly or begin Phase 02 in that step.
+- Plan 01-28 execution is complete; pause at this workflow boundary. Next exact action: dispatch one fresh whole-phase `gsd-verifier` for Phase 01 directly and refresh `01-VERIFICATION.md`, assessing the current Phase 01 goal and CPU-01–05. The installed 1.15.0 router has the documented `gaps_found` defect; `$gsd-verify-work 01` repeats UAT and is not this phase-goal assessment. No verified user CLI command exists for the direct-dispatch workaround.
+- Do not repeat another gap plan from the old verdict, broadly rerun historical UAT, resume the finite silicon search or begin Phase 02. If the fresh verifier passes, finish Phase 01 bookkeeping and propose `$gsd-discuss-phase 02`, then pause.
 
 ### Blockers/Concerns
 
-- Fresh phase-goal verification is current at 8/9 `gaps_found`. The current receipt is unqualified and admission is deferred. The actionable repository gap is the ROADMAP/validator mismatch and stale README workflow route; preserve the semantic pending gate, unknown saved PC, and deferred admission while fixing it. Do not add unrelated scope or repeat the prior security-report binding repair.
+- The previous whole-phase verdict is 8/9 GAPS_FOUND; its document gap is repaired by Plan 01-28 but awaits fresh verifier reconciliation. Receipt unqualified and admission deferred; CPU requirements stay Pending. Do not repeat the prior report-binding repair.
 - Original-silicon saved PC, unsupported platforms, public persistence formats, board/BIOS compatibility and performance qualification remain unknown or outside scope.
 - Preserve the historical odd-IRQ, fixture-UBSan, reset-accounting/NMI, BSD address-error and malformed-state/zero-request counterexamples.
 - Both original Musashi adaptation attempts are consumed. Do not repeat them automatically.
@@ -123,6 +128,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-05T14:17:13Z
-Stopped at: Plan 01-28 is planned, structurally validated and independently checked. Phase 01 remains incomplete at the fresh 8/9 GAPS_FOUND verdict; 26 plans are execution-complete and Plan 01-17 remains an answered checkpoint. Next exact command: `$gsd-execute-phase 01 --gaps-only`. After that bounded execution, pause for one fresh whole-phase `gsd-verifier`; do not repeat `$gsd-plan-phase 01 --gaps` or all 49 historical UAT rows.
+Last session: 2026-10-05T14:38:15.649Z
+Stopped at: Completed Plan 01-28 execution; next is one separate fresh whole-phase gsd-verifier
 Resume file: None
