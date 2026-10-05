@@ -74,3 +74,6 @@ The user asked for broad, relevant technical and stakeholder lenses, primary-sou
 - Commercial ROM/BIOS import, game support, video/audio, GUI/front-end integration, public snapshots, and durable persistence are outside Phase 02.
 - Hosted CI authority, protected PRs, unattended App/bot events, release staging/publication, and release artifact qualification remain Phase 03.
 
+## Phase 01 gate refresh (2026-10-05)
+
+The original discussion decisions remain unchanged. After a separate fresh Phase 01 verifier passed 10/10, `02-CONTEXT.md` was updated to record that Phase 02 is unblocked for planning, distinguish the phase-level admission from the frozen candidate receipt, and preserve the original-silicon saved-PC unknown. No prior discussion choices or historical UAT rows were replayed.

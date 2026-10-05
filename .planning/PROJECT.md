@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Glueyneo is a planned portable Neo Geo MVS/AES cartridge emulation core written in C, for frontend integrators, players, maintainers and hardware researchers. It is intended to make trustworthy emulation easy to embed in Playstead and other shared hosts, with a thin libretro adapter providing the first interactive path through RetroArch. A private owned-CPU diagnostic experiment is underway, but no Neo Geo core, public SDK, platform support, compatibility or performance claim is currently qualified.
+Glueyneo is a planned portable Neo Geo MVS/AES cartridge emulation core written in C, for frontend integrators, players, maintainers and hardware researchers. It is intended to make trustworthy emulation easy to embed in Playstead and other shared hosts, with a thin libretro adapter providing the first interactive path through RetroArch. Phase 01 accepted an owned C17 68000 backend for a bounded CPU/bus diagnostic subset. There is not yet a public SDK or complete Neo Geo core, and platform support, game compatibility, original-silicon behavior, and performance remain unqualified.
 
 ## Core Value
 
@@ -12,13 +12,12 @@ Trustworthy Neo Geo emulation that other software can embed easily.
 
 ### Validated
 
-(None yet — ship to validate.)
+- Phase 01 accepted the owned C17 CPU backend for the documented bounded diagnostic subset, including guest execution, independent instances, supported-boundary continuation, timing limits, and source/state inventory. See [01-VERIFICATION.md](phases/01-cpu-acceptance-experiment/01-VERIFICATION.md). This does not qualify original-silicon behavior beyond the recorded subset or establish a public SDK.
 
 ### Active
 
-Current milestone: **v0.1 — CPU/bus diagnostic SDK alpha**. The first delivered capability is an offline installable C library that executes an original deterministic diagnostic through its ordinary native API. A stub API or green automation without meaningful execution does not satisfy it.
+Current milestone: **v0.1 — CPU/bus diagnostic SDK alpha**. Its first delivery target is an offline installable C library that executes an original deterministic diagnostic through its ordinary native API. A stub API or green automation without meaningful execution does not satisfy it.
 
-- [ ] Build and qualify an owned C17 68000 backend under the [Phase 01 contract](../experiments/owned_cpu/CONTRACT.md), with a bounded diagnostic-first scope, complete mutable-state audit, independent instances and documented timing limits.
 - [ ] Provide an opaque native instance API with explicit ownership, lifecycle, normalized diagnostic media, bounded execution, useful errors and no ambient host dependencies.
 - [ ] Execute an original redistributable CPU/bus diagnostic with a justified oracle, deterministic outputs and isolation evidence through a real out-of-tree consumer and a headless diagnostic runner.
 - [ ] Ship a C17/CMake/CTest foundation with pinned Unity, static/shared builds, installed/relocated package consumption, compiled examples and a tested platform matrix.
@@ -39,9 +38,9 @@ The next milestone adds a real interactive diagnostic: selected video/input/soun
 
 ## Context
 
-The preparation dossier was produced on 2026-10-01 and is preserved under [preparation/README.md](preparation/README.md). [BRIEF.md](preparation/BRIEF.md) records user intent; [DECISIONS.md](preparation/DECISIONS.md) supplies the dated preparation decision register (`PREP-D-01`–`PREP-D-44`). The dossier is research, not implemented behavior. Current canonical documents supersede its proposed scope where explicitly linked; historical source receipts remain dated. The [Phase 01 owned-core contract](../experiments/owned_cpu/CONTRACT.md) defines the replacement experiment without admitting an implementation.
+The preparation dossier was produced on 2026-10-01 and is preserved under [preparation/README.md](preparation/README.md). [BRIEF.md](preparation/BRIEF.md) records user intent; [DECISIONS.md](preparation/DECISIONS.md) supplies the dated preparation decision register (`PREP-D-01`–`PREP-D-44`). The dossier is research, not implemented behavior. Current canonical documents supersede its proposed scope where explicitly linked; historical source receipts remain dated. The [Phase 01 owned-core contract](../experiments/owned_cpu/CONTRACT.md) defines the bounded candidate experiment; the separate [Phase 01 verification](phases/01-cpu-acceptance-experiment/01-VERIFICATION.md) records its current phase-level admission.
 
-The intended machine has an original board model and audited reusable chips behind private adapters. Preparation identifies process-global state and serializer/timing coupling in candidate engines. A nominal context API or global lock does not prove reentrancy. The owned-core direction is approved for planning, but Phase 1 must produce bounded acceptance evidence or an explicit GAPS_FOUND outcome before backend admission or a public CPU ABI. Future Z80/YM2610 candidates are inventoried without making their full implementation a prerequisite for a CPU-only alpha.
+The intended machine has an original board model and audited reusable chips behind private adapters. Preparation identifies process-global state and serializer/timing coupling in candidate engines. A nominal context API or global lock does not prove reentrancy. Phase 01 now supplies bounded acceptance evidence and admits the owned backend for Phase 02 SDK integration; it does not establish a public CPU ABI, original-silicon truth, complete ISA support, or Neo Geo board behavior. Future Z80/YM2610 candidates are inventoried without making their full implementation a prerequisite for a CPU-only alpha.
 
 Each core repository delivers a reusable library, a headless diagnostic runner, and a thin libretro adapter. The host owns files, archives, media discovery, windowing, device audio, input mapping, host pacing and networking. The native core owns deterministic guest time and hardware behavior. It preserves hardware slowdown. AES/MVS, motherboard, region, BIOS, cartridge revision, peripheral and scenario claims are tracked separately. A diagnostic bootstrap is not proof of original BIOS compatibility.
 
@@ -73,7 +72,7 @@ The local repository began with preparation only. No remote repository, hosted C
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | PROJECT-D-01/02: Native embeddable MVS/AES cartridge core first | Focuses hardware and ownership while supporting several hosts | — Pending implementation |
-| PROJECT-D-03/04: MIT original board/API plus audited C chip reuse | Reuse may shorten the correctness path without importing an entire emulator architecture | — Backend feasibility and file audit pending |
+| PROJECT-D-03/04: MIT original board/API plus audited C chip reuse | Reuse may shorten the correctness path without importing an entire emulator architecture | — Phase 01 accepted the owned C17 CPU candidate for the bounded diagnostic subset; full hardware and platform qualification remain open |
 | PROJECT-D-06: Per-core libretro adapter and RetroArch macOS qualification after the CPU diagnostic SDK | Provides an early interactive path; GUI ownership stays with RetroArch and the future shared host | — Pending next milestone |
 | PROJECT-D-07–14: C17, CMake/CTest, pinned Unity, offline packages | Familiar portable C integration with explicit consumer evidence | — Toolchain matrix pending |
 | PROJECT-D-15–22: Explicit contexts, deterministic time, normalized media and host-owned I/O | Supports reproducibility, independent instances and FFI integration | — Timing and lifecycle contract pending |
@@ -83,6 +82,7 @@ The local repository began with preparation only. No remote repository, hosted C
 | PROJECT-D-41–44: One current contract and rolling milestones | Preserves provenance without freezing speculative designs | — Adopted for planning; implementation unverified |
 | PROJECT-D-45: Shift-left automated acceptance; human handoff only for irreducibly human or external evidence | Removes repeat UAT toil while keeping unknowns honest and CI proportional | — Default for planning and verification; apply per-phase |
 | PROJECT-D-46: Refresh a failed phase verdict before planning more gap work | Prevents stale negative reports and status-router behavior from generating repeated plans; only fresh, actionable in-scope gaps justify another bounded repair | — Default; Phase 01 runtime-routing incident and workaround recorded in [preparation evidence](preparation/2026-10-04-gsd-verification-loop.md) |
+| PROJECT-D-47: Keep candidate receipt disposition separate from phase admission | A frozen experiment receipt can remain unqualified while a fresh whole-phase verifier admits the bounded scope; status routing follows the verifier and canonical planning docs | — Phase 01 passed 10/10; candidate receipt remains unchanged and original-silicon saved PC remains unknown |
 
 ## Evolution
 
@@ -104,4 +104,4 @@ After each milestone:
 4. Update the current milestone, next outline and revisable longer horizon.
 
 ---
-*Last updated: 2026-10-04 after recording phase-verification loop prevention.*
+*Last updated: 2026-10-05 after Phase 01 acceptance and Phase 02 handoff.*

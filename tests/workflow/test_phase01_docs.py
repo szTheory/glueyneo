@@ -1,4 +1,4 @@
-"""Local controls for the Phase 01 admission and contributor navigation."""
+"""Local controls for current Phase 01 admission and contributor navigation."""
 
 from pathlib import Path
 import re
@@ -7,8 +7,9 @@ from urllib.parse import unquote, urlsplit
 
 
 ROOT = Path(__file__).resolve().parents[2]
-ADMISSION_GATE = "Phase 01 remains open / GAPS_FOUND and Phase 02 gated"
+ADMISSION_STATUS = "Phase 01 passed whole-phase verification (10/10); Phase 02 is unblocked."
 STATE_PATH = ".planning/STATE.md"
+VERIFICATION_PATH = ".planning/phases/01-cpu-acceptance-experiment/01-VERIFICATION.md"
 
 
 def markdown_link_targets(markdown):
@@ -39,9 +40,11 @@ class WorkflowDocsControls(unittest.TestCase):
         self.roadmap = (ROOT / ".planning/ROADMAP.md").read_text(encoding="utf-8")
 
     def check_navigation(self, readme, roadmap):
-        self.assertTrue(ADMISSION_GATE in roadmap, "admission gate missing")
+        self.assertIn(ADMISSION_STATUS, roadmap, "current admission status missing")
         links = markdown_link_targets(readme)
         self.assertIn(STATE_PATH, links, "canonical STATE link missing")
+        self.assertNotIn("CPU-01–05 remain Pending", readme,
+                         "README still reports the pre-admission state")
         self.assertNotRegex(readme, r"\$gsd-execute-phase\s+0?1\b",
                             "fixed Phase 01 execute route")
         local = 0
@@ -56,11 +59,13 @@ class WorkflowDocsControls(unittest.TestCase):
 
     def test_current_docs_navigation(self):
         links, local = self.check_navigation(self.readme, self.roadmap)
+        self.assertIn(VERIFICATION_PATH, markdown_link_targets(self.readme),
+                      "current Phase 01 verification link missing")
         print(f"README links: {links} Markdown, {local}/{local} local resolved")
 
-    def test_removed_admission_gate_is_rejected(self):
-        with self.assertRaisesRegex(AssertionError, "admission gate missing"):
-            self.check_navigation(self.readme, self.roadmap.replace(ADMISSION_GATE, ""))
+    def test_removed_admission_status_is_rejected(self):
+        with self.assertRaisesRegex(AssertionError, "current admission status missing"):
+            self.check_navigation(self.readme, self.roadmap.replace(ADMISSION_STATUS, ""))
 
     def test_removed_state_link_is_rejected(self):
         with self.assertRaisesRegex(AssertionError, "canonical STATE link missing"):

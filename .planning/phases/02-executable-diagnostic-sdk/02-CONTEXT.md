@@ -1,14 +1,18 @@
 # Phase 02: Executable diagnostic SDK - Context
 
 **Gathered:** 2026-10-05  
-**Status:** Ready for planning after the Phase 01 admission gate passes
+**Status:** Ready for planning; Phase 01 bounded backend acceptance passed 2026-10-05
 
 <domain>
 ## Phase Boundary
 
 Deliver an offline-installable C17 SDK and headless runner that execute one meaningful, original, redistributable CPU/bus diagnostic through the ordinary native instance API. Make instance lifecycle and bounded immutable-media ownership explicit, return actionable host-safe errors and deterministic guest progress, and demonstrate the installed package through real out-of-tree C consumers for static and shared builds plus C++ public-header linkage. Tie diagnostic observations, dependency/fixture provenance, machine-readable results, and cost baselines to exact inputs and revisions.
 
-Phase 02 depends on the Phase 01 CPU acceptance gate. At context-gathering time, Phase 01 is still open and awaiting a fresh whole-phase verification after Plan 01-28. These decisions do not admit the candidate or authorize Phase 02 planning/execution ahead of that gate. Re-read current STATE and Phase 01 verification when resuming; the 2026-10-05 `01-VERIFICATION.md` predates Plan 01-28 and is not the final gate result.
+Phase 02 depends on the Phase 01 CPU acceptance gate, which passed a fresh whole-phase verification at source revision `09476ed57ee29c0798f8be8f082e05ad73776e3b` (10/10 must-haves). CPU-01–05 are complete for the bounded owned diagnostic subset, and Phase 02 is unblocked for planning. The frozen candidate receipt still says `unqualified` / `phase_admitted: false`; that is its experiment-level disposition, separate from phase-level admission. Original-silicon saved-PC behavior remains unknown, and exact `0x4AFC` remains unsupported for this candidate only. The prior gate-status prose in this context is superseded by this update; no implementation decisions below are reopened.
+
+The source-bound `tools/owned_cpu/contract.py` validation records the pre-admission Pending/gated checkpoint and must not be edited to rewrite the old receipt. It is not the current phase router. The current admission result is `01-VERIFICATION.md` plus the canonical `STATE.md` and `ROADMAP.md`. The unchanged checker no longer accepts the current post-admission planning text; planning must account for that historical gate test without restoring stale Pending status or altering the source-bound receipt. Do not repeat Plan 01-29, Phase 01 verification, or historical UAT.
+
+The installed `query verification.status` reports the 01 report's fingerprint as stale after phase-closeout documentation changed and suggests `$gsd-execute-phase 01`. This is administrative fingerprint drift: no runtime or CPU acceptance evidence changed, and the updated documentation-route regression passed 8/8. Do not follow that stale route or rerun Phase 01 for status-only edits. Phase 02 is the active phase and the next command is `$gsd-plan-phase 02`.
 
 Out of scope: full game and original-BIOS compatibility, commercial media, video/audio, a GUI, public CPU/plugin state, durable persistence, and Phase 03 hosted CI/protected-PR/release qualification. Do not turn a functional callback trace into a physical bus-pin, Neo Geo board-timing, or hardware-truth claim.
 
@@ -67,16 +71,16 @@ The user instructed: “follow ur recs for all these plz.” This accepts the re
 - `.planning/PROJECT.md` — product scope, C17 and host-boundary contracts, dependency preference, and Phase 01/02 gate.
 - `.planning/REQUIREMENTS.md` — exact API, diagnostic, build, evidence, and documentation requirements for Phase 02.
 - `.planning/ROADMAP.md` — Phase 02 success criteria and Phase 03 boundary.
-- `.planning/STATE.md` — current workflow status; Phase 01 remains open pending fresh verification.
+- `.planning/STATE.md` — current workflow status; Phase 02 is ready to plan after the bounded Phase 01 acceptance.
 - `.planning/METHODOLOGY.md` — role-based synthesis, primary-source use, small-dependency policy, shift-left checks, and stale-verification-loop prevention.
 - `.planning/preparation/README.md` and `.planning/preparation/DECISIONS.md` — dated evidence index and PREP-D provenance; current canonical project documents supersede preparation proposals.
 
 ### Phase 01 admission and reusable evidence
 - `.planning/phases/01-cpu-acceptance-experiment/01-CONTEXT.md` — candidate boundary, original fixture, explicit uncertainty, and prior decisions.
-- `.planning/phases/01-cpu-acceptance-experiment/01-VERIFICATION.md` — prior point-in-time report only; it predates Plan 01-28 and must not be treated as the refreshed admission verdict.
-- `.planning/phases/01-cpu-acceptance-experiment/01-28-SUMMARY.md` — latest bounded documentation repair and its evidence; does not itself admit the CPU.
+- `.planning/phases/01-cpu-acceptance-experiment/01-VERIFICATION.md` — current 10/10 whole-phase result, point-in-time at the source revision above; phase-level admission for the bounded candidate.
+- `.planning/phases/01-cpu-acceptance-experiment/01-29-SUMMARY.md` and `01-29-ADMISSION-REVIEW.md` — independent bounded CPU recommendation and evidence, reconciled by the current verifier.
 - `.planning/preparation/2026-10-04-gsd-verification-loop.md` — reproduced installed-router limitation and the fresh-verifier route.
-- `experiments/owned_cpu/CONTRACT.md` and `experiments/owned_cpu/ACCEPTANCE.md` — owned-core scope and current candidate evidence/disposition; neither is admission by itself.
+- `experiments/owned_cpu/CONTRACT.md` and `experiments/owned_cpu/ACCEPTANCE.md` — bounded owned-core scope and frozen candidate evidence/disposition; the receipt is not the phase-level admission authority.
 - `experiments/owned_cpu/cpu.h` — current private cycle/run/allocator shape to assess, not a public SDK interface.
 
 ### Fixture, architecture, package, and verification evidence
@@ -101,18 +105,18 @@ The user instructed: “follow ur recs for all these plz.” This accepts the re
 ## Existing Code Insights
 
 ### Reusable Assets
-- `experiments/owned_cpu/cpu.h`: private opaque CPU handle, explicit bus/allocator callbacks, finite guest-cycle budget, result counters, and fault status. Its contract is experiment-only and remains behind the admission gate.
-- `tests/cpu/guest_fixture.c` and `tests/cpu/ORACLE.md`: small original MIT arithmetic/store guest with manual-derived outcomes and a specific mutation control. It is a seed for Phase 02 evidence, not a complete Phase 02 diagnostic and not an admitted backend result.
+- `experiments/owned_cpu/cpu.h`: private opaque CPU handle, explicit bus/allocator callbacks, finite guest-cycle budget, result counters, and fault status. The bounded backend passed Phase 01 acceptance; this header is still not the public SDK API.
+- `tests/cpu/guest_fixture.c` and `tests/cpu/ORACLE.md`: small original MIT arithmetic/store guest with manual-derived outcomes and a specific mutation control. It is a seed for Phase 02 evidence, not a complete Phase 02 diagnostic.
 - `experiments/owned_cpu/CMakeLists.txt`, root `CMakeLists.txt`, and `third_party/unity/`: current experimental CMake/CTest and test-only Unity patterns; they do not yet provide a public library target or installed SDK package.
 
 ### Established Patterns
 - C17 runtime, explicit widths/byte order, opaque per-instance state, bounded resources, deterministic guest cycles, explicit status/results, and no ambient host services.
 - Every fixture/result is tied to source, tool, configuration, input, and oracle ancestry. Unsupported/unknown/skipped outcomes remain explicit.
 - No public CPU state, snapshot, replay, or persistence claim is implied by private continuation tests.
-- The local build currently contains CPU experiments, not a public `src/` SDK or installed package. New SDK integration remains blocked until Phase 01 admission.
+- The local build currently contains CPU experiments, not a public `src/` SDK or installed package. Phase 01 admission is complete for the bounded subset; Phase 02 creates and qualifies the public SDK boundary.
 
 ### Integration Points
-- After Phase 01 passes, place the accepted backend behind the ordinary native instance API and normalized diagnostic media boundary.
+- Place the Phase 01 accepted backend behind the ordinary native instance API and normalized diagnostic media boundary.
 - Use the same native path from the headless runner and an installed out-of-tree C consumer; compile/link a separate C++ public-header consumer without adding C++ runtime code.
 - Keep CTest, deterministic consumer checks, bounded fuzz/sanitizer configurations, machine-readable evidence, and cost baselines connected through the local verification entrypoint; Phase 03 later qualifies hosted authority and publication.
 
@@ -131,7 +135,7 @@ The user accepted the synthesized recommendations for all four areas and specifi
 - Commercial ROM/BIOS import, game compatibility, original-BIOS boot, video/audio, GUI, and full Neo Geo hardware claims remain outside this SDK phase.
 - Public CPU/plugin ABI, snapshots, replay compatibility, durable saves, and frontend/libretro or Playstead integration remain deferred to later scopes.
 - Hosted CI authority, protected PRs, App/bot event qualification, release staging/publication, and complete artifact qualification belong to Phase 03.
-- Phase 02 implementation stays gated until the fresh Phase 01 whole-phase verifier reconciles Plan 01-28 against current evidence.
+- The original-silicon saved-PC question remains unknown and excluded from the accepted candidate scope; it does not block this Phase 02 SDK plan.
 
 </deferred>
 

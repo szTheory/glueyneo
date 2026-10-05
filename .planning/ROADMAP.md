@@ -2,7 +2,7 @@
 
 ## Overview
 
-Deliver an offline installable C SDK whose ordinary native API runs an original deterministic CPU/bus diagnostic. Qualify the CPU before SDK integration, demonstrate the complete consumer workflow, then distribute a tested unsigned alpha. Phase 1 has 29 plans and 29 summaries (28 execution-complete; Plan 01-17 remains incomplete); the latest fresh 2026-10-05 phase verdict is 9/10 GAPS_FOUND and predates Plan 01-29. Plan 01-29 produced an independent bounded accept recommendation, not phase admission. Phase 1 remains incomplete pending one separate fresh whole-phase verifier; Phases 2–3 remain gated/unplanned with release evidence pending. [PROJECT.md](PROJECT.md) and [REQUIREMENTS.md](REQUIREMENTS.md) govern scope; [research synthesis](research/SUMMARY.md), [roadmap seed](preparation/ROADMAP-SEED.md) and [adversarial gates](preparation/ADVERSARIAL-REVIEW.md) supply dated rationale.
+Deliver an offline installable C SDK whose ordinary native API runs an original deterministic CPU/bus diagnostic. Phase 01 accepted the owned CPU backend for the bounded diagnostic subset. Phase 02 builds the SDK and proves the complete consumer workflow; Phase 03 qualifies and distributes a tested unsigned alpha. The fresh 2026-10-05 Phase 01 report passed 10/10 after Plan 01-29; see its verification report for source identity, current checks, and limitations. The candidate-level receipt remains `unqualified`, while the independent phase report is the current bounded admission decision. Phase 02 is ready for planning; Phase 03 remains unplanned with delivery evidence pending. [PROJECT.md](PROJECT.md) and [REQUIREMENTS.md](REQUIREMENTS.md) govern scope; [research synthesis](research/SUMMARY.md), [roadmap seed](preparation/ROADMAP-SEED.md) and [adversarial gates](preparation/ADVERSARIAL-REVIEW.md) supply dated rationale.
 
 ## Milestones
 
@@ -18,7 +18,7 @@ Deliver an offline installable C SDK whose ordinary native API runs an original 
 
 Integer phases are planned milestone work. Decimal phases are reserved for inserted work and execute in numeric order. Granularity is coarse; each phase will use small reviewable vertical plans.
 
-- [ ] **Phase 1: CPU acceptance experiment** - Qualify a reproducible C backend with real guest, isolation, state and timing evidence.
+- [x] **Phase 1: CPU acceptance experiment** - Qualify a reproducible C backend with real guest, isolation, state and timing evidence. (completed 2026-10-05)
 - [ ] **Phase 2: Executable diagnostic SDK** - Run a meaningful original guest through a safe native API and real installed consumers.
 - [ ] **Phase 3: Distributable release qualification** - Qualify relocated artifacts, delivery authority and a complete commit-bound unsigned release.
 
@@ -38,12 +38,12 @@ Integer phases are planned milestone work. Decimal phases are reserved for inser
   4. A maintainer can inspect the complete mutable-state/callback inventory and restore backend state at supported boundaries with identical continuation, excluding host pointers and jump buffers. (CPU-04)
   5. A maintainer can reproduce the explicit owned-core decision, commands and results against finite effort/churn limits fixed before implementation; failed work and findings are preserved, actionable issues receive budgeted repair, and resource thresholds trigger review/replanning rather than automatic backend rejection. (CPU-05)
 
-**Plans**: 28/29 execution-complete; 29 plans have summaries, including Plan 01-17, which remains incomplete at its answered checkpoint. Plan 01-29 executed the one bounded admission assessment: its independent reviewer recommends acceptance for CPU-01–05, while the separate security assessment found zero HIGH/CRITICAL blockers. The latest fresh 2026-10-05 `01-VERIFICATION.md` is 9/10 `GAPS_FOUND`; it predates Plan 01-29 and remains the current phase-goal report. CPU-01–05 remain Pending, the candidate receipt remains unqualified, Phase 01 remains open and Phase 02 stays gated. Next is exactly one separate fresh whole-phase verifier using the recommendation and current evidence. Do not repeat UAT rows 1–51, replan this evidence, or infer phase admission from the recommendation. An exact new verifier blocker must name its material dependency before any gap planning.
+**Plans**: 28/29 execution-complete; all 29 have summaries. Plan 01-17 remains an answered, incomplete hardware-evidence checkpoint; the unresolved original-silicon saved-PC question stays unknown and outside the accepted candidate capability. Plan 01-29's independent CPU review recommends bounded acceptance, and its security review found zero HIGH/CRITICAL blockers. The separate fresh 2026-10-05 [whole-phase report](phases/01-cpu-acceptance-experiment/01-VERIFICATION.md) passed 10/10 and establishes Phase 01 acceptance for the exact bounded CPU subset. Phase 02 is unblocked. The candidate receipt remains `unqualified` as a frozen experiment artifact; no receipt, seal, source collection, or historical UAT row was rewritten or replayed. Do not repeat Plan 01-29 or the same-evidence verifier pass.
 
 Plans:
 
 **Wave 29** *(bounded gap closure; follows Wave 28)*
-- [x] 01-29-PLAN.md — Independent CPU-01–05 review supports a bounded accept recommendation; a separate fresh verifier still controls phase admission
+- [x] 01-29-PLAN.md — Independent CPU-01–05 review supports bounded acceptance; the separate Phase 01 verifier subsequently passed 10/10
 
 **Wave 28** *(bounded gap closure; follows Wave 27)*
 - [x] 01-28-PLAN.md — Restore the verified CPU-05 documentation interface, route contributors through canonical state, and add bounded local regression evidence; phase verification remains separate
@@ -146,15 +146,15 @@ Plans:
 
 - [x] 01-17-PLAN.md — Acquire and independently adjudicate additional applicable original-MC68000 evidence; preserve HIGH/open and stop at a decision checkpoint if unresolved. The owner preserved hardware uncertainty (P01-C-13); P01-C-14 later selected a candidate-only `0x4AFC` unsupported boundary. Plans 01-18–01-21 reconcile that claim without rewriting this evidence record.
 
-Planning guidance: Plans 01-07–01-14 built and assessed the owned-core candidate; Plans 01-15–01-17 preserve original-silicon uncertainty and the answered checkpoint. P01-C-14 excludes exact `0x4AFC` from this candidate only; original-silicon saved PC remains unknown. Plans 01-18–01-29 repaired and assessed bounded candidate evidence without admitting the backend or completing Phase 01. Plan 01-29 is complete and must not be repeated. One separate fresh whole-phase verifier controls Phase 01 completion and Phase 02 admission. Preserve unknown hardware truth and do not repeat earlier evidence searches or same-evidence planning.
+Planning guidance: Plans 01-07–01-14 built and assessed the owned-core candidate; Plans 01-15–01-17 preserve original-silicon uncertainty and the answered checkpoint. P01-C-14 excludes exact `0x4AFC` from this candidate only; original-silicon saved PC remains unknown. Plans 01-18–01-29 repaired and assessed bounded candidate evidence. The fresh whole-phase verifier passed 10/10 and admits this candidate only for the bounded diagnostic scope. Plan 01-29 and its verifier pass are complete; do not repeat them, replay historical UAT, or restart the silicon evidence search.
 
-**Admission gate:** CPU-01–05 remain Pending. Historical task evidence and the old Musashi rejection decision do not qualify current backend admission; both Musashi adaptation attempts are consumed. The candidate-only exact `0x4AFC` exclusion and later bounded repairs remain unqualified at the candidate-receipt level. Plan 01-29's independent assessment recommends bounded acceptance; it does not alter the unqualified receipt. The latest fresh 2026-10-05 verifier is 9/10 `GAPS_FOUND` and predates that recommendation. Phase 01 remains open / GAPS_FOUND and Phase 02 gated until a separate fresh phase-goal verifier resolves the result. Original-silicon saved PC remains unknown; no phase admission or hardware result is inferred here.
+**Admission status:** Phase 01 passed whole-phase verification (10/10); Phase 02 is unblocked. The fresh report admits CPU-01–05 for the bounded owned diagnostic subset, with WR-01 retained as a documentation warning. The candidate-level receipt remains `unqualified`; its historical `phase_admitted: false` value was not changed. This phase decision does not establish original-silicon saved-PC behavior, full ISA coverage, board timing, BIOS/game compatibility, platform support, or performance. The original-silicon saved PC remains unknown, and exact `0x4AFC` remains unsupported for this candidate only. The frozen `tools/owned_cpu/contract.py` check records the pre-admission gate at source revision `09476ed`; it is historical evidence, not the current phase router. A post-closeout fingerprint check reports the Phase 01 report stale because planning files changed; per METHODOLOGY.md, do not repeat verification for these administrative updates. Follow this roadmap and STATE for current admission and next-step routing.
 
 ### Phase 2: Executable diagnostic SDK
 
 **Goal**: As a C integrator, I want to install an offline SDK and run a meaningful original CPU/bus diagnostic through its ordinary native API and a headless runner, so that I can reproduce results with safe failures and clear evidence.
 **Mode:** mvp
-**Depends on**: Phase 1 acceptance gate
+**Depends on**: Phase 1 acceptance gate (passed for the bounded candidate scope on 2026-10-05)
 **Requirements**: API-01, API-02, API-03, API-04, DIAG-01, DIAG-02, DIAG-03, BUILD-01, BUILD-02, EVID-01, EVID-02, EVID-03, EVID-04, DOC-01, DOC-02
 **Success Criteria** (what must be TRUE):
 
@@ -190,15 +190,15 @@ Planning guidance: Qualify relocated/offline consumers and the exact support mat
 
 ## Progress
 
-Execution order: 1 → 2 → 3, subject to the explicit backend admission gate.
+Execution order: 1 → 2 → 3. Phase 01's bounded backend admission gate is satisfied; Phase 02 may be planned.
 
 | Phase | Milestone | Execution-complete plans | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. CPU acceptance experiment | v0.1 | 27/28 | In Progress |  |
+| 1. CPU acceptance experiment | v0.1 | 28/29 (01-17 remains a checkpoint) | Complete | 2026-10-05 |
 | 2. Executable diagnostic SDK | v0.1 | 0/TBD | Not started | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
-Coverage: 27/27 current requirements assigned exactly once; 5 in Phase 1, 15 in Phase 2, 7 in Phase 3. Task-level records for CPU-01–05 exist, but current phase-goal verification must be refreshed before any admission decision; backend admission remains deferred and the other 22 remain Pending in [traceability](REQUIREMENTS.md#traceability). Deferred v2 requirements are not allocated to these phases.
+Coverage: 27/27 current requirements are assigned exactly once; 5 in Phase 1, 15 in Phase 2, and 7 in Phase 3. CPU-01–05 are Complete for Phase 01's bounded backend acceptance. The other 22 remain Pending in [traceability](REQUIREMENTS.md#traceability). Deferred v2 requirements are not allocated to these phases.
 
 ## Next Milestone Outline — Interactive Diagnostic Alpha
 

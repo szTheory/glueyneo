@@ -6,17 +6,17 @@
 
 ## v1 Requirements
 
-In this OpenGSD template, v1 means the first scoped deliverable, **v0.1**, not a stable 1.0 API or a complete Neo Geo emulator. Acceptance is evidence from actual execution; preparation and research are design inputs. The current owned-core subset, limits, oracle ancestry and stop rules are defined in the [Phase 01 owned-core contract](../experiments/owned_cpu/CONTRACT.md). CPU-01–04 are Pending current admission despite historical task evidence. The historical phase verifier refused grammar preflight; it did not establish that all four behaviors failed. The historical Musashi CPU-05 rejection decision is complete; the separate owned-core CPU-05 decision remains pending until its evidence is reproduced. Both Musashi adaptation attempts are consumed and no further Musashi adaptation is authorized. Phase 01 stays open and Phase 02 gated.
+In this OpenGSD template, v1 means the first scoped deliverable, **v0.1**, not a stable 1.0 API or a complete Neo Geo emulator. Acceptance is evidence from actual execution; preparation and research are design inputs. The current owned-core subset, limits, oracle ancestry and stop rules are defined in the [Phase 01 owned-core contract](../experiments/owned_cpu/CONTRACT.md). CPU-01–05 are complete for that bounded candidate scope under the fresh 10/10 [Phase 01 verification](phases/01-cpu-acceptance-experiment/01-VERIFICATION.md). This does not establish original-silicon saved-PC behavior, a complete ISA, game/BIOS support, board timing, or public SDK compatibility. The candidate receipt remains unqualified as an experiment artifact; the phase verifier records the separate current admission decision. Both Musashi adaptation attempts remain consumed and no further Musashi adaptation is authorized. Phase 02 is unblocked for planning.
 
 ### CPU Admission
 
-- [ ] **CPU-01**: At a recorded source revision, a maintainer can reproduce the owned C17 68000 build and per-file authored/copied/generated/compiled/distributed inventory with license notices and host-call disposition, proving that imported CPU/FPU/SoftFloat/generator code is absent from the owned runtime closure, as scoped by the [Phase 01 contract](../experiments/owned_cpu/CONTRACT.md).
-- [ ] **CPU-02**: At recorded source, build and input identities, a maintainer can run distinguishable CPU instances alternately and concurrently, including simultaneous cold initialization and failing creation/teardown paths, with results matching isolated baselines and no shared mutable machine state.
-- [ ] **CPU-03**: At recorded source and build identities, a maintainer can observe actual guest progress, stop/overshoot behavior and selected interrupt/exception interactions in a bounded execution experiment whose timing precision, bus sequence and unsupported behavior are documented.
-- [ ] **CPU-04**: At a recorded source revision, a maintainer can inspect a complete mutable-state and callback inventory and reproduce backend continuation at supported boundaries without serializing host pointers or jump buffers; this establishes no public board-snapshot format.
-- [ ] **CPU-05**: A maintainer can reproduce the owned-core decision against cumulative active-effort limits and churn review thresholds set before implementation, with commands and counterexamples. Do not use a fixed attempt count; tooling halts do not consume an attempt. Repair actionable in-scope findings from the remaining budget. If a hard effort limit or churn threshold prevents repair, preserve GAPS_FOUND and replan; a threshold alone does not reject the backend. This preserves the completed historical Musashi rejection as provenance and adds a separate pending owned-core decision obligation.
+- [x] **CPU-01**: At a recorded source revision, a maintainer can reproduce the owned C17 68000 build and per-file authored/copied/generated/compiled/distributed inventory with license notices and host-call disposition, proving that imported CPU/FPU/SoftFloat/generator code is absent from the owned runtime closure, as scoped by the [Phase 01 contract](../experiments/owned_cpu/CONTRACT.md).
+- [x] **CPU-02**: At recorded source, build and input identities, a maintainer can run distinguishable CPU instances alternately and concurrently, including simultaneous cold initialization and failing creation/teardown paths, with results matching isolated baselines and no shared mutable machine state.
+- [x] **CPU-03**: At recorded source and build identities, a maintainer can observe actual guest progress, stop/overshoot behavior and selected interrupt/exception interactions in a bounded execution experiment whose timing precision, bus sequence and unsupported behavior are documented.
+- [x] **CPU-04**: At a recorded source revision, a maintainer can inspect a complete mutable-state and callback inventory and reproduce backend continuation at supported boundaries without serializing host pointers or jump buffers; this establishes no public board-snapshot format.
+- [x] **CPU-05**: A maintainer can reproduce the owned-core decision against cumulative active-effort limits and churn review thresholds set before implementation, with commands and counterexamples. Do not use a fixed attempt count; tooling halts do not consume an attempt. Repair actionable in-scope findings from the remaining budget. If a hard effort limit or churn threshold prevents repair, preserve GAPS_FOUND and replan; a threshold alone does not reject the backend. This preserves the completed historical Musashi rejection as provenance and adds a separate pending owned-core decision obligation.
 
-Historical Musashi CPU-05 decision evidence: [bounded rejection](../experiments/cpu/ACCEPTANCE.md#current-supersession-and-bounded-rejection--2026-10-02-plan-01-05), [sealed report](../experiments/cpu/acceptance-results.json), [independent reconciliation](../experiments/cpu/REVIEW.md), and [01-05 summary](phases/01-cpu-acceptance-experiment/01-05-SUMMARY.md). Normal-Python seal and read-only verify each return exit 1 with rejected / GAPS_FOUND and `blocking review finding`. The original pre-adaptation limits, two consumed attempts and 2,614 handwritten / 523 helper / 483 semantic lines, 20,005 total / 18,859 final-attempt seconds remain unchanged. All eight later source counterexamples and uncertainties are dispositioned without repair; earlier runtime results remain historical. SDK integration is prohibited. This completes only the historical Musashi decision; owned-core decision and CPU-01–04 admission evidence remain pending.
+Historical Musashi CPU-05 decision evidence: [bounded rejection](../experiments/cpu/ACCEPTANCE.md#current-supersession-and-bounded-rejection--2026-10-02-plan-01-05), [sealed report](../experiments/cpu/acceptance-results.json), [independent reconciliation](../experiments/cpu/REVIEW.md), and [01-05 summary](phases/01-cpu-acceptance-experiment/01-05-SUMMARY.md). Normal-Python seal and read-only verify each return exit 1 with rejected / GAPS_FOUND and `blocking review finding`. The original pre-adaptation limits, two consumed attempts and 2,614 handwritten / 523 helper / 483 semantic lines, 20,005 total / 18,859 final-attempt seconds remain unchanged. All eight later source counterexamples and uncertainties are dispositioned without repair; earlier runtime results remain historical. Integration of the rejected Musashi backend is prohibited. This section completes only that historical decision; the owned-core requirements are now complete for the bounded Phase 01 scope documented in [01-VERIFICATION.md](phases/01-cpu-acceptance-experiment/01-VERIFICATION.md).
 
 ### Native API and Host Safety
 
@@ -113,11 +113,11 @@ Each v1 requirement has exactly one primary phase in v0.1. Later requirements re
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CPU-01 | Phase 1 | Pending |
-| CPU-02 | Phase 1 | Pending |
-| CPU-03 | Phase 1 | Pending |
-| CPU-04 | Phase 1 | Pending |
-| CPU-05 | Phase 1 | Pending |
+| CPU-01 | Phase 1 | Complete |
+| CPU-02 | Phase 1 | Complete |
+| CPU-03 | Phase 1 | Complete |
+| CPU-04 | Phase 1 | Complete |
+| CPU-05 | Phase 1 | Complete |
 | API-01 | Phase 2 | Pending |
 | API-02 | Phase 2 | Pending |
 | API-03 | Phase 2 | Pending |
