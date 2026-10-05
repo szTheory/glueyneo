@@ -1,9 +1,9 @@
 ---
 status: complete
 phase: 01-cpu-acceptance-experiment
-source: "01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md, 01-04-SUMMARY.md, 01-05-SUMMARY.md, 01-06-SUMMARY.md, 01-07-SUMMARY.md, 01-08-SUMMARY.md, 01-09-SUMMARY.md, 01-10-SUMMARY.md, 01-11-SUMMARY.md, 01-12-SUMMARY.md, 01-13-SUMMARY.md, 01-14-SUMMARY.md, 01-15-SUMMARY.md, 01-16-SUMMARY.md, 01-17-SUMMARY.md, 01-18-SUMMARY.md, 01-19-SUMMARY.md, 01-20-SUMMARY.md, 01-21-SUMMARY.md, 01-22-SUMMARY.md, 01-23-SUMMARY.md, 01-24-SUMMARY.md, 01-25-SUMMARY.md"
+source: "01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md, 01-04-SUMMARY.md, 01-05-SUMMARY.md, 01-06-SUMMARY.md, 01-07-SUMMARY.md, 01-08-SUMMARY.md, 01-09-SUMMARY.md, 01-10-SUMMARY.md, 01-11-SUMMARY.md, 01-12-SUMMARY.md, 01-13-SUMMARY.md, 01-14-SUMMARY.md, 01-15-SUMMARY.md, 01-16-SUMMARY.md, 01-17-SUMMARY.md, 01-18-SUMMARY.md, 01-19-SUMMARY.md, 01-20-SUMMARY.md, 01-21-SUMMARY.md, 01-22-SUMMARY.md, 01-23-SUMMARY.md, 01-24-SUMMARY.md, 01-25-SUMMARY.md, 01-26-SUMMARY.md, 01-27-SUMMARY.md"
 started: 2026-10-03T23:16:26Z
-updated: 2026-10-04T16:34:48Z
+updated: "2026-10-05T00:12:36Z"
 ---
 
 **Routing supersession — 2026-10-04:** Row 44 preserves the README route check at its recorded source revision, when gap planning was the next step. That gap-planning attempt returned `PLANNING INCONCLUSIVE`; the old verification report is now marked stale. The current next step is `$gsd-execute-phase 01`, which resumes at verification because all plan summaries are present. Row 44 remains historical evidence for its recorded revision.
@@ -284,12 +284,60 @@ source_revision: 56b6b3a53c553b639d24a9fe5ff3143169161761
 command: `python3 -c 'from pathlib import Path; import re; s=Path("README.md").read_text(); links=re.findall(r"\[[^\]]+\]\(([^)]+)\)",s); local=[x for x in links if not re.match(r"(?:https?:|mailto:)",x) and not x.startswith("#")]; missing=[x for x in local if not Path(x.split("#",1)[0]).exists()]; good=(len(links)==19 and len(local)==19 and not missing and "44/44 automated checks passing" in s and "`$gsd-plan-phase 01 --gaps`" in s and "`$gsd-verify-work 01`" not in s and "CPU-01–05 remain Pending" in s and "saved PC remains unknown" in s); print({"markdown_links":len(links),"local_resolved":len(local)-len(missing),"missing":missing,"current_next_step_present":"`$gsd-plan-phase 01 --gaps`" in s,"completed_verify_step_absent":"`$gsd-verify-work 01`" not in s,"valid":good}); raise SystemExit(0 if good else 1)'`
 denominator: 19/19 local Markdown links and current status/routing assertions.
 
+
+### 45. Plan 01-26 GATE — Canonical admission wording
+expected: The unchanged contract accepts the canonical admission wording while CPU-01–05 remain Pending and Phase 02 remains gated.
+result: pass
+source: automated
+coverage_id: GATE
+source_revision: 83de9e95e3fdaf62bf732fe682d32a06bae733e2
+command: PYTHONPATH=. python3 tests/owned_cpu/test_contract.py ContractControls.test_frozen_subject_and_pending_gate_validate
+denominator: 1/1 targeted regression; contract validate status pass.
+
+### 46. Plan 01-26 REPRODUCTION — Current read-only decision checks
+expected: Current read-only contract and acceptance checks pass with the candidate unqualified, requirements Pending, Phase 02 gated, and original-silicon saved PC unknown.
+result: pass
+source: automated
+coverage_id: REPRODUCTION
+source_revision: 83de9e95e3fdaf62bf732fe682d32a06bae733e2
+command: python3 tools/owned_cpu/contract.py validate; python3 tools/owned_cpu/acceptance.py verify
+denominator: Contract validator status pass; acceptance verifier status pass, six collections, zero lane blockers, disposition unqualified.
+
+### 47. Plan 01-27 D1 — Stale-binding archive and history preservation
+expected: The six archived payloads validate, the captured stale-binding rejection remains recoverable, all six collections and the original 45-entry ledger prefix remain intact, and the current deferred seal is present.
+result: pass
+source: automated
+coverage_id: D1
+source_revision: 83de9e95e3fdaf62bf732fe682d32a06bae733e2
+command: Corrected archive assertion in 01-27-PLAN.md Task 1 verify; final receipt/ledger preservation comparison recorded below.
+denominator: Six archived payload SHA-256 digests match; the captured exit-1 acceptance result records the expected stale security binding in stderr; all six collections match; prior receipt fields match; the former seal is preserved as the newest superseded seal; 45/45 original ledger entries and frozen ledger policy are preserved; current deferred seal budget passes.
+correction: The original planned assertion parsed the rejection JSON from stdout. Its archived process record has empty stdout and the expected JSON in stderr. The plan now checks stderr; the corrected assertion passed. No acceptance behavior or expected result changed.
+
+### 48. Plan 01-27 D2 — Independent bindings and deferred seal
+expected: The exact current REVIEW/SECURITY bindings validate and the candidate remains unqualified with admission deferred.
+result: pass
+source: automated
+coverage_id: D2
+source_revision: 83de9e95e3fdaf62bf732fe682d32a06bae733e2
+command: PYTHONPATH=. python3 tests/owned_cpu/test_acceptance.py AcceptanceControls.test_deferred_seal_binds_review_security_and_never_admits; same targeted test under python3 -O; acceptance.py review-check at the receipt seal revision; contract validate; acceptance verify; contract budget.
+denominator: Acceptance control 1/1 normal and 1/1 optimized; independent review check clean at C2 revision e65ea35fe36a0d9cbcbd2f938142f247f3bbf3e2; contract, acceptance, and budget statuses pass.
+
+
+### 49. Current README verification route and UAT count
+expected: README shows the current 49/49 automated UAT, links resolve, the separate phase-goal verification command is current, and the open/pending/unknown status remains accurate.
+result: pass
+source: automated
+coverage_id: README-verify-route
+source_revision: 83de9e95e3fdaf62bf732fe682d32a06bae733e2
+command: Current README assertion: 19 Markdown links and 19 local links resolve; 49/49 UAT, $gsd-execute-phase 01, Pending CPU requirements, unknown saved PC, and removal of the completed $gsd-verify-work route are checked.
+denominator: 19/19 local Markdown links resolve; all current status/routing assertions pass.
+
 ## Summary
 
-Current Plan 01-25 plus verify-work navigation aggregate (44 rows):
+Current automated UAT aggregate (49 rows):
 
-total: 44
-passed: 44
+total: 49
+passed: 49
 issues: 0
 pending: 0
 skipped: 0
@@ -312,6 +360,14 @@ blocked: 0
 - Test 44 reran the README link/status check at its recorded revision and confirmed `$gsd-plan-phase 01 --gaps` as the next route at that time. This updated navigation only; the phase-goal report then remained `gaps_found`. The later gap-planning attempt returned inconclusive, so that route is superseded by the stale-verification gate documented above.
 - Reviewer build/source identity: base source commit `9fba16b864cf74e3b8a9c97047bb27a5db544b59`, current profile `owned-p01-c14-continuation-2`, collection `cb77285dd7b821993e1e12ec96e72ed5e13bbf57da7d6dd433f07b3940275738`, map `be6e2c45f9590425a227bb9d6622d7629d080cca778eba29d5304bef3bd13a6d`, amendment `3728dc84fc27b2f51262ede8f916d755ff9340b80b069e53a731caea247b36ad`. Review/security final revision binding and deferred seal pass; candidate admission remains deferred pending phase-goal verification.
 - Candidate disposition stays unqualified and not admitted. CPU-01–05 remain Pending, Phase 01 remains incomplete with stale phase-goal verification, Phase 02 remains gated, and original-silicon saved PC for `0x4AFC` remains unknown.
+
+
+- Plans 01-26 and 01-27 coverage classifiers each report all entries auto-covered and no human-judgment checkpoint. Rows 45–48 record those four coverage entries as automated.
+- Current checks ran against HEAD 83de9e95e3fdaf62bf732fe682d32a06bae733e2. No runtime, test, tool, collection, or acceptance source changed; the existing uncommitted 01-VERIFICATION.md edit was left untouched and is outside the scoped acceptance inputs. The corrected Plan 01-27 archive assertion passed.
+- Legacy commit reconciliation: all 27 summaries lack an explicit commits field, so the workflow classified them as warnings, not mismatches. Eighteen recorded bases were available for measurement, eight plan windows could be bounded by plan_head_after, one historical base object was unavailable, and eight summaries had no base revision. No claimed commit count was contradicted.
+- No human UAT checkpoint remains for machine-observable Phase 01 claims. Original-silicon saved PC remains unknown and is not converted into an emulator pass.
+- README now records 49/49 automated checks and the current separate phase-goal verification route; row 49 checks all 19 local links and status assertions.
+- Verify-post security check: the current SECURITY report is ASVS L1, verified with `threats_open: 0`; its Plan 01-27 C2 binding matches the active receipt, and `acceptance.py verify` passes. The report bytes were preserved because no security source or claim changed.
 
 ## Historical Plan 01-21 Verification Evidence (preserved verbatim)
 

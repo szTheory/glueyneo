@@ -6,9 +6,9 @@ current_phase: 01
 current_phase_name: CPU acceptance experiment
 status: executing
 stopped_at: Plan 01-27 execution complete; Phase 01 remains open/GAPS_FOUND pending separate fresh phase-goal verification.
-last_updated: "2026-10-04T23:05:53Z"
+last_updated: "2026-10-05T00:07:14Z"
 last_activity: 2026-10-04
-last_activity_desc: Plan 01-27 execution and advisory review complete; separate phase-goal verification pending
+last_activity_desc: Phase 01 verify-work extended UAT to 49/49 automated checks; separate fresh phase-goal verification pending
 state_head: cdcd2e859e579d6d9a9774f048b1875a3ce302ec
 progress:
   total_phases: 3
@@ -33,13 +33,13 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 Phase: 01 (CPU acceptance experiment) — EXECUTING; phase goal remains open / GAPS_FOUND
 Plan: 27 of 27 — gap-closeout execution complete
 Status: Execution and advisory review complete; ready for separate fresh phase-goal verification
-Last activity: 2026-10-04 — Plan 01-27 execution and review complete
+Last activity: 2026-10-04 — Phase 01 UAT auto-coverage updated; fresh phase-goal verification remains next
 
 Progress: [░░░░░░░░░░] 0% (zero of three phases complete)
 
 GSD frontmatter completed_plans counts matching SUMMARY files: 27/27, including Plan 01-17’s answered checkpoint summary. Execution-complete plans are 01-01–01-16 and 01-18–01-27 (26); Plan 01-17 remains incomplete at its answered checkpoint. Plan 01-27 preserved the stale report-binding failure and prior seal, recovered only derived metadata, independently rebound the reports, and reproduced the deferred seal at C2. No source or collection changed; the candidate remains unqualified. Run the separate fresh phase-goal verification next.
 
-Current UAT is 44/44 historical automated checks. CPU-01–05 remain Pending. The original-silicon saved PC for candidate-only 0x4AFC exclusion remains unknown. See PROJECT.md, METHODOLOGY.md, preparation/DECISIONS.md and phase 01 UAT for the current contracts and provenance.
+Current UAT is 49/49 automated checks: rows 1–44 retain their recorded scope, rows 45–48 cover Plans 01-26/27 at the current relevant revision, and row 49 checks README routing. No human UAT checkpoint remains for these machine-observable claims. CPU-01–05 remain Pending. The original-silicon saved PC for candidate-only 0x4AFC exclusion remains unknown. See PROJECT.md, METHODOLOGY.md, preparation/DECISIONS.md and phase 01 UAT for the current contracts and provenance.
 
 ## Performance Metrics
 

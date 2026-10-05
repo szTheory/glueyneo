@@ -208,6 +208,23 @@ new behavioral qualification. Earlier PLANNED and historical audits remain
 unaltered. This closes the candidate evidence tasks while phase verification
 and backend admission remain pending.
 
+## Current Execution Validation Audit 2026-10-04
+
+The current 27 PLAN files and matching SUMMARY files were reconciled after Plans 01-26 and 01-27. A structural scan found 64 task blocks across 27 plans; all 64 declare at least one nonempty automated check, with 155 automated command declarations and no task-level verification gap.
+
+Plans 01-26 and 01-27 add five tasks. All five have automated checks, and their four coverage entries are recorded as current automated outcomes in 01-UAT.md rows 45-48. The current verify-work run repeated the relevant acceptance controls and read-only validators. Plans 01-26/27 changed canonical planning/evidence metadata only; no runtime, test, tool, or collection source changed, so no new behavior test or full native lane was added or rerun.
+
+This audit establishes declared task-level validation coverage and current results for the evidence-closeout tasks. It does not complete Plan 01-17's answered checkpoint, resolve original-silicon saved-PC truth, change CPU-01–05 from Pending, admit the candidate, or replace the separate fresh phase-goal verification.
+
+| Metric | Count |
+|--------|-------|
+| Plans reconciled | 27/27 |
+| Task blocks with automated checks | 64/64 |
+| Automated command declarations | 155 |
+| Task-level validation gaps | 0 |
+| New tests added | 0 |
+| Targeted checks rerun during verify-work | 1 contract control; 1 acceptance control normal and optimized; contract, acceptance, review, budget and archive/preservation checks |
+
 ### Final Task3 gate failure — supersedes clean closeout claim
 
 The preceding initial pass and proposed reseal are historical observations.
