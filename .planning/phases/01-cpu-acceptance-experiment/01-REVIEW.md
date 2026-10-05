@@ -1,5 +1,180 @@
 ---
 phase: 01-cpu-acceptance-experiment
+reviewed: 2026-10-05T15:01:27Z
+depth: standard
+files_reviewed: 2
+files_reviewed_list:
+  - README.md
+  - tests/workflow/test_phase01_docs.py
+findings:
+  critical: 0
+  warning: 0
+  info: 0
+  total: 0
+status: clean
+---
+
+# Phase 01: Code Review Report
+
+**Reviewed:** 2026-10-05T15:01:27Z
+**Depth:** standard
+**Files Reviewed:** 2
+**Status:** clean
+
+## Summary
+
+Standard-depth re-review of README.md and tests/workflow/test_phase01_docs.py after commit 73a422dc7dd7149bb5c7cb8b1cde9528cc20338f. Both prior warnings are resolved; no new actionable BLOCKER or WARNING was established in the supplied scope. All reviewed files meet quality standards. No issues found.
+
+The current files and repair diff were read in full using the previously loaded project and Plan 01-28 context. Neither file is ignored. No tests, builds, validators, native execution, source edits or commits were performed. The orchestrator's reported 8/8 focused-suite result is recorded execution evidence, not an independent reviewer run. The complete previous review file is retained verbatim below.
+
+## Narrative Findings (AI reviewer)
+
+No new actionable findings within the supplied scope.
+
+Prior finding dispositions, established by static inspection:
+
+- WR-01, reference-style links omitted: resolved at e835bf4. The shared extractor matches definitions and reference uses, normalizes labels, and feeds referenced destinations into the same local-path assertion as inline links. Positive existing-destination and negative missing-destination controls exercise that path.
+- WR-02, duplicate definitions selecting the last destination: resolved at 73a422d. `definitions.setdefault(normalized, angle_target or plain_target)` retains the first definition after case and whitespace normalization. The original missing-first/existing-second counterexample now retains the missing destination and reaches the rejection assertion. The added control varies label case between definitions, covering normalized collisions. The reverse ordering likewise preserves its existing first target by inspection. This matches the first-definition rule in [CommonMark 0.31.2, example 544](https://spec.commonmark.org/0.31.2/#example-544), consulted during the preceding review.
+
+The correction retains the original gate, canonical STATE link, stale-route rejection and inline-link mutation controls. No new dependencies, runtime behavior or external authority are introduced. The README remains unchanged and agrees with the previously reviewed canonical execution boundary and dated verifier status. This is a bounded navigation-regression review, not qualification of a general Markdown renderer.
+
+CPU-01–05 remain Pending, the candidate remains unqualified with admission deferred, Phase 01 remains open, Phase 02 gated, and original-silicon saved PC unknown. The clean status closes only this incremental review; a separate fresh whole-phase assessment remains required.
+
+---
+
+_Reviewed: 2026-10-05T15:01:27Z_
+_Reviewer: the agent (gsd-code-reviewer), independent incremental re-review_
+_Depth: standard_
+
+## Retained prior review reports — through 2026-10-05T14:58:47Z
+
+The complete prior review file follows verbatim. Its original warnings and older advisory reports retain their dated scopes; the report above owns the current re-review and resolved finding dispositions.
+
+---
+phase: 01-cpu-acceptance-experiment
+reviewed: 2026-10-05T14:58:47Z
+depth: standard
+files_reviewed: 2
+files_reviewed_list:
+  - README.md
+  - tests/workflow/test_phase01_docs.py
+findings:
+  critical: 0
+  warning: 1
+  info: 0
+  total: 1
+status: issues_found
+---
+
+# Phase 01: Code Review Report
+
+**Reviewed:** 2026-10-05T14:58:47Z
+**Depth:** standard
+**Files Reviewed:** 2
+**Status:** issues_found
+
+## Summary
+
+Standard-depth re-review of README.md and tests/workflow/test_phase01_docs.py after commit e835bf4d7cb482d28757cdd273feecec3d9766f6. The earlier WR-01 omission is resolved: the shared extractor now includes reference-style destinations and the module adds existing-destination and missing-destination controls. A separate WARNING affects duplicate reference definitions in that new extractor. No BLOCKER was established within this scope.
+
+The current files and repair diff were read in full using the previously loaded project and Plan 01-28 context. No tests, builds, validators, native execution, source edits or commits were performed. The orchestrator's reported 7/7 test result is not an independent reviewer execution. Counterexample reasoning below is static. The complete previous review file is retained verbatim after this current report.
+
+## Narrative Findings (AI reviewer)
+
+## Warnings
+
+### WR-02: Duplicate reference definitions check the wrong destination
+
+**Classification:** WARNING
+**File:** `tests/workflow/test_phase01_docs.py:21`
+**Issue:** `definitions[normalized] = ...` overwrites earlier definitions of the same normalized label. CommonMark resolves a reference link using its first matching definition, as specified by [CommonMark 0.31.2, reference links and example 544](https://spec.commonmark.org/0.31.2/#example-544). Append the following text to the current README:
+
+```markdown
+[broken][phase-doc]
+
+[phase-doc]: missing-phase01-doc.md
+[phase-doc]: README.md
+```
+
+The rendered link points to the missing file, but the extractor returns README.md for that use; the local existence check accepts the existing file. The canonical STATE link and admission gate still satisfy their assertions, so the regression can incorrectly pass with a broken rendered link. Reversing the two definitions can also reject a valid rendered link. The two new reference controls use unique labels and do not cover this precedence error.
+
+**Fix:** Preserve the first normalized definition rather than overwriting it:
+
+```python
+definitions.setdefault(normalized, angle_target or plain_target)
+```
+
+Add a negative control for a missing first destination followed by an existing duplicate destination, and ensure existing-first/missing-second definitions resolve to the existing first destination. Case and whitespace normalization must precede the first-definition decision, as it already does in the submitted implementation.
+
+**Prior finding disposition:** WR-01 from the 2026-10-05T14:54:48Z report is resolved at e835bf4. The original full-reference example now follows definition normalization, use resolution and the same local-path assertion as inline links. That disposition does not close WR-02.
+
+README remains unchanged and retains the canonical STATE route, historical UAT qualification and Pending/unqualified/deferred/open/gated/unknown outcomes assessed in the preceding review. This bounded review supplies no CPU admission or fresh whole-phase verdict.
+
+---
+
+_Reviewed: 2026-10-05T14:58:47Z_
+_Reviewer: the agent (gsd-code-reviewer), independent incremental re-review_
+_Depth: standard_
+
+## Retained prior review reports — through 2026-10-05T14:54:48Z
+
+The complete prior review file follows verbatim. Its warning and older advisory reports retain their dated scopes; the report above owns the current re-review and finding disposition.
+
+---
+phase: 01-cpu-acceptance-experiment
+reviewed: 2026-10-05T14:54:48Z
+depth: standard
+files_reviewed: 2
+files_reviewed_list:
+  - README.md
+  - tests/workflow/test_phase01_docs.py
+findings:
+  critical: 0
+  warning: 1
+  info: 0
+  total: 1
+status: issues_found
+---
+
+# Phase 01: Code Review Report
+
+**Reviewed:** 2026-10-05T14:54:48Z
+**Depth:** standard
+**Files Reviewed:** 2
+**Status:** issues_found
+
+## Summary
+
+Incremental execute:post review for Plan 01-28, limited to README.md and tests/workflow/test_phase01_docs.py. The README was reviewed for incorrect admission, evidence-freshness and contributor-routing claims. The test module was reviewed for assertion coverage, mutation controls and false passing results. One WARNING affects the promised local-link regression; no BLOCKER was established within this scope.
+
+AGENTS.md, the current project/state documents, Plan 01-28 and its summary supplied context. The diff from the plan's recorded starting revision was inspected, and supporting requirement, roadmap, verifier, subset and contract-validator references were consulted. Neither reviewed file is ignored. No project-local skill indexes or configured reviewer skills were found. No tests, builds, native execution, validator execution, source edits or commits were performed. The counterexample below follows directly from the submitted regex; it is not a claimed executed test result.
+
+## Narrative Findings (AI reviewer)
+
+## Warnings
+
+### WR-01: Reference-style Markdown links bypass the navigation regression
+
+**Classification:** WARNING
+**File:** `tests/workflow/test_phase01_docs.py:21`
+**Issue:** The link extractor recognizes only inline `[label](destination)` syntax. A valid reference-style Markdown link such as `[broken][phase-doc]` with a later definition `[phase-doc]: missing-phase01-doc.md` renders as a local link in the README, but neither line matches this regex. With the existing STATE link and admission gate retained, the new broken destination never reaches the existence assertion on line 32 and the current-document check can report success. This undermines the module's stated check of all repository-local README links during later documentation edits. The current README uses inline links; the defect is in regression coverage, not a currently broken README destination.
+
+**Fix:** Resolve reference-style link definitions and uses as well as inline destinations before applying the shared local-path check. Alternatively, explicitly reject unsupported reference-link syntax so the test cannot silently omit it. Keep the current dependency-free approach if practical. Add a negative control containing the reference-style missing-file example and a positive control for an existing reference-style destination; both should exercise the same extractor used for the real README.
+
+The README's current 8/9 GAPS_FOUND description agrees with the dated whole-phase report, and its historical 49/49 statement does not claim current validation of the changed documents. Its canonical STATE pointer agrees with the current execution boundary. CPU-01–05 remain Pending; the candidate remains unqualified with deferred admission; Phase 01 remains open, Phase 02 gated, and original-silicon saved PC unknown. This review does not replace the separate fresh whole-phase assessment.
+
+---
+
+_Reviewed: 2026-10-05T14:54:48Z_
+_Reviewer: the agent (gsd-code-reviewer), independent incremental review_
+_Depth: standard_
+
+## Retained prior advisory reports — through 2026-10-04T23:03:49Z
+
+The following complete prior file is preserved verbatim as dated history. Its reports retain their original scopes and evidence identities; the two-file report above owns the current incremental review.
+
+---
+phase: 01-cpu-acceptance-experiment
 reviewed: 2026-10-04T23:03:49Z
 depth: standard
 files_reviewed: 3
