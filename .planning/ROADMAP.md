@@ -2,11 +2,11 @@
 
 ## Overview
 
-Deliver an offline installable C SDK whose ordinary native API runs an original deterministic CPU/bus diagnostic. Phase 01 accepted the owned CPU backend for the bounded diagnostic subset. Phase 02 builds the SDK and proves the complete consumer workflow; Phase 03 qualifies and distributes a tested unsigned alpha. The fresh 2026-10-05 Phase 01 report passed 10/10 after Plan 01-29; see its verification report for source identity, current checks, and limitations. The candidate-level receipt remains `unqualified`, while the independent phase report is the current bounded admission decision. Phase 02 is ready for planning; Phase 03 remains unplanned with delivery evidence pending. [PROJECT.md](PROJECT.md) and [REQUIREMENTS.md](REQUIREMENTS.md) govern scope; [research synthesis](research/SUMMARY.md), [roadmap seed](preparation/ROADMAP-SEED.md) and [adversarial gates](preparation/ADVERSARIAL-REVIEW.md) supply dated rationale.
+Deliver an offline installable C SDK whose ordinary native API runs an original deterministic CPU/bus diagnostic. Phase 01 accepted the owned CPU backend for the bounded diagnostic subset. Phase 02 builds the SDK and proves the complete consumer workflow; Phase 03 qualifies and distributes a tested unsigned alpha. The fresh 2026-10-05 Phase 01 report passed 10/10 after Plan 01-29; see its verification report for source identity, current checks, and limitations. The candidate-level receipt remains `unqualified`, while the independent phase report is the current bounded admission decision. Phase 02 has six independently checked plans and is ready for execution; Phase 03 remains unplanned with delivery evidence pending. [PROJECT.md](PROJECT.md) and [REQUIREMENTS.md](REQUIREMENTS.md) govern scope; [research synthesis](research/SUMMARY.md), [roadmap seed](preparation/ROADMAP-SEED.md) and [adversarial gates](preparation/ADVERSARIAL-REVIEW.md) supply dated rationale.
 
 ## Milestones
 
-- 🚧 **v0.1 CPU/bus diagnostic SDK alpha** — current; Phases 1–3 detailed below, ready for planning.
+- 🚧 **v0.1 CPU/bus diagnostic SDK alpha** — current; Phase 02 plans are ready for execution, with Phase 03 delivery evidence pending.
 - 📋 **Next: Interactive diagnostic alpha** — outlined below; version and phase allocation await v0.1 evidence.
 - **Longer horizon:** Commercial scenarios, hardware profiles, integration and measured performance; revisable, without release promises.
 
@@ -167,11 +167,22 @@ Planning guidance: Plans 01-07–01-14 built and assessed the owned-core candida
 **Plans**: 6 plans
 
 Plans:
+**Wave 1**
 - [ ] 02-01-PLAN.md — Ordinary API/runner tracer, original fixture and counted Wave 0 verification
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 02-02-PLAN.md — Copied transactional media, lifecycle and allocation-failure recovery
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 02-03-PLAN.md — Bounded timing, exact controls and independent-instance determinism
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 02-04-PLAN.md — Offline static/shared installs, relocated C/C++ consumers and compiled guides
+
+**Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 02-05-PLAN.md — Bounded hostile mutation, retained regressions and supported sanitizers
+
+**Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 02-06-PLAN.md — Exact identities/outcomes, measured local baselines and final aggregate
 
 Execution waves: 1 → 2 → 3 → 4 → 5 → 6. Package checks rebuild the runtime, so they follow source-changing ownership/timing slices. Phase 02 remains unexecuted; separate plan checking precedes execution.
