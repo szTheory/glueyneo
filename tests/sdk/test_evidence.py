@@ -58,6 +58,68 @@ def valid_record() -> dict[str, Any]:
     }
 
 
+def valid_baseline_record() -> dict[str, Any]:
+    identity = valid_identity()
+    identity["configuration"] = "Release"
+    identity["build_flags"]["configuration_c_flags"] = "-O3 -DNDEBUG"
+    load = [100 + index for index in range(31)]
+    load_batches = [value * evidence.BASELINE_EXECUTION_RUNS_PER_SAMPLE for value in load]
+    execution = [40 + index for index in range(31)]
+    execution_batches = [value * evidence.BASELINE_EXECUTION_RUNS_PER_SAMPLE
+                        for value in execution]
+    cold = [1_000_000, 1_100_000, 1_200_000]
+    memory_samples = [{"allocations": 5, "bytes": 5000, "attempts": 5} for _ in load]
+    return {
+        "schema_version": evidence.BASELINE_SCHEMA_VERSION,
+        "suite": "baseline",
+        "outcome": "pass",
+        "command": "python3 tools/verify_sdk.py --suite baseline",
+        "identity": identity,
+        "workload": {
+            "workload_id": evidence.BASELINE_WORKLOAD_ID,
+            "configuration": "Release",
+            "input_sha256": evidence.BASELINE_INPUT_SHA256,
+            "output_sha256": evidence.BASELINE_OUTPUT_SHA256,
+            "expected_output": dict(evidence.BASELINE_EXPECTED_OUTPUT),
+            "observed_output": dict(evidence.BASELINE_EXPECTED_OUTPUT),
+            "observed_output_sha256": evidence.baseline_output_sha256(
+                evidence.BASELINE_EXPECTED_OUTPUT),
+            "guest_cycles": 172,
+        },
+        "protocol": {"warmup_samples": 3, "retained_samples": 31,
+                     "load_runs_per_sample": evidence.BASELINE_EXECUTION_RUNS_PER_SAMPLE,
+                     "execution_runs_per_sample": evidence.BASELINE_EXECUTION_RUNS_PER_SAMPLE,
+                     "cold_build_configuration": {
+                         "build_type": "Release", "generator": "Ninja",
+                         "BUILD_TESTING": False, "GLUEYNEO_BUILD_TESTS": False,
+                         "GLUEYNEO_SDK_SANITIZER": "NONE",
+                         "GLUEYNEO_CPU_EXPERIMENT": False,
+                         "GLUEYNEO_OWNED_CPU_EXPERIMENT": False,
+                     },
+                     "cold_build_ids": ["cold-1", "cold-2", "cold-3"]},
+        "raw_samples": {"load_ns": load, "load_batch_ns": load_batches,
+                        "execution_ns": execution,
+                        "execution_batch_ns": execution_batches,
+                        "cold_build_ns": cold},
+        "timer": {"clock": "CLOCK_MONOTONIC", "resolution_ns": 1},
+        "summaries": {"load_ns": evidence._sample_summary(load),
+                      "load_batch_ns": evidence._sample_summary(load_batches),
+                      "execution_ns": evidence._sample_summary(execution),
+                      "execution_batch_ns": evidence._sample_summary(execution_batches),
+                      "cold_build_ns": evidence._sample_summary(cold)},
+        "discarded_samples": [],
+        "memory": {"status": "measured", "allocator": "gn_test_allocator",
+                   "scope": "successful first load plus exact diagnostic run",
+                   "current_allocations": 5, "current_bytes": 5000,
+                   "peak_allocations": 5, "peak_bytes": 5000,
+                   "samples": memory_samples},
+        "host_rss": {"status": "unsupported", "reason": "process RSS was not measured"},
+        "measurement_tool": {"source_sha256": "a" * 64,
+                             "binary_sha256": "b" * 64,
+                             "compiler": identity["compiler"]},
+    }
+
+
 def expect_rejection(name: str, action: Callable[[], Any], expected_reason: str) -> dict[str, Any]:
     try:
         action()
@@ -167,6 +229,59 @@ def cases() -> dict[str, Callable[[], dict[str, Any]]]:
         record["outcome"] = "pending"
         return expect_rejection("evidence.unknown-outcome", lambda: evidence.validate_case_record(record), "outcome-unknown")
 
+    def baseline_insufficient_samples() -> dict[str, Any]:
+        record = valid_baseline_record()
+        record["raw_samples"]["load_ns"] = record["raw_samples"]["load_ns"][:29]
+        record["protocol"]["retained_samples"] = 29
+        return expect_rejection("baseline.insufficient-samples",
+                                lambda: evidence.validate_baseline_record(record),
+                                "insufficient-samples")
+
+    def baseline_missing_raw_samples() -> dict[str, Any]:
+        record = valid_baseline_record()
+        record.pop("raw_samples")
+        return expect_rejection("baseline.missing-raw-samples",
+                                lambda: evidence.validate_baseline_record(record),
+                                "missing-raw-samples")
+
+    def baseline_invalid_measurement() -> dict[str, Any]:
+        record = valid_baseline_record()
+        record["raw_samples"]["execution_ns"][0] = -1
+        return expect_rejection("baseline.invalid-measurement",
+                                lambda: evidence.validate_baseline_record(record),
+                                "invalid-measurement")
+
+    def baseline_workload_mismatch() -> dict[str, Any]:
+        record = valid_baseline_record()
+        record["workload"]["output_sha256"] = "2" * 64
+        return expect_rejection("baseline.workload-output-mismatch",
+                                lambda: evidence.validate_baseline_record(record),
+                                "workload-mismatch")
+
+    def baseline_summary_mismatch() -> dict[str, Any]:
+        record = valid_baseline_record()
+        record["summaries"]["load_ns"]["median_ns"] += 1
+        return expect_rejection("baseline.fake-summary-precision",
+                                lambda: evidence.validate_baseline_record(record),
+                                "summary-mismatch")
+
+    def baseline_discarded_sample() -> dict[str, Any]:
+        record = valid_baseline_record()
+        record["discarded_samples"] = [{"kind": "execution_ns", "original_ns": 99}]
+        return expect_rejection("baseline.unexplained-discard",
+                                lambda: evidence.validate_baseline_record(record),
+                                "discarded-sample")
+
+    def baseline_memory_unsupported() -> dict[str, Any]:
+        record = valid_baseline_record()
+        record["outcome"] = "unsupported"
+        record["reason"] = "owned allocator measurements are unavailable"
+        record["memory"] = {"status": "unsupported", "reason": "private allocator unavailable"}
+        evidence.validate_baseline_record(record)
+        return {"case_id": "baseline.unsupported-memory-remains-unsupported",
+                "outcome": "pass", "assertions": 2,
+                "expected": "unsupported", "observed": record["memory"]["status"]}
+
     return {
         "missing_identity": missing_identity,
         "malformed": malformed,
@@ -186,6 +301,13 @@ def cases() -> dict[str, Callable[[], dict[str, Any]]]:
         "empty_ancestry": empty_ancestry,
         "stale_manifest_source": stale_manifest_source,
         "unknown_outcome": unknown_outcome,
+        "baseline_insufficient_samples": baseline_insufficient_samples,
+        "baseline_missing_raw_samples": baseline_missing_raw_samples,
+        "baseline_invalid_measurement": baseline_invalid_measurement,
+        "baseline_workload_mismatch": baseline_workload_mismatch,
+        "baseline_summary_mismatch": baseline_summary_mismatch,
+        "baseline_discarded_sample": baseline_discarded_sample,
+        "baseline_memory_unsupported": baseline_memory_unsupported,
     }
 
 

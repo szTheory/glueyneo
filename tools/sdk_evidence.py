@@ -49,6 +49,24 @@ IDENTITY_FIELDS = {
     "configuration", "build_flags", "host_class",
 }
 
+BASELINE_SCHEMA_VERSION = 1
+BASELINE_WORKLOAD_ID = "diagnostic-original-a-172-cycles"
+BASELINE_EXECUTION_RUNS_PER_SAMPLE = 32
+BASELINE_INPUT_SHA256 = FIXTURES["a"]["sha256"]
+BASELINE_OUTPUT_SHA256 = FIXTURES["a"]["output_sha256"]
+BASELINE_EXPECTED_OUTPUT = {
+    "arithmetic_result": 10,
+    "initialized_result": 0x1237,
+    "bss_result": 1,
+    "ready": 1,
+    "requested_cycles": 172,
+    "elapsed_cycles": 172,
+    "overshoot_cycles": 0,
+    "instructions": 12,
+    "terminal_pc": 0x12E,
+    "stop_reason": 1,
+}
+
 RELEVANT_FILES = (
     "CMakeLists.txt", "CMakePresets.json", "cmake/GlueyneoConfig.cmake.in",
     "include/glueyneo/glueyneo.h", "src/instance.c", "src/sdk_private.h",
@@ -61,7 +79,7 @@ RELEVANT_FILES = (
     "tools/diagnostic/main.c", "tools/sdk_evidence.py", "tools/verify_sdk.py",
     "fixtures/diagnostic/manifest.json",
     "docs/evidence-schema.md", "docs/ownership-and-errors.md", "docs/testing.md",
-    "README.md", "third_party/unity/src/unity.c", "third_party/unity/src/unity.h",
+    "README.md", "tools/sdk_baseline.py", "third_party/unity/src/unity.c", "third_party/unity/src/unity.h",
     "third_party/unity/src/unity_internals.h", "third_party/unity/LICENSE.txt",
     "third_party/unity/PROVENANCE.md",
 )
@@ -166,28 +184,32 @@ def relevant_source_rows(root: Path = ROOT) -> list[dict[str, Any]]:
     return rows
 
 
-def public_source_identity(root: Path = ROOT) -> dict[str, Any]:
+def public_source_identity(root: Path = ROOT,
+                           build_relative: str = "build/sdk-debug") -> dict[str, Any]:
     rows = relevant_source_rows(root)
     relevant_digest = sha256_bytes(canonical_bytes(rows))
     dirty = bool(_git("status", "--porcelain", "--untracked-files=all", "--", *RELEVANT_FILES))
-    cache = root / "build/sdk-debug/CMakeCache.txt"
+    build_dir = root / build_relative
+    cache = build_dir / "CMakeCache.txt"
     compiler_path = _cache_value(cache, "CMAKE_C_COMPILER", "unknown")
-    build_dir = root / "build/sdk-debug"
     compiler_id = _cmake_generated_value(build_dir, "CMAKE_C_COMPILER_ID", "unknown")
     compiler_version = _cmake_generated_value(build_dir, "CMAKE_C_COMPILER_VERSION", "unknown")
     cmake_version = _run(["cmake", "--version"]).splitlines()[0]
     generator = _cache_value(cache, "CMAKE_GENERATOR", "unknown")
     ninja = shutil.which("ninja")
     generator_version = _run([ninja, "--version"]) if ninja else "unknown"
-    runtime_candidates = [root / "build/sdk-debug/libglueyneo.a",
-                          root / "build/sdk-debug/libglueyneo.dylib",
-                          root / "build/sdk-debug/libglueyneo.so"]
-    runner = root / "build/sdk-debug/glueyneo-diagnostic"
+    runtime_candidates = [build_dir / "libglueyneo.a",
+                          build_dir / "libglueyneo_test.a",
+                          build_dir / "libglueyneo.dylib",
+                          build_dir / "libglueyneo.so"]
+    runner = build_dir / "glueyneo-diagnostic"
     runtime = [p for p in runtime_candidates if p.is_file()]
     require(runtime and runner.is_file(), "missing-artifact", "SDK runtime and runner must be built before collecting evidence")
     manifest = root / MANIFEST_PATH
     require(manifest.is_file(), "manifest-missing", "diagnostic fixture manifest is missing")
     fixture_hashes = [FIXTURES[key]["sha256"] for key in ("a", "b")]
+    configuration = _cache_value(cache, "CMAKE_BUILD_TYPE", "unknown")
+    configuration_flags = _cache_value(cache, "CMAKE_C_FLAGS_" + configuration.upper(), "")
     return {
         "source_revision": _git("rev-parse", "HEAD"),
         "relevant_source_sha256": relevant_digest,
@@ -209,10 +231,10 @@ def public_source_identity(root: Path = ROOT) -> dict[str, Any]:
         "sdk": {"status": "measured", "version": _run(["xcrun", "--show-sdk-version"]) if sys.platform == "darwin" and shutil.which("xcrun") else "unknown"},
         "os": platform.system() + "-" + (platform.mac_ver()[0].split(".")[0] if sys.platform == "darwin" and platform.mac_ver()[0] else "unknown"),
         "architecture": platform.machine(),
-        "configuration": _cache_value(cache, "CMAKE_BUILD_TYPE", "unknown"),
+        "configuration": configuration,
         "build_flags": {
             "c_flags": _cache_value(cache, "CMAKE_C_FLAGS", ""),
-            "configuration_c_flags": _cache_value(cache, "CMAKE_C_FLAGS_DEBUG", ""),
+            "configuration_c_flags": configuration_flags,
             "shared_libraries": _cache_value(cache, "BUILD_SHARED_LIBS", "OFF"),
             "sdk_sanitizer": _cache_value(cache, "GLUEYNEO_SDK_SANITIZER", "NONE"),
         },
@@ -318,6 +340,190 @@ def validate_case_record(record: Any, expected_identity: dict[str, Any] | None =
         require(assertions > 0, "zero-assertions", "passing evidence needs positive executed assertions")
     require(status != "pass" or all(case["outcome"] == "pass" for case in cases),
             "outcome-mismatch", "record cannot pass while a named case is not passing")
+    scan_public_value(record)
+
+
+def _positive_integer(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
+def _sample_summary(samples: list[int]) -> dict[str, int]:
+    ordered = sorted(samples)
+    minimum, maximum = ordered[0], ordered[-1]
+    median = ordered[len(ordered) // 2]
+    return {
+        "median_ns": median,
+        "minimum_ns": minimum,
+        "maximum_ns": maximum,
+        "range_ns": maximum - minimum,
+        "spread_basis_points": ((maximum - minimum) * 10000) // median,
+    }
+
+
+def baseline_output_sha256(observed: dict[str, Any]) -> str:
+    return sha256_bytes(struct.pack(
+        ">IIIQQQQII", observed["arithmetic_result"],
+        observed["initialized_result"], observed["bss_result"],
+        observed["requested_cycles"], observed["elapsed_cycles"],
+        observed["overshoot_cycles"], observed["instructions"],
+        observed["terminal_pc"], observed["stop_reason"]))
+
+
+def validate_baseline_record(record: Any,
+                             expected_identity: dict[str, Any] | None = None) -> None:
+    """Validate retained raw measurements against their exact fixed workload."""
+    require(isinstance(record, dict), "malformed-baseline", "baseline must be an object")
+    require(record.get("schema_version") == BASELINE_SCHEMA_VERSION,
+            "schema-version", "unsupported baseline schema version")
+    require(record.get("suite") == "baseline", "baseline-suite", "record is not the baseline suite")
+    outcome = record.get("outcome")
+    require(outcome in OUTCOMES, "outcome-unknown", "baseline outcome is outside the five-value vocabulary")
+    if outcome != "pass":
+        require(isinstance(record.get("reason"), str) and record["reason"].strip(),
+                "missing-reason", "non-passing baseline needs an explicit reason")
+    failures = record.get("failure_history", [])
+    retained = record.get("retained_failures", [])
+    require(isinstance(failures, list) and isinstance(retained, list),
+            "malformed-baseline", "baseline failure history must be arrays")
+    require(not failures or len(retained) >= len(failures), "erased-failure",
+            "a previous baseline failure is missing from retained evidence")
+    for failure in failures:
+        require(isinstance(failure, dict) and failure.get("outcome") == "fail" and
+                isinstance(failure.get("reason"), str) and failure["reason"].strip(),
+                "malformed-baseline", "failure history entries need a named failure outcome")
+    identity = record.get("identity")
+    validate_identity(identity, expected_identity)
+    require(identity.get("configuration") == "Release", "configuration-mismatch",
+            "baseline identity must name the Release configuration")
+    require(identity.get("build_flags", {}).get("sdk_sanitizer") == "NONE",
+            "configuration-mismatch", "baseline must use the unsanitized Release runtime")
+
+    workload = record.get("workload")
+    require(isinstance(workload, dict), "workload-mismatch", "fixed workload identity is missing")
+    require(workload.get("workload_id") == BASELINE_WORKLOAD_ID and
+            workload.get("configuration") == "Release" and
+            workload.get("input_sha256") == BASELINE_INPUT_SHA256 and
+            workload.get("output_sha256") == BASELINE_OUTPUT_SHA256 and
+            workload.get("expected_output") == BASELINE_EXPECTED_OUTPUT,
+            "workload-mismatch", "baseline workload or expected output differs from the fixed original scenario")
+    observed_output = workload.get("observed_output")
+    require(observed_output == BASELINE_EXPECTED_OUTPUT and
+            all(type(value) is int for value in observed_output.values()),
+            "workload-mismatch", "measured run did not observe the exact fixed diagnostic output")
+    observed_output_digest = baseline_output_sha256(observed_output)
+    require(observed_output_digest == BASELINE_OUTPUT_SHA256 and
+            workload.get("observed_output_sha256") == observed_output_digest,
+            "workload-mismatch", "observed output digest differs from the explicit big-endian result tuple")
+    require(workload.get("guest_cycles") == 172,
+            "workload-mismatch", "baseline guest-cycle request differs from 172")
+
+    protocol = record.get("protocol")
+    require(isinstance(protocol, dict), "missing-raw-samples", "sampling protocol is missing")
+    require(protocol.get("warmup_samples") == 3,
+            "insufficient-samples", "baseline must perform exactly three warmups")
+    raw = record.get("raw_samples")
+    require(isinstance(raw, dict), "missing-raw-samples", "raw sample arrays are missing")
+    samples_by_kind: dict[str, list[int]] = {}
+    for kind in ("load_ns", "load_batch_ns", "execution_ns", "execution_batch_ns", "cold_build_ns"):
+        samples = raw.get(kind)
+        require(isinstance(samples, list), "missing-raw-samples", f"raw {kind} samples are missing")
+        require(all(_positive_integer(sample) for sample in samples),
+                "invalid-measurement", f"raw {kind} samples must be positive integer nanoseconds")
+        samples_by_kind[kind] = samples
+    load_samples = samples_by_kind["load_ns"]
+    load_batches = samples_by_kind["load_batch_ns"]
+    execution_samples = samples_by_kind["execution_ns"]
+    execution_batches = samples_by_kind["execution_batch_ns"]
+    cold_samples = samples_by_kind["cold_build_ns"]
+    require(isinstance(protocol.get("retained_samples"), int) and
+            not isinstance(protocol.get("retained_samples"), bool) and
+            protocol["retained_samples"] >= 30 and len(load_samples) >= 30 and
+            len(execution_samples) >= 30 and len(cold_samples) >= 3,
+            "insufficient-samples", "at least thirty load/execution and three cold-build samples are required")
+    require(protocol.get("cold_build_configuration") == {
+        "build_type": "Release", "generator": "Ninja", "BUILD_TESTING": False,
+        "GLUEYNEO_BUILD_TESTS": False, "GLUEYNEO_SDK_SANITIZER": "NONE",
+        "GLUEYNEO_CPU_EXPERIMENT": False,
+        "GLUEYNEO_OWNED_CPU_EXPERIMENT": False,
+    }, "configuration-mismatch", "cold build configuration differs from the named protocol")
+    require(protocol.get("load_runs_per_sample") == BASELINE_EXECUTION_RUNS_PER_SAMPLE and
+            len(load_batches) == len(load_samples) and
+            all(batch // BASELINE_EXECUTION_RUNS_PER_SAMPLE == average
+                for batch, average in zip(load_batches, load_samples)),
+            "summary-mismatch", "load averages must match 32-load raw batch intervals")
+    require(protocol.get("execution_runs_per_sample") == BASELINE_EXECUTION_RUNS_PER_SAMPLE and
+            len(execution_batches) == len(execution_samples) and
+            all(batch // BASELINE_EXECUTION_RUNS_PER_SAMPLE == average
+                for batch, average in zip(execution_batches, execution_samples)),
+            "summary-mismatch", "execution averages must match 32-run raw batch intervals")
+    require(len(load_samples) == len(execution_samples) and
+            protocol.get("retained_samples") == len(load_samples),
+            "insufficient-samples", "at least thirty paired load/execution samples are required")
+    cold_ids = protocol.get("cold_build_ids")
+    require(isinstance(cold_ids, list) and len(cold_ids) == len(cold_samples) and
+            len(cold_samples) >= 3 and len(cold_ids) == len(set(cold_ids)) and
+            all(isinstance(item, str) and item for item in cold_ids),
+            "insufficient-samples", "at least three distinct cold-build directories are required")
+    timer = record.get("timer")
+    require(isinstance(timer, dict) and timer.get("clock") == "CLOCK_MONOTONIC" and
+            _positive_integer(timer.get("resolution_ns")),
+            "timer-resolution", "monotonic timer resolution must be measured and positive")
+
+    summaries = record.get("summaries")
+    require(isinstance(summaries, dict), "summary-mismatch", "uncertainty summaries are missing")
+    for kind, samples in samples_by_kind.items():
+        require(summaries.get(kind) == _sample_summary(samples),
+                "summary-mismatch", f"{kind} summary does not match raw retained samples")
+
+    discarded = record.get("discarded_samples")
+    require(isinstance(discarded, list), "discarded-sample", "discarded sample inventory must be an array")
+    for row in discarded:
+        require(isinstance(row, dict) and isinstance(row.get("kind"), str) and
+                _positive_integer(row.get("original_ns")) and
+                isinstance(row.get("reason"), str) and row["reason"].strip(),
+                "discarded-sample", "every discarded observation needs its value and explanation")
+    require(outcome != "pass" or not discarded,
+            "discarded-sample", "passing baseline may not discard any observation")
+
+    memory = record.get("memory")
+    require(isinstance(memory, dict), "memory-unsupported", "memory result must be explicit")
+    memory_status = memory.get("status")
+    require(memory_status in {"measured", "unsupported"}, "memory-unsupported",
+            "memory status must be measured or unsupported")
+    if memory_status == "unsupported":
+        require(isinstance(memory.get("reason"), str) and memory["reason"].strip(),
+                "memory-unsupported", "unsupported memory result needs a reason")
+        require(outcome != "pass", "memory-unsupported", "unsupported owned-memory measurement cannot pass the required baseline")
+    else:
+        memory_samples = memory.get("samples")
+        require(isinstance(memory_samples, list) and len(memory_samples) == len(load_samples),
+                "memory-unsupported", "allocator memory counters must bind every retained workload sample")
+        for row in memory_samples:
+            require(isinstance(row, dict) and _positive_integer(row.get("allocations")) and
+                    _positive_integer(row.get("bytes")) and _positive_integer(row.get("attempts")),
+                    "invalid-measurement", "allocator count, bytes, and attempts must be positive")
+        require(memory.get("allocator") == "gn_test_allocator" and
+                memory.get("scope") == "successful first load plus exact diagnostic run" and
+                memory.get("current_allocations") == memory_samples[-1]["allocations"] and
+                memory.get("current_bytes") == memory_samples[-1]["bytes"] and
+                memory.get("peak_allocations") == max(row["allocations"] for row in memory_samples) and
+                memory.get("peak_bytes") == max(row["bytes"] for row in memory_samples),
+                "summary-mismatch", "allocator current/peak summaries differ from measured counters")
+    host_rss = record.get("host_rss")
+    require(isinstance(host_rss, dict) and host_rss.get("status") in {"measured", "unsupported"},
+            "memory-unsupported", "host RSS must be explicitly measured or unsupported")
+    if host_rss.get("status") == "unsupported":
+        require(isinstance(host_rss.get("reason"), str) and host_rss["reason"].strip(),
+                "memory-unsupported", "unsupported host RSS needs a reason")
+
+    measurement_tool = record.get("measurement_tool")
+    require(isinstance(measurement_tool, dict) and
+            all(re.fullmatch(r"[0-9a-f]{64}", str(measurement_tool.get(field, "")))
+                for field in ("source_sha256", "binary_sha256")) and
+            measurement_tool.get("compiler") == identity.get("compiler"),
+            "identity-mismatch", "measurement helper identity/compiler is incomplete or mismatched")
+    require(isinstance(record.get("command"), str) and record["command"].strip(),
+            "missing-command", "baseline collection command is required")
     scan_public_value(record)
 
 
@@ -470,8 +676,9 @@ def write_manifest(root: Path = ROOT) -> dict[str, Any]:
     return manifest
 
 
-def current_identity(root: Path = ROOT) -> dict[str, Any]:
-    identity = public_source_identity(root)
+def current_identity(root: Path = ROOT,
+                     build_relative: str = "build/sdk-debug") -> dict[str, Any]:
+    identity = public_source_identity(root, build_relative)
     manifest = verify_manifest(root)
     # Re-evaluate the manifest after verification and bind both lawful scenarios.
     validate_identity(identity)

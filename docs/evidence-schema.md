@@ -51,25 +51,41 @@ process logs or environment contents.
 
 ## Cost protocol
 
-The baseline is one fixed workload: the original scenario A fixture, Debug SDK
-configuration, one public API create/load/run/destroy path, exactly 172 guest
-cycles, output tuple `10, 0x1237, 1`, twelve instructions, PC `0x012e`, STOP.
-The collector performs three warmups, retains at least thirty separate load
-and diagnostic-execution samples, and records three clean local builds in
-distinct temporary build directories with at most two build workers. Retained
-raw nanosecond samples, monotonic clock resolution, median, minimum, maximum,
-range and normalized spread are recorded. No outlier is silently discarded;
-any discarded observation must retain an explanation and original value.
+The baseline is one fixed workload: the original scenario A fixture, unsanitized
+Release SDK configuration, one private-test-allocator create/load/run/destroy
+path around the public load/run/observe calls, exactly 172 guest cycles, output
+tuple `10, 0x1237, 1`, twelve instructions, PC `0x012e`, STOP. The collector
+performs exactly three warmups, retains 31 paired load and diagnostic-execution
+samples, and records three clean local builds in distinct temporary build
+directories with at most two build workers. Each load sample times 32
+precreated independent instances, and each run sample times 32 separate
+preloaded instances, in separate monotonic-clock intervals. The collector
+retains each batch total and reports its integer per-operation average. This
+avoids publishing a false zero when one short operation falls within a host
+clock tick. Retained raw nanosecond samples, clock resolution, median, minimum,
+maximum, range and normalized spread are recorded and checked against the raw
+arrays. No outlier is silently discarded; every discarded observation would
+need its original value and explanation, and a passing baseline currently
+permits none.
 
-Private test allocator counters identify owned allocation count and bytes.
-The first-load workload keeps each allocation live after candidate publication,
-so the post-load live count/bytes are also its exact peak for this workload.
-Process RSS, when available, is separately labeled as a host-process metric;
-it is unsupported if the host denies inspection and is never used to infer
+Private test allocator counters identify owned allocation count and bytes for
+every retained sample. The recorded peak is the maximum measured live count and
+bytes after successful first load. All allocations remain live after candidate
+publication and the run path makes no owned allocations, so this boundary
+measurement covers the fixed workload. Process RSS is explicitly unsupported
+in this record because the helper did not measure it; it is never used to infer
 owned bytes. Cold-build samples include configure and build wall time and use
-separate clean directories. These three observations are low-count and
-environment-sensitive. They are reproducibility data, not calibrated budgets,
-tail-latency estimates, hosted runner-minutes, or gameplay throughput.
+separate cleaned temporary directories. These three observations are low-count
+and environment-sensitive. They are reproducibility data, not calibrated
+budgets, tail-latency estimates, hosted runner-minutes, or gameplay throughput.
+
+The baseline identity names the Release runtime/test library/runner hashes,
+compiler identity read from generated CMake metadata, fixture and output
+digests, source revision and relevant-file inventory, helper source/binary
+digests, build flags, host class and exact workload. Host timing uses
+`CLOCK_MONOTONIC`; guest-cycle time remains the fixed 172 cycles and is not
+mixed into host nanoseconds. Reported ranges describe these samples only; they
+do not establish independent-run variance or rare latency tails.
 
 The supported local gate is `python3 tools/verify_sdk.py`. It has named focused
 suite selectors and finite child-command timeouts. Unsupported optional tool
