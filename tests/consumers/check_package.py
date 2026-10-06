@@ -377,6 +377,68 @@ def parse_consumer_record(output: str, marker: str) -> dict[str, object]:
     return result
 
 
+def require_public_cli_output(output: str, local_paths: tuple[Path, ...]) -> None:
+    if any(str(path) in output for path in local_paths if str(path)):
+        raise CheckError("CLI output exposed a local filesystem path")
+    if (re.search(r"/(?:Users|home)/[^/\s\"]+", output) or
+            re.search(r"[A-Za-z]:\\Users\\[^\s\"]+", output)):
+        raise CheckError("CLI output exposed a host-user path")
+
+
+def parse_diagnostic_record(output: str, local_paths: tuple[Path, ...]) -> dict[str, object]:
+    marker = "SDK_DIAGNOSTIC "
+    lines = [line[len(marker):] for line in output.splitlines() if line.startswith(marker)]
+    if len(lines) != 1:
+        raise CheckError(f"Expected one {marker.strip()} result record; got {len(lines)}")
+    require_public_cli_output(lines[0], local_paths)
+    try:
+        result = json.loads(lines[0])
+    except json.JSONDecodeError as error:
+        raise CheckError(f"Installed runner emitted malformed JSON: {error}") from error
+    if not isinstance(result, dict):
+        raise CheckError("Installed runner result must be a JSON object")
+
+    expected = {
+        "arithmetic": 10,
+        "initialized": 0x1237,
+        "bss": 1,
+        "cycles": 172,
+        "instructions": 12,
+        "pc": 0x12E,
+    }
+    observed = result.get("observed")
+    identity = result.get("identity")
+    if (result.get("schema_version") != 1 or
+            result.get("case_id") != "sdk.diagnostic.original-a" or
+            result.get("outcome") != "pass" or
+            not isinstance(result.get("assertions"), int) or
+            result["assertions"] < 14 or result.get("expected") != expected or
+            not isinstance(observed, dict) or
+            any(observed.get(name) != value for name, value in expected.items()) or
+            observed.get("reason") != 1 or not isinstance(identity, dict) or
+            not all(
+                isinstance(identity.get(name), str) and identity[name]
+                for name in ("source_revision", "configuration", "compiler")
+            ) or
+            identity.get("configuration") != "Release"):
+        raise CheckError("Installed runner result omits named diagnostic, boundary, or build identity fields")
+    return result
+
+
+def check_ownership_error_guide() -> int:
+    guide = (ROOT / "docs" / "ownership-and-errors.md").read_text(encoding="utf-8")
+    required = (
+        "`GN_STATUS_INVALID_MEDIA` | `invalid diagnostic media`",
+        "`gn_status_string`",
+        "failed replacements retain the previously loaded image",
+        "These strings contain no host pointers or private paths.",
+    )
+    for phrase in required:
+        if phrase not in guide:
+            raise CheckError(f"Ownership and error guide is missing recovery contract: {phrase}")
+    return len(required)
+
+
 def run_with_loader_trace(executable: Path, args: list[str], layout: dict[str, Path]) -> str:
     env = clean_environment()
     for name in ("DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH", "LD_LIBRARY_PATH"):
@@ -484,6 +546,15 @@ def case_consumers(variant: str) -> None:
         ).stdout
     verify_fixture_digest(fixture)
 
+    if variant == "shared":
+        runner_diagnostic_output = run_with_loader_trace(layout["runner"], [], layout)
+    else:
+        runner_diagnostic_output = run([str(layout["runner"])], env=runner_env).stdout
+    runner_record = parse_diagnostic_record(
+        runner_diagnostic_output,
+        (ROOT, work, relocated_prefix, Path.home()),
+    )
+
     c_executable = consumer_build / "glueyneo-installed-c"
     cxx_executable = consumer_build / "glueyneo-installed-cxx"
     if sys.platform == "win32":
@@ -511,6 +582,11 @@ def case_consumers(variant: str) -> None:
         marker not in wrong_expected.stdout for marker in intended_failures
     ):
         raise CheckError("Wrong-output control failed for a reason other than the arithmetic result")
+    require_public_cli_output(
+        "\n".join(line for line in wrong_expected.stdout.splitlines()
+                   if line.startswith("CONSUMER_ASSERT")),
+        (ROOT, work, relocated_prefix, Path.home()),
+    )
 
     control_results: list[str] = []
     for component in ("library", "config", "header"):
@@ -536,8 +612,14 @@ def case_consumers(variant: str) -> None:
         "relocation": "pass; installed runner and C/C++ consumers used moved prefix; no producer include/build paths",
         "loader_resolution": "moved prefix" if variant == "shared" else "static archive",
         "lanes": {"C": c_record, "C++": cxx_record},
+        "runner_diagnostic": runner_record,
         "negative_controls": {"outcome": "pass", "checks": control_results},
-        "assertions": int(c_record["assertions"]) + int(cxx_record["assertions"]) + len(control_results),
+        "assertions": (
+            int(runner_record["assertions"])
+            + int(c_record["assertions"])
+            + int(cxx_record["assertions"])
+            + len(control_results)
+        ),
         "runner_fixture_output": runner_output.splitlines()[-1] if runner_output.splitlines() else "pass",
     }
     print("SDK_PACKAGE " + json.dumps(result, sort_keys=True))
@@ -634,7 +716,7 @@ def check_readme_links_and_contracts() -> int:
     for phrase in stale_phrases:
         if phrase in readme:
             raise CheckError(f"README retains stale scope text: {phrase}")
-    return local_links + len(required_contracts) + len(stale_phrases)
+    return local_links + len(required_contracts) + len(stale_phrases) + check_ownership_error_guide()
 
 
 def check_capability_contract() -> None:
@@ -734,6 +816,7 @@ def case_docs_variant(variant: str) -> None:
         if argv[0].startswith("./") and "glueyneo-installed-cxx" in argv[0]:
             outcomes.append(parse_consumer_record(result.stdout, "SDK_CONSUMER_CPP "))
         elif argv[0].startswith("./") and "glueyneo-installed-c" in argv[0]:
+            require_public_cli_output(result.stdout, (ROOT, work, source, Path.home()))
             if "--recovery" in argv:
                 recovery = parse_consumer_record(result.stdout, "SDK_RECOVERY ")
                 if recovery.get("expected_status") != "invalid diagnostic media" or recovery.get(
