@@ -278,12 +278,15 @@ def export_inspector() -> tuple[str, str]:
     return name, executable
 
 
-def export_inspector_identity() -> dict[str, str]:
+def export_inspector_identity(library: Path) -> dict[str, str]:
     name, executable = export_inspector()
-    output = run([executable, "/?"] if name == "dumpbin" else [executable, "--version"]).stdout
+    # DUMPBIN help can exit nonzero. Bind its banner to successful inspection
+    # of the tested DLL rather than accepting a failed inspector invocation.
+    output = run([executable, "/EXPORTS", str(library)] if name == "dumpbin"
+                 else [executable, "--version"]).stdout
     first_line = next((line.strip() for line in output.splitlines() if line.strip()), "")
     if name == "dumpbin" and re.search(r"Dumper Version\s+[0-9.]+", first_line, re.IGNORECASE) is None:
-        raise CheckError("DUMPBIN /? returned an unsupported version identity")
+        raise CheckError("DUMPBIN /EXPORTS returned an unsupported version identity")
     if name == "nm" and not re.search(r"\b(nm|llvm-nm|Apple LLVM)\b", first_line, re.IGNORECASE):
         raise CheckError("nm --version returned an unsupported tool identity")
     return {"name": name, "executable": Path(executable).name, "version": first_line}
@@ -392,7 +395,7 @@ def build_package(variant: str, work: Path) -> dict[str, object]:
     layout = installed_layout(prefix, variant)
     inspect_exports(prefix, build_dir, layout, variant)
     exports = shared_exports(layout["library"]) if variant == "shared" else []
-    export_tool = export_inspector_identity() if variant == "shared" else None
+    export_tool = export_inspector_identity(layout["library"]) if variant == "shared" else None
 
     generated = work / "installed-runner-fixture.bin"
     clean = clean_environment(inherited)

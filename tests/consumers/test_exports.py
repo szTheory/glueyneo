@@ -132,6 +132,28 @@ class WindowsRuntimeClosureTests(unittest.TestCase):
 
 
 class SharedExportTests(unittest.TestCase):
+    def test_windows_version_is_bound_to_successful_dll_inspection(self) -> None:
+        library = Path("glueyneo.dll")
+        with mock.patch.object(check_package, "export_inspector",
+                               return_value=("dumpbin", "dumpbin.exe")), \
+             mock.patch.object(check_package, "run",
+                               return_value=mock.Mock(stdout=WINDOWS_EXPORTS)) as inspector:
+            identity = check_package.export_inspector_identity(library)
+            self.assertIn("Dumper Version 14.43.34808.0", identity["version"])
+            inspector.assert_called_once_with(["dumpbin.exe", "/EXPORTS", str(library)])
+
+    def test_windows_version_rejects_unknown_and_failed_inspection(self) -> None:
+        with mock.patch.object(check_package, "export_inspector",
+                               return_value=("dumpbin", "dumpbin.exe")):
+            with mock.patch.object(check_package, "run",
+                                   return_value=mock.Mock(stdout="unrecognized inspector\n")):
+                with self.assertRaisesRegex(check_package.CheckError, "unsupported version"):
+                    check_package.export_inspector_identity(Path("glueyneo.dll"))
+            with mock.patch.object(check_package, "run",
+                                   side_effect=check_package.CheckError("inspector failed")):
+                with self.assertRaisesRegex(check_package.CheckError, "inspector failed"):
+                    check_package.export_inspector_identity(Path("glueyneo.dll"))
+
     def test_linux_loader_initialization_resolves_relocated_parent_segments(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             prefix = Path(temp) / "sdk prefix"
