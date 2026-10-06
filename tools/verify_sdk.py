@@ -244,7 +244,8 @@ def ensure_debug_build() -> float:
     started = time.monotonic()
     run(["cmake", "--preset", "sdk-debug"], timeout=180)
     run(["cmake", "--build", "--preset", "sdk-debug", "--parallel", str(MAX_WORKERS)], timeout=300)
-    runner = BUILD / "glueyneo-diagnostic"
+    runner = BUILD / ("glueyneo-diagnostic.exe" if os.name == "nt"
+                      else "glueyneo-diagnostic")
     if not runner.is_file():
         raise VerificationError("sdk-debug build did not produce the diagnostic runner")
     fixture_b = BUILD / "diagnostic-original-b.bin"
@@ -813,47 +814,64 @@ def sanitizer_summary(identity: dict[str, Any]) -> tuple[dict[str, Any], str]:
             if not isinstance(reason, str) or not reason.strip():
                 raise VerificationError(f"unsupported sanitizer lane {name} omitted its reason")
             unsupported.append({"lane": name, "outcome": "unsupported", "reason": reason})
-        elif status == "failed_runtime":
-            if (row.get("runtime_status") != "failed" or row.get("expected_tests") != expected[name] or
-                    not isinstance(row.get("error"), str) or not row["error"].strip()):
-                raise VerificationError(f"failed sanitizer lane {name} omitted its explicit runtime failure")
-            attempted_tests += expected[name]
-            reported_failed_assertions += row.get("sdk_assertions", 0)
-            tail = row.get("runtime_log_tail", [])
-            failures = [line.strip() for line in tail
-                        if re.search(r"sdk_(?:isolation|cold).*\(Timeout\)", line)]
-            if row.get("evidence_reused"):
-                runtime_log = BUILD.parent / row["preset"] / "sanitizer-control/runtime.log"
-                log_text = runtime_log.read_text(encoding="utf-8", errors="replace")
-                failures = re.findall(r"(?m)^\s*\d+\s+-\s+(sdk_(?:isolation|cold))\s+\(Timeout\)", log_text)
-                row["ctest_wall_seconds"] = float(re.search(
-                    r"(?m)^Total Test time \(real\) =\s+([\d.]+) sec$", log_text).group(1))
+        elif status in {"failed_runtime", "failed"}:
+            if (not isinstance(row.get("error"), str) or not row["error"].strip() or
+                    row.get("expected_tests") != expected[name]):
+                raise VerificationError(f"failed sanitizer lane {name} omitted its explicit failure")
+            stage = row.get("failure_stage")
+            if not stage:
+                # Older retained reports do not have an explicit failure_stage.
+                stage = "runtime" if status == "failed_runtime" else next(
+                    (key for key in ("configure", "build", "startup")
+                     if row.get(f"{key}_status") == "failed"), "unknown")
+            if status == "failed_runtime" and row.get("runtime_status") != "failed":
+                raise VerificationError(f"failed sanitizer lane {name} omitted its runtime status")
+            row["failure_stage"] = stage
+            tail = row.get(f"{stage}_log_tail", [])
+            diagnostic = "\n".join(tail) if isinstance(tail, list) else str(tail)
+            if not diagnostic:
+                stage_log = BUILD.parent / row.get("preset", f"sdk-{name}") / f"sanitizer-control/{stage}.log"
+                if stage_log.is_file():
+                    diagnostic = stage_log.read_text(encoding="utf-8", errors="replace")
+            row["failure_diagnostic"] = redacted_failure_diagnostic(diagnostic or row["error"])
+            failures = row.get("failed_tests", [])
+            if not isinstance(failures, list) or any(
+                    not isinstance(value, str) or not re.fullmatch(r"sdk_\w+", value)
+                    for value in failures):
+                raise VerificationError(f"failed sanitizer lane {name} has malformed test names")
+            if status == "failed_runtime":
+                # A native failure is not required to reproduce Phase 02's
+                # historical pair of macOS timeouts. Preserve all actual CTest
+                # failure-list names and statuses, including startup failures
+                # in child processes after the standalone probe has passed.
+                log_text = runtime_log.read_text(encoding="utf-8", errors="replace") if runtime_log.is_file() else diagnostic
+                failures = sorted(set(failures) | set(re.findall(
+                    r"(?m)^\s*\d+\s+-\s+(sdk_\w+)\s+\([^\n]+\)\s*$", log_text)))
+                completed = re.findall(
+                    r"(?m)^\s*\d+/\d+\s+Test #\d+:\s+(sdk_\w+)\s+([^\n]*?)\s+([\d.]+)\s+sec\s*$", log_text)
+                started = set(re.findall(r"(?m)^\s*Start \d+:\s+(sdk_\w+)\s*$", log_text))
+                observed_attempts = len(started | {test_name for test_name, _, _ in completed})
+                attempts = row.get("tests_attempted", observed_attempts)
+                if not isinstance(attempts, int) or isinstance(attempts, bool) or not 0 <= attempts <= expected[name]:
+                    raise VerificationError(f"failed sanitizer lane {name} has invalid attempted-test count")
+                attempted_tests += attempts
+                row["tests_attempted"] = attempts
+                reported_failed_assertions += row.get("sdk_assertions", 0)
                 row["per_test_wall_seconds"] = [float(value) for value in re.findall(
-                    r"(?m)^Test time = ([\d.]+) sec$", log_text)]
-                row["runtime_log_sha256"] = evidence.sha256_file(runtime_log)
+                    r"(?m)^Test time = ([\d.]+) sec$", log_text)] or [float(seconds) for _, _, seconds in completed]
+                row["configured_test_timeout_seconds"] = 180
+                row["child_process_timeout_seconds"] = 30
+                row["assertions_status"] = "reported by failed runtime parser; excluded from passing assertion count"
             else:
-                runtime_log = BUILD.parent / row.get("preset", f"sdk-{name}") / "sanitizer-control/runtime.log"
-                if runtime_log.is_file():
-                    log_text = runtime_log.read_text(encoding="utf-8", errors="replace")
-                    row["runtime_log_sha256"] = evidence.sha256_file(runtime_log)
-                    wall = re.search(r"(?m)^Total Test time \(real\) =\s+([\d.]+) sec$", log_text)
-                    if wall:
-                        row["ctest_wall_seconds"] = float(wall.group(1))
-                    row["per_test_wall_seconds"] = [float(value) for value in re.findall(
-                        r"(?m)^Test time = ([\d.]+) sec$", log_text)]
-            if name == "tsan" and set(failures) != {"sdk_isolation", "sdk_cold"}:
-                raise VerificationError("TSan failure record lacks exact isolation and cold timeout names")
+                row["tests_attempted"] = 0
+                row["assertions_status"] = "runtime tests did not start; no passing assertion count"
             row["failed_tests"] = sorted(set(failures))
-            if not row.get("per_test_wall_seconds"):
-                row["per_test_wall_seconds"] = [float(value) for value in re.findall(
-                    r"(?m)^Test time = ([\d.]+) sec$", "\n".join(tail))]
-            row["assertions_status"] = "reported by failed runtime parser; excluded from passing assertion count"
-            row["configured_test_timeout_seconds"] = 180
-            row["child_process_timeout_seconds"] = 30
-            row["ctest_parallel_jobs"] = row.get("ctest_parallel_jobs", 2)
             failed.append({"lane": name, "outcome": "fail", "reason": row["error"],
+                           "stage": stage, "failure_diagnostic": row["failure_diagnostic"],
                            "failed_tests": row["failed_tests"],
-                           "attempted_tests": expected[name], "passed_tests": row.get("tests_passed", 0),
+                           "attempted_tests": row["tests_attempted"], "passed_tests": row.get("tests_passed", 0),
+                           "source_revision": row.get("result_source_revision"),
+                           "relevant_source_sha256": row.get("result_relevant_source_sha256"),
                            "runtime_log_sha256": row.get("runtime_log_sha256")})
         else:
             raise VerificationError(f"sanitizer lane {name} ended with {status!r}")
@@ -864,7 +882,8 @@ def sanitizer_summary(identity: dict[str, Any]) -> tuple[dict[str, Any], str]:
             "matrix_exit_code", "result_source_revision", "result_relevant_source_sha256",
             "runtime_log_sha256", "ctest_wall_seconds", "per_test_wall_seconds",
             "configured_test_timeout_seconds", "child_process_timeout_seconds", "ctest_parallel_jobs",
-            "failed_tests", "assertions_status", "configure_seconds",
+            "failed_tests", "failure_stage", "failure_diagnostic", "tests_attempted",
+            "assertions_status", "configure_seconds",
             "build_seconds", "startup_seconds", "runtime_seconds", "platform", "compiler",
             "expected_tests", "tests_passed", "sdk_assertions", "startup",
             "reported_failed_assertions",

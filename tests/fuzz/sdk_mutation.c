@@ -4,7 +4,6 @@
 #include "test_support.h"
 
 #include <inttypes.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -968,10 +967,10 @@ static void replay_entrypoint(void) {
     }
 }
 
-static void *startup_thread(void *context) {
+static SDK_TEST_THREAD_RESULT SDK_TEST_THREAD_CALL startup_thread(void *context) {
     (void)context;
     startup_thread_value = 1;
-    return NULL;
+    return SDK_TEST_THREAD_DONE;
 }
 
 static int startup_probe(const char *lane) {
@@ -987,10 +986,10 @@ static int startup_probe(const char *lane) {
     if (sum != UINT64_C(120)) return 1;
     unsigned startup_checks = 17u;
     if (is_tsan) {
-        pthread_t thread;
+        sdk_test_thread thread;
         startup_thread_value = 0;
-        if (pthread_create(&thread, NULL, startup_thread, NULL) != 0) return 1;
-        if (pthread_join(thread, NULL) != 0) return 1;
+        if (!sdk_test_thread_start(&thread, startup_thread, NULL)) return 1;
+        if (!sdk_test_thread_join(thread)) return 1;
         if (startup_thread_value != 1) return 1;
         ++startup_checks;
     }

@@ -59,6 +59,12 @@ struct owned_cpu {
     uint64_t reset_signal_events;
 };
 
+#ifdef OWNED_CPU_TEST_HOOKS
+_Static_assert(_Alignof(owned_cpu) <=
+                   _Alignof(owned_cpu_test_allocation_alignment),
+               "test allocator alignment must cover the complete owned CPU");
+#endif
+
 static uint32_t bus_address(uint32_t address) {
     return address & CPU_ADDRESS_MASK;
 }

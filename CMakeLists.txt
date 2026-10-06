@@ -228,7 +228,9 @@ install(FILES
 if(GLUEYNEO_BUILD_TESTS)
   enable_testing()
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
-  find_package(Threads REQUIRED)
+  if(NOT WIN32)
+    find_package(Threads REQUIRED)
+  endif()
   add_library(glueyneo_test STATIC ${GLUEYNEO_RUNTIME_SOURCES})
   target_compile_features(glueyneo_test PRIVATE c_std_17)
   set_target_properties(glueyneo_test PROPERTIES
@@ -272,7 +274,10 @@ if(GLUEYNEO_BUILD_TESTS)
     C_EXTENSIONS NO
   )
   target_link_libraries(sdk_diagnostic PRIVATE
-    glueyneo_test glueyneo_unity Threads::Threads)
+    glueyneo_test glueyneo_unity)
+  if(NOT WIN32)
+    target_link_libraries(sdk_diagnostic PRIVATE Threads::Threads)
+  endif()
   target_compile_definitions(sdk_diagnostic PRIVATE GLUEYNEO_SDK_TEST_HOOKS)
   target_compile_definitions(sdk_diagnostic PRIVATE
     GLUEYNEO_SOURCE_REVISION="${GLUEYNEO_SOURCE_REVISION}"
@@ -298,7 +303,10 @@ if(GLUEYNEO_BUILD_TESTS)
     C_STANDARD_REQUIRED YES
     C_EXTENSIONS NO
   )
-  target_link_libraries(sdk_mutation PRIVATE glueyneo glueyneo_unity Threads::Threads)
+  target_link_libraries(sdk_mutation PRIVATE glueyneo glueyneo_unity)
+  if(NOT WIN32)
+    target_link_libraries(sdk_mutation PRIVATE Threads::Threads)
+  endif()
   target_compile_definitions(sdk_mutation PRIVATE
     GLUEYNEO_SOURCE_REVISION="${GLUEYNEO_SOURCE_REVISION}"
     GLUEYNEO_CONFIGURATION="${CMAKE_BUILD_TYPE}"

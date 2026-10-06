@@ -4,13 +4,19 @@
 from __future__ import annotations
 
 import copy
+import json
+import subprocess
 import sys
+import tempfile
+from unittest import mock
 
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
 import sdk_evidence as evidence  # noqa: E402
+import verify_sdk  # noqa: E402
+import controls  # noqa: E402
 
 
 def require_rejection(report: dict, reason: str) -> None:
@@ -59,6 +65,87 @@ def valid_report() -> dict:
     }
 
 
+def sanitizer_failure_controls() -> None:
+    identity = {"source_revision": "a" * 40, "relevant_source_sha256": "b" * 64,
+                "compiler": {"id": "Clang", "version": "18.1.8"}}
+    passing = {"lane": "asan-ubsan", "preset": "sdk-asan-ubsan", "status": "passed",
+               "runtime_status": "passed", "startup_status": "passed",
+               "expected_tests": 8, "tests_passed": 8, "sdk_assertions": 80,
+               "compiler": {**identity["compiler"], "configuration": "Debug"}}
+    native_path = "/" + "home/" + "private-account/runner.c"
+    native_failure = (
+        "1/2 Test #10: sdk_isolation ...........***Failed    0.01 sec\n"
+        "2/2 Test #11: sdk_cold ................   Passed    0.02 sec\n"
+        "50% tests passed, 1 tests failed out of 2\n"
+        "Total Test time (real) =   0.03 sec\n"
+        "The following tests FAILED:\n"
+        " 10 - sdk_isolation (Failed)\n"
+        "ThreadSanitizer: native child failure at " + native_path + "\n")
+    timed_out = (
+        "1/2 Test #10: sdk_isolation ...........***Timeout 180.00 sec\n"
+        "2/2 Test #11: sdk_cold ................***Timeout 180.00 sec\n"
+        "The following tests FAILED:\n"
+        " 10 - sdk_isolation (Timeout)\n"
+        " 11 - sdk_cold (Timeout)\n")
+    variants = [
+        ({"status": "failed_runtime", "runtime_status": "failed",
+          "error": "runtime CTest suite exited 8", "tests_passed": 1,
+          "sdk_assertions": 7, "runtime_log_tail": native_failure.splitlines()},
+         native_failure, ["sdk_isolation"], 2, 7, "runtime"),
+        ({"status": "failed_runtime", "runtime_status": "failed",
+          "error": "runtime CTest suite exited 8", "tests_passed": 0,
+          "sdk_assertions": 0, "runtime_log_tail": timed_out.splitlines()},
+         timed_out, ["sdk_cold", "sdk_isolation"], 2, 0, "runtime"),
+        ({"status": "failed", "startup_status": "failed", "failure_stage": "startup",
+          "error": "startup probe returned 66 without a runtime failure signature",
+          "tests_passed": 0, "sdk_assertions": 0,
+          "startup_log_tail": ["ThreadSanitizer: native failure at " + native_path]},
+         "", [], 0, 0, "startup"),
+    ]
+    for changes, runtime, failed_tests, attempts, failed_assertions, stage in variants:
+        failed = {"lane": "tsan", "preset": "sdk-tsan", "expected_tests": 2,
+                  "ctest_parallel_jobs": 1, **changes}
+        wire = "\n".join("SANITIZER_LANE " + json.dumps(row) for row in (passing, failed))
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            runtime_path = base / "sdk-tsan/sanitizer-control/runtime.log"
+            runtime_path.parent.mkdir(parents=True)
+            runtime_path.write_text(runtime, encoding="utf-8")
+            with mock.patch.object(verify_sdk, "BUILD", base / "sdk-debug"), \
+                    mock.patch.object(verify_sdk, "TREE", base / "sdk-debug/verify-sdk"), \
+                    mock.patch.object(verify_sdk, "preserve_output", return_value="c" * 64), \
+                    mock.patch.object(verify_sdk, "run", return_value=subprocess.CompletedProcess([], 1, wire)):
+                result, _ = verify_sdk.sanitizer_summary(identity)
+        assert result["outcome"] == "fail"
+        assert result["cases"] == 8 and result["assertions"] == 80
+        assert result["attempted_tests"] == 8 + attempts
+        assert result["reported_failed_assertions"] == failed_assertions
+        failure = result["failed"][0]
+        assert failure["failed_tests"] == failed_tests and failure["stage"] == stage
+        assert failure["source_revision"] == identity["source_revision"]
+        assert failure["relevant_source_sha256"] == identity["relevant_source_sha256"]
+        assert native_path not in failure["failure_diagnostic"]
+        if stage == "startup" or failed_assertions:
+            assert "ThreadSanitizer" in failure["failure_diagnostic"]
+            assert "[private-path-redacted]" in failure["failure_diagnostic"]
+    # Exercise the native supervisor's partial CTest counts without running a
+    # native sanitizer or relying on a particular host's runtime availability.
+    startup = 'SANITIZER_STARTUP ' + json.dumps({
+        "outcome": "pass", "lane": "tsan", "startup_checks": 17,
+        "sanitizer": "THREAD", "compiler": "Clang 18.1.8"})
+    with tempfile.TemporaryDirectory() as directory, \
+            mock.patch.object(controls, "__file__", str(Path(directory) / "tests/sdk/controls.py")), \
+            mock.patch.object(controls, "cache_values", return_value={"GLUEYNEO_SDK_SANITIZER": "THREAD"}), \
+            mock.patch.object(controls, "verify_target_scoped_flags", return_value=(True, "verified")), \
+            mock.patch.object(controls, "run_logged", side_effect=[
+                (0, 0.01, None, ""), (0, 0.01, None, ""),
+                (0, 0.01, None, startup), (8, 0.03, None, native_failure)]):
+        supervised = controls.sanitizer_lane("sdk-tsan", "tsan", "THREAD", "-fsanitize=thread", "^sdk_(isolation|cold)$")
+    assert supervised["status"] == "failed_runtime" and supervised["failure_stage"] == "runtime"
+    assert supervised["tests_attempted"] == 2 and supervised["tests_passed"] == 1
+    assert supervised["failed_tests"] == ["sdk_isolation"]
+
+
 def main() -> int:
     report = valid_report()
     evidence.validate_matrix_report(report)
@@ -105,7 +192,9 @@ def main() -> int:
     mutation["outcome"] = "unknown"
     evidence.validate_matrix_report(mutation)
 
+    sanitizer_failure_controls()
     print("PASS: matrix evidence positive identity, outcome, count, timing, and cost controls")
+    print("PASS: sanitizer non-timeout, timeout, and startup failures preserve identity and excluded counts")
     return 0
 
 
