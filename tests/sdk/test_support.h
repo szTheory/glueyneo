@@ -8,6 +8,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#ifndef GLUEYNEO_SANITIZER
+#define GLUEYNEO_SANITIZER "NONE"
+#endif
+
 static uint64_t sdk_assertions;
 static uint64_t sdk_cases;
 
@@ -56,9 +60,11 @@ static void sdk_test_result(const char *suite, int failures,
         "\"outcome\":\"%s\",\"outcomes\":[\"pass\",\"fail\","
         "\"skipped\",\"unsupported\",\"unknown\"],\"cases\":%" PRIu64
         ",\"assertions\":%" PRIu64 ",\"identity\":{\"source_revision\":\"%s\","
-        "\"configuration\":\"%s\",\"compiler\":\"%s %s\"}}\n",
+        "\"configuration\":\"%s\",\"compiler\":\"%s %s\","
+        "\"sanitizer\":\"%s\"}}\n",
         suite, failures == 0 ? "pass" : "fail", sdk_cases, sdk_assertions,
-        source_revision, configuration, compiler_id, compiler_version);
+        source_revision, configuration, compiler_id, compiler_version,
+        GLUEYNEO_SANITIZER);
 }
 
 #endif

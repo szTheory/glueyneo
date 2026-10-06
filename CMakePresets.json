@@ -6,20 +6,26 @@
     {"name": "owned-release", "inherits": "owned-debug", "binaryDir": "${sourceDir}/build/owned-release", "cacheVariables": {"CMAKE_BUILD_TYPE": "Release", "GLUEYNEO_OWNED_CPU_OPTIMIZATION": "RELEASE"}},
     {"name": "owned-asan-ubsan", "inherits": "owned-debug", "binaryDir": "${sourceDir}/build/owned-asan-ubsan", "cacheVariables": {"GLUEYNEO_OWNED_CPU_SANITIZER": "ADDRESS_UNDEFINED"}},
     {"name": "owned-tsan", "inherits": "owned-release", "binaryDir": "${sourceDir}/build/owned-tsan", "cacheVariables": {"GLUEYNEO_OWNED_CPU_SANITIZER": "THREAD"}},
-    {"name": "sdk-debug", "generator": "Ninja", "binaryDir": "${sourceDir}/build/sdk-debug", "cacheVariables": {"GLUEYNEO_CPU_EXPERIMENT": "OFF", "GLUEYNEO_OWNED_CPU_EXPERIMENT": "OFF", "GLUEYNEO_BUILD_TESTS": "ON", "CMAKE_BUILD_TYPE": "Debug"}}
+    {"name": "sdk-debug", "generator": "Ninja", "binaryDir": "${sourceDir}/build/sdk-debug", "cacheVariables": {"GLUEYNEO_CPU_EXPERIMENT": "OFF", "GLUEYNEO_OWNED_CPU_EXPERIMENT": "OFF", "GLUEYNEO_BUILD_TESTS": "ON", "CMAKE_BUILD_TYPE": "Debug"}},
+    {"name": "sdk-asan-ubsan", "inherits": "sdk-debug", "binaryDir": "${sourceDir}/build/sdk-asan-ubsan", "cacheVariables": {"GLUEYNEO_SDK_SANITIZER": "ADDRESS_UNDEFINED", "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"}},
+    {"name": "sdk-tsan", "inherits": "sdk-debug", "binaryDir": "${sourceDir}/build/sdk-tsan", "cacheVariables": {"GLUEYNEO_SDK_SANITIZER": "THREAD", "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"}}
   ],
   "buildPresets": [
     {"name": "owned-debug", "configurePreset": "owned-debug", "jobs": 2},
     {"name": "owned-release", "configurePreset": "owned-release", "jobs": 2},
     {"name": "owned-asan-ubsan", "configurePreset": "owned-asan-ubsan", "jobs": 2},
     {"name": "owned-tsan", "configurePreset": "owned-tsan", "jobs": 2},
-    {"name": "sdk-debug", "configurePreset": "sdk-debug", "jobs": 2}
+    {"name": "sdk-debug", "configurePreset": "sdk-debug", "jobs": 2},
+    {"name": "sdk-asan-ubsan", "configurePreset": "sdk-asan-ubsan", "jobs": 2},
+    {"name": "sdk-tsan", "configurePreset": "sdk-tsan", "jobs": 2}
   ],
   "testPresets": [
     {"name": "owned-debug", "configurePreset": "owned-debug", "output": {"outputOnFailure": true}, "execution": {"jobs": 2, "noTestsAction": "error"}},
     {"name": "owned-release", "configurePreset": "owned-release", "output": {"outputOnFailure": true}, "execution": {"jobs": 2, "noTestsAction": "error"}},
     {"name": "owned-asan-ubsan", "configurePreset": "owned-asan-ubsan", "output": {"outputOnFailure": true}, "execution": {"jobs": 2, "noTestsAction": "error"}},
     {"name": "owned-tsan", "configurePreset": "owned-tsan", "output": {"outputOnFailure": true}, "execution": {"jobs": 2, "noTestsAction": "error"}},
-    {"name": "sdk-debug", "configurePreset": "sdk-debug", "output": {"outputOnFailure": true}, "execution": {"jobs": 2, "noTestsAction": "error"}}
+    {"name": "sdk-debug", "configurePreset": "sdk-debug", "output": {"outputOnFailure": true}, "execution": {"jobs": 2, "noTestsAction": "error"}},
+    {"name": "sdk-asan-ubsan", "configurePreset": "sdk-asan-ubsan", "output": {"outputOnFailure": true}, "execution": {"jobs": 2, "noTestsAction": "error"}},
+    {"name": "sdk-tsan", "configurePreset": "sdk-tsan", "output": {"outputOnFailure": true}, "execution": {"jobs": 2, "noTestsAction": "error"}}
   ]
 }

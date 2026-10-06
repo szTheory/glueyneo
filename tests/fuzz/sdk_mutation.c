@@ -4,6 +4,7 @@
 #include "test_support.h"
 
 #include <inttypes.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -68,6 +69,7 @@ static uint64_t sdk_mutation_max_operations;
 static size_t sdk_mutation_max_input_bytes;
 static const uint8_t *replay_input;
 static size_t replay_input_size;
+static volatile int startup_thread_value;
 
 void setUp(void) {}
 void tearDown(void) {}
@@ -966,7 +968,16 @@ static void replay_entrypoint(void) {
     }
 }
 
+static void *startup_thread(void *context) {
+    (void)context;
+    startup_thread_value = 1;
+    return NULL;
+}
+
 static int startup_probe(const char *lane) {
+    const int is_tsan = strcmp(lane, "tsan") == 0;
+    const int is_asan_ubsan = strcmp(lane, "asan-ubsan") == 0;
+    if (!is_tsan && !is_asan_ubsan) return 2;
     volatile uint8_t *memory = (volatile uint8_t *)malloc(16u);
     if (memory == NULL) return 1;
     for (size_t index = 0u; index < 16u; ++index) memory[index] = (uint8_t)index;
@@ -974,11 +985,21 @@ static int startup_probe(const char *lane) {
     for (size_t index = 0u; index < 16u; ++index) sum += memory[index];
     free((void *)memory);
     if (sum != UINT64_C(120)) return 1;
+    unsigned startup_checks = 17u;
+    if (is_tsan) {
+        pthread_t thread;
+        startup_thread_value = 0;
+        if (pthread_create(&thread, NULL, startup_thread, NULL) != 0) return 1;
+        if (pthread_join(thread, NULL) != 0) return 1;
+        if (startup_thread_value != 1) return 1;
+        ++startup_checks;
+    }
     (void)printf("SANITIZER_STARTUP {\"lane\":\"%s\",\"outcome\":\"pass\","
-                 "\"assertions\":17,\"compiler\":\"%s %s\","
-                 "\"configuration\":\"%s\"}\n",
-                 lane, GLUEYNEO_COMPILER_ID, GLUEYNEO_COMPILER_VERSION,
-                 GLUEYNEO_CONFIGURATION);
+                 "\"startup_checks\":%u,\"compiler\":\"%s %s\","
+                 "\"configuration\":\"%s\",\"sanitizer\":\"%s\"}\n",
+                 lane, startup_checks, GLUEYNEO_COMPILER_ID,
+                 GLUEYNEO_COMPILER_VERSION, GLUEYNEO_CONFIGURATION,
+                 GLUEYNEO_SANITIZER);
     return 0;
 }
 

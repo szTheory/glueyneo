@@ -1,0 +1,94 @@
+# SDK testing
+
+Run these focused checks from the repository root:
+
+```sh
+cmake --build --preset sdk-debug
+ctest --preset sdk-debug -L sdk-mutation --output-on-failure --no-tests=error
+python3 tests/sdk/controls.py --sanitizers
+```
+
+The mutation command exercises deterministic hostile media and legal public API
+sequences. The sanitizer supervisor configures and builds separate presets,
+checks their private compile/link flags and installed consumer export, starts an
+instrumented executable, and only then runs the corresponding CTest suite. It
+writes stage logs and a machine-readable report under each preset's
+`build/<preset>/sanitizer-control/` directory. Configure, build, startup and
+runtime status are reported separately. A startup-only pass is not a suite pass.
+
+## Executed sanitizer lanes
+
+Evidence recorded on AppleClang 21.0.0.21000101, Debug, arm64 Darwin 25.6.0.
+Both lanes compiled and linked with lane-private flags. The installed
+`GlueyneoTargets.cmake` export contains no sanitizer flag; the normal consumer
+target receives no sanitizer or test usage requirement.
+
+| Lane | Startup probe | Runtime suite | SDK cases / assertions | Runtime wall time |
+| --- | --- | --- | ---: | ---: |
+| ASan + UBSan | pass, 17 checks | 8/8 tests passed | 31 cases / 577,077 assertions | 0.49 s |
+| TSan | pass, 18 checks including a joined worker thread | 2/2 tests passed | 2 cases / 30 assertions | 2.96 s |
+
+The ASan + UBSan suite ran lifecycle, media, fault, run, diagnostic, both
+mutation entrypoints, and the minimizer self-test. The seven SDK result records
+reported:
+
+| Suite | Cases | Assertions |
+| --- | ---: | ---: |
+| Lifecycle | 2 | 42 |
+| Media | 3 | 118 |
+| Faults | 3 | 476 |
+| Run | 6 | 149 |
+| Diagnostic | 4 | 119 |
+| Mutation media | 11 | 34,739 |
+| Mutation sequence | 2 | 541,434 |
+
+The minimizer self-test is the eighth CTest case; it verifies that deterministic
+byte deletion reduces a synthetic 25-byte failure to its 2-byte trigger while
+preserving the same failure ID. TSan exercised 13 equal-boundary observations,
+16 interleaved pairs, 16 barrier-synchronized pairs, 32 concurrent candidate
+failure paths, and eight cold processes covering 16 owners, 16 failure paths,
+and 16 reset recoveries. No sanitizer finding was reported.
+
+The final supervisor pass took about 0.87 seconds for the ASan + UBSan configure,
+incremental build, startup and runtime stages, and 3.68 seconds for TSan. The
+first successful full compiles took 0.73 seconds for ASan + UBSan and 0.75
+seconds for TSan; configure took 1.23 and 0.91 seconds, respectively. Peak RSS
+is **unmeasured**: this host denied process inspection (`ps`: “Operation not
+permitted”), so the supervisor records the memory measurement as unsupported.
+These timings describe this local diagnostic suite only.
+
+## Bounded mutation corpus
+
+Both C harnesses use seeded xorshift64 mutation, with 1,024 iterations each.
+This is finite deterministic mutation, not coverage-guided fuzzing. The common
+limits are 4,096 input bytes, 64 operations per input, four live instances,
+1,000,000 guest-requested cycles per input, two media descriptors, 256 possible
+trace events, and the existing 1 MiB mapped-plus-source storage budget.
+
+| Harness | Seed | Named corpus cases | Unique generated inputs | Operations | Max cycles per input | Max input bytes | Peak storage |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Media | `0x6e656f67656f3235` | 10 | 1,024 | 1,034 total | 432 | 64 | within the 1 MiB cap |
+| Public call sequence | `0x6e656f67656f3235 XOR 0xa17f00d5` | 2 | 1,017 | 33,169 total | 3,313 | 64 | 20,520 bytes |
+
+The 1,114,212 sequence cycles in the run log aggregate work over all inputs; the
+largest individual input requested 3,313 cycles, below the 1,000,000-cycle cap.
+The harness checks valid caller-owned storage, exact rejection statuses,
+repeat/reset behavior, peer isolation and bounded lifecycle recovery. No trace
+events are collected by these public-API harnesses, so the 256-event ceiling is
+not exercised. The mutation CTest run passed all three registered cases
+(media, sequence, and minimizer), with nonzero assertions in both C entrypoints.
+
+`tests/fuzz/regressions.json` records original diagnostic boundary inputs and
+the deterministic seeds. No runtime defect was found in this run; therefore no
+real failing input was minimized or promoted. The minimizer self-test validates
+exact failure-ID preservation on its synthetic trigger. `findings` remains
+empty in the corpus manifest.
+
+## Unsupported coverage
+
+The matching AppleClang libFuzzer archive is absent on this host, so no
+coverage-guided libFuzzer lane was built or run. No compiler/runtime is installed
+or selected by this workflow. Other operating systems, compilers, hardware
+profiles, arbitrary hostile host pointers, and real-game compatibility are not
+qualified by these finite diagnostic checks. A hash, bounded mutation pass, or
+reference-emulator result does not establish hardware truth.

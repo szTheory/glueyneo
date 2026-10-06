@@ -7,6 +7,64 @@ include(CMakePackageConfigHelpers)
 option(GLUEYNEO_BUILD_TESTS "Build SDK tests and the headless diagnostic" ${BUILD_TESTING})
 option(GLUEYNEO_CPU_EXPERIMENT "Build the private CPU acceptance experiment" OFF)
 option(GLUEYNEO_OWNED_CPU_EXPERIMENT "Build the private owned MC68000 experiment" OFF)
+set(GLUEYNEO_SDK_SANITIZER "NONE" CACHE STRING
+    "SDK-only instrumentation: NONE, ADDRESS_UNDEFINED, or THREAD")
+set_property(CACHE GLUEYNEO_SDK_SANITIZER PROPERTY STRINGS
+             NONE ADDRESS_UNDEFINED THREAD)
+if(NOT GLUEYNEO_SDK_SANITIZER MATCHES "^(NONE|ADDRESS_UNDEFINED|THREAD)$")
+  message(FATAL_ERROR "Unknown SDK sanitizer mode: ${GLUEYNEO_SDK_SANITIZER}")
+endif()
+
+set(GLUEYNEO_SDK_SANITIZER_FLAGS "")
+set(GLUEYNEO_SDK_SANITIZER_LINK_FLAGS "")
+if(GLUEYNEO_SDK_SANITIZER STREQUAL "ADDRESS_UNDEFINED")
+  include(CheckCCompilerFlag)
+  include(CheckLinkerFlag)
+  set(CMAKE_REQUIRED_LINK_OPTIONS "-fsanitize=address,undefined")
+  check_c_compiler_flag("-fsanitize=address,undefined"
+    GLUEYNEO_SDK_HAS_ASAN_UBSAN_COMPILE)
+  unset(CMAKE_REQUIRED_LINK_OPTIONS)
+  check_linker_flag(C "-fsanitize=address,undefined"
+    GLUEYNEO_SDK_HAS_ASAN_UBSAN_LINK)
+  if(NOT GLUEYNEO_SDK_HAS_ASAN_UBSAN_COMPILE OR
+     NOT GLUEYNEO_SDK_HAS_ASAN_UBSAN_LINK)
+    message(FATAL_ERROR
+      "SDK_SANITIZER_UNSUPPORTED: selected C compiler/linker lacks ASan+UBSan")
+  endif()
+  set(GLUEYNEO_SDK_SANITIZER_FLAGS
+      -fsanitize=address,undefined -fno-omit-frame-pointer
+      -fno-sanitize-recover=all)
+  set(GLUEYNEO_SDK_SANITIZER_LINK_FLAGS
+      -fsanitize=address,undefined -fno-omit-frame-pointer
+      -fno-sanitize-recover=all)
+elseif(GLUEYNEO_SDK_SANITIZER STREQUAL "THREAD")
+  include(CheckCCompilerFlag)
+  include(CheckLinkerFlag)
+  set(CMAKE_REQUIRED_LINK_OPTIONS "-fsanitize=thread")
+  check_c_compiler_flag("-fsanitize=thread"
+    GLUEYNEO_SDK_HAS_TSAN_COMPILE)
+  unset(CMAKE_REQUIRED_LINK_OPTIONS)
+  check_linker_flag(C "-fsanitize=thread" GLUEYNEO_SDK_HAS_TSAN_LINK)
+  if(NOT GLUEYNEO_SDK_HAS_TSAN_COMPILE OR NOT GLUEYNEO_SDK_HAS_TSAN_LINK)
+    message(FATAL_ERROR
+      "SDK_SANITIZER_UNSUPPORTED: selected C compiler/linker lacks TSan")
+  endif()
+  set(GLUEYNEO_SDK_SANITIZER_FLAGS
+      -fsanitize=thread -fno-omit-frame-pointer -fno-sanitize-recover=all)
+  set(GLUEYNEO_SDK_SANITIZER_LINK_FLAGS
+      -fsanitize=thread -fno-omit-frame-pointer -fno-sanitize-recover=all)
+endif()
+
+function(glueyneo_apply_sdk_sanitizer target)
+  if(GLUEYNEO_SDK_SANITIZER_FLAGS)
+    target_compile_options(${target} PRIVATE ${GLUEYNEO_SDK_SANITIZER_FLAGS})
+    get_target_property(target_type ${target} TYPE)
+    if(NOT target_type STREQUAL "STATIC_LIBRARY")
+      target_link_options(${target} PRIVATE ${GLUEYNEO_SDK_SANITIZER_LINK_FLAGS})
+    endif()
+  endif()
+endfunction()
+
 if(GLUEYNEO_CPU_EXPERIMENT AND GLUEYNEO_OWNED_CPU_EXPERIMENT)
   message(FATAL_ERROR "Select one whole CPU backend experiment per build directory")
 endif()
@@ -42,6 +100,7 @@ if(MSVC)
 else()
   target_compile_options(glueyneo PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
+glueyneo_apply_sdk_sanitizer(glueyneo)
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
   execute_process(
@@ -78,6 +137,7 @@ if(MSVC)
 else()
   target_compile_options(glueyneo-diagnostic PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
+glueyneo_apply_sdk_sanitizer(glueyneo-diagnostic)
 
 if(APPLE)
   set_target_properties(glueyneo-diagnostic PROPERTIES
@@ -167,6 +227,7 @@ if(GLUEYNEO_BUILD_TESTS)
   else()
     target_compile_options(glueyneo_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
   endif()
+  glueyneo_apply_sdk_sanitizer(glueyneo_test)
 
   add_library(glueyneo_unity STATIC third_party/unity/src/unity.c)
   target_include_directories(glueyneo_unity PUBLIC third_party/unity/src)
@@ -176,6 +237,7 @@ if(GLUEYNEO_BUILD_TESTS)
     C_STANDARD_REQUIRED YES
     C_EXTENSIONS NO
   )
+  glueyneo_apply_sdk_sanitizer(glueyneo_unity)
   add_executable(sdk_diagnostic tests/sdk/test_sdk.c tests/sdk/guest_fixture.c)
   target_include_directories(sdk_diagnostic PRIVATE tests/sdk src)
   target_compile_features(sdk_diagnostic PRIVATE c_std_17)
@@ -192,12 +254,14 @@ if(GLUEYNEO_BUILD_TESTS)
     GLUEYNEO_CONFIGURATION="${CMAKE_BUILD_TYPE}"
     GLUEYNEO_COMPILER_ID="${CMAKE_C_COMPILER_ID}"
     GLUEYNEO_COMPILER_VERSION="${CMAKE_C_COMPILER_VERSION}"
+    GLUEYNEO_SANITIZER="${GLUEYNEO_SDK_SANITIZER}"
   )
   if(MSVC)
     target_compile_options(sdk_diagnostic PRIVATE /W4 /WX)
   else()
     target_compile_options(sdk_diagnostic PRIVATE -Wall -Wextra -Wpedantic -Werror)
   endif()
+  glueyneo_apply_sdk_sanitizer(sdk_diagnostic)
   add_executable(sdk_mutation
     tests/fuzz/sdk_mutation.c
     tests/sdk/guest_fixture.c
@@ -215,12 +279,14 @@ if(GLUEYNEO_BUILD_TESTS)
     GLUEYNEO_CONFIGURATION="${CMAKE_BUILD_TYPE}"
     GLUEYNEO_COMPILER_ID="${CMAKE_C_COMPILER_ID}"
     GLUEYNEO_COMPILER_VERSION="${CMAKE_C_COMPILER_VERSION}"
+    GLUEYNEO_SANITIZER="${GLUEYNEO_SDK_SANITIZER}"
   )
   if(MSVC)
     target_compile_options(sdk_mutation PRIVATE /W4 /WX)
   else()
     target_compile_options(sdk_mutation PRIVATE -Wall -Wextra -Wpedantic -Werror)
   endif()
+  glueyneo_apply_sdk_sanitizer(sdk_mutation)
   add_test(NAME sdk_diagnostic COMMAND sdk_diagnostic diagnostic)
   set_tests_properties(sdk_diagnostic PROPERTIES LABELS "sdk-contract;sdk-diagnostic")
   add_test(NAME sdk_lifecycle COMMAND sdk_diagnostic lifecycle)
