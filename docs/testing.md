@@ -92,3 +92,40 @@ or selected by this workflow. Other operating systems, compilers, hardware
 profiles, arbitrary hostile host pointers, and real-game compatibility are not
 qualified by these finite diagnostic checks. A hash, bounded mutation pass, or
 reference-emulator result does not establish hardware truth.
+
+## Required CI aggregate
+
+The focused selectors are `matrix` (SDK diagnostic CTest groups and installed
+static/shared consumers), `release-consumer`, `ci-policy`, `public-content`,
+`sanitizer`, and `fuzz`; `all` retains the full local verification path. The
+matrix command is `python3 tools/verify_sdk.py --suite matrix`. It records
+compiler, SDK, runner image, architecture, build and fixture identities from
+the active runner. Sanitizer and seeded mutation controls run as separate Linux
+Clang lanes in `.github/workflows/ci.yml`.
+
+CI always starts the `ci-policy` aggregate for pull requests and pushes to
+`main`; branch protection should require the current `CI / ci-policy` check.
+The workflow has no path filters. Its internal classifier sends recognized
+documentation-only changes through the public-content gate and sends source,
+build, package, release, unknown, and unclassifiable changes through the full
+matrix. Missing or failed jobs, cancelled or empty lanes, zero assertion counts,
+stale source revisions, and absent receipts fail the aggregate. Pull request
+jobs use the workflow's read-only `contents: read` token, contain no secrets,
+and use `pull_request`; GitHub's first-time contributor workflow-approval
+safeguard remains active where repository settings require it. There is no
+privileged PR job that consumes or executes an uploaded PR artifact.
+
+Successful hosted runs retain per-lane receipts and an aggregate under
+`evidence/sdk/ci-aggregate.json`. A local parser fixture proves rejection
+behavior; it does not claim that any hosted lane ran. At this revision no
+remote, hosted runner result, required-check protection, or first-time fork
+approval event has been exercised. Linux GCC/Clang, macOS arm64 AppleClang,
+Windows x64 MSVC, sanitizer, and fuzz support remain unqualified until matching
+current-source receipts are produced by GitHub Actions. Local successful
+diagnostic runs do not qualify a hosted runner lane. Runner execution minutes
+and matrix critical path are computed from measured verification command
+durations after checkout; they exclude checkout/upload overhead and GitHub's
+billing rounding. They describe those observed lane commands only.
+Public-content scanning is detector coverage, not proof
+that every private value is absent, and it cannot establish redistribution
+rights.

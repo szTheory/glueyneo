@@ -189,7 +189,8 @@ def preserve_output(lane: str, output: str) -> str:
     return evidence.sha256_file(path)
 
 
-def ensure_debug_build() -> None:
+def ensure_debug_build() -> float:
+    started = time.monotonic()
     run(["cmake", "--preset", "sdk-debug"], timeout=180)
     run(["cmake", "--build", "--preset", "sdk-debug", "--parallel", str(MAX_WORKERS)], timeout=300)
     runner = BUILD / "glueyneo-diagnostic"
@@ -198,6 +199,7 @@ def ensure_debug_build() -> None:
     fixture_b = BUILD / "diagnostic-original-b.bin"
     run([str(runner), "--write-fixture", str(fixture_b), "--scenario-b"], timeout=20)
     run([str(runner), "--check-fixture", str(fixture_b), "--scenario-b"], timeout=20)
+    return round(time.monotonic() - started, 6)
 
 
 def _bracket(value: str) -> str:
@@ -938,9 +940,81 @@ def suite_all() -> dict[str, Any]:
     }
 
 
+def suite_matrix() -> dict[str, Any]:
+    """Run platform-neutral SDK diagnostics and installed static/shared consumers."""
+    started = time.monotonic()
+    cold_build_seconds = ensure_debug_build()
+    identity = evidence.current_identity(ROOT)
+    focused = {}
+    for name in ("contract", "diagnostic", "run", "controls", "isolation", "provenance", "capabilities"):
+        focused[name], _ = collect_ctest_lane(name, identity)
+    consumers, _ = suite_package("consumers")
+    final_identity = evidence.current_identity(ROOT)
+    if any(identity.get(field) != final_identity.get(field) for field in
+           ("source_revision", "relevant_source_sha256", "working_tree_dirty")):
+        raise VerificationError("relevant source changed while matrix SDK lanes were running")
+    assertions = sum(row.get("assertions", 0) for row in focused.values()) + consumers["assertions"]
+    cases = sum(row.get("cases", row.get("ctest_cases", 0)) for row in focused.values()) + consumers["cases"]
+    return {"suite": "matrix", "outcome": "pass", "identity": identity,
+            "aggregate": {"lane_execution_count": len(focused) + consumers["ctest_cases"],
+                          "case_count": cases, "assertion_count": assertions},
+            "lanes": {"ctest": focused, "installed_consumers": consumers},
+            "cold_build_seconds": cold_build_seconds,
+            "critical_path_seconds": round(time.monotonic() - started, 6)}
+
+
+def suite_fuzz() -> dict[str, Any]:
+    cold_build_seconds = ensure_debug_build()
+    identity = evidence.current_identity(ROOT)
+    lane, _ = collect_ctest_lane("hostile", identity)
+    return {"suite": "fuzz", "outcome": lane["outcome"], "identity": identity,
+            "aggregate": {"lane_execution_count": lane["ctest_cases"],
+                          "case_count": lane.get("cases", 0),
+                          "assertion_count": lane.get("assertions", 0)},
+            "lanes": {"fuzz": lane}, "cold_build_seconds": cold_build_seconds}
+
+
+def suite_ci_policy() -> dict[str, Any]:
+    results = []
+    for test in ("tests/workflow/test_ci_policy.py", "tests/sdk/test_matrix_evidence.py"):
+        output = run([sys.executable, test], timeout=60).stdout
+        if "PASS:" not in output:
+            raise VerificationError(f"CI policy control omitted positive marker: {Path(test).name}")
+        results.append({"test": test, "outcome": "pass"})
+    return {"suite": "ci-policy", "outcome": "pass", "lane_execution_count": len(results),
+            "assertion_count": len(results), "tests": results}
+
+
+def suite_public_content() -> dict[str, Any]:
+    report_path = ROOT / "build/verify-sdk/public-content.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    result = run([sys.executable, "tools/public_content.py", "--root", str(ROOT),
+                  "--history-revision", "--all", "--json", str(report_path)], timeout=300)
+    report = evidence.load_canonical_json(report_path.read_bytes(), label="public-content report")
+    if result.returncode != 0 or report.get("outcome") != "pass":
+        raise VerificationError("public-content scan failed")
+    counts = report.get("counts", {})
+    return {"suite": "public-content", "outcome": "pass", "lane_execution_count": 1,
+            "assertion_count": sum(value for value in counts.values() if isinstance(value, int)),
+            "report_sha256": evidence.sha256_file(report_path), "coverage": report.get("coverage")}
+
+
+def suite_release_consumer() -> dict[str, Any]:
+    output = run([sys.executable, "tests/consumers/test_release_consumer.py"], timeout=1800).stdout
+    match = re.search(r"(?m)^Ran (\d+) tests? in [\d.]+s$", output)
+    if match is None or int(match.group(1)) <= 0 or "OK" not in output.splitlines()[-1:]:
+        raise VerificationError("release-consumer suite omitted a positive unittest denominator")
+    return {"suite": "release-consumer", "outcome": "pass", "cases": int(match.group(1)),
+            "assertion_count": int(match.group(1)), "output_sha256": evidence.sha256_bytes(output.encode())}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--suite", choices=("evidence", "provenance", "baseline", "all"), default="all")
+    parser.add_argument("--suite", choices=("evidence", "provenance", "baseline", "matrix",
+                                             "release-consumer", "ci-policy", "public-content",
+                                             "fuzz", "sanitizer", "all"), default="all")
+    parser.add_argument("--lane", choices=evidence.REQUIRED_MATRIX_LANES)
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     start = time.monotonic()
     try:
@@ -950,12 +1024,39 @@ def main() -> int:
             report = suite_provenance()
         elif args.suite == "baseline":
             report = suite_baseline()
+        elif args.suite == "matrix":
+            report = suite_matrix()
+        elif args.suite == "release-consumer":
+            report = suite_release_consumer()
+        elif args.suite == "ci-policy":
+            report = suite_ci_policy()
+        elif args.suite == "public-content":
+            report = suite_public_content()
+        elif args.suite == "fuzz":
+            report = suite_fuzz()
+        elif args.suite == "sanitizer":
+            cold_build_seconds = ensure_debug_build()
+            identity = evidence.current_identity(ROOT)
+            sanitizers, _ = sanitizer_summary(identity)
+            report = {"suite": "sanitizer", "outcome": sanitizers["outcome"],
+                      "identity": identity, "aggregate": {
+                          "lane_execution_count": sanitizers["attempted_tests"],
+                          "assertion_count": sanitizers["assertions"]}, "lanes": sanitizers,
+                      "cold_build_seconds": cold_build_seconds}
         else:
             report = suite_all()
         report["duration_seconds"] = round(time.monotonic() - start, 6)
+        if args.suite in {"matrix", "fuzz", "sanitizer"} and args.lane:
+            lane = evidence.matrix_lane_from_environment(args.lane, report, report["duration_seconds"], ROOT)
+            report["matrix_lane"] = lane
+            if lane["outcome"] != "pass":
+                report["outcome"] = lane["outcome"]
+            if args.output:
+                args.output.parent.mkdir(parents=True, exist_ok=True)
+                args.output.write_bytes(evidence.canonical_bytes(lane))
         evidence.scan_public_value(report)
         print("SDK_VERIFY " + json.dumps(report, sort_keys=True, separators=(",", ":")))
-        return 1 if report.get("outcome") == "fail" else 0
+        return 0 if report.get("outcome") == "pass" else 1
     except (VerificationError, evidence.EvidenceError, OSError, ValueError, RuntimeError) as error:
         try:
             preserve_output(f"{args.suite}-failed", str(error))
