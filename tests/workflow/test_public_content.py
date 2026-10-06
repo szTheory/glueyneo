@@ -15,9 +15,13 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
 import public_content as content  # noqa: E402
+import release_manifest as release  # noqa: E402
 
 
 class PublicContentTests(unittest.TestCase):
+    def test_source_scan_tracks_release_archive_policy(self) -> None:
+        self.assertEqual(tuple(content.SOURCE_PATHS), release.SOURCE_PATHS)
+
     def test_secret_canaries_are_redacted_and_rule_labeled(self) -> None:
         personal_path = "/".join(("Users", "alice", "private.txt"))
         identity = "alice" + "@" + "private-domain" + ".com"
@@ -145,6 +149,11 @@ class PublicContentTests(unittest.TestCase):
             (root / "link").symlink_to(root / "missing")
             with self.assertRaises(content.ContentError) as caught:
                 content.scan_tree(root, ["link"])
+            self.assertEqual(caught.exception.reason, "input-type")
+            (root / "original").write_bytes(b"public")
+            (root / "hardlink").hardlink_to(root / "original")
+            with self.assertRaises(content.ContentError) as caught:
+                content.scan_tree(root, ["hardlink"])
             self.assertEqual(caught.exception.reason, "input-type")
 
 
