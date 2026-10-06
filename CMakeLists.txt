@@ -1,5 +1,30 @@
 cmake_minimum_required(VERSION 3.20)
-project(Glueyneo VERSION 0.1.0 LANGUAGES C)
+
+# release-please owns the only project version. Keep this parsing before
+# project() so CMake's installed package version uses the manifest value.
+set(GLUEYNEO_RELEASE_MANIFEST "${CMAKE_CURRENT_LIST_DIR}/.release-please-manifest.json")
+if(NOT EXISTS "${GLUEYNEO_RELEASE_MANIFEST}")
+  message(FATAL_ERROR "release-please manifest is missing: ${GLUEYNEO_RELEASE_MANIFEST}")
+endif()
+file(READ "${GLUEYNEO_RELEASE_MANIFEST}" GLUEYNEO_RELEASE_MANIFEST_JSON)
+string(JSON GLUEYNEO_RELEASE_MANIFEST_LENGTH ERROR_VARIABLE GLUEYNEO_RELEASE_JSON_ERROR
+       LENGTH "${GLUEYNEO_RELEASE_MANIFEST_JSON}")
+if(GLUEYNEO_RELEASE_JSON_ERROR OR NOT GLUEYNEO_RELEASE_MANIFEST_LENGTH EQUAL 1)
+  message(FATAL_ERROR "release-please manifest must be a valid object containing only the root package")
+endif()
+string(JSON GLUEYNEO_RELEASE_MANIFEST_PACKAGE ERROR_VARIABLE GLUEYNEO_RELEASE_JSON_ERROR
+       MEMBER "${GLUEYNEO_RELEASE_MANIFEST_JSON}" 0)
+if(GLUEYNEO_RELEASE_JSON_ERROR OR NOT GLUEYNEO_RELEASE_MANIFEST_PACKAGE STREQUAL ".")
+  message(FATAL_ERROR "release-please manifest must define exactly the root package key '.'")
+endif()
+string(JSON GLUEYNEO_PROJECT_VERSION ERROR_VARIABLE GLUEYNEO_RELEASE_JSON_ERROR
+       GET "${GLUEYNEO_RELEASE_MANIFEST_JSON}" ".")
+if(GLUEYNEO_RELEASE_JSON_ERROR OR
+   NOT GLUEYNEO_PROJECT_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?(\\+[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$")
+  message(FATAL_ERROR "release-please manifest root version must be valid semantic version text")
+endif()
+
+project(Glueyneo VERSION "${GLUEYNEO_PROJECT_VERSION}" LANGUAGES C)
 include(CTest)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
