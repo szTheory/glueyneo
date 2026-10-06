@@ -61,25 +61,43 @@ class PublicContentTests(unittest.TestCase):
                 self.assertTrue(row["reason"])
 
     def test_uncatalogued_binary_test_asset_fails_tree_and_archive_rights_gates(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            (root / "docs").mkdir()
-            (root / "tests/cpu").mkdir(parents=True)
-            (root / "tests/cpu/title.bin").write_bytes(b"synthetic")
-            (root / "docs/rights-inventory.md").write_text(
-                "```json\n{\"schema\":1,\"items\":[]}\n```\n", encoding="utf-8")
-            with mock.patch.object(content, "_git_source_paths", return_value=["tests/cpu/title.bin"]):
+        for suffix in (".bin", ".json", ".txt", ".md", ".py", ".extension", ""):
+            path = f"tests/cpu/title{suffix}"
+            with tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                (root / "docs").mkdir()
+                (root / "tests/cpu").mkdir(parents=True)
+                (root / path).write_bytes(b"synthetic test payload")
+                (root / "docs/rights-inventory.md").write_text(
+                    "```json\n{\"schema\":1,\"items\":[]}\n```\n", encoding="utf-8")
+                with mock.patch.object(content, "_git_source_paths", return_value=[path]):
+                    with self.assertRaises(content.ContentError) as caught:
+                        content.validate_repository_inventory(root)
+                self.assertEqual(caught.exception.reason, "rights-path-set", path)
+                archive = root / "source.tar.gz"
+                with tarfile.open(archive, "w:gz") as stream:
+                    item = tarfile.TarInfo(path)
+                    item.size = len(b"synthetic test payload")
+                    stream.addfile(item, io.BytesIO(b"synthetic test payload"))
                 with self.assertRaises(content.ContentError) as caught:
-                    content.validate_repository_inventory(root)
-            self.assertEqual(caught.exception.reason, "rights-path-set")
-            archive = root / "source.tar.gz"
-            with tarfile.open(archive, "w:gz") as stream:
-                item = tarfile.TarInfo("tests/cpu/title.bin")
-                item.size = len(b"synthetic")
-                stream.addfile(item, io.BytesIO(b"synthetic"))
-            with self.assertRaises(content.ContentError) as caught:
-                content.scan_archive(archive)
-            self.assertEqual(caught.exception.reason, "rights-path-set")
+                    content.scan_archive(archive)
+                self.assertEqual(caught.exception.reason, "rights-path-set", path)
+
+    def test_personal_home_path_mentions_are_found_and_redacted(self) -> None:
+        local_home = os.path.expanduser("~")
+        suffix = "/".join((".codex", "config.toml"))
+        path = local_home + "/" + suffix
+        for text in ("@" + path, "(" + path + ")", "[config] (" + path + ")"):
+            result = content.scan_bytes(text.encode(), "tests/synthetic-reference.txt")
+            self.assertIn("personal-path", result["findings"][0]["rules"])
+            self.assertNotIn(local_home, json.dumps(result))
+
+    def test_private_key_header_is_detected_without_echoing_header(self) -> None:
+        header = "-----BEGIN " + "OPENSSH " + "PRIVATE KEY-----"
+        result = content.scan_bytes((header + "\nsynthetic-key\n-----END OPENSSH PRIVATE KEY-----").encode(),
+                                    "tests/synthetic-key.txt")
+        self.assertIn("private-key", result["findings"][0]["rules"])
+        self.assertNotIn(header, json.dumps(result))
 
     def test_secret_canaries_are_redacted_and_rule_labeled(self) -> None:
         personal_path = "/".join(("Users", "alice", "private.txt"))
@@ -169,7 +187,7 @@ class PublicContentTests(unittest.TestCase):
     def test_repository_inventory_matches_recorded_fixture_and_dependency_bytes(self) -> None:
         result = content.validate_repository_inventory(ROOT)
         self.assertTrue(result["passed"])
-        self.assertGreater(result["items"], 0)
+        self.assertEqual(result["items"], 21)
 
     def test_rights_inventory_binds_bytes_and_rejects_unknown_or_changed_item(self) -> None:
         inventory = {"schema": 1, "items": [{

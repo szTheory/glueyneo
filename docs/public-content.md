@@ -37,22 +37,26 @@ archives; zero means that class was not supplied. A missing class remains an
 uncovered class and cannot support a full release-qualification claim.
 
 The configured detector covers common personal POSIX paths, email identities,
-machine/serial identifiers, credential assignments and common GitHub/AWS token
-forms, plus credential-bearing and private-network URLs. It does not decode
-arbitrary binary formats, discover every credential shape, inspect remote
+machine/serial identifiers, credential assignments, common GitHub/AWS token
+forms, private-key PEM headers, credential-bearing URLs, and private-network
+URLs. Home-directory paths are detected when they follow mentions or appear in
+Markdown and parenthesized references. It does not decode arbitrary binary
+formats, discover every credential shape, inspect remote
 services, detect all personal data, or scan unbounded history/log/archive sets.
 The synthetic test addresses, paths and credentials are constructed from pieces
 so the public test sources do not themselves contain the canary values.
 
 The separate rights gate reads the JSON record in
-[`rights-inventory.md`](rights-inventory.md), compares every tracked fixture and
-vendored dependency candidate by exact path and SHA-256, and requires an
-affirmative rights row for every non-code or non-text asset under `tests/`.
-Unknown and extensionless test paths are treated as rights candidates. It also
-requires item-level rights and checks that required notices appear in source
-and source archives. Unknown or changed items fail. The inventory currently
-covers the original MIT diagnostic fixture assets and the Unity subset pinned to
-upstream commit `b6763fbd9cedfacaa89e2ad9fd00d615a234e355`. Game ROMs, BIOS images,
+[`rights-inventory.md`](rights-inventory.md), compares every tracked fixture,
+test asset, and vendored dependency candidate by exact path and SHA-256. Test
+source files are classified by exact repository-relative paths; every other
+test path requires an affirmative inventory row, regardless of extension or
+whether its bytes look like text. Unknown and extensionless test paths therefore
+fail the exact path-set comparison. The gate also checks that required notices
+appear in source and source archives. Unknown or changed items fail. The
+inventory covers the original MIT diagnostic assets and test metadata, plus the
+Unity subset pinned to upstream commit
+`b6763fbd9cedfacaa89e2ad9fd00d615a234e355`. Game ROMs, BIOS images,
 save states, capture files, private corpora, and the experimental Musashi tree
 remain excluded.
 

@@ -37,13 +37,33 @@ SOURCE_PATHS = (
 # Repository publication includes workflow and release configuration even
 # though the SDK source archive intentionally has a narrower file set.
 REPOSITORY_PATHS = SOURCE_PATHS + (".github/workflows", "release-please-config.json")
-TEST_TEXT_SUFFIXES = {
-    ".c", ".cc", ".cpp", ".h", ".hpp", ".py", ".json", ".md", ".txt",
-    ".cmake", ".sh", ".yml", ".yaml",
-}
+TEST_SOURCE_PATHS = frozenset({
+    "tests/consumers/CMakeLists.txt", "tests/consumers/check_package.py",
+    "tests/consumers/header.cpp", "tests/consumers/test_exports.py",
+    "tests/consumers/test_release_consumer.py", "tests/cpu/guest_fixture.c",
+    "tests/cpu/guest_fixture.h", "tests/cpu/isolation_fixture.h",
+    "tests/cpu/isolation_negative.py", "tests/cpu/negative.py",
+    "tests/cpu/state_negative.py", "tests/cpu/test_acceptance.py",
+    "tests/cpu/test_audit.py", "tests/cpu/test_cold.c", "tests/cpu/test_faults.c",
+    "tests/cpu/test_guest.c", "tests/cpu/test_inventory.py",
+    "tests/cpu/test_isolation.c", "tests/cpu/test_state.c", "tests/cpu/test_timing.c",
+    "tests/fuzz/minimize.py", "tests/fuzz/sdk_mutation.c", "tests/owned_cpu/cold.py",
+    "tests/owned_cpu/isolation_fixture.h", "tests/owned_cpu/negative.py",
+    "tests/owned_cpu/negative_timing.py", "tests/owned_cpu/test_acceptance.py",
+    "tests/owned_cpu/test_cold.c", "tests/owned_cpu/test_contract.py",
+    "tests/owned_cpu/test_diagnostic.c", "tests/owned_cpu/test_faults.c",
+    "tests/owned_cpu/test_inventory.py", "tests/owned_cpu/test_isolation.c",
+    "tests/owned_cpu/test_semantics.c", "tests/owned_cpu/test_state.c",
+    "tests/owned_cpu/test_timing.c", "tests/sdk/controls.py", "tests/sdk/guest_fixture.c",
+    "tests/sdk/guest_fixture.h", "tests/sdk/test_evidence.py",
+    "tests/sdk/test_matrix_evidence.py", "tests/sdk/test_sdk.c",
+    "tests/sdk/test_support.h", "tests/workflow/test_ci_policy.py",
+    "tests/workflow/test_phase01_admission.py", "tests/workflow/test_phase01_docs.py",
+    "tests/workflow/test_public_content.py", "tests/workflow/test_release_recovery.py",
+})
 
 PRIVACY_RULES = (
-    ("personal-path", re.compile(r"(?i)(?:^|[\s\"'=])/(?:Users|home)/[^\s\"']+")),
+    ("personal-path", re.compile(r"(?i)(?:^|[\s\"'=(@<])/(?:Users|home)/[^\s\"')\]>]+")),
     ("personal-path", re.compile(r"(?i)(?:^|[\s\"'=])/(?:private/var|var/folders)/[^\s\"']+")),
     ("private-identity", re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I)),
     ("machine-identifier", re.compile(r"(?i)\b(?:serial(?:_number)?|machine_id|hostname|computer_name)\s*[:=]\s*[^\s,}\]]+")),
@@ -52,6 +72,7 @@ PRIVACY_RULES = (
     ("credential", re.compile(r"(?i)\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\b")),
     ("credential", re.compile(r"(?i)\b(?:AKIA|ASIA)[A-Z0-9]{16}\b")),
     ("credential", re.compile(r"(?i)\b(?:api[_-]?key|access[_-]?token|secret[_-]?key|password)\s*[:=]\s*[\"']?[A-Za-z0-9/+_=-]{12,}")),
+    ("private-key", re.compile(r"(?i)-{5}BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-{5}")),
 )
 PUBLIC_EMAILS = {"noreply@github.com"}
 SYNTHETIC_PATH_MARKERS = {"private-person"}
@@ -187,13 +208,9 @@ def _is_rights_candidate(path: str) -> bool:
     relative = PurePosixPath(path)
     if path.startswith("third_party/") or path.startswith("fixtures/"):
         return True
-    if not path.startswith("tests/"):
-        return False
-    # Test code and text remain covered by the repository MIT notice. Every
-    # other test path, including unknown extensions and extensionless files,
-    # must have an affirmative item-level rights record.
-    return ("fixture" in relative.name.lower()
-            or relative.suffix.lower() not in TEST_TEXT_SUFFIXES)
+    return path.startswith("tests/") and (
+        path not in TEST_SOURCE_PATHS or "fixture" in relative.name.lower()
+    )
 
 
 def load_rights_inventory(root: Path = ROOT) -> dict[str, Any]:

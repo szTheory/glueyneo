@@ -16,10 +16,12 @@ The machine-readable list below is the scanner's canonical item-level record.
 Update it only with exact source revision, digest, license/permission evidence,
 and a notice that is present in each applicable package. Adding a fixture,
 dependency, BIOS, ROM, or corpus file without an affirmative record fails closed.
-Every non-code or non-text file under `tests/` also requires an affirmative row;
-unknown and extensionless test paths are treated as assets. Test source and text
-files remain under the repository MIT notice, while fixture recipes with
-separate provenance continue to have individual rows.
+Test source files are classified by exact repository-relative paths in the
+scanner. Every other path under `tests/` requires its own affirmative row with
+exact bytes, provenance, and notice, regardless of extension or whether its
+bytes appear textual. Unknown and extensionless test paths fail closed. This
+inventory includes each existing oracle document and test-evidence metadata
+file, in addition to fixture recipes with separate provenance.
 
 ```json
 {
@@ -37,7 +39,15 @@ separate provenance continue to have individual rows.
     {"path":"third_party/unity/LICENSE.txt","sha256":"ec6cf55f05ba2aa538b9677b2481b9ac14a87c63594fce8a0677d4f71c583980","kind":"dependency-notice","license":"MIT","rights":"affirmative","source_revision":"b6763fbd9cedfacaa89e2ad9fd00d615a234e355","provenance":"ThrowTheSwitch/Unity immutable commit b6763fbd9cedfacaa89e2ad9fd00d615a234e355","notice":"third_party/unity/LICENSE.txt"},
     {"path":"third_party/unity/src/unity.c","sha256":"a6cc4b143075a03317d72c760b5ed67a4a12eeda1242f575464ad23f34042275","kind":"dependency-source","license":"MIT","rights":"affirmative","source_revision":"b6763fbd9cedfacaa89e2ad9fd00d615a234e355","provenance":"ThrowTheSwitch/Unity immutable commit b6763fbd9cedfacaa89e2ad9fd00d615a234e355","notice":"third_party/unity/LICENSE.txt"},
     {"path":"third_party/unity/src/unity.h","sha256":"b30ba4db1e0be1a1f6c862d359d73c91025a114977e41d3dad17103363804334","kind":"dependency-source","license":"MIT","rights":"affirmative","source_revision":"b6763fbd9cedfacaa89e2ad9fd00d615a234e355","provenance":"ThrowTheSwitch/Unity immutable commit b6763fbd9cedfacaa89e2ad9fd00d615a234e355","notice":"third_party/unity/LICENSE.txt"},
-    {"path":"third_party/unity/src/unity_internals.h","sha256":"35bffad23ebc533977291e7a848c646027513572268fbfa9bd03d5ec21ee818a","kind":"dependency-source","license":"MIT","rights":"affirmative","source_revision":"b6763fbd9cedfacaa89e2ad9fd00d615a234e355","provenance":"ThrowTheSwitch/Unity immutable commit b6763fbd9cedfacaa89e2ad9fd00d615a234e355","notice":"third_party/unity/LICENSE.txt"}
+    {"path":"third_party/unity/src/unity_internals.h","sha256":"35bffad23ebc533977291e7a848c646027513572268fbfa9bd03d5ec21ee818a","kind":"dependency-source","license":"MIT","rights":"affirmative","source_revision":"b6763fbd9cedfacaa89e2ad9fd00d615a234e355","provenance":"ThrowTheSwitch/Unity immutable commit b6763fbd9cedfacaa89e2ad9fd00d615a234e355","notice":"third_party/unity/LICENSE.txt"},
+    {"path":"tests/cpu/ORACLE.md","sha256":"8a1f9c113ea4fe7608a41b2fedd856c69533a1009b07f9dda6dafd276dc93ade","kind":"test-oracle-documentation","license":"MIT","rights":"affirmative","source_revision":"cb4834ed89e2422491387eb8ef4a2598fb5824dd","provenance":"Original Glueyneo CPU diagnostic oracle documentation","notice":"LICENSE"},
+    {"path":"tests/cpu/audit-red-evidence.json","sha256":"e07a691f294baca90d0d1ff916cd65bb02551a2ffea15f965cfd5411476df62d","kind":"test-evidence-metadata","license":"MIT","rights":"affirmative","source_revision":"cb4834ed89e2422491387eb8ef4a2598fb5824dd","provenance":"Original Glueyneo CPU audit regression metadata; contains no ROM or BIOS bytes","notice":"LICENSE"},
+    {"path":"tests/cpu/faults-red-evidence.json","sha256":"f4abb74a45b6566b26b72306de585b8a66bbc169c4e7b4f3140144cbd6f2f520","kind":"test-evidence-metadata","license":"MIT","rights":"affirmative","source_revision":"cb4834ed89e2422491387eb8ef4a2598fb5824dd","provenance":"Original Glueyneo CPU fault regression metadata; contains no ROM or BIOS bytes","notice":"LICENSE"},
+    {"path":"tests/cpu/isolation-red-evidence.json","sha256":"2f2fe2cace4fd274e8ba3c21317592e208f000d1b260cffeff2b06011e57f940","kind":"test-evidence-metadata","license":"MIT","rights":"affirmative","source_revision":"cb4834ed89e2422491387eb8ef4a2598fb5824dd","provenance":"Original Glueyneo CPU isolation regression metadata; contains no ROM or BIOS bytes","notice":"LICENSE"},
+    {"path":"tests/cpu/red-evidence.json","sha256":"948ac3d908b41d1b1a71724a5cd78896f554738ae8c7e6077c6f0f02839b1d78","kind":"test-evidence-metadata","license":"MIT","rights":"affirmative","source_revision":"cb4834ed89e2422491387eb8ef4a2598fb5824dd","provenance":"Original Glueyneo CPU diagnostic regression metadata; contains no ROM or BIOS bytes","notice":"LICENSE"},
+    {"path":"tests/fuzz/regressions.json","sha256":"a382aa1a124b6a5afce716b8be69c25053a4cbbc009b264ec94e39edac5386ac","kind":"fuzz-regression-metadata","license":"MIT","rights":"affirmative","source_revision":"cb4834ed89e2422491387eb8ef4a2598fb5824dd","provenance":"Original Glueyneo seeded SDK mutation regression inputs","notice":"LICENSE"},
+    {"path":"tests/owned_cpu/ORACLE.md","sha256":"2af54ed3fd35303c68d92b551ce02a65b1fb94f4b42a84779d03734e264771e0","kind":"test-oracle-documentation","license":"MIT","rights":"affirmative","source_revision":"cb4834ed89e2422491387eb8ef4a2598fb5824dd","provenance":"Original Glueyneo owned CPU acceptance oracle documentation","notice":"LICENSE"},
+    {"path":"tests/sdk/ORACLE.md","sha256":"a981a824568820e94c81189f1e9d9995a8dfcac028921e6f3a61bda884ecfb32","kind":"test-oracle-documentation","license":"MIT","rights":"affirmative","source_revision":"cb4834ed89e2422491387eb8ef4a2598fb5824dd","provenance":"Original Glueyneo SDK diagnostic oracle documentation","notice":"LICENSE"}
   ]
 }
 ```
