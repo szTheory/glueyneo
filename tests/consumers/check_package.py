@@ -38,7 +38,9 @@ FILTERED_ENVIRONMENT = {
 
 
 class CheckError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, code: str = "check-failed") -> None:
+        super().__init__(message)
+        self.code = code
 
 
 def clean_environment(source: dict[str, str] | None = None) -> dict[str, str]:
@@ -54,6 +56,7 @@ def run(
     cwd: Path = ROOT,
     env: dict[str, str] | None = None,
     timeout: int = COMMAND_TIMEOUT_SECONDS,
+    expected_returncode: int = 0,
 ) -> subprocess.CompletedProcess[str]:
     try:
         result = subprocess.run(
@@ -73,9 +76,9 @@ def run(
         raise CheckError(
             f"Timed out after {timeout}s: {' '.join(argv)}\n{output[-12000:]}"
         ) from error
-    if result.returncode != 0:
+    if result.returncode != expected_returncode:
         raise CheckError(
-            f"Command exited {result.returncode}: {' '.join(argv)}\n"
+            f"Command exited {result.returncode}, expected {expected_returncode}: {' '.join(argv)}\n"
             f"{result.stdout[-16000:]}"
         )
     return result
@@ -110,7 +113,7 @@ def assert_no_download_mechanisms() -> None:
 def installed_layout(prefix: Path, variant: str) -> dict[str, Path]:
     configs = list(prefix.rglob("GlueyneoConfig.cmake"))
     if len(configs) != 1:
-        raise CheckError(f"Expected one installed package config; found {configs}")
+        raise CheckError(f"Expected one installed package config; found {configs}", code="missing-config")
     config_dir = configs[0].parent
     version_file = config_dir / "GlueyneoConfigVersion.cmake"
     targets_file = config_dir / "GlueyneoTargets.cmake"
@@ -120,7 +123,8 @@ def installed_layout(prefix: Path, variant: str) -> dict[str, Path]:
     runner_candidates = list((prefix / "bin").glob("glueyneo-diagnostic*"))
     for path in (version_file, targets_file, header, license_file, fixture):
         if not path.is_file():
-            raise CheckError(f"Missing installed package artifact: {path.relative_to(prefix)}")
+            code = "missing-header" if path == header else "missing-fixture" if path == fixture else "missing-package-metadata"
+            raise CheckError(f"Missing installed package artifact: {path.relative_to(prefix)}", code=code)
     if len(runner_candidates) != 1:
         raise CheckError(f"Expected one installed diagnostic runner; found {runner_candidates}")
 
@@ -130,7 +134,7 @@ def installed_layout(prefix: Path, variant: str) -> dict[str, Path]:
         names = {"libglueyneo.dylib", "libglueyneo.so", "glueyneo.dll"}
     libraries = [path for path in prefix.rglob("*") if path.is_file() and path.name in names]
     if len(libraries) != 1:
-        raise CheckError(f"Expected one installed {variant} runtime; found {libraries}")
+        raise CheckError(f"Expected one installed {variant} runtime; found {libraries}", code="missing-library")
     return {
         "config": configs[0],
         "version": version_file,
@@ -143,12 +147,36 @@ def installed_layout(prefix: Path, variant: str) -> dict[str, Path]:
     }
 
 
-def inspect_exports(prefix: Path, build_dir: Path, layout: dict[str, Path], variant: str) -> None:
+def require_component(layout: dict[str, Path], component: str) -> None:
+    path = layout.get(component)
+    if path is None or not path.is_file():
+        raise CheckError(
+            f"Installed package is missing {component}: {path}",
+            code=f"missing-{component}",
+        )
+
+
+def verify_fixture_digest(path: Path, expected: str = EXPECTED_FIXTURE_SHA256) -> None:
+    observed = sha256(path)
+    if observed != expected:
+        raise CheckError(
+            f"Fixture digest mismatch: expected {expected}, observed {observed}",
+            code="fixture-digest-mismatch",
+        )
+
+
+def inspect_exports(
+    prefix: Path,
+    build_dir: Path,
+    layout: dict[str, Path],
+    variant: str,
+    extra_forbidden: tuple[str, ...] = (),
+) -> None:
     metadata_paths = sorted(layout["config"].parent.glob("*.cmake"))
     if not metadata_paths:
         raise CheckError("Installed package contains no CMake export metadata")
     metadata = "\n".join(path.read_text(encoding="utf-8") for path in metadata_paths)
-    forbidden_text = (str(ROOT), str(build_dir), "owned_cpu", "gn_test_", "unity")
+    forbidden_text = (str(ROOT), str(build_dir), *extra_forbidden, "owned_cpu", "gn_test_", "unity")
     for forbidden in forbidden_text:
         if forbidden in metadata:
             raise CheckError(f"Private or absolute build detail leaked into package metadata: {forbidden}")
@@ -163,8 +191,7 @@ def inspect_exports(prefix: Path, build_dir: Path, layout: dict[str, Path], vari
     if variant == "shared" and "GLUEYNEO_SHARED" not in targets:
         raise CheckError("Shared package does not export the public DLL import definition")
 
-    if sha256(layout["fixture"]) != EXPECTED_FIXTURE_SHA256:
-        raise CheckError("Installed original diagnostic fixture digest does not match ORACLE.md")
+    verify_fixture_digest(layout["fixture"])
     if sha256(layout["header"]) != sha256(ROOT / "include" / "glueyneo" / "glueyneo.h"):
         raise CheckError("Installed public header differs from the producer header")
 
@@ -227,10 +254,34 @@ def compiler_identity(build_dir: Path) -> dict[str, str]:
     return values
 
 
-def case_build(variant: str) -> None:
+def consumer_compiler_identity(build_dir: Path) -> dict[str, str]:
+    identity = compiler_identity(build_dir)
+    cache = (build_dir / "CMakeCache.txt").read_text(encoding="utf-8")
+    compiler_files = sorted((build_dir / "CMakeFiles").glob("*/CMakeCXXCompiler.cmake"))
+    if len(compiler_files) != 1:
+        raise CheckError(f"Expected one generated C++ compiler identity file: {compiler_files}")
+    compiler_data = compiler_files[0].read_text(encoding="utf-8")
+    for key in ("CMAKE_CXX_COMPILER",):
+        match = re.search(rf"^{re.escape(key)}(?::[^=]+)?=(.*)$", cache, re.MULTILINE)
+        if match is None:
+            raise CheckError(f"CMake cache is missing toolchain identity {key}")
+        identity[key] = match.group(1)
+    for key in ("CMAKE_CXX_COMPILER_ID", "CMAKE_CXX_COMPILER_VERSION"):
+        match = re.search(rf'set\({key} "([^"]*)"\)', compiler_data)
+        if match is None:
+            raise CheckError(f"Generated compiler metadata is missing {key}")
+        identity[key] = match.group(1)
+    return identity
+
+
+def new_work_dir(label: str) -> Path:
+    work_parent = Path(tempfile.gettempdir()) / "glueyneo-sdk-checks"
+    work_parent.mkdir(parents=True, exist_ok=True)
+    return Path(tempfile.mkdtemp(prefix=f"{label}-", dir=work_parent))
+
+
+def build_package(variant: str, work: Path) -> dict[str, object]:
     assert_no_download_mechanisms()
-    BUILD_ROOT.mkdir(parents=True, exist_ok=True)
-    work = Path(tempfile.mkdtemp(prefix=f"build-{variant}-", dir=BUILD_ROOT))
     build_dir = work / "producer"
     prefix = work / "install"
     inherited = dict(os.environ)
@@ -273,6 +324,19 @@ def case_build(variant: str) -> None:
     if sha256(generated) != EXPECTED_FIXTURE_SHA256:
         raise CheckError("Installed runner did not reproduce the original diagnostic fixture")
 
+    return {
+        "work": work,
+        "build_dir": build_dir,
+        "prefix": prefix,
+        "layout": layout,
+        "identity": identity,
+        "exports": exports,
+    }
+
+
+def case_build(variant: str) -> None:
+    package = build_package(variant, new_work_dir(f"build-{variant}"))
+    layout = package["layout"]
     result = {
         "schema_version": 1,
         "case_id": f"sdk.package.build-{variant}",
@@ -280,14 +344,14 @@ def case_build(variant: str) -> None:
         "assertions": 8 if variant == "shared" else 7,
         "variant": variant,
         "host": f"{platform.system()} {platform.machine()}",
-        "compiler": identity,
+        "compiler": package["identity"],
         "cmake": run([shutil.which("cmake") or "cmake", "--version"]).stdout.splitlines()[0],
         "project_version": "0.1.0",
         "configuration": "Release",
         "library_sha256": sha256(layout["library"]),
         "header_sha256": sha256(layout["header"]),
         "fixture_sha256": sha256(layout["fixture"]),
-        "shared_public_exports": exports,
+        "shared_public_exports": package["exports"],
         "offline_configure": "pass; no fetch/download hooks; tests disabled; vendored dependencies not required",
         "install_prefix_relocation_ready": "pass; metadata contains no source/build path",
         "inherited_flags": "pass; controlled CFLAGS/CXXFLAGS sentinels were stripped",
@@ -295,8 +359,195 @@ def case_build(variant: str) -> None:
     print("SDK_PACKAGE " + json.dumps(result, sort_keys=True))
 
 
+def stage_consumer_project(destination: Path) -> None:
+    destination.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(ROOT / "tests" / "consumers" / "CMakeLists.txt", destination / "CMakeLists.txt")
+    shutil.copy2(ROOT / "tests" / "consumers" / "header.cpp", destination / "header.cpp")
+    shutil.copy2(ROOT / "examples" / "diagnostic.c", destination / "diagnostic.c")
+
+
+def parse_consumer_record(output: str, marker: str) -> dict[str, object]:
+    records = [line[len(marker) :] for line in output.splitlines() if line.startswith(marker)]
+    if len(records) != 1:
+        raise CheckError(f"Expected one {marker.strip()} result record; got {len(records)}")
+    result = json.loads(records[0])
+    if result.get("outcome") != "pass":
+        raise CheckError(f"Consumer reported failure: {result}")
+    return result
+
+
+def run_with_loader_trace(executable: Path, args: list[str], layout: dict[str, Path]) -> str:
+    env = clean_environment()
+    for name in ("DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH", "LD_LIBRARY_PATH"):
+        env.pop(name, None)
+    library = layout["library"].resolve()
+    if sys.platform == "darwin":
+        env["DYLD_PRINT_LIBRARIES"] = "1"
+    elif sys.platform.startswith("linux"):
+        env["LD_DEBUG"] = "libs"
+    else:
+        raise CheckError(f"Relocated shared loader identity is not implemented for {sys.platform}")
+    output = run([str(executable), *args], env=env).stdout
+    if str(library) not in output:
+        raise CheckError(f"Loader trace did not resolve the shared runtime from the moved prefix: {library}")
+    return output
+
+
+def expect_failure(code: str, action) -> None:
+    try:
+        action()
+    except CheckError as error:
+        if error.code != code:
+            raise CheckError(
+                f"Negative control expected {code}, but hit {error.code}: {error}"
+            ) from error
+        return
+    raise CheckError(f"Negative control did not fail at expected check {code}")
+
+
+def verify_missing_component_control(layout: dict[str, Path], component: str) -> None:
+    path = layout[component]
+    backup = path.with_name(path.name + ".negative-control")
+    if backup.exists():
+        raise CheckError(f"Stale negative-control backup exists: {backup}")
+    path.rename(backup)
+    try:
+        expect_failure(f"missing-{component}", lambda: require_component(layout, component))
+    finally:
+        backup.rename(path)
+
+
+def case_consumers(variant: str) -> None:
+    work = new_work_dir(f"consumers-{variant}")
+    package = build_package(variant, work)
+    old_prefix = package["prefix"]
+    relocated_prefix = work / "relocated" / "sdk-prefix"
+    relocated_prefix.parent.mkdir(parents=True)
+    shutil.move(str(old_prefix), str(relocated_prefix))
+    if old_prefix.exists():
+        raise CheckError("Original install prefix still exists after relocation")
+
+    build_dir = package["build_dir"]
+    layout = installed_layout(relocated_prefix, variant)
+    inspect_exports(
+        relocated_prefix,
+        build_dir,
+        layout,
+        variant,
+        extra_forbidden=(str(old_prefix),),
+    )
+    staged_source = work / "consumer-source"
+    stage_consumer_project(staged_source)
+    consumer_build = work / "consumer-build"
+    cmake = shutil.which("cmake") or "cmake"
+    ctest_identity = compiler_identity(build_dir)
+    run(
+        [
+            cmake,
+            "-S",
+            str(staged_source),
+            "-B",
+            str(consumer_build),
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+            f"-DGlueyneo_DIR={layout['config'].parent}",
+            "-DGLUEYNEO_CONSUMER_C_SOURCE=diagnostic.c",
+        ]
+    )
+    run([cmake, "--build", str(consumer_build), "--parallel", str(MAX_WORKERS)])
+
+    compile_commands_path = consumer_build / "compile_commands.json"
+    compile_commands = json.loads(compile_commands_path.read_text(encoding="utf-8"))
+    command_text = "\n".join(item.get("command", "") for item in compile_commands)
+    compile_source_text = "\n".join(item.get("file", "") for item in compile_commands)
+    cache = (consumer_build / "CMakeCache.txt").read_text(encoding="utf-8")
+    for forbidden in (str(ROOT), str(build_dir), str(old_prefix), "experiments/owned_cpu", "third_party/unity"):
+        if forbidden in command_text or forbidden in compile_source_text or forbidden in cache:
+            raise CheckError(f"Out-of-tree consumer retained producer/private path: {forbidden}")
+    if str(relocated_prefix) not in command_text:
+        raise CheckError("Consumer compile commands do not use the moved installed header")
+    if str(layout["config"].parent) not in cache:
+        raise CheckError("Consumer did not resolve find_package from the moved Glueyneo_DIR")
+
+    fixture = work / "moved-prefix-fixture.bin"
+    runner_env = clean_environment()
+    for name in ("DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH", "LD_LIBRARY_PATH"):
+        runner_env.pop(name, None)
+    if variant == "shared":
+        runner_output = run_with_loader_trace(
+            layout["runner"], ["--write-fixture", str(fixture)], layout
+        )
+    else:
+        runner_output = run(
+            [str(layout["runner"]), "--write-fixture", str(fixture)], env=runner_env
+        ).stdout
+    verify_fixture_digest(fixture)
+
+    c_executable = consumer_build / "glueyneo-installed-c"
+    cxx_executable = consumer_build / "glueyneo-installed-cxx"
+    if sys.platform == "win32":
+        c_executable = c_executable.with_suffix(".exe")
+        cxx_executable = cxx_executable.with_suffix(".exe")
+    if variant == "shared":
+        c_output = run_with_loader_trace(c_executable, [str(fixture)], layout)
+        cxx_output = run_with_loader_trace(cxx_executable, [], layout)
+    else:
+        c_output = run([str(c_executable), str(fixture)]).stdout
+        cxx_output = run([str(cxx_executable)]).stdout
+    c_record = parse_consumer_record(c_output, "SDK_CONSUMER ")
+    cxx_record = parse_consumer_record(cxx_output, "SDK_CONSUMER_CPP ")
+
+    wrong_expected = run(
+        [str(c_executable), str(fixture), "--expect-arithmetic", "11"],
+        env=clean_environment(),
+        expected_returncode=1,
+    )
+    intended_failures = (
+        "CONSUMER_ASSERT sdk.observe.arithmetic expected=11 observed=10",
+        "CONSUMER_ASSERT sdk.reset-observe.arithmetic expected=11 observed=10",
+    )
+    if wrong_expected.stdout.count("CONSUMER_ASSERT") != len(intended_failures) or any(
+        marker not in wrong_expected.stdout for marker in intended_failures
+    ):
+        raise CheckError("Wrong-output control failed for a reason other than the arithmetic result")
+
+    control_results: list[str] = []
+    for component in ("library", "config", "header"):
+        verify_missing_component_control(layout, component)
+        control_results.append(f"missing-{component}")
+    expect_failure(
+        "fixture-digest-mismatch",
+        lambda: verify_fixture_digest(fixture, expected="0" * 64),
+    )
+    control_results.append("wrong-fixture-digest")
+    control_results.append("wrong-expected-output")
+
+    result = {
+        "schema_version": 1,
+        "case_id": f"sdk.package.consumers-{variant}",
+        "outcome": "pass",
+        "variant": variant,
+        "host": f"{platform.system()} {platform.machine()}",
+        "producer_compiler": ctest_identity,
+        "consumer_compilers": consumer_compiler_identity(consumer_build),
+        "cmake": run([cmake, "--version"]).stdout.splitlines()[0],
+        "fixture_sha256": sha256(fixture),
+        "relocation": "pass; installed runner and C/C++ consumers used moved prefix; no producer include/build paths",
+        "loader_resolution": "moved prefix" if variant == "shared" else "static archive",
+        "lanes": {"C": c_record, "C++": cxx_record},
+        "negative_controls": {"outcome": "pass", "checks": control_results},
+        "assertions": int(c_record["assertions"]) + int(cxx_record["assertions"]) + len(control_results),
+        "runner_fixture_output": runner_output.splitlines()[-1] if runner_output.splitlines() else "pass",
+    }
+    print("SDK_PACKAGE " + json.dumps(result, sort_keys=True))
+
+
 def suite(suite_name: str) -> None:
-    if suite_name != "build":
+    labels = {
+        "build": "sdk-package-build",
+        "consumers": "sdk-package-consumers",
+    }
+    if suite_name not in labels:
         raise CheckError(f"Suite is not implemented yet: {suite_name}")
     BUILD_ROOT.mkdir(parents=True, exist_ok=True)
     build_dir = BUILD_ROOT / "root-suite-build"
@@ -328,14 +579,14 @@ def suite(suite_name: str) -> None:
             "--parallel",
             str(MAX_WORKERS),
             "-L",
-            "sdk-package-build",
+            labels[suite_name],
         ]
     )
     print(result.stdout, end="")
     print(
         "SDK_PACKAGE_SUITE "
         + json.dumps(
-            {"schema_version": 1, "suite": suite_name, "outcome": "pass", "label": "sdk-package-build"},
+            {"schema_version": 1, "suite": suite_name, "outcome": "pass", "label": labels[suite_name]},
             sort_keys=True,
         )
     )
@@ -352,6 +603,8 @@ def main() -> int:
             suite(args.suite)
         elif args.case in {"build-static", "build-shared"}:
             case_build(args.case.removeprefix("build-"))
+        elif args.case in {"consumers-static", "consumers-shared"}:
+            case_consumers(args.case.removeprefix("consumers-"))
         else:
             raise CheckError(f"Unknown case: {args.case}")
     except (CheckError, OSError, ValueError) as error:

@@ -289,8 +289,16 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
   add_test(NAME sdk_package_build_shared
     COMMAND ${Python3_EXECUTABLE} "${GLUEYNEO_CONSUMER_CHECK}"
             --case build-shared)
+  add_test(NAME sdk_package_consumers_static
+    COMMAND ${Python3_EXECUTABLE} "${GLUEYNEO_CONSUMER_CHECK}"
+            --case consumers-static)
+  add_test(NAME sdk_package_consumers_shared
+    COMMAND ${Python3_EXECUTABLE} "${GLUEYNEO_CONSUMER_CHECK}"
+            --case consumers-shared)
   set_tests_properties(sdk_package_build_static sdk_package_build_shared
     PROPERTIES LABELS "sdk-package-build" TIMEOUT 360)
+  set_tests_properties(sdk_package_consumers_static sdk_package_consumers_shared
+    PROPERTIES LABELS "sdk-package-consumers" TIMEOUT 360)
 endif()
 
 if(GLUEYNEO_CPU_EXPERIMENT)
