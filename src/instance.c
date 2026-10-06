@@ -33,6 +33,9 @@ typedef struct {
     uint8_t *ram_seed;
     size_t ram_seed_size;
     owned_cpu *cpu;
+#if defined(GLUEYNEO_SDK_TEST_HOOKS)
+    size_t test_fail_bus_callbacks;
+#endif
 } gn_image;
 
 struct gn_instance {
@@ -69,10 +72,16 @@ static void gn_cpu_release(void *userdata, void *allocation) {
 }
 
 static int gn_read16(void *userdata, uint32_t address, uint16_t *value) {
-    const gn_image *image = (const gn_image *)userdata;
+    gn_image *image = (gn_image *)userdata;
     if (image == NULL || value == NULL || (address & UINT32_C(1)) != 0u) {
         return 0;
     }
+#if defined(GLUEYNEO_SDK_TEST_HOOKS)
+    if (image->test_fail_bus_callbacks != 0u) {
+        --image->test_fail_bus_callbacks;
+        return 0;
+    }
+#endif
     if (address >= image->rom.base &&
         address - image->rom.base <= image->rom.size - UINT32_C(2)) {
         const size_t offset = (size_t)(address - image->rom.base);
@@ -97,6 +106,12 @@ static int gn_write16(void *userdata, uint32_t address, uint16_t value) {
         address - image->ram.base > image->ram.size - UINT32_C(2)) {
         return 0;
     }
+#if defined(GLUEYNEO_SDK_TEST_HOOKS)
+    if (image->test_fail_bus_callbacks != 0u) {
+        --image->test_fail_bus_callbacks;
+        return 0;
+    }
+#endif
     const size_t offset = (size_t)(address - image->ram.base);
     image->ram.bytes[offset] = (uint8_t)(value >> 8);
     image->ram.bytes[offset + 1u] = (uint8_t)value;
@@ -396,6 +411,25 @@ gn_status gn_test_create(gn_test_allocator *test_allocator,
                                     gn_test_release};
     return gn_create_with_allocator(allocator, out_instance);
 }
+
+gn_status gn_test_seed_counters(gn_instance *instance, uint64_t instructions,
+                                uint64_t instruction_cycles,
+                                uint64_t exception_cycles,
+                                uint64_t idle_cycles, uint64_t total_cycles) {
+    if (instance == NULL) return GN_STATUS_INVALID_ARGUMENT;
+    if (instance->image == NULL) return GN_STATUS_INVALID_STATE;
+    const owned_cpu_status status = owned_cpu_test_seed_counters(
+        instance->image->cpu, instructions, instruction_cycles,
+        exception_cycles, idle_cycles, total_cycles);
+    return status == OWNED_CPU_OK ? GN_STATUS_OK : GN_STATUS_CPU_FAILURE;
+}
+
+gn_status gn_test_fail_next_bus_callback(gn_instance *instance) {
+    if (instance == NULL) return GN_STATUS_INVALID_ARGUMENT;
+    if (instance->image == NULL) return GN_STATUS_INVALID_STATE;
+    instance->image->test_fail_bus_callbacks = 1u;
+    return GN_STATUS_OK;
+}
 #endif
 
 GN_API gn_status gn_load(gn_instance *instance, const gn_manifest *manifest) {
@@ -491,8 +525,7 @@ GN_API gn_status gn_run(gn_instance *instance, uint64_t cycle_budget,
         out_result->reason = GN_RUN_BUDGET;
         return GN_STATUS_OK;
     }
-    if (cpu_result.reason == OWNED_CPU_HOST_FAULT ||
-        cpu_result.reason == OWNED_CPU_ADDRESS_ERROR ||
+    if (cpu_result.reason == OWNED_CPU_ADDRESS_ERROR ||
         cpu_result.reason == OWNED_CPU_UNSUPPORTED_OPCODE ||
         cpu_result.reason == OWNED_CPU_PRIVILEGE_VIOLATION) {
         out_result->reason = GN_RUN_FAULT;

@@ -133,6 +133,8 @@ if(GLUEYNEO_BUILD_TESTS)
   set_tests_properties(sdk_media PROPERTIES LABELS "sdk-contract;sdk-media")
   add_test(NAME sdk_faults COMMAND sdk_diagnostic faults)
   set_tests_properties(sdk_faults PROPERTIES LABELS "sdk-contract;sdk-faults")
+  add_test(NAME sdk_run COMMAND sdk_diagnostic run)
+  set_tests_properties(sdk_run PROPERTIES LABELS "sdk-contract;sdk-run")
 
   # Keep the runtime source closure explicit, then inspect both source and the
   # linked target for ambient host services used by the native core.

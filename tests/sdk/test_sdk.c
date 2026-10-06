@@ -54,7 +54,8 @@ static gn_status load_scenario(gn_instance *target, unsigned scenario) {
 void setUp(void) {
     instance = NULL;
     SDK_CHECK_STATUS("sdk.instance.create", GN_STATUS_OK, gn_create(&instance));
-    if (instance != NULL && strcmp(selected_suite, "diagnostic") == 0) {
+    if (instance != NULL && (strcmp(selected_suite, "diagnostic") == 0 ||
+                             strcmp(selected_suite, "run") == 0)) {
         SDK_CHECK_STATUS("sdk.media.load.original-a", GN_STATUS_OK,
                          load_scenario(instance, 0u));
     }
@@ -170,6 +171,208 @@ static void original_instruction_boundaries_match_manual_recipe(void) {
                 : GN_RUN_BUDGET;
         SDK_CHECK_STATUS("sdk.boundary.reason", expected_reason, run.reason);
     }
+}
+
+static void assert_run_result(const char *label, uint64_t request,
+                              uint64_t elapsed, uint64_t overshoot,
+                              uint64_t instructions, uint32_t pc,
+                              gn_run_reason reason) {
+    gn_run_result run;
+    memset(&run, 0xa5, sizeof(run));
+    SDK_CHECK_STATUS(label, GN_STATUS_OK, gn_run(instance, request, &run));
+    SDK_CHECK_U64("sdk.run.requested", request, run.requested_cycles);
+    SDK_CHECK_U64("sdk.run.elapsed", elapsed, run.elapsed_cycles);
+    SDK_CHECK_U64("sdk.run.overshoot", overshoot, run.overshoot_cycles);
+    SDK_CHECK_U64("sdk.run.instructions", instructions, run.instructions);
+    SDK_CHECK_U64("sdk.run.pc", pc, run.boundary_pc);
+    SDK_CHECK_STATUS("sdk.run.reason", reason, run.reason);
+}
+
+static void bounded_run_reports_actual_progress_and_preserves_invalid_requests(void) {
+    SDK_CASE("sdk.run.budget-boundaries");
+    uint64_t before = 0u;
+    uint64_t after = 0u;
+    SDK_CHECK_STATUS("sdk.run.digest-before-zero", GN_STATUS_OK,
+                     gn_test_image_digest(instance, &before));
+
+    assert_run_result("sdk.run.zero-status", 0u, 0u, 0u, 0u, 0x100u,
+                      GN_RUN_BUDGET);
+    SDK_CHECK_STATUS("sdk.run.digest-after-zero", GN_STATUS_OK,
+                     gn_test_image_digest(instance, &after));
+    SDK_CHECK_U64("sdk.run.zero-does-not-change-state", before, after);
+
+    assert_run_result("sdk.run.one-status", 1u, 40u, 39u, 0u, 0x100u,
+                      GN_RUN_BUDGET);
+    SDK_CHECK_STATUS("sdk.run.reset-before-39", GN_STATUS_OK, gn_reset(instance));
+    assert_run_result("sdk.run.39-status", 39u, 40u, 1u, 0u, 0x100u,
+                      GN_RUN_BUDGET);
+    SDK_CHECK_STATUS("sdk.run.reset-before-40", GN_STATUS_OK, gn_reset(instance));
+    assert_run_result("sdk.run.40-status", 40u, 40u, 0u, 0u, 0x100u,
+                      GN_RUN_BUDGET);
+    SDK_CHECK_STATUS("sdk.run.reset-before-41", GN_STATUS_OK, gn_reset(instance));
+    assert_run_result("sdk.run.41-status", 41u, 44u, 3u, 1u, 0x102u,
+                      GN_RUN_BUDGET);
+
+    SDK_CHECK_STATUS("sdk.run.reset-before-172", GN_STATUS_OK, gn_reset(instance));
+    assert_run_result("sdk.run.172-status", 172u, 172u, 0u, 12u, 0x12eu,
+                      GN_RUN_STOPPED);
+    assert_run_result("sdk.run.173-status", 173u, 173u, 0u, 0u, 0x12eu,
+                      GN_RUN_STOPPED);
+    SDK_CHECK_STATUS("sdk.run.reset-before-maximum", GN_STATUS_OK,
+                     gn_reset(instance));
+    assert_run_result("sdk.run.maximum-status", GN_MAX_CYCLE_BUDGET,
+                      GN_MAX_CYCLE_BUDGET, 0u, 12u, 0x12eu, GN_RUN_STOPPED);
+
+    SDK_CHECK_STATUS("sdk.run.reset-before-invalid", GN_STATUS_OK,
+                     gn_reset(instance));
+    SDK_CHECK_STATUS("sdk.run.digest-before-invalid", GN_STATUS_OK,
+                     gn_test_image_digest(instance, &before));
+    gn_run_result invalid;
+    memset(&invalid, 0xa5, sizeof(invalid));
+    SDK_CHECK_STATUS("sdk.run.reject-over-maximum", GN_STATUS_INVALID_ARGUMENT,
+                     gn_run(instance, GN_MAX_CYCLE_BUDGET + 1u, &invalid));
+    SDK_CHECK_U64("sdk.run.invalid-clears-request", 0u,
+                  invalid.requested_cycles);
+    SDK_CHECK_U64("sdk.run.invalid-clears-elapsed", 0u, invalid.elapsed_cycles);
+    SDK_CHECK_STATUS("sdk.run.digest-after-invalid", GN_STATUS_OK,
+                     gn_test_image_digest(instance, &after));
+    SDK_CHECK_U64("sdk.run.invalid-does-not-change-state", before, after);
+}
+
+static void stopped_guest_consumes_idle_budget_without_dispatches(void) {
+    SDK_CASE("sdk.run.stop-idle-progress");
+    assert_run_result("sdk.run.stop-before-idle", 172u, 172u, 0u, 12u,
+                      0x12eu, GN_RUN_STOPPED);
+    assert_run_result("sdk.run.stop-idle", 21u, 21u, 0u, 0u, 0x12eu,
+                      GN_RUN_STOPPED);
+}
+
+static void reset_debt_overflow_is_rejected_before_any_event_mutation(void) {
+    SDK_CASE("sdk.run.counter-overflow-atomic");
+    uint64_t before = 0u;
+    uint64_t after = 0u;
+    gn_run_result completed;
+    SDK_CHECK_STATUS("sdk.run.overflow-establish-stop", GN_STATUS_OK,
+                     gn_run(instance, 172u, &completed));
+    SDK_CHECK_STATUS("sdk.run.overflow-establish-stop-reason", GN_RUN_STOPPED,
+                     completed.reason);
+    SDK_CHECK_STATUS("sdk.run.overflow-seed-counters", GN_STATUS_OK,
+                     gn_test_seed_counters(instance, 12u, 132u, 0u,
+                                           UINT64_MAX - UINT64_C(172),
+                                           UINT64_MAX));
+    SDK_CHECK_STATUS("sdk.run.overflow-digest-before", GN_STATUS_OK,
+                     gn_test_image_digest(instance, &before));
+    gn_run_result result;
+    memset(&result, 0xa5, sizeof(result));
+    SDK_CHECK_STATUS("sdk.run.overflow-status", GN_STATUS_CPU_FAILURE,
+                     gn_run(instance, 1u, &result));
+    SDK_CHECK_STATUS("sdk.run.overflow-reason", GN_RUN_ERROR, result.reason);
+    SDK_CHECK_U64("sdk.run.overflow-no-partial-elapsed", 0u,
+                  result.elapsed_cycles);
+    SDK_CHECK_U64("sdk.run.overflow-no-dispatch", 0u, result.instructions);
+    SDK_CHECK_STATUS("sdk.run.overflow-digest-after", GN_STATUS_OK,
+                     gn_test_image_digest(instance, &after));
+    SDK_CHECK_U64("sdk.run.overflow-no-partial-mutation", before, after);
+}
+
+static void unsupported_instruction_exposes_only_bounded_fault_details(void) {
+    SDK_CASE("sdk.run.unsupported-fault-details");
+    guest_fixture_image fixture;
+    gn_manifest manifest;
+    make_manifest(&manifest, &fixture, GUEST_FIXTURE_SCENARIO_A);
+    fixture.rom[0x100u] = UINT8_C(0x4a);
+    fixture.rom[0x101u] = UINT8_C(0xfc);
+    SDK_CHECK_STATUS("sdk.run.load-unsupported", GN_STATUS_OK,
+                     gn_load(instance, &manifest));
+    gn_run_result result;
+    SDK_CHECK_STATUS("sdk.run.unsupported-status", GN_STATUS_OK,
+                     gn_run(instance, 172u, &result));
+    SDK_CHECK_STATUS("sdk.run.unsupported-reason", GN_RUN_FAULT, result.reason);
+    SDK_CHECK_U64("sdk.run.unsupported-fault-pc", 0x100u, result.fault_pc);
+    SDK_CHECK_U64("sdk.run.unsupported-opcode", 0x4afcu,
+                  result.instruction_register);
+    SDK_CHECK_U64("sdk.run.unsupported-elapsed-reset-only", 40u,
+                  result.elapsed_cycles);
+    SDK_CHECK_U64("sdk.run.unsupported-no-dispatch", 0u, result.instructions);
+}
+
+static void host_fault_is_sticky_until_reset_and_can_recover(void) {
+    SDK_CASE("sdk.run.host-fault-reset-recovery");
+    assert_run_result("sdk.run.host-fault-reset-debt", 40u, 40u, 0u, 0u,
+                      0x100u, GN_RUN_BUDGET);
+    SDK_CHECK_STATUS("sdk.run.arm-host-fault", GN_STATUS_OK,
+                     gn_test_fail_next_bus_callback(instance));
+    gn_run_result result;
+    SDK_CHECK_STATUS("sdk.run.host-fault-status", GN_STATUS_CPU_FAILURE,
+                     gn_run(instance, 4u, &result));
+    SDK_CHECK_STATUS("sdk.run.host-fault-reason", GN_RUN_ERROR, result.reason);
+    SDK_CHECK_STATUS("sdk.run.sticky-host-fault-status", GN_STATUS_CPU_FAILURE,
+                     gn_run(instance, 4u, &result));
+    SDK_CHECK_STATUS("sdk.run.sticky-host-fault-reason", GN_RUN_ERROR,
+                     result.reason);
+    SDK_CHECK_STATUS("sdk.run.reset-clears-host-fault", GN_STATUS_OK,
+                     gn_reset(instance));
+    SDK_CHECK_STATUS("sdk.run.host-fault-recovery", GN_STATUS_OK,
+                     gn_run(instance, 172u, &result));
+    SDK_CHECK_STATUS("sdk.run.host-fault-recovery-stopped", GN_RUN_STOPPED,
+                     result.reason);
+}
+
+static void expected_result_integer_boundaries_match_original_encodings(void) {
+    static const struct {
+        uint8_t moveq;
+        uint32_t expected;
+        const char *name;
+    } moveq_vectors[] = {
+        {UINT8_C(0x7f), UINT32_C(0x00000082), "moveq-7f"},
+        {UINT8_C(0x80), UINT32_C(0xffffff83), "moveq-80"},
+        {UINT8_C(0xff), UINT32_C(0x00000002), "moveq-ff"}
+    };
+    SDK_CASE("sdk.run.integer-boundaries");
+    for (size_t index = 0u;
+         index < sizeof(moveq_vectors) / sizeof(moveq_vectors[0]); ++index) {
+        guest_fixture_image fixture;
+        gn_manifest manifest;
+        make_manifest(&manifest, &fixture, GUEST_FIXTURE_SCENARIO_A);
+        fixture.rom[0x101u] = moveq_vectors[index].moveq;
+        SDK_CHECK_STATUS("sdk.run.integer-load-moveq", GN_STATUS_OK,
+                         gn_load(instance, &manifest));
+        gn_run_result run;
+        SDK_CHECK_STATUS("sdk.run.integer-run-moveq", GN_STATUS_OK,
+                         gn_run(instance, 172u, &run));
+        gn_observations observations;
+        SDK_CHECK_STATUS("sdk.run.integer-observe-moveq", GN_STATUS_OK,
+                         gn_observe(instance, &observations));
+        (void)printf("# VECTOR %s expected=%" PRIu32 " observed=%" PRIu32 "\n",
+                     moveq_vectors[index].name,
+                     moveq_vectors[index].expected,
+                     observations.arithmetic_result);
+        SDK_CHECK_U64("sdk.run.integer-moveq-result",
+                      moveq_vectors[index].expected,
+                      observations.arithmetic_result);
+        SDK_CHECK_STATUS("sdk.run.integer-moveq-stop", GN_RUN_STOPPED,
+                         run.reason);
+    }
+
+    guest_fixture_image fixture;
+    gn_manifest manifest;
+    make_manifest(&manifest, &fixture, GUEST_FIXTURE_SCENARIO_A);
+    fixture.rom[0x100u] = UINT8_C(0x70);
+    fixture.rom[0x101u] = UINT8_C(0xff);
+    fixture.rom[0x102u] = UINT8_C(0x52);
+    fixture.rom[0x103u] = UINT8_C(0x80);
+    SDK_CHECK_STATUS("sdk.run.integer-load-addq-wrap", GN_STATUS_OK,
+                     gn_load(instance, &manifest));
+    gn_run_result wrap_run;
+    SDK_CHECK_STATUS("sdk.run.integer-run-addq-wrap", GN_STATUS_OK,
+                     gn_run(instance, 172u, &wrap_run));
+    gn_observations wrap_observations;
+    SDK_CHECK_STATUS("sdk.run.integer-observe-addq-wrap", GN_STATUS_OK,
+                     gn_observe(instance, &wrap_observations));
+    SDK_CHECK_U64("sdk.run.integer-addq-unsigned-wrap", 0u,
+                  wrap_observations.arithmetic_result);
+    SDK_CHECK_STATUS("sdk.run.integer-addq-wrap-stop", GN_RUN_STOPPED,
+                     wrap_run.reason);
 }
 
 static void unloaded_lifecycle_and_null_arguments_are_reported(void) {
@@ -876,9 +1079,18 @@ static void sdk_diagnostic_suite(void) {
     RUN_TEST(original_instruction_boundaries_match_manual_recipe);
 }
 
+static void sdk_run_suite(void) {
+    RUN_TEST(bounded_run_reports_actual_progress_and_preserves_invalid_requests);
+    RUN_TEST(stopped_guest_consumes_idle_budget_without_dispatches);
+    RUN_TEST(reset_debt_overflow_is_rejected_before_any_event_mutation);
+    RUN_TEST(unsupported_instruction_exposes_only_bounded_fault_details);
+    RUN_TEST(host_fault_is_sticky_until_reset_and_can_recover);
+    RUN_TEST(expected_result_integer_boundaries_match_original_encodings);
+}
+
 int main(int argc, char **argv) {
     if (argc != 2) {
-        (void)fprintf(stderr, "usage: %s <diagnostic|lifecycle|media|faults>\n",
+        (void)fprintf(stderr, "usage: %s <diagnostic|lifecycle|media|faults|run>\n",
                       argv[0]);
         return 2;
     }
@@ -892,6 +1104,8 @@ int main(int argc, char **argv) {
         sdk_media_suite();
     } else if (strcmp(selected_suite, "faults") == 0) {
         sdk_faults_suite();
+    } else if (strcmp(selected_suite, "run") == 0) {
+        sdk_run_suite();
     } else {
         (void)fprintf(stderr, "unknown suite: %s\n", selected_suite);
         return 2;

@@ -95,6 +95,51 @@ not Neo Geo board behavior, original-silicon qualification, BIOS boot, game
 compatibility, or bus-pin timing. The accepted backend's timing remains a
 bounded candidate contract. A reference emulator is not this oracle's source.
 
+## Bounded progress and integer edges
+
+`gn_run` reports the backend's actual event charges. The native contract accepts
+requests from 0 through 1,000,000 guest cycles. A zero request consumes nothing.
+An outstanding external-reset recovery event costs 40 cycles as a whole, even
+when the request is smaller: requests 1, 39, 40 and 41 therefore report
+elapsed 40, 40, 40 and 44, with overshoots 39, 1, 0 and 3 respectively. The
+41-cycle call completes the first 4-cycle `MOVEQ`. A request above the limit is
+rejected before the CPU or guest RAM changes. After STOP, a later positive
+request advances stopped idle time by that exact amount and dispatches no
+instruction. Reaching STOP during a request can likewise consume the remaining
+requested idle cycles; elapsed time is not clamped to the pre-STOP instruction
+total. The cap does not turn host wall time into guest progress.
+
+The diagnostic tests also alter only original legal instruction bytes while
+keeping expected values independent: `MOVEQ #$7f,D0; ADDQ.L #3,D0` stores
+`$00000082`; `MOVEQ #$80,D0; ADDQ.L #3,D0` stores `$ffffff83`; and
+`MOVEQ #$ff,D0; ADDQ.L #3,D0` stores `$00000002`. Replacing the second opcode
+with `ADDQ.L #1,D0` after `MOVEQ #$ff,D0` checks unsigned wrap to zero. The
+results are read from the fixture's named arithmetic mailbox through
+`gn_observe`; complete CPU registers remain private. These expected effects
+follow the MOVEQ and ADDQ encodings and 32-bit result rules in the primary
+Programmer's Reference Manual (printed pp. 4-11–4-12 and 4-134).
+
+Unsupported candidate opcode `$4afc` reports the bounded fault PC and opcode;
+it does not expose the register file. A callback host fault remains sticky until
+reset, while reset restores the original fixture and permits a successful run.
+The private test build also seeds a stopped instance's accounting counters at
+the exact `uint64_t` limit and verifies that a rejected idle event leaves the
+complete image/state digest unchanged. Host-fault and counter-overflow outcomes
+map to the existing `GN_RUN_ERROR`/`GN_STATUS_CPU_FAILURE` pair; guest
+address/privilege/unsupported-opcode faults use the existing `GN_RUN_FAULT`
+reason, with unsupported instruction details populated when available. The
+public result layout is unchanged.
+
+These are bounded event-accounting and instruction-result claims for the
+accepted candidate forms. They do not qualify arbitrary instruction streams,
+mid-instruction suspension, wait states, a Neo Geo board bus, or physical
+silicon. The earlier Phase 01 WR-01 wording about a `$106` extension read on a
+user-mode MOVE-to-SR privilege path is explicitly superseded by the current
+[Phase 01 verification](../../.planning/phases/01-cpu-acceptance-experiment/01-VERIFICATION.md):
+the accepted candidate enters vector 8 after opcode `$104` without reading
+`$106`. That historical sequence is unrelated to this fixture and is not
+repeated as a hardware claim here.
+
 ## Reproduction and exact identities
 
 From the repository root:
