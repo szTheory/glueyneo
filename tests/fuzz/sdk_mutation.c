@@ -662,8 +662,8 @@ static int run_sequence_operation(sequence_owner owners[MUTATION_LIVE_LIMIT],
         owners[target].loaded = 0;
     }
     uint64_t loaded_storage = 0u;
-    for (unsigned index = 0u; index < MUTATION_LIVE_LIMIT; ++index) {
-        if (owners[index].instance != NULL && owners[index].loaded != 0) {
+    for (unsigned owner_index = 0u; owner_index < MUTATION_LIVE_LIMIT; ++owner_index) {
+        if (owners[owner_index].instance != NULL && owners[owner_index].loaded != 0) {
             loaded_storage += UINT64_C(5130);
         }
     }
