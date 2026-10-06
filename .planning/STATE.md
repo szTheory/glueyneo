@@ -5,16 +5,16 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 02
 current_phase_name: Executable diagnostic SDK
 status: executing
-stopped_at: "Phase 02 planning complete; next: $gsd-execute-phase 02"
-last_updated: "2026-10-05T23:55:28.855Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-10-06T00:23:07.077Z"
 last_activity: 2026-10-05
-last_activity_desc: Phase 02 plans independently checked; planning gates passed; ready for execution
-state_head: 722721824209cbc1a2dc19aa6ccae1fef62e6182
+last_activity_desc: Phase 02 execution started
+state_head: 67368cd87dedab66a214c58de94c5d1ecb0dc508
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 35
-  completed_plans: 29
+  completed_plans: 30
   percent: 33
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 
 ## Current Position
 
-Phase: 02 (Executable diagnostic SDK) — READY TO EXECUTE
-Plan: 02-01 through 02-06 planned; 0/6 executed
-Status: Ready to execute
-Last activity: 2026-10-05 — Phase 02 plans independently checked; planning gates passed; ready for execution
+Phase: 02 (Executable diagnostic SDK) — EXECUTING
+Plan: 2 of 6 — 02-01 complete; 02-02 is next
+Status: Executing Phase 02
+Last activity: 2026-10-05 — Plan 02-01 execution complete; Wave 2 is ready
 
 Progress: [███░░░░░░░] 33% (one of three phases complete)
 
@@ -41,7 +41,7 @@ Phase 01 passed its fresh whole-phase verifier at source revision `09476ed57ee29
 
 Phase 01 has 29 plan summaries, of which 28 are execution-complete. Plan 01-17 remains an answered, incomplete hardware-evidence checkpoint; that unknown hardware question is outside the admitted candidate capability. Preserve the historical summaries, receipt, seals, source collection and all UAT rows. Do not repeat Plan 01-29, the fresh verifier, the finite silicon search, or conversational UAT.
 
-The GSD completion transaction updated the active phase and requirements after the report was written. The subsequent edits changed planning status and the documentation-route regression; that focused regression now passes 8/8. No runtime implementation or CPU acceptance evidence changed. Retain `01-VERIFICATION.md` as the point-in-time verdict and do not rerun it just to refresh administrative fingerprints. Installed `query verification.status` reports the fingerprint as stale and suggests `$gsd-execute-phase 01`; this is the known administrative-fingerprint routing problem, not a new acceptance gap. Do not follow that stale route. Phase 02 planning is complete: six plans passed an independent review, all 15 requirements and 18 decisions are covered, and the installed decision, API-coverage, structure, path, failure-direction and post-plan gap checks pass. The current command is `$gsd-execute-phase 02`. Phase 02 implementation has not started. The frozen candidate contract checker reproduces its pre-admission gate only at the recorded pre-closeout revision; it is not a current phase router.
+The GSD completion transaction updated the active phase and requirements after the report was written. The subsequent edits changed planning status and the documentation-route regression; that focused regression now passes 8/8. No runtime implementation or CPU acceptance evidence changed. Retain `01-VERIFICATION.md` as the point-in-time verdict and do not rerun it just to refresh administrative fingerprints. Installed `query verification.status` reports the fingerprint as stale and suggests `$gsd-execute-phase 01`; this is the known administrative-fingerprint routing problem, not a new acceptance gap. Do not follow that stale route. Phase 02 planning passed its independent review: six plans cover all 15 requirements and 18 decisions, and the installed decision, API-coverage, structure, path, failure-direction and post-plan gap checks passed. Plan 02-01 is now execution-complete; its public API, original fixture/runner and counted provenance checks pass. Plan 02-02 is the next ready plan, followed by the remaining dependency-ordered plans. The frozen candidate contract checker reproduces its pre-admission gate only at the recorded pre-closeout revision; it is not a current phase router.
 
 ## Performance Metrics
 
@@ -94,6 +94,7 @@ The GSD completion transaction updated the active phase and requirements after t
 | Phase 01 P27 | 110min | 3 tasks | 8 files |
 | Phase 01 P28 | 6min | 2 tasks | 7 files |
 | Phase 01 P29 | 73min | 2 tasks | 11 files |
+| Phase 02 P01 | 20 min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -106,7 +107,9 @@ The GSD completion transaction updated the active phase and requirements after t
 - Plan 01-27 changes only derived report/receipt/accounting metadata. C2 binds the exact independent review/security report bytes; source collection remains unchanged.
 - The initial project branch has no remote base; no main merge or hosted qualification is implied.
 - [Phase 01]: Plan 01-29's independent CPU review and security assessment were reconciled by a fresh 10/10 whole-phase report at revision `09476ed`; see `01-VERIFICATION.md`. The report is the phase-level admission authority for the bounded subset, separate from the unchanged unqualified candidate receipt. WR-01 remains a documentation warning; original-silicon saved PC remains unknown.
-- [Phase 02]: Existing `02-CONTEXT.md` contains the accepted design decisions and was refreshed after the gate passed. Plans 02-01–06 cover all 15 requirements, 18 decisions and 21 edge-probe dispositions. Six sequential waves avoid package rebuilds racing runtime edits. The plan-phase checker is the remaining step before proposing `$gsd-execute-phase 02`; no execution or phase completion is implied.
+- [Phase 02]: Existing `02-CONTEXT.md` contains the accepted design decisions and was refreshed after the gate passed. Plans 02-01–06 cover all 15 requirements, 18 decisions and 21 edge-probe dispositions. Six sequential waves avoid package rebuilds racing runtime edits. Plan 02-01 completed its executable API/runner tracer and counted fixture checks; Plan 02-02 is next. The phase remains in progress.
+- [Phase 02]: Expose only a bounded instruction-boundary PC alongside run results so exact diagnostic boundaries are observable without publishing the CPU register file.
+- [Phase 02]: Share one host-side diagnostic fixture module between runner and SDK tests to prevent byte-recipe drift.
 
 ### Pending Todos
 
@@ -129,6 +132,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-05T23:55:28.827Z
-Stopped at: Phase 02 planning complete; next: $gsd-execute-phase 02
+Last session: 2026-10-06T00:23:07.047Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
