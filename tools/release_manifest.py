@@ -220,7 +220,10 @@ def build_archives(repo: Path, commit: str, output_dir: Path) -> dict[str, objec
     output_dir.mkdir(parents=True, exist_ok=True)
     commit, version = read_commit(repo, commit)
     source_name = f"glueyneo-source-{version}.tar.gz"
-    sdk_name = f"glueyneo-sdk-{version}-{platform.system().lower()}-{platform.machine().lower()}.tar.gz"
+    system = {"darwin": "macos", "windows": "windows"}.get(platform.system().lower(), platform.system().lower())
+    machine = {"amd64": "x86_64", "x86-64": "x86_64", "aarch64": "arm64"}.get(
+        platform.machine().lower(), platform.machine().lower())
+    sdk_name = f"glueyneo-sdk-{version}-{system}-{machine}.tar.gz"
     source_archive = output_dir / source_name
     sdk_archive = output_dir / sdk_name
 
