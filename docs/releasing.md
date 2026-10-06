@@ -59,3 +59,39 @@ pending until the workflow runs in the target repository. A clean scanner result
 is detector evidence; the affirmative item-level records in
 [`rights-inventory.md`](rights-inventory.md) remain the distribution-rights
 authority, and any unresolved rights question blocks publication.
+
+## Protected merge policy
+
+Configure `main` as protected and require the `CI / ci-policy` aggregate with
+strict up-to-date branches. The independent GSD code review is a separate
+current-head gate: every proposed PR head needs a review bound to its full
+commit SHA, and every finding must be fixed or have a written disposition
+supported by evidence. Any head change invalidates both the review and checks
+for merge readiness; rerun the review and require checks for the new SHA. Keep
+security-review threat dispositions separate from code-review findings.
+
+Use GitHub's native auto-merge after these controls are configured and observed.
+Add a merge queue only if measured merge contention shows that strict branch
+protection causes repeated integration failures. Triage relevant open issues and
+PRs when repository authority is configured and again before shipping. Local
+workflow tests establish parser and policy behavior only; they do not establish
+protection, required-check, App, or event settings in GitHub.
+
+The local policy receipt can be checked with:
+
+```sh
+python3 tools/workflow/ci_policy.py merge-readiness \
+  --receipt merge-readiness.json --head-sha <full-pr-head-sha> \
+  --output merge-readiness-result.json
+```
+
+The receipt uses `schema_version: 1`, `pr_head_sha`, `required_aggregate`, and
+`independent_review`. The aggregate includes `sha`, `outcome`, `lane_count`,
+and `assertion_count`; the review includes `sha`, `review_type` set to
+`gsd-code-review`, `outcome`, and an explicit `findings` list. Each finding must
+be `resolved` with resolution evidence, or `dispositioned` with both a
+nonempty disposition and evidence reference. Both SHAs must equal the proposed
+head, the aggregate and review must pass, and lane/assertion counts must be
+positive. This local validator does not fetch GitHub receipts or grant merge
+authority; attach the actual current-run/check and GSD review identifiers when
+the hosted workflow is qualified.

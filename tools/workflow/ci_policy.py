@@ -15,6 +15,73 @@ MATRIX_JOB = "matrix"
 DOCS_JOB = "public-content"
 AGGREGATE_JOB = "ci-policy"
 REQUIRED_JOBS = frozenset((MATRIX_JOB, DOCS_JOB))
+_COMMIT_SHA_LENGTH = 40
+
+
+def _is_commit_sha(value: Any) -> bool:
+    return (isinstance(value, str) and len(value) == _COMMIT_SHA_LENGTH
+            and all(character in "0123456789abcdefABCDEF" for character in value))
+
+
+def validate_merge_readiness(receipt: dict[str, Any], *, proposed_sha: str) -> dict[str, Any]:
+    """Validate a local merge receipt whose CI and independent review bind to one PR head."""
+    issues: list[str] = []
+    if not _is_commit_sha(proposed_sha):
+        issues.append("proposed head is not a full commit SHA")
+    if receipt.get("schema_version") != 1:
+        issues.append("unsupported or missing merge receipt schema_version")
+    if receipt.get("pr_head_sha") != proposed_sha:
+        issues.append("receipt PR head does not match proposed merge SHA")
+
+    aggregate = receipt.get("required_aggregate")
+    if not isinstance(aggregate, dict):
+        issues.append("required aggregate receipt is missing")
+    else:
+        if aggregate.get("sha") != proposed_sha:
+            issues.append("required aggregate SHA is stale")
+        if aggregate.get("outcome") != "pass":
+            issues.append("required aggregate did not pass")
+        for field in ("lane_count", "assertion_count"):
+            value = aggregate.get(field)
+            if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+                issues.append(f"required aggregate has no positive {field}")
+
+    review = receipt.get("independent_review")
+    if not isinstance(review, dict):
+        issues.append("independent GSD code review receipt is missing")
+    else:
+        if review.get("sha") != proposed_sha:
+            issues.append("independent GSD code review SHA is stale")
+        if review.get("review_type") != "gsd-code-review":
+            issues.append("review receipt is not identified as an independent GSD code review")
+        if review.get("outcome") != "pass":
+            issues.append("independent GSD code review did not pass")
+        findings = review.get("findings")
+        if not isinstance(findings, list):
+            issues.append("review findings must be an explicit list")
+        else:
+            for index, finding in enumerate(findings):
+                if not isinstance(finding, dict):
+                    issues.append(f"review finding {index} is malformed")
+                    continue
+                status = finding.get("status")
+                if status == "resolved":
+                    evidence = finding.get("evidence")
+                    if not isinstance(evidence, str) or not evidence.strip():
+                        issues.append(f"resolved review finding {index} lacks resolution evidence")
+                    continue
+                if status != "dispositioned":
+                    issues.append(f"review finding {index} is open or has an invalid status")
+                    continue
+                disposition = finding.get("disposition")
+                evidence = finding.get("evidence")
+                if not isinstance(disposition, str) or not disposition.strip():
+                    issues.append(f"review finding {index} lacks a disposition")
+                if not isinstance(evidence, str) or not evidence.strip():
+                    issues.append(f"review finding {index} disposition lacks evidence")
+
+    return {"outcome": "fail" if issues else "pass", "issues": issues,
+            "proposed_sha": proposed_sha}
 
 
 def classify_paths(paths: Iterable[str] | None, *, diff_error: bool = False) -> set[str]:
@@ -176,6 +243,10 @@ def main(argv: list[str] | None = None) -> int:
     aggregate.add_argument("--output", type=Path, required=True)
     prepare = commands.add_parser("prepare")
     prepare.add_argument("--output-dir", type=Path, required=True)
+    readiness = commands.add_parser("merge-readiness")
+    readiness.add_argument("--receipt", type=Path, required=True)
+    readiness.add_argument("--head-sha", required=True)
+    readiness.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
         if args.command == "classify":
@@ -184,6 +255,9 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "prepare":
             plan_path, results_path = prepare_workflow_inputs(args.output_dir)
             report = {"outcome": "pass", "plan": str(plan_path.name), "results": str(results_path.name)}
+        elif args.command == "merge-readiness":
+            report = validate_merge_readiness(json.loads(args.receipt.read_text()),
+                                              proposed_sha=args.head_sha)
         else:
             report = assemble_aggregate(json.loads(args.results.read_text()),
                                         json.loads(args.plan.read_text()), args.matrix_dir)

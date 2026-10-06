@@ -21,6 +21,55 @@ def expect(value: bool, message: str) -> None:
 
 
 def main() -> int:
+    # Merge readiness must bind both the required aggregate and the separate
+    # GSD review to the exact proposed PR head.
+    proposed_sha = "a" * 40
+    receipt = {
+        "schema_version": 1,
+        "pr_head_sha": proposed_sha,
+        "required_aggregate": {
+            "sha": proposed_sha, "outcome": "pass", "lane_count": 6,
+            "assertion_count": 120,
+        },
+        "independent_review": {
+            "sha": proposed_sha, "review_type": "gsd-code-review", "outcome": "pass",
+            "findings": [{"id": "R-1", "status": "dispositioned",
+                          "disposition": "not-applicable", "evidence": "review note"}],
+        },
+    }
+    expect(policy.validate_merge_readiness(receipt, proposed_sha=proposed_sha)["outcome"] == "pass",
+           "complete exact-SHA aggregate and independent review must pass")
+    for stale_field in ("pr_head_sha", "required_aggregate", "independent_review"):
+        stale = json.loads(json.dumps(receipt))
+        if stale_field == "required_aggregate":
+            stale[stale_field]["sha"] = "b" * 40
+        elif stale_field == "independent_review":
+            stale[stale_field]["sha"] = "b" * 40
+        else:
+            stale[stale_field] = "b" * 40
+        expect(policy.validate_merge_readiness(stale, proposed_sha=proposed_sha)["outcome"] == "fail",
+               f"stale {stale_field} must reject merge readiness")
+    open_finding = json.loads(json.dumps(receipt))
+    open_finding["independent_review"]["findings"][0]["status"] = "open"
+    expect(policy.validate_merge_readiness(open_finding, proposed_sha=proposed_sha)["outcome"] == "fail",
+           "open review finding must reject merge readiness")
+    unsupported_disposition = json.loads(json.dumps(receipt))
+    unsupported_disposition["independent_review"]["findings"][0]["evidence"] = ""
+    expect(policy.validate_merge_readiness(unsupported_disposition, proposed_sha=proposed_sha)["outcome"] == "fail",
+           "finding disposition without evidence must reject merge readiness")
+    resolved_without_evidence = json.loads(json.dumps(receipt))
+    resolved_without_evidence["independent_review"]["findings"][0] = {"id": "R-1", "status": "resolved"}
+    expect(policy.validate_merge_readiness(resolved_without_evidence, proposed_sha=proposed_sha)["outcome"] == "fail",
+           "resolved finding without resolution evidence must reject merge readiness")
+    other_review = json.loads(json.dumps(receipt))
+    other_review["independent_review"]["review_type"] = "security-review"
+    expect(policy.validate_merge_readiness(other_review, proposed_sha=proposed_sha)["outcome"] == "fail",
+           "security review must not substitute for independent GSD code review")
+    zero_lane = json.loads(json.dumps(receipt))
+    zero_lane["required_aggregate"]["lane_count"] = 0
+    expect(policy.validate_merge_readiness(zero_lane, proposed_sha=proposed_sha)["outcome"] == "fail",
+           "zero-count aggregate must reject merge readiness")
+
     expect(policy.classify_paths(["docs/testing.md"]) == {policy.DOCS_JOB}, "docs-only change must retain the content gate")
     expect(policy.classify_paths(["src/instance.c"]) == set(policy.REQUIRED_JOBS), "source change must run every required lane")
     expect(policy.classify_paths(["new/unknown.file"]) == set(policy.REQUIRED_JOBS), "unknown path must fail open to every lane")
@@ -74,6 +123,20 @@ def main() -> int:
     expect("contents: write" not in workflow, "PR workflow token must remain read-only")
     expect('"${{ matrix.' not in workflow,
            "matrix values must enter runner shells through environment variables, not inline interpolation")
+
+    releasing = (ROOT / "docs/releasing.md").read_text(encoding="utf-8")
+    for required in (
+        "strict up-to-date branches", "independent GSD code review", "Any head change",
+        "native auto-merge", "measured merge contention", "security-review threat dispositions",
+        "This local validator does not fetch GitHub receipts or grant merge",
+    ):
+        expect(required in releasing, f"release policy documentation omitted: {required}")
+    testing = (ROOT / "docs/testing.md").read_text(encoding="utf-8")
+    for required in (
+        "Darwin-26", "Apple SDK 26.5", "1,440 assertions", "9.374 seconds",
+        "runner-minutes", "unknown; no hosted receipt", "rights status unknown",
+    ):
+        expect(required in testing, f"qualification documentation omitted: {required}")
 
     revision = "a" * 40
     with tempfile.TemporaryDirectory(prefix="ci-matrix-test-") as temp:

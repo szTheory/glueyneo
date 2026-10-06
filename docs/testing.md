@@ -93,6 +93,41 @@ profiles, arbitrary hostile host pointers, and real-game compatibility are not
 qualified by these finite diagnostic checks. A hash, bounded mutation pass, or
 reference-emulator result does not establish hardware truth.
 
+## Current platform and cost evidence
+
+The exact local profile recorded by the committed-head Phase 03 matrix is
+AppleClang 21.0.0.21000101, macOS arm64 (`Darwin-26`), Apple SDK 26.5, CMake
+4.4.3, Ninja 1.13.2, Debug, with the SDK sanitizer disabled. At source revision
+`2054c3d6d07427d0e4a045b2388bcc933478bec9`, its local diagnostic and installed
+consumer checks passed 36 cases and 1,440 assertions in nine lane executions.
+The measured local lane duration was 9.374 seconds and one clean configure/build
+took 1.636 seconds. These are measurements of that local invocation only; they
+do not establish a supported platform range, hosted critical path, or GitHub
+runner-minutes.
+
+| Required hosted identity | Current result |
+| --- | --- |
+| Linux x64, Clang, Ubuntu 24.04 hosted image | unknown; no hosted receipt |
+| Linux x64, GCC, Ubuntu 24.04 hosted image | unknown; no hosted receipt |
+| macOS arm64, AppleClang, macOS 15 hosted image | unknown; local macOS result does not qualify it |
+| Windows x64, MSVC, Windows 2025 hosted image | unknown; no hosted receipt |
+| Linux Clang ASan/UBSan hosted lane | unknown; local AppleClang sanitizer run is separate evidence |
+| Linux Clang seeded-fuzz hosted lane | unknown; no hosted receipt |
+
+Do not mark a row passing until its current-source GitHub job receipt includes
+the exact hosted image, compiler/SDK, architecture, configuration, positive
+assertion denominator, cold-build duration, and lane duration. The hosted
+matrix aggregate then supplies its measured slowest-job critical path and sum
+of runner durations. Failed attempts remain failures, while skipped,
+unsupported, and untested combinations keep their distinct outcomes and do not
+contribute passing assertions.
+
+The rights inventory currently contains affirmative records for the shipped
+original diagnostic material and pinned Unity subset. No commercial game ROM,
+BIOS, private corpus, or private capture is licensed into the release. Any new
+item without an affirmative record tied to exact bytes remains excluded and its
+rights status unknown; a clean content scan cannot resolve that question.
+
 ## Required CI aggregate
 
 The focused selectors are `matrix` (SDK diagnostic CTest groups and installed
