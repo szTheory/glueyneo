@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 from unittest import mock
 
@@ -34,6 +35,23 @@ File Type: DLL
 
 
 class SharedExportTests(unittest.TestCase):
+    def test_linux_loader_initialization_resolves_relocated_parent_segments(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            prefix = Path(temp) / "sdk prefix"
+            (prefix / "bin").mkdir(parents=True)
+            (prefix / "lib").mkdir()
+            library = prefix / "lib/libglueyneo.so"
+            library.touch()
+            loader_path = str(prefix / "bin/../lib/libglueyneo.so")
+            self.assertTrue(check_package.linux_trace_loaded_library(
+                "  132: calling init: " + loader_path + "\n", library))
+            for output in (
+                "  132: trying file=" + loader_path + "\n",
+                "  132: calling init: " + str(prefix / "wrong/libglueyneo.so") + "\n",
+                "  132: calling init: libglueyneo.so\n",
+            ):
+                self.assertFalse(check_package.linux_trace_loaded_library(output, library))
+
     def test_windows_dll_exports_use_the_shared_exact_contract(self) -> None:
         parser = getattr(check_package, "parse_windows_exports", None)
         self.assertIsNotNone(parser, "Windows DUMPBIN export parsing is required")

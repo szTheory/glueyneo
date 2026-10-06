@@ -570,9 +570,23 @@ def run_with_loader_trace(
         [str(executable), *args], env=env,
         expected_returncode=expected_returncode,
     ).stdout
-    if str(library) not in output:
+    # glibc's LD_DEBUG preserves a loader path such as bin/../lib. Inspect
+    # successful initialization, rather than a candidate search, and compare
+    # resolved paths so a relocatable $ORIGIN path keeps its actual identity.
+    # https://man7.org/linux/man-pages/man8/ld.so.8.html (checked 2026-10-06)
+    loaded = linux_trace_loaded_library(output, library) if sys.platform.startswith("linux") else str(library) in output
+    if not loaded:
         raise CheckError(f"Loader trace did not resolve the shared runtime from the moved prefix: {library}")
     return output
+
+
+def linux_trace_loaded_library(output: str, library: Path) -> bool:
+    expected = library.resolve()
+    for match in re.finditer(r"(?m)^\s*\d+:\s*calling init:\s*(.+?)\s*$", output):
+        path = Path(match.group(1))
+        if path.is_absolute() and path.resolve() == expected:
+            return True
+    return False
 
 
 def expect_failure(code: str, action) -> None:
