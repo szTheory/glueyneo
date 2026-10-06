@@ -79,3 +79,34 @@ blobs plus commit metadata, bounded by 50,000 objects, 64 MiB per blob, and
 remain separately visible. The publication clone must be sanitized before its
 history scan can pass; original local history was not rewritten. Independent
 re-review and any public push remain pending.
+
+## Hosted CI attempt 1 follow-up
+
+The attempt at `public0712ed83` exposed three wiring problems and one credential
+configuration mismatch. Commit `7fe7db1` fixes them:
+
+- The SDK public-content suite passes `--history-revision=--all` as a single
+  option/value argument. A subprocess regression runs the actual CLI against a
+  clean synthetic repository and requires a passing all-reachable-refs report.
+- `ci_policy.py prepare` no longer accesses the `--output` field belonging to
+  other subcommands; a CLI regression checks both generated inputs.
+- Failed verifier subprocess output remains in runner-private logs. The public
+  diagnostic is capped, redacts repository/home and Windows user paths,
+  identities, common credentials and private-key blocks, and is emitted only
+  after the privacy scanner finds no remaining finding. Exceptions also write
+  a failed-stage receipt to `--output`, with the workflow's exact source SHA
+  when available and no fabricated counts. The release matrix uploads only
+  this evidence directory with an always-run step.
+- The three privileged-job GitHub App IDs now use nonsecret Actions variables;
+  only the private key remains a secret.
+
+Both focused controls passed: `tests/workflow/test_ci_policy.py` and
+`tests/workflow/test_public_content.py` (17 tests). In-memory Python compilation,
+`actionlint .github/workflows/release.yml`, and `git diff --check` passed. A
+current-tree scan against `HEAD` passed with zero findings. A depth-one
+publication-style clone passed `--history-revision=--all` with zero unresolved
+findings and one exact history disposition. The original local all-refs history
+still contains the previously recorded 24 real personal-path findings across
+8 plan paths; it was neither rewritten nor treated as a passing scan. The
+hosted matrix has not been rerun, and this follow-up is not an independent
+re-review or publication approval.
