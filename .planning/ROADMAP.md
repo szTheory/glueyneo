@@ -2,11 +2,11 @@
 
 ## Overview
 
-Deliver an offline installable C SDK whose ordinary native API runs an original deterministic CPU/bus diagnostic. Phase 01 accepted the owned CPU backend for the bounded diagnostic subset. Phase 02 builds the SDK and proves the complete consumer workflow; Phase 03 qualifies and distributes a tested unsigned alpha. The fresh 2026-10-05 Phase 01 report passed 10/10 after Plan 01-29; see its verification report for source identity, current checks, and limitations. The candidate-level receipt remains `unqualified`, while the independent phase report is the current bounded admission decision. All six Phase 02 plans are execution-complete; separate Phase 02 review and verification remain. Phase 03 remains unplanned with delivery evidence pending. [PROJECT.md](PROJECT.md) and [REQUIREMENTS.md](REQUIREMENTS.md) govern scope; [research synthesis](research/SUMMARY.md), [roadmap seed](preparation/ROADMAP-SEED.md) and [adversarial gates](preparation/ADVERSARIAL-REVIEW.md) supply dated rationale.
+Deliver an offline installable C SDK whose ordinary native API runs an original deterministic CPU/bus diagnostic. Phase 01 accepted the owned CPU backend for the bounded diagnostic subset. Phase 02 builds the SDK and proves the complete consumer workflow; Phase 03 qualifies and distributes a tested unsigned alpha. The fresh 2026-10-05 Phase 01 report passed 10/10 after Plan 01-29; see its verification report for source identity, current checks, and limitations. The candidate-level receipt remains `unqualified`, while the independent phase report is the current bounded admission decision. Phase 02 is complete: all six plans, the 5/5 whole-phase verification and automated UAT passed. Phase 03 remains unplanned with delivery evidence pending. [PROJECT.md](PROJECT.md) and [REQUIREMENTS.md](REQUIREMENTS.md) govern scope; [research synthesis](research/SUMMARY.md), [roadmap seed](preparation/ROADMAP-SEED.md) and [adversarial gates](preparation/ADVERSARIAL-REVIEW.md) supply dated rationale.
 
 ## Milestones
 
-- 🚧 **v0.1 CPU/bus diagnostic SDK alpha** — current; Phase 02 execution is in progress, with Phase 03 delivery evidence pending.
+- 🚧 **v0.1 CPU/bus diagnostic SDK alpha** — current; Phase 02 is complete and Phase 03 delivery qualification is next.
 - 📋 **Next: Interactive diagnostic alpha** — outlined below; version and phase allocation await v0.1 evidence.
 - **Longer horizon:** Commercial scenarios, hardware profiles, integration and measured performance; revisable, without release promises.
 
@@ -19,7 +19,7 @@ Deliver an offline installable C SDK whose ordinary native API runs an original 
 Integer phases are planned milestone work. Decimal phases are reserved for inserted work and execute in numeric order. Granularity is coarse; each phase will use small reviewable vertical plans.
 
 - [x] **Phase 1: CPU acceptance experiment** - Qualify a reproducible C backend with real guest, isolation, state and timing evidence. (completed 2026-10-05)
-- [ ] **Phase 2: Executable diagnostic SDK** - Run a meaningful original guest through a safe native API and real installed consumers.
+- [x] **Phase 2: Executable diagnostic SDK** - Run a meaningful original guest through a safe native API and real installed consumers. (completed 2026-10-06)
 - [ ] **Phase 3: Distributable release qualification** - Qualify relocated artifacts, delivery authority and a complete commit-bound unsigned release.
 
 ## Phase Details
@@ -164,7 +164,7 @@ Planning guidance: Plans 01-07–01-14 built and assessed the owned-core candida
   4. An integrator builds C17 static/shared libraries offline with target-scoped CMake/CTest and pinned test-only Unity, executes the diagnostic from out-of-tree installed C consumers for both variants, and compiles/links C++ public-header consumers. Compiled getting-started, ownership/error and failure-reproduction guidance matches the artifacts and states the exact supported subset and excluded game/BIOS/video/audio/public-state/persistence claims. (BUILD-01, BUILD-02, DOC-01, DOC-02)
   5. A maintainer can audit every public dependency/fixture's rights, notices, source and recipe, output digest, firmware needs and oracle ancestry; reproduce nonempty machine-readable results with exact identities and distinct outcomes; and reproduce diagnostic execution, memory/allocation, load and build-cost baselines on named hosts with uncertainty and no gameplay or uncalibrated-threshold claims. (EVID-01, EVID-03, EVID-04)
 
-**Plans**: 6/6 plans executed
+**Plans**: 6/6 plans complete
 
 Plans:
 **Wave 1**
@@ -185,9 +185,9 @@ Plans:
 **Wave 6** *(blocked on Wave 5 completion)*
 - [x] 02-06-PLAN.md — Exact identities/outcomes, measured local baselines and final aggregate
 
-Execution waves: 1 → 2 → 3 → 4 → 5 → 6. Package checks rebuild the runtime, so they follow source-changing ownership/timing slices. Plans 02-01 through 02-06 are execution-complete; Phase 02 is ready for separate review and verification.
+Execution waves: 1 → 2 → 3 → 4 → 5 → 6. Package checks rebuild the runtime, so they follow source-changing ownership/timing slices. Plans 02-01 through 02-06 and Phase 02 verification are complete. The former output/recovery UAT item is automated and passed; per PROJECT-D-45 and METHODOLOGY.md, do not repeat it unless relevant source or acceptance criteria change.
 
-Planning guidance: Slice from opaque lifecycle and bounded media through the real diagnostic and installed consumer; add only its evidenced bus/bootstrap subset. Couple each behavior to its tests, provenance, compiled example and capability statement. Separate diagnostic-oracle research from standard package work. Plan 02-06 and all earlier Phase 02 plans are complete; run the separate Phase 02 review/verifier before advancing to Phase 03. Begin lightweight CI and public-content checks as infrastructure permits; final hosted delivery acceptance belongs to Phase 3.
+Planning guidance: Slice from opaque lifecycle and bounded media through the real diagnostic and installed consumer; add only its evidenced bus/bootstrap subset. Couple each behavior to its tests, provenance, compiled example and capability statement. Separate diagnostic-oracle research from standard package work. Plan 02-06, whole-phase verification and automated UAT are complete. Shift verification left into deterministic local and recurring CI checks whenever that provides recurring value; reserve human handoff for evidence that intrinsically requires a person or external authority. Begin lightweight CI and public-content checks as infrastructure permits; final hosted delivery acceptance belongs to Phase 3.
 
 ### Phase 3: Distributable release qualification
 
@@ -211,12 +211,12 @@ Planning guidance: Qualify relocated/offline consumers and the exact support mat
 
 ## Progress
 
-Execution order: 1 → 2 → 3. Phase 01's bounded backend admission gate is satisfied. All six Phase 02 plans are execution-complete; separate Phase 02 review and verification remain before Phase 03.
+Execution order: 1 → 2 → 3. Phase 01's bounded backend admission gate is satisfied. Phase 02 is complete, including whole-phase verification and automated UAT. Phase 03 is next and remains unplanned.
 
 | Phase | Milestone | Execution-complete plans | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. CPU acceptance experiment | v0.1 | 28/29 (01-17 remains a checkpoint) | Complete | 2026-10-05 |
-| 2. Executable diagnostic SDK | v0.1 | 6/6 | In Progress | - |
+| 2. Executable diagnostic SDK | v0.1 | 6/6 | Complete    | 2026-10-06 |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
 Coverage: 27/27 current requirements are assigned exactly once; 5 in Phase 1, 15 in Phase 2, and 7 in Phase 3. The 5 bounded Phase 01 requirements and all 15 Phase 02 SDK requirements are complete; the 7 Phase 03 delivery requirements remain pending in [traceability](REQUIREMENTS.md#traceability). Deferred v2 requirements are not allocated to these phases.
