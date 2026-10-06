@@ -127,18 +127,17 @@ else()
 endif()
 glueyneo_apply_sdk_sanitizer(glueyneo)
 
-if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-  execute_process(
-    COMMAND git rev-parse --short=12 HEAD
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    OUTPUT_VARIABLE GLUEYNEO_SOURCE_REVISION
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET
-  )
-else()
-  set(GLUEYNEO_SOURCE_REVISION "unknown")
-endif()
-if(NOT GLUEYNEO_SOURCE_REVISION)
+# Source identity belongs to the checkout, independently of the C compiler.
+# An offline source archive without Git retains the explicit unknown identity.
+execute_process(
+  COMMAND git rev-parse --short=12 HEAD
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  RESULT_VARIABLE GLUEYNEO_SOURCE_REVISION_RESULT
+  OUTPUT_VARIABLE GLUEYNEO_SOURCE_REVISION
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET
+)
+if(NOT GLUEYNEO_SOURCE_REVISION_RESULT EQUAL 0 OR NOT GLUEYNEO_SOURCE_REVISION)
   set(GLUEYNEO_SOURCE_REVISION "unknown")
 endif()
 
