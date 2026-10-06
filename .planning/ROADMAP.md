@@ -203,7 +203,7 @@ Planning guidance: Slice from opaque lifecycle and bounded media through the rea
   4. Pinned release-please automation uses one C version source to stage a complete unsigned SDK draft bound to the tested commit, recovers interrupted staging and no-new-release retries, refuses incomplete/wrong-commit publication, and yields a published download whose expected digests and real diagnostic consumer pass. (DEL-03, DEL-04)
   5. A maintainer can inspect public-content evidence covering source, documentation, commit identity, logs and archives for notices and exclusion of personal paths/private identity, secrets, commercial media and private corpus material before publication. (DEL-05)
 
-**Plans**: 3/5 plans executed
+**Plans**: 4/5 plans executed
 
 Plans:
 **Wave 1**
@@ -214,7 +214,7 @@ Plans:
 - [x] 03-03-PLAN.md — Exact platform evidence and always-started required CI aggregate
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 03-04-PLAN.md — Serialized draft recovery and downloaded-byte release gates
+- [x] 03-04-PLAN.md — Serialized draft recovery and downloaded-byte release gates
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 03-05-PLAN.md — Current-SHA review/merge policy and hosted authority qualification
