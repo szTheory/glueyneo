@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 #include "unity.h"
 #include "glueyneo/glueyneo.h"
+#include "guest_fixture.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -50,51 +51,23 @@ static uint64_t sdk_cases;
         (void)printf("# CASE %s\n", (id)); \
     } while (0)
 
-static void build_guest(uint8_t rom[512], uint8_t ram_seed[10], unsigned scenario) {
-    static const uint16_t words[] = {
-        0x7007u, 0x5680u, 0x23c0u, 0x0000u, 0x1000u,
-        0x7200u, 0x3239u, 0x0000u, 0x1008u, 0x5681u, 0x23c1u, 0x0000u, 0x1004u,
-        0x7400u, 0x3439u, 0x0000u, 0x100au, 0x5282u, 0x23c2u, 0x0000u, 0x1010u,
-        0x4e72u, 0x2700u
-    };
-    memset(rom, 0, 512u);
-    memset(ram_seed, 0, 10u);
-    rom[2] = 0x20u;
-    rom[6] = 0x01u;
-    for (size_t index = 0u; index < sizeof(words) / sizeof(words[0]); ++index) {
-        const size_t offset = 0x100u + index * 2u;
-        rom[offset] = (uint8_t)(words[index] >> 8);
-        rom[offset + 1u] = (uint8_t)words[index];
-    }
-    ram_seed[8] = scenario == 0u ? 0x12u : 0x23u;
-    ram_seed[9] = scenario == 0u ? 0x34u : 0x45u;
-    if (scenario != 0u) {
-        rom[0x101u] = 0x0bu;
-        rom[0x102u] = 0x5au;
-    }
-}
-
 static gn_status load_scenario(gn_instance *target, unsigned scenario) {
-    uint8_t *rom = (uint8_t *)malloc(512u);
-    uint8_t *ram_seed = (uint8_t *)malloc(10u);
-    if (rom == NULL || ram_seed == NULL) {
-        free(rom);
-        free(ram_seed);
-        return GN_STATUS_OUT_OF_MEMORY;
-    }
-    build_guest(rom, ram_seed, scenario);
+    guest_fixture_image *fixture =
+        (guest_fixture_image *)malloc(sizeof(*fixture));
+    if (fixture == NULL) return GN_STATUS_OUT_OF_MEMORY;
+    guest_fixture_build(fixture, (guest_fixture_scenario)scenario);
     gn_manifest manifest;
     memset(&manifest, 0, sizeof(manifest));
     manifest.version = GN_MANIFEST_VERSION;
     manifest.profile = GN_PROFILE_DIAGNOSTIC;
     manifest.region_count = GN_MAX_REGIONS;
-    manifest.regions[0] = (gn_region){0u, 512u, rom, 512u, GN_REGION_ROM};
-    manifest.regions[1] = (gn_region){0x1000u, 4096u, ram_seed, 10u, GN_REGION_RAM};
+    manifest.regions[0] = (gn_region){0u, GUEST_FIXTURE_ROM_SIZE, fixture->rom,
+                                      GUEST_FIXTURE_ROM_SIZE, GN_REGION_ROM};
+    manifest.regions[1] = (gn_region){0x1000u, 4096u, fixture->ram_seed,
+                                      GUEST_FIXTURE_RAM_INIT_SIZE, GN_REGION_RAM};
     const gn_status status = gn_load(target, &manifest);
-    memset(rom, 0xa5, 512u);
-    memset(ram_seed, 0x5a, 10u);
-    free(rom);
-    free(ram_seed);
+    memset(fixture, 0xa5, sizeof(*fixture));
+    free(fixture);
     return status;
 }
 
@@ -164,6 +137,61 @@ static void failed_replacement_and_reset_preserve_owned_media(void) {
     SDK_CHECK_U64("sdk.reset.restored-stop", GN_RUN_STOPPED, run.reason);
 }
 
+static void scenario_b_has_distinguishable_named_results(void) {
+    SDK_CASE("sdk.diagnostic.original-b");
+    SDK_CHECK_STATUS("sdk.media.load.original-b", GN_STATUS_OK,
+                     load_scenario(instance, GUEST_FIXTURE_SCENARIO_B));
+    gn_run_result run;
+    SDK_CHECK_STATUS("sdk.run.scenario-b", GN_STATUS_OK, gn_run(instance, 172u, &run));
+    gn_observations observations;
+    SDK_CHECK_STATUS("sdk.observe.scenario-b", GN_STATUS_OK,
+                     gn_observe(instance, &observations));
+    SDK_CHECK_U64("sdk.scenario-b.arithmetic", 16u,
+                  observations.arithmetic_result);
+    SDK_CHECK_U64("sdk.scenario-b.initialized", 0x2348u,
+                  observations.initialized_result);
+    SDK_CHECK_U64("sdk.scenario-b.bss", 1u, observations.bss_result);
+    SDK_CHECK_U64("sdk.scenario-b.cycles", 172u, run.elapsed_cycles);
+    SDK_CHECK_U64("sdk.scenario-b.instructions", 12u, run.instructions);
+    SDK_CHECK_STATUS("sdk.scenario-b.stopped", GN_RUN_STOPPED, run.reason);
+}
+
+static void original_instruction_boundaries_match_manual_recipe(void) {
+    static const uint64_t requests[] = {
+        40u, 4u, 8u, 20u, 4u, 16u, 8u, 20u, 4u, 16u, 8u, 20u, 4u
+    };
+    static const uint64_t cumulative_cycles[] = {
+        40u, 44u, 52u, 72u, 76u, 92u, 100u, 120u, 124u, 140u, 148u, 168u, 172u
+    };
+    static const uint32_t boundary_pcs[] = {
+        0x100u, 0x102u, 0x104u, 0x10au, 0x10cu, 0x112u, 0x114u,
+        0x11au, 0x11cu, 0x122u, 0x124u, 0x12au, 0x12eu
+    };
+    SDK_CASE("sdk.diagnostic.original-a-instruction-boundaries");
+    uint64_t total_elapsed = 0u;
+    uint64_t total_instructions = 0u;
+    for (size_t index = 0u; index < sizeof(requests) / sizeof(requests[0]); ++index) {
+        gn_run_result run;
+        memset(&run, 0, sizeof(run));
+        SDK_CHECK_STATUS("sdk.boundary.run", GN_STATUS_OK,
+                         gn_run(instance, requests[index], &run));
+        total_elapsed += run.elapsed_cycles;
+        total_instructions += run.instructions;
+        SDK_CHECK_U64("sdk.boundary.elapsed-this-call", requests[index],
+                      run.elapsed_cycles);
+        SDK_CHECK_U64("sdk.boundary.elapsed-total", cumulative_cycles[index],
+                      total_elapsed);
+        SDK_CHECK_U64("sdk.boundary.instructions-total", (uint64_t)index,
+                      total_instructions);
+        SDK_CHECK_U64("sdk.boundary.pc", boundary_pcs[index], run.boundary_pc);
+        const gn_run_reason expected_reason =
+            index + 1u == sizeof(requests) / sizeof(requests[0])
+                ? GN_RUN_STOPPED
+                : GN_RUN_BUDGET;
+        SDK_CHECK_STATUS("sdk.boundary.reason", expected_reason, run.reason);
+    }
+}
+
 int main(int argc, char **argv) {
     (void)argc;
     (void)argv;
@@ -172,6 +200,8 @@ int main(int argc, char **argv) {
     UNITY_BEGIN();
     RUN_TEST(original_guest_computes_named_results);
     RUN_TEST(failed_replacement_and_reset_preserve_owned_media);
+    RUN_TEST(scenario_b_has_distinguishable_named_results);
+    RUN_TEST(original_instruction_boundaries_match_manual_recipe);
     const int failures = UNITY_END();
     (void)printf(
         "SDK_RESULT {\"schema_version\":1,\"suite\":\"sdk_diagnostic\","

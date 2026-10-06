@@ -48,7 +48,8 @@ if(NOT GLUEYNEO_SOURCE_REVISION)
   set(GLUEYNEO_SOURCE_REVISION "unknown")
 endif()
 
-add_executable(glueyneo-diagnostic tools/diagnostic/main.c)
+add_executable(glueyneo-diagnostic tools/diagnostic/main.c tests/sdk/guest_fixture.c)
+target_include_directories(glueyneo-diagnostic PRIVATE tests/sdk)
 target_compile_features(glueyneo-diagnostic PRIVATE c_std_17)
 set_target_properties(glueyneo-diagnostic PROPERTIES
   C_STANDARD 17
@@ -78,7 +79,8 @@ if(GLUEYNEO_BUILD_TESTS)
     C_STANDARD_REQUIRED YES
     C_EXTENSIONS NO
   )
-  add_executable(sdk_diagnostic tests/sdk/test_sdk.c)
+  add_executable(sdk_diagnostic tests/sdk/test_sdk.c tests/sdk/guest_fixture.c)
+  target_include_directories(sdk_diagnostic PRIVATE tests/sdk)
   target_compile_features(sdk_diagnostic PRIVATE c_std_17)
   set_target_properties(sdk_diagnostic PROPERTIES
     C_STANDARD 17
@@ -99,10 +101,20 @@ if(GLUEYNEO_BUILD_TESTS)
   endif()
   add_test(NAME sdk_diagnostic COMMAND sdk_diagnostic)
   set_tests_properties(sdk_diagnostic PROPERTIES LABELS "sdk-contract;sdk-diagnostic")
+  add_test(NAME sdk_fixture_write
+    COMMAND glueyneo-diagnostic --write-fixture
+            ${CMAKE_CURRENT_BINARY_DIR}/diagnostic-original-a.bin)
+  set_tests_properties(sdk_fixture_write PROPERTIES
+    FIXTURES_SETUP sdk_fixture_a
+    LABELS "sdk-provenance"
+  )
   add_test(NAME sdk_provenance
     COMMAND glueyneo-diagnostic --check-fixture
-            ${CMAKE_CURRENT_BINARY_DIR}/diagnostic-original.bin)
-  set_tests_properties(sdk_provenance PROPERTIES LABELS "sdk-provenance")
+            ${CMAKE_CURRENT_BINARY_DIR}/diagnostic-original-a.bin)
+  set_tests_properties(sdk_provenance PROPERTIES
+    FIXTURES_REQUIRED sdk_fixture_a
+    LABELS "sdk-provenance"
+  )
 endif()
 
 if(GLUEYNEO_CPU_EXPERIMENT)

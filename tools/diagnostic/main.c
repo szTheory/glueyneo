@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 #include "glueyneo/glueyneo.h"
+#include "guest_fixture.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -19,68 +20,125 @@
 #define GLUEYNEO_COMPILER_VERSION "unknown"
 #endif
 
-static void build_guest(uint8_t rom[512], uint8_t ram_seed[10], unsigned scenario) {
-    static const uint16_t words[] = {
-        0x7007u, 0x5680u, 0x23c0u, 0x0000u, 0x1000u,
-        0x7200u, 0x3239u, 0x0000u, 0x1008u, 0x5681u, 0x23c1u, 0x0000u, 0x1004u,
-        0x7400u, 0x3439u, 0x0000u, 0x100au, 0x5282u, 0x23c2u, 0x0000u, 0x1010u,
-        0x4e72u, 0x2700u
-    };
-    memset(rom, 0, 512u);
-    memset(ram_seed, 0, 10u);
-    rom[2] = 0x20u;
-    rom[6] = 0x01u;
-    for (size_t index = 0u; index < sizeof(words) / sizeof(words[0]); ++index) {
-        const size_t offset = 0x100u + index * 2u;
-        rom[offset] = (uint8_t)(words[index] >> 8);
-        rom[offset + 1u] = (uint8_t)words[index];
-    }
-    ram_seed[8] = scenario == 0u ? 0x12u : 0x23u;
-    ram_seed[9] = scenario == 0u ? 0x34u : 0x45u;
-    if (scenario != 0u) {
-        rom[0x101u] = 0x0bu;
-        rom[0x102u] = 0x5au;
-    }
+static uint64_t assertion_count;
+
+static int check_u64(const char *id, uint64_t expected, uint64_t observed) {
+    ++assertion_count;
+    (void)printf("# ASSERT %s expected=%" PRIu64 " observed=%" PRIu64 "\n",
+                 id, expected, observed);
+    return expected == observed;
 }
 
-static int run_scenario(unsigned scenario) {
-    uint8_t rom[512];
-    uint8_t ram_seed[10];
-    build_guest(rom, ram_seed, scenario);
+static int write_fixture(const char *path, const guest_fixture_image *fixture,
+                         char scenario_id) {
+    FILE *output = fopen(path, "wb");
+    if (output == NULL) {
+        (void)fprintf(stderr, "fixture write failed\n");
+        return EXIT_FAILURE;
+    }
+    const size_t rom_written = fwrite(fixture->rom, 1u, sizeof(fixture->rom), output);
+    const size_t ram_written = fwrite(fixture->ram_seed, 1u,
+                                      sizeof(fixture->ram_seed), output);
+    const int close_status = fclose(output);
+    const int passed = rom_written == sizeof(fixture->rom) &&
+                       ram_written == sizeof(fixture->ram_seed) && close_status == 0;
+    (void)printf("SDK_FIXTURE {\"schema_version\":1,\"case_id\":"
+                 "\"sdk.fixture.write-%c\",\"outcome\":\"%s\","
+                 "\"bytes\":%u}\n",
+                 scenario_id, passed ? "pass" : "fail",
+                 (unsigned)(sizeof(fixture->rom) + sizeof(fixture->ram_seed)));
+    return passed ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
+static int check_fixture(const char *path, const guest_fixture_image *fixture,
+                         char scenario_id) {
+    uint8_t observed[sizeof(fixture->rom) + sizeof(fixture->ram_seed)];
+    FILE *input = fopen(path, "rb");
+    if (input == NULL) {
+        (void)fprintf(stderr, "fixture check could not read expected file\n");
+        return EXIT_FAILURE;
+    }
+    const size_t amount = fread(observed, 1u, sizeof(observed), input);
+    const int trailing = fgetc(input);
+    const int io_error = ferror(input);
+    const int close_status = fclose(input);
+    const int same_length = amount == sizeof(observed) && trailing == EOF &&
+                            io_error == 0 && close_status == 0;
+    const int same_rom = same_length &&
+                         memcmp(observed, fixture->rom, sizeof(fixture->rom)) == 0;
+    const int same_ram = same_rom &&
+                         memcmp(observed + sizeof(fixture->rom), fixture->ram_seed,
+                                sizeof(fixture->ram_seed)) == 0;
+    const int passed = same_length && same_rom && same_ram;
+    (void)printf("SDK_FIXTURE {\"schema_version\":1,\"case_id\":"
+                 "\"sdk.fixture.check-%c\",\"outcome\":\"%s\","
+                 "\"bytes\":%u}\n",
+                 scenario_id, passed ? "pass" : "fail", (unsigned)sizeof(observed));
+    return passed ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
+static int run_scenario(guest_fixture_scenario scenario, const char *fixture_path,
+                        int check_canonical_fixture) {
+    assertion_count = 0u;
+    guest_fixture_image fixture;
+    guest_fixture_build(&fixture, scenario);
+    const char scenario_id = scenario == GUEST_FIXTURE_SCENARIO_A ? 'a' : 'b';
+    if (check_canonical_fixture &&
+        check_fixture(fixture_path, &fixture, scenario_id) != EXIT_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+
     gn_manifest manifest;
     memset(&manifest, 0, sizeof(manifest));
     manifest.version = GN_MANIFEST_VERSION;
     manifest.profile = GN_PROFILE_DIAGNOSTIC;
     manifest.region_count = GN_MAX_REGIONS;
-    manifest.regions[0] = (gn_region){0u, 512u, rom, sizeof(rom), GN_REGION_ROM};
-    manifest.regions[1] =
-        (gn_region){0x1000u, 4096u, ram_seed, sizeof(ram_seed), GN_REGION_RAM};
+    manifest.regions[0] = (gn_region){0u, GUEST_FIXTURE_ROM_SIZE, fixture.rom,
+                                      sizeof(fixture.rom), GN_REGION_ROM};
+    manifest.regions[1] = (gn_region){0x1000u, 4096u, fixture.ram_seed,
+                                      sizeof(fixture.ram_seed), GN_REGION_RAM};
 
     gn_instance *instance = NULL;
     gn_status status = gn_create(&instance);
-    if (status == GN_STATUS_OK) status = gn_load(instance, &manifest);
-    memset(rom, 0xa5, sizeof(rom));
-    memset(ram_seed, 0x5a, sizeof(ram_seed));
+    int passes = check_u64("sdk.instance.create", GN_STATUS_OK, status);
+    if (status == GN_STATUS_OK) {
+        status = gn_load(instance, &manifest);
+    }
+    passes &= check_u64("sdk.media.load", GN_STATUS_OK, status);
+    memset(&fixture, 0xa5, sizeof(fixture));
 
     gn_run_result run;
     memset(&run, 0, sizeof(run));
-    if (status == GN_STATUS_OK) status = gn_run(instance, 172u, &run);
+    gn_status run_status = GN_STATUS_INVALID_STATE;
+    if (status == GN_STATUS_OK) run_status = gn_run(instance, 172u, &run);
+    passes &= check_u64("sdk.run.status", GN_STATUS_OK, run_status);
+    passes &= check_u64("sdk.run.requested-cycles", 172u, run.requested_cycles);
+    passes &= check_u64("sdk.run.elapsed-cycles", 172u, run.elapsed_cycles);
+    passes &= check_u64("sdk.run.overshoot-cycles", 0u, run.overshoot_cycles);
+    passes &= check_u64("sdk.run.instructions", 12u, run.instructions);
+    passes &= check_u64("sdk.run.reason-stopped", GN_RUN_STOPPED, run.reason);
+    passes &= check_u64("sdk.run.boundary-pc", 0x12eu, run.boundary_pc);
+
     gn_observations observations;
     memset(&observations, 0, sizeof(observations));
-    if (status == GN_STATUS_OK) status = gn_observe(instance, &observations);
+    gn_status observe_status = GN_STATUS_INVALID_STATE;
+    if (status == GN_STATUS_OK) observe_status = gn_observe(instance, &observations);
+    passes &= check_u64("sdk.observe.status", GN_STATUS_OK, observe_status);
+    const uint32_t expected_arithmetic =
+        scenario == GUEST_FIXTURE_SCENARIO_A ? 10u : 16u;
+    const uint32_t expected_initialized =
+        scenario == GUEST_FIXTURE_SCENARIO_A ? 0x1237u : 0x2348u;
+    passes &= check_u64("sdk.observe.arithmetic", expected_arithmetic,
+                        observations.arithmetic_result);
+    passes &= check_u64("sdk.observe.initialized", expected_initialized,
+                        observations.initialized_result);
+    passes &= check_u64("sdk.observe.bss", 1u, observations.bss_result);
+    passes &= check_u64("sdk.observe.ready", 1u, observations.ready);
 
-    const uint32_t expected_arithmetic = scenario == 0u ? 10u : 16u;
-    const uint32_t expected_initialized = scenario == 0u ? 0x1237u : 0x2348u;
-    const int passes = status == GN_STATUS_OK && run.reason == GN_RUN_STOPPED &&
-                       run.requested_cycles == 172u && run.elapsed_cycles == 172u &&
-                       run.overshoot_cycles == 0u && run.instructions == 12u &&
-                       run.boundary_pc == 0x12eu && observations.ready == 1u &&
-                       observations.arithmetic_result == expected_arithmetic &&
-                       observations.initialized_result == expected_initialized &&
-                       observations.bss_result == 1u;
     (void)printf(
-        "SDK_DIAGNOSTIC {\"schema_version\":1,\"case_id\":\"sdk.diagnostic.original-%c\","
-        "\"outcome\":\"%s\",\"assertions\":10,\"expected\":{"
+        "SDK_DIAGNOSTIC {\"schema_version\":1,\"case_id\":"
+        "\"sdk.diagnostic.original-%c\",\"outcome\":\"%s\","
+        "\"assertions\":%" PRIu64 ",\"expected\":{"
         "\"arithmetic\":%" PRIu32 ",\"initialized\":%" PRIu32
         ",\"bss\":1,\"cycles\":172,\"instructions\":12,\"pc\":302},"
         "\"observed\":{\"arithmetic\":%" PRIu32 ",\"initialized\":%" PRIu32
@@ -88,7 +146,7 @@ static int run_scenario(unsigned scenario) {
         ",\"pc\":%" PRIu32 ",\"reason\":%d},\"identity\":{"
         "\"source_revision\":\"%s\",\"configuration\":\"%s\","
         "\"compiler\":\"%s %s\"}}\n",
-        scenario == 0u ? 'a' : 'b', passes ? "pass" : "fail", expected_arithmetic,
+        scenario_id, passes ? "pass" : "fail", assertion_count, expected_arithmetic,
         expected_initialized, observations.arithmetic_result,
         observations.initialized_result, observations.bss_result, run.elapsed_cycles,
         run.instructions, run.boundary_pc, (int)run.reason, GLUEYNEO_SOURCE_REVISION,
@@ -100,13 +158,40 @@ static int run_scenario(unsigned scenario) {
     return passes ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
+static int print_usage(void) {
+    (void)fprintf(stderr,
+                  "usage: glueyneo-diagnostic [--scenario-b] | "
+                  "--write-fixture PATH [--scenario-b] | "
+                  "--check-fixture PATH [--scenario-b]\n");
+    return EXIT_FAILURE;
+}
+
 int main(int argc, char **argv) {
-    unsigned scenario = 0u;
-    if (argc == 2 && strcmp(argv[1], "--scenario-b") == 0) {
-        scenario = 1u;
-    } else if (argc != 1) {
-        (void)fprintf(stderr, "usage: glueyneo-diagnostic [--scenario-b]\n");
-        return EXIT_FAILURE;
+    guest_fixture_scenario scenario = GUEST_FIXTURE_SCENARIO_A;
+    const char *fixture_path = NULL;
+    int write_mode = 0;
+    int check_mode = 0;
+    for (int index = 1; index < argc; ++index) {
+        if (strcmp(argv[index], "--scenario-b") == 0) {
+            scenario = GUEST_FIXTURE_SCENARIO_B;
+        } else if (strcmp(argv[index], "--write-fixture") == 0) {
+            if (write_mode || check_mode || index + 1 >= argc) return print_usage();
+            write_mode = 1;
+            fixture_path = argv[++index];
+        } else if (strcmp(argv[index], "--check-fixture") == 0) {
+            if (write_mode || check_mode || index + 1 >= argc) return print_usage();
+            check_mode = 1;
+            fixture_path = argv[++index];
+        } else {
+            return print_usage();
+        }
     }
-    return run_scenario(scenario);
+
+    guest_fixture_image fixture;
+    guest_fixture_build(&fixture, scenario);
+    if (write_mode) {
+        const char scenario_id = scenario == GUEST_FIXTURE_SCENARIO_A ? 'a' : 'b';
+        return write_fixture(fixture_path, &fixture, scenario_id);
+    }
+    return run_scenario(scenario, fixture_path, check_mode);
 }
