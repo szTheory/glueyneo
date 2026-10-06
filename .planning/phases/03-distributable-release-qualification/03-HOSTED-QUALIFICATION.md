@@ -48,9 +48,9 @@ facts have been observed; local implementation does not complete them.
 
 ## CHECKPOINT REACHED
 
-**Type:** human-verify  
-**Gate:** blocking-human  
-**Plan:** 03-05  
+**Type:** human-verify
+**Gate:** blocking-human
+**Plan:** 03-05
 **Progress:** 1/2 tasks complete
 
 **Current task:** Task 2, “Qualify hosted repository authority and release
