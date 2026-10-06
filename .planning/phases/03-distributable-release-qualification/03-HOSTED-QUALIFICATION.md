@@ -45,3 +45,22 @@ are available. Capture each receipt above against exact current commit/run IDs,
 update the relevant documentation, then execute the plan's hosted acceptance
 criteria. Keep DEL-02, DEL-03, DEL-04, and DEL-05 pending until their hosted
 facts have been observed; local implementation does not complete them.
+
+## CHECKPOINT REACHED
+
+**Type:** human-verify  
+**Gate:** blocking-human  
+**Plan:** 03-05  
+**Progress:** 1/2 tasks complete
+
+**Current task:** Task 2, “Qualify hosted repository authority and release
+events,” is blocked because the target GitHub repository and remote are not yet
+configured in this checkout, and App installation/account authority has not
+been observed. No hosted workflow, repository rule, fork approval, review/merge
+event, or release publication was attempted or claimed.
+
+**Awaiting:** the authorized target `szTheory/glueyneo` is to be created and
+configured after the independent tracked-tree/history public-content audit.
+Then capture the exact run, ruleset, review, App-scope, and published-asset
+receipts listed above. Keep this plan and mapped delivery requirements
+incomplete until those facts have been observed.

@@ -5,11 +5,11 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 03
 current_phase_name: Distributable release qualification
 status: executing
-stopped_at: Completed 03-04-PLAN.md
-last_updated: "2026-10-06T18:20:38.921Z"
+stopped_at: "Checkpoint: 03-05 Task 2 hosted repository precondition unavailable"
+last_updated: "2026-10-06T18:27:37.306Z"
 last_activity: 2026-10-06
 last_activity_desc: Completed Phase 03 Plan 03-02; DEL-05 hosted and publication evidence remains pending
-state_head: 5f106d89d56e987d3aa2232a3060c8f1bfc62e47
+state_head: 256f9f63b13fbd0b55dee13b65029c130efc2d22
 progress:
   total_phases: 3
   completed_phases: 2
@@ -157,6 +157,7 @@ None yet.
 - Preserve the historical odd-IRQ, fixture-UBSan, reset-accounting/NMI, BSD address-error and malformed-state/zero-request counterexamples.
 - Both original Musashi adaptation attempts are consumed. Do not repeat them automatically.
 - Original-silicon saved PC, unsupported platforms, public persistence formats, board/BIOS compatibility, and gameplay performance remain unknown or outside scope. WR-01 is a documentation warning carried into the Phase 02 plan; it does not block bounded CPU acceptance.
+- 03-05 Task 2 is blocked pending the independent public-content audit, creation/configuration of authorized target szTheory/glueyneo, and observed GitHub App/repository authority; hosted receipts remain pending.
 
 ## Deferred Items
 
@@ -168,6 +169,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-06T18:20:31.872Z
-Stopped at: Completed 03-04-PLAN.md
-Resume file: None
+Last session: 2026-10-06T18:27:37.209Z
+Stopped at: Checkpoint: 03-05 Task 2 hosted repository precondition unavailable
+Resume file: .planning/phases/03-distributable-release-qualification/03-HOSTED-QUALIFICATION.md
