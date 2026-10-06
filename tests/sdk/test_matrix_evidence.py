@@ -147,6 +147,35 @@ def sanitizer_failure_controls() -> None:
 
 
 def main() -> int:
+    # Exercise the collector's actual Windows artifact lookup without claiming
+    # that these synthetic bytes are a native Windows runtime qualification.
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        build = root / "build/sdk-debug"
+        build.mkdir(parents=True)
+        (root / "experiments/owned_cpu").mkdir(parents=True)
+        (root / "experiments/owned_cpu/cpu.c").write_bytes(b"synthetic source")
+        manifest = root / evidence.MANIFEST_PATH
+        manifest.parent.mkdir(parents=True, exist_ok=True)
+        manifest.write_bytes(b"synthetic manifest")
+        for name in ("glueyneo.lib", "glueyneo_test.lib", "glueyneo-diagnostic.exe"):
+            (build / name).write_bytes(name.encode())
+        with mock.patch.object(evidence.sys, "platform", "win32"), \
+             mock.patch.object(evidence, "relevant_source_rows", return_value=[{"path": "synthetic.c", "sha256": "a" * 64, "bytes": 1}]), \
+             mock.patch.object(evidence, "_git", return_value=""), \
+             mock.patch.object(evidence, "_run", return_value="synthetic version"):
+            identity = evidence.public_source_identity(root)
+            assert {row["path"] for row in identity["runtime_artifacts"]} == {
+                "glueyneo.lib", "glueyneo_test.lib", "glueyneo-diagnostic.exe"}
+            for row in identity["runtime_artifacts"]:
+                assert row["sha256"] == evidence.sha256_file(build / row["path"])
+            (build / "glueyneo-diagnostic.exe").unlink()
+            try:
+                evidence.public_source_identity(root)
+            except evidence.EvidenceError as error:
+                assert error.reason == "missing-artifact"
+            else:
+                raise AssertionError("missing Windows runner accepted as built evidence")
     report = valid_report()
     evidence.validate_matrix_report(report)
 

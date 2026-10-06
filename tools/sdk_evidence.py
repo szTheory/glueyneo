@@ -400,8 +400,12 @@ def public_source_identity(root: Path = ROOT,
     runtime_candidates = [build_dir / "libglueyneo.a",
                           build_dir / "libglueyneo_test.a",
                           build_dir / "libglueyneo.dylib",
-                          build_dir / "libglueyneo.so"]
-    runner = build_dir / "glueyneo-diagnostic"
+                          build_dir / "libglueyneo.so",
+                          build_dir / "glueyneo.lib",
+                          build_dir / "glueyneo_test.lib",
+                          build_dir / "glueyneo.dll"]
+    runner = build_dir / ("glueyneo-diagnostic.exe" if sys.platform == "win32"
+                          else "glueyneo-diagnostic")
     runtime = [p for p in runtime_candidates if p.is_file()]
     require(runtime and runner.is_file(), "missing-artifact", "SDK runtime and runner must be built before collecting evidence")
     manifest = root / MANIFEST_PATH
