@@ -106,6 +106,11 @@ Clang and GCC, macOS arm64 AppleClang, Windows x64 MSVC, plus Linux Clang
 sanitizer and seeded-fuzz controls. A green parser fixture does not execute any
 of these lanes.
 
+Local runs may record the actual host and successful diagnostic results, but
+remain `unknown` as platform-matrix evidence unless the run supplies the
+GitHub Actions job ID and exact hosted image name/version. This prevents a
+developer workstation observation from qualifying a hosted runner lane.
+
 Outcomes remain `pass`, `fail`, `skipped`, `unsupported`, or `unknown`. Only an
 observed `pass` with a positive assertion denominator can qualify a support
 row. Unknown, skipped, unsupported and failed rows require a reason and never

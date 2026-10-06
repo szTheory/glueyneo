@@ -46,6 +46,14 @@ REQUIRED_MATRIX_LANES = (
     "linux-clang", "linux-gcc", "macos-appleclang", "windows-msvc",
     "linux-clang-sanitizer", "linux-clang-fuzz",
 )
+MATRIX_LANE_IDENTITY = {
+    "linux-clang": ("Linux", {"Clang"}, {"x86_64", "AMD64"}),
+    "linux-gcc": ("Linux", {"GNU"}, {"x86_64", "AMD64"}),
+    "macos-appleclang": ("Darwin", {"AppleClang"}, {"arm64", "aarch64"}),
+    "windows-msvc": ("Windows", {"MSVC"}, {"AMD64", "x86_64"}),
+    "linux-clang-sanitizer": ("Linux", {"Clang"}, {"x86_64", "AMD64"}),
+    "linux-clang-fuzz": ("Linux", {"Clang"}, {"x86_64", "AMD64"}),
+}
 IDENTITY_FIELDS = {
     "source_revision", "relevant_source_sha256", "working_tree_dirty",
     "owned_backend_sha256", "unity_pin", "unity_files", "fixture_manifest_sha256",
@@ -149,12 +157,20 @@ def validate_matrix_report(report: Any) -> None:
                            build.get("fixture_sha256") if isinstance(build, dict) else None]
         require(all(isinstance(value, str) and value and value != "unknown" for value in identity_values),
                 "matrix-identity-missing", "lane lacks a measured compiler, SDK, OS, build, fixture or runner identity")
+        expected_os, expected_compilers, expected_arches = MATRIX_LANE_IDENTITY[name]
+        require(row.get("os") == expected_os and compiler.get("id") in expected_compilers
+                and row.get("architecture") in expected_arches,
+                "matrix-lane-identity-mismatch", "observed OS, compiler or architecture does not match its exact lane")
         require(re.fullmatch(r"[0-9a-f]{64}", str(build.get("fixture_sha256", ""))) is not None,
                 "matrix-identity-missing", "lane fixture identity must be a SHA-256 digest")
         assertions = row.get("assertions")
         require(isinstance(assertions, int) and not isinstance(assertions, bool) and assertions >= 0,
                 "matrix-invalid-assertions", "lane assertion count must be a nonnegative integer")
+        require(isinstance(row.get("working_tree_dirty"), bool),
+                "matrix-identity-missing", "lane must record whether its source tree was dirty")
         if outcome == "pass":
+            require(row["working_tree_dirty"] is False,
+                    "matrix-dirty-source", "passing matrix lane must bind to a clean committed source tree")
             require(assertions > 0, "matrix-zero-assertions", "passing lane needs positive diagnostic and consumer assertions")
         else:
             require(isinstance(row.get("reason"), str) and row["reason"].strip(),
@@ -178,6 +194,10 @@ def validate_matrix_report(report: Any) -> None:
     expected_minutes = sum(durations) / 60
     require(abs(cost["runner_minutes"] - expected_minutes) < 0.001,
             "matrix-cost-mismatch", "runner minutes must equal measured job durations")
+    expected_outcome = ("fail" if any(row["outcome"] == "fail" for row in lanes) else
+                        "pass" if all(row["outcome"] == "pass" for row in lanes) else "unknown")
+    require(report.get("outcome") == expected_outcome,
+            "matrix-outcome-mismatch", "aggregate outcome must preserve failed and untested lane outcomes")
 
 
 def matrix_lane_from_environment(lane: str, verification: dict[str, Any],
@@ -190,6 +210,15 @@ def matrix_lane_from_environment(lane: str, verification: dict[str, Any],
     assertions = aggregate.get("assertion_count", 0)
     outcome = verification.get("outcome", "unknown")
     require(outcome in OUTCOMES, "matrix-outcome-invalid", "verification output has an invalid outcome")
+    source_dirty = identity.get("working_tree_dirty", True)
+    hosted_identity_available = (os.environ.get("GITHUB_ACTIONS") == "true"
+                                 and bool(os.environ.get("GITHUB_RUN_ID"))
+                                 and bool(os.environ.get("ImageOS"))
+                                 and bool(os.environ.get("ImageVersion")))
+    if source_dirty:
+        outcome = "unknown"
+    elif not hosted_identity_available:
+        outcome = "unknown"
     cache = root / "build/sdk-debug/CMakeCache.txt"
     sdk_name = platform.system()
     sdk_version = identity.get("sdk", {}).get("version", "unknown")
@@ -199,7 +228,8 @@ def matrix_lane_from_environment(lane: str, verification: dict[str, Any],
         sdk_version = f"{libc} {version}" if libc and version else "unknown"
     elif sys.platform == "win32":
         sdk_name = "Windows SDK"
-        sdk_version = _cache_value(cache, "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION", "unknown")
+        sdk_version = os.environ.get("WindowsSDKVersion", "").rstrip("\\/") or _cache_value(
+            cache, "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION", "unknown")
     elif sys.platform == "darwin":
         sdk_name = "macOS SDK"
     image = os.environ.get("ImageOS")
@@ -213,26 +243,32 @@ def matrix_lane_from_environment(lane: str, verification: dict[str, Any],
     if runner_id and run_id:
         runner_id = f"{runner_id}/{run_id}/{os.environ.get('GITHUB_RUN_ATTEMPT', '1')}"
     else:
-        runner_id = f"local-{platform.node()}-{platform.machine()}"
+        runner_id = f"local-{platform.system()}-{platform.machine()}"
     baseline = verification.get("lanes", {}).get("baseline", {})
     cold_samples = baseline.get("raw_samples", {}).get("cold_build_ns", [])
-    cold_seconds = (float(sorted(cold_samples)[len(cold_samples) // 2]) / 1_000_000_000
-                    if cold_samples else 0)
+    cold_seconds = float(verification.get("cold_build_seconds", 0))
+    if not cold_seconds and cold_samples:
+        cold_seconds = float(sorted(cold_samples)[len(cold_samples) // 2]) / 1_000_000_000
     return {
         "lane": lane,
         "compiler": identity["compiler"],
         "sdk": {"name": sdk_name, "version": sdk_version},
         "os_image": os_image,
+        "os": platform.system(),
         "architecture": identity["architecture"],
         "configuration": identity["configuration"],
         "source_revision": identity["source_revision"],
+        "working_tree_dirty": source_dirty,
         "build_identity": {"cmake": identity["cmake"],
                            "generator": identity["generator"]["name"] + " " + identity["generator"]["version"],
                            "fixture_sha256": identity["fixture_manifest_sha256"],
                            "runtime_artifacts": identity["runtime_artifacts"]},
         "outcome": outcome,
         "assertions": assertions if outcome == "pass" else 0,
-        "reason": None if outcome == "pass" else verification.get("reason", "lane did not pass"),
+        "reason": None if outcome == "pass" else (
+            "relevant source tree contains uncommitted changes; observations are not bound to the recorded commit"
+            if source_dirty else "local execution did not identify a GitHub hosted runner image"
+            if not hosted_identity_available else verification.get("reason", "lane did not pass")),
         "duration_seconds": duration_seconds,
         "cold_build_seconds": cold_seconds,
         "runner_id": runner_id,
@@ -247,6 +283,8 @@ def build_matrix_report(lanes: list[dict[str, Any]]) -> dict[str, Any]:
     report = {
         "schema_version": MATRIX_SCHEMA_VERSION,
         "source_revision": rows[0].get("source_revision") if rows else "",
+        "outcome": ("fail" if any(row.get("outcome") == "fail" for row in rows) else
+                    "pass" if rows and all(row.get("outcome") == "pass" for row in rows) else "unknown"),
         "lanes": rows,
         "cost": {
             "cold_build_seconds": max((row.get("cold_build_seconds", 0) for row in rows), default=0),
