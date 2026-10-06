@@ -2,6 +2,7 @@
 #include "glueyneo/glueyneo.h"
 
 #include "cpu.h"
+#include "sdk_private.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -81,6 +82,62 @@ static uint32_t gn_read32_be(const uint8_t *bytes) {
            ((uint32_t)bytes[2] << 8) | (uint32_t)bytes[3];
 }
 
+static gn_status gn_validate_region_layout(const gn_manifest *manifest) {
+    if (manifest == NULL) {
+        return GN_STATUS_INVALID_ARGUMENT;
+    }
+    if (manifest->version != GN_MANIFEST_VERSION ||
+        manifest->region_count != GN_MAX_REGIONS) {
+        return GN_STATUS_INVALID_MEDIA;
+    }
+
+    size_t total_bytes = 0u;
+    uint64_t region_starts[GN_MAX_REGIONS];
+    uint64_t region_ends[GN_MAX_REGIONS];
+    int saw_rom = 0;
+    int saw_ram = 0;
+    for (size_t index = 0u; index < manifest->region_count; ++index) {
+        const gn_region *region = &manifest->regions[index];
+        if ((region->source == NULL && region->source_size != 0u) ||
+            region->mapped_size == 0u ||
+            region->source_size > (size_t)region->mapped_size) {
+            return GN_STATUS_INVALID_MEDIA;
+        }
+        const uint64_t start = (uint64_t)region->guest_base;
+        const uint64_t end = start + (uint64_t)region->mapped_size;
+        if (end > (UINT64_C(1) << 32)) return GN_STATUS_INVALID_MEDIA;
+        region_starts[index] = start;
+        region_ends[index] = end;
+        if (region->source_size > GN_MAX_MEDIA_BYTES - total_bytes) {
+            return GN_STATUS_INVALID_MEDIA;
+        }
+        total_bytes += region->source_size;
+        if ((size_t)region->mapped_size > GN_MAX_MEDIA_BYTES - total_bytes) {
+            return GN_STATUS_INVALID_MEDIA;
+        }
+        total_bytes += (size_t)region->mapped_size;
+        if (region->kind == GN_REGION_ROM) {
+            if (saw_rom != 0) return GN_STATUS_INVALID_MEDIA;
+            saw_rom = 1;
+        } else if (region->kind == GN_REGION_RAM) {
+            if (saw_ram != 0) return GN_STATUS_INVALID_MEDIA;
+            saw_ram = 1;
+        } else {
+            return GN_STATUS_INVALID_MEDIA;
+        }
+    }
+    if (saw_rom == 0 || saw_ram == 0) return GN_STATUS_INVALID_MEDIA;
+    for (size_t left = 0u; left < manifest->region_count; ++left) {
+        for (size_t right = left + 1u; right < manifest->region_count; ++right) {
+            if (region_starts[left] < region_ends[right] &&
+                region_starts[right] < region_ends[left]) {
+                return GN_STATUS_INVALID_MEDIA;
+            }
+        }
+    }
+    return GN_STATUS_OK;
+}
+
 static gn_status gn_validate_manifest(const gn_manifest *manifest,
                                       const gn_region **rom_out,
                                       const gn_region **ram_out) {
@@ -92,34 +149,14 @@ static gn_status gn_validate_manifest(const gn_manifest *manifest,
     if (manifest->profile != GN_PROFILE_DIAGNOSTIC) {
         return GN_STATUS_UNSUPPORTED_PROFILE;
     }
-    if (manifest->version != GN_MANIFEST_VERSION ||
-        manifest->region_count != GN_MAX_REGIONS) {
-        return GN_STATUS_INVALID_MEDIA;
-    }
-
-    size_t total_bytes = 0u;
+    const gn_status layout_status = gn_validate_region_layout(manifest);
+    if (layout_status != GN_STATUS_OK) return layout_status;
     for (size_t index = 0u; index < manifest->region_count; ++index) {
         const gn_region *region = &manifest->regions[index];
-        if (region->source == NULL || region->source_size == 0u ||
-            region->mapped_size == 0u ||
-            region->guest_base > UINT32_MAX - region->mapped_size ||
-            region->source_size > (size_t)region->mapped_size) {
-            return GN_STATUS_INVALID_MEDIA;
-        }
-        if (region->source_size > GN_MAX_MEDIA_BYTES - total_bytes ||
-            (size_t)region->mapped_size > GN_MAX_MEDIA_BYTES - total_bytes -
-                                               region->source_size) {
-            return GN_STATUS_INVALID_MEDIA;
-        }
-        total_bytes += region->source_size + (size_t)region->mapped_size;
         if (region->kind == GN_REGION_ROM) {
-            if (*rom_out != NULL) return GN_STATUS_INVALID_MEDIA;
             *rom_out = region;
-        } else if (region->kind == GN_REGION_RAM) {
-            if (*ram_out != NULL) return GN_STATUS_INVALID_MEDIA;
-            *ram_out = region;
         } else {
-            return GN_STATUS_INVALID_MEDIA;
+            *ram_out = region;
         }
     }
 
@@ -134,11 +171,101 @@ static gn_status gn_validate_manifest(const gn_manifest *manifest,
     const uint32_t initial_ssp = gn_read32_be(rom->source);
     const uint32_t initial_pc = gn_read32_be(rom->source + 4u);
     if (initial_ssp != GN_STACK_TOP || (initial_pc & UINT32_C(1)) != 0u ||
-        initial_pc >= GN_ROM_SIZE) {
+        initial_pc > GN_ROM_SIZE - UINT32_C(2)) {
         return GN_STATUS_INVALID_MEDIA;
     }
     return GN_STATUS_OK;
 }
+
+#if defined(GLUEYNEO_SDK_TEST_HOOKS)
+gn_status gn_test_validate_region_layout(const gn_manifest *manifest) {
+    return gn_validate_region_layout(manifest);
+}
+
+static uint64_t gn_digest_byte(uint64_t digest, uint8_t byte) {
+    return (digest ^ byte) * UINT64_C(1099511628211);
+}
+
+static uint64_t gn_digest_bytes(uint64_t digest, const uint8_t *bytes,
+                                size_t length) {
+    for (size_t index = 0u; index < length; ++index) {
+        digest = gn_digest_byte(digest, bytes[index]);
+    }
+    return digest;
+}
+
+static uint64_t gn_digest_u16(uint64_t digest, uint16_t value) {
+    digest = gn_digest_byte(digest, (uint8_t)(value >> 8));
+    return gn_digest_byte(digest, (uint8_t)value);
+}
+
+static uint64_t gn_digest_u32(uint64_t digest, uint32_t value) {
+    digest = gn_digest_byte(digest, (uint8_t)(value >> 24));
+    digest = gn_digest_byte(digest, (uint8_t)(value >> 16));
+    digest = gn_digest_byte(digest, (uint8_t)(value >> 8));
+    return gn_digest_byte(digest, (uint8_t)value);
+}
+
+static uint64_t gn_digest_u64(uint64_t digest, uint64_t value) {
+    digest = gn_digest_u32(digest, (uint32_t)(value >> 32));
+    return gn_digest_u32(digest, (uint32_t)value);
+}
+
+gn_status gn_test_image_digest(const gn_instance *instance, uint64_t *out_digest) {
+    if (out_digest == NULL) return GN_STATUS_INVALID_ARGUMENT;
+    *out_digest = 0u;
+    if (instance == NULL) return GN_STATUS_INVALID_ARGUMENT;
+    if (instance->image == NULL) return GN_STATUS_INVALID_STATE;
+
+    owned_cpu_state state;
+    memset(&state, 0, sizeof(state));
+    if (owned_cpu_capture_state(instance->image->cpu, &state) != OWNED_CPU_OK) {
+        return GN_STATUS_CPU_FAILURE;
+    }
+    uint64_t digest = UINT64_C(14695981039346656037);
+    const gn_image *image = instance->image;
+    digest = gn_digest_u32(digest, image->rom.base);
+    digest = gn_digest_u32(digest, image->rom.size);
+    digest = gn_digest_bytes(digest, image->rom.bytes, image->rom.size);
+    digest = gn_digest_u32(digest, image->ram.base);
+    digest = gn_digest_u32(digest, image->ram.size);
+    digest = gn_digest_u64(digest, image->ram_seed_size);
+    digest = gn_digest_bytes(digest, image->ram_seed, image->ram_seed_size);
+    digest = gn_digest_bytes(digest, image->ram.bytes, image->ram.size);
+    digest = gn_digest_u32(digest, state.size);
+    digest = gn_digest_u32(digest, state.version);
+    digest = gn_digest_bytes(digest, (const uint8_t *)state.core_identity,
+                             sizeof(state.core_identity));
+    digest = gn_digest_u64(digest, state.present_fields);
+    for (unsigned index = 0u; index < 8u; ++index) {
+        digest = gn_digest_u32(digest, state.data_registers[index]);
+    }
+    for (unsigned index = 0u; index < 8u; ++index) {
+        digest = gn_digest_u32(digest, state.address_registers[index]);
+    }
+    digest = gn_digest_u32(digest, state.pc);
+    digest = gn_digest_u32(digest, state.previous_pc);
+    digest = gn_digest_u32(digest, state.usp);
+    digest = gn_digest_u32(digest, state.ssp);
+    digest = gn_digest_u32(digest, state.fault_pc);
+    digest = gn_digest_u16(digest, state.sr);
+    digest = gn_digest_u16(digest, state.instruction_register);
+    digest = gn_digest_byte(digest, state.stopped);
+    digest = gn_digest_byte(digest, state.irq_level);
+    digest = gn_digest_byte(digest, state.irq7_pending);
+    digest = gn_digest_byte(digest, state.reset_pending);
+    digest = gn_digest_byte(digest, state.last_exception_vector);
+    digest = gn_digest_u64(digest, state.instructions);
+    digest = gn_digest_u64(digest, state.instruction_cycles);
+    digest = gn_digest_u64(digest, state.reset_cycles);
+    digest = gn_digest_u64(digest, state.exception_cycles);
+    digest = gn_digest_u64(digest, state.idle_cycles);
+    digest = gn_digest_u64(digest, state.total_cycles);
+    digest = gn_digest_u64(digest, state.reset_signal_events);
+    *out_digest = digest;
+    return GN_STATUS_OK;
+}
+#endif
 
 static void gn_free_image(gn_image *image) {
     if (image == NULL) return;

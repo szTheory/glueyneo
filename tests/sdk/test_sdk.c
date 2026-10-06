@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 #include "glueyneo/glueyneo.h"
 #include "guest_fixture.h"
+#include "sdk_private.h"
 #include "test_support.h"
 
 #include <stdlib.h>
@@ -22,20 +23,25 @@
 static gn_instance *instance;
 static const char *selected_suite;
 
+static void make_manifest(gn_manifest *manifest, guest_fixture_image *fixture,
+                          unsigned scenario) {
+    guest_fixture_build(fixture, (guest_fixture_scenario)scenario);
+    memset(manifest, 0, sizeof(*manifest));
+    manifest->version = GN_MANIFEST_VERSION;
+    manifest->profile = GN_PROFILE_DIAGNOSTIC;
+    manifest->region_count = GN_MAX_REGIONS;
+    manifest->regions[0] = (gn_region){0u, GUEST_FIXTURE_ROM_SIZE, fixture->rom,
+                                      GUEST_FIXTURE_ROM_SIZE, GN_REGION_ROM};
+    manifest->regions[1] = (gn_region){0x1000u, 4096u, fixture->ram_seed,
+                                      GUEST_FIXTURE_RAM_INIT_SIZE, GN_REGION_RAM};
+}
+
 static gn_status load_scenario(gn_instance *target, unsigned scenario) {
     guest_fixture_image *fixture =
         (guest_fixture_image *)malloc(sizeof(*fixture));
     if (fixture == NULL) return GN_STATUS_OUT_OF_MEMORY;
-    guest_fixture_build(fixture, (guest_fixture_scenario)scenario);
     gn_manifest manifest;
-    memset(&manifest, 0, sizeof(manifest));
-    manifest.version = GN_MANIFEST_VERSION;
-    manifest.profile = GN_PROFILE_DIAGNOSTIC;
-    manifest.region_count = GN_MAX_REGIONS;
-    manifest.regions[0] = (gn_region){0u, GUEST_FIXTURE_ROM_SIZE, fixture->rom,
-                                      GUEST_FIXTURE_ROM_SIZE, GN_REGION_ROM};
-    manifest.regions[1] = (gn_region){0x1000u, 4096u, fixture->ram_seed,
-                                      GUEST_FIXTURE_RAM_INIT_SIZE, GN_REGION_RAM};
+    make_manifest(&manifest, fixture, scenario);
     const gn_status status = gn_load(target, &manifest);
     memset(fixture, 0xa5, sizeof(*fixture));
     free(fixture);
@@ -248,9 +254,282 @@ static void unload_reload_and_repeated_reset_reproduce_results(void) {
     gn_destroy(created);
 }
 
+static uint64_t test_image_digest(const char *id, const gn_instance *target) {
+    uint64_t digest = 0u;
+    SDK_CHECK_STATUS(id, GN_STATUS_OK,
+                     gn_test_image_digest(target, &digest));
+    return digest;
+}
+
+static void rejected_manifest_preserves_digest(const char *id,
+                                               gn_instance *target,
+                                               const gn_manifest *candidate,
+                                               gn_status expected) {
+    const uint64_t before = test_image_digest("sdk.media.digest-before-reject",
+                                              target);
+    SDK_CHECK_STATUS(id, expected, gn_load(target, candidate));
+    const uint64_t after = test_image_digest("sdk.media.digest-after-reject",
+                                             target);
+    SDK_CHECK_U64("sdk.media.rejected-load-keeps-full-image", before, after);
+}
+
+static void malformed_manifests_are_rejected_before_touching_live_media(void) {
+    SDK_CASE("sdk.media.validation-preserves-live-image");
+    guest_fixture_image *fixture =
+        (guest_fixture_image *)malloc(sizeof(*fixture));
+    TEST_ASSERT_NOT_NULL(fixture);
+    gn_manifest valid;
+    make_manifest(&valid, fixture, GUEST_FIXTURE_SCENARIO_A);
+    SDK_CHECK_STATUS("sdk.media.exact-supported-manifest", GN_STATUS_OK,
+                     gn_load(instance, &valid));
+
+    gn_instance *baseline = NULL;
+    SDK_CHECK_STATUS("sdk.media.baseline-create", GN_STATUS_OK,
+                     gn_create(&baseline));
+    SDK_CHECK_STATUS("sdk.media.baseline-load", GN_STATUS_OK,
+                     load_scenario(baseline, GUEST_FIXTURE_SCENARIO_A));
+    gn_run_result initial_run;
+    gn_run_result baseline_run;
+    SDK_CHECK_STATUS("sdk.media.initial-progress", GN_STATUS_OK,
+                     gn_run(instance, 120u, &initial_run));
+    SDK_CHECK_STATUS("sdk.media.baseline-progress", GN_STATUS_OK,
+                     gn_run(baseline, 120u, &baseline_run));
+    SDK_CHECK_STATUS("sdk.media.initial-budget-result", GN_RUN_BUDGET,
+                     initial_run.reason);
+    const uint64_t loaded_digest = test_image_digest("sdk.media.initial-digest",
+                                                     instance);
+    SDK_CHECK_U64("sdk.media.baseline-digest-matches",
+                  test_image_digest("sdk.media.baseline-digest", baseline),
+                  loaded_digest);
+
+    gn_manifest candidate = valid;
+    candidate.version += 1u;
+    rejected_manifest_preserves_digest("sdk.media.reject-version",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+    candidate = valid;
+    candidate.region_count = 1u;
+    rejected_manifest_preserves_digest("sdk.media.reject-short-count",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+    candidate = valid;
+    candidate.region_count = GN_MAX_REGIONS + 1u;
+    rejected_manifest_preserves_digest("sdk.media.reject-long-count",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+    candidate = valid;
+    candidate.profile += 1u;
+    rejected_manifest_preserves_digest("sdk.media.reject-unsupported-profile",
+                                       instance, &candidate,
+                                       GN_STATUS_UNSUPPORTED_PROFILE);
+    candidate = valid;
+    candidate.regions[1].kind = GN_REGION_ROM;
+    rejected_manifest_preserves_digest("sdk.media.reject-duplicate-role",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+    candidate = valid;
+    candidate.regions[1].kind = (gn_region_kind)0;
+    rejected_manifest_preserves_digest("sdk.media.reject-unknown-role",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+    candidate = valid;
+    candidate.regions[0].source = NULL;
+    rejected_manifest_preserves_digest("sdk.media.reject-null-source",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+    candidate = valid;
+    candidate.regions[0].source = NULL;
+    candidate.regions[0].source_size = 0u;
+    rejected_manifest_preserves_digest("sdk.media.reject-empty-rom",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+    candidate = valid;
+    candidate.regions[0].source_size -= 1u;
+    rejected_manifest_preserves_digest("sdk.media.reject-short-rom",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+    candidate = valid;
+    candidate.regions[0].source_size += 1u;
+    rejected_manifest_preserves_digest("sdk.media.reject-long-rom",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+    candidate = valid;
+    candidate.regions[1].source_size -= 1u;
+    rejected_manifest_preserves_digest("sdk.media.reject-short-ram-seed",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+    candidate = valid;
+    candidate.regions[1].source_size += 1u;
+    rejected_manifest_preserves_digest("sdk.media.reject-long-ram-seed",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+    candidate = valid;
+    candidate.regions[0].guest_base = 2u;
+    rejected_manifest_preserves_digest("sdk.media.reject-rom-base",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+    candidate = valid;
+    candidate.regions[1].mapped_size -= 2u;
+    rejected_manifest_preserves_digest("sdk.media.reject-ram-map-size",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+
+    guest_fixture_image invalid_vectors = *fixture;
+    invalid_vectors.rom[7] = 1u;
+    candidate = valid;
+    candidate.regions[0].source = invalid_vectors.rom;
+    rejected_manifest_preserves_digest("sdk.media.reject-odd-reset-pc",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+    invalid_vectors = *fixture;
+    invalid_vectors.rom[4] = 0u;
+    invalid_vectors.rom[5] = 0u;
+    invalid_vectors.rom[6] = 2u;
+    invalid_vectors.rom[7] = 0u;
+    candidate = valid;
+    candidate.regions[0].source = invalid_vectors.rom;
+    rejected_manifest_preserves_digest("sdk.media.reject-pc-at-map-end",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+    invalid_vectors = *fixture;
+    invalid_vectors.rom[3] = 1u;
+    candidate = valid;
+    candidate.regions[0].source = invalid_vectors.rom;
+    rejected_manifest_preserves_digest("sdk.media.reject-initial-ssp",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+
+    uint64_t after_digest = test_image_digest("sdk.media.final-digest", instance);
+    SDK_CHECK_U64("sdk.media.all-rejections-kept-current-state", loaded_digest,
+                  after_digest);
+    gn_run_result final_run;
+    gn_run_result baseline_final_run;
+    SDK_CHECK_STATUS("sdk.media.continued-run", GN_STATUS_OK,
+                     gn_run(instance, 52u, &final_run));
+    SDK_CHECK_STATUS("sdk.media.baseline-continued-run", GN_STATUS_OK,
+                     gn_run(baseline, 52u, &baseline_final_run));
+    SDK_CHECK_STATUS("sdk.media.continued-stop", GN_RUN_STOPPED,
+                     final_run.reason);
+    SDK_CHECK_U64("sdk.media.continued-cycles-match",
+                  baseline_final_run.elapsed_cycles, final_run.elapsed_cycles);
+    SDK_CHECK_U64("sdk.media.continued-instructions-match",
+                  baseline_final_run.instructions, final_run.instructions);
+    SDK_CHECK_U64("sdk.media.continued-pc-match",
+                  baseline_final_run.boundary_pc, final_run.boundary_pc);
+    gn_observations after;
+    gn_observations baseline_after;
+    SDK_CHECK_STATUS("sdk.media.continued-observe", GN_STATUS_OK,
+                     gn_observe(instance, &after));
+    SDK_CHECK_STATUS("sdk.media.baseline-observe", GN_STATUS_OK,
+                     gn_observe(baseline, &baseline_after));
+    SDK_CHECK_U64("sdk.media.continued-result-match",
+                  baseline_after.arithmetic_result, after.arithmetic_result);
+    SDK_CHECK_U64("sdk.media.continued-initialized-match",
+                  baseline_after.initialized_result, after.initialized_result);
+    gn_destroy(baseline);
+    free(fixture);
+}
+
+static void region_range_arithmetic_and_cap_are_checked_without_dereference(void) {
+    SDK_CASE("sdk.media.range-overlap-endpoint-and-cap");
+    guest_fixture_image fixture;
+    gn_manifest manifest;
+    make_manifest(&manifest, &fixture, GUEST_FIXTURE_SCENARIO_A);
+
+    manifest.regions[1].guest_base = GUEST_FIXTURE_ROM_SIZE;
+    SDK_CHECK_STATUS("sdk.media.adjacent-spans-layout-valid", GN_STATUS_OK,
+                     gn_test_validate_region_layout(&manifest));
+    SDK_CHECK_STATUS("sdk.media.adjacent-span-profile-rejected",
+                     GN_STATUS_INVALID_MEDIA, gn_load(instance, &manifest));
+    manifest.regions[1].guest_base = GUEST_FIXTURE_ROM_SIZE - 1u;
+    SDK_CHECK_STATUS("sdk.media.one-byte-overlap-rejected",
+                     GN_STATUS_INVALID_MEDIA,
+                     gn_test_validate_region_layout(&manifest));
+    SDK_CHECK_STATUS("sdk.media.one-byte-overlap-load-rejected",
+                     GN_STATUS_INVALID_MEDIA, gn_load(instance, &manifest));
+
+    make_manifest(&manifest, &fixture, GUEST_FIXTURE_SCENARIO_A);
+    manifest.regions[0].mapped_size = UINT32_C(800000);
+    manifest.regions[1].guest_base = UINT32_C(0x00100000);
+    manifest.regions[1].mapped_size =
+        (uint32_t)(GN_MAX_MEDIA_BYTES - 522u - 800000u);
+    SDK_CHECK_STATUS("sdk.media-exact-one-mib-accounting",
+                     GN_STATUS_OK,
+                     gn_test_validate_region_layout(&manifest));
+    SDK_CHECK_STATUS("sdk.media-exact-one-mib-profile-rejected",
+                     GN_STATUS_INVALID_MEDIA, gn_load(instance, &manifest));
+    manifest.regions[1].mapped_size += 1u;
+    SDK_CHECK_STATUS("sdk.media-over-one-mib-accounting",
+                     GN_STATUS_INVALID_MEDIA,
+                     gn_test_validate_region_layout(&manifest));
+    SDK_CHECK_STATUS("sdk.media-over-one-mib-load-rejected",
+                     GN_STATUS_INVALID_MEDIA, gn_load(instance, &manifest));
+
+    make_manifest(&manifest, &fixture, GUEST_FIXTURE_SCENARIO_A);
+    manifest.regions[1].source = (const uint8_t *)(uintptr_t)1u;
+    manifest.regions[1].source_size = SIZE_MAX;
+    manifest.regions[1].mapped_size = UINT32_MAX;
+    SDK_CHECK_STATUS("sdk.media-size-max-rejected-before-read",
+                     GN_STATUS_INVALID_MEDIA,
+                     gn_test_validate_region_layout(&manifest));
+    SDK_CHECK_STATUS("sdk.media-size-max-load-rejected-before-read",
+                     GN_STATUS_INVALID_MEDIA, gn_load(instance, &manifest));
+    manifest.regions[1].source_size = 8u;
+    manifest.regions[1].mapped_size = 8u;
+    manifest.regions[1].guest_base = UINT32_MAX - 3u;
+    SDK_CHECK_STATUS("sdk.media-u32-endpoint-overflow-rejected",
+                     GN_STATUS_INVALID_MEDIA,
+                     gn_test_validate_region_layout(&manifest));
+    SDK_CHECK_STATUS("sdk.media-u32-endpoint-load-rejected",
+                     GN_STATUS_INVALID_MEDIA, gn_load(instance, &manifest));
+    manifest.regions[1].guest_base = UINT32_C(0x00100000);
+    manifest.regions[1].source_size = 1u;
+    manifest.regions[1].mapped_size = UINT32_MAX;
+    SDK_CHECK_STATUS("sdk.media-u32-map-size-over-cap-rejected",
+                     GN_STATUS_INVALID_MEDIA,
+                     gn_test_validate_region_layout(&manifest));
+    SDK_CHECK_STATUS("sdk.media-u32-map-size-load-rejected",
+                     GN_STATUS_INVALID_MEDIA, gn_load(instance, &manifest));
+}
+
+static void successful_replacement_owns_source_and_reset_seed(void) {
+    SDK_CASE("sdk.media.replacement-copies-and-resets-seed");
+    guest_fixture_image *source =
+        (guest_fixture_image *)malloc(sizeof(*source));
+    TEST_ASSERT_NOT_NULL(source);
+    gn_manifest manifest;
+    make_manifest(&manifest, source, GUEST_FIXTURE_SCENARIO_B);
+    SDK_CHECK_STATUS("sdk.media.load-distinguishable-replacement", GN_STATUS_OK,
+                     gn_load(instance, &manifest));
+    memset(source, 0xa5, sizeof(*source));
+    free(source);
+
+    gn_run_result run;
+    gn_observations observations;
+    SDK_CHECK_STATUS("sdk.media.reset-after-source-release", GN_STATUS_OK,
+                     gn_reset(instance));
+    SDK_CHECK_STATUS("sdk.media.run-after-source-release", GN_STATUS_OK,
+                     gn_run(instance, 172u, &run));
+    SDK_CHECK_STATUS("sdk.media.observe-after-source-release", GN_STATUS_OK,
+                     gn_observe(instance, &observations));
+    SDK_CHECK_STATUS("sdk.media.replacement-stopped", GN_RUN_STOPPED, run.reason);
+    SDK_CHECK_U64("sdk.media.replacement-arithmetic", 16u,
+                  observations.arithmetic_result);
+    SDK_CHECK_U64("sdk.media.replacement-initialized-seed", 0x2348u,
+                  observations.initialized_result);
+    SDK_CHECK_U64("sdk.media.replacement-bss-zero-fill", 1u,
+                  observations.bss_result);
+}
+
 static void sdk_lifecycle_suite(void) {
     RUN_TEST(unloaded_lifecycle_and_null_arguments_are_reported);
     RUN_TEST(unload_reload_and_repeated_reset_reproduce_results);
+}
+
+static void sdk_media_suite(void) {
+    RUN_TEST(malformed_manifests_are_rejected_before_touching_live_media);
+    RUN_TEST(region_range_arithmetic_and_cap_are_checked_without_dereference);
+    RUN_TEST(successful_replacement_owns_source_and_reset_seed);
 }
 
 static void sdk_diagnostic_suite(void) {
@@ -272,8 +551,9 @@ int main(int argc, char **argv) {
         sdk_diagnostic_suite();
     } else if (strcmp(selected_suite, "lifecycle") == 0) {
         sdk_lifecycle_suite();
-    } else if (strcmp(selected_suite, "media") != 0 &&
-               strcmp(selected_suite, "faults") != 0) {
+    } else if (strcmp(selected_suite, "media") == 0) {
+        sdk_media_suite();
+    } else if (strcmp(selected_suite, "faults") != 0) {
         (void)fprintf(stderr, "unknown suite: %s\n", selected_suite);
         return 2;
     }

@@ -72,6 +72,30 @@ endif()
 
 if(GLUEYNEO_BUILD_TESTS)
   enable_testing()
+  add_library(glueyneo_test STATIC ${GLUEYNEO_RUNTIME_SOURCES})
+  target_compile_features(glueyneo_test PRIVATE c_std_17)
+  set_target_properties(glueyneo_test PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS NO
+    C_VISIBILITY_PRESET hidden
+  )
+  target_include_directories(glueyneo_test
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src
+      ${CMAKE_CURRENT_SOURCE_DIR}/experiments/owned_cpu
+  )
+  target_compile_definitions(glueyneo_test PRIVATE
+    GLUEYNEO_SDK_TEST_HOOKS
+    OWNED_CPU_TEST_HOOKS
+  )
+  if(MSVC)
+    target_compile_options(glueyneo_test PRIVATE /W4 /WX)
+  else()
+    target_compile_options(glueyneo_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+
   add_library(glueyneo_unity STATIC third_party/unity/src/unity.c)
   target_include_directories(glueyneo_unity PUBLIC third_party/unity/src)
   target_compile_features(glueyneo_unity PRIVATE c_std_17)
@@ -81,14 +105,15 @@ if(GLUEYNEO_BUILD_TESTS)
     C_EXTENSIONS NO
   )
   add_executable(sdk_diagnostic tests/sdk/test_sdk.c tests/sdk/guest_fixture.c)
-  target_include_directories(sdk_diagnostic PRIVATE tests/sdk)
+  target_include_directories(sdk_diagnostic PRIVATE tests/sdk src)
   target_compile_features(sdk_diagnostic PRIVATE c_std_17)
   set_target_properties(sdk_diagnostic PROPERTIES
     C_STANDARD 17
     C_STANDARD_REQUIRED YES
     C_EXTENSIONS NO
   )
-  target_link_libraries(sdk_diagnostic PRIVATE Glueyneo::glueyneo glueyneo_unity)
+  target_link_libraries(sdk_diagnostic PRIVATE glueyneo_test glueyneo_unity)
+  target_compile_definitions(sdk_diagnostic PRIVATE GLUEYNEO_SDK_TEST_HOOKS)
   target_compile_definitions(sdk_diagnostic PRIVATE
     GLUEYNEO_SOURCE_REVISION="${GLUEYNEO_SOURCE_REVISION}"
     GLUEYNEO_CONFIGURATION="${CMAKE_BUILD_TYPE}"

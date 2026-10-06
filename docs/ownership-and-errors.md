@@ -32,6 +32,26 @@ zero-fills the remainder, and resets the CPU, so the same loaded diagnostic can
 be run again. Unload releases the copy; the instance itself remains valid for
 another load.
 
+## Validated diagnostic manifest
+
+Version 1 accepts only profile `GN_PROFILE_DIAGNOSTIC` and exactly two
+descriptors: one ROM and one RAM. ROM has guest base `0`, mapped size `512`,
+and source size `512`. RAM has guest base `0x1000`, mapped size `4096`, and a
+10-byte initialization prefix. The manifest has no caller-selected permission
+field: this fixed profile exposes ROM as read-only and RAM as writable. Other
+regions or profiles are rejected rather than clipped.
+
+Before allocating or copying, loading checks that nonempty source prefixes have
+non-null pointers, each prefix fits its mapping, every nonempty mapped span has
+an in-range exclusive endpoint in the 32-bit guest address space, descriptors
+have unique supported roles, and mapped spans do not overlap. The combined
+`source_size + mapped_size` for all descriptors is capped at 1 MiB. The reset
+vector is read explicitly as big-endian bytes: initial SSP must be `0x2000`,
+and the initial PC must be even and leave at least one instruction word inside
+the 512-byte ROM. Malformed descriptors and size arithmetic are rejected before
+source bytes are read. The two reset-vector words are then read explicitly and
+checked before any candidate storage is allocated.
+
 Calls on one instance must not overlap or re-enter. Distinct instances own
 separate mutable CPU and memory state and may be used concurrently. The public
 API uses standard C allocation. Allocation failure is reported as
@@ -70,3 +90,8 @@ checks that the native runtime source and linked symbols do not introduce
 filesystem, clock, device, network, process, or thread-service calls. Allocation
 failure reproduction is exercised through a private test-only build seam and is
 kept separate from the installed public API.
+
+The media suite uses a private test build to compare a digest over the full ROM,
+RAM seed and live RAM, plus all named CPU continuation fields. That digest and
+the private hooks are test evidence only; neither is part of the installed API,
+snapshot format, or persistence contract.
