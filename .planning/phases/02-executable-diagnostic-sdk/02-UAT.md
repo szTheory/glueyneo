@@ -23,9 +23,9 @@ scope: Covered by current-revision automated package/docs checks; do not repeat 
 ## Summary
 
 total: 1
-passed: 0
+passed: 1
 issues: 0
-pending: 1
+pending: 0
 skipped: 0
 blocked: 0
 
