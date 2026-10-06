@@ -36,9 +36,9 @@ include file/member and byte denominators for source, history, logs, and
 archives; zero means that class was not supplied. A missing class remains an
 uncovered class and cannot support a full release-qualification claim.
 
-The configured detector covers common personal POSIX paths, email identities,
+The configured detector covers common personal POSIX and Windows paths, email identities,
 machine/serial identifiers, credential assignments, common GitHub/AWS token
-forms, private-key PEM headers, credential-bearing URLs, and private-network
+forms, private-key PEM and OpenPGP headers, credential-bearing URLs, and private-network
 URLs. Home-directory paths are detected when they follow mentions or appear in
 Markdown and parenthesized references. It does not decode arbitrary binary
 formats, discover every credential shape, inspect remote

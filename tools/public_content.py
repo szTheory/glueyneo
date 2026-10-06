@@ -64,6 +64,7 @@ TEST_SOURCE_PATHS = frozenset({
 
 PRIVACY_RULES = (
     ("personal-path", re.compile(r"(?i)(?:^|[\s\"'=(@<])/(?:Users|home)/[^\s\"')\]>]+")),
+    ("personal-path", re.compile(r"(?i)\b[A-Z]:[\\/](?:Users|Documents and Settings)[\\/][^\s\"')\]>]+")),
     ("personal-path", re.compile(r"(?i)(?:^|[\s\"'=])/(?:private/var|var/folders)/[^\s\"']+")),
     ("private-identity", re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I)),
     ("machine-identifier", re.compile(r"(?i)\b(?:serial(?:_number)?|machine_id|hostname|computer_name)\s*[:=]\s*[^\s,}\]]+")),
@@ -73,6 +74,7 @@ PRIVACY_RULES = (
     ("credential", re.compile(r"(?i)\b(?:AKIA|ASIA)[A-Z0-9]{16}\b")),
     ("credential", re.compile(r"(?i)\b(?:api[_-]?key|access[_-]?token|secret[_-]?key|password)\s*[:=]\s*[\"']?[A-Za-z0-9/+_=-]{12,}")),
     ("private-key", re.compile(r"(?i)-{5}BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-{5}")),
+    ("private-key", re.compile(r"(?i)-{5}BEGIN PGP PRIVATE KEY BLOCK-{5}")),
 )
 PUBLIC_EMAILS = {"noreply@github.com"}
 SYNTHETIC_PATH_MARKERS = {"private-person"}

@@ -99,6 +99,19 @@ class PublicContentTests(unittest.TestCase):
         self.assertIn("private-key", result["findings"][0]["rules"])
         self.assertNotIn(header, json.dumps(result))
 
+    def test_windows_home_paths_are_detected_and_redacted(self) -> None:
+        for separator in ("\\", "/"):
+            path = separator.join(("C:", "Users", "synthetic-account", "private.txt"))
+            result = content.scan_bytes(("[file](" + path + ")").encode(), "tests/synthetic-reference.txt")
+            self.assertIn("personal-path", result["findings"][0]["rules"])
+            self.assertNotIn(path, json.dumps(result))
+
+    def test_openpgp_private_key_header_is_detected_and_redacted(self) -> None:
+        header = "-----BEGIN " + "PGP PRIVATE KEY BLOCK-----"
+        result = content.scan_bytes(header.encode(), "tests/synthetic-key.txt")
+        self.assertIn("private-key", result["findings"][0]["rules"])
+        self.assertNotIn(header, json.dumps(result))
+
     def test_secret_canaries_are_redacted_and_rule_labeled(self) -> None:
         personal_path = "/".join(("Users", "alice", "private.txt"))
         identity = "alice" + "@" + "private-domain" + ".example"
