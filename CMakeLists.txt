@@ -72,6 +72,7 @@ endif()
 
 if(GLUEYNEO_BUILD_TESTS)
   enable_testing()
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
   add_library(glueyneo_test STATIC ${GLUEYNEO_RUNTIME_SOURCES})
   target_compile_features(glueyneo_test PRIVATE c_std_17)
   set_target_properties(glueyneo_test PROPERTIES
@@ -135,6 +136,11 @@ if(GLUEYNEO_BUILD_TESTS)
   set_tests_properties(sdk_faults PROPERTIES LABELS "sdk-contract;sdk-faults")
   add_test(NAME sdk_run COMMAND sdk_diagnostic run)
   set_tests_properties(sdk_run PROPERTIES LABELS "sdk-contract;sdk-run")
+  add_test(NAME sdk_controls
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/sdk/controls.py --controls
+            $<TARGET_FILE:sdk_diagnostic> $<TARGET_FILE:glueyneo-diagnostic>)
+  set_tests_properties(sdk_controls PROPERTIES LABELS "sdk-controls")
 
   # Keep the runtime source closure explicit, then inspect both source and the
   # linked target for ambient host services used by the native core.

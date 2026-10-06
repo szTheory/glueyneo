@@ -140,6 +140,53 @@ the accepted candidate enters vector 8 after opcode `$104` without reading
 `$106`. That historical sequence is unrelated to this fixture and is not
 repeated as a hardware claim here.
 
+## Functional callback trace and exact controls
+
+The private test SDK records at most 256 successful numeric callback events
+per instance. Each event is a 24-bit-masked guest address, 16-bit width, value,
+and read/write direction. Storage is fixed inside the test image; no trace
+allocation or process-global trace state is used. When full, the trace keeps
+the first 256 records and increments an explicit dropped count. The ordinary
+original-guest suite observes 35 records with zero drops: four reset-vector
+reads at `$0000/$0002/$0004/$0006`, instruction/extension/data reads, and six
+RAM word writes. It asserts every address, direction, width and value.
+
+The callback sequence proves only the selected functional mapping contract.
+For example, event indices 9–10 write `$0000` then `$000a` at `$1000/$1002`;
+20–21 write `$0000` then `$1237` at `$1004/$1006`; and 31–32 write `$0000`
+then `$0001` at `$1010/$1012`. Reads at `$1008` and `$100a` return initialized
+`$1234` and zero-filled zero. These are callback values/order in this native
+implementation, excluding physical pins, prefetch, wait states and Neo Geo
+board timing.
+
+The supervisor in `tests/sdk/controls.py` leaves expected values fixed and
+requires each child to exit normally with code 1, exactly one Unity failure,
+one exact assertion ID and expected/observed wrong value, a positive assertion
+denominator, and a valid one-case failure summary/result. Crashes, signals,
+timeouts, unrelated or multiple failures, unchanged values, missing records,
+and zero denominators are rejected. Eight self-controls exercise those reject
+paths. The eight consequential mutations and their fixed assertions are:
+
+| Mutation | Intended assertion | Fixed expected | Mutated observed |
+|---|---|---:|---:|
+| MOVEQ input changes 7 to 8 | `sdk.observe.arithmetic` | 10 | 11 |
+| Initialized word changes `$1234` to `$1235` | `sdk.observe.initialized` | 4663 | 4664 |
+| BSS read adapter returns 1 | `sdk.observe.bss` | 1 | 2 |
+| Run result adapter increments instruction count | `sdk.run.instructions` | 12 | 13 |
+| Run result adapter increments elapsed cycles | `sdk.run.elapsed-cycles` | 172 | 173 |
+| Run result adapter changes STOP to budget | `sdk.run.reason-stopped` | 1 | 0 |
+| Observation adapter reverses arithmetic byte order | `sdk.observe.arithmetic-byte-order` | 10 | 167772160 |
+| Trace adapter swaps the first two vector reads | `sdk.bus.event.00.address` | 0 | 2 |
+
+Input mutations alter only fixture bytes before load. Adapter mutations are
+guarded by `GLUEYNEO_SDK_TEST_HOOKS` and stored with the corresponding instance
+image. The installed/public runtime is compiled without these declarations,
+fields, trace functions or mutation branches. `sdk-controls` runs the normal
+counted test, all eight controls, and four independent public-runner processes:
+two for scenario A and two for scenario B. The supervisor writes each JSON
+record to a distinct temporary result path and requires exact, matching named
+outputs and run fields. A STOP result alone is insufficient.
+
 ## Reproduction and exact identities
 
 From the repository root:
@@ -148,6 +195,9 @@ From the repository root:
 cmake --preset sdk-debug
 cmake --build --preset sdk-debug
 ctest --preset sdk-debug -L 'sdk-provenance|sdk-diagnostic' --output-on-failure --no-tests=error
+ctest --preset sdk-debug -L sdk-run --output-on-failure --no-tests=error
+ctest --preset sdk-debug -L sdk-controls --output-on-failure --no-tests=error
+ctest --preset sdk-debug -L sdk-isolation --output-on-failure --no-tests=error
 build/sdk-debug/glueyneo-diagnostic
 build/sdk-debug/glueyneo-diagnostic --scenario-b
 build/sdk-debug/glueyneo-diagnostic --write-fixture build/sdk-debug/diagnostic-original-a.bin

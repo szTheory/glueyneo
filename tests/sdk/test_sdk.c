@@ -39,12 +39,44 @@ static void make_manifest(gn_manifest *manifest, guest_fixture_image *fixture,
                                       GUEST_FIXTURE_RAM_INIT_SIZE, GN_REGION_RAM};
 }
 
+static int suite_is_control(void) {
+    return selected_suite != NULL && strncmp(selected_suite, "control-", 8u) == 0;
+}
+
+static gn_test_mutation mutation_for_suite(void) {
+    if (strcmp(selected_suite, "control-bss") == 0) {
+        return GN_TEST_MUTATION_BSS_READ;
+    }
+    if (strcmp(selected_suite, "control-run-elapsed") == 0) {
+        return GN_TEST_MUTATION_RUN_ELAPSED;
+    }
+    if (strcmp(selected_suite, "control-run-instructions") == 0) {
+        return GN_TEST_MUTATION_RUN_INSTRUCTIONS;
+    }
+    if (strcmp(selected_suite, "control-run-stop") == 0) {
+        return GN_TEST_MUTATION_RUN_STOP_REASON;
+    }
+    if (strcmp(selected_suite, "control-byte-order") == 0) {
+        return GN_TEST_MUTATION_OBSERVATION_BYTE_ORDER;
+    }
+    if (strcmp(selected_suite, "control-access-order") == 0) {
+        return GN_TEST_MUTATION_TRACE_ORDER;
+    }
+    return GN_TEST_MUTATION_NONE;
+}
+
 static gn_status load_scenario(gn_instance *target, unsigned scenario) {
     guest_fixture_image *fixture =
         (guest_fixture_image *)malloc(sizeof(*fixture));
     if (fixture == NULL) return GN_STATUS_OUT_OF_MEMORY;
     gn_manifest manifest;
     make_manifest(&manifest, fixture, scenario);
+    if (strcmp(selected_suite, "control-arithmetic") == 0) {
+        fixture->rom[0x101u] = UINT8_C(8);
+    } else if (strcmp(selected_suite, "control-initialized") == 0) {
+        fixture->ram_seed[8u] = UINT8_C(0x12);
+        fixture->ram_seed[9u] = UINT8_C(0x35);
+    }
     const gn_status status = gn_load(target, &manifest);
     memset(fixture, 0xa5, sizeof(*fixture));
     free(fixture);
@@ -55,9 +87,16 @@ void setUp(void) {
     instance = NULL;
     SDK_CHECK_STATUS("sdk.instance.create", GN_STATUS_OK, gn_create(&instance));
     if (instance != NULL && (strcmp(selected_suite, "diagnostic") == 0 ||
-                             strcmp(selected_suite, "run") == 0)) {
+                             strcmp(selected_suite, "run") == 0 ||
+                             strcmp(selected_suite, "controls") == 0 ||
+                             suite_is_control())) {
         SDK_CHECK_STATUS("sdk.media.load.original-a", GN_STATUS_OK,
                          load_scenario(instance, 0u));
+        if (suite_is_control() && mutation_for_suite() != GN_TEST_MUTATION_NONE) {
+            SDK_CHECK_STATUS("sdk.control.install-test-adapter-mutation",
+                             GN_STATUS_OK,
+                             gn_test_set_mutation(instance, mutation_for_suite()));
+        }
     }
 }
 
@@ -373,6 +412,139 @@ static void expected_result_integer_boundaries_match_original_encodings(void) {
                   wrap_observations.arithmetic_result);
     SDK_CHECK_STATUS("sdk.run.integer-addq-wrap-stop", GN_RUN_STOPPED,
                      wrap_run.reason);
+}
+
+typedef struct {
+    uint32_t address;
+    uint16_t value;
+    uint8_t direction;
+} expected_bus_event;
+
+static void assert_original_functional_bus_trace(gn_instance *target) {
+    static const expected_bus_event expected[] = {
+        {0x0000u, 0x0000u, GN_TEST_BUS_READ},
+        {0x0002u, 0x2000u, GN_TEST_BUS_READ},
+        {0x0004u, 0x0000u, GN_TEST_BUS_READ},
+        {0x0006u, 0x0100u, GN_TEST_BUS_READ},
+        {0x0100u, 0x7007u, GN_TEST_BUS_READ},
+        {0x0102u, 0x5680u, GN_TEST_BUS_READ},
+        {0x0104u, 0x23c0u, GN_TEST_BUS_READ},
+        {0x0106u, 0x0000u, GN_TEST_BUS_READ},
+        {0x0108u, 0x1000u, GN_TEST_BUS_READ},
+        {0x1000u, 0x0000u, GN_TEST_BUS_WRITE},
+        {0x1002u, 0x000au, GN_TEST_BUS_WRITE},
+        {0x010au, 0x7200u, GN_TEST_BUS_READ},
+        {0x010cu, 0x3239u, GN_TEST_BUS_READ},
+        {0x010eu, 0x0000u, GN_TEST_BUS_READ},
+        {0x0110u, 0x1008u, GN_TEST_BUS_READ},
+        {0x1008u, 0x1234u, GN_TEST_BUS_READ},
+        {0x0112u, 0x5681u, GN_TEST_BUS_READ},
+        {0x0114u, 0x23c1u, GN_TEST_BUS_READ},
+        {0x0116u, 0x0000u, GN_TEST_BUS_READ},
+        {0x0118u, 0x1004u, GN_TEST_BUS_READ},
+        {0x1004u, 0x0000u, GN_TEST_BUS_WRITE},
+        {0x1006u, 0x1237u, GN_TEST_BUS_WRITE},
+        {0x011au, 0x7400u, GN_TEST_BUS_READ},
+        {0x011cu, 0x3439u, GN_TEST_BUS_READ},
+        {0x011eu, 0x0000u, GN_TEST_BUS_READ},
+        {0x0120u, 0x100au, GN_TEST_BUS_READ},
+        {0x100au, 0x0000u, GN_TEST_BUS_READ},
+        {0x0122u, 0x5282u, GN_TEST_BUS_READ},
+        {0x0124u, 0x23c2u, GN_TEST_BUS_READ},
+        {0x0126u, 0x0000u, GN_TEST_BUS_READ},
+        {0x0128u, 0x1010u, GN_TEST_BUS_READ},
+        {0x1010u, 0x0000u, GN_TEST_BUS_WRITE},
+        {0x1012u, 0x0001u, GN_TEST_BUS_WRITE},
+        {0x012au, 0x4e72u, GN_TEST_BUS_READ},
+        {0x012cu, 0x2700u, GN_TEST_BUS_READ}
+    };
+    gn_test_bus_event events[GN_TEST_TRACE_CAPACITY];
+    size_t count = 0u;
+    size_t dropped = 0u;
+    SDK_CHECK_STATUS("sdk.bus.trace-read", GN_STATUS_OK,
+                     gn_test_trace_read(target, events,
+                                       GN_TEST_TRACE_CAPACITY, &count, &dropped));
+    SDK_CHECK_U64("sdk.bus.trace-count",
+                  sizeof(expected) / sizeof(expected[0]), count);
+    SDK_CHECK_U64("sdk.bus.trace-dropped", 0u, dropped);
+    for (size_t index = 0u; index < sizeof(expected) / sizeof(expected[0]); ++index) {
+        char assertion[64];
+        (void)snprintf(assertion, sizeof(assertion),
+                       "sdk.bus.event.%02zu.address", index);
+        SDK_CHECK_U64(assertion, expected[index].address, events[index].address);
+        (void)snprintf(assertion, sizeof(assertion),
+                       "sdk.bus.event.%02zu.direction", index);
+        SDK_CHECK_U64(assertion, expected[index].direction, events[index].direction);
+        (void)snprintf(assertion, sizeof(assertion),
+                       "sdk.bus.event.%02zu.width", index);
+        SDK_CHECK_U64(assertion, 16u, events[index].width_bits);
+        (void)snprintf(assertion, sizeof(assertion),
+                       "sdk.bus.event.%02zu.value", index);
+        SDK_CHECK_U64(assertion, expected[index].value, events[index].value);
+    }
+}
+
+static void named_observations_and_bounded_functional_trace_match_fixture(void) {
+    SDK_CASE("sdk.controls.original-functional-trace");
+    gn_run_result run;
+    SDK_CHECK_STATUS("sdk.controls.run", GN_STATUS_OK,
+                     gn_run(instance, 172u, &run));
+    SDK_CHECK_U64("sdk.run.elapsed-cycles", 172u, run.elapsed_cycles);
+    SDK_CHECK_U64("sdk.run.instructions", 12u, run.instructions);
+    SDK_CHECK_STATUS("sdk.run.reason-stopped", GN_RUN_STOPPED, run.reason);
+    gn_observations observations;
+    SDK_CHECK_STATUS("sdk.controls.observe", GN_STATUS_OK,
+                     gn_observe(instance, &observations));
+    SDK_CHECK_U64("sdk.observe.arithmetic", 10u,
+                  observations.arithmetic_result);
+    SDK_CHECK_U64("sdk.observe.initialized", 0x1237u,
+                  observations.initialized_result);
+    SDK_CHECK_U64("sdk.observe.bss", 1u, observations.bss_result);
+    SDK_CHECK_U64("sdk.observe.arithmetic-byte-order", 10u,
+                  observations.arithmetic_result);
+    assert_original_functional_bus_trace(instance);
+}
+
+static void controlled_wrong_behavior_fails_its_exact_assertion(void) {
+    SDK_CASE("sdk.controls.exact-negative-control");
+    gn_run_result run;
+    SDK_CHECK_STATUS("sdk.control.run-status", GN_STATUS_OK,
+                     gn_run(instance, 172u, &run));
+    gn_observations observations;
+    SDK_CHECK_STATUS("sdk.control.observe-status", GN_STATUS_OK,
+                     gn_observe(instance, &observations));
+
+    if (strcmp(selected_suite, "control-arithmetic") == 0) {
+        SDK_CHECK_U64("sdk.observe.arithmetic", 10u,
+                      observations.arithmetic_result);
+    } else if (strcmp(selected_suite, "control-initialized") == 0) {
+        SDK_CHECK_U64("sdk.observe.initialized", 0x1237u,
+                      observations.initialized_result);
+    } else if (strcmp(selected_suite, "control-bss") == 0) {
+        SDK_CHECK_U64("sdk.observe.bss", 1u, observations.bss_result);
+    } else if (strcmp(selected_suite, "control-run-instructions") == 0) {
+        SDK_CHECK_U64("sdk.run.instructions", 12u, run.instructions);
+    } else if (strcmp(selected_suite, "control-run-elapsed") == 0) {
+        SDK_CHECK_U64("sdk.run.elapsed-cycles", 172u, run.elapsed_cycles);
+    } else if (strcmp(selected_suite, "control-run-stop") == 0) {
+        SDK_CHECK_STATUS("sdk.run.reason-stopped", GN_RUN_STOPPED, run.reason);
+    } else if (strcmp(selected_suite, "control-byte-order") == 0) {
+        SDK_CHECK_U64("sdk.observe.arithmetic-byte-order", 10u,
+                      observations.arithmetic_result);
+    } else if (strcmp(selected_suite, "control-access-order") == 0) {
+        gn_test_bus_event events[GN_TEST_TRACE_CAPACITY];
+        size_t count = 0u;
+        size_t dropped = 0u;
+        SDK_CHECK_STATUS("sdk.control.trace-status", GN_STATUS_OK,
+                         gn_test_trace_read(instance, events,
+                                           GN_TEST_TRACE_CAPACITY,
+                                           &count, &dropped));
+        SDK_CHECK_U64("sdk.control.trace-count", 35u, count);
+        SDK_CHECK_U64("sdk.control.trace-dropped", 0u, dropped);
+        SDK_CHECK_U64("sdk.bus.event.00.address", 0u, events[0].address);
+    } else {
+        SDK_CHECK_TRUE("sdk.control.known-mutation", 0);
+    }
 }
 
 static void unloaded_lifecycle_and_null_arguments_are_reported(void) {
@@ -1088,9 +1260,18 @@ static void sdk_run_suite(void) {
     RUN_TEST(expected_result_integer_boundaries_match_original_encodings);
 }
 
+static void sdk_controls_suite(void) {
+    RUN_TEST(named_observations_and_bounded_functional_trace_match_fixture);
+}
+
+static void sdk_control_suite(void) {
+    RUN_TEST(controlled_wrong_behavior_fails_its_exact_assertion);
+}
+
 int main(int argc, char **argv) {
     if (argc != 2) {
-        (void)fprintf(stderr, "usage: %s <diagnostic|lifecycle|media|faults|run>\n",
+        (void)fprintf(stderr,
+                      "usage: %s <diagnostic|lifecycle|media|faults|run|controls|control-...>\n",
                       argv[0]);
         return 2;
     }
@@ -1106,6 +1287,10 @@ int main(int argc, char **argv) {
         sdk_faults_suite();
     } else if (strcmp(selected_suite, "run") == 0) {
         sdk_run_suite();
+    } else if (strcmp(selected_suite, "controls") == 0) {
+        sdk_controls_suite();
+    } else if (suite_is_control()) {
+        sdk_control_suite();
     } else {
         (void)fprintf(stderr, "unknown suite: %s\n", selected_suite);
         return 2;

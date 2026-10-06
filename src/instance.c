@@ -35,6 +35,10 @@ typedef struct {
     owned_cpu *cpu;
 #if defined(GLUEYNEO_SDK_TEST_HOOKS)
     size_t test_fail_bus_callbacks;
+    size_t test_trace_count;
+    size_t test_trace_dropped;
+    gn_test_mutation test_mutation;
+    gn_test_bus_event test_trace[GN_TEST_TRACE_CAPACITY];
 #endif
 } gn_image;
 
@@ -61,6 +65,21 @@ static void gn_release(const gn_allocator *allocator, void *allocation) {
     if (allocation != NULL) allocator->release(allocator->userdata, allocation);
 }
 
+#if defined(GLUEYNEO_SDK_TEST_HOOKS)
+static void gn_test_record_bus_event(gn_image *image,
+                                     gn_test_bus_direction direction,
+                                     uint32_t address, uint16_t value) {
+    if (image->test_trace_count == GN_TEST_TRACE_CAPACITY) {
+        if (image->test_trace_dropped < SIZE_MAX) {
+            ++image->test_trace_dropped;
+        }
+        return;
+    }
+    image->test_trace[image->test_trace_count++] = (gn_test_bus_event){
+        address, value, UINT8_C(16), (uint8_t)direction};
+}
+#endif
+
 static void *gn_cpu_allocate(void *userdata, size_t bytes) {
     const gn_image *image = (const gn_image *)userdata;
     return gn_allocate(&image->allocator, bytes);
@@ -82,21 +101,33 @@ static int gn_read16(void *userdata, uint32_t address, uint16_t *value) {
         return 0;
     }
 #endif
+    uint16_t observed = 0u;
+    int found = 0;
     if (address >= image->rom.base &&
         address - image->rom.base <= image->rom.size - UINT32_C(2)) {
         const size_t offset = (size_t)(address - image->rom.base);
-        *value = (uint16_t)(((uint16_t)image->rom.bytes[offset] << 8) |
-                            (uint16_t)image->rom.bytes[offset + 1u]);
-        return 1;
-    }
-    if (address >= image->ram.base &&
+        observed = (uint16_t)(((uint16_t)image->rom.bytes[offset] << 8) |
+                              (uint16_t)image->rom.bytes[offset + 1u]);
+        found = 1;
+    } else if (address >= image->ram.base &&
         address - image->ram.base <= image->ram.size - UINT32_C(2)) {
         const size_t offset = (size_t)(address - image->ram.base);
-        *value = (uint16_t)(((uint16_t)image->ram.bytes[offset] << 8) |
-                            (uint16_t)image->ram.bytes[offset + 1u]);
-        return 1;
+        observed = (uint16_t)(((uint16_t)image->ram.bytes[offset] << 8) |
+                              (uint16_t)image->ram.bytes[offset + 1u]);
+        found = 1;
     }
-    return 0;
+    if (found == 0) return 0;
+#if defined(GLUEYNEO_SDK_TEST_HOOKS)
+    if (image->test_mutation == GN_TEST_MUTATION_BSS_READ &&
+        address == UINT32_C(0x100a)) {
+        observed = UINT16_C(1);
+    }
+#endif
+    *value = observed;
+#if defined(GLUEYNEO_SDK_TEST_HOOKS)
+    gn_test_record_bus_event(image, GN_TEST_BUS_READ, address, observed);
+#endif
+    return 1;
 }
 
 static int gn_write16(void *userdata, uint32_t address, uint16_t value) {
@@ -115,6 +146,9 @@ static int gn_write16(void *userdata, uint32_t address, uint16_t value) {
     const size_t offset = (size_t)(address - image->ram.base);
     image->ram.bytes[offset] = (uint8_t)(value >> 8);
     image->ram.bytes[offset + 1u] = (uint8_t)value;
+#if defined(GLUEYNEO_SDK_TEST_HOOKS)
+    gn_test_record_bus_event(image, GN_TEST_BUS_WRITE, address, value);
+#endif
     return 1;
 }
 
@@ -430,6 +464,57 @@ gn_status gn_test_fail_next_bus_callback(gn_instance *instance) {
     instance->image->test_fail_bus_callbacks = 1u;
     return GN_STATUS_OK;
 }
+
+gn_status gn_test_set_mutation(gn_instance *instance, gn_test_mutation mutation) {
+    if (instance == NULL) return GN_STATUS_INVALID_ARGUMENT;
+    if (instance->image == NULL) return GN_STATUS_INVALID_STATE;
+    if (mutation < GN_TEST_MUTATION_NONE ||
+        mutation > GN_TEST_MUTATION_TRACE_ORDER) {
+        return GN_STATUS_INVALID_ARGUMENT;
+    }
+    instance->image->test_mutation = mutation;
+    return GN_STATUS_OK;
+}
+
+gn_status gn_test_trace_clear(gn_instance *instance) {
+    if (instance == NULL) return GN_STATUS_INVALID_ARGUMENT;
+    if (instance->image == NULL) return GN_STATUS_INVALID_STATE;
+    instance->image->test_trace_count = 0u;
+    instance->image->test_trace_dropped = 0u;
+    return GN_STATUS_OK;
+}
+
+gn_status gn_test_trace_read(const gn_instance *instance,
+                             gn_test_bus_event *events, size_t capacity,
+                             size_t *out_count, size_t *out_dropped) {
+    if (out_count == NULL || out_dropped == NULL) {
+        return GN_STATUS_INVALID_ARGUMENT;
+    }
+    *out_count = 0u;
+    *out_dropped = 0u;
+    if (instance == NULL) return GN_STATUS_INVALID_ARGUMENT;
+    if (instance->image == NULL) return GN_STATUS_INVALID_STATE;
+    const gn_image *image = instance->image;
+    *out_count = image->test_trace_count;
+    *out_dropped = image->test_trace_dropped;
+    if (capacity < image->test_trace_count ||
+        (events == NULL && image->test_trace_count != 0u)) {
+        *out_count = 0u;
+        *out_dropped = 0u;
+        return GN_STATUS_INVALID_ARGUMENT;
+    }
+    if (image->test_trace_count != 0u) {
+        memcpy(events, image->test_trace,
+               image->test_trace_count * sizeof(image->test_trace[0]));
+    }
+    if (image->test_mutation == GN_TEST_MUTATION_TRACE_ORDER &&
+        image->test_trace_count > 1u) {
+        const gn_test_bus_event first = events[0];
+        events[0] = events[1];
+        events[1] = first;
+    }
+    return GN_STATUS_OK;
+}
 #endif
 
 GN_API gn_status gn_load(gn_instance *instance, const gn_manifest *manifest) {
@@ -517,22 +602,42 @@ GN_API gn_status gn_run(gn_instance *instance, uint64_t cycle_budget,
     out_result->boundary_pc = cpu_result.pc;
     out_result->fault_pc = cpu_result.fault_pc;
     out_result->instruction_register = cpu_result.instruction_register;
+    gn_status mapped_status;
     if (cpu_result.reason == OWNED_CPU_STOPPED) {
         out_result->reason = GN_RUN_STOPPED;
-        return GN_STATUS_OK;
-    }
-    if (cpu_result.reason == OWNED_CPU_BUDGET) {
+        mapped_status = GN_STATUS_OK;
+    } else if (cpu_result.reason == OWNED_CPU_BUDGET) {
         out_result->reason = GN_RUN_BUDGET;
-        return GN_STATUS_OK;
-    }
-    if (cpu_result.reason == OWNED_CPU_ADDRESS_ERROR ||
+        mapped_status = GN_STATUS_OK;
+    } else if (cpu_result.reason == OWNED_CPU_ADDRESS_ERROR ||
         cpu_result.reason == OWNED_CPU_UNSUPPORTED_OPCODE ||
         cpu_result.reason == OWNED_CPU_PRIVILEGE_VIOLATION) {
         out_result->reason = GN_RUN_FAULT;
-        return GN_STATUS_OK;
+        mapped_status = GN_STATUS_OK;
+    } else {
+        out_result->reason = GN_RUN_ERROR;
+        mapped_status = GN_STATUS_CPU_FAILURE;
     }
-    out_result->reason = GN_RUN_ERROR;
-    return GN_STATUS_CPU_FAILURE;
+#if defined(GLUEYNEO_SDK_TEST_HOOKS)
+    if (mapped_status == GN_STATUS_OK) {
+        switch (instance->image->test_mutation) {
+            case GN_TEST_MUTATION_RUN_ELAPSED:
+                ++out_result->elapsed_cycles;
+                break;
+            case GN_TEST_MUTATION_RUN_INSTRUCTIONS:
+                ++out_result->instructions;
+                break;
+            case GN_TEST_MUTATION_RUN_STOP_REASON:
+                if (out_result->reason == GN_RUN_STOPPED) {
+                    out_result->reason = GN_RUN_BUDGET;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+#endif
+    return mapped_status;
 }
 
 GN_API gn_status gn_observe(const gn_instance *instance,
@@ -552,6 +657,17 @@ GN_API gn_status gn_observe(const gn_instance *instance,
     out_observations->initialized_result = gn_read32_be(ram + 4u);
     out_observations->bss_result = gn_read32_be(ram + 16u);
     out_observations->ready = cpu_observation.stopped != 0u ? UINT8_C(1) : UINT8_C(0);
+#if defined(GLUEYNEO_SDK_TEST_HOOKS)
+    if (instance->image->test_mutation ==
+        GN_TEST_MUTATION_OBSERVATION_BYTE_ORDER) {
+        const uint32_t value = out_observations->arithmetic_result;
+        out_observations->arithmetic_result =
+            ((value & UINT32_C(0x000000ff)) << 24) |
+            ((value & UINT32_C(0x0000ff00)) << 8) |
+            ((value & UINT32_C(0x00ff0000)) >> 8) |
+            ((value & UINT32_C(0xff000000)) >> 24);
+    }
+#endif
     return GN_STATUS_OK;
 }
 
