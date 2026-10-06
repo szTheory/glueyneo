@@ -198,6 +198,29 @@ if(GLUEYNEO_BUILD_TESTS)
   else()
     target_compile_options(sdk_diagnostic PRIVATE -Wall -Wextra -Wpedantic -Werror)
   endif()
+  add_executable(sdk_mutation
+    tests/fuzz/sdk_mutation.c
+    tests/sdk/guest_fixture.c
+  )
+  target_include_directories(sdk_mutation PRIVATE tests/sdk)
+  target_compile_features(sdk_mutation PRIVATE c_std_17)
+  set_target_properties(sdk_mutation PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS NO
+  )
+  target_link_libraries(sdk_mutation PRIVATE glueyneo glueyneo_unity Threads::Threads)
+  target_compile_definitions(sdk_mutation PRIVATE
+    GLUEYNEO_SOURCE_REVISION="${GLUEYNEO_SOURCE_REVISION}"
+    GLUEYNEO_CONFIGURATION="${CMAKE_BUILD_TYPE}"
+    GLUEYNEO_COMPILER_ID="${CMAKE_C_COMPILER_ID}"
+    GLUEYNEO_COMPILER_VERSION="${CMAKE_C_COMPILER_VERSION}"
+  )
+  if(MSVC)
+    target_compile_options(sdk_mutation PRIVATE /W4 /WX)
+  else()
+    target_compile_options(sdk_mutation PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
   add_test(NAME sdk_diagnostic COMMAND sdk_diagnostic diagnostic)
   set_tests_properties(sdk_diagnostic PROPERTIES LABELS "sdk-contract;sdk-diagnostic")
   add_test(NAME sdk_lifecycle COMMAND sdk_diagnostic lifecycle)
@@ -208,6 +231,13 @@ if(GLUEYNEO_BUILD_TESTS)
   set_tests_properties(sdk_faults PROPERTIES LABELS "sdk-contract;sdk-faults")
   add_test(NAME sdk_run COMMAND sdk_diagnostic run)
   set_tests_properties(sdk_run PROPERTIES LABELS "sdk-contract;sdk-run")
+  add_test(NAME sdk_mutation_media COMMAND sdk_mutation --media)
+  add_test(NAME sdk_mutation_sequence COMMAND sdk_mutation --sequence)
+  add_test(NAME sdk_mutation_minimizer
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/fuzz/minimize.py
+            --self-test)
+  set_tests_properties(sdk_mutation_media sdk_mutation_sequence
+    sdk_mutation_minimizer PROPERTIES LABELS "sdk-hostile;sdk-mutation" TIMEOUT 180)
   add_test(NAME sdk_controls
     COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/tests/sdk/controls.py --controls

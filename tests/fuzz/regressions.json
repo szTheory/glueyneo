@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "profile": "bounded-deterministic-original-inputs",
+  "limits": {
+    "input_bytes": 4096,
+    "operations_per_input": 64,
+    "live_instances": 4,
+    "guest_requested_cycles_per_input": 1000000,
+    "trace_events": 256,
+    "mapped_plus_source_bytes_per_instance": 1048576
+  },
+  "mutation": {
+    "engine": "seeded-xorshift64 byte mutation",
+    "coverage_guided": false,
+    "iterations_per_harness": 1024,
+    "media_seed": "0x6e656f67656f3235",
+    "sequence_seed": "0x6e656f67656f3235 XOR 0xa17f00d5",
+    "max_generated_input_bytes": 64
+  },
+  "media_cases": [
+    {"id": "media-payload-owned-copy", "input_hex_prefix": "00", "expected_status": "GN_STATUS_OK", "invariant": "repeat after source overwrite has equal observations"},
+    {"id": "media-version", "input_hex_prefix": "01", "expected_status": "GN_STATUS_INVALID_MEDIA", "invariant": "live target and peer remain unchanged"},
+    {"id": "media-profile", "input_hex_prefix": "02", "expected_status": "GN_STATUS_UNSUPPORTED_PROFILE", "invariant": "live target and peer remain unchanged"},
+    {"id": "media-region-count", "input_hex_prefix": "03", "expected_status": "GN_STATUS_INVALID_MEDIA", "invariant": "live target and peer remain unchanged"},
+    {"id": "media-rom-base", "input_hex_prefix": "04", "expected_status": "GN_STATUS_INVALID_MEDIA", "invariant": "live target and peer remain unchanged"},
+    {"id": "media-short-rom", "input_hex_prefix": "05", "expected_status": "GN_STATUS_INVALID_MEDIA", "invariant": "live target and peer remain unchanged"},
+    {"id": "media-long-rom-readable", "input_hex_prefix": "06", "expected_status": "GN_STATUS_INVALID_MEDIA", "invariant": "513 readable source bytes reject without reading beyond storage"},
+    {"id": "media-overlap", "input_hex_prefix": "07", "expected_status": "GN_STATUS_INVALID_MEDIA", "invariant": "overlapping mapping rejects before replacing live media"},
+    {"id": "media-endpoint-wrap", "input_hex_prefix": "08", "expected_status": "GN_STATUS_INVALID_MEDIA", "invariant": "guest endpoint wrap rejects before source access"},
+    {"id": "media-duplicate-region-kind", "input_hex_prefix": "09", "expected_status": "GN_STATUS_INVALID_MEDIA", "invariant": "duplicate ROM region role rejects before replacing live media"}
+  ],
+  "integer_cases": [
+    {"id": "integer-moveq-7f", "immediate": "0x7f", "expected_arithmetic": "0x00000082"},
+    {"id": "integer-moveq-80", "immediate": "0x80", "expected_arithmetic": "0xffffff83"},
+    {"id": "integer-moveq-ff", "immediate": "0xff", "expected_arithmetic": "0x00000002"},
+    {"id": "integer-addq-unsigned-wrap", "program": "moveq -1; addq.l #1,d0", "expected_arithmetic": "0x00000000"}
+  ],
+  "sequence_cases": [
+    {"id": "sequence-unload-reload-recovery", "operation_codes": [0, 1, 3, 2, 4, 1, 5], "meaning": ["create", "load", "reset", "bounded run", "unload", "reload", "destroy"]},
+    {"id": "sequence-four-live-owners", "operation_codes": [0, 8, 16, 24, 1, 9, 17, 25, 3, 11, 19, 27, 5, 13, 21, 29], "meaning": "create/load/run/destroy four independent instances"}
+  ],
+  "findings": []
+}
