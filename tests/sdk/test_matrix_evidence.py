@@ -161,6 +161,7 @@ def main() -> int:
         for name in ("glueyneo.lib", "glueyneo_test.lib", "glueyneo-diagnostic.exe"):
             (build / name).write_bytes(name.encode())
         with mock.patch.object(evidence.sys, "platform", "win32"), \
+             mock.patch.object(evidence.shutil, "which", return_value=None), \
              mock.patch.object(evidence, "relevant_source_rows", return_value=[{"path": "synthetic.c", "sha256": "a" * 64, "bytes": 1}]), \
              mock.patch.object(evidence, "_git", return_value=""), \
              mock.patch.object(evidence, "_run", return_value="synthetic version"):
