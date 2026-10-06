@@ -16,6 +16,10 @@ The machine-readable list below is the scanner's canonical item-level record.
 Update it only with exact source revision, digest, license/permission evidence,
 and a notice that is present in each applicable package. Adding a fixture,
 dependency, BIOS, ROM, or corpus file without an affirmative record fails closed.
+Every non-code or non-text file under `tests/` also requires an affirmative row;
+unknown and extensionless test paths are treated as assets. Test source and text
+files remain under the repository MIT notice, while fixture recipes with
+separate provenance continue to have individual rows.
 
 ```json
 {

@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MAX_FILE_BYTES = 64 * 1024 * 1024
 MAX_TOTAL_BYTES = 512 * 1024 * 1024
 MAX_MEMBERS = 50_000
+MAX_HISTORY_OBJECTS = 50_000
 BLOCK_SIZE = 1024 * 1024
 SOURCE_PATHS = (
     ".release-please-manifest.json", "CMakeLists.txt", "CMakePresets.json",
@@ -33,6 +34,13 @@ SOURCE_PATHS = (
     "tests", "third_party/unity", "tools/diagnostic", "tools/release_manifest.py",
     "tools/release_state.py",
 )
+# Repository publication includes workflow and release configuration even
+# though the SDK source archive intentionally has a narrower file set.
+REPOSITORY_PATHS = SOURCE_PATHS + (".github/workflows", "release-please-config.json")
+TEST_TEXT_SUFFIXES = {
+    ".c", ".cc", ".cpp", ".h", ".hpp", ".py", ".json", ".md", ".txt",
+    ".cmake", ".sh", ".yml", ".yaml",
+}
 
 PRIVACY_RULES = (
     ("personal-path", re.compile(r"(?i)(?:^|[\s\"'=])/(?:Users|home)/[^\s\"']+")),
@@ -48,6 +56,20 @@ PRIVACY_RULES = (
 PUBLIC_EMAILS = {"noreply@github.com"}
 SYNTHETIC_PATH_MARKERS = {"private-person"}
 SYNTHETIC_EMAIL_SUFFIXES = (".invalid", ".example", ".example.com", ".example.org", ".example.net")
+# Exact immutable history objects audited as bounded false positives. These
+# dispositions are tied to object IDs, not paths or rule classes globally:
+# upstream Musashi contains a public copyright contact; historical redaction
+# tests contain synthetic identity/path canaries. A changed blob is scanned.
+HISTORY_FINDING_DISPOSITIONS = {
+    "007bd7fabaee7b0c171cb38a2581abeacf0f0c15": {
+        "path": "third_party/musashi/m68kmake.c", "rules": {"private-identity"},
+        "reason": "immutable upstream public copyright contact; preserved source and license history",
+    },
+    "1c94ae35fe4334c8a1ecbb273a12e1e12a60fa79": {
+        "path": "tests/workflow/test_public_content.py", "rules": {"personal-path"},
+        "reason": "synthetic path canary used by the historical redaction regression",
+    },
+}
 
 
 class ContentError(ValueError):
@@ -165,8 +187,13 @@ def _is_rights_candidate(path: str) -> bool:
     relative = PurePosixPath(path)
     if path.startswith("third_party/") or path.startswith("fixtures/"):
         return True
-    return (path.startswith("tests/") and "fixture" in relative.name.lower()
-            and relative.suffix.lower() in {".c", ".h", ".json", ".bin", ".rom", ".bios"})
+    if not path.startswith("tests/"):
+        return False
+    # Test code and text remain covered by the repository MIT notice. Every
+    # other test path, including unknown extensions and extensionless files,
+    # must have an affirmative item-level rights record.
+    return ("fixture" in relative.name.lower()
+            or relative.suffix.lower() not in TEST_TEXT_SUFFIXES)
 
 
 def load_rights_inventory(root: Path = ROOT) -> dict[str, Any]:
@@ -317,7 +344,8 @@ def validate_inventory(inventory: Any, actual: dict[str, bytes]) -> dict[str, An
             "inventory_sha256": sha256_bytes(canonical_bytes(inventory))}
 
 
-def _git_history(root: Path, revision: str = "--all") -> bytes:
+def _git_history(root: Path, revision: str = "--all") -> tuple[bytes, list[dict[str, Any]], int, int]:
+    """Scan reachable commit metadata and every unique reachable blob body."""
     try:
         result = subprocess.run(["git", "log", revision, "--format=%H%x00%an%x00%ae%x00%cn%x00%ce%x00%s%x00%b"],
                                 cwd=root, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -328,12 +356,109 @@ def _git_history(root: Path, revision: str = "--all") -> bytes:
         raise ContentError("history-unreadable", "publishable history is empty or unavailable")
     if len(result.stdout) > MAX_TOTAL_BYTES:
         raise ContentError("history-limit", "publishable history metadata exceeds the byte limit")
-    return result.stdout
+    metadata = result.stdout
+    try:
+        listing = subprocess.run(["git", "rev-list", "--objects", revision], cwd=root,
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 check=False, timeout=120)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise ContentError("history-unreadable", "publishable blob list could not be inspected") from error
+    if listing.returncode:
+        raise ContentError("history-unreadable", "publishable blob list could not be inspected")
+    if len(listing.stdout) > MAX_TOTAL_BYTES:
+        raise ContentError("history-limit", "publishable history object list exceeds the byte limit")
+    object_paths: dict[str, str] = {}
+    for line in listing.stdout.splitlines():
+        parts = line.split(b" ", 1)
+        object_id = parts[0]
+        if re.fullmatch(rb"[0-9a-f]{40}|[0-9a-f]{64}", object_id):
+            oid = object_id.decode("ascii")
+            path = parts[1].decode("utf-8", errors="replace") if len(parts) == 2 else ""
+            object_paths.setdefault(oid, path)
+            if len(object_paths) > MAX_HISTORY_OBJECTS:
+                raise ContentError("history-object-limit", "reachable history exceeds the object count limit")
+    if not object_paths:
+        raise ContentError("history-unreadable", "publishable history contains no reachable objects")
+    input_data = ("\n".join(sorted(object_paths)) + "\n").encode("ascii")
+    try:
+        checked = subprocess.run(["git", "cat-file", "--batch-check"], cwd=root, input=input_data,
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 check=False, timeout=120)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise ContentError("history-unreadable", "reachable history objects could not be inspected") from error
+    if checked.returncode:
+        raise ContentError("history-unreadable", "reachable history objects could not be inspected")
+    blobs: list[tuple[str, int]] = []
+    blob_bytes = 0
+    for line in checked.stdout.splitlines():
+        fields = line.split()
+        if len(fields) != 3 or fields[1] == b"missing":
+            raise ContentError("history-unreadable", "reachable history object metadata is incomplete")
+        if fields[1] != b"blob":
+            continue
+        try:
+            size = int(fields[2])
+        except ValueError as error:
+            raise ContentError("history-unreadable", "reachable blob size is malformed") from error
+        if size < 0 or size > MAX_FILE_BYTES:
+            raise ContentError("history-file-limit", "reachable history blob exceeds the per-file byte limit")
+        blob_bytes += size
+        if blob_bytes > MAX_TOTAL_BYTES:
+            raise ContentError("history-total-limit", "reachable history blobs exceed the total byte limit")
+        blobs.append((fields[0].decode("ascii"), size))
+    if len(blobs) > MAX_HISTORY_OBJECTS:
+        raise ContentError("history-object-limit", "reachable history exceeds the object count limit")
+    if len(metadata) + blob_bytes > MAX_TOTAL_BYTES:
+        raise ContentError("history-total-limit", "reachable history metadata and blobs exceed the total byte limit")
+    process: subprocess.Popen[bytes] | None = None
+    try:
+        process = subprocess.Popen(["git", "cat-file", "--batch"], cwd=root,
+                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                   stderr=subprocess.DEVNULL)
+        assert process.stdin is not None and process.stdout is not None
+        dispositions: list[dict[str, Any]] = []
+        for object_id, size in blobs:
+            process.stdin.write(object_id.encode("ascii") + b"\n")
+            process.stdin.flush()
+            header = process.stdout.readline(256)
+            fields = header.rstrip(b"\n").split()
+            if len(fields) != 3 or fields[0].decode("ascii", errors="ignore") != object_id or fields[1] != b"blob":
+                raise ContentError("history-unreadable", "reachable history blob stream is malformed")
+            body = process.stdout.read(size)
+            if len(body) != size or process.stdout.read(1) != b"\n":
+                raise ContentError("history-unreadable", "reachable history blob stream is truncated")
+            path = object_paths.get(object_id, "")
+            result = scan_bytes(body, f"history/{path}" if path else "history/reachable-blob")
+            disposition = HISTORY_FINDING_DISPOSITIONS.get(object_id)
+            if disposition is not None:
+                actual_rules = set(result["findings"][0]["rules"] if result["findings"] else ())
+                if path != disposition["path"] or actual_rules != disposition["rules"]:
+                    raise ContentError("history-disposition", "a provenance-bound history disposition no longer matches its object")
+                dispositions.append({"object": object_id, "location": _safe_location(f"history/{path}"),
+                                     "rules": sorted(disposition["rules"]), "reason": disposition["reason"]})
+            elif result["findings"]:
+                dispositions.extend({"object": object_id, **finding} for finding in result["findings"])
+        process.stdin.close()
+        if process.wait(timeout=120):
+            raise ContentError("history-unreadable", "reachable history blob stream failed")
+        process.stdout.close()
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise ContentError("history-unreadable", "reachable history blobs could not be read") from error
+    finally:
+        if process is not None:
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+            if process.stdin is not None and not process.stdin.closed:
+                process.stdin.close()
+            if process.stdout is not None and not process.stdout.closed:
+                process.stdout.close()
+    return metadata, dispositions, blob_bytes, len(blobs)
 
 
 def _git_source_paths(root: Path) -> list[str]:
     try:
-        result = subprocess.run(["git", "ls-files", "-z", "--", *SOURCE_PATHS], cwd=root,
+        result = subprocess.run(["git", "ls-files", "-z", "--", *REPOSITORY_PATHS], cwd=root,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                 check=False, timeout=30)
     except (OSError, subprocess.TimeoutExpired) as error:
@@ -367,8 +492,15 @@ def scan_inputs(*, root: Path = ROOT, paths: list[str] | None = None,
     selected = paths if paths is not None else _git_source_paths(root)
     source = scan_tree(root, selected)
     rights = validate_repository_inventory(root) if paths is None else None
-    history_data = history_text.encode() if history_text is not None else _git_history(root, history_revision)
-    history = _scan_blob(history_data, "history/commit-metadata")
+    if history_text is not None:
+        history_data = history_text.encode()
+        history = _scan_blob(history_data, "history/commit-metadata")
+        history_dispositions = []
+    else:
+        history_data, history_dispositions, history_blob_bytes, history_blob_count = _git_history(root, history_revision)
+        history = _scan_blob(history_data, "history/commit-metadata")
+        history["bytes"] += history_blob_bytes
+        history["files"] += history_blob_count
     log_rows = []
     log_bytes = 0
     for index, log in enumerate(logs or []):
@@ -390,10 +522,12 @@ def scan_inputs(*, root: Path = ROOT, paths: list[str] | None = None,
         "logs": {"files": len(log_rows), "bytes": log_bytes},
         "archives": {"files": sum(item["files"] for item in archive_rows), "bytes": archive_bytes},
     }
-    findings = source["findings"] + history["findings"] + [f for row in log_rows + archive_rows for f in row["findings"]]
+    unresolved_history = [row for row in history_dispositions if "reason" not in row]
+    finding_dispositions = [row for row in history_dispositions if "reason" in row]
+    findings = source["findings"] + history["findings"] + unresolved_history + [f for row in log_rows + archive_rows for f in row["findings"]]
     findings.sort(key=lambda item: (item["location"], item["rules"]))
     return {"schema": 1, "outcome": "fail" if findings else "pass", "findings": findings,
-            "rights": rights,
+            "rights": rights, "history_dispositions": finding_dispositions,
             "counts": counts, "detector_negative_only": True,
             "coverage": {"logs_supplied": len(log_rows), "archives_supplied": len(archive_rows),
                          "history_mode": "all reachable refs" if history_text is None else "synthetic supplied input"},
