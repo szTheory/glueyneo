@@ -22,6 +22,10 @@ CONTROL_CASES = {
     "byte-order": ("sdk.observe.arithmetic-byte-order", 10, 167772160),
     "access-order": ("sdk.bus.event.00.address", 0, 2),
 }
+ISOLATION_CONTROL_CASES = {
+    "swapped-owner": ("sdk.isolation.owner.arithmetic", 10, 16),
+    "altered-split-progress": ("sdk.isolation.split-progress", 40, 41),
+}
 
 ASSERTION = re.compile(
     r"(?m)^# ASSERT (?P<id>\S+) expected=(?P<expected>\d+) observed=(?P<observed>\d+)$"
@@ -150,6 +154,75 @@ def run_control_matrix(executable: str) -> int:
     return 0
 
 
+def run_isolation_matrix(executable: str) -> int:
+    try:
+        normal = run_child([executable, "isolation"], timeout=30.0)
+    except subprocess.TimeoutExpired as error:
+        return fail("normal isolation comparison timed out", str(error.stdout or ""))
+    except OSError as error:
+        return fail(f"cannot execute isolation comparison: {error}")
+    output = normal.stdout + normal.stderr
+    record = sdk_result(output)
+    expected_summary = (
+        "SDK_ISOLATION boundaries=13 interleaved_pairs=16 "
+        "barrier_concurrent_pairs=16 concurrent_candidate_failure_paths=32"
+    )
+    summaries = [line for line in output.splitlines()
+                 if line.startswith("SDK_ISOLATION ")]
+    if (normal.returncode != 0 or record is None or
+            record.get("outcome") != "pass" or record.get("cases") != 1 or
+            record.get("assertions") != 11 or summaries != [expected_summary]):
+        return fail("normal equal-boundary isolation checks failed", output)
+    print("PASS: normal-isolation boundaries=13 interleaved_pairs=16 "
+          "barrier_concurrent_pairs=16 assertions=11")
+
+    for name, (assertion_id, expected, observed) in ISOLATION_CONTROL_CASES.items():
+        try:
+            child = run_child([executable, f"control-{name}"])
+        except subprocess.TimeoutExpired as error:
+            return fail(f"isolation {name} mutation timed out", str(error.stdout or ""))
+        except OSError as error:
+            return fail(f"cannot execute isolation {name} mutation: {error}")
+        output = child.stdout + child.stderr
+        if not negative_control_is_valid(child.returncode, output,
+                                         assertion_id, (expected, observed)):
+            return fail(f"isolation {name} mutation did not fail its exact assertion",
+                        output)
+        child_record = sdk_result(output)
+        print(f"PASS: isolation_control={name} assertion={assertion_id} "
+              f"expected={expected} observed={observed} "
+              f"assertions={child_record['assertions']}")
+    return 0
+
+
+def run_cold_processes(executable: str) -> int:
+    process_count = 8
+    expected_line = (
+        "SDK_COLD process_pairs=1 owners=2 candidate_failure_paths=2 "
+        "reset_recoveries=2 teardown_leaks=0"
+    )
+    for process_number in range(1, process_count + 1):
+        try:
+            child = run_child([executable, "cold"], timeout=30.0)
+        except subprocess.TimeoutExpired as error:
+            return fail(f"cold process {process_number} timed out",
+                        str(error.stdout or ""))
+        except OSError as error:
+            return fail(f"cannot execute cold process {process_number}: {error}")
+        output = child.stdout + child.stderr
+        record = sdk_result(output)
+        summaries = [line for line in output.splitlines()
+                     if line.startswith("SDK_COLD ")]
+        if (child.returncode != 0 or record is None or
+                record.get("outcome") != "pass" or record.get("cases") != 1 or
+                record.get("assertions") != 19 or summaries != [expected_line]):
+            return fail(f"cold process {process_number} did not prove pair lifecycle",
+                        output)
+    print("PASS: cold_processes=8 concurrent_pairs=8 owners=16 "
+          "candidate_failure_paths=16 reset_recoveries=16 teardown_leaks=0")
+    return 0
+
+
 def diagnostic_records(runner: str, result_dir: Path) -> int:
     expected_by_scenario = {
         "a": {"arithmetic": 10, "initialized": 0x1237},
@@ -200,8 +273,14 @@ def diagnostic_records(runner: str, result_dir: Path) -> int:
 
 
 def main(arguments: list[str]) -> int:
+    if len(arguments) == 3 and arguments[1] == "--isolation":
+        self_control = supervisor_self_controls()
+        return self_control if self_control != 0 else run_isolation_matrix(arguments[2])
+    if len(arguments) == 3 and arguments[1] == "--cold":
+        return run_cold_processes(arguments[2])
     if len(arguments) != 4 or arguments[1] != "--controls":
-        return fail("usage: controls.py --controls SDK_DIAGNOSTIC PUBLIC_RUNNER")
+        return fail("usage: controls.py --controls SDK_DIAGNOSTIC PUBLIC_RUNNER | "
+                    "--isolation SDK_DIAGNOSTIC | --cold SDK_DIAGNOSTIC")
     self_control = supervisor_self_controls()
     if self_control != 0:
         return self_control

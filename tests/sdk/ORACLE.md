@@ -187,6 +187,68 @@ two for scenario A and two for scenario B. The supervisor writes each JSON
 record to a distinct temporary result path and requires exact, matching named
 outputs and run fields. A STOP result alone is insufficient.
 
+## Equal-boundary instance determinism
+
+Scenario A (`10`, `$1237`, `1`) and scenario B (`16`, `$2348`, `1`) first run
+through the ordinary public API in separate instances to create owner-specific
+baselines. The split schedule is `40,4,8,20,4,16,8,20,4,16,8,20,4`, with
+cumulative guest-cycle boundaries `40,44,52,72,76,92,100,120,124,140,148,168,172`.
+At all 13 boundaries the comparison includes public named observations, guest
+PC, run reason, cumulative elapsed cycles, completed instructions, cumulative
+overshoot, per-call requested/elapsed/overshoot/instruction fields, a
+pointer-free image digest, and the private ordered-trace digest/count/drop
+count. Each split call lands exactly on a selected event boundary and reports
+zero per-call overshoot; the comparison does not generalize to arbitrary
+budget partitions.
+
+The `sdk-isolation` suite repeats each split sequence after reset, compares a
+single 172-cycle call at the terminal boundary, interleaves 16 A/B instance
+pairs, and runs 16 barrier-started concurrent A/B pairs. Every concurrent
+owner also attempts a replacement that fails at its first allocation, checks
+the pointer-free ROM/RAM/CPU-state digest and allocator live counts remain
+unchanged, resets and resumes through the first instruction, then unloads and
+destroys with no live allocation. The supervisor's two additional controls
+require exact failures: `control-swapped-owner` must fail
+`sdk.isolation.owner.arithmetic` (`10` expected, `16` observed), and
+`control-altered-split-progress` must fail
+`sdk.isolation.split-progress` (`40` expected, `41` observed).
+
+The separate `sdk_cold` host supervisor starts eight fresh `sdk_diagnostic
+cold` processes. Each process creates two distinct instances concurrently
+before either worker proceeds, loads A/B, runs the same 13 split boundaries,
+exercises one candidate replacement failure per owner, resets and resumes,
+then unloads and destroys. Across the eight children this is eight concurrent
+pairs, 16 owner executions, 16 candidate-failure paths, 16 reset recoveries,
+and zero teardown leaks. A finite process timeout exists only in the host
+supervisor; it never contributes guest progress or changes core semantics.
+
+### Mutable state and concurrency inventory
+
+The runtime sources `src/instance.c` and `experiments/owned_cpu/cpu.c` have no
+mutable file-scope machine state. Each `gn_instance` owns its allocator
+callbacks/userdata and `gn_image *`. Each `gn_image` owns its allocator,
+ROM/RAM region byte storage and base/size metadata, RAM reset seed and size,
+and `owned_cpu *`. Under `GLUEYNEO_SDK_TEST_HOOKS` only, that image also owns
+the bounded trace array/count/drop count, one-shot callback failure count,
+and mutation selector; those fields and hooks are absent from the production
+library.
+
+Each `owned_cpu` owns its bus/allocator callbacks and userdata, D0–D7 and
+A0–A7 arrays, PC/previous PC, USP/SSP/fault PC, SR/instruction register,
+stopped/IRQ/ready/fault/active/reset/exception state, and instruction,
+instruction-cycle, reset-cycle, exception-cycle, idle-cycle, total-cycle and
+reset-signal counters. The fixture recipe and boundary schedule are immutable.
+In the test process, the selected-suite pointer is set before execution and is
+read-only during worker activity; Unity and SDK assertion/case/failpoint
+counters are touched only by the main test thread. Each worker uses a separate
+stack-owned instance, allocator, result slot and worker argument, and workers
+do not call Unity. The CMake `Threads::Threads` dependency and POSIX thread
+primitives apply to the test executable only; this toolchain does not provide
+the C17 `<threads.h>` header, so the test harness uses its available native
+thread API. These checks cover distinct-instance access and do not qualify
+concurrent calls on one instance, arbitrary host schedules, physical bus
+timing, or original hardware.
+
 ## Reproduction and exact identities
 
 From the repository root:
