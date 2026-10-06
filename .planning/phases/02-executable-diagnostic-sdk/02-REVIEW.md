@@ -36,22 +36,22 @@ files_reviewed_list:
   - tools/verify_sdk.py
 findings:
   critical: 0
-  warning: 2
+  warning: 3
   info: 0
-  total: 2
+  total: 3
 status: issues_found
 ---
 
 # Phase 02: Code Review Report
 
-**Reviewed:** 2026-10-06T10:18:07Z  
+**Reviewed:** 2026-10-06T15:05:52Z  
 **Depth:** standard  
 **Files Reviewed:** 30  
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the 30 scoped implementation, test, evidence, packaging, and documentation files. The C runtime's fixed-map validation and replacement-load ownership paths are internally consistent on inspection. Two robustness defects remain in malformed evidence handling and packaging of sanitizer-instrumented static libraries.
+Reviewed the 30 scoped implementation, test, evidence, packaging, and documentation files, then re-reviewed the package automation fix in `d060614`. WR-03 is fixed: complete user-facing output is scanned, loader tracing is kept out of the diagnostic-output scan, and the diagnostic record/assertion fields are constrained. WR-01 and WR-02 remain open.
 
 ## Warnings
 
@@ -67,8 +67,16 @@ Reviewed the 30 scoped implementation, test, evidence, packaging, and documentat
 **Issue:** `glueyneo_apply_sdk_sanitizer` instruments `glueyneo` when the sanitizer option is enabled, but deliberately omits sanitizer link options for static-library targets. The installed static archive then contains ASan/UBSan or TSan references while its exported target does not propagate the required link flags/runtime dependency. A downstream consumer linking the installed archive from such a build can fail with unresolved sanitizer symbols.
 **Fix:** Keep sanitizer instrumentation confined to private test targets, or propagate the matching sanitizer link options/runtime requirements through the exported static target when instrumentation is intentionally applied to the public archive. Add an installed static-consumer check for each supported sanitizer mode.
 
+### WR-03: CLI privacy check inspects only the diagnostic JSON line
+
+**Disposition:** Fixed in `d060614`.
+
+**File:** `tests/consumers/check_package.py:393`
+**Issue:** At `fd0e029`, `parse_diagnostic_record` scanned only the `SDK_DIAGNOSTIC` JSON payload and the wrong-output control scanned only assertion lines. The original path patterns also missed common temporary roots.
+**Resolution:** `d060614` scans the complete captured runner and wrong-output output, scans full README C-example output, adds common macOS temporary and Windows user/temp path patterns, and validates the diagnostic record's exact field sets and assertion-line schema. Shared-library loader tracing remains on the separate loader-verification calls and is not mixed into the public diagnostic output being checked.
+
 ---
 
-_Reviewed: 2026-10-06T10:18:07Z_  
+_Reviewed: 2026-10-06T15:05:52Z_  
 _Reviewer: the agent (gsd-code-reviewer)_  
 _Depth: standard_
