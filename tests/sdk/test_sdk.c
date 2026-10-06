@@ -22,6 +22,9 @@
 
 static gn_instance *instance;
 static const char *selected_suite;
+static uint64_t sdk_failpoint_positions;
+static uint64_t sdk_failpoint_failures;
+static uint64_t sdk_failpoint_success_boundaries;
 
 static void make_manifest(gn_manifest *manifest, guest_fixture_image *fixture,
                           unsigned scenario) {
@@ -344,6 +347,11 @@ static void malformed_manifests_are_rejected_before_touching_live_media(void) {
                                        instance, &candidate,
                                        GN_STATUS_INVALID_MEDIA);
     candidate = valid;
+    candidate.regions[1].source_size = 0u;
+    rejected_manifest_preserves_digest("sdk.media.reject-empty-ram-seed",
+                                       instance, &candidate,
+                                       GN_STATUS_INVALID_MEDIA);
+    candidate = valid;
     candidate.regions[0].source_size -= 1u;
     rejected_manifest_preserves_digest("sdk.media.reject-short-rom",
                                        instance, &candidate,
@@ -521,6 +529,318 @@ static void successful_replacement_owns_source_and_reset_seed(void) {
                   observations.bss_result);
 }
 
+static void peer_start_at_first_instruction(gn_instance *peer,
+                                            const char *label) {
+    gn_run_result run;
+    SDK_CHECK_STATUS(label, GN_STATUS_OK, gn_reset(peer));
+    SDK_CHECK_STATUS("sdk.faults.peer-reset-budget", GN_STATUS_OK,
+                     gn_run(peer, 40u, &run));
+    SDK_CHECK_STATUS("sdk.faults.peer-reset-boundary", GN_RUN_BUDGET,
+                     run.reason);
+    SDK_CHECK_U64("sdk.faults.peer-reset-pc", 0x100u, run.boundary_pc);
+}
+
+static void peer_progress_after_failure(gn_instance *peer,
+                                        const char *label) {
+    gn_run_result run;
+    SDK_CHECK_STATUS(label, GN_STATUS_OK, gn_run(peer, 4u, &run));
+    SDK_CHECK_STATUS("sdk.faults.peer-progress-budget", GN_RUN_BUDGET,
+                     run.reason);
+    SDK_CHECK_U64("sdk.faults.peer-progress-pc", 0x102u, run.boundary_pc);
+}
+
+static void assert_test_allocator_counts(const char *label,
+                                         const gn_test_allocator *allocator,
+                                         size_t attempts,
+                                         size_t total_attempts,
+                                         size_t live_allocations,
+                                         size_t live_bytes) {
+    char field[96];
+    (void)snprintf(field, sizeof(field), "%s.attempts", label);
+    SDK_CHECK_U64(field, attempts, allocator->attempts);
+    (void)snprintf(field, sizeof(field), "%s.total-attempts", label);
+    SDK_CHECK_U64(field, total_attempts, allocator->total_attempts);
+    (void)snprintf(field, sizeof(field), "%s.live-allocations", label);
+    SDK_CHECK_U64(field, live_allocations, allocator->live_allocations);
+    (void)snprintf(field, sizeof(field), "%s.live-bytes", label);
+    SDK_CHECK_U64(field, live_bytes, allocator->live_bytes);
+    (void)printf("# ALLOCATION %s attempts=%zu total_attempts=%zu "
+                 "live_allocations=%zu live_bytes=%zu\n",
+                 label, allocator->attempts, allocator->total_attempts,
+                 allocator->live_allocations, allocator->live_bytes);
+}
+
+static void assert_named_result(gn_instance *target, uint32_t arithmetic,
+                                const char *label) {
+    gn_run_result run;
+    gn_observations observations;
+    SDK_CHECK_STATUS("sdk.faults.recovery-run", GN_STATUS_OK,
+                     gn_run(target, 172u, &run));
+    SDK_CHECK_STATUS("sdk.faults.recovery-observe", GN_STATUS_OK,
+                     gn_observe(target, &observations));
+    SDK_CHECK_STATUS(label, GN_RUN_STOPPED, run.reason);
+    SDK_CHECK_U64("sdk.faults.recovery-result", arithmetic,
+                  observations.arithmetic_result);
+}
+
+static void allocation_failures_in_create_and_first_load_are_contained(void) {
+    SDK_CASE("sdk.faults.create-and-first-load-allocation-sweep");
+    gn_instance *peer = NULL;
+    SDK_CHECK_STATUS("sdk.faults.peer-create", GN_STATUS_OK, gn_create(&peer));
+    SDK_CHECK_STATUS("sdk.faults.peer-load-b", GN_STATUS_OK,
+                     load_scenario(peer, GUEST_FIXTURE_SCENARIO_B));
+    peer_start_at_first_instruction(peer, "sdk.faults.peer-before-create-failure");
+
+    gn_test_allocator create_failure;
+    gn_test_allocator_init(&create_failure);
+    gn_test_allocator_arm(&create_failure, 1u);
+    gn_instance *created = (gn_instance *)(uintptr_t)1u;
+    ++sdk_failpoint_positions;
+    ++sdk_failpoint_failures;
+    SDK_CHECK_STATUS("sdk.faults.create-allocation-fails", GN_STATUS_OUT_OF_MEMORY,
+                     gn_test_create(&create_failure, &created));
+    SDK_CHECK_TRUE("sdk.faults.create-output-cleared", created == NULL);
+    assert_test_allocator_counts("create-fail-1", &create_failure, 1u, 1u,
+                                 0u, 0u);
+    peer_progress_after_failure(peer, "sdk.faults.peer-after-create-failure");
+
+    gn_test_allocator create_success;
+    gn_test_allocator_init(&create_success);
+    gn_test_allocator_arm(&create_success, 2u);
+    ++sdk_failpoint_positions;
+    ++sdk_failpoint_success_boundaries;
+    SDK_CHECK_STATUS("sdk.faults.create-first-success", GN_STATUS_OK,
+                     gn_test_create(&create_success, &created));
+    assert_test_allocator_counts("create-success-after-1", &create_success,
+                                 1u, 1u, 1u, create_success.live_bytes);
+    peer_start_at_first_instruction(peer, "sdk.faults.peer-before-create-success");
+    peer_progress_after_failure(peer, "sdk.faults.peer-after-create-success");
+    gn_destroy(created);
+    assert_test_allocator_counts("create-destroy", &create_success, 1u, 1u,
+                                 0u, 0u);
+
+    for (size_t fail_at = 1u; fail_at <= 6u; ++fail_at) {
+        gn_test_allocator allocator;
+        gn_test_allocator_init(&allocator);
+        gn_instance *target = NULL;
+        SDK_CHECK_STATUS("sdk.faults.first-load-create", GN_STATUS_OK,
+                         gn_test_create(&allocator, &target));
+        const size_t baseline_allocations = allocator.live_allocations;
+        const size_t baseline_bytes = allocator.live_bytes;
+        gn_test_allocator_arm(&allocator, fail_at);
+        peer_start_at_first_instruction(peer, "sdk.faults.peer-before-first-load-failure");
+
+        gn_manifest invalid;
+        memset(&invalid, 0, sizeof(invalid));
+        invalid.version = GN_MANIFEST_VERSION;
+        invalid.profile = GN_PROFILE_DIAGNOSTIC;
+        SDK_CHECK_STATUS("sdk.faults.invalid-request-before-first-load",
+                         GN_STATUS_INVALID_MEDIA, gn_load(target, &invalid));
+        SDK_CHECK_U64("sdk.faults.invalid-request-allocation-free", 0u,
+                      allocator.attempts);
+
+        const gn_status expected = fail_at <= 5u ? GN_STATUS_OUT_OF_MEMORY
+                                                 : GN_STATUS_OK;
+        ++sdk_failpoint_positions;
+        if (fail_at <= 5u) {
+            ++sdk_failpoint_failures;
+        } else {
+            ++sdk_failpoint_success_boundaries;
+        }
+        const gn_status actual = load_scenario(target,
+                                               GUEST_FIXTURE_SCENARIO_A);
+        char label[64];
+        (void)snprintf(label, sizeof(label), "first-load-position-%zu", fail_at);
+        SDK_CHECK_STATUS(label, expected, actual);
+        const size_t expected_attempts = fail_at <= 5u ? fail_at : 5u;
+        const size_t expected_total_attempts = 1u + expected_attempts;
+        const size_t expected_allocations =
+            baseline_allocations + (fail_at <= 5u ? 0u : 5u);
+        const size_t expected_bytes = fail_at <= 5u ? baseline_bytes
+                                                     : allocator.live_bytes;
+        assert_test_allocator_counts(label, &allocator, expected_attempts,
+                                     expected_total_attempts,
+                                     expected_allocations, expected_bytes);
+        peer_progress_after_failure(peer, "sdk.faults.peer-after-first-load-failure");
+        gn_test_allocator_disarm(&allocator);
+
+        if (fail_at <= 5u) {
+            gn_run_result run;
+            gn_observations observations;
+            SDK_CHECK_STATUS("sdk.faults.first-load-unloaded-reset",
+                             GN_STATUS_INVALID_STATE, gn_reset(target));
+            SDK_CHECK_STATUS("sdk.faults.first-load-unloaded-run",
+                             GN_STATUS_INVALID_STATE, gn_run(target, 1u, &run));
+            SDK_CHECK_U64("sdk.faults.first-load-error-output-cleared", 0u,
+                          run.requested_cycles);
+            SDK_CHECK_STATUS("sdk.faults.first-load-unloaded-observe",
+                             GN_STATUS_INVALID_STATE,
+                             gn_observe(target, &observations));
+            SDK_CHECK_U64("sdk.faults.first-load-observation-cleared", 0u,
+                          observations.arithmetic_result);
+            SDK_CHECK_STATUS("sdk.faults.first-load-unload-after-error",
+                             GN_STATUS_OK, gn_unload(target));
+            SDK_CHECK_STATUS("sdk.faults.first-load-reload", GN_STATUS_OK,
+                             load_scenario(target, GUEST_FIXTURE_SCENARIO_B));
+        } else {
+            SDK_CHECK_STATUS("sdk.faults.first-load-reset", GN_STATUS_OK,
+                             gn_reset(target));
+            assert_named_result(target, 10u, "sdk.faults.first-load-success-stopped");
+            SDK_CHECK_STATUS("sdk.faults.first-load-unload", GN_STATUS_OK,
+                             gn_unload(target));
+            SDK_CHECK_STATUS("sdk.faults.first-load-reload", GN_STATUS_OK,
+                             load_scenario(target, GUEST_FIXTURE_SCENARIO_B));
+        }
+        SDK_CHECK_STATUS("sdk.faults.first-load-invalid-budget-recovery",
+                         GN_STATUS_OK, gn_reset(target));
+        assert_named_result(target, 16u, "sdk.faults.first-load-reloaded-b-stopped");
+        SDK_CHECK_STATUS("sdk.faults.first-load-final-unload", GN_STATUS_OK,
+                         gn_unload(target));
+        gn_destroy(target);
+        assert_test_allocator_counts("first-load-final-destroy", &allocator,
+                                     expected_attempts + 5u,
+                                     expected_total_attempts + 5u, 0u, 0u);
+    }
+
+    gn_reset(peer);
+    assert_named_result(peer, 16u, "sdk.faults.peer-remains-distinct-b");
+    gn_destroy(peer);
+}
+
+static void allocation_failures_in_replacement_preserve_old_image_and_peer(void) {
+    SDK_CASE("sdk.faults.replacement-allocation-sweep");
+    gn_instance *peer = NULL;
+    SDK_CHECK_STATUS("sdk.faults.replacement-peer-create", GN_STATUS_OK,
+                     gn_create(&peer));
+    SDK_CHECK_STATUS("sdk.faults.replacement-peer-load-b", GN_STATUS_OK,
+                     load_scenario(peer, GUEST_FIXTURE_SCENARIO_B));
+
+    for (size_t fail_at = 1u; fail_at <= 6u; ++fail_at) {
+        gn_test_allocator allocator;
+        gn_test_allocator_init(&allocator);
+        gn_instance *target = NULL;
+        SDK_CHECK_STATUS("sdk.faults.replacement-create", GN_STATUS_OK,
+                         gn_test_create(&allocator, &target));
+        SDK_CHECK_STATUS("sdk.faults.replacement-load-original-a", GN_STATUS_OK,
+                         load_scenario(target, GUEST_FIXTURE_SCENARIO_A));
+        gn_run_result partial;
+        SDK_CHECK_STATUS("sdk.faults.replacement-partial-run", GN_STATUS_OK,
+                         gn_run(target, 120u, &partial));
+        const uint64_t before = test_image_digest("sdk.faults.replacement-before",
+                                                  target);
+        const size_t baseline_allocations = allocator.live_allocations;
+        const size_t baseline_bytes = allocator.live_bytes;
+        gn_test_allocator_arm(&allocator, fail_at);
+        peer_start_at_first_instruction(peer,
+                                        "sdk.faults.peer-before-replacement-failure");
+
+        gn_manifest invalid;
+        memset(&invalid, 0, sizeof(invalid));
+        invalid.version = GN_MANIFEST_VERSION;
+        invalid.profile = GN_PROFILE_DIAGNOSTIC;
+        SDK_CHECK_STATUS("sdk.faults.invalid-request-before-replacement",
+                         GN_STATUS_INVALID_MEDIA, gn_load(target, &invalid));
+        SDK_CHECK_U64("sdk.faults.replacement-invalid-is-allocation-free", 0u,
+                      allocator.attempts);
+
+        const gn_status expected = fail_at <= 5u ? GN_STATUS_OUT_OF_MEMORY
+                                                 : GN_STATUS_OK;
+        ++sdk_failpoint_positions;
+        if (fail_at <= 5u) {
+            ++sdk_failpoint_failures;
+        } else {
+            ++sdk_failpoint_success_boundaries;
+        }
+        const gn_status actual = load_scenario(target,
+                                               GUEST_FIXTURE_SCENARIO_B);
+        char label[64];
+        (void)snprintf(label, sizeof(label), "replacement-position-%zu", fail_at);
+        SDK_CHECK_STATUS(label, expected, actual);
+        const size_t expected_attempts = fail_at <= 5u ? fail_at : 5u;
+        const size_t expected_total_attempts = 6u + expected_attempts;
+        assert_test_allocator_counts(label, &allocator, expected_attempts,
+                                     expected_total_attempts,
+                                     baseline_allocations, baseline_bytes);
+        peer_progress_after_failure(peer,
+                                    "sdk.faults.peer-after-replacement-failure");
+        gn_test_allocator_disarm(&allocator);
+
+        if (fail_at <= 5u) {
+            SDK_CHECK_U64("sdk.faults.failed-replacement-keeps-complete-image",
+                          before,
+                          test_image_digest("sdk.faults.replacement-after",
+                                            target));
+            gn_run_result invalid_budget;
+            memset(&invalid_budget, 0xa5, sizeof(invalid_budget));
+            SDK_CHECK_STATUS("sdk.faults.replacement-invalid-budget",
+                             GN_STATUS_INVALID_ARGUMENT,
+                             gn_run(target, GN_MAX_CYCLE_BUDGET + 1u,
+                                    &invalid_budget));
+            SDK_CHECK_U64("sdk.faults.replacement-invalid-budget-zeroed", 0u,
+                          invalid_budget.requested_cycles);
+            SDK_CHECK_STATUS("sdk.faults.replacement-reset-after-error",
+                             GN_STATUS_OK, gn_reset(target));
+            assert_named_result(target, 10u,
+                                "sdk.faults.replacement-old-a-recovers");
+            SDK_CHECK_STATUS("sdk.faults.replacement-unload-after-error",
+                             GN_STATUS_OK, gn_unload(target));
+            SDK_CHECK_STATUS("sdk.faults.replacement-reload-after-error",
+                             GN_STATUS_OK,
+                             load_scenario(target, GUEST_FIXTURE_SCENARIO_B));
+        } else {
+            SDK_CHECK_TRUE("sdk.faults.successful-replacement-changes-image",
+                           before != test_image_digest(
+                                        "sdk.faults.replacement-success-digest",
+                                        target));
+            assert_named_result(target, 16u,
+                                "sdk.faults.successful-replacement-b");
+            SDK_CHECK_STATUS("sdk.faults.successful-replacement-reset",
+                             GN_STATUS_OK, gn_reset(target));
+        }
+        assert_named_result(target, 16u, "sdk.faults.replacement-b-recovery");
+        SDK_CHECK_STATUS("sdk.faults.replacement-final-unload", GN_STATUS_OK,
+                         gn_unload(target));
+        gn_destroy(target);
+        assert_test_allocator_counts("replacement-final-destroy", &allocator,
+                                     expected_attempts + (fail_at <= 5u ? 5u : 0u),
+                                     expected_total_attempts +
+                                         (fail_at <= 5u ? 5u : 0u),
+                                     0u, 0u);
+    }
+
+    gn_reset(peer);
+    assert_named_result(peer, 16u, "sdk.faults.replacement-peer-b");
+    gn_destroy(peer);
+}
+
+static void guest_fault_reset_and_invalid_requests_allow_recovery(void) {
+    SDK_CASE("sdk.faults.guest-fault-and-invalid-request-recovery");
+    guest_fixture_image fixture;
+    gn_manifest manifest;
+    make_manifest(&manifest, &fixture, GUEST_FIXTURE_SCENARIO_A);
+    fixture.rom[0x100u] = UINT8_C(0x4a);
+    fixture.rom[0x101u] = UINT8_C(0xfc);
+    SDK_CHECK_STATUS("sdk.faults.load-guest-fault", GN_STATUS_OK,
+                     gn_load(instance, &manifest));
+    gn_run_result result;
+    SDK_CHECK_STATUS("sdk.faults.guest-fault-run-status", GN_STATUS_OK,
+                     gn_run(instance, 172u, &result));
+    SDK_CHECK_STATUS("sdk.faults.guest-fault-reason", GN_RUN_FAULT,
+                     result.reason);
+    SDK_CHECK_U64("sdk.faults.guest-fault-pc", 0x100u, result.fault_pc);
+    SDK_CHECK_STATUS("sdk.faults.reset-after-guest-fault", GN_STATUS_OK,
+                     gn_reset(instance));
+    SDK_CHECK_STATUS("sdk.faults.repeat-guest-fault-status", GN_STATUS_OK,
+                     gn_run(instance, 172u, &result));
+    SDK_CHECK_STATUS("sdk.faults.repeat-guest-fault-reason", GN_RUN_FAULT,
+                     result.reason);
+    SDK_CHECK_STATUS("sdk.faults.unload-after-guest-fault", GN_STATUS_OK,
+                     gn_unload(instance));
+    SDK_CHECK_STATUS("sdk.faults.reload-after-guest-fault", GN_STATUS_OK,
+                     load_scenario(instance, GUEST_FIXTURE_SCENARIO_B));
+    assert_named_result(instance, 16u, "sdk.faults.valid-run-after-fault");
+}
+
 static void sdk_lifecycle_suite(void) {
     RUN_TEST(unloaded_lifecycle_and_null_arguments_are_reported);
     RUN_TEST(unload_reload_and_repeated_reset_reproduce_results);
@@ -530,6 +850,23 @@ static void sdk_media_suite(void) {
     RUN_TEST(malformed_manifests_are_rejected_before_touching_live_media);
     RUN_TEST(region_range_arithmetic_and_cap_are_checked_without_dereference);
     RUN_TEST(successful_replacement_owns_source_and_reset_seed);
+}
+
+static void sdk_faults_suite(void) {
+    RUN_TEST(allocation_failures_in_create_and_first_load_are_contained);
+    RUN_TEST(allocation_failures_in_replacement_preserve_old_image_and_peer);
+    RUN_TEST(guest_fault_reset_and_invalid_requests_allow_recovery);
+    (void)printf("# FAILPOINT_SWEEP positions=%" PRIu64
+                 " injected_failures=%" PRIu64
+                 " successful_boundaries=%" PRIu64 "\n",
+                 sdk_failpoint_positions, sdk_failpoint_failures,
+                 sdk_failpoint_success_boundaries);
+    SDK_CHECK_U64("sdk.faults.failpoint-positions", 14u,
+                  sdk_failpoint_positions);
+    SDK_CHECK_U64("sdk.faults.injected-failure-count", 11u,
+                  sdk_failpoint_failures);
+    SDK_CHECK_U64("sdk.faults.first-success-boundaries", 3u,
+                  sdk_failpoint_success_boundaries);
 }
 
 static void sdk_diagnostic_suite(void) {
@@ -553,7 +890,9 @@ int main(int argc, char **argv) {
         sdk_lifecycle_suite();
     } else if (strcmp(selected_suite, "media") == 0) {
         sdk_media_suite();
-    } else if (strcmp(selected_suite, "faults") != 0) {
+    } else if (strcmp(selected_suite, "faults") == 0) {
+        sdk_faults_suite();
+    } else {
         (void)fprintf(stderr, "unknown suite: %s\n", selected_suite);
         return 2;
     }

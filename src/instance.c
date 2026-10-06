@@ -15,12 +15,19 @@
 #define GN_STACK_TOP UINT32_C(0x2000)
 
 typedef struct {
+    void *userdata;
+    void *(*allocate)(void *userdata, size_t bytes);
+    void (*release)(void *userdata, void *allocation);
+} gn_allocator;
+
+typedef struct {
     uint8_t *bytes;
     uint32_t base;
     uint32_t size;
 } gn_memory_region;
 
 typedef struct {
+    gn_allocator allocator;
     gn_memory_region rom;
     gn_memory_region ram;
     uint8_t *ram_seed;
@@ -29,17 +36,36 @@ typedef struct {
 } gn_image;
 
 struct gn_instance {
+    gn_allocator allocator;
     gn_image *image;
 };
 
-static void *gn_cpu_allocate(void *userdata, size_t bytes) {
+static void *gn_system_allocate(void *userdata, size_t bytes) {
     (void)userdata;
     return malloc(bytes);
 }
 
-static void gn_cpu_release(void *userdata, void *allocation) {
+static void gn_system_release(void *userdata, void *allocation) {
     (void)userdata;
     free(allocation);
+}
+
+static void *gn_allocate(const gn_allocator *allocator, size_t bytes) {
+    return allocator->allocate(allocator->userdata, bytes);
+}
+
+static void gn_release(const gn_allocator *allocator, void *allocation) {
+    if (allocation != NULL) allocator->release(allocator->userdata, allocation);
+}
+
+static void *gn_cpu_allocate(void *userdata, size_t bytes) {
+    const gn_image *image = (const gn_image *)userdata;
+    return gn_allocate(&image->allocator, bytes);
+}
+
+static void gn_cpu_release(void *userdata, void *allocation) {
+    const gn_image *image = (const gn_image *)userdata;
+    gn_release(&image->allocator, allocation);
 }
 
 static int gn_read16(void *userdata, uint32_t address, uint16_t *value) {
@@ -269,11 +295,12 @@ gn_status gn_test_image_digest(const gn_instance *instance, uint64_t *out_digest
 
 static void gn_free_image(gn_image *image) {
     if (image == NULL) return;
+    const gn_allocator allocator = image->allocator;
     owned_cpu_destroy(image->cpu);
-    free(image->ram.bytes);
-    free(image->ram_seed);
-    free(image->rom.bytes);
-    free(image);
+    gn_release(&allocator, image->ram.bytes);
+    gn_release(&allocator, image->ram_seed);
+    gn_release(&allocator, image->rom.bytes);
+    gn_release(&allocator, image);
 }
 
 static gn_status gn_initialize_candidate(gn_image *image) {
@@ -283,14 +310,93 @@ static gn_status gn_initialize_candidate(gn_image *image) {
     return status == OWNED_CPU_OK ? GN_STATUS_OK : GN_STATUS_CPU_FAILURE;
 }
 
-GN_API gn_status gn_create(gn_instance **out_instance) {
+static gn_status gn_create_with_allocator(gn_allocator allocator,
+                                          gn_instance **out_instance) {
     if (out_instance == NULL) return GN_STATUS_INVALID_ARGUMENT;
     *out_instance = NULL;
-    gn_instance *instance = (gn_instance *)calloc(1u, sizeof(*instance));
+    if (allocator.allocate == NULL || allocator.release == NULL) {
+        return GN_STATUS_INVALID_ARGUMENT;
+    }
+    gn_instance *instance = (gn_instance *)gn_allocate(&allocator,
+                                                        sizeof(*instance));
     if (instance == NULL) return GN_STATUS_OUT_OF_MEMORY;
+    memset(instance, 0, sizeof(*instance));
+    instance->allocator = allocator;
     *out_instance = instance;
     return GN_STATUS_OK;
 }
+
+GN_API gn_status gn_create(gn_instance **out_instance) {
+    const gn_allocator allocator = {NULL, gn_system_allocate, gn_system_release};
+    return gn_create_with_allocator(allocator, out_instance);
+}
+
+#if defined(GLUEYNEO_SDK_TEST_HOOKS)
+typedef union {
+    max_align_t alignment;
+    size_t bytes;
+} gn_test_allocation_header;
+
+void gn_test_allocator_init(gn_test_allocator *allocator) {
+    if (allocator == NULL) return;
+    memset(allocator, 0, sizeof(*allocator));
+}
+
+void gn_test_allocator_arm(gn_test_allocator *allocator, size_t fail_at) {
+    if (allocator == NULL) return;
+    allocator->fail_at = fail_at;
+    allocator->attempts = 0u;
+}
+
+void gn_test_allocator_disarm(gn_test_allocator *allocator) {
+    if (allocator == NULL) return;
+    allocator->fail_at = 0u;
+}
+
+static void *gn_test_allocate(void *userdata, size_t bytes) {
+    gn_test_allocator *allocator = (gn_test_allocator *)userdata;
+    if (allocator == NULL) return NULL;
+    ++allocator->attempts;
+    ++allocator->total_attempts;
+    if (allocator->fail_at != 0u &&
+        allocator->attempts == allocator->fail_at) {
+        return NULL;
+    }
+    if (bytes > SIZE_MAX - sizeof(gn_test_allocation_header)) return NULL;
+    gn_test_allocation_header *header =
+        (gn_test_allocation_header *)malloc(sizeof(*header) + bytes);
+    if (header == NULL) return NULL;
+    header->bytes = bytes;
+    ++allocator->live_allocations;
+    allocator->live_bytes += bytes;
+    return header + 1;
+}
+
+static void gn_test_release(void *userdata, void *allocation) {
+    gn_test_allocator *allocator = (gn_test_allocator *)userdata;
+    if (allocation == NULL) return;
+    gn_test_allocation_header *header =
+        ((gn_test_allocation_header *)allocation) - 1;
+    if (allocator != NULL) {
+        if (allocator->live_allocations > 0u) --allocator->live_allocations;
+        if (allocator->live_bytes >= header->bytes) {
+            allocator->live_bytes -= header->bytes;
+        }
+    }
+    free(header);
+}
+
+gn_status gn_test_create(gn_test_allocator *test_allocator,
+                         gn_instance **out_instance) {
+    if (test_allocator == NULL) {
+        if (out_instance != NULL) *out_instance = NULL;
+        return GN_STATUS_INVALID_ARGUMENT;
+    }
+    const gn_allocator allocator = {test_allocator, gn_test_allocate,
+                                    gn_test_release};
+    return gn_create_with_allocator(allocator, out_instance);
+}
+#endif
 
 GN_API gn_status gn_load(gn_instance *instance, const gn_manifest *manifest) {
     if (instance == NULL) return GN_STATUS_INVALID_ARGUMENT;
@@ -300,18 +406,30 @@ GN_API gn_status gn_load(gn_instance *instance, const gn_manifest *manifest) {
     gn_status status = gn_validate_manifest(manifest, &rom, &ram);
     if (status != GN_STATUS_OK) return status;
 
-    gn_image *candidate = (gn_image *)calloc(1u, sizeof(*candidate));
+    const gn_allocator allocator = instance->allocator;
+    gn_image *candidate = (gn_image *)gn_allocate(&allocator,
+                                                   sizeof(*candidate));
     if (candidate == NULL) return GN_STATUS_OUT_OF_MEMORY;
+    memset(candidate, 0, sizeof(*candidate));
+    candidate->allocator = allocator;
     candidate->rom.base = rom->guest_base;
     candidate->rom.size = rom->mapped_size;
     candidate->ram.base = ram->guest_base;
     candidate->ram.size = ram->mapped_size;
     candidate->ram_seed_size = ram->source_size;
-    candidate->rom.bytes = (uint8_t *)malloc(rom->source_size);
-    candidate->ram_seed = (uint8_t *)malloc(ram->source_size);
-    candidate->ram.bytes = (uint8_t *)malloc((size_t)ram->mapped_size);
-    if (candidate->rom.bytes == NULL || candidate->ram_seed == NULL ||
-        candidate->ram.bytes == NULL) {
+    candidate->rom.bytes = (uint8_t *)gn_allocate(&allocator, rom->source_size);
+    if (candidate->rom.bytes == NULL) {
+        gn_free_image(candidate);
+        return GN_STATUS_OUT_OF_MEMORY;
+    }
+    candidate->ram_seed = (uint8_t *)gn_allocate(&allocator, ram->source_size);
+    if (candidate->ram_seed == NULL) {
+        gn_free_image(candidate);
+        return GN_STATUS_OUT_OF_MEMORY;
+    }
+    candidate->ram.bytes =
+        (uint8_t *)gn_allocate(&allocator, (size_t)ram->mapped_size);
+    if (candidate->ram.bytes == NULL) {
         gn_free_image(candidate);
         return GN_STATUS_OUT_OF_MEMORY;
     }
@@ -321,9 +439,10 @@ GN_API gn_status gn_load(gn_instance *instance, const gn_manifest *manifest) {
     memcpy(candidate->ram.bytes, candidate->ram_seed, candidate->ram_seed_size);
 
     const owned_cpu_bus bus = {candidate, gn_read16, gn_write16};
-    const owned_cpu_allocator allocator = {NULL, gn_cpu_allocate, gn_cpu_release};
+    const owned_cpu_allocator cpu_allocator = {candidate, gn_cpu_allocate,
+                                                gn_cpu_release};
     const owned_cpu_status cpu_status = owned_cpu_create(
-        OWNED_CPU_MODEL_MC68000, bus, allocator, &candidate->cpu);
+        OWNED_CPU_MODEL_MC68000, bus, cpu_allocator, &candidate->cpu);
     if (cpu_status != OWNED_CPU_OK) {
         gn_free_image(candidate);
         return cpu_status == OWNED_CPU_ALLOCATION_FAILURE ? GN_STATUS_OUT_OF_MEMORY
@@ -412,8 +531,9 @@ GN_API gn_status gn_unload(gn_instance *instance) {
 
 GN_API void gn_destroy(gn_instance *instance) {
     if (instance == NULL) return;
+    const gn_allocator allocator = instance->allocator;
     gn_free_image(instance->image);
-    free(instance);
+    gn_release(&allocator, instance);
 }
 
 GN_API const char *gn_status_string(gn_status status) {

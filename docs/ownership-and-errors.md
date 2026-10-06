@@ -95,3 +95,18 @@ The media suite uses a private test build to compare a digest over the full ROM,
 RAM seed and live RAM, plus all named CPU continuation fields. That digest and
 the private hooks are test evidence only; neither is part of the installed API,
 snapshot format, or persistence contract.
+
+The private fault suite routes each test instance through its own allocation
+counter and fails one selected allocation call. It sweeps create, initial load,
+and replacement through the first position beyond all allocations, recording
+attempt count, live allocation count, and requested live bytes. The private
+allocator state must outlive its test instance. Failed initial loads remain
+unloaded; failed replacements preserve the complete image digest and continued
+guest results. The test target is compiled separately from the public runtime;
+the installed header and library contain no fault-injection API.
+
+Run the allocation-failure and recovery checks with:
+
+```sh
+ctest --preset sdk-debug -L sdk-faults --output-on-failure --no-tests=error
+```
