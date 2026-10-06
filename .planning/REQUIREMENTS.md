@@ -40,15 +40,15 @@ Historical Musashi CPU-05 decision evidence: [bounded rejection](../experiments/
 
 ### Evidence and Measurement
 
-- [ ] **EVID-01**: A maintainer can audit every public fixture and dependency from a manifest recording rights/notices, source revision, generation/build recipe, output digest, firmware needs and test-oracle ancestry.
+- [x] **EVID-01**: A maintainer can audit every public fixture and dependency from a manifest recording rights/notices, source revision, generation/build recipe, output digest, firmware needs and test-oracle ancestry.
 - [x] **EVID-02**: A maintainer can run proportionate boundary and lifecycle tests, meaningful properties, bounded input/call-sequence fuzzing and supported sanitizer checks, with retained regressions for discovered failures.
 - [x] **EVID-03**: A maintainer receives machine-readable results with exact code/dependency/configuration/input identities, nonzero executed assertions and distinct pass/fail/skipped/unsupported/unknown outcomes.
-- [ ] **EVID-04**: A maintainer can reproduce an initial diagnostic execution, memory/allocation, load and build-cost baseline on named host classes, retaining workload/output identity and uncertainty without presenting these measurements as gameplay performance or an enforced uncalibrated threshold.
+- [x] **EVID-04**: A maintainer can reproduce an initial diagnostic execution, memory/allocation, load and build-cost baseline on named host classes, retaining workload/output identity and uncertainty without presenting these measurements as gameplay performance or an enforced uncalibrated threshold.
 
 ### Documentation and Delivery
 
-- [ ] **DOC-01**: A new integrator can follow a compiled getting-started example, ownership/lifetime/error guide and small failure reproduction procedure that match the shipped API and artifacts.
-- [ ] **DOC-02**: An integrator can inspect the alpha's exact CPU/bus/bootstrap capability subset, timing limitations and unverified dimensions, including explicit absence of game, original-BIOS, video, audio and public snapshot/persistence compatibility claims.
+- [x] **DOC-01**: A new integrator can follow a compiled getting-started example, ownership/lifetime/error guide and small failure reproduction procedure that match the shipped API and artifacts.
+- [x] **DOC-02**: An integrator can inspect the alpha's exact CPU/bus/bootstrap capability subset, timing limitations and unverified dimensions, including explicit absence of game, original-BIOS, video, audio and public snapshot/persistence compatibility claims.
 - [ ] **DEL-01**: A maintainer gets a small always-started aggregate required CI check with conservative change classification, meaningful execution counts and recorded cold-build, critical-path and runner-minute evidence.
 - [ ] **DEL-02**: Qualifying changes can merge through protected PRs only after current-revision required checks and independent review pass; relevant issues/PRs are triaged at repository setup and shipping, and actual bot/App event behavior is qualified for unattended operation.
 - [ ] **DEL-03**: A maintainer can use pinned release-please automation with one C version source to stage a complete unsigned SDK draft bound to the tested release commit, including correct recovery from interrupted staging and retries that report no newly created release.
@@ -129,12 +129,12 @@ Each v1 requirement has exactly one primary phase in v0.1. Later requirements re
 | BUILD-02 | Phase 2 | Complete |
 | BUILD-03 | Phase 3 | Pending |
 | BUILD-04 | Phase 3 | Pending |
-| EVID-01 | Phase 2 | Pending |
+| EVID-01 | Phase 2 | Complete |
 | EVID-02 | Phase 2 | Complete |
 | EVID-03 | Phase 2 | Complete |
-| EVID-04 | Phase 2 | Pending |
-| DOC-01 | Phase 2 | Pending |
-| DOC-02 | Phase 2 | Pending |
+| EVID-04 | Phase 2 | Complete |
+| DOC-01 | Phase 2 | Complete |
+| DOC-02 | Phase 2 | Complete |
 | DEL-01 | Phase 3 | Pending |
 | DEL-02 | Phase 3 | Pending |
 | DEL-03 | Phase 3 | Pending |
