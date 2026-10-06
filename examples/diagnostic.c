@@ -63,9 +63,11 @@ static int parse_expected_arithmetic(const char *text, uint32_t *expected) {
 }
 
 int main(int argc, char **argv) {
-    if (argc != 2 && argc != 4) {
+    const int recovery_mode = argc == 3 && strcmp(argv[2], "--recovery") == 0;
+    if (argc != 2 && argc != 4 && !recovery_mode) {
         (void)fprintf(stderr,
-                      "usage: glueyneo-installed-c FIXTURE [--expect-arithmetic N]\n");
+                      "usage: glueyneo-installed-c FIXTURE [--recovery | "
+                      "--expect-arithmetic N]\n");
         return 2;
     }
     uint32_t expected_arithmetic = 10u;
@@ -104,6 +106,29 @@ int main(int argc, char **argv) {
     int passed = check_status("sdk.instance.create", GN_STATUS_OK, status);
     if (status == GN_STATUS_OK) status = gn_load(instance, &manifest);
     passed &= check_status("sdk.media.load", GN_STATUS_OK, status);
+
+    if (recovery_mode && status == GN_STATUS_OK) {
+        manifest.regions[0].mapped_size = DIAGNOSTIC_ROM_BYTES - 1u;
+        const gn_status rejected_status = gn_load(instance, &manifest);
+        ++assertion_count;
+        if (rejected_status != GN_STATUS_INVALID_MEDIA) {
+            passed = 0;
+            (void)fprintf(stderr,
+                          "CONSUMER_ASSERT sdk.recovery.malformed-manifest "
+                          "expected=%s observed=%s\n",
+                          gn_status_string(GN_STATUS_INVALID_MEDIA),
+                          gn_status_string(rejected_status));
+        } else {
+            (void)puts(
+                "SDK_RECOVERY {\"schema_version\":1,\"case_id\":"
+                "\"sdk.recovery.malformed-manifest\",\"outcome\":\"pass\","
+                "\"expected_status\":\"invalid diagnostic media\","
+                "\"observed_status\":\"invalid diagnostic media\","
+                "\"assertions\":1}");
+        }
+        manifest.regions[0].mapped_size = DIAGNOSTIC_ROM_BYTES;
+        if (rejected_status != GN_STATUS_INVALID_MEDIA) status = rejected_status;
+    }
 
     gn_run_result run;
     memset(&run, 0, sizeof(run));

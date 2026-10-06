@@ -295,10 +295,26 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
   add_test(NAME sdk_package_consumers_shared
     COMMAND ${Python3_EXECUTABLE} "${GLUEYNEO_CONSUMER_CHECK}"
             --case consumers-shared)
+  add_test(NAME sdk_package_docs_static
+    COMMAND ${Python3_EXECUTABLE} "${GLUEYNEO_CONSUMER_CHECK}"
+            --case docs-static)
+  add_test(NAME sdk_package_docs_shared
+    COMMAND ${Python3_EXECUTABLE} "${GLUEYNEO_CONSUMER_CHECK}"
+            --case docs-shared)
+  add_test(NAME sdk_package_docs_readme
+    COMMAND ${Python3_EXECUTABLE} "${GLUEYNEO_CONSUMER_CHECK}"
+            --case docs-readme)
+  add_test(NAME sdk_package_capabilities
+    COMMAND ${Python3_EXECUTABLE} "${GLUEYNEO_CONSUMER_CHECK}"
+            --case capabilities)
   set_tests_properties(sdk_package_build_static sdk_package_build_shared
     PROPERTIES LABELS "sdk-package-build" TIMEOUT 360)
   set_tests_properties(sdk_package_consumers_static sdk_package_consumers_shared
     PROPERTIES LABELS "sdk-package-consumers" TIMEOUT 360)
+  set_tests_properties(sdk_package_docs_static sdk_package_docs_shared sdk_package_docs_readme
+    PROPERTIES LABELS "sdk-package-docs" TIMEOUT 600)
+  set_tests_properties(sdk_package_capabilities
+    PROPERTIES LABELS "sdk-package-capabilities" TIMEOUT 180)
 endif()
 
 if(GLUEYNEO_CPU_EXPERIMENT)

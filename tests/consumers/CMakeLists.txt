@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(GlueyneoInstalledConsumer LANGUAGES C CXX)
 
-find_package(Glueyneo CONFIG REQUIRED)
+find_package(Glueyneo 0.1.0 EXACT CONFIG REQUIRED)
 
 add_executable(glueyneo-installed-c "${GLUEYNEO_CONSUMER_C_SOURCE}")
 target_link_libraries(glueyneo-installed-c PRIVATE Glueyneo::glueyneo)

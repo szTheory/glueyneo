@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -542,10 +543,245 @@ def case_consumers(variant: str) -> None:
     print("SDK_PACKAGE " + json.dumps(result, sort_keys=True))
 
 
+def README_commands() -> list[str]:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    start = "<!-- docs:installed-commands:start -->"
+    end = "<!-- docs:installed-commands:end -->"
+    if readme.count(start) != 1 or readme.count(end) != 1:
+        raise CheckError("README must contain one marked installed-command block")
+    section = readme.split(start, 1)[1].split(end, 1)[0]
+    fenced = re.search(r"```sh\s*\n(.*?)\n```", section, re.DOTALL)
+    if fenced is None:
+        raise CheckError("README installed commands are not in one shell code block")
+    commands: list[str] = []
+    pending = ""
+    for line in fenced.group(1).splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.endswith("\\"):
+            pending += line[:-1].rstrip() + " "
+            continue
+        commands.append(pending + line)
+        pending = ""
+    if pending:
+        raise CheckError("README installed-command block ends with an incomplete continuation")
+    return commands
+
+
+def stage_documentation_project(destination: Path) -> None:
+    destination.mkdir(parents=True, exist_ok=True)
+    for file in ("CMakeLists.txt", "LICENSE"):
+        shutil.copy2(ROOT / file, destination / file)
+    for directory in ("cmake", "include", "src", "experiments/owned_cpu"):
+        shutil.copytree(ROOT / directory, destination / directory)
+    for relative in (
+        "tools/diagnostic/main.c",
+        "tests/sdk/guest_fixture.c",
+        "tests/sdk/guest_fixture.h",
+        "tests/consumers/CMakeLists.txt",
+        "tests/consumers/header.cpp",
+        "examples/diagnostic.c",
+    ):
+        target = destination / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / relative, target)
+
+
+def command_argv(command: str, cwd: Path) -> list[str]:
+    expanded = command.replace('"$PWD"', str(cwd)).replace("$PWD", str(cwd))
+    return shlex.split(expanded)
+
+
+def check_readme_links_and_contracts() -> int:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    link_pattern = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+    local_links = 0
+    for target in link_pattern.findall(readme):
+        target = target.strip().split()[0]
+        if target.startswith(("https://", "http://", "mailto:")) or target.startswith("#"):
+            continue
+        path = target.split("#", 1)[0]
+        if path and not (ROOT / path).is_file() and not (ROOT / path).is_dir():
+            raise CheckError(f"README link points to a missing local path: {target}")
+        local_links += 1
+    if local_links < 9:
+        raise CheckError(f"README local-link verification found too few links: {local_links}")
+
+    required_contracts = (
+        "find_package(Glueyneo 0.1.0 EXACT CONFIG REQUIRED)",
+        "callbacks receive the low 24 address bits",
+        "GN_STATUS_INVALID_MEDIA",
+        "invalid diagnostic media",
+        "GN_RUN_STOPPED",
+        "overshoot",
+        "stopped-idle",
+        "0x4AFC",
+        "saved-PC behavior remains unknown",
+        "phase_admitted: false",
+        "WR-01",
+        "without reading `0x106`",
+        "do not qualify a platform support matrix",
+    )
+    for phrase in required_contracts:
+        if phrase not in readme:
+            raise CheckError(f"README is missing required current contract text: {phrase}")
+    stale_phrases = (
+        "There is no public SDK yet",
+        "no public SDK qualification is established",
+        "$gsd-execute-phase 01",
+    )
+    for phrase in stale_phrases:
+        if phrase in readme:
+            raise CheckError(f"README retains stale scope text: {phrase}")
+    return local_links + len(required_contracts) + len(stale_phrases)
+
+
+def check_capability_contract() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    subset = (ROOT / "experiments" / "owned_cpu" / "SUBSET.md").read_text(encoding="utf-8")
+    contract_rows = (
+        ("MOVEQ #imm8,Dn", "MOVEQ #imm8,Dn"),
+        ("ADDQ.L #1..8,Dn", "ADDQ.L #1..8,Dn"),
+        ("MOVE.L Dn,(abs.L)", "MOVE.L Dn,(abs.L)"),
+        ("NOP", "0x4e71"),
+        ("RESET", "0x4e70"),
+        ("RTE", "0x4e73"),
+        ("TRAP #0", "0x4e40"),
+        ("MOVE.W #imm16,SR", "0x46fc"),
+        ("MOVE.W (abs.L),Dn", "MOVE.W (abs.L),Dn"),
+        ("STOP #imm16", "0x4e72"),
+    )
+    for public_phrase, subset_phrase in contract_rows:
+        if public_phrase not in readme or subset_phrase not in subset:
+            raise CheckError(f"README and candidate subset disagree or omit {public_phrase}")
+    exclusions = (
+        "physical pin",
+        "board behavior",
+        "commercial game or BIOS compatibility",
+        "video",
+        "audio",
+        "public\nsnapshots",
+        "replay",
+        "durable saves",
+        "CPU plugins",
+        "gameplay performance",
+    )
+    for phrase in exclusions:
+        if phrase not in readme:
+            raise CheckError(f"README omits a required excluded capability: {phrase}")
+    if "phase_admitted: true" in readme or "original-silicon saved PC is known" in readme:
+        raise CheckError("README overstates candidate admission or hardware saved-PC evidence")
+
+
+def case_docs_readme() -> None:
+    assertion_count = check_readme_links_and_contracts()
+    commands = README_commands()
+    if len(commands) != 16:
+        raise CheckError(f"Expected 16 executable static/shared README commands; found {len(commands)}")
+    print(
+        "SDK_DOCS "
+        + json.dumps(
+            {
+                "schema_version": 1,
+                "case_id": "sdk.docs.readme-links-and-commands",
+                "outcome": "pass",
+                "assertions": assertion_count + 3 + len(commands),
+                "commands_found": len(commands),
+                "local_links": "pass",
+            },
+            sort_keys=True,
+        )
+    )
+
+
+def case_capabilities() -> None:
+    check_capability_contract()
+    readme_assertions = check_readme_links_and_contracts()
+    print(
+        "SDK_CAPABILITIES "
+        + json.dumps(
+            {
+                "schema_version": 1,
+                "case_id": "sdk.capabilities.alpha-scope",
+                "outcome": "pass",
+                "assertions": 31 + readme_assertions,
+                "scope": "bounded candidate and fixed diagnostic profile",
+                "unknowns": ["original-silicon saved PC", "CMake 3.20 floor", "other platforms"],
+            },
+            sort_keys=True,
+        )
+    )
+
+
+def case_docs_variant(variant: str) -> None:
+    commands = README_commands()
+    work = new_work_dir(f"docs-{variant}")
+    source = work / "project"
+    stage_documentation_project(source)
+    selected: list[list[str]] = []
+    tags = (f"sdk-{variant}", f"install-{variant}", f"consumer-{variant}")
+    for command in commands:
+        if any(tag in command for tag in tags):
+            argv = command_argv(command, source)
+            selected.append(argv)
+    if len(selected) != 8:
+        raise CheckError(f"Expected eight README commands for {variant}, found {len(selected)}")
+
+    outcomes: list[dict[str, object]] = []
+    for argv in selected:
+        result = run(argv, cwd=source, timeout=COMMAND_TIMEOUT_SECONDS)
+        if argv[0].startswith("./") and "glueyneo-installed-cxx" in argv[0]:
+            outcomes.append(parse_consumer_record(result.stdout, "SDK_CONSUMER_CPP "))
+        elif argv[0].startswith("./") and "glueyneo-installed-c" in argv[0]:
+            if "--recovery" in argv:
+                recovery = parse_consumer_record(result.stdout, "SDK_RECOVERY ")
+                if recovery.get("expected_status") != "invalid diagnostic media" or recovery.get(
+                    "observed_status"
+                ) != "invalid diagnostic media":
+                    raise CheckError("README recovery command did not produce the documented invalid-media status")
+                outcomes.append(recovery)
+            outcomes.append(parse_consumer_record(result.stdout, "SDK_CONSUMER "))
+
+    install_name = f"install-{variant}"
+    fixture = source / "build" / install_name / "share" / "glueyneo" / "diagnostic-original-a.bin"
+    verify_fixture_digest(fixture)
+
+    if len(outcomes) != 4:
+        raise CheckError(f"Expected C/C++ plus recovery outcomes for {variant}; found {len(outcomes)}")
+    c_records = [record for record in outcomes if record.get("case_id") == "sdk.consumer.c"]
+    cxx_records = [record for record in outcomes if record.get("case_id") == "sdk.consumer.cpp"]
+    recovery_records = [record for record in outcomes if record.get("case_id") == "sdk.recovery.malformed-manifest"]
+    if len(c_records) != 2 or len(cxx_records) != 1 or len(recovery_records) != 1:
+        raise CheckError(f"README lane outcomes are incomplete for {variant}: {outcomes}")
+    for c_record in c_records:
+        if (c_record.get("arithmetic"), c_record.get("initialized"), c_record.get("bss")) != (10, 0x1237, 1):
+            raise CheckError(f"README C example returned unexpected named results: {c_record}")
+    print(
+        "SDK_DOCS "
+        + json.dumps(
+            {
+                "schema_version": 1,
+                "case_id": f"sdk.docs.installed-example-{variant}",
+                "outcome": "pass",
+                "variant": variant,
+                "assertions": sum(int(record.get("assertions", 0)) for record in outcomes),
+                "compiled_commands_executed": len(selected),
+                "c_lanes": len(c_records),
+                "cpp_lanes": len(cxx_records),
+                "malformed_manifest_recovery": "pass; GN_STATUS_INVALID_MEDIA then original loaded results pass",
+            },
+            sort_keys=True,
+        )
+    )
+
+
 def suite(suite_name: str) -> None:
     labels = {
         "build": "sdk-package-build",
         "consumers": "sdk-package-consumers",
+        "docs": "sdk-package-docs",
+        "capabilities": "sdk-package-capabilities",
     }
     if suite_name not in labels:
         raise CheckError(f"Suite is not implemented yet: {suite_name}")
@@ -605,6 +841,12 @@ def main() -> int:
             case_build(args.case.removeprefix("build-"))
         elif args.case in {"consumers-static", "consumers-shared"}:
             case_consumers(args.case.removeprefix("consumers-"))
+        elif args.case in {"docs-static", "docs-shared"}:
+            case_docs_variant(args.case.removeprefix("docs-"))
+        elif args.case == "docs-readme":
+            case_docs_readme()
+        elif args.case == "capabilities":
+            case_capabilities()
         else:
             raise CheckError(f"Unknown case: {args.case}")
     except (CheckError, OSError, ValueError) as error:
