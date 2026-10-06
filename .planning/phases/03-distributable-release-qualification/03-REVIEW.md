@@ -1,8 +1,8 @@
 ---
 phase: 03-distributable-release-qualification
-reviewed: 2026-10-06T18:31:37Z
+reviewed: 2026-10-06T19:20:22Z
 depth: standard
-files_reviewed: 26
+files_reviewed: 31
 files_reviewed_list:
   - .github/workflows/ci.yml
   - .github/workflows/release.yml
@@ -30,13 +30,19 @@ files_reviewed_list:
   - .planning/phases/02-executable-diagnostic-sdk/02-04-PLAN.md
   - .planning/phases/02-executable-diagnostic-sdk/02-05-PLAN.md
   - .planning/phases/02-executable-diagnostic-sdk/02-06-PLAN.md
+  - .planning/phases/03-distributable-release-qualification/03-PUBLICATION-AUDIT.json
+  - .planning/phases/03-distributable-release-qualification/03-PUBLICATION-COMMIT-MAP.txt
+  - .planning/phases/03-distributable-release-qualification/03-HOSTED-QUALIFICATION.md
+  - docs/releasing.md
+  - third_party/musashi/PROVENANCE.md
 findings:
-  critical: 2
-  warning: 1
+  critical: 0
+  warning: 0
   info: 0
-  total: 3
-status: issues_found
-reviewed_revision: 1ba5b3c75ba7bda878e652ecf13d8544c6510bc2
+  total: 0
+status: clean
+reviewed_revision: f74f4cd77cb88fe0803697b74ea423765e94cae7
+initial_reviewed_revision: 1ba5b3c75ba7bda878e652ecf13d8544c6510bc2
 diff_base: 8ddebb9856e70e0e753e0747059b97a9a8e63a32
 re_reviewed_revision: cb4834ed89e2422491387eb8ef4a2598fb5824dd
 re_review_status: issues_found
@@ -48,23 +54,28 @@ re_review_open_findings:
 latest_reviewed_revision: 30d29dbc66d84cbeb500ed2029ce06f1667a74df
 latest_review_status: issues_found
 latest_open_findings:
-  critical: 1
-  warning: 2
+  critical: 0
+  warning: 0
   info: 0
-  total: 3
+  total: 0
+publication_head_reviewed: f74f4cd77cb88fe0803697b74ea423765e94cae7
+publication_review_status: clean_bounded_scan
+historical_private_refs_reviewed: false
 ---
 
 # Phase 03: Code Review Report
 
 **Reviewed:** 2026-10-06
 **Depth:** standard
-**Files Reviewed:** 26
-**Status:** issues_found
-**Revision:** `1ba5b3c75ba7bda878e652ecf13d8544c6510bc2`
+**Files Reviewed:** 31
+**Status:** clean at current public HEAD; hosted release qualification remains pending
+**Revision:** `f74f4cd77cb88fe0803697b74ea423765e94cae7`
 
 ## Summary
 
 Reviewed release archive construction, release recovery and download validation, CI aggregation, privacy/rights scanning, and consumer integration at the requested revision. The exact-SHA and downloaded-byte checks are present, but the publication gates do not inspect historical Git blob contents and can omit unclassified test assets from rights validation. These gaps are material for the stated public repository and redistribution boundary. Hosted CI lanes, repository protections, App token behavior, and publication remain pending as recorded by the phase; no hosted claims were inferred from local evidence. No tests or other commands were run during this review.
+
+The findings and counts below preserve the initial and intermediate review trail. At the latest reviewed public HEAD, all previously reported source defects and the historical-path blocker are resolved for the selected publication history. The current local detector run is bounded evidence only; the GitHub App, event, protected-merge, hosted-runner, and actual release/publication claims remain pending.
 
 ## Critical Issues
 
@@ -106,6 +117,26 @@ Reviewed release archive construction, release recovery and download validation,
 _Reviewed: 2026-10-06_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
+
+## Final publication re-review at `f74f4cd77cb88fe0803697b74ea423765e94cae7`
+
+**Verdict:** No open code-review findings remain in the reviewed current public HEAD scope. CR-01, CR-02, CR-04, WR-01, WR-02, WR-03, and PUB-01 are resolved for this publication head. This is a clean bounded scanner and rights-inventory review, not a global guarantee of secret absence or legal rights, and it does not qualify unobserved hosted behavior.
+
+**HEAD-only verification:** A temporary single-branch repository was constructed from the current `HEAD` commit only; local private refs and uncommitted user planning changes were not included. The clone resolved to the exact reviewed SHA. `python3 tests/workflow/test_public_content.py` passed 16/16 tests in 4.337 seconds. `python3 tools/public_content.py` passed with 98 repository-scope files (2,137,247 bytes), 1,115 history entries (29,246,607 bytes), zero unresolved findings, and two exact history dispositions.
+
+**Full tracked-tree verification:** The complete tracked content at current HEAD contains 355 files (9,498,009 bytes). Raw pattern scanning reports one hit at `third_party/musashi/m68kmake.c` under `private-identity`; this is the exact upstream public contact recorded in the publication audit, not user or private data. Its file digest matches the separate Musashi retained-grant record and its corresponding history object disposition. The committed audit snapshot at sanitized source `a8b78788799fb70a18e4198d54f86dc3d4ee17ba` records 351 files and 9,444,231 bytes; the current HEAD has later documentation and evidence files, so the fresh 355-file result is the current denominator.
+
+**Rights and history evidence:** The current repository rights check passes with 21 records. All nine repository-only Musashi records match the committed SHA-256 values; provenance pins upstream revision `313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd` and states the source retains the upstream permissive notices. `tools/release_manifest.py` includes Unity and excludes `third_party/musashi`, keeping the experimental candidate out of SDK archives while preserving its notices in the repository. The 323-entry publication commit map has unique, well-formed old/new IDs and includes the audit source revision. The audit's complementary literal-home check is recorded as passed; this review did not enumerate or inspect preserved local private refs.
+
+**Resolved finding trail:**
+
+- **CR-01 — RESOLVED for selected publication history.** The scanner covers reachable blobs; the clean HEAD-only history scan has zero unresolved findings and retains only the two exact, provenance-bound dispositions.
+- **CR-02 and CR-04 — RESOLVED.** The exact test-source path allowlist and 21-item inventory now reject unrecorded test assets without suffix exceptions.
+- **WR-01 — RESOLVED.** Workflow and root release configuration files are in repository scan scope while the SDK archive scope stays separate.
+- **WR-02 and WR-03 — RESOLVED.** Windows home paths and OpenPGP private-key headers have explicit rules and redaction tests; all 16 focused tests pass.
+- **PUB-01 — RESOLVED for selected publication history.** The sanitized public history scan no longer reports the former plan-path matches. The preserved local refs remain outside this reviewed scope and must not be pushed.
+
+The full tracked-tree detector and rights inventory remain bounded mechanisms. A negative result covers only configured patterns, files, refs, and limits actually scanned; an affirmative row and digest do not independently establish legal permission. Repository secret scanning/push protection were observed enabled in the hosted receipt, but no live credential canary was used. Hosted CI lane identities, branch protection, App installation/token authority, fork approval, protected merge, release event delivery, downloaded published asset verification, and actual publication remain pending in `03-HOSTED-QUALIFICATION.md`.
 
 ## Re-review at `cb4834ed89e2422491387eb8ef4a2598fb5824dd`
 
