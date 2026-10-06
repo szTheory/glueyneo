@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
-project(Glueyneo LANGUAGES C)
+project(Glueyneo VERSION 0.1.0 LANGUAGES C)
 include(CTest)
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 option(GLUEYNEO_BUILD_TESTS "Build SDK tests and the headless diagnostic" ${BUILD_TESTING})
 option(GLUEYNEO_CPU_EXPERIMENT "Build the private CPU acceptance experiment" OFF)
@@ -13,7 +15,7 @@ set(GLUEYNEO_RUNTIME_SOURCES
   src/instance.c
   experiments/owned_cpu/cpu.c
 )
-add_library(glueyneo STATIC ${GLUEYNEO_RUNTIME_SOURCES})
+add_library(glueyneo ${GLUEYNEO_RUNTIME_SOURCES})
 add_library(Glueyneo::glueyneo ALIAS glueyneo)
 target_compile_features(glueyneo PRIVATE c_std_17)
 set_target_properties(glueyneo PROPERTIES
@@ -25,9 +27,16 @@ set_target_properties(glueyneo PROPERTIES
 target_include_directories(glueyneo
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/experiments/owned_cpu
 )
+if(BUILD_SHARED_LIBS)
+  target_compile_definitions(glueyneo
+    PUBLIC GLUEYNEO_SHARED
+    PRIVATE GLUEYNEO_BUILDING
+  )
+endif()
 if(MSVC)
   target_compile_options(glueyneo PRIVATE /W4 /WX)
 else()
@@ -69,6 +78,67 @@ if(MSVC)
 else()
   target_compile_options(glueyneo-diagnostic PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
+
+if(APPLE)
+  set_target_properties(glueyneo-diagnostic PROPERTIES
+    INSTALL_RPATH "@loader_path/../${CMAKE_INSTALL_LIBDIR}"
+  )
+elseif(UNIX)
+  set_target_properties(glueyneo-diagnostic PROPERTIES
+    INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}"
+  )
+endif()
+
+set(GLUEYNEO_DIAGNOSTIC_FIXTURE
+  "${CMAKE_CURRENT_BINARY_DIR}/diagnostic-original-a.bin")
+add_custom_command(
+  OUTPUT "${GLUEYNEO_DIAGNOSTIC_FIXTURE}"
+  COMMAND $<TARGET_FILE:glueyneo-diagnostic> --write-fixture
+          "${GLUEYNEO_DIAGNOSTIC_FIXTURE}"
+  DEPENDS glueyneo-diagnostic
+  VERBATIM
+)
+add_custom_target(glueyneo-original-fixture ALL
+  DEPENDS "${GLUEYNEO_DIAGNOSTIC_FIXTURE}")
+
+install(TARGETS glueyneo
+  EXPORT GlueyneoTargets
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+  INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+)
+install(TARGETS glueyneo-diagnostic
+  RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+)
+install(DIRECTORY include/glueyneo
+  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+)
+install(FILES LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/Glueyneo")
+install(FILES "${GLUEYNEO_DIAGNOSTIC_FIXTURE}"
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/glueyneo")
+
+set(GLUEYNEO_CMAKE_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/Glueyneo")
+configure_package_config_file(
+  cmake/GlueyneoConfig.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/GlueyneoConfig.cmake"
+  INSTALL_DESTINATION "${GLUEYNEO_CMAKE_INSTALL_DIR}"
+)
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/GlueyneoConfigVersion.cmake"
+  VERSION "${PROJECT_VERSION}"
+  COMPATIBILITY SameMajorVersion
+)
+install(EXPORT GlueyneoTargets
+  FILE GlueyneoTargets.cmake
+  NAMESPACE Glueyneo::
+  DESTINATION "${GLUEYNEO_CMAKE_INSTALL_DIR}"
+)
+install(FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/GlueyneoConfig.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/GlueyneoConfigVersion.cmake"
+  DESTINATION "${GLUEYNEO_CMAKE_INSTALL_DIR}"
+)
 
 if(GLUEYNEO_BUILD_TESTS)
   enable_testing()
@@ -210,6 +280,17 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
     FIXTURES_REQUIRED sdk_fixture_a
     LABELS "sdk-provenance"
   )
+
+  set(GLUEYNEO_CONSUMER_CHECK
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/consumers/check_package.py")
+  add_test(NAME sdk_package_build_static
+    COMMAND ${Python3_EXECUTABLE} "${GLUEYNEO_CONSUMER_CHECK}"
+            --case build-static)
+  add_test(NAME sdk_package_build_shared
+    COMMAND ${Python3_EXECUTABLE} "${GLUEYNEO_CONSUMER_CHECK}"
+            --case build-shared)
+  set_tests_properties(sdk_package_build_static sdk_package_build_shared
+    PROPERTIES LABELS "sdk-package-build" TIMEOUT 360)
 endif()
 
 if(GLUEYNEO_CPU_EXPERIMENT)
