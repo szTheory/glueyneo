@@ -293,7 +293,7 @@ GN_API const char *gn_status_string(gn_status status) {
     switch (status) {
         case GN_STATUS_OK: return "ok";
         case GN_STATUS_INVALID_ARGUMENT: return "invalid argument";
-        case GN_STATUS_INVALID_STATE: return "invalid lifecycle state";
+        case GN_STATUS_INVALID_STATE: return "instance has no loaded media";
         case GN_STATUS_INVALID_MEDIA: return "invalid diagnostic media";
         case GN_STATUS_UNSUPPORTED_PROFILE: return "unsupported diagnostic profile";
         case GN_STATUS_OUT_OF_MEMORY: return "out of memory";

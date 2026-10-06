@@ -1,10 +1,8 @@
 /* SPDX-License-Identifier: MIT */
-#include "unity.h"
 #include "glueyneo/glueyneo.h"
 #include "guest_fixture.h"
+#include "test_support.h"
 
-#include <inttypes.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -22,34 +20,7 @@
 #endif
 
 static gn_instance *instance;
-static uint64_t sdk_assertions;
-static uint64_t sdk_cases;
-
-#define SDK_CHECK_STATUS(id, expected, actual)                                     \
-    do {                                                                           \
-        const int sdk_expected_value = (int)(expected);                            \
-        const int sdk_actual_value = (int)(actual);                                \
-        ++sdk_assertions;                                                          \
-        (void)printf("# ASSERT %s expected=%d observed=%d\n", (id),              \
-                     sdk_expected_value, sdk_actual_value);                       \
-        TEST_ASSERT_EQUAL_INT_MESSAGE(sdk_expected_value, sdk_actual_value, (id)); \
-    } while (0)
-
-#define SDK_CHECK_U64(id, expected, actual)                                          \
-    do {                                                                             \
-        const uint64_t sdk_expected_value = (uint64_t)(expected);                    \
-        const uint64_t sdk_actual_value = (uint64_t)(actual);                        \
-        ++sdk_assertions;                                                            \
-        (void)printf("# ASSERT %s expected=%" PRIu64 " observed=%" PRIu64 "\n", \
-                     (id), sdk_expected_value, sdk_actual_value);                    \
-        TEST_ASSERT_EQUAL_UINT64_MESSAGE(sdk_expected_value, sdk_actual_value, (id));\
-    } while (0)
-
-#define SDK_CASE(id)             \
-    do {                         \
-        ++sdk_cases;             \
-        (void)printf("# CASE %s\n", (id)); \
-    } while (0)
+static const char *selected_suite;
 
 static gn_status load_scenario(gn_instance *target, unsigned scenario) {
     guest_fixture_image *fixture =
@@ -74,7 +45,7 @@ static gn_status load_scenario(gn_instance *target, unsigned scenario) {
 void setUp(void) {
     instance = NULL;
     SDK_CHECK_STATUS("sdk.instance.create", GN_STATUS_OK, gn_create(&instance));
-    if (instance != NULL) {
+    if (instance != NULL && strcmp(selected_suite, "diagnostic") == 0) {
         SDK_CHECK_STATUS("sdk.media.load.original-a", GN_STATUS_OK,
                          load_scenario(instance, 0u));
     }
@@ -192,25 +163,123 @@ static void original_instruction_boundaries_match_manual_recipe(void) {
     }
 }
 
-int main(int argc, char **argv) {
-    (void)argc;
-    (void)argv;
-    sdk_assertions = 0u;
-    sdk_cases = 0u;
-    UNITY_BEGIN();
+static void unloaded_lifecycle_and_null_arguments_are_reported(void) {
+    SDK_CASE("sdk.lifecycle.unloaded-and-null-arguments");
+    gn_run_result run;
+    gn_observations observations;
+    memset(&run, 0xa5, sizeof(run));
+    memset(&observations, 0xa5, sizeof(observations));
+
+    SDK_CHECK_STATUS("sdk.lifecycle.create-null-output", GN_STATUS_INVALID_ARGUMENT,
+                     gn_create(NULL));
+    gn_instance *created = (gn_instance *)(uintptr_t)1u;
+    SDK_CHECK_STATUS("sdk.lifecycle.create-clears-output", GN_STATUS_OK,
+                     gn_create(&created));
+    SDK_CHECK_TRUE("sdk.lifecycle.created-handle", created != NULL);
+    SDK_CHECK_STATUS("sdk.lifecycle.reset-before-load", GN_STATUS_INVALID_STATE,
+                     gn_reset(created));
+    SDK_CHECK_STATUS("sdk.lifecycle.run-before-load", GN_STATUS_INVALID_STATE,
+                     gn_run(created, 1u, &run));
+    SDK_CHECK_U64("sdk.lifecycle.run-output-zero-request", 0u, run.requested_cycles);
+    SDK_CHECK_U64("sdk.lifecycle.run-output-zero-reason", GN_RUN_BUDGET, run.reason);
+    SDK_CHECK_STATUS("sdk.lifecycle.observe-before-load", GN_STATUS_INVALID_STATE,
+                     gn_observe(created, &observations));
+    SDK_CHECK_U64("sdk.lifecycle.observe-output-zero", 0u,
+                  observations.initialized_result);
+    SDK_CHECK_STATUS("sdk.lifecycle.null-run-handle", GN_STATUS_INVALID_ARGUMENT,
+                     gn_run(NULL, 1u, &run));
+    SDK_CHECK_U64("sdk.lifecycle.null-run-zero-output", 0u, run.elapsed_cycles);
+    SDK_CHECK_STATUS("sdk.lifecycle.null-observe-handle", GN_STATUS_INVALID_ARGUMENT,
+                     gn_observe(NULL, &observations));
+    SDK_CHECK_U64("sdk.lifecycle.null-observe-zero-output", 0u,
+                  observations.arithmetic_result);
+    SDK_CHECK_STATUS("sdk.lifecycle.null-reset-handle", GN_STATUS_INVALID_ARGUMENT,
+                     gn_reset(NULL));
+    SDK_CHECK_STATUS("sdk.lifecycle.null-unload-handle", GN_STATUS_INVALID_ARGUMENT,
+                     gn_unload(NULL));
+    SDK_CHECK_STATUS("sdk.lifecycle.unload-already-unloaded", GN_STATUS_OK,
+                     gn_unload(created));
+    SDK_CHECK_STATUS("sdk.lifecycle.unload-repeat", GN_STATUS_OK,
+                     gn_unload(created));
+    SDK_CHECK_STATUS("sdk.lifecycle.run-null-output", GN_STATUS_INVALID_ARGUMENT,
+                     gn_run(created, 1u, NULL));
+    SDK_CHECK_STATUS("sdk.lifecycle.load-null-manifest", GN_STATUS_INVALID_ARGUMENT,
+                     gn_load(created, NULL));
+    gn_destroy(NULL);
+    gn_destroy(created);
+}
+
+static void unload_reload_and_repeated_reset_reproduce_results(void) {
+    SDK_CASE("sdk.lifecycle.unload-reload-repeat-reset");
+    gn_instance *created = NULL;
+    SDK_CHECK_STATUS("sdk.lifecycle.create", GN_STATUS_OK, gn_create(&created));
+    SDK_CHECK_STATUS("sdk.lifecycle.load", GN_STATUS_OK, load_scenario(created, 0u));
+
+    for (unsigned reset = 0u; reset < 2u; ++reset) {
+        gn_run_result run;
+        gn_observations observations;
+        SDK_CHECK_STATUS("sdk.lifecycle.reset-loaded", GN_STATUS_OK,
+                         gn_reset(created));
+        SDK_CHECK_STATUS("sdk.lifecycle.run-after-reset", GN_STATUS_OK,
+                         gn_run(created, 172u, &run));
+        SDK_CHECK_STATUS("sdk.lifecycle.observe-after-run", GN_STATUS_OK,
+                         gn_observe(created, &observations));
+        SDK_CHECK_STATUS("sdk.lifecycle.repeat-stop", GN_RUN_STOPPED, run.reason);
+        SDK_CHECK_U64("sdk.lifecycle.repeat-result", 10u,
+                      observations.arithmetic_result);
+        SDK_CHECK_U64("sdk.lifecycle.repeat-initialized", 0x1237u,
+                      observations.initialized_result);
+    }
+
+    SDK_CHECK_STATUS("sdk.lifecycle.unload", GN_STATUS_OK, gn_unload(created));
+    SDK_CHECK_STATUS("sdk.lifecycle.reset-after-unload", GN_STATUS_INVALID_STATE,
+                     gn_reset(created));
+    SDK_CHECK_STATUS("sdk.lifecycle.reload", GN_STATUS_OK, load_scenario(created, 1u));
+    gn_run_result run;
+    gn_observations observations;
+    SDK_CHECK_STATUS("sdk.lifecycle.run-after-reload", GN_STATUS_OK,
+                     gn_run(created, 172u, &run));
+    SDK_CHECK_STATUS("sdk.lifecycle.observe-after-reload", GN_STATUS_OK,
+                     gn_observe(created, &observations));
+    SDK_CHECK_U64("sdk.lifecycle.reloaded-scenario", 16u,
+                  observations.arithmetic_result);
+    SDK_CHECK_STATUS("sdk.lifecycle.destroy-after-use", GN_STATUS_OK,
+                     gn_unload(created));
+    gn_destroy(created);
+}
+
+static void sdk_lifecycle_suite(void) {
+    RUN_TEST(unloaded_lifecycle_and_null_arguments_are_reported);
+    RUN_TEST(unload_reload_and_repeated_reset_reproduce_results);
+}
+
+static void sdk_diagnostic_suite(void) {
     RUN_TEST(original_guest_computes_named_results);
     RUN_TEST(failed_replacement_and_reset_preserve_owned_media);
     RUN_TEST(scenario_b_has_distinguishable_named_results);
     RUN_TEST(original_instruction_boundaries_match_manual_recipe);
+}
+
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        (void)fprintf(stderr, "usage: %s <diagnostic|lifecycle|media|faults>\n",
+                      argv[0]);
+        return 2;
+    }
+    selected_suite = argv[1];
+    UNITY_BEGIN();
+    if (strcmp(selected_suite, "diagnostic") == 0) {
+        sdk_diagnostic_suite();
+    } else if (strcmp(selected_suite, "lifecycle") == 0) {
+        sdk_lifecycle_suite();
+    } else if (strcmp(selected_suite, "media") != 0 &&
+               strcmp(selected_suite, "faults") != 0) {
+        (void)fprintf(stderr, "unknown suite: %s\n", selected_suite);
+        return 2;
+    }
     const int failures = UNITY_END();
-    (void)printf(
-        "SDK_RESULT {\"schema_version\":1,\"suite\":\"sdk_diagnostic\","
-        "\"outcome\":\"%s\",\"outcomes\":[\"pass\",\"fail\","
-        "\"skipped\",\"unsupported\",\"unknown\"],\"cases\":%" PRIu64
-        ",\"assertions\":%" PRIu64 ",\"identity\":{\"source_revision\":\"%s\","
-        "\"configuration\":\"%s\",\"compiler\":\"%s %s\"}}\n",
-        failures == 0 ? "pass" : "fail", sdk_cases, sdk_assertions,
-        GLUEYNEO_SOURCE_REVISION, GLUEYNEO_CONFIGURATION,
-        GLUEYNEO_COMPILER_ID, GLUEYNEO_COMPILER_VERSION);
+    sdk_test_result(selected_suite, failures, GLUEYNEO_SOURCE_REVISION,
+                    GLUEYNEO_CONFIGURATION, GLUEYNEO_COMPILER_ID,
+                    GLUEYNEO_COMPILER_VERSION);
     return failures;
 }

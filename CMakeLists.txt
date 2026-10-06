@@ -9,10 +9,11 @@ if(GLUEYNEO_CPU_EXPERIMENT AND GLUEYNEO_OWNED_CPU_EXPERIMENT)
   message(FATAL_ERROR "Select one whole CPU backend experiment per build directory")
 endif()
 
-add_library(glueyneo STATIC
+set(GLUEYNEO_RUNTIME_SOURCES
   src/instance.c
   experiments/owned_cpu/cpu.c
 )
+add_library(glueyneo STATIC ${GLUEYNEO_RUNTIME_SOURCES})
 add_library(Glueyneo::glueyneo ALIAS glueyneo)
 target_compile_features(glueyneo PRIVATE c_std_17)
 set_target_properties(glueyneo PROPERTIES
@@ -99,8 +100,48 @@ if(GLUEYNEO_BUILD_TESTS)
   else()
     target_compile_options(sdk_diagnostic PRIVATE -Wall -Wextra -Wpedantic -Werror)
   endif()
-  add_test(NAME sdk_diagnostic COMMAND sdk_diagnostic)
+  add_test(NAME sdk_diagnostic COMMAND sdk_diagnostic diagnostic)
   set_tests_properties(sdk_diagnostic PROPERTIES LABELS "sdk-contract;sdk-diagnostic")
+  add_test(NAME sdk_lifecycle COMMAND sdk_diagnostic lifecycle)
+  set_tests_properties(sdk_lifecycle PROPERTIES LABELS "sdk-contract;sdk-lifecycle")
+  add_test(NAME sdk_media COMMAND sdk_diagnostic media)
+  set_tests_properties(sdk_media PROPERTIES LABELS "sdk-contract;sdk-media")
+  add_test(NAME sdk_faults COMMAND sdk_diagnostic faults)
+  set_tests_properties(sdk_faults PROPERTIES LABELS "sdk-contract;sdk-faults")
+
+  # Keep the runtime source closure explicit, then inspect both source and the
+  # linked target for ambient host services used by the native core.
+  set(SDK_HOST_CLOSURE_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/sdk-host-closure.cmake")
+  set(SDK_RUNTIME_ABSOLUTE_SOURCES)
+  foreach(runtime_source IN LISTS GLUEYNEO_RUNTIME_SOURCES)
+    list(APPEND SDK_RUNTIME_ABSOLUTE_SOURCES
+      "${CMAKE_CURRENT_SOURCE_DIR}/${runtime_source}")
+  endforeach()
+  set(SDK_HOST_CLOSURE_CONTENT [=[
+set(_sdk_sources "@SDK_RUNTIME_ABSOLUTE_SOURCES@")
+set(_sdk_library "$<TARGET_FILE:glueyneo>")
+set(_sdk_nm "@CMAKE_NM@")
+set(_sdk_host_calls "(^|[^A-Za-z0-9_])(fopen|freopen|fread|fwrite|remove|rename|open|close|read|write|time|clock|gettimeofday|socket|connect|accept|system|fork|execve|pthread_create|pthread_mutex_lock)[ \t]*\\(")
+foreach(_sdk_source IN LISTS _sdk_sources)
+  file(READ "${_sdk_source}" _sdk_text)
+  if(_sdk_text MATCHES "${_sdk_host_calls}")
+    message(FATAL_ERROR "Ambient host call found in runtime source: ${_sdk_source}")
+  endif()
+endforeach()
+execute_process(COMMAND "${_sdk_nm}" -u "${_sdk_library}"
+  RESULT_VARIABLE _sdk_nm_result OUTPUT_VARIABLE _sdk_symbols ERROR_VARIABLE _sdk_nm_error)
+if(NOT _sdk_nm_result EQUAL 0)
+  message(FATAL_ERROR "Could not inspect runtime symbols: ${_sdk_nm_error}")
+endif()
+if(_sdk_symbols MATCHES "(^|[^A-Za-z0-9_])_?(fopen|freopen|fread|fwrite|remove|rename|open|close|read|write|time|clock|gettimeofday|socket|connect|accept|system|fork|execve|pthread_create|pthread_mutex_lock)($|[^A-Za-z0-9_])")
+  message(FATAL_ERROR "Ambient host symbol found in runtime: ${_sdk_symbols}")
+endif()
+message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
+]=])
+  string(CONFIGURE "${SDK_HOST_CLOSURE_CONTENT}" SDK_HOST_CLOSURE_CONTENT @ONLY)
+  file(GENERATE OUTPUT "${SDK_HOST_CLOSURE_SCRIPT}" CONTENT "${SDK_HOST_CLOSURE_CONTENT}")
+  add_test(NAME sdk_host_closure COMMAND ${CMAKE_COMMAND} -P "${SDK_HOST_CLOSURE_SCRIPT}")
+  set_tests_properties(sdk_host_closure PROPERTIES LABELS "sdk-lifecycle;sdk-capabilities")
   add_test(NAME sdk_fixture_write
     COMMAND glueyneo-diagnostic --write-fixture
             ${CMAKE_CURRENT_BINARY_DIR}/diagnostic-original-a.bin)
