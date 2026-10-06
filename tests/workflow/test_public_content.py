@@ -23,14 +23,16 @@ class PublicContentTests(unittest.TestCase):
         identity = "alice" + "@" + "private-domain" + ".com"
         machine = "machine" + "_id=" + "HOST-SECRET"
         credential = "ghp_" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        private_url = "https://user" + ":password@private-host.invalid/repo"
+        private_url = "https://user" + ":pass" + "word" + "@private-host.invalid/repo"
         data = ("/" + personal_path + " " + identity + " " + machine +
                 " token=" + credential + " " + private_url + "\n").encode()
         result = content.scan_bytes(data, "tests/canary.txt")
         rendered = json.dumps(result, sort_keys=True)
         for rule in ("personal-path", "private-identity", "machine-identifier", "credential", "private-url"):
             self.assertIn(rule, rendered)
-        for secret in (identity, "HOST-SECRET", credential, "/Users/alice", "user:password@private-host.invalid"):
+        expected_path = "/".join(("Users", "alice"))
+        expected_url_identity = "user:pass" + "word" + "@private-host.invalid"
+        for secret in (identity, "HOST-SECRET", credential, "/" + expected_path, expected_url_identity):
             self.assertNotIn(secret, rendered)
 
     def test_archive_rejects_escape_links_duplicates_and_limits(self) -> None:

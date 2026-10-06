@@ -84,6 +84,7 @@ def scan_bytes(data: bytes, location: str) -> dict[str, Any]:
                 email = match.group(0).lower()
                 domain = email.rsplit("@", 1)[-1]
                 if (email in PUBLIC_EMAILS or domain.endswith("users.noreply.github.com")
+                        or domain in {"invalid", "test", "example", "example.com", "example.org", "example.net"}
                         or domain.endswith(SYNTHETIC_EMAIL_SUFFIXES)):
                     continue
             if rule == "personal-path" and any(f"/{marker}/" in match.group(0) for marker in SYNTHETIC_PATH_MARKERS):
