@@ -380,17 +380,31 @@ def parse_consumer_record(output: str, marker: str) -> dict[str, object]:
 def require_public_cli_output(output: str, local_paths: tuple[Path, ...]) -> None:
     if any(str(path) in output for path in local_paths if str(path)):
         raise CheckError("CLI output exposed a local filesystem path")
-    if (re.search(r"/(?:Users|home)/[^/\s\"]+", output) or
-            re.search(r"[A-Za-z]:\\Users\\[^\s\"]+", output)):
+    host_path_patterns = (
+        r"/(?:Users|home)/[^/\s\"]+",
+        r"/(?:private/tmp|tmp|var/folders|private/var/folders)/[^/\s\"]+",
+        r"[A-Za-z]:\\(?:Users\\|Temp\\)[^\s\"]+",
+    )
+    if any(re.search(pattern, output, re.IGNORECASE) for pattern in host_path_patterns):
         raise CheckError("CLI output exposed a host-user path")
 
 
 def parse_diagnostic_record(output: str, local_paths: tuple[Path, ...]) -> dict[str, object]:
+    require_public_cli_output(output, local_paths)
     marker = "SDK_DIAGNOSTIC "
     lines = [line[len(marker):] for line in output.splitlines() if line.startswith(marker)]
     if len(lines) != 1:
         raise CheckError(f"Expected one {marker.strip()} result record; got {len(lines)}")
-    require_public_cli_output(lines[0], local_paths)
+    assertion_count = 0
+    for line in output.splitlines():
+        if not line:
+            continue
+        if line.startswith("# ASSERT "):
+            if re.fullmatch(r"# ASSERT sdk\.[A-Za-z0-9_.-]+ expected=\d+ observed=\d+", line) is None:
+                raise CheckError("Installed runner emitted an unclear assertion line")
+            assertion_count += 1
+        elif not line.startswith(marker):
+            raise CheckError("Installed runner emitted unexpected user-facing output")
     try:
         result = json.loads(lines[0])
     except json.JSONDecodeError as error:
@@ -412,15 +426,24 @@ def parse_diagnostic_record(output: str, local_paths: tuple[Path, ...]) -> dict[
             result.get("case_id") != "sdk.diagnostic.original-a" or
             result.get("outcome") != "pass" or
             not isinstance(result.get("assertions"), int) or
-            result["assertions"] < 14 or result.get("expected") != expected or
+            result["assertions"] != assertion_count or assertion_count < 14 or
+            set(result) != {"schema_version", "case_id", "outcome", "assertions",
+                            "expected", "observed", "identity"} or
+            result.get("expected") != expected or
             not isinstance(observed, dict) or
+            set(observed) != {*expected, "reason"} or
             any(observed.get(name) != value for name, value in expected.items()) or
             observed.get("reason") != 1 or not isinstance(identity, dict) or
+            set(identity) != {"source_revision", "configuration", "compiler"} or
             not all(
                 isinstance(identity.get(name), str) and identity[name]
                 for name in ("source_revision", "configuration", "compiler")
             ) or
-            identity.get("configuration") != "Release"):
+            identity.get("configuration") != "Release" or
+            (identity.get("source_revision") != "unknown" and
+             re.fullmatch(r"[0-9a-f]{7,40}", identity["source_revision"]) is None) or
+            any("/" in identity[name] or "\\" in identity[name]
+                for name in ("source_revision", "configuration", "compiler"))):
         raise CheckError("Installed runner result omits named diagnostic, boundary, or build identity fields")
     return result
 
@@ -546,13 +569,10 @@ def case_consumers(variant: str) -> None:
         ).stdout
     verify_fixture_digest(fixture)
 
-    if variant == "shared":
-        runner_diagnostic_output = run_with_loader_trace(layout["runner"], [], layout)
-    else:
-        runner_diagnostic_output = run([str(layout["runner"])], env=runner_env).stdout
+    runner_diagnostic_output = run([str(layout["runner"])], env=runner_env).stdout
     runner_record = parse_diagnostic_record(
         runner_diagnostic_output,
-        (ROOT, work, relocated_prefix, Path.home()),
+        (ROOT, work, relocated_prefix, Path.home(), Path(tempfile.gettempdir())),
     )
 
     c_executable = consumer_build / "glueyneo-installed-c"
@@ -583,9 +603,8 @@ def case_consumers(variant: str) -> None:
     ):
         raise CheckError("Wrong-output control failed for a reason other than the arithmetic result")
     require_public_cli_output(
-        "\n".join(line for line in wrong_expected.stdout.splitlines()
-                   if line.startswith("CONSUMER_ASSERT")),
-        (ROOT, work, relocated_prefix, Path.home()),
+        wrong_expected.stdout,
+        (ROOT, work, relocated_prefix, Path.home(), Path(tempfile.gettempdir())),
     )
 
     control_results: list[str] = []
@@ -816,7 +835,10 @@ def case_docs_variant(variant: str) -> None:
         if argv[0].startswith("./") and "glueyneo-installed-cxx" in argv[0]:
             outcomes.append(parse_consumer_record(result.stdout, "SDK_CONSUMER_CPP "))
         elif argv[0].startswith("./") and "glueyneo-installed-c" in argv[0]:
-            require_public_cli_output(result.stdout, (ROOT, work, source, Path.home()))
+            require_public_cli_output(
+                result.stdout,
+                (ROOT, work, source, Path.home(), Path(tempfile.gettempdir())),
+            )
             if "--recovery" in argv:
                 recovery = parse_consumer_record(result.stdout, "SDK_RECOVERY ")
                 if recovery.get("expected_status") != "invalid diagnostic media" or recovery.get(
