@@ -2,7 +2,7 @@
 
 ## Overview
 
-Deliver an offline installable C SDK whose ordinary native API runs an original deterministic CPU/bus diagnostic. Phase 01 accepted the owned CPU backend for the bounded diagnostic subset. Phase 02 builds the SDK and proves the complete consumer workflow; Phase 03 qualifies and distributes a tested unsigned alpha. The fresh 2026-10-05 Phase 01 report passed 10/10 after Plan 01-29; see its verification report for source identity, current checks, and limitations. The candidate-level receipt remains `unqualified`, while the independent phase report is the current bounded admission decision. Phase 02 has six independently checked plans and is ready for execution; Phase 03 remains unplanned with delivery evidence pending. [PROJECT.md](PROJECT.md) and [REQUIREMENTS.md](REQUIREMENTS.md) govern scope; [research synthesis](research/SUMMARY.md), [roadmap seed](preparation/ROADMAP-SEED.md) and [adversarial gates](preparation/ADVERSARIAL-REVIEW.md) supply dated rationale.
+Deliver an offline installable C SDK whose ordinary native API runs an original deterministic CPU/bus diagnostic. Phase 01 accepted the owned CPU backend for the bounded diagnostic subset. Phase 02 builds the SDK and proves the complete consumer workflow; Phase 03 qualifies and distributes a tested unsigned alpha. The fresh 2026-10-05 Phase 01 report passed 10/10 after Plan 01-29; see its verification report for source identity, current checks, and limitations. The candidate-level receipt remains `unqualified`, while the independent phase report is the current bounded admission decision. Phase 02 has six independently checked plans; Plans 02-01 through 02-05 are complete and Plan 02-06 is next after the user continues. Phase 03 remains unplanned with delivery evidence pending. [PROJECT.md](PROJECT.md) and [REQUIREMENTS.md](REQUIREMENTS.md) govern scope; [research synthesis](research/SUMMARY.md), [roadmap seed](preparation/ROADMAP-SEED.md) and [adversarial gates](preparation/ADVERSARIAL-REVIEW.md) supply dated rationale.
 
 ## Milestones
 
@@ -164,7 +164,7 @@ Planning guidance: Plans 01-07–01-14 built and assessed the owned-core candida
   4. An integrator builds C17 static/shared libraries offline with target-scoped CMake/CTest and pinned test-only Unity, executes the diagnostic from out-of-tree installed C consumers for both variants, and compiles/links C++ public-header consumers. Compiled getting-started, ownership/error and failure-reproduction guidance matches the artifacts and states the exact supported subset and excluded game/BIOS/video/audio/public-state/persistence claims. (BUILD-01, BUILD-02, DOC-01, DOC-02)
   5. A maintainer can audit every public dependency/fixture's rights, notices, source and recipe, output digest, firmware needs and oracle ancestry; reproduce nonempty machine-readable results with exact identities and distinct outcomes; and reproduce diagnostic execution, memory/allocation, load and build-cost baselines on named hosts with uncertainty and no gameplay or uncalibrated-threshold claims. (EVID-01, EVID-03, EVID-04)
 
-**Plans**: 4/6 plans executed
+**Plans**: 5/6 plans executed
 
 Plans:
 **Wave 1**
@@ -180,14 +180,14 @@ Plans:
 - [x] 02-04-PLAN.md — Offline static/shared installs, relocated C/C++ consumers and compiled guides
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 02-05-PLAN.md — Bounded hostile mutation, retained regressions and supported sanitizers
+- [x] 02-05-PLAN.md — Bounded hostile mutation, retained regressions and supported sanitizers
 
 **Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 02-06-PLAN.md — Exact identities/outcomes, measured local baselines and final aggregate
 
-Execution waves: 1 → 2 → 3 → 4 → 5 → 6. Package checks rebuild the runtime, so they follow source-changing ownership/timing slices. Phase 02 plan execution is in progress; Plans 02-01 through 02-04 are complete.
+Execution waves: 1 → 2 → 3 → 4 → 5 → 6. Package checks rebuild the runtime, so they follow source-changing ownership/timing slices. Phase 02 plan execution is in progress; Plans 02-01 through 02-05 are complete and Plan 02-06 is next after the user continues.
 
-Planning guidance: Slice from opaque lifecycle and bounded media through the real diagnostic and installed consumer; add only its evidenced bus/bootstrap subset. Couple each behavior to its tests, provenance, compiled example and capability statement. Separate diagnostic-oracle research from standard package work. Plans 02-01 through 02-04 are complete; continue with the next dependency-ordered plan after review. Begin lightweight CI and public-content checks as infrastructure permits; final hosted delivery acceptance belongs to Phase 3.
+Planning guidance: Slice from opaque lifecycle and bounded media through the real diagnostic and installed consumer; add only its evidenced bus/bootstrap subset. Couple each behavior to its tests, provenance, compiled example and capability statement. Separate diagnostic-oracle research from standard package work. Plans 02-01 through 02-05 are complete; continue with Plan 02-06 after the user continues. Begin lightweight CI and public-content checks as infrastructure permits; final hosted delivery acceptance belongs to Phase 3.
 
 ### Phase 3: Distributable release qualification
 
@@ -211,7 +211,7 @@ Planning guidance: Qualify relocated/offline consumers and the exact support mat
 
 ## Progress
 
-Execution order: 1 → 2 → 3. Phase 01's bounded backend admission gate is satisfied. Phase 02 execution is in progress; Plans 02-01 through 02-04 are complete and Plan 02-05 is next after the user continues.
+Execution order: 1 → 2 → 3. Phase 01's bounded backend admission gate is satisfied. Phase 02 execution is in progress; Plans 02-01 through 02-05 are complete and Plan 02-06 is next after the user continues.
 
 | Phase | Milestone | Execution-complete plans | Status | Completed |
 |-------|-----------|----------------|--------|-----------|

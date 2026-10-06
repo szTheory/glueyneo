@@ -29,7 +29,7 @@ Historical Musashi CPU-05 decision evidence: [bounded rejection](../experiments/
 
 - [x] **DIAG-01**: An external C consumer executes an original redistributable CPU/bus guest program through the ordinary create/load/run/results/destroy path and checks meaningful guest-computed observations.
 - [x] **DIAG-02**: A maintainer can run a headless diagnostic runner through the ordinary native API and reproduce the diagnostic bootstrap, initialized-data/BSS and named CPU/bus assertions using documented oracle ancestry, with a deliberate wrong-behavior control that fails the checks.
-- [ ] **DIAG-03**: A maintainer can repeat and split the supported execution workload and run distinguishable native diagnostic instances both interleaved and concurrently while matching isolated-baseline guest observations at equal execution boundaries, including concurrent native creation/load/teardown paths.
+- [x] **DIAG-03**: A maintainer can repeat and split the supported execution workload and run distinguishable native diagnostic instances both interleaved and concurrently while matching isolated-baseline guest observations at equal execution boundaries, including concurrent native creation/load/teardown paths.
 
 ### Build and Package Consumption
 
@@ -41,8 +41,8 @@ Historical Musashi CPU-05 decision evidence: [bounded rejection](../experiments/
 ### Evidence and Measurement
 
 - [ ] **EVID-01**: A maintainer can audit every public fixture and dependency from a manifest recording rights/notices, source revision, generation/build recipe, output digest, firmware needs and test-oracle ancestry.
-- [ ] **EVID-02**: A maintainer can run proportionate boundary and lifecycle tests, meaningful properties, bounded input/call-sequence fuzzing and supported sanitizer checks, with retained regressions for discovered failures.
-- [ ] **EVID-03**: A maintainer receives machine-readable results with exact code/dependency/configuration/input identities, nonzero executed assertions and distinct pass/fail/skipped/unsupported/unknown outcomes.
+- [x] **EVID-02**: A maintainer can run proportionate boundary and lifecycle tests, meaningful properties, bounded input/call-sequence fuzzing and supported sanitizer checks, with retained regressions for discovered failures.
+- [x] **EVID-03**: A maintainer receives machine-readable results with exact code/dependency/configuration/input identities, nonzero executed assertions and distinct pass/fail/skipped/unsupported/unknown outcomes.
 - [ ] **EVID-04**: A maintainer can reproduce an initial diagnostic execution, memory/allocation, load and build-cost baseline on named host classes, retaining workload/output identity and uncertainty without presenting these measurements as gameplay performance or an enforced uncalibrated threshold.
 
 ### Documentation and Delivery
@@ -124,14 +124,14 @@ Each v1 requirement has exactly one primary phase in v0.1. Later requirements re
 | API-04 | Phase 2 | Complete |
 | DIAG-01 | Phase 2 | Complete |
 | DIAG-02 | Phase 2 | Complete |
-| DIAG-03 | Phase 2 | Pending |
+| DIAG-03 | Phase 2 | Complete |
 | BUILD-01 | Phase 2 | Complete |
 | BUILD-02 | Phase 2 | Complete |
 | BUILD-03 | Phase 3 | Pending |
 | BUILD-04 | Phase 3 | Pending |
 | EVID-01 | Phase 2 | Pending |
-| EVID-02 | Phase 2 | Pending |
-| EVID-03 | Phase 2 | Pending |
+| EVID-02 | Phase 2 | Complete |
+| EVID-03 | Phase 2 | Complete |
 | EVID-04 | Phase 2 | Pending |
 | DOC-01 | Phase 2 | Pending |
 | DOC-02 | Phase 2 | Pending |
