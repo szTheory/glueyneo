@@ -28,7 +28,7 @@ key-decisions:
 patterns-established:
   - "Bind archive identity to exact committed source, version, build configuration, and per-file digests."
   - "Reject unsafe archive members and unsupported export-inspector output."
-requirements-completed: [BUILD-03, DEL-03, DEL-04]
+requirements-completed: []
 coverage:
   - id: D1
     description: Rebuild exact source archive offline and run relocated SDK diagnostic plus C and C++ consumers.
@@ -53,8 +53,10 @@ coverage:
       - kind: unit
         ref: python3 tests/consumers/test_exports.py (4 fixtures)
         status: pass
-    human_judgment: true
-    rationale: Fixture parsing passed, but this Darwin arm64 runner cannot inspect a generated Windows DLL; Windows/MSVC qualification remains pending.
+      - kind: integration
+        ref: python3 tests/consumers/check_package.py --suite consumers on Windows/MSVC (pending runner evidence)
+        status: unknown
+    human_judgment: false
 duration: 12min
 completed: 2026-10-06
 status: complete
@@ -97,7 +99,7 @@ status: complete
 - Used the root release-please manifest as the single version source.
 - Packaged static and shared variants under separate install prefixes so each can relocate independently.
 - Chose DUMPBIN `/EXPORTS` for Windows and require an available supported inspector; recorded its identity in shared build evidence.
-- Requirements are listed as this plan's traceability references, but the milestone requirement register remains pending because shared acceptance spans later plans and platform/hosted checks.
+- BUILD-03, DEL-03, and DEL-04 remain pending in the milestone register: this plan establishes local archive/version/export subclaims, while complete acceptance also depends on other plans, Windows runner evidence, and pinned release-please staging/recovery or published-download obligations.
 
 ## TDD Evidence
 
@@ -123,7 +125,7 @@ status: complete
 
 ## Issues Encountered
 
-- Windows parser fixtures passed, but no Windows runner was available to inspect a generated DLL. Linux/macOS/Windows shared export parity therefore remains unqualified pending the planned platform matrix.
+- Windows parser fixtures passed, but no Windows runner was available to inspect a generated DLL. The deterministic generated-DLL matrix evidence remains pending; no subjective human judgment is requested.
 - Hosted release-please behavior, GitHub event/token authority, draft/recovery semantics, and artifact publication were not exercised. Related release claims remain pending.
 - No release-signing or public artifact publication was performed.
 

@@ -203,11 +203,11 @@ Planning guidance: Slice from opaque lifecycle and bounded media through the rea
   4. Pinned release-please automation uses one C version source to stage a complete unsigned SDK draft bound to the tested commit, recovers interrupted staging and no-new-release retries, refuses incomplete/wrong-commit publication, and yields a published download whose expected digests and real diagnostic consumer pass. (DEL-03, DEL-04)
   5. A maintainer can inspect public-content evidence covering source, documentation, commit identity, logs and archives for notices and exclusion of personal paths/private identity, secrets, commercial media and private corpus material before publication. (DEL-05)
 
-**Plans**: 5 plans
+**Plans**: 1/5 plans executed
 
 Plans:
 **Wave 1**
-- [ ] 03-01-PLAN.md — Manifest-bound source/SDK archive tracer, offline relocated consumer and Windows exports
+- [x] 03-01-PLAN.md — Manifest-bound source/SDK archive tracer, offline relocated consumer and Windows exports
 - [ ] 03-02-PLAN.md — Bounded public-content scanner, canaries and rights inventory
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -231,7 +231,7 @@ Execution order: 1 → 2 → 3. Phase 01's bounded backend admission gate is sat
 |-------|-----------|----------------|--------|-----------|
 | 1. CPU acceptance experiment | v0.1 | 28/29 (01-17 remains a checkpoint) | Complete | 2026-10-05 |
 | 2. Executable diagnostic SDK | v0.1 | 6/6 | Complete    | 2026-10-06 |
-| 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
+| 3. Distributable release qualification | v0.1 | 0/TBD | In Progress | - |
 
 Coverage: 27/27 current requirements are assigned exactly once; 5 in Phase 1, 15 in Phase 2, and 7 in Phase 3. The 5 bounded Phase 01 requirements and all 15 Phase 02 SDK requirements are complete; the 7 Phase 03 delivery requirements remain pending in [traceability](REQUIREMENTS.md#traceability). Deferred v2 requirements are not allocated to these phases.
 

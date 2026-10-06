@@ -5,16 +5,16 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 03
 current_phase_name: Distributable release qualification
 status: executing
-stopped_at: Phase 03 context gathered
-last_updated: "2026-10-06T16:45:54.449Z"
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-10-06T17:10:48.458Z"
 last_activity: 2026-10-06
-last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: db71b0c7ddc6b7ed3c246c77c40fb9c0dcfbf7ee
+last_activity_desc: Phase 03 execution started
+state_head: 095bde994d98ed7d1e3176bf9565076f13ffc8d6
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 40
-  completed_plans: 35
+  completed_plans: 36
   percent: 67
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 
 ## Current Position
 
-Phase: 03 (Distributable release qualification) — READY TO EXECUTE
-Plan: Not started
+Phase: 03 (Distributable release qualification) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-10-06 — Phase 02 complete, transitioned to Phase 3
+Last activity: 2026-10-06 — Phase 03 execution started
 
 Progress: [███████░░░] 67% (two of three phases complete)
 
@@ -101,6 +101,7 @@ The GSD completion transaction updated the active phase and requirements after t
 | Phase 02 P04 | 19min | 3 tasks | 7 files |
 | Phase 02 P05 | 40min | 2 tasks | 8 files |
 | Phase 02 P06 | 429min | 3 tasks | 9 files |
+| Phase 03 P01 | 12 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -131,6 +132,9 @@ The GSD completion transaction updated the active phase and requirements after t
 - [Phase 02]: Bind evidence, workload, and sanitizer outcomes to exact current source and input identities, and retain failed attempts.
 - [Phase 02]: Keep host time, guest cycles, owned allocation bytes, and process RSS separate; record unmeasured RSS explicitly.
 - [Phase 02]: Run only the process-heavy TSan CTest lane serially after same-input serial execution confirmed parallel host contention.
+- [Phase 03]: The root release-please manifest is the sole CMake project/package version source.
+- [Phase 03]: The SDK carries separately relocatable static and shared package prefixes.
+- [Phase 03]: Windows export inspection uses DUMPBIN output and requires the exact shared public symbol set.
 
 ### Pending Todos
 
@@ -153,6 +157,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-06T15:59:21.373Z
-Stopped at: Phase 03 context gathered
-Resume file: .planning/phases/03-distributable-release-qualification/03-CONTEXT.md
+Last session: 2026-10-06T17:10:48.349Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: None
