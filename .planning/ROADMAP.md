@@ -206,10 +206,17 @@ Planning guidance: Slice from opaque lifecycle and bounded media through the rea
 **Plans**: 5 plans
 
 Plans:
+**Wave 1**
 - [ ] 03-01-PLAN.md — Manifest-bound source/SDK archive tracer, offline relocated consumer and Windows exports
 - [ ] 03-02-PLAN.md — Bounded public-content scanner, canaries and rights inventory
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 03-03-PLAN.md — Exact platform evidence and always-started required CI aggregate
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 03-04-PLAN.md — Serialized draft recovery and downloaded-byte release gates
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 03-05-PLAN.md — Current-SHA review/merge policy and hosted authority qualification
 
 Planning guidance: Qualify relocated/offline consumers and the exact support matrix; then required checks/protected PRs and the actual release event/recovery graph; then stage, inspect, publish and verify the downloaded artifacts. Do not wait for a tag event that the configured draft flow cannot emit. Treat action/service behavior as requiring current qualification. Unsigned SDK delivery does not require application notarization.
