@@ -22,13 +22,13 @@ Historical Musashi CPU-05 decision evidence: [bounded rejection](../experiments/
 
 - [x] **API-01**: A C integrator can create, reset and destroy an opaque instance under documented ownership/allocation/lifecycle rules without requiring filesystem, device, network, wall-clock or process-global machine services.
 - [x] **API-02**: A C integrator can load the documented diagnostic region/manifest representation with explicit immutable-media lifetime, checked sizes/arithmetic and finite resource limits.
-- [ ] **API-03**: A C integrator can request bounded execution and obtain actual progress, stop reason and diagnostic observations through the ordinary native API under the qualified timing contract.
+- [x] **API-03**: A C integrator can request bounded execution and obtain actual progress, stop reason and diagnostic observations through the ordinary native API under the qualified timing contract.
 - [x] **API-04**: A C integrator receives actionable errors for invalid sizes, unsupported capabilities, lifecycle misuse and allocation/load failures, and can safely recover or destroy the instance without leaks, process exit or unintended live-state mutation.
 
 ### Executable Diagnostic
 
 - [ ] **DIAG-01**: An external C consumer executes an original redistributable CPU/bus guest program through the ordinary create/load/run/results/destroy path and checks meaningful guest-computed observations.
-- [ ] **DIAG-02**: A maintainer can run a headless diagnostic runner through the ordinary native API and reproduce the diagnostic bootstrap, initialized-data/BSS and named CPU/bus assertions using documented oracle ancestry, with a deliberate wrong-behavior control that fails the checks.
+- [x] **DIAG-02**: A maintainer can run a headless diagnostic runner through the ordinary native API and reproduce the diagnostic bootstrap, initialized-data/BSS and named CPU/bus assertions using documented oracle ancestry, with a deliberate wrong-behavior control that fails the checks.
 - [ ] **DIAG-03**: A maintainer can repeat and split the supported execution workload and run distinguishable native diagnostic instances both interleaved and concurrently while matching isolated-baseline guest observations at equal execution boundaries, including concurrent native creation/load/teardown paths.
 
 ### Build and Package Consumption
@@ -120,10 +120,10 @@ Each v1 requirement has exactly one primary phase in v0.1. Later requirements re
 | CPU-05 | Phase 1 | Complete |
 | API-01 | Phase 2 | Complete |
 | API-02 | Phase 2 | Complete |
-| API-03 | Phase 2 | Pending |
+| API-03 | Phase 2 | Complete |
 | API-04 | Phase 2 | Complete |
 | DIAG-01 | Phase 2 | Pending |
-| DIAG-02 | Phase 2 | Pending |
+| DIAG-02 | Phase 2 | Complete |
 | DIAG-03 | Phase 2 | Pending |
 | BUILD-01 | Phase 2 | Pending |
 | BUILD-02 | Phase 2 | Pending |

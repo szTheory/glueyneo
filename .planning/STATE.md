@@ -5,16 +5,16 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 02
 current_phase_name: Executable diagnostic SDK
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-10-06T00:49:02.233Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-10-06T01:21:05.472Z"
 last_activity: 2026-10-05
-last_activity_desc: Plan 02-02 execution complete; Plan 02-03 is next after review
-state_head: 5dc56d68acc7fbdf2f4ff6c2aeda420d63f2d194
+last_activity_desc: Plan 02-03 execution complete; Plan 02-04 is next after user continues
+state_head: 184f3a3a1f32ba3eb0f808ee504574bef6735ec7
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 35
-  completed_plans: 31
+  completed_plans: 32
   percent: 33
 ---
 
@@ -31,9 +31,9 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 ## Current Position
 
 Phase: 02 (Executable diagnostic SDK) — EXECUTING
-Plan: 3 of 6 — 02-01 and 02-02 complete; 02-03 is next after review
+Plan: 4 of 6 — 02-01 through 02-03 complete; 02-04 is next after user continues
 Status: Ready to execute
-Last activity: 2026-10-05 — Plan 02-02 execution complete; Plan 02-03 is next after review
+Last activity: 2026-10-05 — Plan 02-03 execution complete; 02-04 is next after user continues
 
 Progress: [███░░░░░░░] 33% (one of three phases complete)
 
@@ -41,7 +41,7 @@ Phase 01 passed its fresh whole-phase verifier at source revision `09476ed57ee29
 
 Phase 01 has 29 plan summaries, of which 28 are execution-complete. Plan 01-17 remains an answered, incomplete hardware-evidence checkpoint; that unknown hardware question is outside the admitted candidate capability. Preserve the historical summaries, receipt, seals, source collection and all UAT rows. Do not repeat Plan 01-29, the fresh verifier, the finite silicon search, or conversational UAT.
 
-The GSD completion transaction updated the active phase and requirements after the report was written. The subsequent edits changed planning status and the documentation-route regression; that focused regression now passes 8/8. No runtime implementation or CPU acceptance evidence changed. Retain `01-VERIFICATION.md` as the point-in-time verdict and do not rerun it just to refresh administrative fingerprints. Installed `query verification.status` reports the fingerprint as stale and suggests `$gsd-execute-phase 01`; this is the known administrative-fingerprint routing problem, not a new acceptance gap. Do not follow that stale route. Phase 02 planning passed its independent review: six plans cover all 15 requirements and 18 decisions, and the installed decision, API-coverage, structure, path, failure-direction and post-plan gap checks passed. Plans 02-01 and 02-02 are execution-complete; their public API, original fixture/runner, counted provenance, lifecycle, copied-media and allocation-recovery checks pass. Plan 02-03 is next after review, followed by the remaining dependency-ordered plans. The frozen candidate contract checker reproduces its pre-admission gate only at the recorded pre-closeout revision; it is not a current phase router.
+The GSD completion transaction updated the active phase and requirements after the report was written. The subsequent edits changed planning status and the documentation-route regression; that focused regression now passes 8/8. No runtime implementation or CPU acceptance evidence changed. Retain `01-VERIFICATION.md` as the point-in-time verdict and do not rerun it just to refresh administrative fingerprints. Installed `query verification.status` reports the fingerprint as stale and suggests `$gsd-execute-phase 01`; this is the known administrative-fingerprint routing problem, not a new acceptance gap. Do not follow that stale route. Phase 02 planning passed its independent review: six plans cover all 15 requirements and 18 decisions, and the installed decision, API-coverage, structure, path, failure-direction and post-plan gap checks passed. Plans 02-01 through 02-03 are execution-complete; bounded progress, exact controls, independent-instance checks, copied-media handling and allocation-recovery evidence pass. Plan 02-04 is next after the user continues, followed by the remaining dependency-ordered plans. The frozen candidate contract checker reproduces its pre-admission gate only at the recorded pre-closeout revision; it is not a current phase router.
 
 ## Performance Metrics
 
@@ -96,6 +96,7 @@ The GSD completion transaction updated the active phase and requirements after t
 | Phase 01 P29 | 73min | 2 tasks | 11 files |
 | Phase 02 P01 | 20 min | 3 tasks | 9 files |
 | Phase 02 P02 | 24min | 3 tasks | 6 files |
+| Phase 02 P03 | 27min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -108,12 +109,16 @@ The GSD completion transaction updated the active phase and requirements after t
 - Plan 01-27 changes only derived report/receipt/accounting metadata. C2 binds the exact independent review/security report bytes; source collection remains unchanged.
 - The initial project branch has no remote base; no main merge or hosted qualification is implied.
 - [Phase 01]: Plan 01-29's independent CPU review and security assessment were reconciled by a fresh 10/10 whole-phase report at revision `09476ed`; see `01-VERIFICATION.md`. The report is the phase-level admission authority for the bounded subset, separate from the unchanged unqualified candidate receipt. WR-01 remains a documentation warning; original-silicon saved PC remains unknown.
-- [Phase 02]: Existing `02-CONTEXT.md` contains the accepted design decisions and was refreshed after the gate passed. Plans 02-01–06 cover all 15 requirements, 18 decisions and 21 edge-probe dispositions. Six sequential waves avoid package rebuilds racing runtime edits. Plans 02-01 and 02-02 completed the executable API/runner tracer, counted fixture checks, lifecycle/media contract and allocation-failure recovery; Plan 02-03 is next after review. The phase remains in progress.
+- [Phase 02]: Existing `02-CONTEXT.md` contains the accepted design decisions and was refreshed after the gate passed. Plans 02-01–06 cover all 15 requirements, 18 decisions and 21 edge-probe dispositions. Six sequential waves avoid package rebuilds racing runtime edits. Plans 02-01 through 02-03 completed the executable API/runner tracer, bounded progress, exact functional controls, independent-instance comparisons, lifecycle/media contract and allocation-failure recovery. Plan 02-04 is next after the user continues; the phase remains in progress.
 - [Phase 02]: Expose only a bounded instruction-boundary PC alongside run results so exact diagnostic boundaries are observable without publishing the CPU register file.
 - [Phase 02]: Share one host-side diagnostic fixture module between runner and SDK tests to prevent byte-recipe drift.
 - [Phase 02]: Keep allocator failpoints and full image digests behind a separately compiled test target so installed headers and the public runtime expose no test hooks.
 - [Phase 02]: The fixed diagnostic profile has no caller-selected permissions field; ROM is read-only and RAM is writable.
 - [Phase 02]: Allocation sweeps stop after the first failure in a candidate path, verify cleanup, and advance to the next injected position.
+- [Phase 02]: Report actual guest event charges; preserve reset recovery overshoot, stopped idle progress, and invalid-request atomicity.
+- [Phase 02]: Keep trace, mutation and callback-failure test state per image and absent from the production runtime.
+- [Phase 02]: Claim equal-boundary determinism only for the selected schedule and distinct instances, not arbitrary partitions or same-instance concurrency.
+- [Phase 02]: Use POSIX threads through the test target's Threads::Threads link because this AppleClang host lacks <threads.h>.
 
 ### Pending Todos
 
@@ -136,6 +141,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-06T00:49:02.205Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-10-06T01:21:05.445Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None

@@ -164,7 +164,7 @@ Planning guidance: Plans 01-07–01-14 built and assessed the owned-core candida
   4. An integrator builds C17 static/shared libraries offline with target-scoped CMake/CTest and pinned test-only Unity, executes the diagnostic from out-of-tree installed C consumers for both variants, and compiles/links C++ public-header consumers. Compiled getting-started, ownership/error and failure-reproduction guidance matches the artifacts and states the exact supported subset and excluded game/BIOS/video/audio/public-state/persistence claims. (BUILD-01, BUILD-02, DOC-01, DOC-02)
   5. A maintainer can audit every public dependency/fixture's rights, notices, source and recipe, output digest, firmware needs and oracle ancestry; reproduce nonempty machine-readable results with exact identities and distinct outcomes; and reproduce diagnostic execution, memory/allocation, load and build-cost baselines on named hosts with uncertainty and no gameplay or uncalibrated-threshold claims. (EVID-01, EVID-03, EVID-04)
 
-**Plans**: 2/6 plans executed
+**Plans**: 3/6 plans executed
 
 Plans:
 **Wave 1**
@@ -174,7 +174,7 @@ Plans:
 - [x] 02-02-PLAN.md — Copied transactional media, lifecycle and allocation-failure recovery
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 02-03-PLAN.md — Bounded timing, exact controls and independent-instance determinism
+- [x] 02-03-PLAN.md — Bounded timing, exact controls and independent-instance determinism
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 02-04-PLAN.md — Offline static/shared installs, relocated C/C++ consumers and compiled guides
@@ -185,7 +185,7 @@ Plans:
 **Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 02-06-PLAN.md — Exact identities/outcomes, measured local baselines and final aggregate
 
-Execution waves: 1 → 2 → 3 → 4 → 5 → 6. Package checks rebuild the runtime, so they follow source-changing ownership/timing slices. Phase 02 remains unexecuted; separate plan checking precedes execution.
+Execution waves: 1 → 2 → 3 → 4 → 5 → 6. Package checks rebuild the runtime, so they follow source-changing ownership/timing slices. Phase 02 plan execution is in progress; Plans 02-01 through 02-03 are complete.
 
 Planning guidance: Slice from opaque lifecycle and bounded media through the real diagnostic and installed consumer; add only its evidenced bus/bootstrap subset. Couple each behavior to its tests, provenance, compiled example and capability statement. Separate diagnostic-oracle research from standard package work. Plans 02-01 and 02-02 are complete; continue with the next dependency-ordered plan after review. Begin lightweight CI and public-content checks as infrastructure permits; final hosted delivery acceptance belongs to Phase 3.
 
@@ -211,15 +211,15 @@ Planning guidance: Qualify relocated/offline consumers and the exact support mat
 
 ## Progress
 
-Execution order: 1 → 2 → 3. Phase 01's bounded backend admission gate is satisfied. Phase 02 execution is in progress; Plans 02-01 and 02-02 are complete and Plan 02-03 is next after review.
+Execution order: 1 → 2 → 3. Phase 01's bounded backend admission gate is satisfied. Phase 02 execution is in progress; Plans 02-01 through 02-03 are complete and Plan 02-04 is next after the user continues.
 
 | Phase | Milestone | Execution-complete plans | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. CPU acceptance experiment | v0.1 | 28/29 (01-17 remains a checkpoint) | Complete | 2026-10-05 |
-| 2. Executable diagnostic SDK | v0.1 | 2/6 | In Progress | - |
+| 2. Executable diagnostic SDK | v0.1 | 3/6 | In Progress | - |
 | 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
 
-Coverage: 27/27 current requirements are assigned exactly once; 5 in Phase 1, 15 in Phase 2, and 7 in Phase 3. CPU-01–05 are Complete for Phase 01's bounded backend acceptance. The other 22 remain Pending in [traceability](REQUIREMENTS.md#traceability). Deferred v2 requirements are not allocated to these phases.
+Coverage: 27/27 current requirements are assigned exactly once; 5 in Phase 1, 15 in Phase 2, and 7 in Phase 3. CPU-01–05 are Complete for Phase 01's bounded backend acceptance; API-03 and DIAG-02 are also complete. The other 20 remain Pending in [traceability](REQUIREMENTS.md#traceability). Deferred v2 requirements are not allocated to these phases.
 
 ## Next Milestone Outline — Interactive Diagnostic Alpha
 
