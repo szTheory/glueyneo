@@ -98,6 +98,11 @@ if(GLUEYNEO_BUILD_TESTS)
     target_compile_options(sdk_diagnostic PRIVATE -Wall -Wextra -Wpedantic -Werror)
   endif()
   add_test(NAME sdk_diagnostic COMMAND sdk_diagnostic)
+  set_tests_properties(sdk_diagnostic PROPERTIES LABELS "sdk-contract;sdk-diagnostic")
+  add_test(NAME sdk_provenance
+    COMMAND glueyneo-diagnostic --check-fixture
+            ${CMAKE_CURRENT_BINARY_DIR}/diagnostic-original.bin)
+  set_tests_properties(sdk_provenance PROPERTIES LABELS "sdk-provenance")
 endif()
 
 if(GLUEYNEO_CPU_EXPERIMENT)
