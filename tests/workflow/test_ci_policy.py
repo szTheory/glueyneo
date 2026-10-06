@@ -6,13 +6,17 @@ from __future__ import annotations
 import sys
 import tempfile
 import json
+import os
+import subprocess
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools" / "workflow"))
 import ci_policy as policy  # noqa: E402
 sys.path.insert(0, str(ROOT / "tools"))
 import sdk_evidence as evidence  # noqa: E402
+import verify_sdk  # noqa: E402
 
 
 def expect(value: bool, message: str) -> None:
@@ -21,6 +25,62 @@ def expect(value: bool, message: str) -> None:
 
 
 def main() -> int:
+    with tempfile.TemporaryDirectory(prefix="ci-prepare-cli-") as temp:
+        output_dir = Path(temp) / "inputs"
+        completed = subprocess.run(
+            [sys.executable, str(ROOT / "tools/workflow/ci_policy.py"), "prepare",
+             "--output-dir", str(output_dir)], cwd=ROOT, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+        expect(completed.returncode == 0 and json.loads(completed.stdout)["outcome"] == "pass",
+               "prepare CLI must complete without assuming the classify --output argument")
+        expect((output_dir / "plan.json").is_file() and (output_dir / "results.json").is_file(),
+               "prepare CLI must write its two expected inputs")
+
+    private_path = os.path.expanduser("~") + "/private-ci-log.txt"
+    windows_path = "\\".join(("C:", "Users", "synthetic-user", "AppData", "private.log"))
+    fake_token = "ghp_" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    fake_bearer = "Bearer " + "synthetic-token-value"
+    fake_identity = "runner-user" + "@" + "private.invalid"
+    fake_key_header = "-----BEGIN " + "OPENSSH PRIVATE KEY-----"
+    diagnostic = verify_sdk.redacted_failure_diagnostic(
+        "compile failed at " + private_path + " " + windows_path + " token=" + fake_token + " " +
+        fake_bearer + " " + fake_identity + " " + fake_key_header +
+        "\nsynthetic-key\n-----END OPENSSH PRIVATE KEY-----")
+    expect(all(value not in diagnostic for value in
+               (private_path, windows_path, fake_token, fake_bearer, fake_identity, fake_key_header)),
+           "failure diagnostics must remove POSIX/Windows paths, keys, credentials and identities")
+    expect("compile failed" in diagnostic, "failure diagnostics should retain safe stage details")
+    raw_failure = "synthetic compiler output " + ("x" * 9000)
+    failed_process = subprocess.CompletedProcess(["synthetic-compiler"], 1, stdout=raw_failure)
+    with mock.patch.object(verify_sdk.subprocess, "run", return_value=failed_process), \
+            mock.patch.object(verify_sdk, "preserve_output") as preserve:
+        try:
+            verify_sdk.run(["synthetic-compiler"])
+        except verify_sdk.VerificationError:
+            pass
+        else:
+            raise AssertionError("failed command must remain a verification failure")
+        expect(preserve.call_args.args[1] == raw_failure,
+               "complete raw subprocess output must remain in local private logs")
+    with tempfile.TemporaryDirectory(prefix="matrix-failure-") as temp:
+        receipt_path = Path(temp) / "matrix" / "linux-gcc.json"
+        previous = sys.argv
+        try:
+            sys.argv = ["verify_sdk.py", "--suite", "matrix", "--lane", "linux-gcc",
+                        "--output", str(receipt_path)]
+            with mock.patch.dict(os.environ, {"SDK_SOURCE_REVISION": "a" * 40}), mock.patch.object(
+                    verify_sdk, "suite_matrix", side_effect=verify_sdk.VerificationError("synthetic compiler stage failed")):
+                code = verify_sdk.main()
+        finally:
+            sys.argv = previous
+        failure = json.loads(receipt_path.read_text(encoding="utf-8"))
+        expect(code == 1 and failure["outcome"] == "fail" and failure["stage"] == "linux-gcc",
+               "verification exception must persist an explicit failed lane receipt")
+        expect(failure["source_revision"] == "a" * 40,
+               "failed lane receipt must bind the workflow-supplied exact source revision")
+        expect("assertion_count" not in failure and "lane_count" not in failure,
+               "failure receipt must not fabricate successful counts")
+
     # Merge readiness must bind both the required aggregate and the separate
     # GSD review to the exact proposed PR head.
     proposed_sha = "a" * 40
@@ -131,6 +191,15 @@ def main() -> int:
         "This local validator does not fetch GitHub receipts or grant merge",
     ):
         expect(required in releasing, f"release policy documentation omitted: {required}")
+    release_workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    expect(release_workflow.count("app-id: ${{ vars.RELEASE_APP_ID }}") == 3
+           and "app-id: ${{ secrets.RELEASE_APP_ID }}" not in release_workflow,
+           "nonsecret GitHub App ID must come from repository variables in all privileged jobs")
+    expect("RELEASE_APP_ID` Actions\nvariable" in releasing,
+           "release setup docs must identify the App ID as a nonsecret variable")
+    expect("Upload bounded matrix verification evidence" in release_workflow
+           and "if: always()" in release_workflow,
+           "matrix diagnostics artifact must upload after failed verification steps")
     testing = (ROOT / "docs/testing.md").read_text(encoding="utf-8")
     for required in (
         "Darwin-26", "Apple SDK 26.5", "1,440 assertions", "9.374 seconds",

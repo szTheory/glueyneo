@@ -28,6 +28,34 @@ class PublicContentTests(unittest.TestCase):
         self.assertIn("release-please-config.json", content.REPOSITORY_PATHS)
         self.assertNotIn(".github/workflows", content.SOURCE_PATHS)
 
+    def test_public_content_cli_accepts_all_history_as_option_value(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="public-content-cli-") as temp:
+            root = Path(temp)
+            (root / "README.md").write_text("synthetic clean input\n", encoding="utf-8")
+            (root / "LICENSE").write_text("MIT License\n", encoding="utf-8")
+            (root / "docs").mkdir()
+            (root / "docs/rights-inventory.md").write_text(
+                "# Synthetic rights inventory\n\n```json\n{\"schema\":1,\"items\":[]}\n```\n",
+                encoding="utf-8")
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            env = {**os.environ, "GIT_AUTHOR_NAME": "Public User",
+                   "GIT_AUTHOR_EMAIL": "public@example.org", "GIT_COMMITTER_NAME": "Public User",
+                   "GIT_COMMITTER_EMAIL": "public@example.org"}
+            subprocess.run(["git", "add", "README.md", "LICENSE", "docs/rights-inventory.md"],
+                           cwd=root, env=env, check=True)
+            subprocess.run(["git", "commit", "-qm", "synthetic input"], cwd=root, env=env, check=True)
+            report = root / "report.json"
+            result = subprocess.run(
+                [sys.executable, str(ROOT / "tools/public_content.py"), "--root", str(root),
+                 "--history-revision=--all", "--json", str(report)], cwd=ROOT,
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+            self.assertTrue(report.is_file(), "CLI should parse --all and emit its structured scan report")
+            parsed = json.loads(report.read_text(encoding="utf-8"))
+            self.assertNotIn("usage:", result.stderr.lower())
+            self.assertEqual(parsed.get("outcome"), "pass")
+            self.assertEqual(parsed.get("coverage", {}).get("history_mode"), "all reachable refs")
+            self.assertEqual(result.returncode, 0)
+
     def test_deleted_reachable_blob_is_scanned_without_exposing_match(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

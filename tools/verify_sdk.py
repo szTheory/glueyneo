@@ -20,6 +20,7 @@ TREE = BUILD / "verify-sdk"
 LOG_DIR = BUILD / "verify-sdk/logs"
 sys.path.insert(0, str(ROOT / "tools"))
 import sdk_evidence as evidence  # noqa: E402
+import public_content  # noqa: E402
 
 MAX_WORKERS = 2
 CHILD_TIMEOUT_SECONDS = 600
@@ -174,10 +175,18 @@ def run(argv: list[str], *, timeout: int = CHILD_TIMEOUT_SECONDS,
         output = error.stdout or ""
         if isinstance(output, bytes):
             output = output.decode(errors="replace")
+        try:
+            preserve_output(f"command-timeout-{Path(argv[0]).stem}", output)
+        except OSError:
+            pass
         raise VerificationError(f"command timed out after {timeout}s: {Path(argv[0]).name}\n{output[-6000:]}") from error
     except OSError as error:
         raise VerificationError(f"could not execute required command: {Path(argv[0]).name}") from error
     if check and result.returncode != 0:
+        try:
+            preserve_output(f"command-failed-{Path(argv[0]).stem}", result.stdout)
+        except OSError:
+            pass
         raise VerificationError(f"command failed ({result.returncode}): {' '.join(argv)}\n{result.stdout[-8000:]}")
     return result
 
@@ -187,6 +196,48 @@ def preserve_output(lane: str, output: str) -> str:
     path = LOG_DIR / f"{lane}.log"
     path.write_text(output, encoding="utf-8")
     return evidence.sha256_file(path)
+
+
+_DIAGNOSTIC_SECRET_PATTERNS = (
+    (re.compile(r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----.*?-----END [A-Z0-9 ]*PRIVATE KEY-----", re.S), "[private-key-redacted]"),
+    (re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\b"), "[credential-redacted]"),
+    (re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]+"), "[credential-redacted]"),
+    (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "[credential-redacted]"),
+    (re.compile(r"(?i)\b(?:token|password|secret|api[_-]?key)\s*[:=]\s*[^\s,;]+"), "[credential-redacted]"),
+    (re.compile(r"(?i)\b[^\s/@:]+@(?:[^\s/:@]+\.)+[A-Za-z]{2,}\b"), "[identity-redacted]"),
+    (re.compile(r"(?i)(?:[A-Z]:[\\/](?:Users|Documents and Settings)[\\/])[^\s\"']+"), "[private-path-redacted]"),
+    (re.compile(r"/(?:Users|home|private/var|private/tmp|tmp|var/folders)/[^\s\"']+"), "[private-path-redacted]"),
+)
+
+
+def redacted_failure_diagnostic(output: str, *, limit: int = 8000) -> str:
+    """Return bounded diagnostics only after path/identity/secret redaction and scan."""
+    value = output[-limit:]
+    for private_path in sorted({str(ROOT), str(Path.home())}, key=len, reverse=True):
+        if private_path and private_path != "/":
+            value = value.replace(private_path, "[private-path-redacted]")
+    for pattern, replacement in _DIAGNOSTIC_SECRET_PATTERNS:
+        value = pattern.sub(replacement, value)
+    if len(value.encode("utf-8", errors="replace")) > limit:
+        value = value.encode("utf-8", errors="replace")[-limit:].decode("utf-8", errors="replace")
+    try:
+        findings = public_content.scan_bytes(value.encode("utf-8", errors="replace"),
+                                             "ci-failure-diagnostic")["findings"]
+    except Exception:
+        return "[diagnostic withheld: privacy detector did not complete]"
+    if findings:
+        return "[diagnostic withheld: privacy detector found sensitive content after redaction]"
+    return value
+
+
+def failure_receipt(suite: str, lane: str | None, error: BaseException) -> dict[str, Any]:
+    detail = redacted_failure_diagnostic(str(error))
+    revision = os.environ.get("SDK_SOURCE_REVISION") or os.environ.get("GITHUB_SHA", "")
+    if not re.fullmatch(r"[0-9a-f]{40,64}", revision):
+        revision = ""
+    return {"schema": "sdk-verify-failure/v1", "suite": suite,
+            "stage": lane or suite, "outcome": "fail", "source_revision": revision or None,
+            "detail": detail or "verification failed; no diagnostic output was captured"}
 
 
 def ensure_debug_build() -> float:
@@ -994,7 +1045,7 @@ def suite_public_content() -> dict[str, Any]:
     report_path = ROOT / "build/verify-sdk/public-content.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     result = run([sys.executable, "tools/public_content.py", "--root", str(ROOT),
-                  "--history-revision", "--all", "--json", str(report_path)], timeout=300)
+                  "--history-revision=--all", "--json", str(report_path)], timeout=300)
     report = evidence.load_canonical_json(report_path.read_bytes(), label="public-content report")
     if result.returncode != 0 or report.get("outcome") != "pass":
         raise VerificationError("public-content scan failed")
@@ -1078,8 +1129,14 @@ def main() -> int:
             preserve_output(f"{args.suite}-failed", str(error))
         except OSError:
             pass
-        print("SDK_VERIFY " + json.dumps({"suite": args.suite, "outcome": "fail",
-              "reason": getattr(error, "reason", "verification-failed")}, sort_keys=True), file=sys.stderr)
+        receipt = failure_receipt(args.suite, args.lane, error)
+        if args.output:
+            try:
+                args.output.parent.mkdir(parents=True, exist_ok=True)
+                args.output.write_bytes(evidence.canonical_bytes(receipt))
+            except OSError:
+                pass
+        print("SDK_VERIFY " + json.dumps(receipt, sort_keys=True, separators=(",", ":")), file=sys.stderr)
         return 1
 
 

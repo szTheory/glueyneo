@@ -31,9 +31,10 @@ The workflow uses a short-lived, repository-scoped GitHub App token only in
 trusted release-control, staging, and final publication jobs. Configure the
 repository App installation with contents write, pull request write, and issue
 write for Release Please; the staging and publication jobs request contents
-write only. Store the App ID and private key as `RELEASE_APP_ID` and
-`RELEASE_APP_PRIVATE_KEY` Actions secrets. Build and downloaded-consumer jobs do
-not receive those secrets or write permissions. Release Please's own action
+write only. Configure the nonsecret App ID as the `RELEASE_APP_ID` Actions
+variable and store only the private key as the `RELEASE_APP_PRIVATE_KEY`
+Actions secret. Build and downloaded-consumer jobs do not receive that secret
+or write permissions. Release Please's own action
 output does not authorize publication; the API tag target, draft state, exact
 asset inventory, downloaded bytes, rebuild, consumers, and content gate are
 independent required checks.
@@ -43,7 +44,11 @@ the workflow with the existing tag. Recovery still reads the root manifest and
 requires its tag and version to match. The workflow does not depend on an event
 triggered by the App token. It serializes by workflow ref and does not cancel an
 in-progress release. Every publish attempt creates a fresh short-lived App token
-and revalidates the draft after the consumer jobs finish.
+and revalidates the draft after the consumer jobs finish. Matrix verification
+keeps full command output only in the runner's private build logs. On failure it
+prints and uploads a bounded diagnostic after path, identity, and credential
+redaction plus a detector-negative check; the uploaded receipt records the
+failed stage and exact source revision without adding successful counts.
 
 ## Current qualification boundary
 

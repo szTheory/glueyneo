@@ -40,7 +40,7 @@ jobs:
       - id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          app-id: ${{ secrets.RELEASE_APP_ID }}
+          app-id: ${{ vars.RELEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
@@ -130,17 +130,31 @@ jobs:
           persist-credentials: false
       - name: Run exact-commit SDK matrix and installed consumers
         if: runner.os != 'Windows'
-        run: python3 tools/verify_sdk.py --suite matrix
+        env:
+          SDK_MATRIX_LANE: ${{ matrix.name }}
+          SDK_SOURCE_REVISION: ${{ needs.release-control.outputs.commit }}
+        run: python3 tools/verify_sdk.py --suite matrix --lane "$SDK_MATRIX_LANE" --output "build/matrix-evidence/$SDK_MATRIX_LANE.json"
       - name: Run exact-commit Windows SDK matrix and installed consumers
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          SDK_MATRIX_LANE: ${{ matrix.name }}
+          SDK_SOURCE_REVISION: ${{ needs.release-control.outputs.commit }}
         run: |
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
           $install = & $vswhere -latest -products '*' -property installationPath
           if (-not $install) { throw 'Visual Studio with MSVC was not found' }
-          $command = 'call "' + $install + '\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 && python tools/verify_sdk.py --suite matrix'
+          $command = 'call "' + $install + '\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 && python tools/verify_sdk.py --suite matrix --lane ' + $env:SDK_MATRIX_LANE + ' --output build/matrix-evidence/' + $env:SDK_MATRIX_LANE + '.json'
           cmd.exe /d /s /c $command
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload bounded matrix verification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-matrix-diagnostics-${{ matrix.name }}
+          path: build/matrix-evidence/
+          if-no-files-found: ignore
+          retention-days: 3
       - name: Build offline source and complete installed SDK archives
         if: runner.os != 'Windows'
         run: python3 tools/release_manifest.py build --repo . --commit "${{ needs.release-control.outputs.commit }}" --output-dir build/release-assets
@@ -177,7 +191,7 @@ jobs:
       - id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          app-id: ${{ secrets.RELEASE_APP_ID }}
+          app-id: ${{ vars.RELEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
@@ -328,7 +342,7 @@ jobs:
       - id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          app-id: ${{ secrets.RELEASE_APP_ID }}
+          app-id: ${{ vars.RELEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}

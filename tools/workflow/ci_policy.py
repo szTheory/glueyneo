@@ -264,8 +264,10 @@ def main(argv: list[str] | None = None) -> int:
         from sdk_evidence import canonical_bytes, scan_public_value
         scan_public_value(report)
         output = canonical_bytes(report)
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_bytes(output)
+        output_path = getattr(args, "output", None)
+        if output_path is not None:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(output)
         print(output.decode(), end="")
         return 0 if report.get("outcome") == "pass" else 1
     except (OSError, ValueError, TypeError) as error:
