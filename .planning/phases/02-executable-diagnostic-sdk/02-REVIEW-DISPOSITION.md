@@ -13,7 +13,7 @@ findings:
     title: "Static runtime becomes unusable when installed from a sanitizer build"
 open: 2
 total: 2
-recorded: "2026-10-06"
+recorded: "2026-10-06T14:05:54Z"
 ---
 
 # Phase 02: Code Review Disposition
