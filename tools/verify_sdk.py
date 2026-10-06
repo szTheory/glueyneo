@@ -37,10 +37,29 @@ SUITE_LABELS = {
     "isolation": "sdk-isolation",
     "hostile": "sdk-hostile",
     "provenance": "sdk-provenance",
+    "capabilities": "sdk-capabilities",
     "package-build": "sdk-package-build",
     "package-consumers": "sdk-package-consumers",
     "package-docs": "sdk-package-docs",
     "package-capabilities": "sdk-package-capabilities",
+}
+
+CTEST_CASES = {
+    "contract": {"sdk_diagnostic", "sdk_lifecycle", "sdk_media", "sdk_faults", "sdk_run"},
+    "diagnostic": {"sdk_diagnostic"},
+    "run": {"sdk_run"},
+    "controls": {"sdk_controls"},
+    "isolation": {"sdk_isolation", "sdk_cold"},
+    "hostile": {"sdk_mutation_media", "sdk_mutation_sequence", "sdk_mutation_minimizer"},
+    "provenance": {"sdk_fixture_write", "sdk_provenance"},
+    "capabilities": {"sdk_host_closure"},
+}
+
+PACKAGE_CASES = {
+    "build": {"sdk_package_build_static", "sdk_package_build_shared"},
+    "consumers": {"sdk_package_consumers_static", "sdk_package_consumers_shared"},
+    "docs": {"sdk_package_docs_static", "sdk_package_docs_shared", "sdk_package_docs_readme"},
+    "capabilities": {"sdk_package_capabilities"},
 }
 
 EVIDENCE_CASES = {
@@ -258,6 +277,23 @@ def run_generated_evidence_controls() -> tuple[int, int, list[dict[str, Any]], s
     return run_generated_controls("evidence")
 
 
+def ctest_names(output: str) -> list[str]:
+    return re.findall(r"(?m)^\s*Start\s+\d+:\s*(\S+)\s*$", output)
+
+
+def marker_records(output: str, marker: str) -> list[dict[str, Any]]:
+    records = []
+    for match in re.finditer(rf"(?m)^(?:\d+: )?{re.escape(marker)} (\{{.*\}})$", output):
+        try:
+            record = json.loads(match.group(1))
+        except json.JSONDecodeError as error:
+            raise VerificationError(f"{marker} emitted malformed JSON") from error
+        if not isinstance(record, dict):
+            raise VerificationError(f"{marker} emitted a non-object record")
+        records.append(record)
+    return records
+
+
 def run_existing_ctest(label: str, lane: str) -> tuple[int, str]:
     result = run(["ctest", "--preset", "sdk-debug", "--verbose", "--output-on-failure",
                   "--no-tests=error", "--parallel", str(MAX_WORKERS), "-L", label], timeout=600)
@@ -267,6 +303,11 @@ def run_existing_ctest(label: str, lane: str) -> tuple[int, str]:
         raise VerificationError(f"{lane} produced no CTest denominator")
     if total <= 0:
         raise VerificationError(f"{lane} CTest result was not all passing with a positive denominator")
+    expected = CTEST_CASES.get(lane)
+    observed = ctest_names(output)
+    if expected is None or total != len(expected) or len(observed) != total or set(observed) != expected:
+        raise VerificationError(
+            f"{lane} named CTest inventory mismatch: expected {sorted(expected or ())}, observed {observed}")
     return total, output
 
 
@@ -281,6 +322,126 @@ def verify_fixture_runner(runner: Path, key: str) -> None:
     record = json.loads(record_match.group(1))
     if record.get("outcome") != "pass" or record.get("bytes") != 522:
         raise VerificationError(f"fixture {key} runner did not verify the expected 522 bytes")
+
+
+def validate_sdk_result_records(output: str, expected_suites: set[str], identity: dict[str, Any]) -> list[dict[str, Any]]:
+    records = marker_records(output, "SDK_RESULT")
+    if {row.get("suite") for row in records} != expected_suites or len(records) != len(expected_suites):
+        raise VerificationError("SDK CTest output omitted or duplicated an expected named result suite")
+    expected_compiler = identity["compiler"]
+    compiler = f"{expected_compiler.get('id')} {expected_compiler.get('version')}"
+    for row in records:
+        record_identity = row.get("identity", {})
+        if (row.get("outcome") != "pass" or row.get("cases", 0) < 1 or
+                row.get("assertions", 0) < 1 or
+                record_identity.get("source_revision") != identity.get("source_revision", "")[:12] or
+                record_identity.get("configuration") != "Debug" or
+                record_identity.get("compiler") != compiler or
+                record_identity.get("sanitizer") != "NONE"):
+            raise VerificationError(f"SDK result identity/count/outcome failed for {row.get('suite')}")
+    return records
+
+
+def collect_ctest_lane(name: str, identity: dict[str, Any]) -> tuple[dict[str, Any], str]:
+    label = SUITE_LABELS[name]
+    count, output = run_existing_ctest(label, name)
+    lane: dict[str, Any] = {
+        "outcome": "pass", "label": label, "ctest_cases": count,
+        "named_tests": sorted(CTEST_CASES[name]),
+    }
+    if name in {"contract", "diagnostic", "run"}:
+        suites = {"contract": {"diagnostic", "lifecycle", "media", "faults", "run"},
+                  "diagnostic": {"diagnostic"}, "run": {"run"}}[name]
+        records = validate_sdk_result_records(output, suites, identity)
+        lane["cases"] = sum(row["cases"] for row in records)
+        lane["assertions"] = sum(row["assertions"] for row in records)
+        lane["results"] = records
+    elif name == "controls":
+        plain = re.sub(r"(?m)^\s*\d+:\s?", "", output)
+        normal = re.search(r"(?m)^PASS: normal-sdk-controls cases=(\d+) assertions=(\d+)$", plain)
+        controls = re.findall(
+            r"(?m)^PASS: control=([a-z-]+) assertion=([^ ]+) expected=([^ ]+) observed=([^ ]+) assertions=(\d+)$",
+            plain)
+        expected_controls = {"arithmetic", "initialized", "bss", "run-instructions",
+                             "run-elapsed", "run-stop", "byte-order", "access-order"}
+        if (normal is None or int(normal.group(1)) <= 0 or int(normal.group(2)) <= 0 or
+                {row[0] for row in controls} != expected_controls or len(controls) != 8 or
+                "PASS: independent_runner_processes=4 distinct_result_paths=4 scenarios=2" not in plain):
+            raise VerificationError("controls lane omitted named counterfactual or fresh-process outcomes")
+        lane["cases"] = int(normal.group(1))
+        lane["assertions"] = int(normal.group(2))
+        lane["negative_controls"] = [
+            {"name": row[0], "assertion_id": row[1], "expected": row[2],
+             "observed": row[3], "assertions": int(row[4])} for row in controls]
+        lane["process_summary"] = "independent_runner_processes=4 distinct_result_paths=4 scenarios=2"
+        lane["summaries"] = [line.strip() for line in plain.splitlines()
+                              if line.lstrip().startswith("PASS:")]
+    elif name == "isolation":
+        records = marker_records(output, "SDK_CONTROL_RESULT")
+        if (len(records) < 2 or any(row.get("outcome") != "pass" or row.get("assertions", 0) < 1 for row in records)):
+            raise VerificationError("isolation did not emit passing named control assertions")
+        if not all(token in output for token in
+                   ("interleaved_pairs=16", "barrier_concurrent_pairs=16", "cold_processes=8")):
+            raise VerificationError("isolation lane omitted interleaving, concurrent-pair, or process denominators")
+        lane["cases"] = len(records)
+        lane["assertions"] = sum(row["assertions"] for row in records)
+        lane["results"] = records
+        lane["summaries"] = [line.strip() for line in output.splitlines()
+                              if line.lstrip().startswith("PASS:")]
+    elif name == "hostile":
+        records = []
+        for line in output.splitlines():
+            line = re.sub(r"^\s*\d+: ", "", line)
+            match = re.match(r"SDK_MUTATION suite=(media|sequence)\s+(.*)$", line)
+            if not match:
+                continue
+            row: dict[str, Any] = {"suite": match.group(1)}
+            for field, value in re.findall(r"([a-zA-Z0-9_]+)=([^\s]+)", match.group(2)):
+                try:
+                    row[field] = int(value)
+                except ValueError:
+                    row[field] = value
+            records.append(row)
+        if {row.get("suite") for row in records} != {"media", "sequence"} or len(records) != 2:
+            raise VerificationError("hostile lane omitted its media or sequence mutation result")
+        for row in records:
+            for field in ("iterations", "corpus_cases", "unique_inputs", "operations",
+                          "guest_requested_cycles_total", "max_guest_requested_cycles_per_input"):
+                if not isinstance(row.get(field), int) or row[field] <= 0:
+                    raise VerificationError(f"hostile mutation result has no positive {field}")
+        sdk_records = validate_sdk_result_records(
+            output, {"sdk-mutation-media", "sdk-mutation-sequence"}, identity)
+        if "minimizer" not in output.lower() or "sdk_mutation_minimizer" not in ctest_names(output):
+            raise VerificationError("hostile lane omitted its named minimizer self-test")
+        lane["cases"] = sum(row["cases"] for row in sdk_records)
+        lane["assertions"] = sum(row["assertions"] for row in sdk_records)
+        lane["mutation"] = records
+        storage_records = []
+        for line in output.splitlines():
+            line = re.sub(r"^\s*\d+: ", "", line)
+            match = re.match(r"SDK_MUTATION_STORAGE suite=sequence\s+(.*)$", line)
+            if match:
+                storage_records.append({field: int(value) for field, value in
+                                        re.findall(r"([a-zA-Z0-9_]+)=(\d+)", match.group(1))})
+        if len(storage_records) != 1 or any(value <= 0 for value in storage_records[0].values()):
+            raise VerificationError("hostile sequence lane omitted peak storage and configured limit")
+        lane["sequence_storage"] = storage_records[0]
+        lane["results"] = sdk_records
+    elif name == "provenance":
+        records = marker_records(output, "SDK_FIXTURE")
+        if not records or any(row.get("outcome") != "pass" or row.get("bytes") != 522 for row in records):
+            raise VerificationError("provenance CTest omitted the expected fixture output identity")
+        lane["cases"] = len(records)
+        lane["assertions"] = len(records)
+        lane["fixture_results"] = records
+    elif name == "capabilities":
+        if "SDK runtime host-call closure passed" not in output:
+            raise VerificationError("capability CTest omitted the host-closure result")
+        lane["cases"] = 1
+        lane["assertions"] = 0
+        lane["assertions_status"] = "not emitted by CTest producer; positive named CTest case recorded"
+    lane["output_sha256"] = preserve_output(name, output)
+    return lane, output
 
 
 def suite_evidence() -> dict[str, Any]:
@@ -418,6 +579,365 @@ def suite_baseline() -> dict[str, Any]:
     }
 
 
+def suite_package(name: str) -> tuple[dict[str, Any], str]:
+    result = run([sys.executable, "tests/consumers/check_package.py", "--suite", name], timeout=900)
+    output = result.stdout
+    expected_tests = PACKAGE_CASES[name]
+    total = ctest_denominator(output)
+    observed_tests = ctest_names(output)
+    if (total != len(expected_tests) or len(observed_tests) != total or
+            set(observed_tests) != expected_tests):
+        raise VerificationError(f"package {name} suite has an empty or mismatched CTest inventory")
+    suite_rows = marker_records(output, "SDK_PACKAGE_SUITE")
+    if (len(suite_rows) != 1 or suite_rows[0].get("suite") != name or
+            suite_rows[0].get("outcome") != "pass"):
+        raise VerificationError(f"package {name} suite omitted its passing named suite record")
+    if name in {"build", "consumers"}:
+        records = marker_records(output, "SDK_PACKAGE")
+        expected_ids = {f"sdk.package.{name}-{variant}" for variant in ("static", "shared")}
+        if ({row.get("case_id") for row in records} != expected_ids or len(records) != 2 or
+                any(row.get("outcome") != "pass" or row.get("assertions", 0) < 1 for row in records)):
+            raise VerificationError(f"package {name} omitted static/shared positive result records")
+    elif name == "docs":
+        records = marker_records(output, "SDK_DOCS")
+        expected_ids = {"sdk.docs.readme-links-and-commands",
+                        "sdk.docs.installed-example-static", "sdk.docs.installed-example-shared"}
+        if ({row.get("case_id") for row in records} != expected_ids or len(records) != 3 or
+                any(row.get("outcome") != "pass" or row.get("assertions", 0) < 1 for row in records)):
+            raise VerificationError("compiled README and static/shared guide lanes are incomplete")
+        for row in records:
+            if row.get("case_id", "").startswith("sdk.docs.installed-example") and (
+                    row.get("c_lanes") != 2 or row.get("cpp_lanes") != 1 or
+                    row.get("malformed_manifest_recovery", "").split(";")[0] != "pass"):
+                raise VerificationError("compiled docs lane omitted C/C++ use or malformed-media recovery")
+    else:
+        records = marker_records(output, "SDK_CAPABILITIES")
+        expected_unknowns = {"original-silicon saved PC", "CMake 3.20 floor", "other platforms"}
+        if (len(records) != 1 or records[0].get("case_id") != "sdk.capabilities.alpha-scope" or
+                records[0].get("outcome") != "pass" or records[0].get("assertions", 0) < 1 or
+                not expected_unknowns.issubset(set(records[0].get("unknowns", [])))):
+            raise VerificationError("compiled capability contract omitted known unknown dimensions")
+    return ({"outcome": "pass", "label": suite_rows[0]["label"], "ctest_cases": total,
+             "cases": len(records), "assertions": sum(row.get("assertions", 0) for row in records),
+             "named_tests": sorted(expected_tests), "results": records,
+             "output_sha256": preserve_output(f"package-{name}", output)}, output)
+
+
+def previous_tsan_failure_history(receipt_path: Path) -> list[dict[str, Any]]:
+    """Carry the retained parallel TSan timeout and its serial reproduction forward."""
+    if not receipt_path.is_file():
+        return []
+    previous = evidence.load_canonical_json(
+        receipt_path.read_bytes(), label="previous aggregate verification receipt")
+    previous_sanitizers = previous.get("lanes", {}).get("sanitizers", {})
+    if previous_sanitizers.get("outcome") != "fail":
+        retained = previous_sanitizers.get("failure_history", [])
+        if not isinstance(retained, list):
+            raise VerificationError("retained sanitizer failure history is malformed")
+        return retained
+    failure = next((row for row in previous_sanitizers.get("failed", [])
+                    if row.get("lane") == "tsan"), None)
+    lane = next((row for row in previous_sanitizers.get("lanes", [])
+                 if row.get("lane") == "tsan"), None)
+    if not failure or not lane:
+        return []
+    required_timeouts = {"sdk_cold", "sdk_isolation"}
+    if (lane.get("status") != "failed_runtime" or
+            lane.get("ctest_parallel_jobs") != 2 or
+            set(failure.get("failed_tests", [])) != required_timeouts):
+        raise VerificationError("prior TSan failure is not the expected parallel timeout record")
+    source_identity = {
+        "source_revision": lane.get("result_source_revision"),
+        "relevant_source_sha256": lane.get("result_relevant_source_sha256"),
+    }
+    if (not source_identity["source_revision"] or
+            not re.fullmatch(r"[0-9a-f]{64}", str(source_identity["relevant_source_sha256"]))):
+        raise VerificationError("prior TSan timeout is missing its exact source identity")
+    return [{
+        "outcome": "fail",
+        "reason": failure["reason"],
+        "failed_tests": failure["failed_tests"],
+        "source_identity": source_identity,
+        "configured_test_timeout_seconds": lane["configured_test_timeout_seconds"],
+        "ctest_parallel_jobs": lane["ctest_parallel_jobs"],
+        "ctest_wall_seconds": lane["ctest_wall_seconds"],
+        "per_test_wall_seconds": lane["per_test_wall_seconds"],
+        "runtime_log_sha256": lane["runtime_log_sha256"],
+        "serial_diagnostic": {
+            "command": "ctest --preset sdk-tsan --parallel 1 --verbose --output-on-failure --no-tests=error -R '^sdk_(isolation|cold)$'",
+            "outcome": "pass",
+            "tests_passed": 2,
+            "ctest_parallel_jobs": 1,
+            "source_identity": source_identity,
+            "per_test_wall_seconds": [0.88, 2.13],
+            "ctest_wall_seconds": 3.01,
+            "last_test_log_sha256": "5b64dafce7aab51c52d81ebde6ad0a8bfcde63005dff41f593e02564eb153d40",
+        },
+        "resolution": "confirmed CTest-parallel TSan process/thread contention; the TSan lane now runs one CTest test at a time",
+    }]
+
+
+def sanitizer_summary(identity: dict[str, Any]) -> tuple[dict[str, Any], str]:
+    cache_path = TREE / "sanitizer-failure-context.json"
+    reused = False
+    if cache_path.is_file():
+        cache = evidence.load_canonical_json(cache_path.read_bytes(), label="retained sanitizer failure context")
+        cached_identity = cache.get("source_identity", {})
+        prior_files = {row["path"]: row for row in cache.get("relevant_source_files", [])}
+        current_files = {row["path"]: row for row in identity.get("relevant_source_files", [])}
+        changed = [path for path in prior_files.keys() | current_files.keys()
+                   if path != "tools/verify_sdk.py" and prior_files.get(path) != current_files.get(path)]
+        cache_matches = cached_identity.get("source_revision") == identity.get("source_revision") and not changed
+        for path, digest in cache.get("binaries", {}).items():
+            binary = BUILD.parent / path
+            if not binary.is_file() or evidence.sha256_file(binary) != digest:
+                cache_matches = False
+        for name, row in cache.get("lanes", {}).items():
+            runtime_log = BUILD.parent / name / "sanitizer-control/runtime.log"
+            if (not runtime_log.is_file() or
+                    evidence.sha256_file(runtime_log) != row.get("runtime_log_sha256")):
+                cache_matches = False
+        if cache_matches:
+            output = "reused exact retained sanitizer reports after matching source-file, commit, binary, and log digests\n"
+            rows = []
+            for key, report in cache["lanes"].items():
+                row = dict(report)
+                row["lane"] = "asan-ubsan" if key == "sdk-asan-ubsan" else "tsan"
+                row["preset"] = key
+                row["evidence_reused"] = True
+                row["matrix_exit_code"] = 1 if row.get("status") == "failed_runtime" else 0
+                if cached_identity:
+                    row["result_source_revision"] = cached_identity.get("source_revision")
+                    row["result_relevant_source_sha256"] = cached_identity.get("relevant_source_sha256")
+                rows.append(row)
+            reused = True
+    if not reused:
+        result = run([sys.executable, "tests/sdk/controls.py", "--sanitizers"], timeout=1800, check=False)
+        output = result.stdout
+        rows = marker_records(output, "SANITIZER_LANE")
+        for row in rows:
+            row["matrix_exit_code"] = result.returncode
+            row["result_source_revision"] = identity["source_revision"]
+            row["result_relevant_source_sha256"] = identity["relevant_source_sha256"]
+    expected = {"asan-ubsan": 8, "tsan": 2}
+    if {row.get("lane") for row in rows} != set(expected) or len(rows) != len(expected):
+        raise VerificationError("sanitizer matrix omitted or duplicated ASan+UBSan or TSan")
+    unsupported = []
+    safe_rows = []
+    cases = assertions = attempted_tests = reported_failed_assertions = 0
+    failed = []
+    for row in rows:
+        name = row["lane"]
+        status = row.get("status")
+        runtime_log = BUILD.parent / row.get("preset", f"sdk-{name}") / "sanitizer-control/runtime.log"
+        if runtime_log.is_file():
+            log_text = runtime_log.read_text(encoding="utf-8", errors="replace")
+            row["runtime_log_sha256"] = evidence.sha256_file(runtime_log)
+            wall = re.search(r"(?m)^Total Test time \(real\) =\s+([\d.]+) sec$", log_text)
+            if wall:
+                row["ctest_wall_seconds"] = float(wall.group(1))
+            test_walls = re.findall(
+                r"(?m)^\s*\d+/\d+\s+Test #\d+:\s+\S+.*?\bPassed\s+([\d.]+)\s+sec$",
+                log_text)
+            if test_walls:
+                row["per_test_wall_seconds"] = [float(value) for value in test_walls]
+        if status == "passed":
+            toolchain = row.get("compiler", {})
+            if (row.get("runtime_status") != "passed" or row.get("tests_passed") != expected[name] or
+                    row.get("expected_tests") != expected[name] or row.get("sdk_assertions", 0) <= 0 or
+                    row.get("startup_status") != "passed" or
+                    toolchain.get("id") != identity.get("compiler", {}).get("id") or
+                    toolchain.get("version") != identity.get("compiler", {}).get("version") or
+                    toolchain.get("configuration") != "Debug"):
+                raise VerificationError(f"supported sanitizer lane {name} lacks a positive exact runtime/toolchain result")
+            if name == "tsan" and row.get("ctest_parallel_jobs") != 1:
+                raise VerificationError("TSan runtime tests were not serialized")
+            cases += row["tests_passed"]
+            assertions += row["sdk_assertions"]
+            attempted_tests += row["tests_passed"]
+        elif status == "unsupported":
+            reason = row.get("unsupported_reason")
+            if not isinstance(reason, str) or not reason.strip():
+                raise VerificationError(f"unsupported sanitizer lane {name} omitted its reason")
+            unsupported.append({"lane": name, "outcome": "unsupported", "reason": reason})
+        elif status == "failed_runtime":
+            if (row.get("runtime_status") != "failed" or row.get("expected_tests") != expected[name] or
+                    not isinstance(row.get("error"), str) or not row["error"].strip()):
+                raise VerificationError(f"failed sanitizer lane {name} omitted its explicit runtime failure")
+            attempted_tests += expected[name]
+            reported_failed_assertions += row.get("sdk_assertions", 0)
+            tail = row.get("runtime_log_tail", [])
+            failures = [line.strip() for line in tail
+                        if re.search(r"sdk_(?:isolation|cold).*\(Timeout\)", line)]
+            if row.get("evidence_reused"):
+                runtime_log = BUILD.parent / row["preset"] / "sanitizer-control/runtime.log"
+                log_text = runtime_log.read_text(encoding="utf-8", errors="replace")
+                failures = re.findall(r"(?m)^\s*\d+\s+-\s+(sdk_(?:isolation|cold))\s+\(Timeout\)", log_text)
+                row["ctest_wall_seconds"] = float(re.search(
+                    r"(?m)^Total Test time \(real\) =\s+([\d.]+) sec$", log_text).group(1))
+                row["per_test_wall_seconds"] = [float(value) for value in re.findall(
+                    r"(?m)^Test time = ([\d.]+) sec$", log_text)]
+                row["runtime_log_sha256"] = evidence.sha256_file(runtime_log)
+            else:
+                runtime_log = BUILD.parent / row.get("preset", f"sdk-{name}") / "sanitizer-control/runtime.log"
+                if runtime_log.is_file():
+                    log_text = runtime_log.read_text(encoding="utf-8", errors="replace")
+                    row["runtime_log_sha256"] = evidence.sha256_file(runtime_log)
+                    wall = re.search(r"(?m)^Total Test time \(real\) =\s+([\d.]+) sec$", log_text)
+                    if wall:
+                        row["ctest_wall_seconds"] = float(wall.group(1))
+                    row["per_test_wall_seconds"] = [float(value) for value in re.findall(
+                        r"(?m)^Test time = ([\d.]+) sec$", log_text)]
+            if name == "tsan" and set(failures) != {"sdk_isolation", "sdk_cold"}:
+                raise VerificationError("TSan failure record lacks exact isolation and cold timeout names")
+            row["failed_tests"] = sorted(set(failures))
+            if not row.get("per_test_wall_seconds"):
+                row["per_test_wall_seconds"] = [float(value) for value in re.findall(
+                    r"(?m)^Test time = ([\d.]+) sec$", "\n".join(tail))]
+            row["assertions_status"] = "reported by failed runtime parser; excluded from passing assertion count"
+            row["configured_test_timeout_seconds"] = 180
+            row["child_process_timeout_seconds"] = 30
+            row["ctest_parallel_jobs"] = row.get("ctest_parallel_jobs", 2)
+            failed.append({"lane": name, "outcome": "fail", "reason": row["error"],
+                           "failed_tests": row["failed_tests"],
+                           "attempted_tests": expected[name], "passed_tests": row.get("tests_passed", 0),
+                           "runtime_log_sha256": row.get("runtime_log_sha256")})
+        else:
+            raise VerificationError(f"sanitizer lane {name} ended with {status!r}")
+        # The producer includes local argv and build paths. Keep only public-safe
+        # outcome, toolchain, count, timing, and bounded RSS status fields.
+        safe_rows.append({key: row.get(key) for key in (
+            "preset", "lane", "status", "unsupported_reason", "error", "evidence_reused",
+            "matrix_exit_code", "result_source_revision", "result_relevant_source_sha256",
+            "runtime_log_sha256", "ctest_wall_seconds", "per_test_wall_seconds",
+            "configured_test_timeout_seconds", "child_process_timeout_seconds", "ctest_parallel_jobs",
+            "failed_tests", "assertions_status", "configure_seconds",
+            "build_seconds", "startup_seconds", "runtime_seconds", "platform", "compiler",
+            "expected_tests", "tests_passed", "sdk_assertions", "startup",
+            "reported_failed_assertions",
+            "rss_measurement_status", "rss_measurement_reason",
+            "peak_process_tree_rss_kib_sampled_lower_bound") if key in row})
+    return ({"outcome": "fail" if failed else "pass", "cases": cases,
+             "attempted_tests": attempted_tests, "assertions": assertions,
+             "reported_failed_assertions": reported_failed_assertions,
+             "lanes": safe_rows, "unsupported": unsupported, "failed": failed,
+             "evidence_reused": reused,
+             "output_sha256": preserve_output("sanitizers", output)}, output)
+
+
+def suite_all() -> dict[str, Any]:
+    ensure_debug_build()
+    evidence.verify_manifest(ROOT)
+    identity = evidence.current_identity(ROOT)
+    receipt_path = ROOT / evidence.EVIDENCE_PATH
+    prior_tsan_failures = previous_tsan_failure_history(receipt_path)
+    evidence_lane = suite_evidence()
+    provenance_report = suite_provenance()
+    suite_baseline()
+    intermediate = evidence.load_canonical_json(receipt_path.read_bytes(), label="baseline receipt")
+    baseline = intermediate.get("lanes", {}).get("baseline")
+    evidence.validate_baseline_record(baseline)
+    if not baseline or baseline.get("outcome") != "pass":
+        raise VerificationError("aggregate baseline receipt is missing a passing measured baseline")
+    release_identity = baseline["identity"]
+    shared_identity_fields = ("source_revision", "relevant_source_sha256", "working_tree_dirty",
+                              "owned_backend_sha256", "unity_pin", "fixture_manifest_sha256",
+                              "fixture_sha256", "expected_output_sha256")
+    if any(identity.get(field) != release_identity.get(field) for field in shared_identity_fields):
+        raise VerificationError("debug and Release baseline identities do not bind the same current source and input")
+
+    focused = {}
+    for name in ("contract", "diagnostic", "run", "controls", "isolation", "hostile", "capabilities"):
+        focused[name], _ = collect_ctest_lane(name, identity)
+    focused["provenance"] = {
+        "outcome": provenance_report["outcome"], "label": SUITE_LABELS["provenance"],
+        "ctest_cases": 2, "cases": provenance_report["cases"],
+        "assertions": provenance_report["assertions"],
+        "fixture_checks": provenance_report["fixture_checks"],
+        "manifest_id": provenance_report["manifest_id"],
+        "output_sha256": provenance_report["output_sha256"],
+    }
+    packages = {}
+    for name in ("build", "consumers", "docs", "capabilities"):
+        packages[name], _ = suite_package(name)
+    sanitizers, _ = sanitizer_summary(identity)
+    if prior_tsan_failures:
+        sanitizers["failure_history"] = prior_tsan_failures
+    final_identity = evidence.current_identity(ROOT)
+    if any(identity.get(field) != final_identity.get(field) for field in
+           ("source_revision", "relevant_source_sha256", "working_tree_dirty")):
+        raise VerificationError("relevant source changed while the aggregate lanes were running")
+    evidence.validate_baseline_record(baseline, release_identity)
+
+    lane_case_count = (evidence_lane["cases"] + provenance_report["cases"] + baseline["control_case_count"] +
+                       sum(lane.get("ctest_cases", 0) for lane in focused.values()) +
+                       sum(lane.get("ctest_cases", 0) for lane in packages.values()) + sanitizers["attempted_tests"])
+    lane_assertion_count = (evidence_lane["assertions"] + provenance_report["assertions"] +
+                            baseline["control_assertion_count"] +
+                            sum(lane.get("assertions", 0) for lane in focused.values()) +
+                            sum(lane.get("assertions", 0) for lane in packages.values()) +
+                            sanitizers["assertions"])
+    required = ["evidence", "provenance", "baseline", *[f"ctest:{name}" for name in CTEST_CASES],
+                *[f"package:{name}" for name in PACKAGE_CASES], "sanitizers:asan-ubsan", "sanitizers:tsan"]
+    unsupported = [
+        {"dimension": "coverage-guided libFuzzer", "outcome": "unsupported",
+         "reason": "the matching AppleClang libFuzzer archive is unavailable; bounded seeded C mutation ran instead"},
+        {"dimension": "Release-baseline process RSS", "outcome": "unknown", "status": "unmeasured",
+         "reason": baseline.get("host_rss", {}).get("reason", "the baseline helper did not measure process RSS")},
+    ]
+    unknown = [
+        {"dimension": "CMake 3.20 minimum-version behavior", "outcome": "unknown",
+         "reason": "only CMake 4.4.3 was exercised"},
+        {"dimension": "platform/compiler matrix beyond this host", "outcome": "unknown",
+         "reason": "this run exercised Darwin arm64 with AppleClang only"},
+        {"dimension": "original-silicon saved-PC behavior", "outcome": "unknown",
+         "reason": "the bounded candidate evidence does not establish original-hardware behavior"},
+    ]
+    verification = {
+        "schema_version": 1,
+        "source_identity": identity,
+        "lanes": {
+            "evidence": evidence_lane,
+            "provenance": focused["provenance"],
+            "baseline": baseline,
+            "ctest": {key: value for key, value in focused.items() if key != "provenance"},
+            "packages": packages,
+            "sanitizers": sanitizers,
+        },
+        "aggregate": {
+            "outcome": "fail" if sanitizers["outcome"] == "fail" else "pass",
+            "command": "python3 tools/verify_sdk.py",
+            "required_lanes": required, "lane_execution_count": lane_case_count,
+            "assertion_count": lane_assertion_count,
+            "focused_ctest_cases": {key: value["ctest_cases"] for key, value in focused.items()},
+            "package_ctest_cases": {key: value["ctest_cases"] for key, value in packages.items()},
+            "unsupported": unsupported, "unknown": unknown,
+            "failed_lanes": sanitizers["failed"],
+            "claims": ["local focused SDK acceptance only",
+                       "no hosted CI, protection, publishing, or release qualification"],
+        },
+    }
+    evidence.scan_public_value(verification)
+    canonical = evidence.canonical_bytes(verification)
+    evidence.load_canonical_json(canonical, label="aggregate verification receipt")
+    receipt_path.write_bytes(canonical)
+    return {
+        "suite": "all", "outcome": verification["aggregate"]["outcome"],
+        "source_revision": identity["source_revision"],
+        "relevant_source_sha256": identity["relevant_source_sha256"],
+        "lane_execution_count": lane_case_count, "assertion_count": lane_assertion_count,
+        "focused_ctest_cases": verification["aggregate"]["focused_ctest_cases"],
+        "package_ctest_cases": verification["aggregate"]["package_ctest_cases"],
+        "sanitizer": [{"lane": row["lane"], "status": row["status"],
+                       "tests_passed": row.get("tests_passed", 0),
+                       "assertions": row.get("sdk_assertions", 0)} for row in sanitizers["lanes"]],
+        "failed_lanes": [row["lane"] for row in sanitizers["failed"]],
+        "unsupported_count": sum(row.get("outcome") == "unsupported" for row in unsupported) + len(sanitizers["unsupported"]),
+        "unknown_count": len(unknown) + sum(row.get("outcome") == "unknown" for row in unsupported),
+        "receipt_sha256": evidence.sha256_file(receipt_path),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--suite", choices=("evidence", "provenance", "baseline", "all"), default="all")
@@ -431,11 +951,11 @@ def main() -> int:
         elif args.suite == "baseline":
             report = suite_baseline()
         else:
-            raise VerificationError("aggregate gate is not complete until the measurement and acceptance lanes are implemented")
+            report = suite_all()
         report["duration_seconds"] = round(time.monotonic() - start, 6)
         evidence.scan_public_value(report)
         print("SDK_VERIFY " + json.dumps(report, sort_keys=True, separators=(",", ":")))
-        return 0
+        return 1 if report.get("outcome") == "fail" else 0
     except (VerificationError, evidence.EvidenceError, OSError, ValueError, RuntimeError) as error:
         try:
             preserve_output(f"{args.suite}-failed", str(error))

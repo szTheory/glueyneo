@@ -30,6 +30,9 @@ an all-skipped/empty aggregate fails closed. Failure records are retained
 instead of being replaced by a later favorable rerun. Controls exercise named
 rejection reasons for malformed, zero-count, stale, mismatched, duplicate,
 noncanonical, privacy-contaminated, erased-failure, and spoofed-pass records.
+The process-heavy ThreadSanitizer CTest lane runs one test at a time; its receipt
+retains the earlier parallel timeout and the serial diagnostic that identified
+host process/thread contention.
 
 `fixtures/diagnostic/manifest.json` records the MIT original C fixture recipe,
 source identities, build-local 522-byte ROM+RAM-prefix outputs, rights and

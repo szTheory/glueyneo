@@ -414,6 +414,7 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
                      "machine": platform.machine()},
         "compiler": {},
         "expected_tests": 8 if probe_name == "asan-ubsan" else 2,
+        "ctest_parallel_jobs": 1 if probe_name == "tsan" else 2,
         "tests_passed": 0,
         "sdk_assertions": 0,
         "commands": [],
@@ -508,9 +509,14 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
     report["compiler"]["version"] = compiler_version if separator else "unknown"
     report["status"] = "startup_passed"
 
+    ctest_command = ["ctest", "--preset", preset]
+    if probe_name == "tsan":
+        # These process/thread-heavy TSan tests pass individually, but running
+        # both at once can starve the runtime until CTest's per-test timeout.
+        ctest_command.extend(["--parallel", "1"])
+    ctest_command.extend(["-R", labels, "--output-on-failure", "--no-tests=error"])
     ctest_status, ctest_output = execute(
-        "runtime", ["ctest", "--preset", preset, "-R", labels,
-                    "--output-on-failure", "--no-tests=error"],
+        "runtime", ctest_command,
         sample_rss=True, timeout=900.0)
     last_test_log = build_dir / "Testing" / "Temporary" / "LastTest.log"
     test_details = (last_test_log.read_text(encoding="utf-8", errors="replace")

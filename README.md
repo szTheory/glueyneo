@@ -66,6 +66,24 @@ replacement, then confirms the previously loaded guest still returns the
 expected results. The executable prints an `SDK_RECOVERY` result record when
 that rejection and recovery pass.
 
+## Local verification
+
+Run the current-revision SDK gate from the repository root:
+
+```sh
+python3 tools/verify_sdk.py
+```
+
+It checks counted focused CTest lanes, static/shared installed C and C++
+consumers, compiled documentation examples, capabilities, provenance, evidence,
+the retained local baseline, and supported sanitizer lanes. It writes the
+canonical public-safe result to `evidence/sdk/verification.json`. This local
+gate does not qualify hosted CI, release authority, other platforms, or the
+CMake 3.20 minimum-version claim. Coverage-guided libFuzzer is unsupported on
+the current AppleClang toolchain; deterministic seeded mutation is used. The
+ThreadSanitizer lane runs its process-heavy CTest cases one at a time to avoid
+host resource contention.
+
 ## What this alpha implements
 
 The public `GN_PROFILE_DIAGNOSTIC` accepts exactly two mapped regions:
