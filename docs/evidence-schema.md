@@ -94,3 +94,24 @@ The supported local gate is `python3 tools/verify_sdk.py`. It has named focused
 suite selectors and finite child-command timeouts. Unsupported optional tool
 lanes remain explicit with zero pass/assertion contribution. Phase 03 owns
 hosted CI, branch protection, release authority, and support-matrix qualification.
+
+## Platform matrix evidence
+
+The platform matrix is a separate schema from the local SDK receipt. Each
+required row names one exact compiler/SDK/OS-image/architecture/configuration
+combination, the full source revision, the actual CMake/compiler and fixture
+identities, a runner identifier, outcome, positive behavioral assertion count,
+and measured job and cold-build durations. The required rows are Linux x64
+Clang and GCC, macOS arm64 AppleClang, Windows x64 MSVC, plus Linux Clang
+sanitizer and seeded-fuzz controls. A green parser fixture does not execute any
+of these lanes.
+
+Outcomes remain `pass`, `fail`, `skipped`, `unsupported`, or `unknown`. Only an
+observed `pass` with a positive assertion denominator can qualify a support
+row. Unknown, skipped, unsupported and failed rows require a reason and never
+contribute passing assertions. The aggregate requires every named row at the
+same source revision. It records the slowest measured required job as critical
+path and computes runner minutes from the retained per-job elapsed durations;
+cold-build duration comes from a measured clean configure/build. These values
+are evidence for that runner image and commit, not a generalized platform or
+cost guarantee.
