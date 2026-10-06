@@ -27,14 +27,14 @@ Historical Musashi CPU-05 decision evidence: [bounded rejection](../experiments/
 
 ### Executable Diagnostic
 
-- [ ] **DIAG-01**: An external C consumer executes an original redistributable CPU/bus guest program through the ordinary create/load/run/results/destroy path and checks meaningful guest-computed observations.
+- [x] **DIAG-01**: An external C consumer executes an original redistributable CPU/bus guest program through the ordinary create/load/run/results/destroy path and checks meaningful guest-computed observations.
 - [x] **DIAG-02**: A maintainer can run a headless diagnostic runner through the ordinary native API and reproduce the diagnostic bootstrap, initialized-data/BSS and named CPU/bus assertions using documented oracle ancestry, with a deliberate wrong-behavior control that fails the checks.
 - [ ] **DIAG-03**: A maintainer can repeat and split the supported execution workload and run distinguishable native diagnostic instances both interleaved and concurrently while matching isolated-baseline guest observations at equal execution boundaries, including concurrent native creation/load/teardown paths.
 
 ### Build and Package Consumption
 
-- [ ] **BUILD-01**: An integrator can build the C17 static and shared runtime from an offline source tree with target-scoped CMake, CTest and pinned test-only Unity, without inherited developer flags or configure-time dependency downloads.
-- [ ] **BUILD-02**: An out-of-tree C consumer can find and link an installed CMake package and execute the diagnostic against both static and shared library variants; a C++ consumer can compile and link the public headers without changing the runtime language.
+- [x] **BUILD-01**: An integrator can build the C17 static and shared runtime from an offline source tree with target-scoped CMake, CTest and pinned test-only Unity, without inherited developer flags or configure-time dependency downloads.
+- [x] **BUILD-02**: An out-of-tree C consumer can find and link an installed CMake package and execute the diagnostic against both static and shared library variants; a C++ consumer can compile and link the public headers without changing the runtime language.
 - [ ] **BUILD-03**: An integrator can relocate the installed package and execute its diagnostic consumer after access to the original source/build/install locations is removed, and can rebuild a release source archive offline.
 - [ ] **BUILD-04**: An integrator can identify the exact compiler, SDK, OS, architecture and build variants actually exercised for the release, with failed, skipped, unsupported and untested combinations stated explicitly.
 
@@ -122,11 +122,11 @@ Each v1 requirement has exactly one primary phase in v0.1. Later requirements re
 | API-02 | Phase 2 | Complete |
 | API-03 | Phase 2 | Complete |
 | API-04 | Phase 2 | Complete |
-| DIAG-01 | Phase 2 | Pending |
+| DIAG-01 | Phase 2 | Complete |
 | DIAG-02 | Phase 2 | Complete |
 | DIAG-03 | Phase 2 | Pending |
-| BUILD-01 | Phase 2 | Pending |
-| BUILD-02 | Phase 2 | Pending |
+| BUILD-01 | Phase 2 | Complete |
+| BUILD-02 | Phase 2 | Complete |
 | BUILD-03 | Phase 3 | Pending |
 | BUILD-04 | Phase 3 | Pending |
 | EVID-01 | Phase 2 | Pending |
