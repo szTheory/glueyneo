@@ -313,20 +313,23 @@ Extend this function with a Windows-specific implementation that asserts the exa
 | A4 | Public-content scanner can cover this repository's text, logs, identities, and bounded archive shapes with Python standard library plus canaries. | Scanner | Canary/history findings can justify a focused external scanner after review; a clean scan cannot prove universal absence. |
 | A5 | Exact action versions/commit pins will be selected by planner/executor after release/security review against current official source and runner-image inventory. | Stack | Immutable pins change; mutable or unverified pins would weaken provenance. |
 
-## Open Questions
+## Open Questions (PENDING external or runner evidence)
 
-1. **Which exact Windows symbol inspector should be qualified?**
+1. **(PENDING runner evidence) Which exact Windows symbol inspector should be qualified?**
    - What we know: current checker fails on Windows; local machine has no `dumpbin`, `llvm-readobj`, or MinGW `objdump` executable.
    - What's unclear: selected Windows hosted image availability and output grammar for the chosen binary.
    - Recommendation: plan a small lane-owned probe fixture and inspect one generated DLL in the selected MSVC runner; choose the preinstalled tool if its export output can prove exact parity, otherwise install/pin a small tool deliberately.
-2. **What repository/App/rules configuration will be available at implementation verification?**
+   - Resolution criterion: the selected Windows x64 MSVC runner records the inspector's exact identity and parses a generated DLL plus missing/extra/private export fixtures under the same expected-set check as Linux/macOS. Until then Windows export support remains unqualified.
+2. **(PENDING external repository authority) What repository/App/rules configuration will be available at implementation verification?**
    - What we know: current checkout has no `git remote` and no `.github/workflows` files; project state says no hosted authority is configured.
    - What's unclear: public repository URL/owner, App registration/install, ruleset plan availability, issue/PR triage population, and first-contributor approval state.
    - Recommendation: implementation should continue; maintain a narrow pending list and only clear DEL-02/unattended-release claims after real hosted evidence.
-3. **Are every dependency and fixture redistribution rights affirmative?**
+   - Resolution criterion: actual repository rules, fork PR and current-SHA review/CI runs, App installation scope/token and release event receipts are captured for the target repository; each hosted claim remains pending until its own receipt exists.
+3. **(PENDING item-level rights evidence) Are every dependency and fixture redistribution rights affirmative?**
    - What we know: current manifest/provenance and source licenses provide machine-verifiable inputs for several current files.
    - What's unclear: legal rights for any new artifact/dependency/fixture and any media beyond currently allowed original diagnostic.
    - Recommendation: list every shipped item by immutable identity with license/redistribution record; unresolved rights remain unknown and outside automated scanner disposition.
+   - Resolution criterion: each shipped dependency and fixture has an affirmative license or permission record tied to its immutable identity and notice; any item without that record remains excluded and its rights claim unknown.
 
 ## Environment Availability
 
@@ -358,13 +361,13 @@ Extend this function with a Windows-specific implementation that asserts the exa
 
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |---|---|---|---|---|
-| BUILD-03 | Source archive rebuild offline; relocate installed prefix; remove original source/build/install paths; real diagnostic consumer passes | Package integration | Add focused case to `python3 tools/verify_sdk.py --suite release-consumer` | ❌ Wave 0 |
-| BUILD-04 | Exact matrix identity and pass/fail/skipped/unsupported/unknown denominator semantics | Evidence validation | Add focused matrix evidence validation suite to `python3 tools/verify_sdk.py --suite matrix` | ❌ Wave 0 |
-| DEL-01 | Classifier path classes/failure→full set; aggregate must fail on missing/failed/cancelled required lanes and zero assertions; cost evidence fields | Unit + workflow integration | Add local classifier/control suite under `python3 tools/verify_sdk.py --suite ci-policy` | ❌ Wave 0 |
+| BUILD-03 | Source archive rebuild offline; relocate installed prefix; remove original source/build/install paths; real diagnostic consumer passes | Package integration | Add focused case to `python3 tools/verify_sdk.py --suite release-consumer` | ❌ create first in 03-01-T1 |
+| BUILD-04 | Exact matrix identity and pass/fail/skipped/unsupported/unknown denominator semantics | Evidence validation | Add focused matrix evidence validation suite to `python3 tools/verify_sdk.py --suite matrix` | ❌ create first in 03-03-T1 |
+| DEL-01 | Classifier path classes/failure→full set; aggregate must fail on missing/failed/cancelled required lanes and zero assertions; cost evidence fields | Unit + workflow integration | Add local classifier/control suite under `python3 tools/verify_sdk.py --suite ci-policy` | ❌ create first in 03-03-T2 |
 | DEL-02 | Protected latest-SHA checks + GSD review gate + fork read-only/no-secret isolation + App authority/event evidence | Hosted integration/manual external state | Local workflow static lint can check declarations; run hosted PR/fork/review/ruleset/App event qualification against actual repo | ❌ external hosted behavior |
-| DEL-03 | Manifest/version alignment, exact commit target, existing draft/no-new-release retry, asset mismatch rejection | State-machine integration | Add `python3 tools/verify_sdk.py --suite release-recovery` with fake API/state fixture plus gated hosted exercise | ❌ Wave 0 / hosted |
-| DEL-04 | Expected digest check on downloaded bytes; reject extra/missing/replaced files; downloaded archive offline rebuild/relocated consumer passes before publish | Adversarial package integration | Add `python3 tools/verify_sdk.py --suite release-consumer` and hosted dry-run | ❌ Wave 0 |
-| DEL-05 | Scanner sees tree/history/log/archive classes, notice+allowlist gate, fail-closed bounds/traversal, redacted canary findings | Unit/security integration | Add `python3 tools/verify_sdk.py --suite public-content` | ❌ Wave 0 |
+| DEL-03 | Manifest/version alignment, exact commit target, existing draft/no-new-release retry, asset mismatch rejection | State-machine integration | Add `python3 tools/verify_sdk.py --suite release-recovery` with fake API/state fixture plus gated hosted exercise | ❌ create first in 03-04-T1; hosted pending |
+| DEL-04 | Expected digest check on downloaded bytes; reject extra/missing/replaced files; downloaded archive offline rebuild/relocated consumer passes before publish | Adversarial package integration | Add `python3 tools/verify_sdk.py --suite release-consumer` and hosted dry-run | ❌ create first in 03-01-T1; extend in 03-04-T2 |
+| DEL-05 | Scanner sees tree/history/log/archive classes, notice+allowlist gate, fail-closed bounds/traversal, redacted canary findings | Unit/security integration | Add `python3 tools/verify_sdk.py --suite public-content` | ❌ create first in 03-02-T1 |
 
 ### Sampling Rate
 
@@ -372,7 +375,9 @@ Extend this function with a Windows-specific implementation that asserts the exa
 - **Per wave merge:** `python3 tools/verify_sdk.py` plus workflow static validation and changed-path classifier fixtures.
 - **Phase gate:** Full local current-revision evidence green, all supported matrix lanes pass with positive denominators, final downloaded assets pass digest/offline rebuild/relocation; report hosted/App/rules/rights rows still pending if not exercised.
 
-### Wave 0 Gaps
+### Test-first controls within planned tasks
+
+These controls are created at the start of their named task and run red before production behavior. They do not form a separate execution wave.
 
 - [ ] Windows DLL export inspection and fixture-backed expected-export tests.
 - [ ] Matrix evidence schema/aggregator and conservative changed-path classifier controls.

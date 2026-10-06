@@ -52,7 +52,9 @@ created: "2026-10-06"
 
 ---
 
-## Wave 0 Requirements
+## Test-first task prerequisites
+
+Each named task creates its missing control first and demonstrates a failing case before implementation. No separate execution wave or inter-plan dependency is implied; the plan waves above remain authoritative.
 
 - [ ] 03-01-T1/T2 create release-consumer and export controls before production behavior.
 - [ ] 03-02-T1/T2 create scanner canaries and rights controls before production behavior.
@@ -77,7 +79,7 @@ All other phase behaviors should have automated local, CI, package, or downloade
 
 - [ ] All plan tasks have `<automated>` verify steps or documented external evidence dependencies.
 - [ ] Sampling continuity: no 3 consecutive tasks without automated verify.
-- [ ] Wave 0 covers all missing test references.
+- [ ] Each missing test reference is created and run red within its named task before behavior changes.
 - [ ] No watch-mode flags.
 - [ ] Feedback latency recorded from measured runs.
 - [ ] Task IDs, plan assignments, waves, and threat references reconciled to final plans.
