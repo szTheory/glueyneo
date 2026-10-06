@@ -1,6 +1,6 @@
 # Phase 03 hosted qualification receipts
 
-**Status: pending external repository and account authority.** This file records
+**Status: repository created; remaining hosted qualification pending.** This file records
 only observations made against the configured target repository. Local workflow
 tests and YAML inspection do not qualify GitHub protections, hosted events, App
 permissions, runner identities, or publication.
@@ -9,18 +9,27 @@ permissions, runner identities, or publication.
 
 | Claim | Status | Exact evidence required | External actor |
 | --- | --- | --- | --- |
-| Repository identity and issue/PR triage | pending | Configured remote URL recorded in private operator configuration; public-safe repository identity, open issue/PR triage result, and date | Repository owner configures the remote and grants read access for triage |
+| Repository identity and issue/PR triage | observed 2026-10-06 | Public repository [szTheory/glueyneo](https://github.com/szTheory/glueyneo), owner-authorized creation with GitHub CLI; administrator authority observed; zero open issues and PRs at setup | Repository owner |
 | Protected `main` and strict current-SHA checks | pending | Ruleset/branch-protection receipt naming `CI / ci-policy`, strict up-to-date requirement, review requirement, and any bypass actors | Repository administrator |
 | Independent current-head GSD review and merge | pending | PR number, exact head SHA, review record/run ID, all findings resolved or evidence-dispositioned, matching passing aggregate SHA, and observed protected merge commit | Maintainer with review and merge authority |
 | Fork workflow approval and read-only boundary | pending | First-time fork PR run ID, approval event, effective token permissions, absence of secrets, and exact tested head SHA | Repository administrator approves the workflow under repository settings |
 | Hosted CI support and cost | pending | Per-job run IDs and exact image/compiler/SDK/OS/architecture/configuration identities, source SHA, assertion/lane counts, cold-build duration, critical path, and runner-minutes | Repository maintainer triggers CI after remote setup |
 | Release App installation and event behavior | pending | App installation/repository scope, requested permissions, token lifetime observation without token values, Release Please run ID, retry/no-new-release result, and same-workflow downstream job IDs | App owner and repository administrator |
 | Draft, downloaded artifacts, and publication | pending | Tested commit/tag, expected asset inventory and SHA-256 values, download/consumer run IDs, source rebuild receipt, publication run ID, and downloaded published asset digest checks | Repository administrator enables trusted workflow credentials and runs release qualification |
-| Hosted secret scanning and push protection | pending | Repository security-settings receipt naming enabled products/scope, or explicit disabled status | Repository administrator |
+| Hosted secret scanning and push protection | enabled configuration observed | GitHub repository API reports `secret_scanning.status=enabled` and `secret_scanning_push_protection.status=enabled`; non-provider patterns and validity checks disabled; no live credential canary tested | Repository administrator |
 
-No remote is configured in this checkout, so no repository, PR, run, App, or
-release identifiers can truthfully be recorded yet. Do not replace these rows
-with simulated receipts or local fixture results.
+The repository and `origin` remote now exist. No source had been pushed when
+the publication audit was captured. Plan 03-05 Task 2 remains incomplete;
+App installation/token authority, fork approval and protected merge/release
+events have not been observed. No repository secrets are configured. The
+current CLI authentication cannot list App installations; this does not prove
+that the account has none. Do not substitute local fixtures for hosted receipts.
+
+Before source publication, the isolated publication history passed the complete
+bounded scan and complementary literal-home check: 351 tracked files and
+1,106 unique historical blobs. See `03-PUBLICATION-AUDIT.json` and
+`03-PUBLICATION-COMMIT-MAP.txt`. The original private local refs are retained
+and must never be pushed. Historical receipts keep their original identities.
 
 ## Local evidence that remains distinct
 
@@ -54,13 +63,12 @@ facts have been observed; local implementation does not complete them.
 **Progress:** 1/2 tasks complete
 
 **Current task:** Task 2, “Qualify hosted repository authority and release
-events,” is blocked because the target GitHub repository and remote are not yet
-configured in this checkout, and App installation/account authority has not
-been observed. No hosted workflow, repository rule, fork approval, review/merge
-event, or release publication was attempted or claimed.
+events,” remains incomplete pending observed repository protections, App
+installation/token authority, fork approval, and protected merge/publication
+events. The public repository and sanitized publication branch are prepared;
+no unobserved hosted outcome is claimed.
 
-**Awaiting:** the authorized target `szTheory/glueyneo` is to be created and
-configured after the independent tracked-tree/history public-content audit.
-Then capture the exact run, ruleset, review, App-scope, and published-asset
+**Awaiting:** configure and observe the hosted authority for
+`szTheory/glueyneo`, then capture the exact run, ruleset, review, App-scope, and published-asset
 receipts listed above. Keep this plan and mapped delivery requirements
 incomplete until those facts have been observed.

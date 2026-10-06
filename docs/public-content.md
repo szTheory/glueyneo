@@ -62,7 +62,15 @@ remain excluded.
 
 Rights are an evidence question distinct from pattern detection. A digest binds
 bytes to a record; it does not prove ownership, license scope, or permission.
-GitHub secret scanning and push protection can provide another backstop only
-after enablement is observed on the actual repository. This checkout has no
-hosted repository configuration, CI-captured logs, public artifact publication,
-or hosted secret-scanning evidence, so those outcomes remain pending.
+On 2026-10-06, GitHub reported secret scanning and push protection enabled for
+`szTheory/glueyneo`. Hosted CI logs and release publication remain pending.
+
+Before the first source push, an isolated publication clone was sanitized with
+`git-filter-repo` to replace historical personal home prefixes with portable
+`$HOME` references. The original local history was retained separately; it must
+never be pushed. Current source bytes are unchanged by the rewrite. Historical
+receipt SHA values remain point-in-time identities from the original run; the
+Phase 03 publication commit map records their corresponding public history
+identities. Locally retained private refs remain outside the publication set;
+scan the explicit publication head with `--history-revision HEAD`. Hosted
+checkouts scan every fetched public ref.

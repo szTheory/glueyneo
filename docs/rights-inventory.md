@@ -10,7 +10,12 @@ The Unity source is the four-file subset copied from upstream commit
 `b6763fbd9cedfacaa89e2ad9fd00d615a234e355`. Its upstream MIT license is retained
 in `third_party/unity/LICENSE.txt`. The diagnostic fixture recipes and manifests
 are original Glueyneo work under the repository MIT license. The experimental
-Musashi tree is not in the source archive and is not authorized for distribution.
+Musashi tree is excluded from the SDK source archive because the candidate was
+not admitted. Its permissively licensed experimental source and notices remain
+in repository history; `third_party/musashi/PROVENANCE.md` and
+`tools/cpu/source-manifest.json` record the immutable origin, adapted/generated
+bytes and retained grants. Repository publication preserves those notices.
+This does not admit that candidate into the SDK runtime.
 
 The machine-readable list below is the scanner's canonical item-level record.
 Update it only with exact source revision, digest, license/permission evidence,
@@ -66,5 +71,6 @@ rights holder, tied to its exact immutable bytes, before it can be added.
 The scanner checks path, digest, immutable provenance fields, affirmative record
 status, and notice presence. It does not provide legal advice or establish that
 the cited license applies. GitHub secret scanning and push protection are an
-additional backstop only after the repository's hosted enablement is observed;
-no such hosted configuration evidence is available in this local checkout.
+additional backstop. On 2026-10-06, the GitHub repository API reported secret
+scanning and push protection enabled for `szTheory/glueyneo`. No seeded live
+credential was used to test the detectors.
