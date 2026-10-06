@@ -36,6 +36,7 @@ SOURCE_PATHS = (
     "third_party/unity",
     "tools/diagnostic",
     "tools/release_manifest.py",
+    "tools/release_state.py",
 )
 MAX_MEMBERS = 50_000
 MAX_MEMBER_BYTES = 128 * 1024 * 1024
@@ -200,6 +201,28 @@ def write_digest(archive: Path) -> None:
     )
 
 
+def write_release_manifest(directory: Path, commit: str, version: str, repo: Path = Path.cwd()) -> Path:
+    """Create a canonical manifest for all four versioned release archives."""
+    resolved, committed_version = read_commit(repo, commit)
+    if committed_version != version:
+        raise ReleaseError("release manifest version differs from the tested commit manifest")
+    names = sorted((f"glueyneo-source-{version}.tar.gz",
+                    f"glueyneo-sdk-{version}-linux-x86_64.tar.gz",
+                    f"glueyneo-sdk-{version}-macos-arm64.tar.gz",
+                    f"glueyneo-sdk-{version}-windows-x86_64.tar.gz"))
+    assets = []
+    for name in names:
+        path = directory / name
+        if path.is_symlink() or not path.is_file():
+            raise ReleaseError(f"required release archive is missing or unsafe: {name}")
+        assets.append({"name": name, "size": path.stat().st_size, "sha256": sha256_file(path)})
+    manifest = {"schema_version": 1, "tag": f"v{version}", "source_commit": resolved,
+                "version": version, "assets": assets}
+    destination = directory / "release-manifest.json"
+    destination.write_bytes(canonical_json(manifest))
+    return destination
+
+
 def read_commit(repo: Path, commit: str) -> tuple[str, str]:
     if re.fullmatch(r"[0-9a-fA-F]{40}|[0-9a-fA-F]{64}", commit) is None:
         raise ReleaseError("release commit must be a full immutable Git object ID")
@@ -257,8 +280,14 @@ def build_archives(repo: Path, commit: str, output_dir: Path) -> dict[str, objec
                  "-DCMAKE_BUILD_TYPE=Release", "-DBUILD_TESTING=OFF",
                  "-DGLUEYNEO_BUILD_TESTS=OFF", f"-DBUILD_SHARED_LIBS={shared}",
                  f"-DCMAKE_INSTALL_PREFIX={prefix}"], cwd=source_root)
-            run([cmake, "--build", str(build), "--parallel", "2"], cwd=source_root)
-            run([cmake, "--install", str(build)], cwd=source_root)
+            build_command = [cmake, "--build", str(build), "--parallel", "2"]
+            install_command = [cmake, "--install", str(build)]
+            if platform.system() == "Windows":
+                # Visual Studio is a multi-config generator; CMAKE_BUILD_TYPE is ignored.
+                build_command.extend(["--config", "Release"])
+                install_command.extend(["--config", "Release"])
+            run(build_command, cwd=source_root)
+            run(install_command, cwd=source_root)
         shutil.copy2(source_root / "README.md", sdk_root / "README.md")
         shutil.copy2(source_root / "LICENSE", sdk_root / "LICENSE")
         (sdk_root / "licenses").mkdir()
@@ -343,11 +372,23 @@ def main() -> int:
     build.add_argument("--commit", required=True, help="full immutable Git commit ID")
     build.add_argument("--repo", type=Path, default=Path.cwd())
     build.add_argument("--output-dir", type=Path, required=True)
+    release_manifest_cmd = subparsers.add_parser("release-manifest", help="manifest the four staged release archives")
+    release_manifest_cmd.add_argument("--commit", required=True)
+    release_manifest_cmd.add_argument("--version", required=True)
+    release_manifest_cmd.add_argument("--repo", type=Path, default=Path.cwd())
+    release_manifest_cmd.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
     try:
         if args.command == "build":
             result = build_archives(args.repo, args.commit, args.output_dir)
             print(json.dumps({"outcome": "pass", **result}, sort_keys=True))
+        elif args.command == "release-manifest":
+            resolved, version = read_commit(args.repo, args.commit)
+            if args.version != version:
+                raise ReleaseError("requested release version differs from the tested commit manifest")
+            output = write_release_manifest(args.output_dir, resolved, version, args.repo)
+            print(json.dumps({"outcome": "pass", "manifest": output.name,
+                              "commit": resolved, "version": version}, sort_keys=True))
     except (OSError, ReleaseError, ValueError) as error:
         print(f"RELEASE_MANIFEST {{\"outcome\":\"fail\",\"error\":{json.dumps(str(error))}}}", file=sys.stderr)
         return 1

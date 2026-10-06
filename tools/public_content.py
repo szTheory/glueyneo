@@ -31,6 +31,7 @@ SOURCE_PATHS = (
     "LICENSE", "README.md", "cmake", "docs", "examples",
     "experiments/owned_cpu", "fixtures/diagnostic", "include", "src",
     "tests", "third_party/unity", "tools/diagnostic", "tools/release_manifest.py",
+    "tools/release_state.py",
 )
 
 PRIVACY_RULES = (

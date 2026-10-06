@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import sys
+import tempfile
 from pathlib import Path
 import unittest
 
@@ -16,6 +18,9 @@ COMMIT = "a" * 40
 ASSETS = {
     "glueyneo-source-0.1.0.tar.gz": {"size": 3, "sha256": hashlib.sha256(b"src").hexdigest()},
     "glueyneo-sdk-0.1.0-linux-x86_64.tar.gz": {"size": 3, "sha256": hashlib.sha256(b"lin").hexdigest()},
+    "glueyneo-sdk-0.1.0-macos-arm64.tar.gz": {"size": 3, "sha256": hashlib.sha256(b"mac").hexdigest()},
+    "glueyneo-sdk-0.1.0-windows-x86_64.tar.gz": {"size": 3, "sha256": hashlib.sha256(b"win").hexdigest()},
+    "release-manifest.json": {"size": 3, "sha256": hashlib.sha256(b"{}\n").hexdigest()},
 }
 
 
@@ -35,6 +40,42 @@ def validate(value):
 
 
 class ReleaseRecoveryTests(unittest.TestCase):
+    def test_api_inventory_binds_all_packages_and_manifest_bytes(self):
+        package_rows = [
+            {"name": name, **record}
+            for name, record in ASSETS.items() if name != "release-manifest.json"
+        ]
+        manifest = {"schema_version": 1, "version": "0.1.0", "tag": "v0.1.0",
+                    "source_commit": COMMIT, "assets": package_rows}
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "release-manifest.json"
+            path.write_text(json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n")
+            expected = release_state.expected_api_assets(path)
+            self.assertEqual(set(expected), set(ASSETS))
+            self.assertEqual(expected["release-manifest.json"]["size"], path.stat().st_size)
+            self.assertEqual(expected["release-manifest.json"]["sha256"],
+                             hashlib.sha256(path.read_bytes()).hexdigest())
+            manifest["assets"].pop()
+            path.write_text(json.dumps(manifest))
+            with self.assertRaises(release_state.ReleaseStateError):
+                release_state.expected_api_assets(path)
+
+    def test_retry_queries_existing_draft_even_without_new_release_output(self):
+        class FakeAPI:
+            def __init__(self):
+                self.calls = []
+                self.mutations = 0
+
+            def get_release_by_tag(self, tag):
+                self.calls.append(tag)
+                return draft()
+
+        api = FakeAPI()
+        result = release_state.query_existing_release(api, "v0.1.0", release_created=False)
+        self.assertEqual(result["status"], "found")
+        self.assertEqual(api.calls, ["v0.1.0"])
+        self.assertEqual(api.mutations, 0)
+
     def test_complete_draft_is_publishable_and_order_independent(self):
         assets = [{"name": name, **record} for name, record in reversed(list(ASSETS.items()))]
         result = validate(draft(assets))
@@ -46,7 +87,7 @@ class ReleaseRecoveryTests(unittest.TestCase):
         result = validate(draft([first]))
         self.assertEqual(result["status"], "resume")
         self.assertFalse(result["publishable"])
-        self.assertEqual(result["missing_assets"], ["glueyneo-sdk-0.1.0-linux-x86_64.tar.gz"])
+        self.assertEqual(result["missing_assets"], sorted(set(ASSETS) - {first["name"]}))
 
     def test_empty_interrupted_upload_can_resume_without_publication(self):
         result = validate(draft([]))
@@ -81,6 +122,22 @@ class ReleaseRecoveryTests(unittest.TestCase):
             expected_commit=COMMIT, manifest_version="0.1.1", expected_assets=ASSETS,
         )
         self.assertEqual(result["status"], "reject")
+
+    def test_release_workflow_keeps_publish_behind_three_downloaded_consumers(self):
+        root = Path(__file__).resolve().parents[2]
+        workflow = (root / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        config = json.loads((root / "release-please-config.json").read_text(encoding="utf-8"))
+        self.assertIn("googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071", workflow)
+        self.assertIn("actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1", workflow)
+        self.assertIn("cancel-in-progress: false", workflow)
+        self.assertIn("verify-downloaded-release", workflow)
+        self.assertIn("needs: [release-control, stage-release, verify-downloaded-release]", workflow)
+        self.assertIs(config["packages"]["."]["draft"], True)
+        self.assertTrue(config["$schema"].endswith("release-please/v17.3.0/schemas/config.json"))
+        for platform in ("linux-x86_64", "macos-arm64", "windows-x86_64"):
+            self.assertIn(f"name: {platform}", workflow)
+        self.assertIn("validate-draft", workflow)
+        self.assertIn("verify-download", workflow)
 
 
 if __name__ == "__main__":

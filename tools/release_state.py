@@ -6,18 +6,106 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import sys
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote
+from urllib.request import Request, urlopen
 
 
 class ReleaseStateError(ValueError):
     """A staged release does not satisfy its immutable identity contract."""
 
 
+def query_existing_release(api: Any, tag: str, *, release_created: bool) -> dict[str, Any]:
+    """Always query by tag, including release-please no-output and retry runs.
+
+    The API adapter is read-only. ``release_created`` is accepted to make the
+    recovery condition explicit, but never gates the lookup.
+    """
+    del release_created
+    response = api.get_release_by_tag(tag)
+    if response is None:
+        return {"status": "absent", "release": None}
+    if not isinstance(response, dict):
+        raise ReleaseStateError("release API returned a malformed response")
+    return {"status": "found", "release": response}
+
+
+class GitHubReleaseAPI:
+    """Small authenticated read-only adapter used to snapshot draft state."""
+
+    def __init__(self, repository: str, token: str, api_url: str = "https://api.github.com"):
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository) or not token:
+            raise ReleaseStateError("repository or API credential is unavailable")
+        self.base = api_url.rstrip("/") + f"/repos/{repository}"
+        self.token = token
+
+    def _get(self, path: str) -> dict[str, Any] | None:
+        request = Request(self.base + path, headers={
+            "Accept": "application/vnd.github+json", "Authorization": f"Bearer {self.token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        })
+        try:
+            with urlopen(request, timeout=20) as response:
+                value = json.loads(response.read().decode("utf-8"))
+        except HTTPError as error:
+            if error.code == 404:
+                return None
+            raise ReleaseStateError(f"GitHub release API returned HTTP {error.code}") from error
+        except (OSError, URLError, UnicodeError, json.JSONDecodeError) as error:
+            raise ReleaseStateError("GitHub release API could not be read") from error
+        if not isinstance(value, dict):
+            raise ReleaseStateError("GitHub release API returned malformed JSON")
+        return value
+
+    def get_release_by_tag(self, tag: str) -> dict[str, Any] | None:
+        return self._get("/releases/tags/" + quote(tag, safe=""))
+
+    def tag_commit(self, tag: str) -> str:
+        ref = self._get("/git/ref/tags/" + quote(tag, safe=""))
+        if ref is None:
+            raise ReleaseStateError("release tag ref is missing")
+        target = ref.get("object")
+        for _ in range(5):
+            if not isinstance(target, dict) or not isinstance(target.get("sha"), str):
+                raise ReleaseStateError("release tag target is malformed")
+            if target.get("type") == "commit":
+                if not COMMIT_RE.fullmatch(target["sha"]):
+                    raise ReleaseStateError("release tag target is not a full commit ID")
+                return target["sha"].lower()
+            if target.get("type") != "tag":
+                raise ReleaseStateError("release tag does not resolve to a commit")
+            annotated = self._get("/git/tags/" + quote(target["sha"], safe=""))
+            if annotated is None:
+                raise ReleaseStateError("annotated release tag object is missing")
+            target = annotated.get("object")
+        raise ReleaseStateError("release tag nesting exceeds the resolution limit")
+
+
+def query_github_release(repository: str, token: str, tag: str,
+                         api_url: str = "https://api.github.com") -> dict[str, Any]:
+    api = GitHubReleaseAPI(repository, token, api_url)
+    found = query_existing_release(api, tag, release_created=False)
+    if found["status"] == "found":
+        found["release"]["tag_commit"] = api.tag_commit(tag)
+    return found
+
+
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 COMMIT_RE = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$", re.I)
+
+
+def required_archive_names(version: str) -> set[str]:
+    return {
+        f"glueyneo-source-{version}.tar.gz",
+        f"glueyneo-sdk-{version}-linux-x86_64.tar.gz",
+        f"glueyneo-sdk-{version}-macos-arm64.tar.gz",
+        f"glueyneo-sdk-{version}-windows-x86_64.tar.gz",
+    }
 
 
 def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -78,6 +166,8 @@ def validate_release(
         if (manifest_version != expected_version or expected_tag != f"v{expected_version}"
                 or release.get("tag_name") != expected_tag):
             raise ReleaseStateError("release tag, expected version, and manifest version disagree")
+        if set(inventory) != required_archive_names(expected_version) | {"release-manifest.json"}:
+            raise ReleaseStateError("release asset allowlist differs from the exact archive and manifest set")
         tag_commit = release.get("tag_commit")
         if not isinstance(tag_commit, str) or tag_commit.lower() != expected_commit.lower():
             raise ReleaseStateError("release tag does not target the tested versioned commit")
@@ -122,7 +212,8 @@ def validate_downloaded_assets(directory: Path, manifest_path: Path) -> dict[str
     if (not isinstance(manifest, dict) or manifest.get("schema_version") != 1
             or not isinstance(manifest.get("version"), str)
             or not isinstance(manifest.get("source_commit"), str)
-            or not COMMIT_RE.fullmatch(manifest["source_commit"])):
+            or not COMMIT_RE.fullmatch(manifest["source_commit"])
+            or manifest.get("tag") != f"v{manifest['version']}"):
         raise ReleaseStateError("release asset manifest identity is malformed")
     rows = manifest.get("assets")
     if not isinstance(rows, list) or not rows:
@@ -136,12 +227,25 @@ def validate_downloaded_assets(directory: Path, manifest_path: Path) -> dict[str
             raise ReleaseStateError("release asset manifest has a duplicate or invalid name")
         expected[name] = {"size": row["size"], "sha256": row["sha256"]}
     expected = _expected_inventory(expected)
+    if set(expected) != required_archive_names(manifest["version"]):
+        raise ReleaseStateError("download manifest does not list the exact required archive set")
     try:
-        actual_names = {entry.name for entry in directory.iterdir() if entry.is_file()}
+        entries = list(directory.iterdir())
     except OSError as error:
         raise ReleaseStateError("downloaded release asset directory could not be read") from error
-    if actual_names != set(expected):
+    if any(entry.is_symlink() or not entry.is_file() for entry in entries):
+        raise ReleaseStateError("downloaded release asset directory contains a link or non-file")
+    actual_names = {entry.name for entry in entries}
+    if actual_names != set(expected) | {"release-manifest.json"}:
         raise ReleaseStateError("downloaded release asset names differ from the manifest")
+    downloaded_manifest = directory / "release-manifest.json"
+    if downloaded_manifest.resolve() != manifest_path.resolve():
+        try:
+            identical = downloaded_manifest.read_bytes() == manifest_path.read_bytes()
+        except OSError as error:
+            raise ReleaseStateError("downloaded release manifest could not be read") from error
+        if not identical:
+            raise ReleaseStateError("downloaded release manifest differs from the staged identity")
     verified = []
     for name, record in expected.items():
         path = directory / name
@@ -163,14 +267,77 @@ def validate_downloaded_assets(directory: Path, manifest_path: Path) -> dict[str
             "version": manifest["version"], "assets": sorted(verified)}
 
 
+def expected_api_assets(manifest_path: Path) -> dict[str, dict[str, Any]]:
+    """Build the exact API asset allowlist, including the manifest's own bytes."""
+    manifest = load_json(manifest_path)
+    if (not isinstance(manifest, dict) or manifest.get("schema_version") != 1
+            or not isinstance(manifest.get("version"), str)
+            or not isinstance(manifest.get("source_commit"), str)
+            or not COMMIT_RE.fullmatch(manifest["source_commit"])):
+        raise ReleaseStateError("release asset manifest identity is malformed")
+    if manifest.get("tag") != f"v{manifest['version']}":
+        raise ReleaseStateError("release tag and version in the asset manifest disagree")
+    rows = manifest.get("assets")
+    if not isinstance(rows, list) or not rows:
+        raise ReleaseStateError("release asset manifest inventory is empty or malformed")
+    expected: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if not isinstance(row, dict) or set(row) != {"name", "size", "sha256"}:
+            raise ReleaseStateError("release asset manifest row is malformed")
+        name = row["name"]
+        if not isinstance(name, str) or name in expected:
+            raise ReleaseStateError("release asset manifest has a duplicate or invalid name")
+        expected[name] = {"size": row["size"], "sha256": row["sha256"]}
+    expected = _expected_inventory(expected)
+    if set(expected) != required_archive_names(manifest["version"]):
+        raise ReleaseStateError("release asset manifest does not list the exact required archive set")
+    payload = manifest_path.read_bytes()
+    expected["release-manifest.json"] = {
+        "size": len(payload), "sha256": hashlib.sha256(payload).hexdigest()
+    }
+    return expected
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
+    draft = sub.add_parser("validate-draft")
+    draft.add_argument("--release", type=Path, required=True)
+    draft.add_argument("--manifest", type=Path, required=True)
+    draft.add_argument("--tag", required=True)
+    draft.add_argument("--version", required=True)
+    draft.add_argument("--commit", required=True)
+    query = sub.add_parser("query-api")
+    query.add_argument("--repository", required=True)
+    query.add_argument("--tag", required=True)
+    query.add_argument("--output", type=Path, required=True)
     downloaded = sub.add_parser("verify-download")
     downloaded.add_argument("--directory", type=Path, required=True)
     downloaded.add_argument("--manifest", type=Path, required=True)
     args = parser.parse_args()
     try:
+        if args.command == "query-api":
+            # The token is read from the environment and never included in output.
+            result = query_github_release(args.repository, os.environ.get("GH_TOKEN", ""),
+                                          args.tag, os.environ.get("GH_API_URL", "https://api.github.com"))
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(json.dumps(result, sort_keys=True, separators=(",", ":")) + "\n",
+                                   encoding="utf-8")
+            print(json.dumps({"status": result["status"]}, separators=(",", ":")))
+            return 0
+        if args.command == "validate-draft":
+            manifest = load_json(args.manifest)
+            if (not isinstance(manifest, dict) or manifest.get("version") != args.version
+                    or manifest.get("source_commit", "").lower() != args.commit.lower()
+                    or manifest.get("tag") != args.tag):
+                raise ReleaseStateError("staged manifest differs from the release identity")
+            result = validate_release(
+                load_json(args.release), expected_tag=args.tag, expected_version=args.version,
+                expected_commit=args.commit, manifest_version=manifest["version"],
+                expected_assets=expected_api_assets(args.manifest),
+            )
+            print(json.dumps(result, sort_keys=True, separators=(",", ":")))
+            return 1 if result["status"] == "reject" else 0
         result = validate_downloaded_assets(args.directory, args.manifest)
         print(json.dumps(result, sort_keys=True, separators=(",", ":")))
         return 0

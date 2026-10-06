@@ -863,6 +863,7 @@ def suite_all() -> dict[str, Any]:
     for name in ("build", "consumers", "docs", "capabilities"):
         packages[name], _ = suite_package(name)
     sanitizers, _ = sanitizer_summary(identity)
+    release_recovery = suite_release_recovery()
     if prior_tsan_failures:
         sanitizers["failure_history"] = prior_tsan_failures
     final_identity = evidence.current_identity(ROOT)
@@ -873,14 +874,17 @@ def suite_all() -> dict[str, Any]:
 
     lane_case_count = (evidence_lane["cases"] + provenance_report["cases"] + baseline["control_case_count"] +
                        sum(lane.get("ctest_cases", 0) for lane in focused.values()) +
-                       sum(lane.get("ctest_cases", 0) for lane in packages.values()) + sanitizers["attempted_tests"])
+                       sum(lane.get("ctest_cases", 0) for lane in packages.values()) +
+                       release_recovery["cases"] + sanitizers["attempted_tests"])
     lane_assertion_count = (evidence_lane["assertions"] + provenance_report["assertions"] +
                             baseline["control_assertion_count"] +
                             sum(lane.get("assertions", 0) for lane in focused.values()) +
                             sum(lane.get("assertions", 0) for lane in packages.values()) +
+                            release_recovery["assertion_count"] +
                             sanitizers["assertions"])
     required = ["evidence", "provenance", "baseline", *[f"ctest:{name}" for name in CTEST_CASES],
-                *[f"package:{name}" for name in PACKAGE_CASES], "sanitizers:asan-ubsan", "sanitizers:tsan"]
+                *[f"package:{name}" for name in PACKAGE_CASES], "release-recovery",
+                "sanitizers:asan-ubsan", "sanitizers:tsan"]
     unsupported = [
         {"dimension": "coverage-guided libFuzzer", "outcome": "unsupported",
          "reason": "the matching AppleClang libFuzzer archive is unavailable; bounded seeded C mutation ran instead"},
@@ -904,6 +908,7 @@ def suite_all() -> dict[str, Any]:
             "baseline": baseline,
             "ctest": {key: value for key, value in focused.items() if key != "provenance"},
             "packages": packages,
+            "release_recovery": release_recovery,
             "sanitizers": sanitizers,
         },
         "aggregate": {
@@ -1008,10 +1013,19 @@ def suite_release_consumer() -> dict[str, Any]:
             "assertion_count": int(match.group(1)), "output_sha256": evidence.sha256_bytes(output.encode())}
 
 
+def suite_release_recovery() -> dict[str, Any]:
+    output = run([sys.executable, "tests/workflow/test_release_recovery.py"], timeout=60).stdout
+    match = re.search(r"(?m)^Ran (\d+) tests? in [\d.]+s$", output)
+    if match is None or int(match.group(1)) <= 0 or "OK" not in output.splitlines()[-1:]:
+        raise VerificationError("release-recovery suite omitted a positive unittest denominator")
+    return {"suite": "release-recovery", "outcome": "pass", "cases": int(match.group(1)),
+            "assertion_count": int(match.group(1)), "output_sha256": evidence.sha256_bytes(output.encode())}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--suite", choices=("evidence", "provenance", "baseline", "matrix",
-                                             "release-consumer", "ci-policy", "public-content",
+                                             "release-consumer", "release-recovery", "ci-policy", "public-content",
                                              "fuzz", "sanitizer", "all"), default="all")
     parser.add_argument("--lane", choices=evidence.REQUIRED_MATRIX_LANES)
     parser.add_argument("--output", type=Path)
@@ -1028,6 +1042,8 @@ def main() -> int:
             report = suite_matrix()
         elif args.suite == "release-consumer":
             report = suite_release_consumer()
+        elif args.suite == "release-recovery":
+            report = suite_release_recovery()
         elif args.suite == "ci-policy":
             report = suite_ci_policy()
         elif args.suite == "public-content":

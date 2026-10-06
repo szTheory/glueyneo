@@ -13,9 +13,12 @@ import tarfile
 import tempfile
 import unittest
 import io
+import platform
+import re
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 import release_manifest
+import release_state
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -203,6 +206,124 @@ class ReleaseConsumerTests(unittest.TestCase):
             with self.assertRaises(release_manifest.ReleaseError):
                 release_manifest.safe_extract(archive, Path(self.temp.name) / "unsafe-extract")
 
+    def test_downloaded_release_requires_exact_bytes_and_complete_archive_set(self) -> None:
+        download = Path(self.temp.name) / "downloaded"
+        download.mkdir()
+        contents = {
+            "glueyneo-source-0.1.0.tar.gz": b"source archive",
+            "glueyneo-sdk-0.1.0-linux-x86_64.tar.gz": b"linux archive",
+            "glueyneo-sdk-0.1.0-macos-arm64.tar.gz": b"mac archive",
+            "glueyneo-sdk-0.1.0-windows-x86_64.tar.gz": b"windows archive",
+        }
+        rows = []
+        for name, data in contents.items():
+            (download / name).write_bytes(data)
+            rows.append({"name": name, "size": len(data), "sha256": hashlib.sha256(data).hexdigest()})
+        source_commit = "a" * 40
+        manifest = {"schema_version": 1, "tag": "v0.1.0", "source_commit": source_commit,
+                    "version": "0.1.0", "assets": rows}
+        staged_manifest = Path(self.temp.name) / "expected-release-manifest.json"
+        staged_manifest.write_text(json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n")
+        (download / "release-manifest.json").write_bytes(staged_manifest.read_bytes())
+
+        result = release_state.validate_downloaded_assets(download, staged_manifest)
+        self.assertEqual(result["outcome"], "pass")
+        self.assertEqual(result["source_commit"], source_commit)
+
+        (download / "glueyneo-sdk-0.1.0-linux-x86_64.tar.gz").write_bytes(b"replaced")
+        with self.assertRaises(release_state.ReleaseStateError):
+            release_state.validate_downloaded_assets(download, staged_manifest)
+        (download / "glueyneo-sdk-0.1.0-linux-x86_64.tar.gz").write_bytes(
+            contents["glueyneo-sdk-0.1.0-linux-x86_64.tar.gz"])
+        (download / "unexpected.zip").write_bytes(b"extra")
+        with self.assertRaises(release_state.ReleaseStateError):
+            release_state.validate_downloaded_assets(download, staged_manifest)
+
+
+def verify_downloaded_release(download: Path, staged_manifest: Path, *, commit: str, version: str,
+                              platform_name: str | None = None) -> dict[str, object]:
+    """Rebuild source offline and execute consumers from this host's downloaded SDK bytes."""
+    identity = release_state.validate_downloaded_assets(download, staged_manifest)
+    if identity["source_commit"] != commit or identity["version"] != version:
+        raise RuntimeError("downloaded release identity differs from the tested commit and version")
+    source_archive = download / f"glueyneo-source-{version}.tar.gz"
+    os_name = {"darwin": "macos", "windows": "windows"}.get(platform.system().lower(), platform.system().lower())
+    machine_name = {"amd64": "x86_64", "aarch64": "arm64", "x86-64": "x86_64"}.get(
+        platform.machine().lower(), platform.machine().lower())
+    platform_name = platform_name or f"{os_name}-{machine_name}"
+    sdk_archive = download / f"glueyneo-sdk-{version}-{platform_name}.tar.gz"
+    cmake = shutil.which("cmake")
+    if cmake is None:
+        raise RuntimeError("CMake is required for downloaded release verification")
+
+    def run(argv: list[str], *, cwd: Path, timeout: int = 300) -> str:
+        try:
+            return release_manifest.run(argv, cwd=cwd, timeout=timeout)
+        except release_manifest.ReleaseError as error:
+            raise RuntimeError(str(error)) from error
+
+    with tempfile.TemporaryDirectory(prefix="glueyneo-downloaded-consumer-") as temp_name:
+        work = Path(temp_name)
+        source_dir = work / "source"
+        release_manifest.safe_extract(source_archive, source_dir)
+        source_root = source_dir / "glueyneo-source"
+        build = work / "offline-build"
+        run([cmake, "-S", str(source_root), "-B", str(build), "-DBUILD_TESTING=OFF",
+             "-DGLUEYNEO_BUILD_TESTS=OFF", "-DCMAKE_BUILD_TYPE=Release",
+             "-DFETCHCONTENT_FULLY_DISCONNECTED=ON"], cwd=source_root)
+        run([cmake, "--build", str(build), "--config", "Release", "--parallel", "2"], cwd=source_root)
+
+        sdk_dir = work / "sdk"
+        release_manifest.safe_extract(sdk_archive, sdk_dir)
+        sdk_root = sdk_dir / f"glueyneo-sdk-{version}"
+        for variant in ("static", "shared"):
+            prefix = sdk_root / variant
+            fixture = prefix / "share/glueyneo/diagnostic-original-a.bin"
+            runner = next((prefix / "bin").glob("glueyneo-diagnostic*"))
+            diagnostic = subprocess.run([str(runner), "--check-fixture", str(fixture)],
+                                        text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                        check=False, timeout=30)
+            if diagnostic.returncode:
+                raise RuntimeError(f"relocated {variant} diagnostic failed: {diagnostic.stdout[-4000:]}")
+            consumer_source = sdk_root / "consumer-example/source"
+            consumer_cmake = consumer_source / "CMakeLists.txt"
+            consumer_text = consumer_cmake.read_text(encoding="utf-8")
+            consumer_text = re.sub(r"find_package\(Glueyneo\s+[0-9A-Za-z.+-]+\s+EXACT\s+CONFIG\s+REQUIRED\)",
+                                   "find_package(Glueyneo " + version + " EXACT CONFIG REQUIRED)", consumer_text)
+            consumer_cmake.write_text(consumer_text, encoding="utf-8")
+            consumer_build = work / f"consumer-{variant}"
+            run([cmake, "-S", str(consumer_source), "-B", str(consumer_build),
+                 f"-DGlueyneo_DIR={prefix / 'lib/cmake/Glueyneo'}",
+                 "-DGLUEYNEO_CONSUMER_C_SOURCE=diagnostic.c", "-DCMAKE_BUILD_TYPE=Release"], cwd=work)
+            run([cmake, "--build", str(consumer_build), "--config", "Release", "--parallel", "2"], cwd=work)
+            exe_dir = consumer_build / "Release" if platform.system() == "Windows" else consumer_build
+            consumer_exe = exe_dir / ("glueyneo-installed-c.exe" if platform.system() == "Windows" else "glueyneo-installed-c")
+            process_env = dict(__import__("os").environ)
+            binary_dir = str(prefix / "bin")
+            process_env["PATH"] = binary_dir + __import__("os").pathsep + process_env.get("PATH", "")
+            consumer = subprocess.run([str(consumer_exe), str(fixture)],
+                                      text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                      check=False, timeout=30, env=process_env)
+            if consumer.returncode or '"outcome":"pass"' not in consumer.stdout:
+                raise RuntimeError(f"relocated {variant} SDK consumer failed: {consumer.stdout[-4000:]}")
+        return {"outcome": "pass", "source_commit": commit, "version": version,
+                "platform": platform_name, "variants": ["static", "shared"], "downloaded_byte_verification": "pass",
+                "offline_source_rebuild": "pass", "relocated_consumer": "pass"}
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    if len(sys.argv) > 1 and sys.argv[1] == "--verify-downloaded":
+        import argparse
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--verify-downloaded", action="store_true")
+        parser.add_argument("--directory", type=Path, required=True)
+        parser.add_argument("--manifest", type=Path, required=True)
+        parser.add_argument("--commit", required=True)
+        parser.add_argument("--version", required=True)
+        parser.add_argument("--platform")
+        args = parser.parse_args()
+        print(json.dumps(verify_downloaded_release(args.directory, args.manifest,
+                                                   commit=args.commit, version=args.version,
+                                                   platform_name=args.platform),
+                         sort_keys=True, separators=(",", ":")))
+    else:
+        unittest.main(verbosity=2)
