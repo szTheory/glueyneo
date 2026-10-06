@@ -55,6 +55,10 @@ class PublicContentTests(unittest.TestCase):
             self.assertEqual(parsed.get("outcome"), "pass")
             self.assertEqual(parsed.get("coverage", {}).get("history_mode"), "all reachable refs")
             self.assertEqual(result.returncode, 0)
+            selected = content.scan_inputs(root=root, paths=["README.md"], history_revision="HEAD")
+            self.assertEqual(selected["coverage"]["history_mode"], "selected revision")
+            self.assertEqual(selected["coverage"]["history_revision"], "HEAD")
+            self.assertEqual(selected["coverage"]["history_scope"], "objects available in this checkout")
 
     def test_deleted_reachable_blob_is_scanned_without_exposing_match(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -105,22 +105,37 @@ took 1.636 seconds. These are measurements of that local invocation only; they
 do not establish a supported platform range, hosted critical path, or GitHub
 runner-minutes.
 
-| Required hosted identity | Current result |
-| --- | --- |
-| Linux x64, Clang, Ubuntu 24.04 hosted image | unknown; no hosted receipt |
-| Linux x64, GCC, Ubuntu 24.04 hosted image | unknown; no hosted receipt |
-| macOS arm64, AppleClang, macOS 15 hosted image | unknown; local macOS result does not qualify it |
-| Windows x64, MSVC, Windows 2025 hosted image | unknown; no hosted receipt |
-| Linux Clang ASan/UBSan hosted lane | unknown; local AppleClang sanitizer run is separate evidence |
-| Linux Clang seeded-fuzz hosted lane | unknown; no hosted receipt |
+The first complete hosted matrix passed at source
+`2c7926383222cee174ede5ddde06374b43002191` in [CI run 37525280735](https://github.com/szTheory/glueyneo/actions/runs/37525280735).
+It exercised these exact combinations with nonzero SDK assertions:
 
-Do not mark a row passing until its current-source GitHub job receipt includes
-the exact hosted image, compiler/SDK, architecture, configuration, positive
-assertion denominator, cold-build duration, and lane duration. The hosted
-matrix aggregate then supplies its measured slowest-job critical path and sum
-of runner durations. Failed attempts remain failures, while skipped,
-unsupported, and untested combinations keep their distinct outcomes and do not
-contribute passing assertions.
+| Lane | Exact compiler and SDK/userspace | Image / architecture | Result |
+| --- | --- | --- | --- |
+| linux-clang | Clang 18.1.3; GNU/Linux userspace glibc 2.39 | `ubuntu24@20260927.320.1` / x86_64 | pass |
+| linux-clang-fuzz | Clang 18.1.3; GNU/Linux userspace glibc 2.39 | `ubuntu24@20260927.320.1` / x86_64 | pass |
+| linux-clang-sanitizer | Clang 18.1.3; GNU/Linux userspace glibc 2.39 | `ubuntu24@20260927.320.1` / x86_64 | pass |
+| linux-gcc | GNU 13.3.0; GNU/Linux userspace glibc 2.39 | `ubuntu24@20260927.320.1` / x86_64 | pass |
+| macos-appleclang | AppleClang 17.0.0.17000013; macOS SDK 15.5 | `macos15@20260907.0337.1` / arm64 | pass |
+| windows-msvc | MSVC 19.51.36260.0; Windows SDK 10.0.26100.0 | `win25-vs2026@20260925.250.1` / AMD64 | pass |
+
+Primary runtime checks use Debug/NONE with static/shared installed Release
+consumers; the sanitizer and seeded-fuzz jobs retain separate instrumentation.
+Linux uses CMake 3.31.6; macOS/Windows use 4.4.3; all use Ninja 1.13.2.
+The matrix recorded 1,159,040 SDK assertion executions, 33.479 seconds for the
+slowest verifier lane, 27.010 seconds maximum cold build and 1.601 summed
+verification minutes. GitHub timestamps show 112 seconds run elapsed and
+3.083 summed job wall minutes including setup. Verifier execution, workflow
+elapsed time and billed cost are distinct; no billing multiplier or rounding
+is included. The schema's slowest-lane “critical path” excludes queue/setup and
+is not the workflow's end-to-end critical path.
+
+The [hosted receipt](../.planning/phases/03-distributable-release-qualification/03-CI-HOSTED-RECEIPT.json)
+retains exact job/build/fixture/binary identities and seven previous failed
+attempts. A new SHA requires new evidence; no platform range, published SDK
+release, original-silicon or general-game claim follows from this finite pass.
+The release App, first-time fork boundary, protected merge and released
+archive/download evidence remain pending. Failed/skipped/unsupported/unknown
+outcomes remain distinct and cannot contribute passing assertions.
 
 The rights inventory currently contains affirmative records for the shipped
 original diagnostic material and pinned Unity subset. No commercial game ROM,

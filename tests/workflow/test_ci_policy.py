@@ -203,9 +203,22 @@ def main() -> int:
     testing = (ROOT / "docs/testing.md").read_text(encoding="utf-8")
     for required in (
         "Darwin-26", "Apple SDK 26.5", "1,440 assertions", "9.374 seconds",
-        "runner-minutes", "unknown; no hosted receipt", "rights status unknown",
+        "runner-minutes", "A new SHA requires new evidence", "rights status unknown",
+        "release App", "archive/download evidence remain pending",
     ):
         expect(required in testing, f"qualification documentation omitted: {required}")
+    # Hosted observations supersede the former unknown rows only for the exact
+    # recorded source and identities. Keep the release/authority boundary above.
+    hosted = evidence.load_canonical_json(
+        (ROOT / ".planning/phases/03-distributable-release-qualification/03-CI-HOSTED-RECEIPT.json").read_bytes(),
+        label="hosted CI observation")
+    evidence.validate_matrix_report(hosted["aggregate"]["matrix"])
+    expect(hosted["source_revision"] in testing, "hosted support docs must name the exact observed source")
+    for lane in hosted["aggregate"]["matrix"]["lanes"]:
+        expect(lane["outcome"] == "pass" and all(value in testing for value in
+               (lane["lane"], lane["compiler"]["version"], lane["sdk"]["version"],
+                lane["os_image"], lane["architecture"])),
+               "passing support rows must match measured hosted identities")
 
     revision = "a" * 40
     with tempfile.TemporaryDirectory(prefix="ci-matrix-test-") as temp:

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Deliver an offline installable C SDK whose ordinary native API runs an original deterministic CPU/bus diagnostic. Phase 01 accepted the owned CPU backend for the bounded diagnostic subset. Phase 02 builds the SDK and proves the complete consumer workflow; Phase 03 qualifies and distributes a tested unsigned alpha. The fresh 2026-10-05 Phase 01 report passed 10/10 after Plan 01-29; see its verification report for source identity, current checks, and limitations. The candidate-level receipt remains `unqualified`, while the independent phase report is the current bounded admission decision. Phase 02 is complete: all six plans, the 5/5 whole-phase verification and automated UAT passed. Phase 03 is executing: Plans 03-01 and 03-02 establish reproducible archives, bounded public-content scanning, and item-level rights checks; hosted CI, authority and publication evidence remain pending. [PROJECT.md](PROJECT.md) and [REQUIREMENTS.md](REQUIREMENTS.md) govern scope; [research synthesis](research/SUMMARY.md), [roadmap seed](preparation/ROADMAP-SEED.md) and [adversarial gates](preparation/ADVERSARIAL-REVIEW.md) supply dated rationale.
+Deliver an offline installable C SDK whose ordinary native API runs an original deterministic CPU/bus diagnostic. Phase 01 accepted the owned CPU backend for the bounded diagnostic subset. Phase 02 builds the SDK and proves the complete consumer workflow; Phase 03 qualifies and distributes a tested unsigned alpha. The fresh 2026-10-05 Phase 01 report passed 10/10 after Plan 01-29; see its verification report for source identity, current checks, and limitations. The candidate-level receipt remains `unqualified`, while the independent phase report is the current bounded admission decision. Phase 02 is complete: all six plans, the 5/5 whole-phase verification and automated UAT passed. Phase 03 is executing: Plans 03-01–04 are execution-complete, all six hosted SDK CI lanes and the required aggregate passed, and Plan 03-05 Task 2 retains App/fork/merge/release evidence at its account-setup checkpoint. [PROJECT.md](PROJECT.md) and [REQUIREMENTS.md](REQUIREMENTS.md) govern scope; [research synthesis](research/SUMMARY.md), [roadmap seed](preparation/ROADMAP-SEED.md) and [adversarial gates](preparation/ADVERSARIAL-REVIEW.md) supply dated rationale.
 
 ## Milestones
 
@@ -221,17 +221,17 @@ Plans:
 
 Planning guidance: Qualify relocated/offline consumers and the exact support matrix; then required checks/protected PRs and the actual release event/recovery graph; then stage, inspect, publish and verify the downloaded artifacts. Do not wait for a tag event that the configured draft flow cannot emit. Treat action/service behavior as requiring current qualification. Unsigned SDK delivery does not require application notarization.
 
-**Delivery dependency:** Remote repository, hosted CI, protection and release authority are not configured. This is a future delivery dependency, not a present blocker to implementation or artifact qualification. Keep affected delivery requirements pending until actual authority and event behavior are exercised; never substitute local green results for them.
+**Delivery dependency:** The public `szTheory/glueyneo` repository, hosted CI and strict main protection are configured. Their exact observations are recorded in Phase 03 hosted receipts. No release App exists yet; first-time fork approval/execution, independently approved protected merge and release authority/events remain pending. Keep affected delivery requirements pending until actual authority and event behavior are exercised; never substitute local green results for them.
 
 ## Progress
 
-Execution order: 1 → 2 → 3. Phase 01's bounded backend admission gate is satisfied. Phase 02 is complete, including whole-phase verification and automated UAT. Phase 03 is executing; Plans 03-01 and 03-02 are complete, while hosted delivery evidence remains pending.
+Execution order: 1 → 2 → 3. Phase 01's bounded backend admission gate is satisfied. Phase 02 is complete, including whole-phase verification and automated UAT. Phase 03 is executing; Plans 03-01–04 and Plan 03-05 Task 1 are complete. Plan 03-05 Task 2 retains the pending hosted authority and delivery evidence.
 
 | Phase | Milestone | Execution-complete plans | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. CPU acceptance experiment | v0.1 | 28/29 (01-17 remains a checkpoint) | Complete | 2026-10-05 |
 | 2. Executable diagnostic SDK | v0.1 | 6/6 | Complete    | 2026-10-06 |
-| 3. Distributable release qualification | v0.1 | 0/TBD | In Progress | - |
+| 3. Distributable release qualification | v0.1 | 4/5 | In Progress | - |
 
 Coverage: 27/27 current requirements are assigned exactly once; 5 in Phase 1, 15 in Phase 2, and 7 in Phase 3. The 5 bounded Phase 01 requirements and all 15 Phase 02 SDK requirements are complete; the 7 Phase 03 delivery requirements remain pending in [traceability](REQUIREMENTS.md#traceability). Deferred v2 requirements are not allocated to these phases.
 

@@ -1,40 +1,12 @@
 ---
 phase: 03-distributable-release-qualification
-reviewed: 2026-10-06T19:20:22Z
+reviewed: 2026-10-06T20:21:22Z
 depth: standard
-files_reviewed: 31
+files_reviewed: 3
 files_reviewed_list:
-  - .github/workflows/ci.yml
-  - .github/workflows/release.yml
   - CMakeLists.txt
-  - tools/release_manifest.py
-  - tools/release_state.py
-  - tools/public_content.py
-  - tools/sdk_evidence.py
-  - tools/verify_sdk.py
-  - tools/workflow/ci_policy.py
   - tests/consumers/check_package.py
-  - tests/consumers/test_release_consumer.py
-  - tests/sdk/test_matrix_evidence.py
-  - tests/workflow/test_ci_policy.py
-  - tests/workflow/test_public_content.py
-  - tests/workflow/test_release_recovery.py
-  - docs/public-content.md
-  - docs/rights-inventory.md
-  - .planning/phases/03-distributable-release-qualification/03-REVIEW-FIX.md
-  - .planning/phases/01-cpu-acceptance-experiment/01-26-PLAN.md
-  - .planning/phases/01-cpu-acceptance-experiment/01-29-PLAN.md
-  - .planning/phases/02-executable-diagnostic-sdk/02-01-PLAN.md
-  - .planning/phases/02-executable-diagnostic-sdk/02-02-PLAN.md
-  - .planning/phases/02-executable-diagnostic-sdk/02-03-PLAN.md
-  - .planning/phases/02-executable-diagnostic-sdk/02-04-PLAN.md
-  - .planning/phases/02-executable-diagnostic-sdk/02-05-PLAN.md
-  - .planning/phases/02-executable-diagnostic-sdk/02-06-PLAN.md
-  - .planning/phases/03-distributable-release-qualification/03-PUBLICATION-AUDIT.json
-  - .planning/phases/03-distributable-release-qualification/03-PUBLICATION-COMMIT-MAP.txt
-  - .planning/phases/03-distributable-release-qualification/03-HOSTED-QUALIFICATION.md
-  - docs/releasing.md
-  - third_party/musashi/PROVENANCE.md
+  - tests/consumers/test_exports.py
 findings:
   critical: 0
   warning: 0
@@ -51,13 +23,15 @@ re_review_open_findings:
   warning: 0
   info: 0
   total: 1
-latest_reviewed_revision: 30d29dbc66d84cbeb500ed2029ce06f1667a74df
-latest_review_status: issues_found
+latest_reviewed_revision: 2c7926383222cee174ede5ddde06374b43002191
+latest_review_status: clean
 latest_open_findings:
   critical: 0
   warning: 0
   info: 0
   total: 0
+latest_hosted_run: 37525280735
+latest_hosted_run_status: success
 publication_head_reviewed: f74f4cd77cb88fe0803697b74ea423765e94cae7
 publication_review_status: clean_bounded_scan
 historical_private_refs_reviewed: false
@@ -67,15 +41,15 @@ historical_private_refs_reviewed: false
 
 **Reviewed:** 2026-10-06
 **Depth:** standard
-**Files Reviewed:** 31
-**Status:** clean at current public HEAD; hosted release qualification remains pending
-**Revision:** `f74f4cd77cb88fe0803697b74ea423765e94cae7`
+**Files Reviewed:** 3
+**Status:** clean at `2c7926383222cee174ede5ddde06374b43002191`; hosted release qualification remains pending
+**Revision:** `2c7926383222cee174ede5ddde06374b43002191`
 
 ## Summary
 
-Reviewed release archive construction, release recovery and download validation, CI aggregation, privacy/rights scanning, and consumer integration at the requested revision. The exact-SHA and downloaded-byte checks are present, but the publication gates do not inspect historical Git blob contents and can omit unclassified test assets from rights validation. These gaps are material for the stated public repository and redistribution boundary. Hosted CI lanes, repository protections, App token behavior, and publication remain pending as recorded by the phase; no hosted claims were inferred from local evidence. No tests or other commands were run during this review.
+The latest review covered cross-compiler source identity and the Windows DUMPBIN export-inspector correction. The exact-SHA hosted CI matrix and aggregate pass at the reviewed revision, and the focused local Windows controls and installed consumers pass. Earlier failures remain documented with their fixes. No source findings remain open at this revision. The hosted release App, fork approval, protected merge, draft/retry/download/publication behavior, and public release assets remain unqualified.
 
-The findings and counts below preserve the initial and intermediate review trail. At the latest reviewed public HEAD, all previously reported source defects and the historical-path blocker are resolved for the selected publication history. The current local detector run is bounded evidence only; the GitHub App, event, protected-merge, hosted-runner, and actual release/publication claims remain pending.
+The historical findings and counts below preserve each review iteration. Their current dispositions are recorded in the dated follow-up sections; the latest exact-SHA review has no open findings.
 
 ## Critical Issues
 
@@ -187,7 +161,7 @@ The source edit in each of those eight current plan files is limited to replacin
 
 **Severity:** WARNING
 **File:** `tools/public_content.py:45-47`
-**Issue:** The home-path patterns recognize POSIX `/Users/...` and `/home/...` values, but not common Windows absolute paths such as a Windows drive-root `Users` path. The project builds on Windows, and its privacy rule prohibits publishing personal absolute paths, so a Windows path in tracked content or a supplied log currently passes this detector.
+**Issue:** The home-path patterns recognize common POSIX user-home layouts, but not common Windows absolute paths such as a drive-root user-home path. The project builds on Windows, and its privacy rule prohibits publishing personal absolute paths, so a Windows path in tracked content or a supplied log currently passes this detector.
 **Reproduction:** A read-only `scan_bytes` probe for a synthetic Windows drive-root home path returned an empty finding list.
 **Fix:** Add a Windows drive-root home-path pattern with boundaries and redacted output, plus positive and synthetic-path controls.
 
@@ -198,3 +172,59 @@ The source edit in each of those eight current plan files is limited to replacin
 **Issue:** The new `private-key` expression recognizes common PEM headers, including OPENSSH, but not OpenPGP's a header composed of five hyphens, `BEGIN PGP PRIVATE KEY BLOCK`, and five hyphens armor. A tracked private-key export or supplied log containing that header therefore passes the new key-header detector.
 **Reproduction:** A read-only `scan_bytes` probe for a synthetic a header composed of five hyphens, `BEGIN PGP PRIVATE KEY BLOCK`, and five hyphens header returned an empty finding list.
 **Fix:** Add the OpenPGP private-key block header to the detector and add a test that verifies the rule is emitted without echoing the header or key body.
+
+## Independent follow-up review at `4fb54e4b28ca30d89e4e713af0b610e70d3a688e`
+
+**Verdict:** One blocker remains open. The changed Windows host-thread support and matrix plumbing reach MSVC, but its required build fails on a warning promoted to an error in the SDK mutation test. Do not treat Windows support as qualified until the current source passes this lane and the aggregate check.
+
+**Scope:** Reviewed the 18 non-planning files changed since `0712ed83b5e05a768f24a1e50528be5add3bbff2`. The three unrelated user-modified planning files were not read as implementation scope or changed. The preserved private local refs were not inspected or treated as public history.
+
+**Verification:** `tests/workflow/test_ci_policy.py`, `tests/sdk/test_matrix_evidence.py`, `tests/consumers/test_exports.py` (5 tests), and `tests/workflow/test_public_content.py` (17 tests) passed. Python syntax compilation and `git diff --check` passed. Hosted run `37520769390`, exact head `4fb54e4b28ca30d89e4e713af0b610e70d3a688e`, completed failed: Linux GCC/Clang, macOS, sanitizer, fuzz, and public-content jobs passed; Windows MSVC failed, so `ci-policy` failed as expected. Its bounded diagnostic artifact reported MSVC C4457 at `tests/fuzz/sdk_mutation.c:665`; no raw runner path or canary value is retained here. No release, App, protected-merge, or publication claim is inferred from CI.
+
+### CR-03: MSVC warning-as-error prevents the Windows matrix from compiling
+
+**Severity:** BLOCKER
+**File:** `tests/fuzz/sdk_mutation.c:665`
+**Issue:** `run_sequence_operation` takes a parameter named `index` at line 607, then declares another `index` in the storage-counting loop at line 665. MSVC reports C4457 (“declaration of 'index' hides function parameter”); the test targets use `/W4 /WX`, so `sdk_mutation.c` fails to compile. This stops the Windows MSVC matrix before its package consumers can run and makes the aggregate CI check fail, blocking the phase's Windows platform qualification.
+**Reproduction:** Hosted run `37520769390` at this exact revision failed its `windows-msvc` job while compiling `sdk_mutation.c`; the uploaded bounded failure receipt preserved the diagnostic after redaction. The source location is `for (unsigned index = 0u; index < MUTATION_LIVE_LIMIT; ++index)` inside `run_sequence_operation`.
+**Fix:** Rename the loop variable to a distinct name such as `owner_index` and use it for both `owners[owner_index]` accesses. Rerun the full exact-revision hosted matrix and require the Windows lane and aggregate to pass before counting Windows as qualified.
+
+The latest hosted run's other passing lanes establish only their named runner/configuration outcomes. They do not establish Windows support or complete hosted release qualification.
+
+## Final independent review at `a91e98efe1f507df4b3424705d89b64cac65184d`
+
+**Verdict:** CR-03 is resolved. One blocker remained at this revision: Windows MSVC builds stamped test result records with `unknown` instead of the exact source revision, so the verifier rejected the diagnostic result and the Windows lane and CI aggregate failed.
+
+**Scope:** Reviewed the nine non-planning files changed since `4fb54e4b28ca30d89e4e713af0b610e70d3a688e`. The release-App setup note was read for boundary claims but is a planning artifact and is excluded from the source-file count. The unrelated pre-existing user planning edits and preserved private local refs were left untouched.
+
+**Verification:** `python3 tests/consumers/test_exports.py` passed 10/10, including the generated Windows COFF closure controls; `python3 tests/sdk/test_matrix_evidence.py` and `python3 tests/workflow/test_public_content.py` (17 tests) passed. Python syntax compilation passed. `cmake --preset sdk-debug`, the debug build, and `ctest --preset sdk-debug -R '^sdk_host_closure$' --output-on-failure` passed on the local host. These local and synthetic controls do not establish native Windows qualification.
+
+Hosted run `37524266388` completed failed at this exact SHA. Linux GCC, Linux Clang, macOS, sanitizer, fuzz, and public-content jobs passed; Windows MSVC failed and `ci-policy` failed as a result. The uploaded, bounded Windows receipt reports `SDK result identity/count/outcome failed for diagnostic` and binds the failure to this SHA. The prior C4457 attempt at `4fb54e4` remains a preserved counterexample; that specific compile issue is fixed by the `owner_index` rename. No hosted release App, fork-approval event, protected merge, release, or publication was observed or inferred.
+
+### CR-05: MSVC test records contain no usable source revision
+
+**Severity:** BLOCKER
+**File:** `CMakeLists.txt:130-143`
+**Issue:** The configure logic obtains `GLUEYNEO_SOURCE_REVISION` from `git rev-parse` only when the compiler ID is GNU, Clang, or AppleClang. Every other compiler, including MSVC, is explicitly assigned `unknown`. The SDK test executables include this value in each `SDK_RESULT` record, while `tools/verify_sdk.py:381-395` requires the record's revision to equal the first 12 characters of the current Git `HEAD`. Consequently, the Windows diagnostic CTest can never pass the identity check in a normal MSVC build. The workflow already sets `SDK_SOURCE_REVISION`, but CMake does not consume it.
+**Reproduction:** Exact-SHA hosted run `37524266388` failed the `windows-msvc` lane. Its uploaded failure receipt records `SDK result identity/count/outcome failed for diagnostic`; the source check confirms MSVC configures the test record as `unknown`, which cannot satisfy the verifier's SHA comparison. The previous Windows attempt's build output also identified `GLUEYNEO_SOURCE_REVISION` as `unknown` before reaching this later test stage.
+**Fix:** Resolve the source revision for all compiler families (for example, run `git rev-parse --short=12 HEAD` without the compiler-ID guard), and fail configuration if it is absent or malformed. Alternatively, pass the workflow's exact `SDK_SOURCE_REVISION` into CMake and validate its format before defining the test macro. Rerun the exact hosted Windows lane and aggregate after the change.
+
+The public repository content scan passed at this revision. Release App installation and token scope, first-time fork approval and read-only/no-secret behavior, independent approval and protected merge, draft/retry/download/publication events, and public release assets remain unqualified pending the documented account setup and exact hosted receipts.
+
+## Final independent re-review at `2c7926383222cee174ede5ddde06374b43002191`
+
+**Verdict:** No open source findings. CR-05 is resolved: CMake now obtains the checkout identity independently of compiler family, retaining `unknown` only when Git is unavailable. The prior DUMPBIN-version failure is also resolved: the version banner is read from a successful `/EXPORTS` invocation on the tested DLL.
+
+**Scope:** Reviewed the three source/configuration files changed since `a91e98efe1f507df4b3424705d89b64cac65184d`. No unrelated user edits or preserved private refs were changed or included.
+
+**Verification:** `python3 tests/consumers/test_exports.py` passed 12/12 tests, including generated Windows COFF closure and DUMPBIN identity controls. `python3 tests/consumers/check_package.py --suite consumers` passed both installed static/shared consumer cases. The local CMake debug build and `sdk_host_closure` test passed (1/1). Hosted run `37525280735` completed successfully at this exact SHA: all six matrix lanes (Linux GCC, Linux Clang, macOS, Windows MSVC, sanitizer, fuzz), public-content, and `ci-policy` passed. The preceding Windows attempt, `37524853015` at `1c1265a79f2ab5d556a79f93e3cf39941ebb532c`, passed the diagnostic and static consumer but failed the shared consumer because the DUMPBIN help invocation exited nonzero; the bounded receipt showed this failed inspector command. The updated control obtains the tool banner from successful `/EXPORTS` inspection. These failed attempts remain preserved above and in their hosted receipts as counterexamples, with each correction tied to current evidence.
+
+### CR-03 disposition
+
+- **CR-03 — RESOLVED.** The C4457 variable shadow was corrected by renaming the loop variable. The exact-SHA Windows MSVC lane now passes.
+
+### CR-05 disposition
+
+- **CR-05 — RESOLVED.** Git revision lookup no longer depends on compiler ID. The hosted Windows diagnostic result and static consumer passed on the prior candidate; the latest exact-SHA Windows lane and aggregate pass after the DUMPBIN correction.
+
+The release qualification phase still has external evidence outstanding: no release App currently exists, and App installation/token scope, first-time fork approval and read-only/no-secret behavior, independent PR approval, protected merge, release draft/retry, downloaded assets, and publication have not been observed. This is a phase-delivery boundary, not an open code-review finding. Do not infer protected-merge readiness or release qualification from the CI pass alone.

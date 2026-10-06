@@ -5,11 +5,11 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 03
 current_phase_name: Distributable release qualification
 status: executing
-stopped_at: "03-05 Task 2: sanitized public repository prepared; hosted authority pending"
-last_updated: "2026-10-06T18:27:37.306Z"
+stopped_at: "03-05 Task 2: hosted CI passed; release App, fork/review actors and release events pending"
+last_updated: "2026-10-06T20:24:22.756Z"
 last_activity: 2026-10-06
-last_activity_desc: Completed Phase 03 Plan 03-02; DEL-05 hosted and publication evidence remains pending
-state_head: 256f9f63b13fbd0b55dee13b65029c130efc2d22
+last_activity_desc: Six hosted CI lanes and aggregate passed; 03-05 release authority checkpoint remains
+state_head: 2c7926383222cee174ede5ddde06374b43002191
 progress:
   total_phases: 3
   completed_phases: 2
@@ -22,7 +22,7 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-05)
+See: .planning/PROJECT.md (updated 2026-10-06)
 
 **Core value:** Trustworthy Neo Geo emulation that other software can embed easily.
 **Current focus:** Phase 03 — Distributable release qualification
@@ -32,8 +32,8 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 
 Phase: 03 (Distributable release qualification) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
-Last activity: 2026-10-06 — Phase 03 execution started
+Status: executing
+Last activity: 2026-10-06 — Six hosted CI lanes and aggregate passed; 03-05 release authority checkpoint remains
 
 Progress: [███████░░░] 67% (two of three phases complete)
 
@@ -157,7 +157,7 @@ None yet.
 - Preserve the historical odd-IRQ, fixture-UBSan, reset-accounting/NMI, BSD address-error and malformed-state/zero-request counterexamples.
 - Both original Musashi adaptation attempts are consumed. Do not repeat them automatically.
 - Original-silicon saved PC, unsupported platforms, public persistence formats, board/BIOS compatibility, and gameplay performance remain unknown or outside scope. WR-01 is a documentation warning carried into the Phase 02 plan; it does not block bounded CPU acceptance.
-- 03-05 Task 2 is incomplete. The authorized public repository szTheory/glueyneo is created; sanitized publication history passed its bounded audit. Original private local history is retained and must never be pushed. Hosted protection/CI, scoped GitHub App authority, first-time fork approval, protected merge and release publication receipts remain pending.
+- 03-05 Task 2 is incomplete. The authorized public repository szTheory/glueyneo and draft PR #1 exist; sanitized publication history passed its bounded audit. Original private local refs must never be pushed. Strict protection settings are observed; all six hosted matrix lanes and the aggregate passed at 2c7926383222cee174ede5ddde06374b43002191 with 1,159,040 SDK assertion executions. Independent GSD review at that source has no open findings. No release App exists; App scope/token/events, first-time fork execution, independent GitHub approval, actual protected merge and release/download publication remain pending. See the exact hosted receipt and App setup checkpoint; resume $gsd-execute-phase 03 after account setup.
 
 ## Deferred Items
 
@@ -170,5 +170,5 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 ## Session Continuity
 
 Last session: 2026-10-06T18:27:37.209Z
-Stopped at: 03-05 Task 2: sanitized public repository prepared; hosted authority pending
+Stopped at: 03-05 Task 2: hosted CI passed; release App, fork/review actors and release events pending
 Resume file: .planning/phases/03-distributable-release-qualification/03-HOSTED-QUALIFICATION.md

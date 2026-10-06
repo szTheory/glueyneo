@@ -57,10 +57,17 @@ Release Please reports no new output, wrong tag targets, version disagreement,
 published state, duplicate/extra/missing/replaced assets, unordered responses,
 and downloaded-byte tampering. Local consumer tests also rebuild a source
 archive offline and relocate installed packages. These checks qualify the
-local release logic only. The repository has no configured remote or App
-installation receipt, so GitHub runner identities, token and event behavior,
-repository protections, hosted runner costs, and actual publication remain
-pending until the workflow runs in the target repository. A clean scanner result
+local release logic only. The public
+[szTheory/glueyneo repository](https://github.com/szTheory/glueyneo) now has
+hosted CI and strict main protection. Exact observations and failed attempts
+are recorded in the
+[hosted qualification receipt](../.planning/phases/03-distributable-release-qualification/03-HOSTED-QUALIFICATION.md).
+The owner confirmed no existing release App; its
+[setup checkpoint](../.planning/phases/03-distributable-release-qualification/03-RELEASE-APP-SETUP.md)
+names the repository scope, permissions, secret and nonsecret variable.
+App token/event behavior, first-time fork approval/execution, an independently
+approved protected merge and actual release publication remain pending.
+A clean scanner result
 is detector evidence; the affirmative item-level records in
 [`rights-inventory.md`](rights-inventory.md) remain the distribution-rights
 authority, and any unresolved rights question blocks publication.

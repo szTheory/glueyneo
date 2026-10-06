@@ -549,7 +549,11 @@ def scan_inputs(*, root: Path = ROOT, paths: list[str] | None = None,
             "rights": rights, "history_dispositions": finding_dispositions,
             "counts": counts, "detector_negative_only": True,
             "coverage": {"logs_supplied": len(log_rows), "archives_supplied": len(archive_rows),
-                         "history_mode": "all reachable refs" if history_text is None else "synthetic supplied input"},
+                         "history_mode": ("synthetic supplied input" if history_text is not None
+                                          else "all reachable refs" if history_revision == "--all"
+                                          else "selected revision"),
+                         "history_revision": history_revision if history_text is None else None,
+                         "history_scope": "objects available in this checkout" if history_text is None else None},
             "limits": {"file_bytes": MAX_FILE_BYTES, "total_bytes": MAX_TOTAL_BYTES, "archive_members": MAX_MEMBERS}}
 
 
