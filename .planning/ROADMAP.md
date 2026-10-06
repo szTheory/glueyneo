@@ -203,7 +203,14 @@ Planning guidance: Slice from opaque lifecycle and bounded media through the rea
   4. Pinned release-please automation uses one C version source to stage a complete unsigned SDK draft bound to the tested commit, recovers interrupted staging and no-new-release retries, refuses incomplete/wrong-commit publication, and yields a published download whose expected digests and real diagnostic consumer pass. (DEL-03, DEL-04)
   5. A maintainer can inspect public-content evidence covering source, documentation, commit identity, logs and archives for notices and exclusion of personal paths/private identity, secrets, commercial media and private corpus material before publication. (DEL-05)
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Manifest-bound source/SDK archive tracer, offline relocated consumer and Windows exports
+- [ ] 03-02-PLAN.md — Bounded public-content scanner, canaries and rights inventory
+- [ ] 03-03-PLAN.md — Exact platform evidence and always-started required CI aggregate
+- [ ] 03-04-PLAN.md — Serialized draft recovery and downloaded-byte release gates
+- [ ] 03-05-PLAN.md — Current-SHA review/merge policy and hosted authority qualification
 
 Planning guidance: Qualify relocated/offline consumers and the exact support matrix; then required checks/protected PRs and the actual release event/recovery graph; then stage, inspect, publish and verify the downloaded artifacts. Do not wait for a tag event that the configured draft flow cannot emit. Treat action/service behavior as requiring current qualification. Unsigned SDK delivery does not require application notarization.
 

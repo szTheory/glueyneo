@@ -10,7 +10,7 @@ created: "2026-10-06"
 
 # Phase 03 — Validation Strategy
 
-> Per-phase validation contract for feedback sampling during execution. Plan/task IDs and final wave assignments are filled from the verified plans before execution.
+> Per-phase validation contract for feedback sampling during execution. IDs and waves match the Phase 03 plans. Missing test files are created first in their named task before the behavior is implemented; hosted receipts remain external.
 
 ---
 
@@ -39,24 +39,26 @@ created: "2026-10-06"
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| assigned from plan | assigned from plan | assigned from plan | BUILD-03 | — | Downloaded install works after original paths are absent; source archive rebuild is offline | Package integration | `python3 tools/verify_sdk.py --suite release-consumer` | ❌ Wave 0 | ⬜ pending |
-| assigned from plan | assigned from plan | assigned from plan | BUILD-04 | — | Every lane records exact identity and distinct pass/fail/skipped/unsupported/unknown outcomes | Evidence validation | `python3 tools/verify_sdk.py --suite matrix` | ❌ Wave 0 | ⬜ pending |
-| assigned from plan | assigned from plan | assigned from plan | DEL-01 | — | Unknown paths select every lane; missing/failed/cancelled lanes and zero assertions fail the aggregate | Unit + workflow integration | `python3 tools/verify_sdk.py --suite ci-policy` | ❌ Wave 0 | ⬜ pending |
-| assigned from plan | assigned from plan | assigned from plan | DEL-02 | — | Fork PR jobs have no secrets/write permission; only latest-SHA checks and independent review permit protected merge | Hosted integration | Static workflow checks locally; hosted PR/fork/review/ruleset/App-event qualification on the configured repository | ❌ external hosted behavior | ⬜ pending |
-| assigned from plan | assigned from plan | assigned from plan | DEL-03 | — | Retry accepts only a matching release target/version/asset set and digest; wrong or incomplete drafts cannot publish | State-machine integration | `python3 tools/verify_sdk.py --suite release-recovery` | ❌ Wave 0 | ⬜ pending |
-| assigned from plan | assigned from plan | assigned from plan | DEL-04 | — | Digest mismatch, missing, extra, or replaced assets block publication; real downloaded consumer passes first | Adversarial package integration | `python3 tools/verify_sdk.py --suite release-consumer` plus hosted dry-run | ❌ Wave 0 / hosted | ⬜ pending |
-| assigned from plan | assigned from plan | assigned from plan | DEL-05 | — | Scanner fails closed on limits/traversal, redacts match values, and rejects unapproved media/corpus | Unit + security integration | `python3 tools/verify_sdk.py --suite public-content` | ❌ Wave 0 | ⬜ pending |
+| 03-01-T1 | 03-01 | 1 | BUILD-03, DEL-03/04 | T-03-01 | Offline source rebuild and relocated real consumer from release bytes | Package integration | `python3 tests/consumers/test_release_consumer.py` | ❌ create first in task | ⬜ pending |
+| 03-01-T2 | 03-01 | 1 | BUILD-03 | T-03-01 | All three shared formats enforce exact exports | Export integration | `python3 tests/consumers/test_exports.py` | ❌ create first in task | ⬜ pending |
+| 03-02-T1 | 03-02 | 1 | DEL-05 | T-03-03/04 | Bounded redacted scan of tree/history/log/archive | Security controls | `python3 tests/workflow/test_public_content.py` | ❌ create first in task | ⬜ pending |
+| 03-02-T2 | 03-02 | 1 | DEL-05 | T-03-05 | Inventory and notice gate rejects unapproved bytes | Security controls | `python3 tests/workflow/test_public_content.py` | ❌ extend in task | ⬜ pending |
+| 03-03-T1 | 03-03 | 2 | BUILD-04 | T-03-07 | Exact identities/outcomes and positive denominators | Evidence validation | `python3 tests/sdk/test_matrix_evidence.py` | ❌ create first in task | ⬜ pending |
+| 03-03-T2 | 03-03 | 2 | DEL-01/02 | T-03-06/08 | Unknown diff runs all; empty/missing lane fails aggregate; PR read-only | Workflow controls | `python3 tests/workflow/test_ci_policy.py` | ❌ create first in task | ⬜ pending |
+| 03-04-T1 | 03-04 | 3 | DEL-03 | T-03-09 | Wrong/incomplete draft and retry cannot publish | State-machine integration | `python3 tests/workflow/test_release_recovery.py` | ❌ create first in task | ⬜ pending |
+| 03-04-T2 | 03-04 | 3 | DEL-04 | T-03-10/11 | Downloaded digests and real consumer precede publish | Package integration | `python3 tests/consumers/test_release_consumer.py` | ❌ extend in task | ⬜ pending |
+| 03-05-T1 | 03-05 | 4 | DEL-02 | T-03-12/14 | Stale SHA/review and unsupported claim fail | Workflow controls | `python3 tests/workflow/test_ci_policy.py` | ❌ extend in task | ⬜ pending |
+| 03-05-T2 | 03-05 | 4 | DEL-02/03/04 | T-03-13 | Real fork/App/ruleset/event/release receipts | Hosted integration | External live receipt; precondition blocks if authority absent | ❌ external | ⬜ pending |
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] Windows DLL export inspection and fixture-backed expected-export tests.
-- [ ] Matrix evidence schema/aggregator and conservative changed-path classifier controls.
-- [ ] Public-content scanner with safe archive traversal, bounded IO, notices/inventory, and synthetic secret canaries.
-- [ ] Source archive offline rebuild and relocated installed-artifact consumer using downloaded bytes.
-- [ ] Release draft state-machine/retry cases for wrong target SHA, absent/extra asset, digest mismatch, no-new-release retry, and interruption between assets.
-- [ ] Workflow syntax/security/static validation and a documented hosted qualification path.
+- [ ] 03-01-T1/T2 create release-consumer and export controls before production behavior.
+- [ ] 03-02-T1/T2 create scanner canaries and rights controls before production behavior.
+- [ ] 03-03-T1/T2 create matrix and classifier controls before production behavior.
+- [ ] 03-04-T1/T2 create release-retry and downloaded-byte adversarial controls before production behavior.
+- [ ] 03-05-T1 extends current-SHA policy controls; 03-05-T2 requires external hosted evidence.
 
 ---
 
