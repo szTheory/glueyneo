@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -32,6 +34,101 @@ File Type: DLL
           7    6 00001060 gn_destroy
           8    7 00001070 gn_status_string
 """
+
+WINDOWS_SYMBOLS = """
+Microsoft (R) COFF/PE Dumper Version 14.51.36231.0
+Dump of file glueyneo.lib
+File Type: LIBRARY
+
+COFF SYMBOL TABLE
+000 00000000 SECT1 notype () External | gn_create
+001 00000000 UNDEF notype () External | malloc
+
+COFF SYMBOL TABLE
+000 00000000 SECT1 notype () External | owned_cpu_create
+001 00000000 UNDEF notype () External | memset
+"""
+
+
+class WindowsRuntimeClosureTests(unittest.TestCase):
+    def inspect(self, output: str, *, exit_code: int = 0,
+                source: str = "void sdk_fixture(void) {}\n") -> subprocess.CompletedProcess[str]:
+        # Exercise the actual generated CMake closure with controlled inspector
+        # output. This proves rejection behavior without claiming a Windows run.
+        cmake_source = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        closure = cmake_source.split("set(SDK_HOST_CLOSURE_CONTENT [=[\n", 1)[1].split("\n]=])", 1)[0]
+        with tempfile.TemporaryDirectory(prefix="glueyneo-coff-control-") as temp:
+            directory = Path(temp)
+            sources = [directory / "instance.c", directory / "cpu.c"]
+            for path in sources:
+                path.write_text(source, encoding="utf-8")
+            library = directory / "glueyneo.lib"
+            library.touch()
+            inspector = directory / "inspector.py"
+            inspector.write_text(
+                "import sys\n"
+                f"assert sys.argv[1:] == ['/SYMBOLS', {library.as_posix()!r}]\n"
+                f"sys.stdout.write({output!r})\n"
+                f"raise SystemExit({exit_code})\n",
+                encoding="utf-8",
+            )
+            substitutions = {
+                "@SDK_RUNTIME_ABSOLUTE_SOURCES@": ";".join(path.as_posix() for path in sources),
+                "$<TARGET_FILE:glueyneo>": library.as_posix(),
+                "@CMAKE_NM@": "unused-nm",
+                "@WIN32@": "TRUE",
+                "@GLUEYNEO_SDK_DUMPBIN@": Path(sys.executable).as_posix() + ";" + inspector.as_posix(),
+            }
+            for key, value in substitutions.items():
+                closure = closure.replace(key, value)
+            script = directory / "closure.cmake"
+            script.write_text(closure + "\n", encoding="utf-8")
+            return subprocess.run(
+                [shutil.which("cmake") or "cmake", "-P", str(script)],
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                timeout=30, check=False,
+            )
+
+    def test_accepts_complete_runtime_coff_tables(self) -> None:
+        result = self.inspect(WINDOWS_SYMBOLS)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("SDK runtime host-call closure passed", result.stdout)
+
+    def test_rejects_imported_and_decorated_ambient_host_symbols(self) -> None:
+        for symbol in ("__imp_CreateFileW", "__imp_QueryPerformanceCounter",
+                       "__imp_WSAStartup", "__imp__beginthreadex", "_ReadFile@20",
+                       "__imp_Sleep"):
+            with self.subTest(symbol=symbol):
+                result = self.inspect(WINDOWS_SYMBOLS.replace("| malloc", "| " + symbol))
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+                self.assertIn("Ambient host symbol found in runtime", result.stdout)
+
+    def test_rejects_private_test_symbols(self) -> None:
+        for symbol in ("gn_test_create", "_gn_test_create@8", "__imp_gn_test_create"):
+            with self.subTest(symbol=symbol):
+                result = self.inspect(WINDOWS_SYMBOLS.replace("| gn_create", "| " + symbol))
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+                self.assertIn("Private test hook leaked", result.stdout)
+
+    def test_fails_closed_on_unknown_partial_and_failed_inspection(self) -> None:
+        controls = (
+            ("File Type: LIBRARY\n/GL object has no symbol table\n", 0),
+            (WINDOWS_SYMBOLS.split("COFF SYMBOL TABLE", 2)[0] + "COFF SYMBOL TABLE\n"
+             "000 00000000 SECT1 notype () External | gn_create\n", 0),
+            (WINDOWS_SYMBOLS.replace("000 00000000 SECT1", "000 unknown-value SECT1"), 0),
+            (WINDOWS_SYMBOLS.replace("External", "Static"), 0),
+            (WINDOWS_SYMBOLS, 1),
+        )
+        for output, code in controls:
+            with self.subTest(output=output, code=code):
+                result = self.inspect(output, exit_code=code)
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+                self.assertNotIn("SDK runtime host-call closure passed", result.stdout)
+
+    def test_retains_windows_ambient_source_call_rejection(self) -> None:
+        result = self.inspect(WINDOWS_SYMBOLS, source="void sdk_fixture(void) { GetTickCount64(); }\n")
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn("Ambient host call found in runtime source", result.stdout)
 
 
 class SharedExportTests(unittest.TestCase):

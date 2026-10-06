@@ -512,7 +512,8 @@ def suite_evidence() -> dict[str, Any]:
 def suite_provenance() -> dict[str, Any]:
     ensure_debug_build()
     manifest = evidence.verify_manifest(ROOT)
-    runner = BUILD / "glueyneo-diagnostic"
+    runner = BUILD / ("glueyneo-diagnostic.exe" if os.name == "nt"
+                      else "glueyneo-diagnostic")
     verify_fixture_runner(runner, "a")
     verify_fixture_runner(runner, "b")
     count, output = run_existing_ctest("sdk-provenance", "provenance")

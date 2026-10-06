@@ -36,7 +36,7 @@ SOURCE_PATHS = (
 )
 # Repository publication includes workflow and release configuration even
 # though the SDK source archive intentionally has a narrower file set.
-REPOSITORY_PATHS = SOURCE_PATHS + (".github/workflows", "release-please-config.json")
+REPOSITORY_PATHS = SOURCE_PATHS + (".github/workflows", "release-please-config.json", ".gitattributes")
 TEST_SOURCE_PATHS = frozenset({
     "tests/consumers/CMakeLists.txt", "tests/consumers/check_package.py",
     "tests/consumers/header.cpp", "tests/consumers/test_exports.py",

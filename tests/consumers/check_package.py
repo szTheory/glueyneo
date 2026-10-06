@@ -367,6 +367,7 @@ def build_package(variant: str, work: Path) -> dict[str, object]:
     run(
         [
             shutil.which("cmake") or "cmake",
+            "-G", "Ninja",
             "-S",
             str(ROOT),
             "-B",
@@ -640,6 +641,7 @@ def case_consumers(variant: str) -> None:
     run(
         [
             cmake,
+            "-G", "Ninja",
             "-S",
             str(staged_source),
             "-B",
@@ -1017,6 +1019,7 @@ def suite(suite_name: str) -> None:
     run(
         [
             cmake,
+            "-G", "Ninja",
             "-S",
             str(ROOT),
             "-B",
