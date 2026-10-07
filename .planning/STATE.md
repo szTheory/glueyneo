@@ -5,10 +5,10 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 03
 current_phase_name: Distributable release qualification
 status: executing
-stopped_at: "Phase 03 verification: gaps_found (13/20); next /gsd-plan-phase 03 --gaps"
-last_updated: "2026-10-07T13:20:43.627Z"
+stopped_at: "Phase 03 fresh verification: gaps_found (13/20); resume halted Plan 03-05 only when hosted actors and release evidence are available"
+last_updated: "2026-10-07T14:05:21.491Z"
 last_activity: 2026-10-07
-last_activity_desc: "Phase 03 whole-phase verification found gaps; next: /gsd-plan-phase 03 --gaps"
+last_activity_desc: "Fresh Phase 03 re-verification confirmed scanner fixes and retained only hosted release, fork/merge, and artifact gaps; no new closure plan is warranted"
 state_head: 2d3379777a8241fd2e2f3c5e835267dfb77e0e98
 progress:
   total_phases: 3
@@ -32,8 +32,8 @@ See: .planning/PROJECT.md (updated 2026-10-07)
 
 Phase: 03 (Distributable release qualification) — EXECUTING
 Plan: 5 of 5
-Status: Plan 03-05 is halted at the hosted-evidence gate; verification found gaps (13/20); gap-closure planning is next
-Last activity: 2026-10-07 — Phase 03 whole-phase verification found gaps; next: /gsd-plan-phase 03 --gaps
+Status: Plan 03-05 is halted at the hosted-evidence gate; fresh verification remains gaps_found (13/20). The earlier Windows-path and OpenPGP-key detector findings are resolved; remaining gaps require actual hosted actors and release artifacts.
+Last activity: 2026-10-07 — Direct re-verification refreshed 03-VERIFICATION.md; no new local repair plan is warranted. Once a first-time fork contributor, independent approver, and qualifying release event are available, resume the existing plan with /gsd-execute-phase 03.
 
 Progress: [███████░░░] 67% (two of three phases complete)
 
@@ -157,7 +157,7 @@ None yet.
 - Preserve the historical odd-IRQ, fixture-UBSan, reset-accounting/NMI, BSD address-error and malformed-state/zero-request counterexamples.
 - Both original Musashi adaptation attempts are consumed. Do not repeat them automatically.
 - Original-silicon saved PC, unsupported platforms, public persistence formats, board/BIOS compatibility, and gameplay performance remain unknown or outside scope. WR-01 is a documentation warning carried into the Phase 02 plan; it does not block bounded CPU acceptance.
-- Plan 03-05 Task 1 and its local policy test passed. The owner reports Release App 5217741 installed for szTheory/glueyneo and its Actions secret/variable configured; effective permissions and token/event behavior remain unverified. The first-time fork run, independent GitHub review, protected merge, release staging/download, and publication remain pending. Earlier receipts, CI lanes, protection settings, and review evidence are retained in 03-HOSTED-QUALIFICATION.md. The whole-phase verifier at commit 2d3379777a8241fd2e2f3c5e835267dfb77e0e98 returned gaps_found (13/20); see 03-VERIFICATION.md for three concrete gaps. Next: /gsd-plan-phase 03 --gaps, then execute the resulting gap plan and re-verify. Do not mark Phase 03 complete before the verifier passes. Original private local refs must never be pushed.
+- Plan 03-05 Task 1 and its local policy test passed. The owner reports Release App 5217741 installed for szTheory/glueyneo and its Actions secret/variable configured; effective permissions and token/event behavior remain unverified. The first-time fork run, independent GitHub review, protected merge, release staging/download, and publication remain pending. Earlier receipts, CI lanes, protection settings, and review evidence are retained in 03-HOSTED-QUALIFICATION.md. Fresh verification at 2026-10-07T14:01:59Z remains gaps_found (13/20): the Windows-path and OpenPGP-key detector gaps are resolved, while hosted merge/release and actual archive evidence are not. Do not create another plan for those same external gaps. Once the first-time fork contributor and independent approver are available, resume the existing halted plan with /gsd-execute-phase 03; do not mark Phase 03 complete before a passing fresh verifier. The local all-ref scan is not evidence of public exposure; original private local refs must never be pushed.
 
 ## Deferred Items
 
@@ -169,6 +169,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-07T13:20:43.584Z
-Stopped at: Phase 03 verification: gaps_found (13/20); next /gsd-plan-phase 03 --gaps
+Last session: 2026-10-07T14:05:21.491Z
+Stopped at: Fresh Phase 03 re-verification: gaps_found (13/20); awaiting hosted actors and actual release artifacts before resuming Plan 03-05
 Resume file: .planning/phases/03-distributable-release-qualification/03-VERIFICATION.md

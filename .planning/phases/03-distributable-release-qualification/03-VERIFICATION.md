@@ -1,6 +1,6 @@
 ---
 phase: 03-distributable-release-qualification
-verified: 2026-10-07T12:49:51Z
+verified: 2026-10-07T14:01:59Z
 status: gaps_found
 score: 13/20 must-haves verified
 covered_files:
@@ -17,8 +17,8 @@ covered_files:
   - ".planning/phases/03-distributable-release-qualification/03-05-PLAN.md"
   - ".planning/phases/03-distributable-release-qualification/03-05-SUMMARY.md"
   - ".planning/phases/03-distributable-release-qualification/03-HOSTED-QUALIFICATION.md"
-  - ".planning/phases/03-distributable-release-qualification/03-RELEASE-APP-SETUP.md"
   - ".planning/phases/03-distributable-release-qualification/03-REVIEW.md"
+  - ".planning/phases/03-distributable-release-qualification/03-RELEASE-APP-SETUP.md"
   - ".planning/phases/03-distributable-release-qualification/03-SECURITY.md"
   - ".planning/phases/03-distributable-release-qualification/03-VALIDATION.md"
   - ".release-please-manifest.json"
@@ -43,9 +43,17 @@ covered_files:
   - "tools/sdk_evidence.py"
   - "tools/verify_sdk.py"
   - "tools/workflow/ci_policy.py"
-covered_digest: "v3:sha256:1b33b30d77f25418ea0962c974f51c2e3e2d96a184234c0b519995e5855f1193"
+covered_digest: "v3:sha256:cde4063e441f2f73569a4e0bca5301a00d0bfabae4c944ad75c2a2c7c8ecf0bd"
 behavior_unverified: 1
 overrides_applied: 0
+re_verification:
+  previous_status: gaps_found
+  previous_score: 13/20
+  gaps_closed: []
+  gaps_remaining:
+    - "A complete unsigned SDK is not available as a verified release download."
+    - "Independent protected merge, first-time fork execution, and release App event/authority evidence remain unobserved."
+    - "No actual release archive or published bytes are available for final content/rights validation."
 gaps:
   - truth: "A release consumer can download the complete unsigned SDK for the tested commit and reproduce its diagnostic, including offline source rebuild and relocation."
     status: failed
@@ -68,14 +76,15 @@ gaps:
       - "Exercise the Release App's effective scope and the release-please draft/retry/downstream event chain without recording credentials."
   - truth: "Release content and rights evidence covers the source, documentation, commit identity, CI logs, and distributed archives before publication."
     status: failed
-    reason: "The current source/history scan and rights inventory pass, but there are no release archives or published assets to scan; known scanner blind spots for Windows home paths and OpenPGP private-key armor are also documented in review."
+    reason: "Current rules and passing tests cover Windows home paths and OpenPGP private-key armor, but no release archives or published assets exist to scan. A fresh local all-reachable-ref scan reports 24 historical personal-path findings in this checkout; the selected sanitized public-history scan is a separate bounded receipt, and local preserved refs do not establish public exposure."
     artifacts:
-      - path: "tools/public_content.py"
-        issue: "Current detector does not recognize the documented Windows home-path and OpenPGP private-key header probes."
       - path: ".planning/phases/03-distributable-release-qualification/03-HOSTED-QUALIFICATION.md"
         issue: "No release archives or published downloads exist to bind to the scan receipt."
+      - path: "tools/public_content.py"
+        issue: "The current --all scan finds historical personal paths in local Phase 01/02 plan blobs; only the exact sanitized refs intended for publication may be published."
     missing:
-      - "Close or explicitly accept the documented detector gaps, then scan the exact staged archives, captured CI logs, source/history, and rights inventory before publication."
+      - "Scan exact staged archives, captured CI logs, selected public source/history, and rights inventory before publication; keep preserved private refs out of publication."
+advisory: []
 behavior_unverified_items:
   - truth: "A trusted hosted release run builds the exact versioned commit, stages the complete draft, and wires downloaded-byte verification through to App-authorized publication."
     test: "Run the release workflow on the trusted repository with the configured App, exercise a fresh draft and a no-new-release retry, and inspect the downloaded assets before publication."
@@ -86,9 +95,9 @@ behavior_unverified_items:
 # Phase 03: Distributable Release Qualification Verification Report
 
 **Phase Goal:** As a release consumer, I want to download a complete unsigned SDK bound to a tested commit and rebuild or relocate it, so that I can reproduce its diagnostic under truthful support claims.
-**Verified:** 2026-10-07T12:49:51Z
+**Verified:** 2026-10-07T14:01:59Z
 **Status:** gaps_found
-**Re-verification:** No — initial verification
+**Re-verification:** Yes — current evidence recheck after the 2026-10-07 gaps report
 
 ## User Flow Coverage
 
@@ -111,11 +120,11 @@ User story: «As a release consumer, I want to download a complete unsigned SDK 
 | 2 | **Roadmap:** An always-started aggregate CI check uses conservative change classification, meaningful counts, and recorded build/critical-path/runner-minute evidence. | ✓ VERIFIED | CI run 37618668537 passed classify, six matrix lanes, public-content, and `ci-policy` at the exact current SHA. Receipt records 108 s end-to-end and 163 s summed job wall time; detailed per-lane cold-build and verification timings are retained for run 37525280735. |
 | 3 | **Roadmap:** Protected qualifying PRs require current-revision checks and independent review; fork/App events and actual protected merge demonstrate unattended operation. | ✗ FAILED | Branch protection configuration was read and exact-SHA CI/review evidence is documented, but PR #1 remains draft with no reviews; no independent approval, protected merge, first-time fork run, or App event qualification occurred. |
 | 4 | **Roadmap:** Release-please stages/recoveries a complete tested-commit draft, and published downloads pass digest and diagnostic consumer checks. | ✗ FAILED | Workflow, state validator, and adversarial recovery tests exist. No hosted draft, no-new-release retry, downloaded release assets, or publication was exercised. |
-| 5 | **Roadmap:** Public-content evidence covers source, documentation, commit identity, logs, and release archives before publication. | ✗ FAILED | Current source/history scan and rights inventory pass, but no release archive or published bytes were scanned; review also reproduces Windows home-path and OpenPGP-key-header detector misses. |
+| 5 | **Roadmap:** Public-content evidence covers source, documentation, commit identity, logs, and release archives before publication. | ✗ FAILED | Current rules include Windows-drive home paths and OpenPGP private-key armor; focused tests pass 17/17. Fresh `python3 tools/public_content.py` scanned 99 source files / 2,174,290 bytes and 1,205 history entries / 31,176,345 bytes, reporting 24 historical personal-path findings; zero logs and archives were supplied. The 21-record rights inventory passes. No actual release archive or published bytes are available. |
 | 6 | **Plan 03-01:** A consumer can rebuild the exact source archive offline and run the diagnostic from a relocated SDK archive after original paths are unavailable. | ✓ VERIFIED | Local release consumer suite validates safe extraction, offline source rebuild, moved install prefix, diagnostic runner, and compiled C/C++ consumers; 5/5 passed in current validation. |
 | 7 | **Plan 03-01:** The root release-please manifest controls CMake project and installed package versions. | ✓ VERIFIED | `CMakeLists.txt` reads `.release-please-manifest.json` before `project()`; manifest/version tests pass in `tests/consumers/test_release_consumer.py`. |
 | 8 | **Plan 03-01:** Shared exports enforce the exact public/private symbol contract on Linux, macOS, and Windows, failing without an inspector. | ✓ VERIFIED | Export parser and fail-closed controls are wired through `tests/consumers/check_package.py`; current validation records 12/12 export tests and hosted Windows matrix success. |
-| 9 | **Plan 03-02:** Source, publishable metadata, bounded CI logs, and release archives are scanned with deterministic redacted results. | ✗ FAILED | Scanner handles these input classes and source/history/CI receipts were scanned, but an actual release archive was not produced; detector limitations for Windows home paths and OpenPGP private-key armor are reproduced in the review. |
+| 9 | **Plan 03-02:** Source, publishable metadata, bounded CI logs, and release archives are scanned with deterministic redacted results. | ✗ FAILED | Rules are wired to source/history/log/archive inputs. Fresh focused suite passed 17/17, including Windows-path and OpenPGP-key canaries. The fresh full local scan failed on historical paths in all-ref history, and no release archive or published bytes were supplied, so the complete release-input truth remains unmet. |
 | 10 | **Plan 03-02:** Unknown media/corpus items or missing affirmative redistribution records prevent packaging. | ✓ VERIFIED | `tools/public_content.py` compares path, digest, provenance, rights, and notices; local rights-inventory tests passed and current inventory reports 21 items. |
 | 11 | **Plan 03-02:** Unreadable input, archive links/traversal, or size/count overflow cannot pass cleanly. | ✓ VERIFIED | Scanner mutation tests exercise archive member safety, limits, unreadable inputs, and redacted findings; 17/17 passed in current validation. |
 | 12 | **Plan 03-03:** Exact Linux Clang/GCC, macOS arm64 AppleClang, Windows x64 MSVC, sanitizer, and fuzz configurations run diagnostics and installed consumers. | ✓ VERIFIED | Hosted runs 37525280735 and 37618668537 retain passing six-lane results; run 37618668537 is exact current SHA. Unsupported and unknown dimensions remain explicit. |
@@ -128,7 +137,7 @@ User story: «As a release consumer, I want to download a complete unsigned SDK 
 | 19 | **Plan 03-05:** Hosted fork/App/ruleset/merge/release claims are made only when actual receipts support them. | ✓ VERIFIED | Hosted qualification and setup checkpoint distinguish read-only observed configuration and owner-reported App setup from unobserved permissions, events, actors, merge, and publication. |
 | 20 | **Plan 03-05:** Documentation states exact support identities, measured CI costs, scanner limits, and pending authority/rights questions. | ✓ VERIFIED | `docs/testing.md`, `docs/releasing.md`, hosted qualification, and release App setup record exact identities, durations, detector limits, and pending evidence. |
 
-**Score:** 13/20 truths verified (1 present, behavior-unverified)
+**Score:** 13/20 truths verified (1 present, behavior-unverified). The former WR-02/WR-03 detector misses are resolved in current code and passing regression canaries; the larger release/archive truth remains failed.
 
 ### Required Artifacts
 
@@ -140,8 +149,8 @@ All 18 plan-declared artifacts exist and contain substantive implementation or e
 | `tests/consumers/test_release_consumer.py` | Offline rebuild and relocated SDK consumer | ✓ VERIFIED | Exercises archive extraction, moved install prefix, diagnostic runner and C/C++ consumers; 5/5 current. |
 | `tests/consumers/test_exports.py` | Cross-format export contract controls | ✓ VERIFIED | Parser and fail-closed fixtures; 12/12 current. |
 | `.release-please-manifest.json` | Sole package/release version source | ✓ VERIFIED | Read by CMake and release control. |
-| `tools/public_content.py` | Bounded, redacted public-content and rights scanner | ✓ VERIFIED | Tests and CI/release workflow use it; documented detector misses remain. |
-| `tests/workflow/test_public_content.py` | Scanner, archive, canary, and rights controls | ✓ VERIFIED | 17/17 current validation. |
+| `tools/public_content.py` | Bounded, redacted public-content and rights scanner | ✓ VERIFIED | Tests and CI/release workflow use it; current patterns include Windows drive-root home paths and OpenPGP private-key headers. The separate fresh all-ref scan still finds historical paths in this checkout. |
+| `tests/workflow/test_public_content.py` | Scanner, archive, canary, and rights controls | ✓ VERIFIED | Fresh `python3 tests/workflow/test_public_content.py`: 17/17 passed in 3.938 seconds, including both detector regressions. |
 | `docs/public-content.md` | Scanner scope, limits, and invocation contract | ✓ VERIFIED | Documents detector scope and limits. |
 | `docs/rights-inventory.md` | Item-level redistribution evidence | ✓ VERIFIED | Current inventory contains 21 entries and validates locally. |
 | `tools/workflow/ci_policy.py` | Conservative path selection and merge-readiness policy | ✓ VERIFIED | Classifier and exact-SHA policy are exercised by tests and CI workflow. |
@@ -184,7 +193,7 @@ All 18 plan-declared artifacts exist and contain substantive implementation or e
 | Behavior | Command/evidence | Result | Status |
 |---|---|---|---|
 | Offline source rebuild and relocated installed diagnostic/consumers | `python3 tests/consumers/test_release_consumer.py` (validation receipt at exact SHA) | 5/5 passed | ✓ PASS |
-| Public-content and rights fail-closed controls | `python3 tests/workflow/test_public_content.py` | 17/17 passed; current source/history scan had no findings and 21 rights items | ✓ PASS (bounded inputs) |
+| Public-content and rights fail-closed controls | `python3 tests/workflow/test_public_content.py`; `python3 tools/public_content.py` | Focused suite: 17/17 passed in 3.938 s; 21-item rights inventory validated. Full scan: source 99 files / 2,174,290 bytes; history 1,205 entries / 31,176,345 bytes; 24 redacted historical `personal-path` findings; zero archives/logs supplied | ✓ PASS focused controls; ✗ full local all-ref scan |
 | Shared export contract | `python3 tests/consumers/test_exports.py` | 12/12 passed; hosted Windows lane passed | ✓ PASS |
 | Draft identity and interrupted/no-new-release retry state | `python3 tests/workflow/test_release_recovery.py` | 10/10 passed against fixture API states | ✓ PASS (local state logic) |
 | Current hosted required aggregate | GitHub run 37618668537 at `2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1` | classify, six matrix lanes, public-content, and `ci-policy` passed | ✓ PASS (this exact SHA only) |
@@ -215,8 +224,14 @@ All seven requirement IDs map to at least one plan; no phase-mapped requirement 
 
 | File | Line | Pattern | Severity | Impact |
 |---|---:|---|---|---|
-| `tools/public_content.py` | 45–55 (review locations) | Windows home-path and OpenPGP private-key headers are not detected by current patterns | ⚠️ WARNING | Synthetic probes reproduced misses; detector limits are documented. They reduce coverage for DEL-05 and should be resolved or explicitly accepted before a public release scan. |
+| Local all-ref history (historical Phase 01/02 plan blobs) | — | `personal-path` findings | ⚠️ WARNING | Fresh scan found 24 historical findings in refs available in this checkout. This is not evidence that preserved refs are on the selected public remote; an earlier sanitized selected-public-history scan is a separate bounded receipt. Keep private refs out of publication and scan the exact publication refs. |
 | `ctest --preset owned-debug` baseline | — | Frozen Phase 01 inventory/hash mismatch | ℹ️ INFO | 12/13 result is preserved exactly; this is not reported as a passing regression gate. |
+
+The earlier Windows-home-path and OpenPGP-key-header review findings are closed: both detector rules and the named redaction tests are present, and the fresh focused suite passes. Their original historical findings remain in `03-REVIEW.md` as provenance; its final review marks WR-02/WR-03 resolved.
+
+### Advisory (New Scope, Unevidenced)
+
+No new-scope unevidenced Step 7 finding was promoted to a blocker. The all-ref scan result is recorded above as current bounded evidence and does not establish current public-remote exposure.
 
 No unreferenced `TBD`, `FIXME`, or `XXX` debt markers were found in the phase implementation files. No release-ready placeholder or static empty user-facing output was found. No probe scripts were declared or discovered.
 
@@ -236,17 +251,11 @@ These external steps remain required after local implementation gaps are address
 **Expected:** Exact tested commit/version, full expected asset set and hashes, offline source rebuild, all platform consumers, content/rights scan, and final published download agree.
 **Why human:** Live App permissions, token lifecycle, Release Please events, GitHub draft state, and published bytes cannot be inferred from local tests. No release has been staged or published.
 
-#### 3. Confirm the scanner’s residual detector coverage
-
-**Test:** Decide whether the Windows home-path and OpenPGP private-key-header misses must be fixed before publication; if fixed, rerun their synthetic controls and the full exact-byte scan.
-**Expected:** DEL-05 coverage is sufficient for the repository’s public-content policy, with the accepted detector limits explicit.
-**Why human:** The exposure threshold is a policy decision; the specific misses themselves are reproducible in the independent review.
-
 ### Gaps Summary
 
-The local SDK and archive path is implemented and exercised, exact support identities are recorded, and the required CI aggregate passed at the current SHA. The phase goal remains unmet because there is no complete unsigned SDK available to download and verify. Hosted protection has not produced an independent approval or protected merge, and the Release App flow has not produced a draft, retry, downloaded assets, or publication. The public-content gate has no release bytes to scan and retains two documented detector misses. The 12/13 `owned-debug` regression result remains visible; its frozen Phase 01 inventory/hash failure was not changed or recast as green.
+The local SDK and archive path is implemented and exercised, exact support identities are recorded, and the hosted CI aggregate passed at its documented exact PR SHA. The Windows-home-path and OpenPGP-key detector misses from the earlier review are resolved in current code and pass targeted canaries. Phase 03 remains incomplete: no complete unsigned SDK is available to download, independent protected merge and first-time fork/App behavior remain unobserved, and no staged or published bytes exist for final consumer/content/rights validation. A fresh all-reachable-ref scan of this local checkout reports 24 historical path findings; the earlier sanitized selected-public-history receipt is a different scope and does not establish anything about the local preserved refs. The 12/13 `owned-debug` baseline remains historical evidence and was not rerun or recast as green.
 
 ---
 
-_Verified: 2026-10-07T12:49:51Z_
+_Verified: 2026-10-07T14:01:59Z_
 _Verifier: the agent (gsd-verifier)_
