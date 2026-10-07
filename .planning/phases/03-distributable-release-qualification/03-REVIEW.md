@@ -1,21 +1,24 @@
 ---
 phase: 03-distributable-release-qualification
-reviewed: 2026-10-06T20:21:22Z
+reviewed: 2026-10-07T12:40:16Z
 depth: standard
-files_reviewed: 3
+files_reviewed: 4
 files_reviewed_list:
-  - CMakeLists.txt
-  - tests/consumers/check_package.py
-  - tests/consumers/test_exports.py
+  - docs/releasing.md
+  - docs/testing.md
+  - tests/workflow/test_ci_policy.py
+  - tools/workflow/ci_policy.py
 findings:
   critical: 0
   warning: 0
   info: 0
   total: 0
 status: clean
-reviewed_revision: f74f4cd77cb88fe0803697b74ea423765e94cae7
+reviewed_revision: 2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1
+diff_base: 8f2e551464d154c2e52bc27b65f0dd9e02eabe33
+prior_reviewed_revision: f74f4cd77cb88fe0803697b74ea423765e94cae7
 initial_reviewed_revision: 1ba5b3c75ba7bda878e652ecf13d8544c6510bc2
-diff_base: 8ddebb9856e70e0e753e0747059b97a9a8e63a32
+prior_diff_base: 8ddebb9856e70e0e753e0747059b97a9a8e63a32
 re_reviewed_revision: cb4834ed89e2422491387eb8ef4a2598fb5824dd
 re_review_status: issues_found
 re_review_open_findings:
@@ -23,7 +26,14 @@ re_review_open_findings:
   warning: 0
   info: 0
   total: 1
-latest_reviewed_revision: 2c7926383222cee174ede5ddde06374b43002191
+previous_reviewed_revision: 2c7926383222cee174ede5ddde06374b43002191
+previous_review_status: clean
+previous_open_findings:
+  critical: 0
+  warning: 0
+  info: 0
+  total: 0
+latest_reviewed_revision: 2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1
 latest_review_status: clean
 latest_open_findings:
   critical: 0
@@ -228,3 +238,28 @@ The public repository content scan passed at this revision. Release App installa
 - **CR-05 — RESOLVED.** Git revision lookup no longer depends on compiler ID. The hosted Windows diagnostic result and static consumer passed on the prior candidate; the latest exact-SHA Windows lane and aggregate pass after the DUMPBIN correction.
 
 The release qualification phase still has external evidence outstanding: no release App currently exists, and App installation/token scope, first-time fork approval and read-only/no-secret behavior, independent PR approval, protected merge, release draft/retry, downloaded assets, and publication have not been observed. This is a phase-delivery boundary, not an open code-review finding. Do not infer protected-merge readiness or release qualification from the CI pass alone.
+
+## Standard re-review at `2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1`
+
+**Verdict:** One documentation warning remains open. The merge-readiness validator and its focused controls were reviewed alongside the release/testing guidance. The prior source findings remain resolved; this review found no new code blocker.
+
+**Scope:** `docs/releasing.md`, `docs/testing.md`, `tests/workflow/test_ci_policy.py`, and `tools/workflow/ci_policy.py`, compared with `8f2e551464d154c2e52bc27b65f0dd9e02eabe33`. The required Plan 03-05 summary, plan, and this report were read as context. Tests were not rerun.
+
+## Warnings
+
+### WR-04: Platform qualification sections contradict each other
+
+**Severity:** WARNING
+**File:** `docs/testing.md:89-92, 170-174`
+**Issue:** The unsupported-coverage section says no compiler/runtime is selected by the workflow, while the platform-evidence section records six successful hosted compiler lanes. Later, the aggregate section says no hosted runner result has been exercised, despite documenting the exact hosted run and its receipt immediately above. These contradictions leave readers unable to tell whether compiler and hosted support was exercised; the correct boundary is that the recorded run qualified only its listed identities at SHA `2c7926383222cee174ede5ddde06374b43002191`, while this later SHA has no new matching receipt.
+**Fix:** Update the unsupported-coverage statement to describe only the absent local libFuzzer archive and genuinely untested coverage. Replace the later blanket “no hosted runner result” statement with the exact prior hosted run/SHA and state that current-source qualification requires a new matching receipt.
+
+## Follow-up verification at `2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1`
+
+**Verdict:** WR-04 is resolved. The unsupported section now limits its claim to the locally unavailable libFuzzer archive and unqualified coverage. The platform section distinguishes the detailed matrix receipt at `2c7926383222cee174ede5ddde06374b43002191` from the later pass at `2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1`; the aggregate section confirms run `37618668537` passed at that later SHA and says the documentation-only correction has no new run. This matches the phase hosted qualification and validation records. No residual contradiction remains in the three reviewed sections.
+
+---
+
+_Reviewed: 2026-10-07T12:40:16Z_
+_Reviewer: the agent (gsd-code-reviewer)_
+_Depth: standard_

@@ -1,13 +1,18 @@
 # Release App setup and qualification checkpoint
 
-## Owner-reported setup (2026-10-07)
+## Setup observations (2026-10-07)
 
 The owner reports that a GitHub App with public App ID `5217741` is installed
 for `szTheory/glueyneo`. The owner also reports that repository Actions secret
 `RELEASE_APP_PRIVATE_KEY` and variable `RELEASE_APP_ID` are set, with the
-variable corrected to the App ID. These are user-reported setup facts; this
-execution did not inspect the live App settings, Actions secret, or variable
-value. No private key or token value is recorded here.
+variable corrected to the App ID.
+
+A read-only GitHub CLI/API check confirmed that the repository secret list
+contains the name `RELEASE_APP_PRIVATE_KEY` and that the `RELEASE_APP_ID`
+variable value matches `5217741`. The secret value was never requested or
+read. The installed App's permission grant, repository selection and key
+validity were not directly inspected; installation remains owner-reported.
+No private key or token value is recorded here.
 
 ## Expected App configuration
 

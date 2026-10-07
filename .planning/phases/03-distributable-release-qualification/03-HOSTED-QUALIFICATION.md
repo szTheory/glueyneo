@@ -31,13 +31,23 @@ canary has been tested.
 
 On 2026-10-07 the owner reported that release App ID `5217741` is installed
 for `szTheory/glueyneo`, and that the repository Actions secret
-`RELEASE_APP_PRIVATE_KEY` and variable
-`RELEASE_APP_ID` are configured. These setup details are not direct
-observations of GitHub's current App permission grant or secret/variable
-values. Requested permissions,
-effective token scope, expiration, revocation, and release-please events remain
-unqualified. No credential values are retained. See
+`RELEASE_APP_PRIVATE_KEY` and variable `RELEASE_APP_ID` are configured. A
+read-only GitHub CLI/API check on 2026-10-07 confirmed the secret name exists
+and the variable value equals `5217741`; the secret value was never requested
+or read. The App installation and its current permission grant were not
+directly inspected. Requested permissions, effective token scope, expiration,
+revocation, and release-please events remain unqualified. No credential values
+are retained. See
 [03-RELEASE-APP-SETUP.md](03-RELEASE-APP-SETUP.md).
+
+Read-only repository checks on 2026-10-07 confirmed `main` requires strict
+`ci-policy` from Actions App ID 15368, one approving review, dismissal of stale
+reviews, approval after the last push, and administrator enforcement; force
+pushes and branch deletion are disabled. Actions default workflow permission
+is `read`, and workflows cannot approve pull requests. The rulesets endpoint
+returned no rulesets; the observed enforcement is classic branch protection.
+PR #1 remains draft at head `2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1`, has
+no reviews, and requires review. No open issues were present.
 
 ## Exact hosted CI evidence
 
@@ -46,6 +56,15 @@ always-started `ci-policy` aggregate at the exact source above. The independent
 GSD review at that source has no open findings; see the dated final section in
 [03-REVIEW.md](03-REVIEW.md). Any later PR head needs its own passing checks and
 independent review. These dated receipts must not authorize a different SHA.
+
+The later [CI run 37618668537](https://github.com/szTheory/glueyneo/actions/runs/37618668537)
+also passed at exact PR head `2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1` on
+2026-10-07. GitHub reports successful `classify`, all six matrix lanes,
+`public-content`, and `ci-policy` jobs. Run creation to final update took 108
+seconds; the nine job durations sum to 163 seconds (2.72 job-wall minutes).
+This establishes the run result at that SHA only. The detailed compiler,
+assertion and artifact-digest table below remains bound to run 37525280735 and
+its source SHA; no release or published download is qualified by either CI run.
 
 [03-CI-HOSTED-RECEIPT.json](03-CI-HOSTED-RECEIPT.json) retains per-job IDs/times,
 compiler/SDK/image/build identities, fixture and binary digests, downloaded
@@ -122,7 +141,7 @@ published downloads remain unobserved.
 
 | Claim | Required actual evidence | External actor |
 | --- | --- | --- |
-| Release App authority | Owner-reported App ID, repository target, and Actions secret/variable setup exist; still require observed permission grant, token scope/expiry/revocation without credential values, Release Please and downstream job events | App owner and repository administrator |
+| Release App authority | Owner-reported installation; read-only repository API confirms secret name and App ID variable match, but installation scope/permissions, key validity, token expiry/revocation and Release Please/downstream job events remain unobserved | App owner and repository administrator |
 | First-time fork boundary | A first-time fork PR, workflow approval event, effective read-only token and no-secret execution at exact head | Independent contributor; repository administrator approves run |
 | Protected merge | Independent GitHub approval after final push, exact-head GSD review and passing aggregate, observed protected merge commit | Reviewer other than author/latest pusher; qualifying maintainer |
 | Complete SDK release | Tested tag/commit, staged inventory/digests, no-new-release retry, downloaded platform consumers/source rebuild, publication and verified published downloads | Repository administrator after scoped App setup |
@@ -142,10 +161,10 @@ and phase verification have been satisfied.
 
 **Progress:** Task 1 complete; Task 2 stopped at its hosted-evidence gate after owner-reported App setup.
 
-Plan 03-05 Task 2's App setup checkpoint is now owner-reported, but the hosted
-token/event checks and external actors remain unavailable. Arrange a
-first-time fork contributor and an independent GitHub reviewer with approval
-authority, then resume the hosted portion. Plans 03-01–04 are complete; Plan
-03-05 is halted with its remaining evidence explicit, and Phase 03 itself is
-not complete. No phase verification, shipping, next phase, or milestone step
-has been started.
+At the time this checkpoint was recorded, Plan 03-05 Task 2's App setup was
+owner-reported and the hosted token/event checks and external actors were
+unavailable. Plans 03-01–04 were complete; Plan 03-05 was halted with its
+remaining evidence explicit. The phase verification gate is now being resumed
+with the later read-only repository observations and validation audit above;
+Phase 03 remains incomplete until the required external evidence is addressed
+and the verifier passes.

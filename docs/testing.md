@@ -87,11 +87,12 @@ empty in the corpus manifest.
 ## Unsupported coverage
 
 The matching AppleClang libFuzzer archive is absent on this host, so no
-coverage-guided libFuzzer lane was built or run. No compiler/runtime is installed
-or selected by this workflow. Other operating systems, compilers, hardware
-profiles, arbitrary hostile host pointers, and real-game compatibility are not
-qualified by these finite diagnostic checks. A hash, bounded mutation pass, or
-reference-emulator result does not establish hardware truth.
+coverage-guided libFuzzer lane was built or run locally. The hosted workflow
+selects only the exact compiler/runtime combinations listed below. Other
+operating systems, compilers, hardware profiles, arbitrary hostile host
+pointers, and real-game compatibility are not qualified by these finite
+diagnostic checks. A hash, bounded mutation pass, or reference-emulator result
+does not establish hardware truth.
 
 ## Current platform and cost evidence
 
@@ -137,6 +138,15 @@ The release App, first-time fork boundary, protected merge and released
 archive/download evidence remain pending. Failed/skipped/unsupported/unknown
 outcomes remain distinct and cannot contribute passing assertions.
 
+The later PR head `2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1` also passed all six
+matrix lanes, `public-content`, and `ci-policy` in [CI run
+37618668537](https://github.com/szTheory/glueyneo/actions/runs/37618668537).
+That run extends the pass outcome to that exact revision. The detailed
+compiler, SDK, assertion, and artifact table above remains bound to
+`2c7926383222cee174ede5ddde06374b43002191`; the later run's timings do not
+replace those measurements. The release App, first-time fork boundary,
+protected merge, and released archive/download evidence remain pending.
+
 The rights inventory currently contains affirmative records for the shipped
 original diagnostic material and pinned Unity subset. No commercial game ROM,
 BIOS, private corpus, or private capture is licensed into the release. Any new
@@ -167,15 +177,20 @@ privileged PR job that consumes or executes an uploaded PR artifact.
 
 Successful hosted runs retain per-lane receipts and an aggregate under
 `evidence/sdk/ci-aggregate.json`. A local parser fixture proves rejection
-behavior; it does not claim that any hosted lane ran. At this revision no
-remote, hosted runner result, required-check protection, or first-time fork
-approval event has been exercised. Linux GCC/Clang, macOS arm64 AppleClang,
-Windows x64 MSVC, sanitizer, and fuzz support remain unqualified until matching
-current-source receipts are produced by GitHub Actions. Local successful
-diagnostic runs do not qualify a hosted runner lane. Runner execution minutes
-and matrix critical path are computed from measured verification command
-durations after checkout; they exclude checkout/upload overhead and GitHub's
-billing rounding. They describe those observed lane commands only.
+behavior; it does not establish a hosted result. GitHub Actions run
+`37618668537` passed the six named matrix lanes and `ci-policy` at exact PR head
+`2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1`; the detailed toolchain and
+assertion receipt above belongs to the earlier exact source revision. A
+read-only API check observed that `main` requires the strict `CI / ci-policy`
+check and one approval, with stale reviews dismissed and approval required
+after the last push. Those settings do not establish a protected merge: no
+independent approval, merge, or first-time fork approval event has been
+exercised. The current documentation-only correction has no new hosted run.
+These receipts establish only the named outcomes at their recorded revisions,
+not a broader platform range. Runner execution minutes and matrix critical path
+are computed from measured verification command durations after checkout; they
+exclude checkout/upload overhead and GitHub's billing rounding. They describe
+those observed lane commands only.
 Public-content scanning is detector coverage, not proof
 that every private value is absent, and it cannot establish redistribution
 rights.
