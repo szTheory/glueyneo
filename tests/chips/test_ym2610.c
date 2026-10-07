@@ -16,6 +16,9 @@ typedef struct {
     int read_calls;
     int irq_calls;
     int irq_level;
+    int reenter;
+    int nested_status;
+    ym2610_candidate *candidate;
 } test_callbacks;
 
 static int callback_read(void *userdata, uint32_t access, uint32_t address,
@@ -24,6 +27,9 @@ static int callback_read(void *userdata, uint32_t access, uint32_t address,
     (void)access;
     (void)address;
     ++state->read_calls;
+    if (state->reenter) {
+        state->nested_status = ym2610_candidate_reset(state->candidate);
+    }
     if (state->fail_read) return 1;
     *value = 0u;
     return 0;
@@ -45,7 +51,7 @@ static void callback_irq(void *userdata, int asserted) {
 }
 
 static const ym2610_candidate_callbacks CALLBACKS = {
-    callback_read, callback_write, callback_irq
+    callback_read, callback_write, callback_irq, 0x10000u, 0x10000u, 2u
 };
 
 static void write_register(ym2610_candidate *candidate, uint8_t reg,
@@ -201,11 +207,27 @@ static void callback_failure_latches_until_reset_and_exceptions_are_contained(vo
     size_t produced = 0u;
     TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
         ym2610_candidate_create(&CALLBACKS, &userdata, &candidate));
+    userdata.candidate = candidate;
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_CALLBACK_FAILURE,
+        ym2610_candidate_test_probe_read(candidate,
+            YM2610_CANDIDATE_ACCESS_ADPCM_A, CALLBACKS.adpcm_a_size));
+    TEST_ASSERT_EQUAL_INT(0, userdata.read_calls);
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+                          ym2610_candidate_reset(candidate));
+    userdata.reenter = 1;
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_CALLBACK_FAILURE,
+        ym2610_candidate_test_probe_read(candidate,
+            YM2610_CANDIDATE_ACCESS_ADPCM_A, 0u));
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_CALLBACK_FAILURE,
+                          userdata.nested_status);
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+                          ym2610_candidate_reset(candidate));
+    userdata.reenter = 0;
     userdata.fail_read = 1;
     TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_CALLBACK_FAILURE,
         ym2610_candidate_test_probe_read(candidate,
             YM2610_CANDIDATE_ACCESS_ADPCM_A, 0u));
-    TEST_ASSERT_EQUAL_INT(1, userdata.read_calls);
+    TEST_ASSERT_EQUAL_INT(2, userdata.read_calls);
     TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_CALLBACK_FAILURE,
         ym2610_candidate_clock(candidate, 16u, samples, 1u, &produced));
     TEST_ASSERT_EQUAL_UINT(0u, produced);

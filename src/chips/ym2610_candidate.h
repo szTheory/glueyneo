@@ -50,6 +50,9 @@ typedef struct ym2610_candidate_callbacks {
     ym2610_candidate_read_fn read;
     ym2610_candidate_write_fn write;
     ym2610_candidate_irq_fn irq;
+    uint32_t adpcm_a_size;
+    uint32_t adpcm_b_size;
+    uint32_t io_size;
 } ym2610_candidate_callbacks;
 
 /* The callback table is copied; userdata must outlive the candidate instance. */

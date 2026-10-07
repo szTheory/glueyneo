@@ -91,7 +91,8 @@ public:
     uint8_t ymfm_external_read(ymfm::access_class access,
                                uint32_t address) override {
         if (failure_ != YM2610_CANDIDATE_OK) return 0u;
-        if (callback_active_ || callbacks_.read == nullptr) {
+        if (!address_allowed(access, address) || callback_active_ ||
+            callbacks_.read == nullptr) {
             fail(YM2610_CANDIDATE_CALLBACK_FAILURE);
             return 0u;
         }
@@ -115,7 +116,8 @@ public:
     void ymfm_external_write(ymfm::access_class access, uint32_t address,
                              uint8_t value) override {
         if (failure_ != YM2610_CANDIDATE_OK) return;
-        if (callback_active_ || callbacks_.write == nullptr) {
+        if (!address_allowed(access, address) || callback_active_ ||
+            callbacks_.write == nullptr) {
             fail(YM2610_CANDIDATE_CALLBACK_FAILURE);
             return;
         }
@@ -135,6 +137,17 @@ public:
     }
 
 private:
+    bool address_allowed(ymfm::access_class access, uint32_t address) const noexcept {
+        uint32_t size = 0u;
+        switch (access) {
+            case ymfm::ACCESS_IO: size = callbacks_.io_size; break;
+            case ymfm::ACCESS_ADPCM_A: size = callbacks_.adpcm_a_size; break;
+            case ymfm::ACCESS_ADPCM_B: size = callbacks_.adpcm_b_size; break;
+            default: return false;
+        }
+        return address < size;
+    }
+
     static ymfm::access_class access_from_c(uint32_t access) {
         switch (access) {
             case YM2610_CANDIDATE_ACCESS_ADPCM_A: return ymfm::ACCESS_ADPCM_A;
