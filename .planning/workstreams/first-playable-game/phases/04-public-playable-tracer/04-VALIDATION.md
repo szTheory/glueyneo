@@ -1,70 +1,69 @@
 ---
 phase: "04"
 slug: "public-playable-tracer"
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-10-07"
+completed: "2026-10-07"
 ---
 
 # Phase 04 — Validation Strategy
 
-> Per-phase validation contract for feedback sampling during execution.
+> Execution record for feedback sampling and acceptance evidence.
 
 ## Test Infrastructure
 
 | Property | Value |
 |----------|-------|
-| **Framework** | CTest with the repository's pinned Unity test dependency |
-| **Config file** | `CMakePresets.json`; use the existing `sdk-debug` configure/build/test presets |
-| **Quick run command** | `cmake --preset sdk-debug && cmake --build --preset sdk-debug && ctest --preset sdk-debug --output-on-failure --no-tests=error` |
-| **Full suite command** | `cmake --preset sdk-debug && cmake --build --preset sdk-debug && ctest --preset sdk-debug --output-on-failure --no-tests=error` |
-| **Estimated runtime** | Not measured for Phase 04; capture it after the new targets exist |
+| **Framework** | CTest with pinned Unity; Python qualification and provenance checks |
+| **Config file** | `CMakePresets.json`; `sdk-debug` remains the developer regression preset |
+| **Clean qualification** | `python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean --check-docs` |
+| **Full clean CTest** | 34/34 passed on 2026-10-07; measured 6.37 seconds |
+| **Environment** | macOS 26.6.2 arm64, AppleClang 21.0.0.21000101, SDK 26.5, CMake 4.4.3, Ninja 1.13.2, Python 3.14.4 |
 
-The existing SDK suite is the regression floor. A passing callback harness cannot substitute for the actual pinned RetroArch smoke required by HOST-02. Keep the workstream's existing SDK and CPU diagnostic checks in the selected test preset.
+The receipt and sanitized command logs are retained under ignored `build/playable-qualification/`. A fresh run produced the same 602-byte public fixture in static and shared configurations (SHA-256 `59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0`). The runner builds and installs both native variants, runs an out-of-tree C consumer against each install, runs the full CTest suite, and invokes the actual frontend and chip gates. Its overall result remains nonzero when HOST-02 is unknown.
 
-## Sampling Rate
+## Sampling Rate and Measured Latency
 
-- **After every task commit:** Run the focused test target added by that task, then the existing SDK regression command above when the task changes shared runtime behavior.
-- **After every plan wave:** Run the full `sdk-debug` build and CTest command above, including the diagnostic SDK regressions.
-- **Before `$gsd-verify-work`:** Rebuild the fixture from a clean source tree, run native and actual RetroArch consumers, run both chip-admission gates, and complete clean install/load qualification. Record exact inputs and tool identities.
-- **Max feedback latency:** Not measured; measure focused selectors as they are introduced and keep ordinary task feedback bounded.
+- **After each task commit:** run the task's focused path and `git diff --check`; Task 1 clean install consumers each completed in under 0.2 seconds after build.
+- **Full phase feedback:** fresh configure/build/install for static and shared targets, installed consumer runs, and full CTest completed successfully; full CTest took 6.37 seconds.
+- **Candidate source checks:** Z80 source check 0.068 seconds; YM2610 source check 0.130 seconds; YM2610 installed static/shared C linkage check 1.938 seconds.
+- **Actual frontend smoke:** 0.672 seconds before RetroArch exited with status `-6` and no screenshot. This result is unknown, not a pass.
 
 ## Per-Task Verification Map
 
-Plan and task IDs below map the planned checks. The named new test files and targets do not exist until their plan executes; every row remains pending until a real run records its result.
-
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 04-01 T1 / 04-03 T2 | 04-01 / 04-03 | 1 / 2 | TRAC-01 | T-04-01, T-04-05 | Original, reproducible fixture plus rights/oracle record | integration/provenance | `python3 tests/fixture/check_fixture.py --source tests/fixture/public_guest.c --artifact build/sdk-debug/public-playable.bin --rights tests/fixture/rights-manifest.json --check-rebuild --negative-control` | No — planned | pending |
-| 04-01 T1-T2 | 04-01 | 1 | TRAC-02 | T-04-02 | C API validates output buffers before write | integration/boundary | `cmake --build --preset sdk-debug --target public_guest_test && ctest --preset sdk-debug -R '^public_guest_' --output-on-failure --no-tests=error` | No — planned | pending |
-| 04-01 T3 | 04-01 | 1 | TRAC-03 | T-04-02 | Guest state and pixels follow input; controls fail expected trace | integration/negative control | `ctest --preset sdk-debug -R '^public_guest_(trace|negative)' --output-on-failure --no-tests=error` | No — planned | pending |
-| 04-02 T1-T2 | 04-02 | 2 | HOST-02 | T-04-03, T-04-04 | Actual pinned RetroArch loads, polls, presents and unloads | frontend smoke | `python3 tests/libretro/retroarch_smoke.py --retroarch /Applications/RetroArch.app --core build/sdk-debug/glueyneo_libretro.dylib --content build/sdk-debug/public-playable.bin` | No — planned | pending |
-| 04-01 T2 | 04-01 | 1 | API-05 | T-04-02 | Bounded machine time, capacities, progress/errors, silent-audio metadata | contract/boundary | `ctest --preset sdk-debug -R '^public_guest_' --output-on-failure --no-tests=error` | No — planned | pending |
-| 04-04 T1-T3 | 04-04 | 3 | SND-01 | T-04-06, T-04-07 | Pinned Z80 passes state, cycle, IRQ, bus, continuation, isolation | candidate conformance | `python3 tests/chips/check_z80_source.py && ctest --preset sdk-debug -R '^z80_admission' --output-on-failure --no-tests=error` | No — planned | pending |
-| 04-05 T1-T3 | 04-05 | 4 | SND-02 | T-04-08, T-04-09, T-04-10 | Pinned ymfm passes state, clock/sample, isolation, failure, C links | candidate conformance/consumer | `ctest --preset sdk-debug -R '^ym2610_admission' --output-on-failure --no-tests=error && python3 tests/chips/check_ym2610_link.py --both-linkages` | No — planned | pending |
-| 04-06 T1-T2 | 04-06 | 5 | QUAL-03 | T-04-11, T-04-12 | Clean install/load and exact tested identities | clean package/consumer smoke | `python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean --check-docs` | No — planned | pending |
+| 04-01 T1, 04-03 T2 | 04-01 / 04-03 | 1 / 2 | TRAC-01 | T-04-01, T-04-05 | Original fixture regeneration, hash, rights and oracle ancestry | integration/provenance | `cmake --build <clean-build> --target glueyneo-public-fixture`; full CTest `public_guest_*` | Yes | pass; both clean fixture hashes match |
+| 04-01 T1-T2 | 04-01 | 1 | TRAC-02 | T-04-02 | Validate input/output buffers and render guest-produced pixels | integration/boundary | full clean CTest; `public_guest_contract` | Yes | pass |
+| 04-01 T3 | 04-01 | 1 | TRAC-03 | T-04-02 | Input changes guest state/pixels; no-input and wrong-direction controls hold | integration/negative control | full clean CTest; `public_guest_trace`, `public_guest_negative_left`, `public_guest_negative_none` | Yes | pass |
+| 04-02 T1-T2 | 04-02 | 2 | HOST-02 | T-04-03, T-04-04 | Actual pinned RetroArch loads content, polls input, presents video and unloads | actual frontend smoke | `python3 tests/libretro/retroarch_smoke.py --retroarch /Applications/RetroArch.app --core <installed-prefix>/lib/libretro/glueyneo_libretro.dylib --content <build-directory>/public-playable.bin` | Yes | unknown; RetroArch 1.22.2 exited `-6` before screenshot |
+| 04-01 T2 | 04-01 | 1 | API-05 | T-04-02 | Bounded machine time, capacities, progress/errors and audio metadata | contract/boundary | full clean CTest; `public_guest_*` and SDK contract lanes | Yes | pass |
+| 04-04 T1-T3 | 04-04 | 3 | SND-01 | T-04-06, T-04-07 | Pinned Z80 source and exact synthetic cycle/bus/IRQ/reset/continuation/instance workload | candidate conformance | `python3 tests/chips/check_z80_source.py`; full clean CTest `z80_admission*` | Yes | pass for the documented synthetic workload only |
+| 04-05 T1-T3 | 04-05 | 4 | SND-02 | T-04-08, T-04-09, T-04-10 | Pinned ymfm source/state/clock/isolation/callback behavior and real C linkage | candidate conformance/consumer | `python3 tests/chips/check_ym2610.py source`; full clean CTest `ym2610_admission`; `python3 tests/chips/check_ym2610.py link --both-linkages` | Yes | pass; candidate-only, report SHA-256 `a6faf3de0dc68dec67e80743413d4e53de6ade6620123db5ccb6d3fec2e02` |
+| 04-06 T1-T2 | 04-06 | 5 | QUAL-03 | T-04-11, T-04-12, T-04-SC | Clean static/shared install and C consumers with exact identity; actual frontend outcome retained | clean package/consumer/frontend smoke | `python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean --check-docs` | Yes | native static/shared build, install and consumer pass; actual frontend load unknown |
 
-## Wave 0 Requirements
+## Threat Coverage
 
-- [ ] Add the original fixture source/assets, bounded generator, rights/notices record, oracle, and deterministic regeneration check.
-- [ ] Add native frame/input/video/audio-buffer contract and C-consumer tests, including malformed input and exact-size, short, padded-pitch, null, and overflow boundaries.
-- [ ] Add guest-state and semantic-pixel checks with controlled-input and wrong-input/no-input cases.
-- [ ] Add a Libretro callback-contract harness, while keeping it separate from the actual RetroArch acceptance check.
-- [ ] Establish a runnable pinned macOS RetroArch smoke path for ordinary load, run, input, software video, and unload; if the selected app cannot run, report HOST-02 as blocked/unknown rather than substituting a mock.
-- [ ] Add separate Z80 and ymfm admission evidence, including source/license/state inventories, deterministic behavior, independent instances, and real static/shared C consumers for ymfm.
-- [ ] Add clean macOS install/load instructions with compiler, SDK, OS, architecture, frontend, source, and artifact identities.
+| Threat | Evidence and disposition |
+|--------|--------------------------|
+| T-04-11 information disclosure | The runner redacts repository/home/temporary paths from retained command logs and writes evidence under ignored `build/`; fixture and private media are not copied into tracked output. |
+| T-04-12 repudiation | Receipt records source revision and selected source hashes, compiler/CMake/SDK/OS/architecture, fixture/core/frontend hashes, candidate revisions, command status and log hashes. |
+| T-04-SC dependency closure | Z80 and ymfm immutable source checks passed; YM2610 report records the pinned source and license evidence. Candidate outcomes remain separate from runtime integration. |
 
-## Manual-Only Verifications
+## Wave 0 and Sign-Off
 
-No behavior is designated manual-only at planning time. First attempt to automate the actual RetroArch input/presentation path. If the selected pinned application or host environment makes one interaction irreducibly manual, record the narrow residual check and exact reason; do not count it as satisfied by the callback harness.
+- [x] Original fixture source, generator, rights record and oracle contract are present and checked by digest.
+- [x] Native frame, input, rendering and negative-control tests run in the clean CTest suite.
+- [x] Libretro callback contract and actual RetroArch smoke are separate checks; only the actual smoke can satisfy HOST-02.
+- [x] Z80 synthetic admission and YM2610 candidate gates remain distinct, with static/shared C consumers for ymfm.
+- [x] Clean install/load procedure includes exact tested compiler, SDK, OS, architecture, frontend and artifact identities.
+- [x] Every task maps to an executable command; full clean CTest provides a 34-test denominator.
+- [x] No watch-mode acceptance commands are used.
 
-## Validation Sign-Off
+The validation strategy and its automation are complete. The Phase 04 goal is not yet accepted: HOST-02 remains unknown because the pinned frontend exited before producing a screenshot. The native fixture, Z80 synthetic workload and YM2610 candidate results do not resolve that frontend gap or establish BIOS/game compatibility.
 
-- [ ] Every plan task has an executable `<automated>` verification or an explicit Wave 0 dependency.
-- [ ] Sampling continuity: no three consecutive tasks lack automated verification.
-- [ ] Wave 0 covers every currently missing Phase 04 test lane.
-- [ ] No watch-mode flags are used in acceptance commands.
-- [ ] Replace `nyquist_compliant: false` only after validation is run and its actual coverage is recorded.
-
-**Approval:** pending
+---
+*Phase: 04-public-playable-tracer*
+*Updated: 2026-10-07*

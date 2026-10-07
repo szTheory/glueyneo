@@ -1,0 +1,48 @@
+# First Playable public tracer build and load
+
+This procedure builds the public GNFX v1 tracer from a fresh checkout directory, installs the native package and Libretro core into a temporary prefix under ignored `build/`, and checks both static and shared native consumers. It uses only the original 602-byte public fixture. It does not read or package a game ROM or BIOS.
+
+## Run the qualification
+
+On the selected macOS host with CMake, Ninja, Python 3, and the pinned RetroArch app installed, run:
+
+```sh
+python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean
+```
+
+The runner configures fresh static and shared CMake builds, builds `glueyneo-original-fixture` and `glueyneo-public-fixture`, installs each prefix, and compiles/runs an out-of-tree C17 consumer against each installed native package. It compares the installed diagnostic fixture to the generated copy, checks `public-playable.bin` against its recorded identity, runs the full CTest suite, runs the pinned Z80 and YM2610 source/admission checks, then starts the actual RetroArch smoke with the installed shared Libretro core and the generated public fixture. `--check-docs` also verifies this guide and the validation map:
+
+```sh
+python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean --check-docs
+```
+
+The receipt is written to ignored `build/playable-qualification/receipt.json`; sanitized per-command logs and the fresh build/install prefixes are retained in the ignored run directory there. A zero exit means every required lane passed. A nonzero exit preserves each lane's result so the failed or unknown lane can be addressed; mock Libretro harnesses never count as an actual frontend pass.
+
+## Fixture and consumer paths
+
+The build generates `public-playable.bin` through the `glueyneo-public-fixture` target. Its expected SHA-256 is `59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0` (602 bytes). The generator and assets are original Glueyneo work under MIT; the fixture has no external guest bytes, game ROM, BIOS, private media, or derived capture. The source, rights and oracle limits are recorded in `tests/fixture/rights-manifest.json` and `tests/fixture/ORACLE.md`.
+
+Native `public_guest_*` CTests run the generated fixture through the guest's ordinary frame and input path, including no-input, wrong-direction and right-direction observations. The installed-package C consumer separately loads the installed original diagnostic fixture to prove package relocation and C linkage. The Libretro smoke loads the same generated GNFX fixture used by the native tracer, requests frontend screenshots, checks its guest marker, verifies mapped and wrong input, then quits RetroArch to check unload.
+
+To run the frontend smoke directly after a build, pass the exact `.app` bundle, installed `glueyneo_libretro.dylib`, and generated fixture paths:
+
+```sh
+python3 tests/libretro/retroarch_smoke.py \
+  --retroarch /Applications/RetroArch.app \
+  --core <installed-prefix>/lib/libretro/glueyneo_libretro.dylib \
+  --content <build-directory>/public-playable.bin
+```
+
+The smoke pins RetroArch 1.22.2 by executable digest. It expects software-visible output, no-input stability, a Left Arrow negative control, Right Arrow movement, and clean application exit after content unload. A frontend process exit before the first screenshot is `unknown` for HOST-02, not a pass. In the recorded run below, RetroArch exited with status `-6` before a screenshot; the frontend behavior therefore remains unknown.
+
+## Recorded qualification identity
+
+The clean run was performed 2026-10-07 at source revision `290e218fe4bed3f11f984fef0d4f2f768d23917d`: macOS 26.6.2, arm64, AppleClang C/C++ 21.0.0.21000101, macOS SDK 26.5, CMake 4.4.3, Ninja 1.13.2 and Python 3.14.4. CMake used Debug configuration, Ninja, C17 owned targets and C++14 only for the private YM2610 candidate. The selected RetroArch artifact was 1.22.2, bundle ID `com.libretro.dist.RetroArch`, executable SHA-256 `ed90b54434a2899de0ddbfed59f335255fb462c8691bd970a1a761ebb5656d65`.
+
+Both generated public fixtures had SHA-256 `59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0`. The installed shared Libretro core used for the frontend attempt had SHA-256 `9d26c9a63493dcaf4fc021dc003d89b9879df521dce60db0059a7556fa1d914e`; the static-configured build's Libretro artifact was `7a9edc9d7eca363526f500ae9aaa097838799e5cf0ab80f27fdfb0043517a1d5`.
+
+The fresh full CTest run passed all 34 tests in 6.37 seconds. Static and shared installed C consumers passed. The Z80 source pin is `9e88298ce56319953ac7a43213a1120359f7a3a6`; its gate passed for the exact synthetic instruction, bus, IRQ, reset, continuation and instance workload in `tests/chips/Z80-ADMISSION.md`. This does not qualify a private game sound program or broad Z80 compatibility. The YMFM source pin is `81aec25ccbb98f4873a255f7551ac4dadac59b4a`; the YM2610 candidate's source, direct C consumer and installed static/shared C consumers passed. Its report SHA-256 was `a6faf3de0dc68dec67e80743413d4e53de6ade6620123db5ccb6d3fec2e02`. This remains candidate-only evidence, not YM2610 admission or production audio integration.
+
+Only the listed macOS arm64 toolchain and app artifact were exercised. Other operating systems, architectures, compiler versions, SDK versions and RetroArch builds remain unsupported or untested. The diagnostic fixture and candidate tests establish their own bounded claims. They do not establish production BIOS behavior, commercial-game compatibility, scrolling or representative production audio; those remain in Phases 05–07.
+
+If any required lane fails, retain its status and identity in the receipt, fix the cause or leave it unknown, and rerun the clean command. Do not change fixture hashes, test expectations, or unsupported status to make the aggregate command green.
