@@ -35,13 +35,13 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   4. A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including license/source/state audits, cycle or clock and interrupt/bus behavior, deterministic timing, continuation and independent-instance evidence, contained C++ failures, and static/shared C-consumer linkage; a failed gate blocks admission and requires bounded replanning rather than phase completion.
   5. An integrator can follow the clean-tree build/install/load procedure for the native library and libretro adapter on the selected macOS configuration and identify exact dependency, compiler, SDK, OS, architecture, and frontend identities plus untested configurations.
 
-**Plans**: 2/6 plans executed across 5 waves
+**Plans**: 3/6 plans executed across 5 waves
 **Wave 1**
 - [x] 04-01-PLAN.md
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [x] 04-02-PLAN.md
-- [ ] 04-03-PLAN.md
+- [x] 04-03-PLAN.md
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 04-04-PLAN.md
@@ -104,7 +104,7 @@ Each phase includes the automated evidence and independent review appropriate to
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. Public Playable Tracer | 2/6 | In Progress | - |
+| 4. Public Playable Tracer | 3/6 | In Progress | - |
 | 5. Selected MVS Boot | 0/TBD | Not started | - |
 | 6. Active Title Control | 0/TBD | Not started | - |
 | 7. Sound and Scenario Qualification | 0/TBD | Not started | - |

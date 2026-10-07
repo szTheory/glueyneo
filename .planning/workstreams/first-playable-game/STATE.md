@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
-current_plan: 3
+current_plan: 4
 status: executing
-stopped_at: Completed 04-02-PLAN.md; HOST-02 blocked/unknown before screenshot
-last_updated: "2026-10-07T21:20:09.736Z"
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-10-07T21:26:59.190Z"
 last_activity: 2026-10-07
-last_activity_desc: Phase 04 Plan 01 complete; Plan 02 is ready
-state_head: c86082da2816226b40ae8c5fa99c748a3be2b818
+last_activity_desc: Phase 04 Plan 03 complete; Plan 04 is ready
+state_head: 3c88019acc9b8ce3ed37b3bbfff8fd6a9531d949
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 6
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -31,16 +31,16 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 ## Current Position
 
 Phase: 04 (Public Playable Tracer) — EXECUTING
-Plan: 3 of 6
-Status: Ready to execute Plan 03
-Last activity: 2026-10-07 — Phase 04 Plan 02 complete; HOST-02 blocked/unknown
+Plan: 4 of 6
+Status: Ready to execute Plan 04
+Last activity: 2026-10-07 — Phase 04 Plan 03 complete; HOST-02 remains blocked/unknown
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 3
+**Current Plan:** 4
 
 ## Performance Metrics
 
@@ -51,22 +51,23 @@ Progress: [░░░░░░░░░░] 0%
 |------|----------|-------|-------|
 | Phase 04 P01 | 10min | 3 tasks | 12 files |
 | Phase 04 P02 | 11min | 2 tasks | 7 files |
+| Phase 04 P03 | 16min | 2 tasks | 5 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-07T21:19:03.484Z
+**Last session:** 2026-10-07T21:26:59.160Z
 
-**Stopped At:** Completed 04-02-PLAN.md; HOST-02 blocked/unknown before screenshot
+**Stopped At:** Completed 04-03-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
 
 - Accepted research and primary-source references are preserved in [RESEARCH.md](RESEARCH.md). Outcome: locally reach interactive Metal Slug X gameplay with movement, firing, scrolling, and representative sound in one pinned MVS/macOS RetroArch setup; public CI uses a separate first-party fixture and never commercial game/BIOS data. All 20 requirements and their primary allocations in the roadmap are user-approved.
-- Planning milestone ID: `first-playable-game`; release version remains unassigned. Phase 04 Plans 01 and 02 are complete; HOST-02 remains blocked/unknown pending a successful actual RetroArch run. Project Phase 04 begins this workstream; independent playable work does not close or depend on completion of the sibling hosted-release gate.
+- Planning milestone ID: `first-playable-game`; release version remains unassigned. Phase 04 Plans 01–03 are complete; HOST-02 remains blocked/unknown pending a successful actual RetroArch run. Project Phase 04 begins this workstream; independent playable work does not close or depend on completion of the sibling hosted-release gate.
 - Milestone-start triage on 2026-10-07 found no open issues and one draft PR, [#1](https://github.com/szTheory/glueyneo/pull/1), for the separate diagnostic release work. It supplies no playable-game requirement or completion evidence.
 - Work is isolated on `docs/first-playable-game-milestone`. The existing 138 planning relocations into the diagnostic workstream were verified byte-identical and committed; unrelated pre-existing methodology/configuration/preparation edits remain outside this milestone's commits.
 - Carry-forward constraints: keep the owned native C17 core deterministic and host-independent; introduce the libretro/software-video path early; keep media/archive I/O outside the native core; retain the owned 68000 direction and gate Z80/YM2610 admission on evidence. PROJECT-D-48 permits the narrow ymfm C++14 exception behind a private C interface; a future C replacement is optional. The supplied BIOS is available locally, but the exact MVS profile and compatibility remain unqualified.
-- Approved Phase 04–07 sequencing is in [ROADMAP.md](ROADMAP.md): public playable tracer and early Z80/ymfm admission → selected MVS boot including required sound-CPU handshakes → active title control → sound and qualification. Phase 04 has six plans across five waves; Plans 01–02 are complete and Plan 03 is next.
+- Approved Phase 04–07 sequencing is in [ROADMAP.md](ROADMAP.md): public playable tracer and early Z80/ymfm admission → selected MVS boot including required sound-CPU handshakes → active title control → sound and qualification. Phase 04 has six plans across five waves; Plans 01–03 are complete and Plan 04 is next.
 - Goal: advance from the diagnostic SDK toward a playable Neo Geo game.
 - Local qualification: a user-provided private game archive is stored under the Git-ignored `local/roms/` directory. Keep its contents and private checksums out of tracked files, CI, and release artifacts.
 - The user-provided BIOS archive is also stored under the Git-ignored `local/roms/` directory. The copy matches its source, passes ZIP CRC validation and is untracked; those checks do not establish BIOS compatibility.
@@ -83,6 +84,8 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 04]: The adapter uses in-memory GNFX content, forwards native XRGB8888 frames synchronously, and maps RetroPad RIGHT to the native frame input.
 - [Phase 04]: Serialization, special loading, raw memory exposure, and cheats remain explicit safe opt-outs for the bounded fixture core.
 - [Phase 04]: The RetroArch smoke runner uses local keyboard and screenshot automation without enabling the frontend UDP command interface.
+- [Phase 04]: Recorded the GNFX source, assertion, generator, and 602-byte output as separate identities with affirmative MIT rights.
+- [Phase 04]: Kept Motorola instruction evidence, community board references, emulator comparisons, and physical hardware claims at separate evidence levels.
 
 ### Blockers
 
