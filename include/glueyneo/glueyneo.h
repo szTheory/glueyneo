@@ -23,6 +23,7 @@ extern "C" {
 
 #define GN_MANIFEST_VERSION UINT32_C(1)
 #define GN_PROFILE_DIAGNOSTIC UINT32_C(1)
+#define GN_PROFILE_PUBLIC_FIXTURE UINT32_C(2)
 #define GN_MAX_REGIONS 2u
 #define GN_MAX_MEDIA_BYTES ((size_t)1024u * (size_t)1024u)
 #define GN_MAX_CYCLE_BUDGET UINT64_C(1000000)
@@ -84,6 +85,33 @@ typedef struct {
     uint8_t ready;
 } gn_observations;
 
+typedef enum {
+    GN_PIXEL_XRGB8888 = 1
+} gn_pixel_format;
+
+#define GN_INPUT_RIGHT UINT32_C(1)
+#define GN_INPUT_LEFT UINT32_C(2)
+#define GN_INPUT_SUPPORTED_MASK (GN_INPUT_RIGHT | GN_INPUT_LEFT)
+
+typedef struct {
+    uint32_t input_mask;
+    gn_pixel_format pixel_format;
+    uint32_t width;
+    uint32_t height;
+    size_t pitch_bytes;
+    uint8_t *pixels;
+    size_t pixel_capacity_bytes;
+} gn_frame_request;
+
+typedef struct {
+    uint64_t requested_cycles;
+    uint64_t elapsed_cycles;
+    uint64_t instructions;
+    uint32_t marker_x;
+    uint32_t marker_y;
+    gn_run_reason reason;
+} gn_frame_result;
+
 /* All pointers in a manifest must reference readable caller storage for the
  * duration of gn_load. Successful loads copy every source byte. One instance
  * is single-threaded and non-reentrant; distinct instances may run in parallel.
@@ -96,6 +124,17 @@ GN_API gn_status gn_run(gn_instance *instance, uint64_t cycle_budget,
                         gn_run_result *out_result);
 GN_API gn_status gn_observe(const gn_instance *instance,
                             gn_observations *out_observations);
+/* Public-fixture frames sample RIGHT once at entry, execute the fixture reset
+ * entry for exactly 200000 nominal machine cycles (12 MHz / 60), and render
+ * 320x224 XRGB8888 pixels. This ratio is a fixture contract, not qualified
+ * Neo Geo timing. Frame calls restart the fixture CPU at its BIOS-free reset
+ * vector while preserving guest RAM; this keeps each small frame transaction
+ * bounded without claiming general machine continuation. Pixels are native
+ * endian uint32_t values 0x00RRGGBB. One instance is single-threaded and
+ * non-reentrant, as with the rest of this API. */
+GN_API gn_status gn_advance_frame(gn_instance *instance,
+                                  const gn_frame_request *request,
+                                  gn_frame_result *out_result);
 GN_API gn_status gn_unload(gn_instance *instance);
 GN_API void gn_destroy(gn_instance *instance);
 GN_API const char *gn_status_string(gn_status status);

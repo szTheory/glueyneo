@@ -27,6 +27,15 @@ use the faulting instruction PC in its address-error fixture is local and
 deterministic; the manual calls that saved PC unpredictable, so it is not a
 restart guarantee.
 
+For the bounded guest arithmetic path added in Plan 04-01, PRM §4-4 defines
+`ADD <ea>,Dn` operation, encoding fields, and X/N/Z/V/C behavior; its opmode
+table assigns word Dn-to-Dn to opmode `001`. This slice admits only exact
+`ADD.W D0,D1` (`0xd240`). The same manual's MOVE entry defines low-word data
+register writes and move condition codes. UM Rev. 9.1 Table 8-2 gives 16 clocks
+for `MOVE.W D1,(abs.L)`; Table 8-4 gives 4 clocks for register-direct
+`ADD.W D0,D1`. These entries support the two newly admitted pairs, not broader
+ADD or MOVE decoding.
+
 ## Current private continuation profile — Plan 01-24
 
 The current `owned-p01-c14-continuation-2` profile adds two guest-reachable
@@ -71,6 +80,8 @@ current profile is 15 / 90 and does not mutate those historical counts.
 | RTE | 20 | UM Table 8-12, printed p. 8-10 |
 | STOP | 4 | UM Table 8-12, printed p. 8-10 |
 | MOVE.W absolute-long to Dn | 16 | UM Table 8-2, absolute-long source / data-register destination |
+| Exact `ADD.W D0,D1` | 4 | UM Table 8-4, register-direct `ADD/ADDA`, word |
+| Exact `MOVE.W D1,(abs.L)` | 16 | UM Table 8-2, data-register source / absolute-long destination |
 | TRAP, privilege exception | 34 | UM Table 8-14, printed p. 8-11 |
 | Exact `0x4afc` candidate rejection | 0 | P01-C-14 owner-defined capability boundary, not hardware timing |
 | autovector IRQ | 44 | UM Table 8-14, printed p. 8-11 |
@@ -99,6 +110,7 @@ reset40 + MOVEQ4 + ADDQ.L8 + MOVE.L20 + STOP4.
 | `move_to_sr_switches_to_user_stack` | MOVE.W `#$0000,SR` switches S=1 to S=0 and activates USP `$3800` | Immediate word follows opcode; SSP `$3000` retained | 12 clocks |
 | `rte_restores_user_stack_bank_from_short_frame` | RTE restores user SR0/PC`$200`, switches to USP `$3800`, retains SSP`$3006` | Reads opcode `$100`, then SR/PC words at `$3000/$3002/$3004` | 20 clocks |
 | `move_word_absolute_long_loads_every_data_register` | All D0–D7 retain their high word and receive low word `$8001`; N set, V/C clear, X retained | Opcode, two address extension words, then one data word at `$200` | 16 clocks and one dispatch each |
+| `sampled_words_add_into_marker_and_store_with_word_semantics` | Sample `$fff0` into D0 and `$0020` into D1 after seeding high words; exact ADD produces D1 `$ffff0010`, with C/X set; following MOVE.W stores `$0010`, clears N/Z/V/C and preserves X | Reads the two absolute-long source addresses; one word write records marker address/value | MOVEQ 4 each, loads 16 each, ADD.W 4, MOVE.W absolute-long 16; total 60 clocks |
 | `odd_word_source_stacks_manual_derived_address_error_frame` | Vector3; deterministic local saved PC`$100` | SSW `$001d` (supervisor data read), fault address `$201`, IR`$3039`, SR`$2700`, PC`$100`; final increasing-address layout: SSW, address, IR, SR, PC | 50 clocks, zero completed dispatches |
 | `odd_long_destination_stacks_a_write_address_error` | Vector3 before any destination write | SSW `$000d` (supervisor data write), destination `$201`, IR`$23c0` | 50 clocks, zero completed dispatches |
 | `odd_instruction_fetch_enters_group_zero_without_an_odd_bus_read` | Odd PC`$101` selects vector3 | No callback uses an odd address; SSW `$0016` (supervisor program read), address`$101`, IR0 | 50 clocks, zero completed dispatches |

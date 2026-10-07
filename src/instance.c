@@ -13,6 +13,24 @@
 #define GN_RAM_SIZE UINT32_C(0x1000)
 #define GN_RAM_INIT_SIZE ((size_t)10)
 #define GN_STACK_TOP UINT32_C(0x2000)
+#define GN_FIXTURE_INPUT_PORT UINT32_C(0x00300000)
+#define GN_FIXTURE_HEADER_SIZE 16u
+#define GN_FIXTURE_ROM_SIZE 512u
+#define GN_FIXTURE_RAM_INIT_SIZE 10u
+#define GN_FIXTURE_TILE_SIZE 64u
+#define GN_FIXTURE_PAYLOAD_SIZE (GN_FIXTURE_ROM_SIZE + GN_FIXTURE_RAM_INIT_SIZE + GN_FIXTURE_TILE_SIZE)
+#define GN_FIXTURE_CONTENT_SIZE (GN_FIXTURE_HEADER_SIZE + GN_FIXTURE_PAYLOAD_SIZE)
+#define GN_FIXTURE_FRAME_CYCLES UINT64_C(200000)
+#define GN_FIXTURE_WIDTH UINT32_C(320)
+#define GN_FIXTURE_HEIGHT UINT32_C(224)
+
+static const uint8_t gn_fixture_guest_program[] = {
+    0x30u, 0x39u, 0x00u, 0x30u, 0x00u, 0x00u,
+    0x32u, 0x39u, 0x00u, 0x00u, 0x10u, 0x00u,
+    0xd2u, 0x40u,
+    0x33u, 0xc1u, 0x00u, 0x00u, 0x10u, 0x00u,
+    0x4eu, 0x72u, 0x27u, 0x00u
+};
 
 typedef struct {
     void *userdata;
@@ -32,6 +50,9 @@ typedef struct {
     gn_memory_region ram;
     uint8_t *ram_seed;
     size_t ram_seed_size;
+    uint32_t profile;
+    uint16_t frame_input;
+    uint8_t marker_tile[GN_FIXTURE_TILE_SIZE];
     owned_cpu *cpu;
 #if defined(GLUEYNEO_SDK_TEST_HOOKS)
     size_t test_fail_bus_callbacks;
@@ -95,6 +116,11 @@ static int gn_read16(void *userdata, uint32_t address, uint16_t *value) {
     if (image == NULL || value == NULL || (address & UINT32_C(1)) != 0u) {
         return 0;
     }
+    if (image->profile == GN_PROFILE_PUBLIC_FIXTURE &&
+        address == GN_FIXTURE_INPUT_PORT) {
+        *value = image->frame_input;
+        return 1;
+    }
 #if defined(GLUEYNEO_SDK_TEST_HOOKS)
     if (image->test_fail_bus_callbacks != 0u) {
         --image->test_fail_bus_callbacks;
@@ -155,6 +181,10 @@ static int gn_write16(void *userdata, uint32_t address, uint16_t value) {
 static uint32_t gn_read32_be(const uint8_t *bytes) {
     return ((uint32_t)bytes[0] << 24) | ((uint32_t)bytes[1] << 16) |
            ((uint32_t)bytes[2] << 8) | (uint32_t)bytes[3];
+}
+
+static uint16_t gn_read16_be(const uint8_t *bytes) {
+    return (uint16_t)(((uint16_t)bytes[0] << 8) | (uint16_t)bytes[1]);
 }
 
 static gn_status gn_validate_region_layout(const gn_manifest *manifest) {
@@ -532,6 +562,42 @@ gn_status gn_test_trace_read(const gn_instance *instance,
 GN_API gn_status gn_load(gn_instance *instance, const gn_manifest *manifest) {
     if (instance == NULL) return GN_STATUS_INVALID_ARGUMENT;
 
+    gn_manifest normalized;
+    const uint8_t *fixture_tile = NULL;
+    const uint32_t loaded_profile = manifest == NULL ? 0u : manifest->profile;
+    if (loaded_profile == GN_PROFILE_PUBLIC_FIXTURE) {
+        if (manifest->version != GN_MANIFEST_VERSION || manifest->region_count != 1u) {
+            return GN_STATUS_INVALID_MEDIA;
+        }
+        const gn_region *content = &manifest->regions[0];
+        if (content->source == NULL || content->kind != GN_REGION_ROM ||
+            content->guest_base != 0u || content->mapped_size != GN_FIXTURE_CONTENT_SIZE ||
+            content->source_size != GN_FIXTURE_CONTENT_SIZE) {
+            return GN_STATUS_INVALID_MEDIA;
+        }
+        const uint8_t *bytes = content->source;
+        if (memcmp(bytes, "GNFX", 4u) != 0 || gn_read32_be(bytes + 4u) != 1u ||
+            gn_read32_be(bytes + 8u) != GN_FIXTURE_PAYLOAD_SIZE ||
+            gn_read32_be(bytes + 12u) != GN_FIXTURE_HEADER_SIZE) {
+            return GN_STATUS_INVALID_MEDIA;
+        }
+        if (memcmp(bytes + GN_FIXTURE_HEADER_SIZE + 0x100u,
+                   gn_fixture_guest_program, sizeof(gn_fixture_guest_program)) != 0) {
+            return GN_STATUS_INVALID_MEDIA;
+        }
+        normalized.version = GN_MANIFEST_VERSION;
+        normalized.profile = GN_PROFILE_DIAGNOSTIC;
+        normalized.region_count = GN_MAX_REGIONS;
+        normalized.regions[0] = (gn_region){0u, GN_ROM_SIZE,
+            bytes + GN_FIXTURE_HEADER_SIZE, GN_FIXTURE_ROM_SIZE, GN_REGION_ROM};
+        normalized.regions[1] = (gn_region){GN_RAM_BASE, GN_RAM_SIZE,
+            bytes + GN_FIXTURE_HEADER_SIZE + GN_FIXTURE_ROM_SIZE,
+            GN_FIXTURE_RAM_INIT_SIZE, GN_REGION_RAM};
+        fixture_tile = bytes + GN_FIXTURE_HEADER_SIZE + GN_FIXTURE_ROM_SIZE +
+                       GN_FIXTURE_RAM_INIT_SIZE;
+        manifest = &normalized;
+    }
+
     const gn_region *rom = NULL;
     const gn_region *ram = NULL;
     gn_status status = gn_validate_manifest(manifest, &rom, &ram);
@@ -543,6 +609,7 @@ GN_API gn_status gn_load(gn_instance *instance, const gn_manifest *manifest) {
     if (candidate == NULL) return GN_STATUS_OUT_OF_MEMORY;
     memset(candidate, 0, sizeof(*candidate));
     candidate->allocator = allocator;
+    candidate->profile = loaded_profile;
     candidate->rom.base = rom->guest_base;
     candidate->rom.size = rom->mapped_size;
     candidate->ram.base = ram->guest_base;
@@ -566,6 +633,9 @@ GN_API gn_status gn_load(gn_instance *instance, const gn_manifest *manifest) {
     }
     memcpy(candidate->rom.bytes, rom->source, rom->source_size);
     memcpy(candidate->ram_seed, ram->source, ram->source_size);
+    if (fixture_tile != NULL) {
+        memcpy(candidate->marker_tile, fixture_tile, sizeof(candidate->marker_tile));
+    }
     memset(candidate->ram.bytes, 0, (size_t)candidate->ram.size);
     memcpy(candidate->ram.bytes, candidate->ram_seed, candidate->ram_seed_size);
 
@@ -680,6 +750,66 @@ GN_API gn_status gn_observe(const gn_instance *instance,
             ((value & UINT32_C(0xff000000)) >> 24);
     }
 #endif
+    return GN_STATUS_OK;
+}
+
+GN_API gn_status gn_advance_frame(gn_instance *instance,
+                                  const gn_frame_request *request,
+                                  gn_frame_result *out_result) {
+    if (out_result == NULL || request == NULL) return GN_STATUS_INVALID_ARGUMENT;
+    memset(out_result, 0, sizeof(*out_result));
+    if (instance == NULL) return GN_STATUS_INVALID_ARGUMENT;
+    if (instance->image == NULL) return GN_STATUS_INVALID_STATE;
+    gn_image *image = instance->image;
+    if (image->profile != GN_PROFILE_PUBLIC_FIXTURE) return GN_STATUS_UNSUPPORTED_PROFILE;
+    if ((request->input_mask & ~GN_INPUT_SUPPORTED_MASK) != 0u ||
+        request->pixel_format != GN_PIXEL_XRGB8888 ||
+        request->width != GN_FIXTURE_WIDTH || request->height != GN_FIXTURE_HEIGHT ||
+        request->pixels == NULL) return GN_STATUS_INVALID_ARGUMENT;
+    const size_t row_bytes = (size_t)GN_FIXTURE_WIDTH * sizeof(uint32_t);
+    if (request->pitch_bytes < row_bytes ||
+        request->pitch_bytes > (SIZE_MAX - row_bytes) / (GN_FIXTURE_HEIGHT - 1u)) {
+        return GN_STATUS_INVALID_ARGUMENT;
+    }
+    const size_t required = request->pitch_bytes * (GN_FIXTURE_HEIGHT - 1u) + row_bytes;
+    if (request->pixel_capacity_bytes < required) return GN_STATUS_INVALID_ARGUMENT;
+
+    image->frame_input = (request->input_mask & GN_INPUT_RIGHT) != 0u ? UINT16_C(1) : 0u;
+    const owned_cpu_status reset_status = owned_cpu_reset(image->cpu);
+    if (reset_status != OWNED_CPU_OK) return GN_STATUS_CPU_FAILURE;
+    const owned_cpu_run_result run = owned_cpu_run(image->cpu, GN_FIXTURE_FRAME_CYCLES);
+    out_result->requested_cycles = run.requested_cycles;
+    out_result->elapsed_cycles = run.elapsed_cycles;
+    out_result->instructions = run.instructions;
+    out_result->reason = run.reason == OWNED_CPU_STOPPED ? GN_RUN_STOPPED
+                       : run.reason == OWNED_CPU_BUDGET ? GN_RUN_BUDGET
+                       : run.reason == OWNED_CPU_ADDRESS_ERROR ||
+                         run.reason == OWNED_CPU_UNSUPPORTED_OPCODE ||
+                         run.reason == OWNED_CPU_PRIVILEGE_VIOLATION ? GN_RUN_FAULT
+                       : GN_RUN_ERROR;
+    if (run.reason != OWNED_CPU_STOPPED) return GN_STATUS_CPU_FAILURE;
+
+    const uint32_t marker_x = gn_read16_be(image->ram.bytes);
+    const uint32_t marker_y = gn_read16_be(image->ram.bytes + 2u);
+    if (marker_x > GN_FIXTURE_WIDTH - 8u || marker_y > GN_FIXTURE_HEIGHT - 8u) {
+        out_result->reason = GN_RUN_FAULT;
+        return GN_STATUS_CPU_FAILURE;
+    }
+    for (uint32_t y = 0u; y < GN_FIXTURE_HEIGHT; ++y) {
+        uint8_t *row = request->pixels + (size_t)y * request->pitch_bytes;
+        for (uint32_t x = 0u; x < GN_FIXTURE_WIDTH; ++x) {
+            uint32_t pixel = UINT32_C(0x00000000);
+            if (x >= marker_x && x < marker_x + 8u &&
+                y >= marker_y && y < marker_y + 8u &&
+                image->marker_tile[(size_t)(y - marker_y) * 8u + (x - marker_x)] != 0u) {
+                pixel = UINT32_C(0x00ffffff);
+            }
+            memcpy(row + (size_t)x * sizeof(pixel), &pixel, sizeof(pixel));
+        }
+    }
+    out_result->requested_cycles = GN_FIXTURE_FRAME_CYCLES;
+    out_result->marker_x = marker_x;
+    out_result->marker_y = marker_y;
     return GN_STATUS_OK;
 }
 

@@ -293,6 +293,23 @@ static void add_quick_long(owned_cpu *cpu, unsigned reg, unsigned quick) {
     cpu->sr = flags;
 }
 
+static void add_word_register(owned_cpu *cpu, unsigned source_reg, unsigned destination_reg) {
+    const uint16_t source = (uint16_t)cpu->data_registers[source_reg];
+    const uint16_t destination = (uint16_t)cpu->data_registers[destination_reg];
+    const uint32_t full_sum = (uint32_t)source + (uint32_t)destination;
+    const uint16_t result = (uint16_t)full_sum;
+    uint16_t flags = (uint16_t)(cpu->sr & (uint16_t)~SR_ARITHMETIC_FLAGS);
+    if (result == 0u) flags = (uint16_t)(flags | SR_Z);
+    if ((result & UINT16_C(0x8000)) != 0u) flags = (uint16_t)(flags | SR_N);
+    if (((uint16_t)(~(source ^ destination) & (destination ^ result)) & UINT16_C(0x8000)) != 0u) {
+        flags = (uint16_t)(flags | SR_V);
+    }
+    if (full_sum > UINT16_MAX) flags = (uint16_t)(flags | SR_C | SR_X);
+    cpu->data_registers[destination_reg] =
+        (cpu->data_registers[destination_reg] & UINT32_C(0xffff0000)) | result;
+    cpu->sr = flags;
+}
+
 static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t *opcode,
                                     uint64_t *cycles, step_kind *kind) {
     const uint32_t instruction_pc = cpu->pc;
@@ -441,6 +458,42 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
         set_supervisor_status(cpu, restored_sr);
         *next_pc = restored_pc;
         *cycles = UINT64_C(20);
+    } else if (*opcode == UINT16_C(0x33c1)) {
+        uint16_t high = 0u;
+        uint16_t low = 0u;
+        status = fetch_word(cpu, &cursor, &high);
+        if (status == OWNED_CPU_OK) status = fetch_word(cpu, &cursor, &low);
+        if (status != OWNED_CPU_OK) {
+            cpu->fault_pc = instruction_pc;
+            cpu->instruction_register = *opcode;
+            return status;
+        }
+        const uint32_t destination = ((uint32_t)high << 16) | (uint32_t)low;
+        if ((destination & 1u) != 0u) {
+            cpu->fault_pc = instruction_pc;
+            cpu->instruction_register = *opcode;
+            status = preflight_event(cpu, STEP_ADDRESS_EXCEPTION, UINT64_C(50), 0u, 0u);
+            if (status != OWNED_CPU_OK) return status;
+            status = enter_address_exception(cpu, instruction_pc, *opcode, destination, 0, 0);
+            if (status != OWNED_CPU_OK) return status;
+            *next_pc = cpu->pc;
+            *kind = STEP_ADDRESS_EXCEPTION;
+            *cycles = UINT64_C(50);
+            return OWNED_CPU_OK;
+        }
+        const uint16_t value = (uint16_t)cpu->data_registers[1];
+        status = preflight_event(cpu, STEP_INSTRUCTION, UINT64_C(16), 1u, 0u);
+        if (status != OWNED_CPU_OK) return status;
+        status = write_word(cpu, destination, value);
+        if (status != OWNED_CPU_OK) {
+            cpu->fault_pc = instruction_pc;
+            cpu->instruction_register = *opcode;
+            return status;
+        }
+        cpu->sr = (uint16_t)(cpu->sr & (uint16_t)~SR_MOVE_FLAGS);
+        if (value == 0u) cpu->sr = (uint16_t)(cpu->sr | SR_Z);
+        if ((value & UINT16_C(0x8000)) != 0u) cpu->sr = (uint16_t)(cpu->sr | SR_N);
+        *cycles = UINT64_C(16);
     } else if ((*opcode & UINT16_C(0xf1ff)) == UINT16_C(0x3039)) {
         uint16_t high = 0u;
         uint16_t low = 0u;
@@ -479,6 +532,11 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
         if (value == 0u) cpu->sr = (uint16_t)(cpu->sr | SR_Z);
         if ((value & UINT16_C(0x8000)) != 0u) cpu->sr = (uint16_t)(cpu->sr | SR_N);
         *cycles = UINT64_C(16);
+    } else if (*opcode == UINT16_C(0xd240)) {
+        status = preflight_event(cpu, STEP_INSTRUCTION, UINT64_C(4), 1u, 0u);
+        if (status != OWNED_CPU_OK) return status;
+        add_word_register(cpu, 0u, 1u);
+        *cycles = UINT64_C(4);
     } else if (*opcode == UINT16_C(0x4afc)) {
         /* P01-C-14: candidate capability boundary, not silicon behavior.
          * Successful fetch rejects before exception preflight or bus effects. */

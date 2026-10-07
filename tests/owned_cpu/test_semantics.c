@@ -258,6 +258,44 @@ static void addq_long_selects_each_data_register(void) {
     }
 }
 
+static void sampled_words_add_into_marker_and_store_with_word_semantics(void) {
+    create_cpu();
+    memory.rom[0x1f0] = 0xff;
+    memory.rom[0x1f1] = 0xf0;
+    memory.rom[0x1f2] = 0x00;
+    memory.rom[0x1f3] = 0x20;
+    const uint8_t program[] = {
+        0x70, 0xff,                         /* MOVEQ #-1,D0 */
+        0x72, 0xff,                         /* MOVEQ #-1,D1 */
+        0x30, 0x39, 0x00, 0x00, 0x01, 0xf0, /* MOVE.W ($1f0).L,D0 */
+        0x32, 0x39, 0x00, 0x00, 0x01, 0xf2, /* MOVE.W ($1f2).L,D1 */
+        0xd2, 0x40,                         /* ADD.W D0,D1 */
+        0x33, 0xc1, 0x00, 0x00, 0x01, 0xf4, /* MOVE.W D1,($1f4).L */
+    };
+    TEST_ASSERT_EQUAL(OWNED_CPU_OK, reset_with_program(program, sizeof(program)));
+    owned_cpu_run_result result = owned_cpu_run(cpu, UINT64_C(44));
+    TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, result.reason);
+    TEST_ASSERT_EQUAL_UINT64(44u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(5u, result.instructions);
+
+    owned_cpu_observation observation;
+    TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_observe(cpu, &observation));
+    TEST_ASSERT_EQUAL_HEX32(UINT32_C(0xffffffF0), observation.data_registers[0]);
+    TEST_ASSERT_EQUAL_HEX32(UINT32_C(0xffff0010), observation.data_registers[1]);
+    TEST_ASSERT_BITS_HIGH(0x0011u, observation.sr); /* carry also sets extend */
+    TEST_ASSERT_BITS_LOW(0x000eu, observation.sr);
+    result = owned_cpu_run(cpu, UINT64_C(16));
+    TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, result.reason);
+    TEST_ASSERT_EQUAL_UINT64(16u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(1u, result.instructions);
+    TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_observe(cpu, &observation));
+    TEST_ASSERT_BITS_HIGH(0x0010u, observation.sr); /* MOVE.W preserves X */
+    TEST_ASSERT_BITS_LOW(0x000fu, observation.sr);
+    TEST_ASSERT_EQUAL_UINT(1u, memory.write_attempts);
+    TEST_ASSERT_EQUAL_HEX32(0x1f4u, memory.write_addresses[0]);
+    TEST_ASSERT_EQUAL_UINT16(0x0010u, memory.write_values[0]);
+}
+
 static void addq_long_reports_signed_positive_overflow(void) {
     create_cpu();
     const uint8_t program[] = {0x52, 0x80}; /* ADDQ.L #1,D0 */
@@ -524,6 +562,7 @@ int main(void) {
     RUN_TEST(moveq_selects_all_registers_and_sign_extends);
     RUN_TEST(addq_long_uses_eight_for_zero_and_sets_extend_flags);
     RUN_TEST(addq_long_selects_each_data_register);
+    RUN_TEST(sampled_words_add_into_marker_and_store_with_word_semantics);
     RUN_TEST(addq_long_reports_signed_positive_overflow);
     RUN_TEST(move_long_uses_each_data_register_and_ordered_words);
     RUN_TEST(move_long_clears_nzvc_and_preserves_x);

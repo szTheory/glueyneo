@@ -83,6 +83,8 @@ compatibility, emulator snapshot, replay, durable save or guest-memory format.
 | `MOVEQ #imm8,Dn` | All D0–D7; sign-extend to 32 bits; N/Z from result, V/C clear, X preserved | 4 |
 | `ADDQ.L #1..8,Dn` | All D0–D7 direct; encoded zero means 8; modulo-2^32 result and N/Z/V/C/X | 8 |
 | `MOVE.L Dn,(abs.L)` | All D0–D7 sources; high word then low word; N/Z from long value, V/C clear, X preserved | 20 |
+| `ADD.W D0,D1` | Exact opcode `0xd240`; low-word binary sum, preserves D1 high word, sets N/Z/V/C/X from the word result | 4 |
+| `MOVE.W D1,(abs.L)` | Exact opcode `0x33c1`; one aligned word write from D1 low word; N/Z from the word, V/C clear, X preserved | 16 |
 | `NOP` | Exact opcode `0x4e71`; no register or SR change | 4 |
 | `RESET` | Exact opcode `0x4e70`; supervisor only; records one external-reset-signal event, with no device callback | 132 |
 | `RTE` | Exact opcode `0x4e73`; supervisor only; restores SR/PC from a six-byte short frame and switches USP/SSP when S changes | 20 |

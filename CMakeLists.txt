@@ -264,6 +264,41 @@ if(GLUEYNEO_BUILD_TESTS)
     C_EXTENSIONS NO
   )
   glueyneo_apply_sdk_sanitizer(glueyneo_unity)
+
+  add_executable(public_guest_test
+    tests/fixture/test_public_guest.c
+    tests/fixture/public_guest.c
+  )
+  target_include_directories(public_guest_test PRIVATE tests/fixture)
+  target_compile_features(public_guest_test PRIVATE c_std_17)
+  set_target_properties(public_guest_test PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS NO
+  )
+  target_link_libraries(public_guest_test PRIVATE glueyneo glueyneo_unity)
+  if(MSVC)
+    target_compile_options(public_guest_test PRIVATE /W4 /WX)
+  else()
+    target_compile_options(public_guest_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(public_guest_test)
+  set(GLUEYNEO_PUBLIC_FIXTURE
+      "${CMAKE_CURRENT_BINARY_DIR}/public-playable.bin")
+  add_custom_command(
+    OUTPUT "${GLUEYNEO_PUBLIC_FIXTURE}"
+    COMMAND $<TARGET_FILE:public_guest_test> --write-fixture
+            "${GLUEYNEO_PUBLIC_FIXTURE}"
+    DEPENDS public_guest_test tests/fixture/public_guest.c
+    VERBATIM
+  )
+  add_custom_target(glueyneo-public-fixture ALL
+    DEPENDS "${GLUEYNEO_PUBLIC_FIXTURE}")
+  add_test(NAME public_guest_tracer
+    COMMAND public_guest_test "${GLUEYNEO_PUBLIC_FIXTURE}")
+  set_tests_properties(public_guest_tracer PROPERTIES
+    LABELS "public-fixture;native-tracer")
+
   add_executable(sdk_diagnostic tests/sdk/test_sdk.c tests/sdk/guest_fixture.c)
   target_include_directories(sdk_diagnostic PRIVATE tests/sdk src)
   target_compile_features(sdk_diagnostic PRIVATE c_std_17)
