@@ -54,6 +54,12 @@ class SnapshotTest(unittest.TestCase):
             "qualification must materialize an immutable committed Git archive",
         )
 
+    def test_snapshot_receipt_validator_is_available(self) -> None:
+        self.assertTrue(
+            callable(getattr(playable, "validate_snapshot_record", None)),
+            "qualification receipts must reject missing or stale source inventory rows",
+        )
+
     def test_dirty_and_untracked_checkout_inputs_do_not_change_snapshot_build(self) -> None:
         commit = self.commit_fixture_project()
         (self.repository / "public_guest.c").write_text("#error checkout injection\n", encoding="utf-8")
