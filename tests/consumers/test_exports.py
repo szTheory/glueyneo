@@ -30,9 +30,10 @@ File Type: DLL
           3    2 00001020 gn_reset
           4    3 00001030 gn_run
           5    4 00001040 gn_observe
-          6    5 00001050 gn_unload
-          7    6 00001060 gn_destroy
-          8    7 00001070 gn_status_string
+          6    5 00001050 gn_advance_frame
+          7    6 00001060 gn_unload
+          8    7 00001070 gn_destroy
+          9    8 00001080 gn_status_string
 """
 
 WINDOWS_SYMBOLS = """
@@ -180,7 +181,7 @@ class SharedExportTests(unittest.TestCase):
             parser(WINDOWS_EXPORTS),
             {
                 "gn_create", "gn_load", "gn_reset", "gn_run", "gn_observe",
-                "gn_unload", "gn_destroy", "gn_status_string",
+                "gn_advance_frame", "gn_unload", "gn_destroy", "gn_status_string",
             },
         )
 
@@ -193,9 +194,9 @@ class SharedExportTests(unittest.TestCase):
         expected = parser(WINDOWS_EXPORTS)
         self.assertEqual(contract(expected), sorted(expected))
         for output in (
-            WINDOWS_EXPORTS.replace("gn_status_string", "gn_status_string\n          9    8 00001080 gn_extra"),
-            WINDOWS_EXPORTS.replace("          8    7 00001070 gn_status_string\n", ""),
-            WINDOWS_EXPORTS.replace("          8    7 00001070 gn_status_string", "          8    7 00001070 owned_cpu_secret"),
+            WINDOWS_EXPORTS.replace("gn_status_string", "gn_status_string\n         10    9 00001090 gn_extra"),
+            WINDOWS_EXPORTS.replace("          9    8 00001080 gn_status_string\n", ""),
+            WINDOWS_EXPORTS.replace("          9    8 00001080 gn_status_string", "          9    8 00001080 owned_cpu_secret"),
         ):
             with self.assertRaises(check_package.CheckError):
                 contract(parser(output))

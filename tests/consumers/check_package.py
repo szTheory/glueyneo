@@ -203,6 +203,7 @@ EXPECTED_SHARED_EXPORTS = {
     "gn_reset",
     "gn_run",
     "gn_observe",
+    "gn_advance_frame",
     "gn_unload",
     "gn_destroy",
     "gn_status_string",
