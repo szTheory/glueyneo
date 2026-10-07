@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
-current_plan: 4
+current_plan: 5
 status: executing
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-10-07T21:26:59.190Z"
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-10-07T21:43:21.282Z"
 last_activity: 2026-10-07
 last_activity_desc: Phase 04 Plan 03 complete; Plan 04 is ready
-state_head: 3c88019acc9b8ce3ed37b3bbfff8fd6a9531d949
+state_head: 96d9d8445a2a82506d0145aedabb08a7215897ca
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 ## Current Position
 
 Phase: 04 (Public Playable Tracer) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute Plan 04
 Last activity: 2026-10-07 — Phase 04 Plan 03 complete; HOST-02 remains blocked/unknown
 
@@ -40,7 +40,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 4
+**Current Plan:** 5
 
 ## Performance Metrics
 
@@ -52,12 +52,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P01 | 10min | 3 tasks | 12 files |
 | Phase 04 P02 | 11min | 2 tasks | 7 files |
 | Phase 04 P03 | 16min | 2 tasks | 5 files |
+| Phase 04 P04 | 13min 33sec | 3 tasks | 9 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-07T21:26:59.160Z
+**Last session:** 2026-10-07T21:43:21.259Z
 
-**Stopped At:** Completed 04-03-PLAN.md
+**Stopped At:** Completed 04-04-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
@@ -86,6 +87,8 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 04]: The RetroArch smoke runner uses local keyboard and screenshot automation without enabling the frontend UDP command interface.
 - [Phase 04]: Recorded the GNFX source, assertion, generator, and 602-byte output as separate identities with affirmative MIT rights.
 - [Phase 04]: Kept Motorola instruction evidence, community board references, emulator comparisons, and physical hardware claims at separate evidence levels.
+- [Phase 04]: Admitted the pinned floooh/chips Z80 candidate for the explicitly documented synthetic Phase 04 workload only; private game sound-driver behavior remains unqualified.
+- [Phase 04]: A failed Z80 bus callback remains latched through checkpoint restore; reset is required before execution can resume.
 
 ### Blockers
 
