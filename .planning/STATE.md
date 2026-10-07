@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-10-07)
 
 Phase: 03 (Distributable release qualification) — EXECUTING
 Plan: 5 of 5
-Status: Phase 03 verification found gaps (13/20); gap-closure planning is next
+Status: Plan 03-05 is halted at the hosted-evidence gate; verification found gaps (13/20); gap-closure planning is next
 Last activity: 2026-10-07 — Phase 03 whole-phase verification found gaps; next: /gsd-plan-phase 03 --gaps
 
 Progress: [███████░░░] 67% (two of three phases complete)
