@@ -800,7 +800,10 @@ def stage_documentation_project(destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     for file in ("CMakeLists.txt", "LICENSE", ".release-please-manifest.json"):
         shutil.copy2(ROOT / file, destination / file)
-    for directory in ("cmake", "include", "src", "experiments/owned_cpu"):
+    for directory in (
+        "cmake", "include", "src", "experiments/owned_cpu",
+        "third_party/libretro",
+    ):
         shutil.copytree(ROOT / directory, destination / directory)
     for relative in (
         "tools/diagnostic/main.c",
