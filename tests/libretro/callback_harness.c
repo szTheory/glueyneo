@@ -160,11 +160,17 @@ int main(int argc, char **argv) {
     game.size = CONTENT_BYTES - 1u;
     CHECK(!retro_load_game(&game), "truncated content is rejected");
     game.size = CONTENT_BYTES;
+    content[7] = 2u;
+    CHECK(!retro_load_game(&game), "unsupported content version is rejected");
+    content[7] = 1u;
+    content[16u + 0x100u] ^= 1u;
+    CHECK(!retro_load_game(&game), "native fixture validation failure is rejected");
+    content[16u + 0x100u] ^= 1u;
     reject_pixel_format = true;
     CHECK(!retro_load_game(&game), "unsupported pixel format is rejected");
-    CHECK(format_calls == 1u, "pixel format negotiation is attempted");
     reject_pixel_format = false;
     CHECK(retro_load_game(&game), "valid generated content loads");
+    CHECK(format_calls == 3u, "pixel format negotiation runs for native, rejected, and valid loads");
 
     struct retro_system_av_info av_info;
     memset(&av_info, 0, sizeof(av_info));
