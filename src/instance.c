@@ -765,7 +765,10 @@ GN_API gn_status gn_advance_frame(gn_instance *instance,
     if ((request->input_mask & ~GN_INPUT_SUPPORTED_MASK) != 0u ||
         request->pixel_format != GN_PIXEL_XRGB8888 ||
         request->width != GN_FIXTURE_WIDTH || request->height != GN_FIXTURE_HEIGHT ||
-        request->pixels == NULL) return GN_STATUS_INVALID_ARGUMENT;
+        request->pixels == NULL ||
+        (request->audio == NULL && request->audio_capacity_frames != 0u)) {
+        return GN_STATUS_INVALID_ARGUMENT;
+    }
     const size_t row_bytes = (size_t)GN_FIXTURE_WIDTH * sizeof(uint32_t);
     if (request->pitch_bytes < row_bytes ||
         request->pitch_bytes > (SIZE_MAX - row_bytes) / (GN_FIXTURE_HEIGHT - 1u)) {
@@ -774,12 +777,26 @@ GN_API gn_status gn_advance_frame(gn_instance *instance,
     const size_t required = request->pitch_bytes * (GN_FIXTURE_HEIGHT - 1u) + row_bytes;
     if (request->pixel_capacity_bytes < required) return GN_STATUS_INVALID_ARGUMENT;
 
+    out_result->requested_cycles = GN_FIXTURE_FRAME_CYCLES;
+    out_result->frame_time_denominator = UINT64_C(12000000);
+    out_result->machine_clock_hz_numerator = UINT32_C(12000000);
+    out_result->machine_clock_hz_denominator = 1u;
+    out_result->audio_format = GN_AUDIO_S16_INTERLEAVED_STEREO;
+    out_result->audio_sample_rate = UINT32_C(48000);
+    out_result->audio_channels = 2u;
+    out_result->audio_frames_produced = 0u;
+    out_result->video_pixels_produced = 0u;
+
     image->frame_input = (request->input_mask & GN_INPUT_RIGHT) != 0u ? UINT16_C(1) : 0u;
     const owned_cpu_status reset_status = owned_cpu_reset(image->cpu);
-    if (reset_status != OWNED_CPU_OK) return GN_STATUS_CPU_FAILURE;
+    if (reset_status != OWNED_CPU_OK) {
+        out_result->reason = GN_RUN_ERROR;
+        return GN_STATUS_CPU_FAILURE;
+    }
     const owned_cpu_run_result run = owned_cpu_run(image->cpu, GN_FIXTURE_FRAME_CYCLES);
     out_result->requested_cycles = run.requested_cycles;
     out_result->elapsed_cycles = run.elapsed_cycles;
+    out_result->frame_time_numerator = run.elapsed_cycles;
     out_result->instructions = run.instructions;
     out_result->reason = run.reason == OWNED_CPU_STOPPED ? GN_RUN_STOPPED
                        : run.reason == OWNED_CPU_BUDGET ? GN_RUN_BUDGET
@@ -807,7 +824,7 @@ GN_API gn_status gn_advance_frame(gn_instance *instance,
             memcpy(row + (size_t)x * sizeof(pixel), &pixel, sizeof(pixel));
         }
     }
-    out_result->requested_cycles = GN_FIXTURE_FRAME_CYCLES;
+    out_result->video_pixels_produced = (size_t)GN_FIXTURE_WIDTH * GN_FIXTURE_HEIGHT;
     out_result->marker_x = marker_x;
     out_result->marker_y = marker_y;
     return GN_STATUS_OK;
@@ -832,8 +849,8 @@ GN_API const char *gn_status_string(gn_status status) {
         case GN_STATUS_OK: return "ok";
         case GN_STATUS_INVALID_ARGUMENT: return "invalid argument";
         case GN_STATUS_INVALID_STATE: return "instance has no loaded media";
-        case GN_STATUS_INVALID_MEDIA: return "invalid diagnostic media";
-        case GN_STATUS_UNSUPPORTED_PROFILE: return "unsupported diagnostic profile";
+        case GN_STATUS_INVALID_MEDIA: return "invalid media";
+        case GN_STATUS_UNSUPPORTED_PROFILE: return "unsupported profile";
         case GN_STATUS_OUT_OF_MEMORY: return "out of memory";
         case GN_STATUS_CPU_FAILURE: return "CPU backend failure";
         default: return "unknown status";

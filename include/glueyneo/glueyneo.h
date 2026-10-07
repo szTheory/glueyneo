@@ -89,6 +89,10 @@ typedef enum {
     GN_PIXEL_XRGB8888 = 1
 } gn_pixel_format;
 
+typedef enum {
+    GN_AUDIO_S16_INTERLEAVED_STEREO = 1
+} gn_audio_format;
+
 #define GN_INPUT_RIGHT UINT32_C(1)
 #define GN_INPUT_LEFT UINT32_C(2)
 #define GN_INPUT_SUPPORTED_MASK (GN_INPUT_RIGHT | GN_INPUT_LEFT)
@@ -101,12 +105,23 @@ typedef struct {
     size_t pitch_bytes;
     uint8_t *pixels;
     size_t pixel_capacity_bytes;
+    int16_t *audio;
+    size_t audio_capacity_frames;
 } gn_frame_request;
 
 typedef struct {
     uint64_t requested_cycles;
     uint64_t elapsed_cycles;
     uint64_t instructions;
+    uint64_t frame_time_numerator;
+    uint64_t frame_time_denominator;
+    uint32_t machine_clock_hz_numerator;
+    uint32_t machine_clock_hz_denominator;
+    gn_audio_format audio_format;
+    uint32_t audio_sample_rate;
+    uint32_t audio_channels;
+    size_t audio_frames_produced;
+    size_t video_pixels_produced;
     uint32_t marker_x;
     uint32_t marker_y;
     gn_run_reason reason;
@@ -124,14 +139,25 @@ GN_API gn_status gn_run(gn_instance *instance, uint64_t cycle_budget,
                         gn_run_result *out_result);
 GN_API gn_status gn_observe(const gn_instance *instance,
                             gn_observations *out_observations);
-/* Public-fixture frames sample RIGHT once at entry, execute the fixture reset
- * entry for exactly 200000 nominal machine cycles (12 MHz / 60), and render
- * 320x224 XRGB8888 pixels. This ratio is a fixture contract, not qualified
- * Neo Geo timing. Frame calls restart the fixture CPU at its BIOS-free reset
- * vector while preserving guest RAM; this keeps each small frame transaction
- * bounded without claiming general machine continuation. Pixels are native
- * endian uint32_t values 0x00RRGGBB. One instance is single-threaded and
- * non-reentrant, as with the rest of this API. */
+/* A public-fixture frame samples input_mask once at entry. RIGHT advances x;
+ * LEFT is accepted but has no effect in this guest. The only supported video
+ * request is 320x224 XRGB8888 (native-endian uint32_t 0x00RRGGBB). pitch_bytes
+ * is bytes between rows and pixel_capacity_bytes must cover
+ * (height - 1) * pitch_bytes + width * 4, checked before guest execution.
+ * The pixel buffer must be non-null. Audio is fixed signed-16 interleaved
+ * stereo at 48 kHz and produces zero frames; audio==NULL is valid only when
+ * audio_capacity_frames is zero. Any non-null audio buffer is left untouched.
+ * A successful frame advances exactly 200000 nominal machine cycles at 12 MHz.
+ * frame_time_numerator / frame_time_denominator reports consumed cycles over
+ * 12,000,000, so partial failure progress remains exact without rounding
+ * drift; a complete frame is 200000/12000000 seconds (1/60). This is a fixture
+ * contract, not qualified Neo Geo timing. The
+ * fixture CPU restarts at its BIOS-free reset vector per frame while guest
+ * RAM persists. Invalid requests fail before guest mutation. Once execution
+ * begins, errors report consumed cycles and produced counts; retry starts at
+ * the reset vector and retains any guest RAM writes already completed. Caller
+ * buffers remain owned by the caller and are accessed only until return. One
+ * instance is single-threaded and non-reentrant. */
 GN_API gn_status gn_advance_frame(gn_instance *instance,
                                   const gn_frame_request *request,
                                   gn_frame_result *out_result);

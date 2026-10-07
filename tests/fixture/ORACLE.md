@@ -30,6 +30,16 @@ black `320x224` background and a white `8x8` marker using native-endian
 `uint32_t` pixel values `0x00RRGGBB`. The selected semantic pixel expectations
 are specified by this fixture contract, not copied from an emulator.
 
+The C frame request requires XRGB8888 and exact `320x224` dimensions. Pixel
+pitch is bytes per row and the checked minimum capacity is
+`(height - 1) * pitch + width * 4`; row padding is not written. A null pixel
+pointer is invalid. The fixture reports a 12,000,000/1 machine clock and exact
+consumed-cycle progress over that clock; a complete 200,000-cycle frame is
+`200000/12000000` seconds (1/60) with no host-time conversion. Audio transport
+metadata is signed-16 interleaved stereo at 48 kHz, with zero produced frames
+and no buffer writes. A null audio pointer is accepted only with zero frame
+capacity. The all-zero output is a silent contract, not audible sound support.
+
 ## CPU and board evidence
 
 Existing forms `MOVE.W (abs.L),Dn` and `STOP #$2700` were already in the
