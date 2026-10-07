@@ -49,6 +49,28 @@ returned no rulesets; the observed enforcement is classic branch protection.
 PR #1 remains draft at head `2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1`, has
 no reviews, and requires review. No open issues were present.
 
+## PR state at read-only observation (2026-10-07)
+
+Immediately after the refreshed verification and handoff were pushed, and
+before this receipt correction, read-only GitHub PR metadata reported PR #1
+open and draft against `main`, at head
+`d5456d519e80a1270bb40d353fa190049ada8616`; it was not merged, had no
+submitted reviews, and had no reviewers requested. The repository was public,
+auto-merge was enabled, and squash was the only allowed merge method. These
+are configuration and PR-state observations, not evidence that protection
+allowed a merge.
+
+The local exact-SHA policy regression had passed at `d5456d5` before this
+checkpoint addition. The selected revision public-content scan passed on the
+local worktree based on that head with this checkpoint present, with no
+findings (99 source files, 1,184 history objects available in the checkout,
+and 21 rights-inventory items). The scan is detector-negative-only and
+inspected no release archives or logs.
+No hosted Actions receipt or independent GSD review for `d5456d5` was recorded
+at this observation. The previously recorded hosted runs and committed review
+bind to earlier SHAs and do not qualify that head. Do not infer current-head
+hosted results from the local checks or from historical CI receipts.
+
 ## Exact hosted CI evidence
 
 [CI run 37525280735](https://github.com/szTheory/glueyneo/actions/runs/37525280735) passed all six matrix lanes, public-content and the
