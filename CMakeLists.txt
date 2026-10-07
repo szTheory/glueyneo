@@ -149,6 +149,10 @@ target_include_directories(glueyneo_libretro PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libretro
 )
 target_link_libraries(glueyneo_libretro PRIVATE Glueyneo::glueyneo)
+install(TARGETS glueyneo_libretro
+  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/libretro"
+  RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/libretro"
+)
 if(MSVC)
   target_compile_options(glueyneo_libretro PRIVATE /W4 /WX)
 else()
