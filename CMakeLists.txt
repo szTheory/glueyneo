@@ -30,6 +30,7 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 option(GLUEYNEO_BUILD_TESTS "Build SDK tests and the headless diagnostic" ${BUILD_TESTING})
+option(GLUEYNEO_YM2610_ADMISSION "Build the private ymfm YM2610 admission candidate" ${GLUEYNEO_BUILD_TESTS})
 option(GLUEYNEO_CPU_EXPERIMENT "Build the private CPU acceptance experiment" OFF)
 option(GLUEYNEO_OWNED_CPU_EXPERIMENT "Build the private owned MC68000 experiment" OFF)
 set(GLUEYNEO_SDK_SANITIZER "NONE" CACHE STRING
@@ -38,6 +39,10 @@ set_property(CACHE GLUEYNEO_SDK_SANITIZER PROPERTY STRINGS
              NONE ADDRESS_UNDEFINED THREAD)
 if(NOT GLUEYNEO_SDK_SANITIZER MATCHES "^(NONE|ADDRESS_UNDEFINED|THREAD)$")
   message(FATAL_ERROR "Unknown SDK sanitizer mode: ${GLUEYNEO_SDK_SANITIZER}")
+endif()
+
+if(GLUEYNEO_YM2610_ADMISSION)
+  enable_language(CXX)
 endif()
 
 set(GLUEYNEO_SDK_SANITIZER_FLAGS "")
@@ -219,6 +224,65 @@ install(TARGETS glueyneo
 install(TARGETS glueyneo-diagnostic
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
 )
+if(GLUEYNEO_YM2610_ADMISSION)
+  add_library(glueyneo_ym2610_candidate
+    src/chips/ym2610_candidate.cpp
+    third_party/ymfm/src/ymfm_opn.cpp
+    third_party/ymfm/src/ymfm_adpcm.cpp
+    third_party/ymfm/src/ymfm_ssg.cpp
+  )
+  add_library(Glueyneo::ym2610_candidate ALIAS glueyneo_ym2610_candidate)
+  target_compile_features(glueyneo_ym2610_candidate PUBLIC c_std_17 PRIVATE cxx_std_14)
+  set_target_properties(glueyneo_ym2610_candidate PROPERTIES
+    EXPORT_NAME ym2610_candidate
+    CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN YES
+    POSITION_INDEPENDENT_CODE ON
+  )
+  target_include_directories(glueyneo_ym2610_candidate
+    PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/chips>
+      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/glueyneo/private>
+    PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/third_party/ymfm/src
+  )
+  target_compile_definitions(glueyneo_ym2610_candidate
+    PUBLIC GLUEYNEO_YM2610_TEST_HOOKS
+    PRIVATE GLUEYNEO_YM2610_CANDIDATE_BUILD
+  )
+  if(BUILD_SHARED_LIBS AND WIN32)
+    target_compile_definitions(glueyneo_ym2610_candidate
+      INTERFACE GLUEYNEO_YM2610_CANDIDATE_SHARED
+    )
+  endif()
+  if(APPLE)
+    target_link_libraries(glueyneo_ym2610_candidate INTERFACE
+      "$<$<LINK_LANGUAGE:C>:c++>"
+    )
+  elseif(UNIX)
+    target_link_libraries(glueyneo_ym2610_candidate INTERFACE
+      "$<$<LINK_LANGUAGE:C>:stdc++>"
+    )
+  endif()
+  if(MSVC)
+    target_compile_options(glueyneo_ym2610_candidate PRIVATE /W4)
+  else()
+    target_compile_options(glueyneo_ym2610_candidate PRIVATE -Wall -Wextra -Wpedantic)
+  endif()
+  install(TARGETS glueyneo_ym2610_candidate
+    EXPORT GlueyneoTargets
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+  )
+  install(FILES src/chips/ym2610_candidate.h
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/glueyneo/private"
+  )
+endif()
 install(DIRECTORY include/glueyneo
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
@@ -288,6 +352,31 @@ if(GLUEYNEO_BUILD_TESTS)
     C_EXTENSIONS NO
   )
   glueyneo_apply_sdk_sanitizer(glueyneo_unity)
+
+  if(GLUEYNEO_YM2610_ADMISSION)
+    add_executable(ym2610_admission_test tests/chips/test_ym2610.c)
+    target_include_directories(ym2610_admission_test PRIVATE src/chips)
+    target_compile_features(ym2610_admission_test PRIVATE c_std_17)
+    set_target_properties(ym2610_admission_test PROPERTIES
+      C_STANDARD 17
+      C_STANDARD_REQUIRED YES
+      C_EXTENSIONS NO
+    )
+    target_compile_definitions(ym2610_admission_test PRIVATE GLUEYNEO_YM2610_TEST_HOOKS)
+    target_link_libraries(ym2610_admission_test PRIVATE
+      glueyneo_ym2610_candidate glueyneo_unity
+    )
+    if(MSVC)
+      target_compile_options(ym2610_admission_test PRIVATE /W4 /WX)
+    else()
+      target_compile_options(ym2610_admission_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    endif()
+    add_test(NAME ym2610_admission
+      COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/chips/check_ym2610.py"
+              test --binary $<TARGET_FILE:ym2610_admission_test>
+              --report "${CMAKE_CURRENT_BINARY_DIR}/ym2610-admission/ym2610-admission.json")
+    set_tests_properties(ym2610_admission PROPERTIES LABELS "ym2610-admission" TIMEOUT 180)
+  endif()
 
   add_executable(public_guest_test
     tests/fixture/test_public_guest.c

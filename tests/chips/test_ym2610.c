@@ -18,55 +18,6 @@ typedef struct {
     int irq_level;
 } test_callbacks;
 
-#if defined(YM2610_TEST_STUB)
-ym2610_candidate_status ym2610_candidate_create(
-    const ym2610_candidate_callbacks *callbacks, void *userdata,
-    ym2610_candidate **out_candidate) {
-    (void)callbacks;
-    (void)userdata;
-    if (out_candidate != NULL) *out_candidate = NULL;
-    return YM2610_CANDIDATE_CALLBACK_FAILURE;
-}
-void ym2610_candidate_destroy(ym2610_candidate *candidate) { (void)candidate; }
-ym2610_candidate_status ym2610_candidate_reset(ym2610_candidate *candidate) {
-    (void)candidate;
-    return YM2610_CANDIDATE_CALLBACK_FAILURE;
-}
-ym2610_candidate_status ym2610_candidate_write(ym2610_candidate *candidate,
-                                                uint32_t port, uint8_t value) {
-    (void)candidate;
-    (void)port;
-    (void)value;
-    return YM2610_CANDIDATE_CALLBACK_FAILURE;
-}
-ym2610_candidate_status ym2610_candidate_clock(
-    ym2610_candidate *candidate, uint32_t input_clocks, int32_t *samples,
-    size_t capacity_frames, size_t *produced_frames) {
-    (void)candidate;
-    (void)input_clocks;
-    (void)samples;
-    (void)capacity_frames;
-    if (produced_frames != NULL) *produced_frames = 0u;
-    return YM2610_CANDIDATE_CALLBACK_FAILURE;
-}
-ym2610_candidate_status ym2610_candidate_sample_rate(uint32_t input_clock,
-                                                      uint32_t *rate) {
-    (void)input_clock;
-    (void)rate;
-    return YM2610_CANDIDATE_CALLBACK_FAILURE;
-}
-ym2610_candidate_status ym2610_candidate_test_probe_read(
-    ym2610_candidate *candidate, uint32_t access, uint32_t address) {
-    (void)candidate;
-    (void)access;
-    (void)address;
-    return YM2610_CANDIDATE_CALLBACK_FAILURE;
-}
-ym2610_candidate_status ym2610_candidate_test_throw(void) {
-    return YM2610_CANDIDATE_CALLBACK_FAILURE;
-}
-#endif
-
 static int callback_read(void *userdata, uint32_t access, uint32_t address,
                          uint8_t *value) {
     test_callbacks *state = userdata;
@@ -131,6 +82,21 @@ static int run_trace(ym2610_candidate *candidate, uint32_t total_clocks,
     return 1;
 }
 
+static uint64_t sample_fingerprint(const int32_t *samples, size_t sample_count,
+                                   size_t *nonzero_count) {
+    uint64_t hash = UINT64_C(14695981039346656037);
+    *nonzero_count = 0u;
+    for (size_t index = 0u; index < sample_count; ++index) {
+        uint32_t value = (uint32_t)samples[index];
+        if (samples[index] != 0) ++*nonzero_count;
+        for (unsigned byte = 0u; byte < 4u; ++byte) {
+            hash ^= (uint8_t)(value >> (byte * 8u));
+            hash *= UINT64_C(1099511628211);
+        }
+    }
+    return hash;
+}
+
 static void identical_clock_and_register_traces_match_non_silent_samples(void) {
     test_callbacks callbacks_a = {0};
     test_callbacks callbacks_b = {0};
@@ -152,12 +118,11 @@ static void identical_clock_and_register_traces_match_non_silent_samples(void) {
     TEST_ASSERT_EQUAL_UINT(256u, frames_a);
     TEST_ASSERT_EQUAL_MEMORY(samples_a, samples_b,
                              frames_a * 3u * sizeof(samples_a[0]));
-    int nonzero = 0;
-    for (size_t index = 0u; index < frames_a * 3u; ++index) {
-        if (samples_a[index] != 0) nonzero = 1;
-    }
-    TEST_ASSERT_TRUE_MESSAGE(nonzero, "programmed YM2610 produced only silence");
-    printf("ym2610_sample_frames=%zu sample_sha256_pending=nonzero\n", frames_a);
+    size_t nonzero = 0u;
+    uint64_t fingerprint = sample_fingerprint(samples_a, frames_a * 3u, &nonzero);
+    TEST_ASSERT_TRUE_MESSAGE(nonzero != 0u, "programmed YM2610 produced only silence");
+    printf("ym2610_sample_frames=%zu nonzero_values=%zu fnv1a64=%016llx\n",
+           frames_a, nonzero, (unsigned long long)fingerprint);
     ym2610_candidate_destroy(a);
     ym2610_candidate_destroy(b);
 }

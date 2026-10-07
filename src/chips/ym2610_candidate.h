@@ -8,6 +8,20 @@
 extern "C" {
 #endif
 
+#if defined(_WIN32)
+#if defined(GLUEYNEO_YM2610_CANDIDATE_BUILD)
+#define YM2610_CANDIDATE_API __declspec(dllexport)
+#elif defined(GLUEYNEO_YM2610_CANDIDATE_SHARED)
+#define YM2610_CANDIDATE_API __declspec(dllimport)
+#else
+#define YM2610_CANDIDATE_API
+#endif
+#elif defined(__GNUC__)
+#define YM2610_CANDIDATE_API __attribute__((visibility("default")))
+#else
+#define YM2610_CANDIDATE_API
+#endif
+
 typedef struct ym2610_candidate ym2610_candidate;
 
 typedef enum ym2610_candidate_status {
@@ -38,25 +52,25 @@ typedef struct ym2610_candidate_callbacks {
     ym2610_candidate_irq_fn irq;
 } ym2610_candidate_callbacks;
 
-/* The callback table and userdata must outlive the candidate instance. */
-ym2610_candidate_status ym2610_candidate_create(
+/* The callback table is copied; userdata must outlive the candidate instance. */
+YM2610_CANDIDATE_API ym2610_candidate_status ym2610_candidate_create(
     const ym2610_candidate_callbacks *callbacks, void *userdata,
     ym2610_candidate **out_candidate);
-void ym2610_candidate_destroy(ym2610_candidate *candidate);
-ym2610_candidate_status ym2610_candidate_reset(ym2610_candidate *candidate);
-ym2610_candidate_status ym2610_candidate_write(ym2610_candidate *candidate,
+YM2610_CANDIDATE_API void ym2610_candidate_destroy(ym2610_candidate *candidate);
+YM2610_CANDIDATE_API ym2610_candidate_status ym2610_candidate_reset(ym2610_candidate *candidate);
+YM2610_CANDIDATE_API ym2610_candidate_status ym2610_candidate_write(ym2610_candidate *candidate,
                                                 uint32_t port, uint8_t value);
 /* Produces at most capacity_frames interleaved L/R/SSG int32 triplets. */
-ym2610_candidate_status ym2610_candidate_clock(
+YM2610_CANDIDATE_API ym2610_candidate_status ym2610_candidate_clock(
     ym2610_candidate *candidate, uint32_t input_clocks, int32_t *samples,
     size_t capacity_frames, size_t *produced_frames);
-ym2610_candidate_status ym2610_candidate_sample_rate(uint32_t input_clock,
+YM2610_CANDIDATE_API ym2610_candidate_status ym2610_candidate_sample_rate(uint32_t input_clock,
                                                       uint32_t *rate);
 
 #ifdef GLUEYNEO_YM2610_TEST_HOOKS
-ym2610_candidate_status ym2610_candidate_test_probe_read(
+YM2610_CANDIDATE_API ym2610_candidate_status ym2610_candidate_test_probe_read(
     ym2610_candidate *candidate, uint32_t access, uint32_t address);
-ym2610_candidate_status ym2610_candidate_test_throw(void);
+YM2610_CANDIDATE_API ym2610_candidate_status ym2610_candidate_test_throw(void);
 #endif
 
 #ifdef __cplusplus
