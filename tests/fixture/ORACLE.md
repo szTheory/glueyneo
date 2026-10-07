@@ -7,6 +7,33 @@ guest ROM, a ten-byte RAM initialization prefix, and an 8x8 one-bit marker tile.
 It contains no BIOS, game ROM, commercial data, or third-party guest bytes.
 The generated file is a build artifact and is not committed.
 
+## Source, generator, and output identity
+
+The source recipe is `tests/fixture/public_guest.c`; it defines the guest words,
+RAM seed, marker bitmap, envelope, and writer. The generator executable is the
+ordinary C test consumer, built from `tests/fixture/test_public_guest.c` and
+`tests/fixture/public_guest.c`; its `--write-fixture` path calls
+`public_guest_write`. CMake target `glueyneo-public-fixture` is the single
+producer and writes `build/sdk-debug/public-playable.bin` for the `sdk-debug`
+preset. Native CTest and the real RetroArch smoke both receive that same path.
+The fixture-specific [`rights-manifest.json`](rights-manifest.json) records
+SHA-256 and byte length separately for the recipe, assertion source, generated
+asset source, and output. The 602-byte output digest is
+`59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0`.
+`python3 tests/fixture/check_fixture.py --source tests/fixture/public_guest.c
+--artifact build/sdk-debug/public-playable.bin --rights
+tests/fixture/rights-manifest.json --check-rebuild --negative-control` checks
+source and rights records, verifies the unique CMake producer and shared
+consumer path, rebuilds twice, and proves that changed bytes are rejected.
+
+Authorship and redistribution are affirmative: the guest recipe, seed, bitmap,
+tests, and documentation were authored for Glueyneo and are distributed under
+the repository MIT license, with `LICENSE` retained. The checker records no
+commercial material, firmware, private capture, or third-party guest asset.
+The generated binary is ignored build output and is not included in source or
+release archives. Hash identity binds the stated bytes; it is not itself proof
+of legal rights.
+
 ## Guest contract
 
 The BIOS-free fixture reset vector starts at ROM offset `0x100` with SSP
@@ -42,21 +69,37 @@ capacity. The all-zero output is a silent contract, not audible sound support.
 
 ## CPU and board evidence
 
-Existing forms `MOVE.W (abs.L),Dn` and `STOP #$2700` were already in the
-documented owned CPU subset. This guest added only two opcode/addressing pairs:
-`ADD.W D0,D1` and `MOVE.W D1,(abs.L)`. Their effects, flags, and cycle counts
-are tested against Motorola, *M68000 Family Programmer's Reference Manual*
-(1992), §4-4 and the MOVE instruction entry, plus *M68000 8-/16-/32-Bit
-Microprocessors User's Manual*, ninth edition (1993), tables 8-2 and 8-4.
-Those primary manuals support CPU instruction semantics and timing only.
+The independent assertion ancestry is the fixture contract above and the
+primary Motorola manuals, not output copied from Glueyneo or another emulator.
+The exact manual-derived CPU expectations for `ADD.W D0,D1` (`0xd240`) and
+`MOVE.W D1,(abs.L)` (`0x33c1` plus the absolute address) are recorded in
+[`tests/owned_cpu/ORACLE.md`](../owned_cpu/ORACLE.md): Motorola, *M68000 Family
+Programmer's Reference Manual* (1992), §4-4 and MOVE entry; *M68000 8-/16-/32-Bit
+Microprocessors User's Manual*, Rev. 9.1 (1993), tables 8-2 and 8-4. These
+primary manuals justify CPU semantics and timing only. The one-step trace
+expectations are independently stated here: NONE leaves x=16; RIGHT produces
+x=17 then x=18; pixel `(0,0)` remains black; the 8x8 marker's first/last pixels
+are white and the next edge is black. Substituting LEFT or NONE must fail the
+rightward coordinate and newly occupied edge assertions. These are fixture
+assertions, not copied test output.
 
 The input port, `GNFX` envelope, reset-entry-per-frame behavior, pixel format,
 backdrop, marker, and 12 MHz / 60 cycle ratio are first-party fixture
-semantics. The cycle ratio is not established Neo Geo timing. This fixture
-does not establish physical board/video behavior, BIOS compatibility, normal
-MVS boot, commercial-game compatibility, or hardware truth. The community
-Neo Geo Development Wiki display/sprite/VRAM pages are implementation context
-only; MAME is differential reference material, not an independent oracle.
+semantics. The cycle ratio is not established Neo Geo timing. The community
+[Neo Geo Development Wiki display timing](https://wiki.neogeodev.org/index.php/Display_timing),
+[sprites](https://wiki.neogeodev.org/index.php/Sprites), and
+[VRAM](https://wiki.neogeodev.org/index.php/VRAM) pages were reviewed
+2026-10-07; they are community-maintained implementation references with no
+immutable revision recorded, not vendor manuals or physical observation. Any
+claims derived from them remain uncertain and require separate corroboration.
+MAME's [`neogeo_v.cpp`](https://github.com/mamedev/mame/blob/master/src/mame/snk/neogeo_v.cpp)
+is a mutable-branch implementation reference only; a pinned comparison can be
+differential evidence, never an independent hardware oracle. The accepted
+68000 evidence covers only its bounded diagnostic subset plus the two named
+instruction forms above. This fixture does not support the diagnostic profile,
+general MVS profile, general Neo Geo video behavior, physical board/video
+behavior, BIOS compatibility, normal MVS boot, commercial-game compatibility,
+or any claim of hardware truth.
 
 ## Rebuild and test
 
@@ -69,5 +112,7 @@ absent. These controls establish the fixture's own input behavior only.
 
 `cmake --preset sdk-debug && cmake --build --preset sdk-debug --target
 glueyneo-public-fixture public_guest_test && ctest --preset sdk-debug -R
-'^public_guest_tracer$' --output-on-failure --no-tests=error` rebuilds the
-artifact and runs the ordinary C API consumer.
+'^public_guest_' --output-on-failure --no-tests=error` rebuilds the artifact
+and runs the ordinary C API consumer and negative controls. The pinned
+RetroArch invocation is recorded in the adjacent 04-02 summary; a real frontend
+pass remains unknown until load, input, pixels, and unload are all observed.

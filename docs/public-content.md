@@ -60,6 +60,16 @@ Unity subset pinned to upstream commit
 save states, capture files, private corpora, and the experimental Musashi tree
 remain excluded.
 
+The public playable tracer has a separate
+[`tests/fixture/rights-manifest.json`](../tests/fixture/rights-manifest.json)
+that binds the tracked guest recipe and assertion source to the 602-byte build
+output. `tests/fixture/check_fixture.py` checks those identities, affirmative
+MIT rights, the single CMake producer, and the common native/RetroArch artifact
+path. With `--check-rebuild --negative-control`, it invokes the named CMake
+target twice and verifies that a mutated artifact is rejected. The output stays
+build-only; its digest is an identity record, not a claim that the binary is a
+public source asset or independent rights evidence.
+
 Rights are an evidence question distinct from pattern detection. A digest binds
 bytes to a record; it does not prove ownership, license scope, or permission.
 On 2026-10-06, GitHub reported secret scanning and push protection enabled for
