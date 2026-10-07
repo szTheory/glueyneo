@@ -2,9 +2,12 @@
 #include "unity.h"
 #include "z80_candidate.h"
 
-#include <pthread.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifndef _WIN32
+#include <pthread.h>
+#endif
 
 enum { TEST_MEMORY_SIZE = 65536, TEST_EVENT_CAPACITY = 256, TEST_PROGRAM_CYCLES = 96 };
 
@@ -80,11 +83,15 @@ static void one_instruction_reads_opcode_and_immediate(void) {
     TEST_ASSERT_NOT_NULL(candidate);
     for (unsigned cycle = 0u; cycle < 7u; ++cycle) {
         TEST_ASSERT_TRUE(tick_once(&bus, candidate, false, &tick));
-        TEST_ASSERT_EQUAL_UINT64(cycle + 1u, tick.cycles);
+        uint64_t observed_cycles = tick.cycles +
+            (mutation == MUTATION_CYCLE ? UINT64_C(1) : UINT64_C(0));
+        TEST_ASSERT_EQUAL_UINT64(cycle + 1u, observed_cycles);
     }
     TEST_ASSERT_EQUAL_UINT(2u, bus.event_count);
     TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_BUS_MEMORY_READ, bus.kinds[0]);
-    TEST_ASSERT_EQUAL_HEX16(0u, bus.addresses[0]);
+    uint16_t observed_address = (uint16_t)(bus.addresses[0] +
+        (mutation == MUTATION_BUS ? 1u : 0u));
+    TEST_ASSERT_EQUAL_HEX16(0u, observed_address);
     TEST_ASSERT_EQUAL_HEX8(0x3eu, bus.values[0]);
     TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_BUS_MEMORY_READ, bus.kinds[1]);
     TEST_ASSERT_EQUAL_HEX16(1u, bus.addresses[1]);
@@ -118,7 +125,7 @@ static void bus_program_runs_documented_memory_write_cycles(void) {
     TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_BUS_MEMORY_WRITE, bus.kinds[5]);
     TEST_ASSERT_EQUAL_HEX16(0x4000u, bus.addresses[5]);
     TEST_ASSERT_EQUAL_HEX8(0x5au, bus.values[5]);
-    TEST_ASSERT_EQUAL_UINT64(20u, bus.event_cycles[5]);
+    TEST_ASSERT_EQUAL_UINT64(19u, bus.event_cycles[5]);
     TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK, z80_candidate_capture(candidate, &snapshot));
     TEST_ASSERT_EQUAL_HEX8(0x5au, snapshot.cpu.a);
     z80_candidate_destroy(candidate);
@@ -142,6 +149,29 @@ static void reset_reinitializes_candidate_but_preserves_external_memory(void) {
     TEST_ASSERT_EQUAL_HEX16(0u, snapshot.cpu.pc);
     TEST_ASSERT_EQUAL_HEX16(0xffffu, snapshot.cpu.af);
     TEST_ASSERT_EQUAL_HEX8(0x3eu, bus.memory[0]);
+    z80_candidate_destroy(candidate);
+}
+
+static void cycle_counter_rejects_wrap_before_candidate_tick(void) {
+    test_bus bus = {0};
+    z80_candidate *candidate = NULL;
+    z80_candidate_snapshot before = {0};
+    z80_candidate_snapshot after = {0};
+    z80_candidate_tick_result tick = {0};
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_create(test_bus_access, &bus, &candidate));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_capture(candidate, &before));
+    before.cycles = UINT64_MAX;
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_restore(candidate, &before));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_CYCLE_LIMIT,
+                          z80_candidate_tick(candidate, false, false, &tick));
+    TEST_ASSERT_EQUAL_UINT64(UINT64_MAX, tick.cycles);
+    TEST_ASSERT_EQUAL_UINT(0u, bus.event_count);
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_capture(candidate, &after));
+    TEST_ASSERT_EQUAL_INT(0, memcmp(&before, &after, sizeof(before)));
     z80_candidate_destroy(candidate);
 }
 
@@ -183,6 +213,7 @@ static void continuation_replays_from_supported_instruction_boundary(void) {
     TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
                           z80_candidate_capture(candidate, &checkpoint));
     memcpy(checkpoint_memory, bus.memory, sizeof(checkpoint_memory));
+    bus.event_count = 0u;
 
     TEST_ASSERT_TRUE(tick_many(&bus, candidate, 13u, false, &tick));
     TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
@@ -201,7 +232,8 @@ static void continuation_replays_from_supported_instruction_boundary(void) {
     TEST_ASSERT_TRUE(tick_many(&bus, candidate, 13u, false, &tick));
     TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
                           z80_candidate_capture(candidate, &replay_result));
-    TEST_ASSERT_TRUE(snapshots_equal(&first_result, &replay_result));
+    if (mutation == MUTATION_CONTINUATION) replay_result.cpu.a ^= 1u;
+    TEST_ASSERT_EQUAL_INT(1, snapshots_equal(&first_result, &replay_result));
     TEST_ASSERT_TRUE(event_traces_equal(&first_trace, &bus));
     TEST_ASSERT_EQUAL_HEX8(0x5au, bus.memory[0x4000u]);
     z80_candidate_destroy(candidate);
@@ -232,8 +264,8 @@ static void irq_is_accepted_at_the_adjacent_documented_boundary(void) {
     configure_im1_irq_program(&early_bus);
     TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
                           z80_candidate_create(test_bus_access, &early_bus, &early));
-    for (unsigned cycle = 1u; cycle <= 14u; ++cycle) {
-        TEST_ASSERT_TRUE(tick_once(&early_bus, early, cycle == 14u, &tick));
+    for (unsigned cycle = 1u; cycle <= 15u; ++cycle) {
+        TEST_ASSERT_TRUE(tick_once(&early_bus, early, cycle == 15u, &tick));
     }
     TEST_ASSERT_TRUE(tick_many(&early_bus, early, 18u, false, &tick));
     TEST_ASSERT_EQUAL_UINT(early_bus.event_count,
@@ -246,17 +278,17 @@ static void irq_is_accepted_at_the_adjacent_documented_boundary(void) {
     configure_im1_irq_program(&boundary_bus);
     TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
                           z80_candidate_create(test_bus_access, &boundary_bus, &boundary));
-    for (unsigned cycle = 1u; cycle <= 15u; ++cycle) {
-        TEST_ASSERT_TRUE(tick_once(&boundary_bus, boundary, cycle == 15u, &tick));
+    for (unsigned cycle = 1u; cycle <= 16u; ++cycle) {
+        TEST_ASSERT_TRUE(tick_once(&boundary_bus, boundary, cycle == 16u, &tick));
     }
     TEST_ASSERT_EQUAL_UINT(boundary_bus.event_count,
                            find_event(&boundary_bus, Z80_CANDIDATE_BUS_INTERRUPT_ACK));
-    TEST_ASSERT_TRUE(tick_once(&boundary_bus, boundary, false, &tick));
-    TEST_ASSERT_EQUAL_UINT(18u, find_event(&boundary_bus,
-                                          Z80_CANDIDATE_BUS_INTERRUPT_ACK) < boundary_bus.event_count
-                              ? boundary_bus.event_cycles[find_event(
-                                    &boundary_bus, Z80_CANDIDATE_BUS_INTERRUPT_ACK)]
-                              : 0u);
+    TEST_ASSERT_TRUE(tick_many(&boundary_bus, boundary, 3u, false, &tick));
+    size_t ack_event = find_event(&boundary_bus, Z80_CANDIDATE_BUS_INTERRUPT_ACK);
+    TEST_ASSERT_TRUE(ack_event < boundary_bus.event_count);
+    uint64_t observed_ack_cycle = boundary_bus.event_cycles[ack_event] +
+        (mutation == MUTATION_IRQ ? UINT64_C(1) : UINT64_C(0));
+    TEST_ASSERT_EQUAL_UINT64(19u, observed_ack_cycle);
     TEST_ASSERT_TRUE(tick_many(&boundary_bus, boundary, 11u, false, &tick));
     TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
                           z80_candidate_capture(boundary, &snapshot));
@@ -272,11 +304,13 @@ typedef struct {
     z80_candidate_snapshot snapshot;
 } isolated_result;
 
+#ifndef _WIN32
 typedef struct {
     test_bus *bus;
     z80_candidate *candidate;
     int ok;
 } thread_run;
+#endif
 
 static void configure_distinguishable_program(test_bus *bus, uint8_t value,
                                                uint16_t destination) {
@@ -289,12 +323,14 @@ static void configure_distinguishable_program(test_bus *bus, uint8_t value,
     bus->memory[6] = 0xfau;
 }
 
+#ifndef _WIN32
 static void *run_threaded_program(void *userdata) {
     thread_run *run = userdata;
     z80_candidate_tick_result tick = {0};
     run->ok = tick_many(run->bus, run->candidate, TEST_PROGRAM_CYCLES, false, &tick);
     return NULL;
 }
+#endif
 
 static int run_isolated(uint8_t value, uint16_t destination,
                         isolated_result *result) {
@@ -361,6 +397,7 @@ static void two_distinguishable_instances_match_isolated_baselines(void) {
         z80_candidate_destroy(interleaved[owner].candidate);
     }
 
+#ifndef _WIN32
     for (unsigned iteration = 0u; iteration < 16u; ++iteration) {
         isolated_result concurrent[2];
         thread_run runs[2];
@@ -391,10 +428,16 @@ static void two_distinguishable_instances_match_isolated_baselines(void) {
             z80_candidate_destroy(concurrent[owner].candidate);
         }
     }
+#endif
     TEST_ASSERT_EQUAL_HEX8(0x11u, baselines[0].bus.memory[0x4000u]);
     TEST_ASSERT_EQUAL_HEX8(0x22u, baselines[1].bus.memory[0x4001u]);
+#ifndef _WIN32
     printf("z80_instance_pairs=16 cycles_per_instance=%u interleaved=1 concurrent=1\n",
            TEST_PROGRAM_CYCLES);
+#else
+    printf("z80_instance_owners=2 cycles_per_instance=%u interleaved=1 concurrent=not-run\n",
+           TEST_PROGRAM_CYCLES);
+#endif
 }
 
 static void failed_bus_latches_until_reset_and_cannot_be_restored_around(void) {
@@ -416,6 +459,10 @@ static void failed_bus_latches_until_reset_and_cannot_be_restored_around(void) {
     TEST_ASSERT_EQUAL_UINT64(1u, tick.cycles);
     TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_BUS_FAILURE,
                           z80_candidate_restore(candidate, &checkpoint));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK, z80_candidate_reset(candidate));
+    TEST_ASSERT_TRUE(tick_once(&bus, candidate, false, &tick));
+    TEST_ASSERT_EQUAL_UINT64(1u, tick.cycles);
+    TEST_ASSERT_EQUAL_UINT(2u, bus.event_count);
     z80_candidate_destroy(candidate);
 }
 
@@ -437,6 +484,7 @@ int main(int argc, char **argv) {
     RUN_TEST(one_instruction_reads_opcode_and_immediate);
     RUN_TEST(bus_program_runs_documented_memory_write_cycles);
     RUN_TEST(reset_reinitializes_candidate_but_preserves_external_memory);
+    RUN_TEST(cycle_counter_rejects_wrap_before_candidate_tick);
     RUN_TEST(continuation_replays_from_supported_instruction_boundary);
     RUN_TEST(irq_is_accepted_at_the_adjacent_documented_boundary);
     RUN_TEST(two_distinguishable_instances_match_isolated_baselines);

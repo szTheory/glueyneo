@@ -124,7 +124,9 @@ z80_candidate_status z80_candidate_capture(const z80_candidate *candidate,
 
 z80_candidate_status z80_candidate_restore(z80_candidate *candidate,
                                            const z80_candidate_snapshot *snapshot) {
-    if (candidate == NULL || snapshot == NULL ||
+    if (candidate == NULL) return Z80_CANDIDATE_INVALID_ARGUMENT;
+    if (candidate->bus_failed) return Z80_CANDIDATE_BUS_FAILURE;
+    if (snapshot == NULL ||
         snapshot->version != Z80_CANDIDATE_SNAPSHOT_VERSION ||
         (snapshot->pins & ~Z80_PIN_MASK) != 0u) {
         return Z80_CANDIDATE_INVALID_SNAPSHOT;

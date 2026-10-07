@@ -409,6 +409,14 @@ if(GLUEYNEO_BUILD_TESTS)
   glueyneo_apply_sdk_sanitizer(z80_admission_test)
   add_test(NAME z80_admission_contract COMMAND z80_admission_test)
   set_tests_properties(z80_admission_contract PROPERTIES LABELS "z80-admission")
+  foreach(z80_mutation IN ITEMS cycle bus irq continuation instance)
+    add_test(NAME "z80_admission_mutation_${z80_mutation}"
+      COMMAND z80_admission_test "--mutation=${z80_mutation}")
+    set_tests_properties("z80_admission_mutation_${z80_mutation}" PROPERTIES
+      WILL_FAIL TRUE
+      LABELS "z80-admission;z80-mutation"
+    )
+  endforeach()
 
   add_executable(sdk_mutation
     tests/fuzz/sdk_mutation.c
