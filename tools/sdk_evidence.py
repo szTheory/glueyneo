@@ -41,6 +41,19 @@ FIXTURES = {
     },
 }
 OUTCOMES = {"pass", "fail", "skipped", "unsupported", "unknown"}
+MATRIX_SCHEMA_VERSION = 1
+REQUIRED_MATRIX_LANES = (
+    "linux-clang", "linux-gcc", "macos-appleclang", "windows-msvc",
+    "linux-clang-sanitizer", "linux-clang-fuzz",
+)
+MATRIX_LANE_IDENTITY = {
+    "linux-clang": ("Linux", {"Clang"}, {"x86_64", "AMD64"}),
+    "linux-gcc": ("Linux", {"GNU"}, {"x86_64", "AMD64"}),
+    "macos-appleclang": ("Darwin", {"AppleClang"}, {"arm64", "aarch64"}),
+    "windows-msvc": ("Windows", {"MSVC"}, {"AMD64", "x86_64"}),
+    "linux-clang-sanitizer": ("Linux", {"Clang"}, {"x86_64", "AMD64"}),
+    "linux-clang-fuzz": ("Linux", {"Clang"}, {"x86_64", "AMD64"}),
+}
 IDENTITY_FIELDS = {
     "source_revision", "relevant_source_sha256", "working_tree_dirty",
     "owned_backend_sha256", "unity_pin", "unity_files", "fixture_manifest_sha256",
@@ -77,6 +90,8 @@ RELEVANT_FILES = (
     "tests/fuzz/minimize.py", "tests/consumers/CMakeLists.txt",
     "tests/consumers/check_package.py", "tests/consumers/header.cpp",
     "tools/diagnostic/main.c", "tools/sdk_evidence.py", "tools/verify_sdk.py",
+    "tools/workflow/ci_policy.py", "tests/workflow/test_ci_policy.py",
+    "tests/sdk/test_matrix_evidence.py", ".github/workflows/ci.yml",
     "fixtures/diagnostic/manifest.json",
     "docs/evidence-schema.md", "docs/ownership-and-errors.md", "docs/testing.md",
     "README.md", "tools/sdk_baseline.py", "third_party/unity/src/unity.c", "third_party/unity/src/unity.h",
@@ -97,6 +112,190 @@ class EvidenceError(ValueError):
     def __init__(self, reason: str, message: str):
         super().__init__(message)
         self.reason = reason
+
+
+def _positive_finite(value: Any) -> bool:
+    return (isinstance(value, (int, float)) and not isinstance(value, bool)
+            and value > 0 and value < float("inf"))
+
+
+def validate_matrix_report(report: Any) -> None:
+    """Validate exact observed lane identities, outcomes and measured CI cost."""
+    require(isinstance(report, dict), "matrix-malformed", "matrix report must be an object")
+    require(report.get("schema_version") == MATRIX_SCHEMA_VERSION,
+            "matrix-schema-version", "unsupported matrix schema version")
+    revision = report.get("source_revision")
+    require(isinstance(revision, str) and re.fullmatch(r"[0-9a-f]{40,64}", revision),
+            "matrix-revision-missing", "matrix source revision must be a full hexadecimal object ID")
+    lanes = report.get("lanes")
+    require(isinstance(lanes, list), "matrix-lanes-missing", "matrix lanes must be an array")
+    by_name = {}
+    for row in lanes:
+        require(isinstance(row, dict), "matrix-lane-malformed", "each lane must be an object")
+        name = row.get("lane")
+        require(name in REQUIRED_MATRIX_LANES and name not in by_name,
+                "matrix-lane-duplicate", "lane name is unknown or duplicated")
+        by_name[name] = row
+    require(set(by_name) == set(REQUIRED_MATRIX_LANES),
+            "matrix-missing-lane", "matrix must preserve every required platform and control lane")
+    for name in REQUIRED_MATRIX_LANES:
+        row = by_name[name]
+        outcome = row.get("outcome")
+        require(outcome in OUTCOMES, "matrix-outcome-invalid", "lane outcome is outside the declared vocabulary")
+        require(row.get("source_revision") == revision,
+                "matrix-revision-mismatch", "lane source revision differs from aggregate source revision")
+        compiler = row.get("compiler")
+        sdk = row.get("sdk")
+        build = row.get("build_identity")
+        identity_values = [row.get("os_image"), row.get("architecture"), row.get("configuration"),
+                           row.get("runner_id"), compiler.get("id") if isinstance(compiler, dict) else None,
+                           compiler.get("version") if isinstance(compiler, dict) else None,
+                           sdk.get("name") if isinstance(sdk, dict) else None,
+                           sdk.get("version") if isinstance(sdk, dict) else None,
+                           build.get("cmake") if isinstance(build, dict) else None,
+                           build.get("generator") if isinstance(build, dict) else None,
+                           build.get("fixture_sha256") if isinstance(build, dict) else None]
+        require(all(isinstance(value, str) and value and value != "unknown" for value in identity_values),
+                "matrix-identity-missing", "lane lacks a measured compiler, SDK, OS, build, fixture or runner identity")
+        expected_os, expected_compilers, expected_arches = MATRIX_LANE_IDENTITY[name]
+        require(row.get("os") == expected_os and compiler.get("id") in expected_compilers
+                and row.get("architecture") in expected_arches,
+                "matrix-lane-identity-mismatch", "observed OS, compiler or architecture does not match its exact lane")
+        require(re.fullmatch(r"[0-9a-f]{64}", str(build.get("fixture_sha256", ""))) is not None,
+                "matrix-identity-missing", "lane fixture identity must be a SHA-256 digest")
+        assertions = row.get("assertions")
+        require(isinstance(assertions, int) and not isinstance(assertions, bool) and assertions >= 0,
+                "matrix-invalid-assertions", "lane assertion count must be a nonnegative integer")
+        require(isinstance(row.get("working_tree_dirty"), bool),
+                "matrix-identity-missing", "lane must record whether its source tree was dirty")
+        if outcome == "pass":
+            require(row["working_tree_dirty"] is False,
+                    "matrix-dirty-source", "passing matrix lane must bind to a clean committed source tree")
+            require(assertions > 0, "matrix-zero-assertions", "passing lane needs positive diagnostic and consumer assertions")
+        else:
+            require(isinstance(row.get("reason"), str) and row["reason"].strip(),
+                    "matrix-reason-missing", "non-pass lane needs an explicit reason")
+        require(_positive_finite(row.get("duration_seconds")),
+                "matrix-invalid-duration", "lane duration must be a positive measured number of seconds")
+        require(_positive_finite(row.get("runner_minutes")),
+                "matrix-invalid-duration", "lane runner minutes must be positive and measured")
+        require(_positive_finite(row.get("cold_build_seconds")),
+                "matrix-invalid-duration", "lane cold build must have a measured positive duration")
+    cost = report.get("cost")
+    require(isinstance(cost, dict), "matrix-cost-missing", "matrix cost record is required")
+    for field in ("cold_build_seconds", "critical_path_seconds", "runner_minutes"):
+        require(_positive_finite(cost.get(field)), "matrix-invalid-duration", f"{field} must be positive and measured")
+    durations = cost.get("job_durations_seconds")
+    require(isinstance(durations, list) and len(durations) == len(REQUIRED_MATRIX_LANES)
+            and all(_positive_finite(value) for value in durations),
+            "matrix-invalid-duration", "cost must retain one positive duration for every required lane")
+    require(abs(cost["critical_path_seconds"] - max(durations)) < 0.001,
+            "matrix-cost-mismatch", "critical path must equal the slowest measured required job")
+    expected_minutes = sum(durations) / 60
+    require(abs(cost["runner_minutes"] - expected_minutes) < 0.001,
+            "matrix-cost-mismatch", "runner minutes must equal measured job durations")
+    expected_outcome = ("fail" if any(row["outcome"] == "fail" for row in lanes) else
+                        "pass" if all(row["outcome"] == "pass" for row in lanes) else "unknown")
+    require(report.get("outcome") == expected_outcome,
+            "matrix-outcome-mismatch", "aggregate outcome must preserve failed and untested lane outcomes")
+
+
+def matrix_lane_from_environment(lane: str, verification: dict[str, Any],
+                                 duration_seconds: float,
+                                 root: Path = ROOT) -> dict[str, Any]:
+    """Capture this runner's actual CMake/compiler and diagnostic identities."""
+    require(lane in REQUIRED_MATRIX_LANES, "matrix-lane-unknown", "unknown matrix lane")
+    identity = current_identity(root)
+    aggregate = verification.get("aggregate", {})
+    assertions = aggregate.get("assertion_count", 0)
+    outcome = verification.get("outcome", "unknown")
+    require(outcome in OUTCOMES, "matrix-outcome-invalid", "verification output has an invalid outcome")
+    source_dirty = identity.get("working_tree_dirty", True)
+    hosted_identity_available = (os.environ.get("GITHUB_ACTIONS") == "true"
+                                 and bool(os.environ.get("GITHUB_RUN_ID"))
+                                 and bool(os.environ.get("ImageOS"))
+                                 and bool(os.environ.get("ImageVersion")))
+    if source_dirty:
+        outcome = "unknown"
+    elif not hosted_identity_available:
+        outcome = "unknown"
+    cache = root / "build/sdk-debug/CMakeCache.txt"
+    sdk_name = platform.system()
+    sdk_version = identity.get("sdk", {}).get("version", "unknown")
+    if sys.platform == "linux":
+        sdk_name = "GNU/Linux userspace"
+        libc, version = platform.libc_ver()
+        sdk_version = f"{libc} {version}" if libc and version else "unknown"
+    elif sys.platform == "win32":
+        sdk_name = "Windows SDK"
+        sdk_version = os.environ.get("WindowsSDKVersion", "").rstrip("\\/") or _cache_value(
+            cache, "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION", "unknown")
+    elif sys.platform == "darwin":
+        sdk_name = "macOS SDK"
+    image = os.environ.get("ImageOS")
+    image_version = os.environ.get("ImageVersion")
+    if image and image_version:
+        os_image = f"{image}@{image_version}"
+    else:
+        os_image = f"local-{platform.system()}-{platform.release()}"
+    runner_id = os.environ.get("GITHUB_RUNNER")
+    run_id = os.environ.get("GITHUB_RUN_ID")
+    if runner_id and run_id:
+        runner_id = f"{runner_id}/{run_id}/{os.environ.get('GITHUB_RUN_ATTEMPT', '1')}"
+    else:
+        runner_id = f"local-{platform.system()}-{platform.machine()}"
+    baseline = verification.get("lanes", {}).get("baseline", {})
+    cold_samples = baseline.get("raw_samples", {}).get("cold_build_ns", [])
+    cold_seconds = float(verification.get("cold_build_seconds", 0))
+    if not cold_seconds and cold_samples:
+        cold_seconds = float(sorted(cold_samples)[len(cold_samples) // 2]) / 1_000_000_000
+    return {
+        "lane": lane,
+        "compiler": identity["compiler"],
+        "sdk": {"name": sdk_name, "version": sdk_version},
+        "os_image": os_image,
+        "os": platform.system(),
+        "architecture": identity["architecture"],
+        "configuration": identity["configuration"],
+        "source_revision": identity["source_revision"],
+        "working_tree_dirty": source_dirty,
+        "build_identity": {"cmake": identity["cmake"],
+                           "generator": identity["generator"]["name"] + " " + identity["generator"]["version"],
+                           "fixture_sha256": identity["fixture_manifest_sha256"],
+                           "runtime_artifacts": identity["runtime_artifacts"]},
+        "outcome": outcome,
+        "assertions": assertions if outcome == "pass" else 0,
+        "reason": None if outcome == "pass" else (
+            "relevant source tree contains uncommitted changes; observations are not bound to the recorded commit"
+            if source_dirty else "local execution did not identify a GitHub hosted runner image"
+            if not hosted_identity_available else verification.get("reason", "lane did not pass")),
+        "duration_seconds": duration_seconds,
+        "cold_build_seconds": cold_seconds,
+        "runner_id": runner_id,
+        "runner_minutes": duration_seconds / 60,
+    }
+
+
+def build_matrix_report(lanes: list[dict[str, Any]]) -> dict[str, Any]:
+    """Aggregate per-job receipts without converting unknowns into support."""
+    rows = sorted(lanes, key=lambda row: row.get("lane", ""))
+    durations = [row.get("duration_seconds") for row in rows]
+    report = {
+        "schema_version": MATRIX_SCHEMA_VERSION,
+        "source_revision": rows[0].get("source_revision") if rows else "",
+        "outcome": ("fail" if any(row.get("outcome") == "fail" for row in rows) else
+                    "pass" if rows and all(row.get("outcome") == "pass" for row in rows) else "unknown"),
+        "lanes": rows,
+        "cost": {
+            "cold_build_seconds": max((row.get("cold_build_seconds", 0) for row in rows), default=0),
+            "critical_path_seconds": max(durations, default=0),
+            "runner_minutes": sum((row.get("runner_minutes", 0) for row in rows), 0),
+            "job_durations_seconds": durations,
+            "runner_id": "per-lane runner identities in lane rows",
+        },
+    }
+    validate_matrix_report(report)
+    return report
 
 
 def require(condition: bool, reason: str, message: str) -> None:
@@ -201,8 +400,12 @@ def public_source_identity(root: Path = ROOT,
     runtime_candidates = [build_dir / "libglueyneo.a",
                           build_dir / "libglueyneo_test.a",
                           build_dir / "libglueyneo.dylib",
-                          build_dir / "libglueyneo.so"]
-    runner = build_dir / "glueyneo-diagnostic"
+                          build_dir / "libglueyneo.so",
+                          build_dir / "glueyneo.lib",
+                          build_dir / "glueyneo_test.lib",
+                          build_dir / "glueyneo.dll"]
+    runner = build_dir / ("glueyneo-diagnostic.exe" if sys.platform == "win32"
+                          else "glueyneo-diagnostic")
     runtime = [p for p in runtime_candidates if p.is_file()]
     require(runtime and runner.is_file(), "missing-artifact", "SDK runtime and runner must be built before collecting evidence")
     manifest = root / MANIFEST_PATH

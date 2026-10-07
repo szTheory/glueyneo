@@ -87,8 +87,110 @@ empty in the corpus manifest.
 ## Unsupported coverage
 
 The matching AppleClang libFuzzer archive is absent on this host, so no
-coverage-guided libFuzzer lane was built or run. No compiler/runtime is installed
-or selected by this workflow. Other operating systems, compilers, hardware
-profiles, arbitrary hostile host pointers, and real-game compatibility are not
-qualified by these finite diagnostic checks. A hash, bounded mutation pass, or
-reference-emulator result does not establish hardware truth.
+coverage-guided libFuzzer lane was built or run locally. The hosted workflow
+selects only the exact compiler/runtime combinations listed below. Other
+operating systems, compilers, hardware profiles, arbitrary hostile host
+pointers, and real-game compatibility are not qualified by these finite
+diagnostic checks. A hash, bounded mutation pass, or reference-emulator result
+does not establish hardware truth.
+
+## Current platform and cost evidence
+
+The exact local profile recorded by the committed-head Phase 03 matrix is
+AppleClang 21.0.0.21000101, macOS arm64 (`Darwin-26`), Apple SDK 26.5, CMake
+4.4.3, Ninja 1.13.2, Debug, with the SDK sanitizer disabled. At source revision
+`2054c3d6d07427d0e4a045b2388bcc933478bec9`, its local diagnostic and installed
+consumer checks passed 36 cases and 1,440 assertions in nine lane executions.
+The measured local lane duration was 9.374 seconds and one clean configure/build
+took 1.636 seconds. These are measurements of that local invocation only; they
+do not establish a supported platform range, hosted critical path, or GitHub
+runner-minutes.
+
+The first complete hosted matrix passed at source
+`2c7926383222cee174ede5ddde06374b43002191` in [CI run 37525280735](https://github.com/szTheory/glueyneo/actions/runs/37525280735).
+It exercised these exact combinations with nonzero SDK assertions:
+
+| Lane | Exact compiler and SDK/userspace | Image / architecture | Result |
+| --- | --- | --- | --- |
+| linux-clang | Clang 18.1.3; GNU/Linux userspace glibc 2.39 | `ubuntu24@20260927.320.1` / x86_64 | pass |
+| linux-clang-fuzz | Clang 18.1.3; GNU/Linux userspace glibc 2.39 | `ubuntu24@20260927.320.1` / x86_64 | pass |
+| linux-clang-sanitizer | Clang 18.1.3; GNU/Linux userspace glibc 2.39 | `ubuntu24@20260927.320.1` / x86_64 | pass |
+| linux-gcc | GNU 13.3.0; GNU/Linux userspace glibc 2.39 | `ubuntu24@20260927.320.1` / x86_64 | pass |
+| macos-appleclang | AppleClang 17.0.0.17000013; macOS SDK 15.5 | `macos15@20260907.0337.1` / arm64 | pass |
+| windows-msvc | MSVC 19.51.36260.0; Windows SDK 10.0.26100.0 | `win25-vs2026@20260925.250.1` / AMD64 | pass |
+
+Primary runtime checks use Debug/NONE with static/shared installed Release
+consumers; the sanitizer and seeded-fuzz jobs retain separate instrumentation.
+Linux uses CMake 3.31.6; macOS/Windows use 4.4.3; all use Ninja 1.13.2.
+The matrix recorded 1,159,040 SDK assertion executions, 33.479 seconds for the
+slowest verifier lane, 27.010 seconds maximum cold build and 1.601 summed
+verification minutes. GitHub timestamps show 112 seconds run elapsed and
+3.083 summed job wall minutes including setup. Verifier execution, workflow
+elapsed time and billed cost are distinct; no billing multiplier or rounding
+is included. The schema's slowest-lane “critical path” excludes queue/setup and
+is not the workflow's end-to-end critical path.
+
+The [hosted receipt](../.planning/phases/03-distributable-release-qualification/03-CI-HOSTED-RECEIPT.json)
+retains exact job/build/fixture/binary identities and seven previous failed
+attempts. A new SHA requires new evidence; no platform range, published SDK
+release, original-silicon or general-game claim follows from this finite pass.
+The release App, first-time fork boundary, protected merge and released
+archive/download evidence remain pending. Failed/skipped/unsupported/unknown
+outcomes remain distinct and cannot contribute passing assertions.
+
+The later PR head `2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1` also passed all six
+matrix lanes, `public-content`, and `ci-policy` in [CI run
+37618668537](https://github.com/szTheory/glueyneo/actions/runs/37618668537).
+That run extends the pass outcome to that exact revision. The detailed
+compiler, SDK, assertion, and artifact table above remains bound to
+`2c7926383222cee174ede5ddde06374b43002191`; the later run's timings do not
+replace those measurements. The release App, first-time fork boundary,
+protected merge, and released archive/download evidence remain pending.
+
+The rights inventory currently contains affirmative records for the shipped
+original diagnostic material and pinned Unity subset. No commercial game ROM,
+BIOS, private corpus, or private capture is licensed into the release. Any new
+item without an affirmative record tied to exact bytes remains excluded and its
+rights status unknown; a clean content scan cannot resolve that question.
+
+## Required CI aggregate
+
+The focused selectors are `matrix` (SDK diagnostic CTest groups and installed
+static/shared consumers), `release-consumer`, `ci-policy`, `public-content`,
+`sanitizer`, and `fuzz`; `all` retains the full local verification path. The
+matrix command is `python3 tools/verify_sdk.py --suite matrix`. It records
+compiler, SDK, runner image, architecture, build and fixture identities from
+the active runner. Sanitizer and seeded mutation controls run as separate Linux
+Clang lanes in `.github/workflows/ci.yml`.
+
+CI always starts the `ci-policy` aggregate for pull requests and pushes to
+`main`; branch protection should require the current `CI / ci-policy` check.
+The workflow has no path filters. Its internal classifier sends recognized
+documentation-only changes through the public-content gate and sends source,
+build, package, release, unknown, and unclassifiable changes through the full
+matrix. Missing or failed jobs, cancelled or empty lanes, zero assertion counts,
+stale source revisions, and absent receipts fail the aggregate. Pull request
+jobs use the workflow's read-only `contents: read` token, contain no secrets,
+and use `pull_request`; GitHub's first-time contributor workflow-approval
+safeguard remains active where repository settings require it. There is no
+privileged PR job that consumes or executes an uploaded PR artifact.
+
+Successful hosted runs retain per-lane receipts and an aggregate under
+`evidence/sdk/ci-aggregate.json`. A local parser fixture proves rejection
+behavior; it does not establish a hosted result. GitHub Actions run
+`37618668537` passed the six named matrix lanes and `ci-policy` at exact PR head
+`2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1`; the detailed toolchain and
+assertion receipt above belongs to the earlier exact source revision. A
+read-only API check observed that `main` requires the strict `CI / ci-policy`
+check and one approval, with stale reviews dismissed and approval required
+after the last push. Those settings do not establish a protected merge: no
+independent approval, merge, or first-time fork approval event has been
+exercised. The current documentation-only correction has no new hosted run.
+These receipts establish only the named outcomes at their recorded revisions,
+not a broader platform range. Runner execution minutes and matrix critical path
+are computed from measured verification command durations after checkout; they
+exclude checkout/upload overhead and GitHub's billing rounding. They describe
+those observed lane commands only.
+Public-content scanning is detector coverage, not proof
+that every private value is absent, and it cannot establish redistribution
+rights.

@@ -1,0 +1,205 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  SDK_SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+
+concurrency:
+  group: glueyneo-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  classify:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.classify.outputs.matrix }}
+      public_content: ${{ steps.classify.outputs.public_content }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - id: classify
+        name: Classify changed paths (unknown or failed diffs select all jobs)
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/ci
+          if [[ -z "${BASE_SHA:-}" ]] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            python3 tools/workflow/ci_policy.py classify --diff-error --output build/ci/plan.json
+          elif git diff --name-only --diff-filter=ACDMRTUXB "$BASE_SHA" "$HEAD_SHA" > build/ci/changed-paths.txt; then
+            python3 -c 'import json,sys; json.dump(open(sys.argv[1]).read().splitlines(), open(sys.argv[2], "w"))' build/ci/changed-paths.txt build/ci/changed-paths.json
+            python3 tools/workflow/ci_policy.py classify --paths-json build/ci/changed-paths.json --output build/ci/plan.json
+          else
+            python3 tools/workflow/ci_policy.py classify --diff-error --output build/ci/plan.json
+          fi
+          python3 -c 'import json,os; p=json.load(open("build/ci/plan.json")); f=open(os.environ["GITHUB_OUTPUT"], "a"); print("matrix=" + str(p["matrix"]).lower(), file=f); print("public_content=" + str(p["public_content"]).lower(), file=f)'
+
+  matrix:
+    needs: classify
+    if: needs.classify.outputs.matrix == 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - lane: linux-clang
+            runner: ubuntu-24.04
+            suite: matrix
+            cc: clang
+            cxx: clang++
+          - lane: linux-gcc
+            runner: ubuntu-24.04
+            suite: matrix
+            cc: gcc
+            cxx: g++
+          - lane: macos-appleclang
+            runner: macos-15
+            suite: matrix
+            cc: ""
+            cxx: ""
+          - lane: windows-msvc
+            runner: windows-2025
+            suite: matrix
+            cc: ""
+            cxx: ""
+          - lane: linux-clang-sanitizer
+            runner: ubuntu-24.04
+            suite: sanitizer
+            cc: clang
+            cxx: clang++
+          - lane: linux-clang-fuzz
+            runner: ubuntu-24.04
+            suite: fuzz
+            cc: clang
+            cxx: clang++
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Record matrix lane and measured identity
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+          GLUEYNEO_CI_LANE: ${{ matrix.lane }}
+          MATRIX_SUITE: ${{ matrix.suite }}
+          MATRIX_LANE: ${{ matrix.lane }}
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/sdk
+          python3 tools/verify_sdk.py --suite "$MATRIX_SUITE" --lane "$MATRIX_LANE" --output "evidence/sdk/matrix-${MATRIX_LANE}.json"
+      - name: Record Windows MSVC matrix lane
+        if: matrix.lane == 'windows-msvc'
+        shell: pwsh
+        env:
+          GLUEYNEO_CI_LANE: ${{ matrix.lane }}
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $install = & $vswhere -latest -products '*' -property installationPath
+          if (-not $install) { throw 'Visual Studio with MSVC was not found' }
+          New-Item -ItemType Directory -Force evidence/sdk | Out-Null
+          $command = 'call "' + $install + '\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 && python tools/verify_sdk.py --suite matrix --lane windows-msvc --output evidence/sdk/matrix-windows-msvc.json'
+          cmd.exe /d /s /c $command
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: matrix-lane-${{ matrix.lane }}
+          path: evidence/sdk/matrix-${{ matrix.lane }}.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  public-content:
+    needs: classify
+    if: needs.classify.outputs.public_content == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scan public source, history, notices, and rights inventory
+        run: python3 tools/verify_sdk.py --suite public-content
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: public-content-receipt
+          path: build/verify-sdk/public-content.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  ci-policy:
+    if: always()
+    needs: [classify, matrix, public-content]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: needs.matrix.result == 'success'
+        with:
+          pattern: matrix-lane-*
+          path: build/ci/matrix
+          merge-multiple: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: needs['public-content'].result == 'success'
+        with:
+          name: public-content-receipt
+          path: build/ci/public-content
+      - name: Scan captured matrix receipts as bounded public-safe CI evidence
+        if: needs.matrix.result == 'success'
+        shell: bash
+        env:
+          SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/ci/public-content
+          LOG_ARGS=()
+          for receipt in build/ci/matrix/*.json; do
+            [[ -f "$receipt" ]] && LOG_ARGS+=(--log "$receipt")
+          done
+          python3 tools/public_content.py --root . --history-revision "$SOURCE_REVISION" "${LOG_ARGS[@]}" --json build/ci/public-content/matrix-logs.json
+      - name: Validate required jobs and current-SHA evidence
+        if: always()
+        shell: bash
+        env:
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+          MATRIX_RESULT: ${{ needs.matrix.result }}
+          PUBLIC_CONTENT_RESULT: ${{ needs['public-content'].result }}
+          MATRIX_PLANNED: ${{ needs.classify.outputs.matrix }}
+          CONTENT_PLANNED: ${{ needs.classify.outputs.public_content }}
+          SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/ci
+          python3 tools/workflow/ci_policy.py prepare --output-dir build/ci
+          python3 tools/workflow/ci_policy.py aggregate --results build/ci/results.json --plan build/ci/plan.json --matrix-dir build/ci/matrix --output evidence/sdk/ci-aggregate.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: ci-aggregate-receipt
+          path: evidence/sdk/ci-aggregate.json
+          if-no-files-found: ignore
+          retention-days: 30

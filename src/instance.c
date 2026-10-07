@@ -382,9 +382,21 @@ GN_API gn_status gn_create(gn_instance **out_instance) {
 
 #if defined(GLUEYNEO_SDK_TEST_HOOKS)
 typedef union {
-    max_align_t alignment;
+    /* malloc aligns the base; this union's stride preserves alignment for
+     * every concrete payload allocated through this private test allocator.
+     * The opaque CPU's concrete-member union is checked at its definition. */
+    _Alignas(gn_instance) _Alignas(gn_image)
+        _Alignas(owned_cpu_test_allocation_alignment) unsigned char alignment;
     size_t bytes;
 } gn_test_allocation_header;
+
+_Static_assert(_Alignof(gn_test_allocation_header) >= _Alignof(gn_instance),
+               "test allocation header must preserve instance alignment");
+_Static_assert(_Alignof(gn_test_allocation_header) >= _Alignof(gn_image),
+               "test allocation header must preserve image alignment");
+_Static_assert(_Alignof(gn_test_allocation_header) >=
+                   _Alignof(owned_cpu_test_allocation_alignment),
+               "test allocation header must preserve owned CPU alignment");
 
 void gn_test_allocator_init(gn_test_allocator *allocator) {
     if (allocator == NULL) return;

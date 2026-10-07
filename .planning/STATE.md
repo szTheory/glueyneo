@@ -5,16 +5,16 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 03
 current_phase_name: Distributable release qualification
 status: executing
-stopped_at: Phase 03 context gathered
-last_updated: "2026-10-06T16:45:54.449Z"
-last_activity: 2026-10-06
-last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: db71b0c7ddc6b7ed3c246c77c40fb9c0dcfbf7ee
+stopped_at: "Phase 03 fresh verification: gaps_found (13/20); resume halted Plan 03-05 only when hosted actors and release evidence are available"
+last_updated: "2026-10-07T14:05:21.491Z"
+last_activity: 2026-10-07
+last_activity_desc: "Fresh Phase 03 re-verification confirmed scanner fixes and retained only hosted release, fork/merge, and artifact gaps; no new closure plan is warranted"
+state_head: 2d3379777a8241fd2e2f3c5e835267dfb77e0e98
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 40
-  completed_plans: 35
+  completed_plans: 40
   percent: 67
 ---
 
@@ -22,7 +22,7 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-05)
+See: .planning/PROJECT.md (updated 2026-10-07)
 
 **Core value:** Trustworthy Neo Geo emulation that other software can embed easily.
 **Current focus:** Phase 03 — Distributable release qualification
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-05)
 
 ## Current Position
 
-Phase: 03 (Distributable release qualification) — READY TO EXECUTE
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-10-06 — Phase 02 complete, transitioned to Phase 3
+Phase: 03 (Distributable release qualification) — EXECUTING
+Plan: 5 of 5
+Status: Plan 03-05 is halted at the hosted-evidence gate; fresh verification remains gaps_found (13/20). The earlier Windows-path and OpenPGP-key detector findings are resolved; remaining gaps require actual hosted actors and release artifacts.
+Last activity: 2026-10-07 — Direct re-verification refreshed 03-VERIFICATION.md; no new local repair plan is warranted. Once a first-time fork contributor, independent approver, and qualifying release event are available, resume the existing plan with /gsd-execute-phase 03.
 
 Progress: [███████░░░] 67% (two of three phases complete)
 
@@ -101,6 +101,10 @@ The GSD completion transaction updated the active phase and requirements after t
 | Phase 02 P04 | 19min | 3 tasks | 7 files |
 | Phase 02 P05 | 40min | 2 tasks | 8 files |
 | Phase 02 P06 | 429min | 3 tasks | 9 files |
+| Phase 03 P01 | 12 min | 2 tasks | 6 files |
+| Phase 03 P02 | 13min | 2 tasks | 4 files |
+| Phase 03 P03 | 32 | 2 tasks | 10 files |
+| Phase 03 P04 | 22 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -131,6 +135,17 @@ The GSD completion transaction updated the active phase and requirements after t
 - [Phase 02]: Bind evidence, workload, and sanitizer outcomes to exact current source and input identities, and retain failed attempts.
 - [Phase 02]: Keep host time, guest cycles, owned allocation bytes, and process RSS separate; record unmeasured RSS explicitly.
 - [Phase 02]: Run only the process-heavy TSan CTest lane serially after same-input serial execution confirmed parallel host contention.
+- [Phase 03]: The root release-please manifest is the sole CMake project/package version source.
+- [Phase 03]: The SDK carries separately relocatable static and shared package prefixes.
+- [Phase 03]: Windows export inspection uses DUMPBIN output and requires the exact shared public symbol set.
+- [Phase 03]: Scan exactly the source path set used by tools/release_manifest.py, with a regression test to keep both policies aligned.
+- [Phase 03]: Treat a negative scan as detector coverage only; rights records remain a separate affirmative gate.
+- [Phase 03]: Keep hosted CI log, secret-scanning, and publication evidence pending until captured against the configured repository.
+- [Phase 03]: Local matrix evidence remains unknown for hosted support without an exact hosted runner identity.
+- [Phase 03]: Hosted platform and account-level requirements stay pending until configured GitHub runs are observed.
+- [Phase 03]: Draft recovery always queries existing tags and resumes only exact matching asset bytes.
+- [Phase 03]: Publication is gated on trusted manifest digests for downloaded artifacts, platform consumers, and public-content rights checks.
+- [Phase 03]: Hosted release authority and event behavior remain pending until exercised with configured repository credentials.
 
 ### Pending Todos
 
@@ -142,6 +157,7 @@ None yet.
 - Preserve the historical odd-IRQ, fixture-UBSan, reset-accounting/NMI, BSD address-error and malformed-state/zero-request counterexamples.
 - Both original Musashi adaptation attempts are consumed. Do not repeat them automatically.
 - Original-silicon saved PC, unsupported platforms, public persistence formats, board/BIOS compatibility, and gameplay performance remain unknown or outside scope. WR-01 is a documentation warning carried into the Phase 02 plan; it does not block bounded CPU acceptance.
+- Plan 03-05 Task 1 and its local policy test passed. The owner reports Release App 5217741 installed for szTheory/glueyneo and its Actions secret/variable configured; effective permissions and token/event behavior remain unverified. The first-time fork run, independent GitHub review, protected merge, release staging/download, and publication remain pending. Earlier receipts, CI lanes, protection settings, and review evidence are retained in 03-HOSTED-QUALIFICATION.md. Fresh verification at 2026-10-07T14:01:59Z remains gaps_found (13/20): the Windows-path and OpenPGP-key detector gaps are resolved, while hosted merge/release and actual archive evidence are not. Do not create another plan for those same external gaps. Once the first-time fork contributor and independent approver are available, resume the existing halted plan with /gsd-execute-phase 03; do not mark Phase 03 complete before a passing fresh verifier. The local all-ref scan is not evidence of public exposure; original private local refs must never be pushed.
 
 ## Deferred Items
 
@@ -153,6 +169,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-06T15:59:21.373Z
-Stopped at: Phase 03 context gathered
-Resume file: .planning/phases/03-distributable-release-qualification/03-CONTEXT.md
+Last session: 2026-10-07T14:05:21.491Z
+Stopped at: Fresh Phase 03 re-verification: gaps_found (13/20); awaiting hosted actors and actual release artifacts before resuming Plan 03-05
+Resume file: .planning/phases/03-distributable-release-qualification/03-VERIFICATION.md

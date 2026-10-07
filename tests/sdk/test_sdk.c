@@ -4,9 +4,9 @@
 #include "sdk_private.h"
 #include "test_support.h"
 
-#include <pthread.h>
-#include <sched.h>
+#if !defined(_WIN32)
 #include <stdatomic.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 
@@ -590,9 +590,61 @@ typedef struct {
 } sdk_boundary_snapshot;
 
 typedef struct {
+    sdk_boundary_snapshot owners[2][SDK_BOUNDARY_COUNT];
+} sdk_isolation_baselines;
+
+typedef struct {
+#if defined(_WIN32)
+    volatile LONG ready;
+    volatile LONG release;
+#else
     atomic_uint ready;
     atomic_int release;
+#endif
 } sdk_start_gate;
+
+static void sdk_start_gate_init(sdk_start_gate *gate) {
+#if defined(_WIN32)
+    gate->ready = 0;
+    gate->release = 0;
+#else
+    atomic_init(&gate->ready, 0u);
+    atomic_init(&gate->release, 0);
+#endif
+}
+
+static void sdk_start_gate_arrive(sdk_start_gate *gate) {
+#if defined(_WIN32)
+    /* Interlocked operations provide a full fence for the shared start gate. */
+    (void)InterlockedIncrement(&gate->ready);
+#else
+    atomic_fetch_add_explicit(&gate->ready, 1u, memory_order_release);
+#endif
+}
+
+static int sdk_start_gate_ready(sdk_start_gate *gate) {
+#if defined(_WIN32)
+    return InterlockedCompareExchange(&gate->ready, 0, 0) == 2;
+#else
+    return atomic_load_explicit(&gate->ready, memory_order_acquire) == 2u;
+#endif
+}
+
+static int sdk_start_gate_released(sdk_start_gate *gate) {
+#if defined(_WIN32)
+    return InterlockedCompareExchange(&gate->release, 0, 0) != 0;
+#else
+    return atomic_load_explicit(&gate->release, memory_order_acquire) != 0;
+#endif
+}
+
+static void sdk_start_gate_release(sdk_start_gate *gate) {
+#if defined(_WIN32)
+    (void)InterlockedExchange(&gate->release, 1);
+#else
+    atomic_store_explicit(&gate->release, 1, memory_order_release);
+#endif
+}
 
 typedef struct {
     sdk_boundary_snapshot snapshots[SDK_BOUNDARY_COUNT];
@@ -754,12 +806,12 @@ static int sdk_load_owner(unsigned owner, gn_instance **out_instance) {
     return 1;
 }
 
-static int sdk_build_isolated_baselines(
-    sdk_boundary_snapshot baselines[2][SDK_BOUNDARY_COUNT]) {
+static int sdk_build_isolated_baselines(sdk_isolation_baselines *baselines) {
     for (unsigned owner = 0u; owner < 2u; ++owner) {
         gn_instance *isolated = NULL;
         if (!sdk_load_owner(owner, &isolated)) return 0;
-        const int passed = sdk_run_split_sequence(isolated, baselines[owner]);
+        const int passed = sdk_run_split_sequence(isolated,
+                                                   baselines->owners[owner]);
         gn_destroy(isolated);
         if (passed == 0) return 0;
     }
@@ -767,7 +819,7 @@ static int sdk_build_isolated_baselines(
 }
 
 static int sdk_repeated_and_single_calls_match(
-    const sdk_boundary_snapshot baselines[2][SDK_BOUNDARY_COUNT]) {
+    const sdk_isolation_baselines *baselines) {
     for (unsigned owner = 0u; owner < 2u; ++owner) {
         gn_instance *repeated = NULL;
         if (!sdk_load_owner(owner, &repeated)) return 0;
@@ -777,7 +829,7 @@ static int sdk_repeated_and_single_calls_match(
             return 0;
         }
         for (size_t boundary = 0u; boundary < SDK_BOUNDARY_COUNT; ++boundary) {
-            if (!sdk_boundary_equal(&baselines[owner][boundary],
+            if (!sdk_boundary_equal(&baselines->owners[owner][boundary],
                                     &actual[boundary], 1)) {
                 gn_destroy(repeated);
                 return 0;
@@ -790,7 +842,7 @@ static int sdk_repeated_and_single_calls_match(
             return 0;
         }
         for (size_t boundary = 0u; boundary < SDK_BOUNDARY_COUNT; ++boundary) {
-            if (!sdk_boundary_equal(&baselines[owner][boundary],
+            if (!sdk_boundary_equal(&baselines->owners[owner][boundary],
                                     &actual[boundary], 1)) {
                 gn_destroy(repeated);
                 return 0;
@@ -813,7 +865,7 @@ static int sdk_repeated_and_single_calls_match(
                                                    run.instructions,
                                                    run.overshoot_cycles, &final);
         const int matches = captured != 0 && sdk_boundary_equal(
-            &baselines[owner][SDK_BOUNDARY_COUNT - 1u], &final, 0);
+            &baselines->owners[owner][SDK_BOUNDARY_COUNT - 1u], &final, 0);
         gn_destroy(single);
         if (matches == 0) return 0;
     }
@@ -821,7 +873,7 @@ static int sdk_repeated_and_single_calls_match(
 }
 
 static int sdk_interleaved_pairs_match(
-    const sdk_boundary_snapshot baselines[2][SDK_BOUNDARY_COUNT]) {
+    const sdk_isolation_baselines *baselines) {
     for (unsigned pair = 0u; pair < SDK_ISOLATION_PAIRS; ++pair) {
         gn_instance *owners[2] = {NULL, NULL};
         if (!sdk_load_owner(0u, &owners[0]) ||
@@ -840,7 +892,7 @@ static int sdk_interleaved_pairs_match(
                 if (!sdk_run_boundary(owners[owner], boundary,
                                       &elapsed[owner], &instructions[owner],
                                       &overshoot[owner], &actual) ||
-                    !sdk_boundary_equal(&baselines[owner][boundary],
+                    !sdk_boundary_equal(&baselines->owners[owner][boundary],
                                         &actual, 1)) {
                     gn_destroy(owners[0]);
                     gn_destroy(owners[1]);
@@ -854,13 +906,13 @@ static int sdk_interleaved_pairs_match(
     return 1;
 }
 
-static void *sdk_concurrent_owner_thread(void *userdata) {
+static SDK_TEST_THREAD_RESULT SDK_TEST_THREAD_CALL
+sdk_concurrent_owner_thread(void *userdata) {
     sdk_thread_argument *argument = (sdk_thread_argument *)userdata;
     sdk_thread_result *result = argument->result;
-    atomic_fetch_add_explicit(&argument->gate->ready, 1u, memory_order_release);
-    while (atomic_load_explicit(&argument->gate->release,
-                                memory_order_acquire) == 0) {
-        (void)sched_yield();
+    sdk_start_gate_arrive(argument->gate);
+    while (!sdk_start_gate_released(argument->gate)) {
+        sdk_test_thread_yield();
     }
 
     gn_test_allocator allocator;
@@ -871,14 +923,14 @@ static void *sdk_concurrent_owner_thread(void *userdata) {
         result->sequence_ok = 0;
         result->cleanup_ok = allocator.live_allocations == 0u &&
                              allocator.live_bytes == 0u;
-        return NULL;
+        return SDK_TEST_THREAD_DONE;
     }
     if (load_scenario(target, argument->owner) != GN_STATUS_OK) {
         gn_destroy(target);
         result->sequence_ok = 0;
         result->cleanup_ok = allocator.live_allocations == 0u &&
                              allocator.live_bytes == 0u;
-        return NULL;
+        return SDK_TEST_THREAD_DONE;
     }
 
     uint64_t digest_before = 0u;
@@ -925,43 +977,41 @@ static void *sdk_concurrent_owner_thread(void *userdata) {
     result->cleanup_ok = result->cleanup_ok != 0 &&
                          allocator.live_allocations == 0u &&
                          allocator.live_bytes == 0u;
-    return NULL;
+    return SDK_TEST_THREAD_DONE;
 }
 
 static int sdk_run_barrier_concurrent_pair(sdk_thread_result results[2]) {
     sdk_start_gate gate;
-    atomic_init(&gate.ready, 0u);
-    atomic_init(&gate.release, 0);
+    sdk_start_gate_init(&gate);
     sdk_thread_argument arguments[2];
-    pthread_t threads[2];
+    sdk_test_thread threads[2];
     unsigned started = 0u;
     memset(results, 0, 2u * sizeof(results[0]));
     for (unsigned owner = 0u; owner < 2u; ++owner) {
         arguments[owner] = (sdk_thread_argument){&gate, owner, &results[owner]};
-        if (pthread_create(&threads[owner], NULL, sdk_concurrent_owner_thread,
-                           &arguments[owner]) != 0) {
-            atomic_store_explicit(&gate.release, 1, memory_order_release);
+        if (!sdk_test_thread_start(&threads[owner], sdk_concurrent_owner_thread,
+                                    &arguments[owner])) {
+            sdk_start_gate_release(&gate);
             for (unsigned index = 0u; index < started; ++index) {
-                (void)pthread_join(threads[index], NULL);
+                (void)sdk_test_thread_join(threads[index]);
             }
             return 0;
         }
         ++started;
     }
-    while (atomic_load_explicit(&gate.ready, memory_order_acquire) != 2u) {
-        (void)sched_yield();
+    while (!sdk_start_gate_ready(&gate)) {
+        sdk_test_thread_yield();
     }
-    atomic_store_explicit(&gate.release, 1, memory_order_release);
+    sdk_start_gate_release(&gate);
+    int joined = 1;
     for (unsigned owner = 0u; owner < 2u; ++owner) {
-        if (pthread_join(threads[owner], NULL) != 0) {
-            return 0;
-        }
+        if (!sdk_test_thread_join(threads[owner])) joined = 0;
     }
-    return 1;
+    return joined;
 }
 
 static int sdk_concurrent_pairs_match(
-    const sdk_boundary_snapshot baselines[2][SDK_BOUNDARY_COUNT]) {
+    const sdk_isolation_baselines *baselines) {
     for (unsigned pair = 0u; pair < SDK_ISOLATION_PAIRS; ++pair) {
         sdk_thread_result results[2];
         if (!sdk_run_barrier_concurrent_pair(results)) return 0;
@@ -973,7 +1023,7 @@ static int sdk_concurrent_pairs_match(
                 return 0;
             }
             for (size_t boundary = 0u; boundary < SDK_BOUNDARY_COUNT; ++boundary) {
-                if (!sdk_boundary_equal(&baselines[owner][boundary],
+                if (!sdk_boundary_equal(&baselines->owners[owner][boundary],
                                         &results[owner].snapshots[boundary], 1)) {
                     return 0;
                 }
@@ -985,31 +1035,31 @@ static int sdk_concurrent_pairs_match(
 
 static void repeat_split_and_interleaved_instances_match_isolated_boundaries(void) {
     SDK_CASE("sdk.isolation.equal-boundary-determinism");
-    sdk_boundary_snapshot baselines[2][SDK_BOUNDARY_COUNT];
-    memset(baselines, 0, sizeof(baselines));
+    sdk_isolation_baselines baselines;
+    memset(&baselines, 0, sizeof(baselines));
     SDK_CHECK_TRUE("sdk.isolation.isolated-baselines",
-                   sdk_build_isolated_baselines(baselines));
+                   sdk_build_isolated_baselines(&baselines));
     SDK_CHECK_U64("sdk.isolation.a-arithmetic", 10u,
-                  baselines[0][SDK_BOUNDARY_COUNT - 1u].arithmetic);
+                  baselines.owners[0][SDK_BOUNDARY_COUNT - 1u].arithmetic);
     SDK_CHECK_U64("sdk.isolation.a-initialized", 0x1237u,
-                  baselines[0][SDK_BOUNDARY_COUNT - 1u].initialized);
+                  baselines.owners[0][SDK_BOUNDARY_COUNT - 1u].initialized);
     SDK_CHECK_U64("sdk.isolation.a-bss", 1u,
-                  baselines[0][SDK_BOUNDARY_COUNT - 1u].bss);
+                  baselines.owners[0][SDK_BOUNDARY_COUNT - 1u].bss);
     SDK_CHECK_U64("sdk.isolation.b-arithmetic", 16u,
-                  baselines[1][SDK_BOUNDARY_COUNT - 1u].arithmetic);
+                  baselines.owners[1][SDK_BOUNDARY_COUNT - 1u].arithmetic);
     SDK_CHECK_U64("sdk.isolation.b-initialized", 0x2348u,
-                  baselines[1][SDK_BOUNDARY_COUNT - 1u].initialized);
+                  baselines.owners[1][SDK_BOUNDARY_COUNT - 1u].initialized);
     SDK_CHECK_U64("sdk.isolation.b-bss", 1u,
-                  baselines[1][SDK_BOUNDARY_COUNT - 1u].bss);
+                  baselines.owners[1][SDK_BOUNDARY_COUNT - 1u].bss);
     SDK_CHECK_TRUE("sdk.isolation.owner-baselines-distinguishable",
-                   baselines[0][SDK_BOUNDARY_COUNT - 1u].image_digest !=
-                       baselines[1][SDK_BOUNDARY_COUNT - 1u].image_digest);
+                   baselines.owners[0][SDK_BOUNDARY_COUNT - 1u].image_digest !=
+                       baselines.owners[1][SDK_BOUNDARY_COUNT - 1u].image_digest);
     SDK_CHECK_TRUE("sdk.isolation.repeat-and-single-call",
-                   sdk_repeated_and_single_calls_match(baselines));
+                   sdk_repeated_and_single_calls_match(&baselines));
     SDK_CHECK_TRUE("sdk.isolation.interleaved-16-pairs",
-                   sdk_interleaved_pairs_match(baselines));
+                   sdk_interleaved_pairs_match(&baselines));
     SDK_CHECK_TRUE("sdk.isolation.barrier-concurrent-16-pairs",
-                   sdk_concurrent_pairs_match(baselines));
+                   sdk_concurrent_pairs_match(&baselines));
     (void)printf("SDK_ISOLATION boundaries=%u interleaved_pairs=%u "
                  "barrier_concurrent_pairs=%u "
                  "concurrent_candidate_failure_paths=%u\n",

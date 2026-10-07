@@ -1,5 +1,30 @@
 cmake_minimum_required(VERSION 3.20)
-project(Glueyneo VERSION 0.1.0 LANGUAGES C)
+
+# release-please owns the only project version. Keep this parsing before
+# project() so CMake's installed package version uses the manifest value.
+set(GLUEYNEO_RELEASE_MANIFEST "${CMAKE_CURRENT_LIST_DIR}/.release-please-manifest.json")
+if(NOT EXISTS "${GLUEYNEO_RELEASE_MANIFEST}")
+  message(FATAL_ERROR "release-please manifest is missing: ${GLUEYNEO_RELEASE_MANIFEST}")
+endif()
+file(READ "${GLUEYNEO_RELEASE_MANIFEST}" GLUEYNEO_RELEASE_MANIFEST_JSON)
+string(JSON GLUEYNEO_RELEASE_MANIFEST_LENGTH ERROR_VARIABLE GLUEYNEO_RELEASE_JSON_ERROR
+       LENGTH "${GLUEYNEO_RELEASE_MANIFEST_JSON}")
+if(GLUEYNEO_RELEASE_JSON_ERROR OR NOT GLUEYNEO_RELEASE_MANIFEST_LENGTH EQUAL 1)
+  message(FATAL_ERROR "release-please manifest must be a valid object containing only the root package")
+endif()
+string(JSON GLUEYNEO_RELEASE_MANIFEST_PACKAGE ERROR_VARIABLE GLUEYNEO_RELEASE_JSON_ERROR
+       MEMBER "${GLUEYNEO_RELEASE_MANIFEST_JSON}" 0)
+if(GLUEYNEO_RELEASE_JSON_ERROR OR NOT GLUEYNEO_RELEASE_MANIFEST_PACKAGE STREQUAL ".")
+  message(FATAL_ERROR "release-please manifest must define exactly the root package key '.'")
+endif()
+string(JSON GLUEYNEO_PROJECT_VERSION ERROR_VARIABLE GLUEYNEO_RELEASE_JSON_ERROR
+       GET "${GLUEYNEO_RELEASE_MANIFEST_JSON}" ".")
+if(GLUEYNEO_RELEASE_JSON_ERROR OR
+   NOT GLUEYNEO_PROJECT_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?(\\+[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$")
+  message(FATAL_ERROR "release-please manifest root version must be valid semantic version text")
+endif()
+
+project(Glueyneo VERSION "${GLUEYNEO_PROJECT_VERSION}" LANGUAGES C)
 include(CTest)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -102,18 +127,17 @@ else()
 endif()
 glueyneo_apply_sdk_sanitizer(glueyneo)
 
-if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-  execute_process(
-    COMMAND git rev-parse --short=12 HEAD
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    OUTPUT_VARIABLE GLUEYNEO_SOURCE_REVISION
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET
-  )
-else()
-  set(GLUEYNEO_SOURCE_REVISION "unknown")
-endif()
-if(NOT GLUEYNEO_SOURCE_REVISION)
+# Source identity belongs to the checkout, independently of the C compiler.
+# An offline source archive without Git retains the explicit unknown identity.
+execute_process(
+  COMMAND git rev-parse --short=12 HEAD
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  RESULT_VARIABLE GLUEYNEO_SOURCE_REVISION_RESULT
+  OUTPUT_VARIABLE GLUEYNEO_SOURCE_REVISION
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET
+)
+if(NOT GLUEYNEO_SOURCE_REVISION_RESULT EQUAL 0 OR NOT GLUEYNEO_SOURCE_REVISION)
   set(GLUEYNEO_SOURCE_REVISION "unknown")
 endif()
 
@@ -203,7 +227,9 @@ install(FILES
 if(GLUEYNEO_BUILD_TESTS)
   enable_testing()
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
-  find_package(Threads REQUIRED)
+  if(NOT WIN32)
+    find_package(Threads REQUIRED)
+  endif()
   add_library(glueyneo_test STATIC ${GLUEYNEO_RUNTIME_SOURCES})
   target_compile_features(glueyneo_test PRIVATE c_std_17)
   set_target_properties(glueyneo_test PROPERTIES
@@ -247,7 +273,10 @@ if(GLUEYNEO_BUILD_TESTS)
     C_EXTENSIONS NO
   )
   target_link_libraries(sdk_diagnostic PRIVATE
-    glueyneo_test glueyneo_unity Threads::Threads)
+    glueyneo_test glueyneo_unity)
+  if(NOT WIN32)
+    target_link_libraries(sdk_diagnostic PRIVATE Threads::Threads)
+  endif()
   target_compile_definitions(sdk_diagnostic PRIVATE GLUEYNEO_SDK_TEST_HOOKS)
   target_compile_definitions(sdk_diagnostic PRIVATE
     GLUEYNEO_SOURCE_REVISION="${GLUEYNEO_SOURCE_REVISION}"
@@ -273,7 +302,10 @@ if(GLUEYNEO_BUILD_TESTS)
     C_STANDARD_REQUIRED YES
     C_EXTENSIONS NO
   )
-  target_link_libraries(sdk_mutation PRIVATE glueyneo glueyneo_unity Threads::Threads)
+  target_link_libraries(sdk_mutation PRIVATE glueyneo glueyneo_unity)
+  if(NOT WIN32)
+    target_link_libraries(sdk_mutation PRIVATE Threads::Threads)
+  endif()
   target_compile_definitions(sdk_mutation PRIVATE
     GLUEYNEO_SOURCE_REVISION="${GLUEYNEO_SOURCE_REVISION}"
     GLUEYNEO_CONFIGURATION="${CMAKE_BUILD_TYPE}"
@@ -328,17 +360,72 @@ if(GLUEYNEO_BUILD_TESTS)
     list(APPEND SDK_RUNTIME_ABSOLUTE_SOURCES
       "${CMAKE_CURRENT_SOURCE_DIR}/${runtime_source}")
   endforeach()
+  if(WIN32)
+    find_program(GLUEYNEO_SDK_DUMPBIN NAMES dumpbin REQUIRED)
+  endif()
   set(SDK_HOST_CLOSURE_CONTENT [=[
 set(_sdk_sources "@SDK_RUNTIME_ABSOLUTE_SOURCES@")
 set(_sdk_library "$<TARGET_FILE:glueyneo>")
 set(_sdk_nm "@CMAKE_NM@")
-set(_sdk_host_calls "(^|[^A-Za-z0-9_])(fopen|freopen|fread|fwrite|remove|rename|open|close|read|write|time|clock|gettimeofday|socket|connect|accept|system|fork|execve|pthread_create|pthread_mutex_lock)[ \t]*\\(")
+set(_sdk_windows "@WIN32@")
+set(_sdk_dumpbin "@GLUEYNEO_SDK_DUMPBIN@")
+set(_sdk_host_names "fopen|freopen|fread|fwrite|remove|rename|open|close|read|write|time|clock|gettimeofday|socket|connect|accept|system|fork|execve|pthread_create|pthread_mutex_lock|CreateFileA|CreateFileW|ReadFile|WriteFile|DeleteFileA|DeleteFileW|MoveFileA|MoveFileW|GetSystemTime|GetSystemTimeAsFileTime|GetSystemTimePreciseAsFileTime|GetTickCount|GetTickCount64|QueryPerformanceCounter|QueryPerformanceFrequency|timeGetTime|GetEnvironmentVariableA|GetEnvironmentVariableW|WSAStartup|closesocket|getaddrinfo|send|recv|bind|listen|CreateThread|_beginthread|_beginthreadex|CreateMutexA|CreateMutexW|WaitForSingleObject|WaitForMultipleObjects|EnterCriticalSection|AcquireSRWLockExclusive|AcquireSRWLockShared|Sleep|SleepEx|SwitchToThread")
+set(_sdk_host_calls "(^|[^A-Za-z0-9_])(${_sdk_host_names})[ \t]*\\(")
 foreach(_sdk_source IN LISTS _sdk_sources)
   file(READ "${_sdk_source}" _sdk_text)
   if(_sdk_text MATCHES "${_sdk_host_calls}")
     message(FATAL_ERROR "Ambient host call found in runtime source: ${_sdk_source}")
   endif()
 endforeach()
+if(_sdk_windows)
+  # /SYMBOLS exposes each COFF object's external definitions and references in
+  # the static archive. /GL objects lack this table and must fail qualification.
+  # https://learn.microsoft.com/en-us/cpp/build/reference/symbols
+  # Checked 2026-10-06; retain the source closure as a separate control.
+  execute_process(COMMAND ${_sdk_dumpbin} /SYMBOLS "${_sdk_library}"
+    RESULT_VARIABLE _sdk_dumpbin_result OUTPUT_VARIABLE _sdk_symbols
+    ERROR_VARIABLE _sdk_dumpbin_error)
+  if(NOT _sdk_dumpbin_result EQUAL 0)
+    message(FATAL_ERROR "Could not inspect runtime COFF symbols: ${_sdk_dumpbin_error}")
+  endif()
+  if(NOT _sdk_symbols MATCHES "File Type:[ \t]+(LIBRARY|COFF OBJECT)" OR
+     NOT _sdk_symbols MATCHES "COFF SYMBOL TABLE")
+    message(FATAL_ERROR "Runtime inspector produced no recognizable COFF symbol table")
+  endif()
+  string(REGEX MATCHALL "COFF SYMBOL TABLE" _sdk_coff_tables "${_sdk_symbols}")
+  list(LENGTH _sdk_coff_tables _sdk_coff_table_count)
+  list(LENGTH _sdk_sources _sdk_source_count)
+  if(NOT _sdk_coff_table_count EQUAL _sdk_source_count)
+    message(FATAL_ERROR "Runtime inspector omitted one or more runtime object symbol tables")
+  endif()
+  string(REPLACE "\r" "" _sdk_symbols "${_sdk_symbols}")
+  string(REPLACE "\n" ";" _sdk_symbol_lines "${_sdk_symbols}")
+  set(_sdk_external_count 0)
+  string(REGEX REPLACE "\\|_beginthread" "|beginthread"
+    _sdk_windows_host_names "${_sdk_host_names}")
+  foreach(_sdk_line IN LISTS _sdk_symbol_lines)
+    if(_sdk_line MATCHES "[ \t](WeakExternal|External)[ \t]+\\|")
+      if(NOT _sdk_line MATCHES "^[ \t]*[0-9A-Fa-f]+[ \t]+[0-9A-Fa-f]+[ \t]+(UNDEF|ABS|DEBUG|SECT[0-9A-Fa-f]+)[ \t]+[^|]*[ \t](WeakExternal|External)[ \t]+\\|[ \t]+([^ \t]+)")
+        message(FATAL_ERROR "Runtime inspector produced an unrecognizable external COFF symbol row")
+      endif()
+      set(_sdk_symbol "${CMAKE_MATCH_3}")
+      math(EXPR _sdk_external_count "${_sdk_external_count} + 1")
+      # Handle imported and x86-decorated C symbols before matching exact names.
+      string(REGEX REPLACE "^__imp_" "" _sdk_symbol "${_sdk_symbol}")
+      string(REGEX REPLACE "^_+" "" _sdk_symbol "${_sdk_symbol}")
+      string(REGEX REPLACE "@[0-9]+$" "" _sdk_symbol "${_sdk_symbol}")
+      if(_sdk_symbol MATCHES "^(${_sdk_windows_host_names})$")
+        message(FATAL_ERROR "Ambient host symbol found in runtime: ${_sdk_symbol}")
+      endif()
+      if(_sdk_symbol MATCHES "^gn_test_")
+        message(FATAL_ERROR "Private test hook leaked into public runtime: ${_sdk_symbol}")
+      endif()
+    endif()
+  endforeach()
+  if(_sdk_external_count EQUAL 0)
+    message(FATAL_ERROR "Runtime inspector produced no external COFF symbols")
+  endif()
+else()
 execute_process(COMMAND "${_sdk_nm}" -u "${_sdk_library}"
   RESULT_VARIABLE _sdk_nm_result OUTPUT_VARIABLE _sdk_symbols ERROR_VARIABLE _sdk_nm_error)
 if(NOT _sdk_nm_result EQUAL 0)
@@ -355,6 +442,7 @@ if(NOT _sdk_global_nm_result EQUAL 0)
 endif()
 if(_sdk_global_symbols MATCHES "gn_test_")
   message(FATAL_ERROR "Private test hook leaked into public runtime: ${_sdk_global_symbols}")
+endif()
 endif()
 message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
 ]=])

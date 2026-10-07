@@ -4,7 +4,6 @@
 #include "test_support.h"
 
 #include <inttypes.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -663,8 +662,8 @@ static int run_sequence_operation(sequence_owner owners[MUTATION_LIVE_LIMIT],
         owners[target].loaded = 0;
     }
     uint64_t loaded_storage = 0u;
-    for (unsigned index = 0u; index < MUTATION_LIVE_LIMIT; ++index) {
-        if (owners[index].instance != NULL && owners[index].loaded != 0) {
+    for (unsigned owner_index = 0u; owner_index < MUTATION_LIVE_LIMIT; ++owner_index) {
+        if (owners[owner_index].instance != NULL && owners[owner_index].loaded != 0) {
             loaded_storage += UINT64_C(5130);
         }
     }
@@ -968,10 +967,10 @@ static void replay_entrypoint(void) {
     }
 }
 
-static void *startup_thread(void *context) {
+static SDK_TEST_THREAD_RESULT SDK_TEST_THREAD_CALL startup_thread(void *context) {
     (void)context;
     startup_thread_value = 1;
-    return NULL;
+    return SDK_TEST_THREAD_DONE;
 }
 
 static int startup_probe(const char *lane) {
@@ -987,10 +986,10 @@ static int startup_probe(const char *lane) {
     if (sum != UINT64_C(120)) return 1;
     unsigned startup_checks = 17u;
     if (is_tsan) {
-        pthread_t thread;
+        sdk_test_thread thread;
         startup_thread_value = 0;
-        if (pthread_create(&thread, NULL, startup_thread, NULL) != 0) return 1;
-        if (pthread_join(thread, NULL) != 0) return 1;
+        if (!sdk_test_thread_start(&thread, startup_thread, NULL)) return 1;
+        if (!sdk_test_thread_join(thread)) return 1;
         if (startup_thread_value != 1) return 1;
         ++startup_checks;
     }

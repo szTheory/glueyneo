@@ -416,6 +416,7 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
         "expected_tests": 8 if probe_name == "asan-ubsan" else 2,
         "ctest_parallel_jobs": 1 if probe_name == "tsan" else 2,
         "tests_passed": 0,
+        "tests_attempted": 0,
         "sdk_assertions": 0,
         "commands": [],
         "configure_status": "not_started",
@@ -443,6 +444,7 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
     configure_status, configure_output = execute(
         "configure", ["cmake", "--preset", preset])
     if configure_status != 0:
+        report["failure_stage"] = "configure"
         if "SDK_SANITIZER_UNSUPPORTED:" in configure_output:
             report["status"] = "unsupported"
             report["configure_status"] = "unsupported"
@@ -450,6 +452,7 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
                 "SDK_SANITIZER_UNSUPPORTED:", 1)[1].strip().splitlines()[0]
         else:
             report["error"] = "configure failed without an explicit unsupported marker"
+            report["configure_log_tail"] = configure_output.splitlines()[-40:]
         return report
 
     cache = cache_values(build_dir / "CMakeCache.txt")
@@ -461,6 +464,7 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
     }
     build_status, build_output = execute("build", ["cmake", "--build", "--preset", preset])
     if build_status != 0:
+        report["failure_stage"] = "build"
         report["error"] = "sanitized build failed"
         report["build_log_tail"] = build_output.splitlines()[-40:]
         return report
@@ -468,6 +472,7 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
     scoped, scoped_message = verify_target_scoped_flags(build_dir, sanitizer_flag, cache_mode)
     report["target_scoped_flags"] = scoped_message
     if not scoped:
+        report["failure_stage"] = "target_flags"
         report["error"] = scoped_message
         return report
 
@@ -476,6 +481,7 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
         "startup", [str(executable), "--startup-probe", probe_name], timeout=30.0)
     startup_records = records_from_log(startup_output, "SANITIZER_STARTUP ")
     if startup_status != 0:
+        report["failure_stage"] = "startup"
         known_runtime_unavailable = any(
             marker in startup_output.lower()
             for marker in ("fatal: threadsanitizer: unexpected memory mapping",
@@ -499,6 +505,7 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
             startup_records[0].get("startup_checks", 0) < 17 or
             startup_records[0].get("sanitizer") != cache_mode):
         report["error"] = "startup probe identity or check count is invalid"
+        report["failure_stage"] = "startup"
         report["startup_log_tail"] = startup_output.splitlines()[-40:]
         return report
     report["startup"] = startup_records[0]
@@ -525,26 +532,37 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
     log_records = records_from_log(ctest_log, "SDK_RESULT ")
     if probe_name == "tsan":
         log_records = records_from_log(ctest_log, "SDK_CONTROL_RESULT ")
-    summary_matches = re.findall(r"100% tests passed out of (\d+)",
-                                 ctest_log)
-    if ctest_status == 0 and summary_matches:
-        report["tests_passed"] = int(summary_matches[-1])
+    # Completed test rows retain partial progress on a failed CTest run. The
+    # failure-list status may be Failed, Timeout, SEGFAULT, or another native
+    # outcome; none of those is interchangeable with the old timeout receipt.
+    completed = re.findall(
+        r"(?m)^\s*\d+/\d+\s+Test #\d+:\s+(sdk_\w+)\s+([^\n]*?)\s+[\d.]+\s+sec\s*$",
+        ctest_output)
+    started = set(re.findall(r"(?m)^\s*Start \d+:\s+(sdk_\w+)\s*$", ctest_output))
+    report["tests_attempted"] = len(started | {name for name, _ in completed})
+    report["tests_passed"] = len({name for name, status in completed
+                                  if re.search(r"\bPassed\b", status)})
+    report["failed_tests"] = sorted(set(re.findall(
+        r"(?m)^\s*\d+\s+-\s+(sdk_\w+)\s+\([^\n]+\)\s*$", ctest_output)))
     report["sdk_assertions"] = sum(
         record.get("assertions", 0) for record in log_records
         if isinstance(record.get("assertions"), int))
     if ctest_status != 0:
+        report["failure_stage"] = "runtime"
         report["runtime_status"] = "failed"
         report["status"] = "failed_runtime"
         report["error"] = f"runtime CTest suite exited {ctest_status}"
         report["runtime_log_tail"] = ctest_log.splitlines()[-60:]
         return report
     if report["tests_passed"] != report["expected_tests"]:
+        report["failure_stage"] = "runtime"
         report["runtime_status"] = "failed"
         report["status"] = "failed_runtime"
         report["error"] = (f"expected {report['expected_tests']} runtime tests, "
                             f"observed {report['tests_passed']}")
         return report
     if len(log_records) != (7 if probe_name == "asan-ubsan" else 2):
+        report["failure_stage"] = "runtime"
         report["runtime_status"] = "failed"
         report["status"] = "failed_runtime"
         report["error"] = f"expected SDK identity records, observed {len(log_records)}"
@@ -553,6 +571,7 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
            record.get("assertions", 0) < 1 or
            record.get("identity", {}).get("sanitizer") != cache_mode
            for record in log_records):
+        report["failure_stage"] = "runtime"
         report["runtime_status"] = "failed"
         report["status"] = "failed_runtime"
         report["error"] = "an SDK suite result was not a passing identity record"

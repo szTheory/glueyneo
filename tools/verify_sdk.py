@@ -20,6 +20,7 @@ TREE = BUILD / "verify-sdk"
 LOG_DIR = BUILD / "verify-sdk/logs"
 sys.path.insert(0, str(ROOT / "tools"))
 import sdk_evidence as evidence  # noqa: E402
+import public_content  # noqa: E402
 
 MAX_WORKERS = 2
 CHILD_TIMEOUT_SECONDS = 600
@@ -174,10 +175,18 @@ def run(argv: list[str], *, timeout: int = CHILD_TIMEOUT_SECONDS,
         output = error.stdout or ""
         if isinstance(output, bytes):
             output = output.decode(errors="replace")
+        try:
+            preserve_output(f"command-timeout-{Path(argv[0]).stem}", output)
+        except OSError:
+            pass
         raise VerificationError(f"command timed out after {timeout}s: {Path(argv[0]).name}\n{output[-6000:]}") from error
     except OSError as error:
         raise VerificationError(f"could not execute required command: {Path(argv[0]).name}") from error
     if check and result.returncode != 0:
+        try:
+            preserve_output(f"command-failed-{Path(argv[0]).stem}", result.stdout)
+        except OSError:
+            pass
         raise VerificationError(f"command failed ({result.returncode}): {' '.join(argv)}\n{result.stdout[-8000:]}")
     return result
 
@@ -189,15 +198,60 @@ def preserve_output(lane: str, output: str) -> str:
     return evidence.sha256_file(path)
 
 
-def ensure_debug_build() -> None:
+_DIAGNOSTIC_SECRET_PATTERNS = (
+    (re.compile(r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----.*?-----END [A-Z0-9 ]*PRIVATE KEY-----", re.S), "[private-key-redacted]"),
+    (re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\b"), "[credential-redacted]"),
+    (re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]+"), "[credential-redacted]"),
+    (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "[credential-redacted]"),
+    (re.compile(r"(?i)\b(?:token|password|secret|api[_-]?key)\s*[:=]\s*[^\s,;]+"), "[credential-redacted]"),
+    (re.compile(r"(?i)\b[^\s/@:]+@(?:[^\s/:@]+\.)+[A-Za-z]{2,}\b"), "[identity-redacted]"),
+    (re.compile(r"(?i)(?:[A-Z]:[\\/](?:Users|Documents and Settings)[\\/])[^\s\"']+"), "[private-path-redacted]"),
+    (re.compile(r"/(?:Users|home|private/var|private/tmp|tmp|var/folders)/[^\s\"']+"), "[private-path-redacted]"),
+)
+
+
+def redacted_failure_diagnostic(output: str, *, limit: int = 8000) -> str:
+    """Return bounded diagnostics only after path/identity/secret redaction and scan."""
+    value = output[-limit:]
+    for private_path in sorted({str(ROOT), str(Path.home())}, key=len, reverse=True):
+        if private_path and private_path != "/":
+            value = value.replace(private_path, "[private-path-redacted]")
+    for pattern, replacement in _DIAGNOSTIC_SECRET_PATTERNS:
+        value = pattern.sub(replacement, value)
+    if len(value.encode("utf-8", errors="replace")) > limit:
+        value = value.encode("utf-8", errors="replace")[-limit:].decode("utf-8", errors="replace")
+    try:
+        findings = public_content.scan_bytes(value.encode("utf-8", errors="replace"),
+                                             "ci-failure-diagnostic")["findings"]
+    except Exception:
+        return "[diagnostic withheld: privacy detector did not complete]"
+    if findings:
+        return "[diagnostic withheld: privacy detector found sensitive content after redaction]"
+    return value
+
+
+def failure_receipt(suite: str, lane: str | None, error: BaseException) -> dict[str, Any]:
+    detail = redacted_failure_diagnostic(str(error))
+    revision = os.environ.get("SDK_SOURCE_REVISION") or os.environ.get("GITHUB_SHA", "")
+    if not re.fullmatch(r"[0-9a-f]{40,64}", revision):
+        revision = ""
+    return {"schema": "sdk-verify-failure/v1", "suite": suite,
+            "stage": lane or suite, "outcome": "fail", "source_revision": revision or None,
+            "detail": detail or "verification failed; no diagnostic output was captured"}
+
+
+def ensure_debug_build() -> float:
+    started = time.monotonic()
     run(["cmake", "--preset", "sdk-debug"], timeout=180)
     run(["cmake", "--build", "--preset", "sdk-debug", "--parallel", str(MAX_WORKERS)], timeout=300)
-    runner = BUILD / "glueyneo-diagnostic"
+    runner = BUILD / ("glueyneo-diagnostic.exe" if os.name == "nt"
+                      else "glueyneo-diagnostic")
     if not runner.is_file():
         raise VerificationError("sdk-debug build did not produce the diagnostic runner")
     fixture_b = BUILD / "diagnostic-original-b.bin"
     run([str(runner), "--write-fixture", str(fixture_b), "--scenario-b"], timeout=20)
     run([str(runner), "--check-fixture", str(fixture_b), "--scenario-b"], timeout=20)
+    return round(time.monotonic() - started, 6)
 
 
 def _bracket(value: str) -> str:
@@ -458,7 +512,8 @@ def suite_evidence() -> dict[str, Any]:
 def suite_provenance() -> dict[str, Any]:
     ensure_debug_build()
     manifest = evidence.verify_manifest(ROOT)
-    runner = BUILD / "glueyneo-diagnostic"
+    runner = BUILD / ("glueyneo-diagnostic.exe" if os.name == "nt"
+                      else "glueyneo-diagnostic")
     verify_fixture_runner(runner, "a")
     verify_fixture_runner(runner, "b")
     count, output = run_existing_ctest("sdk-provenance", "provenance")
@@ -760,47 +815,64 @@ def sanitizer_summary(identity: dict[str, Any]) -> tuple[dict[str, Any], str]:
             if not isinstance(reason, str) or not reason.strip():
                 raise VerificationError(f"unsupported sanitizer lane {name} omitted its reason")
             unsupported.append({"lane": name, "outcome": "unsupported", "reason": reason})
-        elif status == "failed_runtime":
-            if (row.get("runtime_status") != "failed" or row.get("expected_tests") != expected[name] or
-                    not isinstance(row.get("error"), str) or not row["error"].strip()):
-                raise VerificationError(f"failed sanitizer lane {name} omitted its explicit runtime failure")
-            attempted_tests += expected[name]
-            reported_failed_assertions += row.get("sdk_assertions", 0)
-            tail = row.get("runtime_log_tail", [])
-            failures = [line.strip() for line in tail
-                        if re.search(r"sdk_(?:isolation|cold).*\(Timeout\)", line)]
-            if row.get("evidence_reused"):
-                runtime_log = BUILD.parent / row["preset"] / "sanitizer-control/runtime.log"
-                log_text = runtime_log.read_text(encoding="utf-8", errors="replace")
-                failures = re.findall(r"(?m)^\s*\d+\s+-\s+(sdk_(?:isolation|cold))\s+\(Timeout\)", log_text)
-                row["ctest_wall_seconds"] = float(re.search(
-                    r"(?m)^Total Test time \(real\) =\s+([\d.]+) sec$", log_text).group(1))
+        elif status in {"failed_runtime", "failed"}:
+            if (not isinstance(row.get("error"), str) or not row["error"].strip() or
+                    row.get("expected_tests") != expected[name]):
+                raise VerificationError(f"failed sanitizer lane {name} omitted its explicit failure")
+            stage = row.get("failure_stage")
+            if not stage:
+                # Older retained reports do not have an explicit failure_stage.
+                stage = "runtime" if status == "failed_runtime" else next(
+                    (key for key in ("configure", "build", "startup")
+                     if row.get(f"{key}_status") == "failed"), "unknown")
+            if status == "failed_runtime" and row.get("runtime_status") != "failed":
+                raise VerificationError(f"failed sanitizer lane {name} omitted its runtime status")
+            row["failure_stage"] = stage
+            tail = row.get(f"{stage}_log_tail", [])
+            diagnostic = "\n".join(tail) if isinstance(tail, list) else str(tail)
+            if not diagnostic:
+                stage_log = BUILD.parent / row.get("preset", f"sdk-{name}") / f"sanitizer-control/{stage}.log"
+                if stage_log.is_file():
+                    diagnostic = stage_log.read_text(encoding="utf-8", errors="replace")
+            row["failure_diagnostic"] = redacted_failure_diagnostic(diagnostic or row["error"])
+            failures = row.get("failed_tests", [])
+            if not isinstance(failures, list) or any(
+                    not isinstance(value, str) or not re.fullmatch(r"sdk_\w+", value)
+                    for value in failures):
+                raise VerificationError(f"failed sanitizer lane {name} has malformed test names")
+            if status == "failed_runtime":
+                # A native failure is not required to reproduce Phase 02's
+                # historical pair of macOS timeouts. Preserve all actual CTest
+                # failure-list names and statuses, including startup failures
+                # in child processes after the standalone probe has passed.
+                log_text = runtime_log.read_text(encoding="utf-8", errors="replace") if runtime_log.is_file() else diagnostic
+                failures = sorted(set(failures) | set(re.findall(
+                    r"(?m)^\s*\d+\s+-\s+(sdk_\w+)\s+\([^\n]+\)\s*$", log_text)))
+                completed = re.findall(
+                    r"(?m)^\s*\d+/\d+\s+Test #\d+:\s+(sdk_\w+)\s+([^\n]*?)\s+([\d.]+)\s+sec\s*$", log_text)
+                started = set(re.findall(r"(?m)^\s*Start \d+:\s+(sdk_\w+)\s*$", log_text))
+                observed_attempts = len(started | {test_name for test_name, _, _ in completed})
+                attempts = row.get("tests_attempted", observed_attempts)
+                if not isinstance(attempts, int) or isinstance(attempts, bool) or not 0 <= attempts <= expected[name]:
+                    raise VerificationError(f"failed sanitizer lane {name} has invalid attempted-test count")
+                attempted_tests += attempts
+                row["tests_attempted"] = attempts
+                reported_failed_assertions += row.get("sdk_assertions", 0)
                 row["per_test_wall_seconds"] = [float(value) for value in re.findall(
-                    r"(?m)^Test time = ([\d.]+) sec$", log_text)]
-                row["runtime_log_sha256"] = evidence.sha256_file(runtime_log)
+                    r"(?m)^Test time = ([\d.]+) sec$", log_text)] or [float(seconds) for _, _, seconds in completed]
+                row["configured_test_timeout_seconds"] = 180
+                row["child_process_timeout_seconds"] = 30
+                row["assertions_status"] = "reported by failed runtime parser; excluded from passing assertion count"
             else:
-                runtime_log = BUILD.parent / row.get("preset", f"sdk-{name}") / "sanitizer-control/runtime.log"
-                if runtime_log.is_file():
-                    log_text = runtime_log.read_text(encoding="utf-8", errors="replace")
-                    row["runtime_log_sha256"] = evidence.sha256_file(runtime_log)
-                    wall = re.search(r"(?m)^Total Test time \(real\) =\s+([\d.]+) sec$", log_text)
-                    if wall:
-                        row["ctest_wall_seconds"] = float(wall.group(1))
-                    row["per_test_wall_seconds"] = [float(value) for value in re.findall(
-                        r"(?m)^Test time = ([\d.]+) sec$", log_text)]
-            if name == "tsan" and set(failures) != {"sdk_isolation", "sdk_cold"}:
-                raise VerificationError("TSan failure record lacks exact isolation and cold timeout names")
+                row["tests_attempted"] = 0
+                row["assertions_status"] = "runtime tests did not start; no passing assertion count"
             row["failed_tests"] = sorted(set(failures))
-            if not row.get("per_test_wall_seconds"):
-                row["per_test_wall_seconds"] = [float(value) for value in re.findall(
-                    r"(?m)^Test time = ([\d.]+) sec$", "\n".join(tail))]
-            row["assertions_status"] = "reported by failed runtime parser; excluded from passing assertion count"
-            row["configured_test_timeout_seconds"] = 180
-            row["child_process_timeout_seconds"] = 30
-            row["ctest_parallel_jobs"] = row.get("ctest_parallel_jobs", 2)
             failed.append({"lane": name, "outcome": "fail", "reason": row["error"],
+                           "stage": stage, "failure_diagnostic": row["failure_diagnostic"],
                            "failed_tests": row["failed_tests"],
-                           "attempted_tests": expected[name], "passed_tests": row.get("tests_passed", 0),
+                           "attempted_tests": row["tests_attempted"], "passed_tests": row.get("tests_passed", 0),
+                           "source_revision": row.get("result_source_revision"),
+                           "relevant_source_sha256": row.get("result_relevant_source_sha256"),
                            "runtime_log_sha256": row.get("runtime_log_sha256")})
         else:
             raise VerificationError(f"sanitizer lane {name} ended with {status!r}")
@@ -811,7 +883,8 @@ def sanitizer_summary(identity: dict[str, Any]) -> tuple[dict[str, Any], str]:
             "matrix_exit_code", "result_source_revision", "result_relevant_source_sha256",
             "runtime_log_sha256", "ctest_wall_seconds", "per_test_wall_seconds",
             "configured_test_timeout_seconds", "child_process_timeout_seconds", "ctest_parallel_jobs",
-            "failed_tests", "assertions_status", "configure_seconds",
+            "failed_tests", "failure_stage", "failure_diagnostic", "tests_attempted",
+            "assertions_status", "configure_seconds",
             "build_seconds", "startup_seconds", "runtime_seconds", "platform", "compiler",
             "expected_tests", "tests_passed", "sdk_assertions", "startup",
             "reported_failed_assertions",
@@ -861,6 +934,7 @@ def suite_all() -> dict[str, Any]:
     for name in ("build", "consumers", "docs", "capabilities"):
         packages[name], _ = suite_package(name)
     sanitizers, _ = sanitizer_summary(identity)
+    release_recovery = suite_release_recovery()
     if prior_tsan_failures:
         sanitizers["failure_history"] = prior_tsan_failures
     final_identity = evidence.current_identity(ROOT)
@@ -871,14 +945,17 @@ def suite_all() -> dict[str, Any]:
 
     lane_case_count = (evidence_lane["cases"] + provenance_report["cases"] + baseline["control_case_count"] +
                        sum(lane.get("ctest_cases", 0) for lane in focused.values()) +
-                       sum(lane.get("ctest_cases", 0) for lane in packages.values()) + sanitizers["attempted_tests"])
+                       sum(lane.get("ctest_cases", 0) for lane in packages.values()) +
+                       release_recovery["cases"] + sanitizers["attempted_tests"])
     lane_assertion_count = (evidence_lane["assertions"] + provenance_report["assertions"] +
                             baseline["control_assertion_count"] +
                             sum(lane.get("assertions", 0) for lane in focused.values()) +
                             sum(lane.get("assertions", 0) for lane in packages.values()) +
+                            release_recovery["assertion_count"] +
                             sanitizers["assertions"])
     required = ["evidence", "provenance", "baseline", *[f"ctest:{name}" for name in CTEST_CASES],
-                *[f"package:{name}" for name in PACKAGE_CASES], "sanitizers:asan-ubsan", "sanitizers:tsan"]
+                *[f"package:{name}" for name in PACKAGE_CASES], "release-recovery",
+                "sanitizers:asan-ubsan", "sanitizers:tsan"]
     unsupported = [
         {"dimension": "coverage-guided libFuzzer", "outcome": "unsupported",
          "reason": "the matching AppleClang libFuzzer archive is unavailable; bounded seeded C mutation ran instead"},
@@ -902,6 +979,7 @@ def suite_all() -> dict[str, Any]:
             "baseline": baseline,
             "ctest": {key: value for key, value in focused.items() if key != "provenance"},
             "packages": packages,
+            "release_recovery": release_recovery,
             "sanitizers": sanitizers,
         },
         "aggregate": {
@@ -938,9 +1016,90 @@ def suite_all() -> dict[str, Any]:
     }
 
 
+def suite_matrix() -> dict[str, Any]:
+    """Run platform-neutral SDK diagnostics and installed static/shared consumers."""
+    started = time.monotonic()
+    cold_build_seconds = ensure_debug_build()
+    identity = evidence.current_identity(ROOT)
+    focused = {}
+    for name in ("contract", "diagnostic", "run", "controls", "isolation", "provenance", "capabilities"):
+        focused[name], _ = collect_ctest_lane(name, identity)
+    consumers, _ = suite_package("consumers")
+    final_identity = evidence.current_identity(ROOT)
+    if any(identity.get(field) != final_identity.get(field) for field in
+           ("source_revision", "relevant_source_sha256", "working_tree_dirty")):
+        raise VerificationError("relevant source changed while matrix SDK lanes were running")
+    assertions = sum(row.get("assertions", 0) for row in focused.values()) + consumers["assertions"]
+    cases = sum(row.get("cases", row.get("ctest_cases", 0)) for row in focused.values()) + consumers["cases"]
+    return {"suite": "matrix", "outcome": "pass", "identity": identity,
+            "aggregate": {"lane_execution_count": len(focused) + consumers["ctest_cases"],
+                          "case_count": cases, "assertion_count": assertions},
+            "lanes": {"ctest": focused, "installed_consumers": consumers},
+            "cold_build_seconds": cold_build_seconds,
+            "critical_path_seconds": round(time.monotonic() - started, 6)}
+
+
+def suite_fuzz() -> dict[str, Any]:
+    cold_build_seconds = ensure_debug_build()
+    identity = evidence.current_identity(ROOT)
+    lane, _ = collect_ctest_lane("hostile", identity)
+    return {"suite": "fuzz", "outcome": lane["outcome"], "identity": identity,
+            "aggregate": {"lane_execution_count": lane["ctest_cases"],
+                          "case_count": lane.get("cases", 0),
+                          "assertion_count": lane.get("assertions", 0)},
+            "lanes": {"fuzz": lane}, "cold_build_seconds": cold_build_seconds}
+
+
+def suite_ci_policy() -> dict[str, Any]:
+    results = []
+    for test in ("tests/workflow/test_ci_policy.py", "tests/sdk/test_matrix_evidence.py"):
+        output = run([sys.executable, test], timeout=60).stdout
+        if "PASS:" not in output:
+            raise VerificationError(f"CI policy control omitted positive marker: {Path(test).name}")
+        results.append({"test": test, "outcome": "pass"})
+    return {"suite": "ci-policy", "outcome": "pass", "lane_execution_count": len(results),
+            "assertion_count": len(results), "tests": results}
+
+
+def suite_public_content() -> dict[str, Any]:
+    report_path = ROOT / "build/verify-sdk/public-content.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    result = run([sys.executable, "tools/public_content.py", "--root", str(ROOT),
+                  "--history-revision=--all", "--json", str(report_path)], timeout=300)
+    report = evidence.load_canonical_json(report_path.read_bytes(), label="public-content report")
+    if result.returncode != 0 or report.get("outcome") != "pass":
+        raise VerificationError("public-content scan failed")
+    counts = report.get("counts", {})
+    return {"suite": "public-content", "outcome": "pass", "lane_execution_count": 1,
+            "assertion_count": sum(value for value in counts.values() if isinstance(value, int)),
+            "report_sha256": evidence.sha256_file(report_path), "coverage": report.get("coverage")}
+
+
+def suite_release_consumer() -> dict[str, Any]:
+    output = run([sys.executable, "tests/consumers/test_release_consumer.py"], timeout=1800).stdout
+    match = re.search(r"(?m)^Ran (\d+) tests? in [\d.]+s$", output)
+    if match is None or int(match.group(1)) <= 0 or "OK" not in output.splitlines()[-1:]:
+        raise VerificationError("release-consumer suite omitted a positive unittest denominator")
+    return {"suite": "release-consumer", "outcome": "pass", "cases": int(match.group(1)),
+            "assertion_count": int(match.group(1)), "output_sha256": evidence.sha256_bytes(output.encode())}
+
+
+def suite_release_recovery() -> dict[str, Any]:
+    output = run([sys.executable, "tests/workflow/test_release_recovery.py"], timeout=60).stdout
+    match = re.search(r"(?m)^Ran (\d+) tests? in [\d.]+s$", output)
+    if match is None or int(match.group(1)) <= 0 or "OK" not in output.splitlines()[-1:]:
+        raise VerificationError("release-recovery suite omitted a positive unittest denominator")
+    return {"suite": "release-recovery", "outcome": "pass", "cases": int(match.group(1)),
+            "assertion_count": int(match.group(1)), "output_sha256": evidence.sha256_bytes(output.encode())}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--suite", choices=("evidence", "provenance", "baseline", "all"), default="all")
+    parser.add_argument("--suite", choices=("evidence", "provenance", "baseline", "matrix",
+                                             "release-consumer", "release-recovery", "ci-policy", "public-content",
+                                             "fuzz", "sanitizer", "all"), default="all")
+    parser.add_argument("--lane", choices=evidence.REQUIRED_MATRIX_LANES)
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     start = time.monotonic()
     try:
@@ -950,19 +1109,54 @@ def main() -> int:
             report = suite_provenance()
         elif args.suite == "baseline":
             report = suite_baseline()
+        elif args.suite == "matrix":
+            report = suite_matrix()
+        elif args.suite == "release-consumer":
+            report = suite_release_consumer()
+        elif args.suite == "release-recovery":
+            report = suite_release_recovery()
+        elif args.suite == "ci-policy":
+            report = suite_ci_policy()
+        elif args.suite == "public-content":
+            report = suite_public_content()
+        elif args.suite == "fuzz":
+            report = suite_fuzz()
+        elif args.suite == "sanitizer":
+            cold_build_seconds = ensure_debug_build()
+            identity = evidence.current_identity(ROOT)
+            sanitizers, _ = sanitizer_summary(identity)
+            report = {"suite": "sanitizer", "outcome": sanitizers["outcome"],
+                      "identity": identity, "aggregate": {
+                          "lane_execution_count": sanitizers["attempted_tests"],
+                          "assertion_count": sanitizers["assertions"]}, "lanes": sanitizers,
+                      "cold_build_seconds": cold_build_seconds}
         else:
             report = suite_all()
         report["duration_seconds"] = round(time.monotonic() - start, 6)
+        if args.suite in {"matrix", "fuzz", "sanitizer"} and args.lane:
+            lane = evidence.matrix_lane_from_environment(args.lane, report, report["duration_seconds"], ROOT)
+            report["matrix_lane"] = lane
+            if lane["outcome"] != "pass":
+                report["outcome"] = lane["outcome"]
+            if args.output:
+                args.output.parent.mkdir(parents=True, exist_ok=True)
+                args.output.write_bytes(evidence.canonical_bytes(lane))
         evidence.scan_public_value(report)
         print("SDK_VERIFY " + json.dumps(report, sort_keys=True, separators=(",", ":")))
-        return 1 if report.get("outcome") == "fail" else 0
+        return 0 if report.get("outcome") == "pass" else 1
     except (VerificationError, evidence.EvidenceError, OSError, ValueError, RuntimeError) as error:
         try:
             preserve_output(f"{args.suite}-failed", str(error))
         except OSError:
             pass
-        print("SDK_VERIFY " + json.dumps({"suite": args.suite, "outcome": "fail",
-              "reason": getattr(error, "reason", "verification-failed")}, sort_keys=True), file=sys.stderr)
+        receipt = failure_receipt(args.suite, args.lane, error)
+        if args.output:
+            try:
+                args.output.parent.mkdir(parents=True, exist_ok=True)
+                args.output.write_bytes(evidence.canonical_bytes(receipt))
+            except OSError:
+                pass
+        print("SDK_VERIFY " + json.dumps(receipt, sort_keys=True, separators=(",", ":")), file=sys.stderr)
         return 1
 
 

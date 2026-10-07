@@ -2,11 +2,11 @@
 
 ## Overview
 
-Deliver an offline installable C SDK whose ordinary native API runs an original deterministic CPU/bus diagnostic. Phase 01 accepted the owned CPU backend for the bounded diagnostic subset. Phase 02 builds the SDK and proves the complete consumer workflow; Phase 03 qualifies and distributes a tested unsigned alpha. The fresh 2026-10-05 Phase 01 report passed 10/10 after Plan 01-29; see its verification report for source identity, current checks, and limitations. The candidate-level receipt remains `unqualified`, while the independent phase report is the current bounded admission decision. Phase 02 is complete: all six plans, the 5/5 whole-phase verification and automated UAT passed. Phase 03 remains unplanned with delivery evidence pending. [PROJECT.md](PROJECT.md) and [REQUIREMENTS.md](REQUIREMENTS.md) govern scope; [research synthesis](research/SUMMARY.md), [roadmap seed](preparation/ROADMAP-SEED.md) and [adversarial gates](preparation/ADVERSARIAL-REVIEW.md) supply dated rationale.
+Deliver an offline installable C SDK whose ordinary native API runs an original deterministic CPU/bus diagnostic. Phase 01 accepted the owned CPU backend for the bounded diagnostic subset. Phase 02 builds the SDK and proves the complete consumer workflow; Phase 03 qualifies and distributes a tested unsigned alpha. The fresh 2026-10-05 Phase 01 report passed 10/10 after Plan 01-29; see its verification report for source identity, current checks, and limitations. The candidate-level receipt remains `unqualified`, while the independent phase report is the current bounded admission decision. Phase 02 is complete: all six plans, the 5/5 whole-phase verification and automated UAT passed. In Phase 03, Plans 03-01–04 have summaries and Plan 03-05 is halted at its hosted-evidence gate. Fresh re-verification on 2026-10-07 remains gaps_found (13/20): the earlier Windows-path and OpenPGP-key detector findings are resolved, while actual hosted fork/merge/App events and release artifacts remain unqualified. No new local closure plan is warranted. Once a first-time fork contributor and independent approver are available, resume the existing halted plan with `$gsd-execute-phase 03`; until then no GSD command advances Phase 03. See [Phase 03 verification](phases/03-distributable-release-qualification/03-VERIFICATION.md) and [hosted qualification receipts](phases/03-distributable-release-qualification/03-HOSTED-QUALIFICATION.md). [PROJECT.md](PROJECT.md) and [REQUIREMENTS.md](REQUIREMENTS.md) govern scope; [research synthesis](research/SUMMARY.md), [roadmap seed](preparation/ROADMAP-SEED.md) and [adversarial gates](preparation/ADVERSARIAL-REVIEW.md) supply dated rationale.
 
 ## Milestones
 
-- 🚧 **v0.1 CPU/bus diagnostic SDK alpha** — current; Phase 02 is complete and Phase 03 delivery qualification is next.
+- 🚧 **v0.1 CPU/bus diagnostic SDK alpha** — current; Phase 02 is complete and Phase 03 delivery qualification is underway.
 - 📋 **Next: Interactive diagnostic alpha** — outlined below; version and phase allocation await v0.1 evidence.
 - **Longer horizon:** Commercial scenarios, hardware profiles, integration and measured performance; revisable, without release promises.
 
@@ -203,35 +203,35 @@ Planning guidance: Slice from opaque lifecycle and bounded media through the rea
   4. Pinned release-please automation uses one C version source to stage a complete unsigned SDK draft bound to the tested commit, recovers interrupted staging and no-new-release retries, refuses incomplete/wrong-commit publication, and yields a published download whose expected digests and real diagnostic consumer pass. (DEL-03, DEL-04)
   5. A maintainer can inspect public-content evidence covering source, documentation, commit identity, logs and archives for notices and exclusion of personal paths/private identity, secrets, commercial media and private corpus material before publication. (DEL-05)
 
-**Plans**: 5 plans
+**Plans**: 4/5 execution-complete; Plan 03-05 has a halted summary after Task 2 recorded its remaining hosted evidence requirements.
 
 Plans:
 **Wave 1**
-- [ ] 03-01-PLAN.md — Manifest-bound source/SDK archive tracer, offline relocated consumer and Windows exports
-- [ ] 03-02-PLAN.md — Bounded public-content scanner, canaries and rights inventory
+- [x] 03-01-PLAN.md — Manifest-bound source/SDK archive tracer, offline relocated consumer and Windows exports
+- [x] 03-02-PLAN.md — Bounded public-content scanner, canaries and rights inventory
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 03-03-PLAN.md — Exact platform evidence and always-started required CI aggregate
+- [x] 03-03-PLAN.md — Exact platform evidence and always-started required CI aggregate
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 03-04-PLAN.md — Serialized draft recovery and downloaded-byte release gates
+- [x] 03-04-PLAN.md — Serialized draft recovery and downloaded-byte release gates
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 03-05-PLAN.md — Current-SHA review/merge policy and hosted authority qualification
+- [ ] 03-05-PLAN.md — Local current-SHA review policy is complete; hosted task remains halted pending independent fork/review actors and release-event evidence
 
 Planning guidance: Qualify relocated/offline consumers and the exact support matrix; then required checks/protected PRs and the actual release event/recovery graph; then stage, inspect, publish and verify the downloaded artifacts. Do not wait for a tag event that the configured draft flow cannot emit. Treat action/service behavior as requiring current qualification. Unsigned SDK delivery does not require application notarization.
 
-**Delivery dependency:** Remote repository, hosted CI, protection and release authority are not configured. This is a future delivery dependency, not a present blocker to implementation or artifact qualification. Keep affected delivery requirements pending until actual authority and event behavior are exercised; never substitute local green results for them.
+**Delivery dependency:** The public `szTheory/glueyneo` repository, hosted CI and strict main protection are configured. Their exact observations are recorded in Phase 03 hosted receipts. The owner reports a release App installed for this repository, with its Actions secret and App ID variable configured; actual App permissions, token/event behavior, first-time fork approval/execution, independently approved protected merge and publication remain pending. Keep affected delivery requirements pending until actual authority and event behavior are exercised; never substitute local green results for them.
 
 ## Progress
 
-Execution order: 1 → 2 → 3. Phase 01's bounded backend admission gate is satisfied. Phase 02 is complete, including whole-phase verification and automated UAT. Phase 03 is next and remains unplanned.
+Execution order: 1 → 2 → 3. Phase 01's bounded backend admission gate is satisfied. Phase 02 is complete, including whole-phase verification and automated UAT. Phase 03 is executing; Plans 03-01–04 and Plan 03-05 Task 1 are complete. Plan 03-05 Task 2 is halted with owner-reported App setup recorded and external hosted authority/delivery evidence still pending. Fresh re-verification remains gaps_found (13/20); after the first-time fork and independent reviewer preconditions are met, resume with `$gsd-execute-phase 03` rather than repeating gap planning.
 
 | Phase | Milestone | Execution-complete plans | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. CPU acceptance experiment | v0.1 | 28/29 (01-17 remains a checkpoint) | Complete | 2026-10-05 |
 | 2. Executable diagnostic SDK | v0.1 | 6/6 | Complete    | 2026-10-06 |
-| 3. Distributable release qualification | v0.1 | 0/TBD | Not started | - |
+| 3. Distributable release qualification | v0.1 | 4/5 | In Progress | - |
 
 Coverage: 27/27 current requirements are assigned exactly once; 5 in Phase 1, 15 in Phase 2, and 7 in Phase 3. The 5 bounded Phase 01 requirements and all 15 Phase 02 SDK requirements are complete; the 7 Phase 03 delivery requirements remain pending in [traceability](REQUIREMENTS.md#traceability). Deferred v2 requirements are not allocated to these phases.
 

@@ -81,6 +81,14 @@ owned_cpu_status owned_cpu_set_irq(owned_cpu *cpu, unsigned level);
 owned_cpu_status owned_cpu_observe(const owned_cpu *cpu, owned_cpu_observation *out);
 
 #ifdef OWNED_CPU_TEST_HOOKS
+/* Concrete allocation-member alignment for the private SDK fault allocator.
+ * cpu.c checks this against the complete owned_cpu type on each test build. */
+typedef union {
+    owned_cpu_bus bus;
+    owned_cpu_allocator allocator;
+    uint64_t counter;
+} owned_cpu_test_allocation_alignment;
+
 /* Private same-build continuation record. This is an in-memory test contract,
  * not a public ABI, wire format, emulator snapshot, replay, or durable save. */
 #define OWNED_CPU_STATE_VERSION UINT32_C(1)
