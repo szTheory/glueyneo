@@ -60,6 +60,13 @@ only; MAME is differential reference material, not an independent oracle.
 
 ## Rebuild and test
 
+The native trace is `[NONE, RIGHT, RIGHT]` and expects coordinates
+`[(16,16), (17,16), (18,16)]`. At each boundary the consumer checks the
+background, marker interior, and marker edge; after movement it checks both
+the vacated edge and newly occupied edge. Separate LEFT-substitution and
+no-input controls stay at x=16 and assert that the expected rightward edge is
+absent. These controls establish the fixture's own input behavior only.
+
 `cmake --preset sdk-debug && cmake --build --preset sdk-debug --target
 glueyneo-public-fixture public_guest_test && ctest --preset sdk-debug -R
 '^public_guest_tracer$' --output-on-failure --no-tests=error` rebuilds the

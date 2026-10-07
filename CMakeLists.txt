@@ -294,9 +294,16 @@ if(GLUEYNEO_BUILD_TESTS)
   )
   add_custom_target(glueyneo-public-fixture ALL
     DEPENDS "${GLUEYNEO_PUBLIC_FIXTURE}")
-  add_test(NAME public_guest_tracer
+  add_test(NAME public_guest_contract
     COMMAND public_guest_test "${GLUEYNEO_PUBLIC_FIXTURE}")
-  set_tests_properties(public_guest_tracer PROPERTIES
+  add_test(NAME public_guest_trace
+    COMMAND public_guest_test "${GLUEYNEO_PUBLIC_FIXTURE}" trace)
+  add_test(NAME public_guest_negative_left
+    COMMAND public_guest_test "${GLUEYNEO_PUBLIC_FIXTURE}" negative-left)
+  add_test(NAME public_guest_negative_none
+    COMMAND public_guest_test "${GLUEYNEO_PUBLIC_FIXTURE}" negative-none)
+  set_tests_properties(public_guest_contract public_guest_trace
+    public_guest_negative_left public_guest_negative_none PROPERTIES
     LABELS "public-fixture;native-tracer")
 
   add_executable(sdk_diagnostic tests/sdk/test_sdk.c tests/sdk/guest_fixture.c)

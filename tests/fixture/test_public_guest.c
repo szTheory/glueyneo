@@ -63,26 +63,70 @@ static gn_status advance(uint32_t input, gn_frame_result *result) {
     return gn_advance_frame(instance, &request, result);
 }
 
-static void generated_guest_moves_guest_owned_marker(void) {
+static void public_guest_fixed_right_trace_has_guest_state_and_pixels(void) {
     TEST_ASSERT_TRUE(read_fixture(fixture_path));
     TEST_ASSERT_EQUAL_INT(GN_STATUS_OK, load_public_fixture());
+    static const uint32_t inputs[] = {0u, GN_INPUT_RIGHT, GN_INPUT_RIGHT};
+    static const uint32_t expected_x[] = {16u, 17u, 18u};
     gn_frame_result frame;
-    TEST_ASSERT_EQUAL_INT(GN_STATUS_OK, advance(0u, &frame));
-    TEST_ASSERT_EQUAL_UINT32(16u, frame.marker_x);
-    TEST_ASSERT_EQUAL_UINT32(16u, frame.marker_y);
-    TEST_ASSERT_EQUAL_UINT64(UINT64_C(200000), frame.requested_cycles);
-    TEST_ASSERT_EQUAL_UINT64(UINT64_C(200000), frame.elapsed_cycles);
-    TEST_ASSERT_EQUAL_INT(GN_RUN_STOPPED, frame.reason);
-    TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00ffffff), pixel_at(16u, 16u));
-    TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00000000), pixel_at(24u, 16u));
+    for (size_t index = 0u; index < 3u; ++index) {
+        TEST_ASSERT_EQUAL_INT(GN_STATUS_OK, advance(inputs[index], &frame));
+        TEST_ASSERT_EQUAL_UINT32(expected_x[index], frame.marker_x);
+        TEST_ASSERT_EQUAL_UINT32(16u, frame.marker_y);
+        TEST_ASSERT_EQUAL_UINT64(UINT64_C(200000), frame.requested_cycles);
+        TEST_ASSERT_EQUAL_UINT64(UINT64_C(200000), frame.elapsed_cycles);
+        TEST_ASSERT_EQUAL_INT(GN_RUN_STOPPED, frame.reason);
+        TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00000000), pixel_at(0u, 0u));
+        TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00ffffff), pixel_at(expected_x[index], 16u));
+        TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00ffffff), pixel_at(expected_x[index] + 7u, 16u));
+        TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00000000), pixel_at(expected_x[index] + 8u, 16u));
+        if (index > 0u) {
+            TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00000000), pixel_at(expected_x[index] - 1u, 16u));
+        }
+    }
+}
 
-    TEST_ASSERT_EQUAL_INT(GN_STATUS_OK, advance(GN_INPUT_RIGHT, &frame));
-    TEST_ASSERT_EQUAL_UINT32(17u, frame.marker_x);
-    TEST_ASSERT_EQUAL_UINT32(16u, frame.marker_y);
-    TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00000000), pixel_at(16u, 16u));
-    TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00ffffff), pixel_at(17u, 16u));
-    TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00ffffff), pixel_at(24u, 16u));
-    TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00000000), pixel_at(25u, 16u));
+static void public_guest_left_control_fails_rightward_trace_safely(void) {
+    TEST_ASSERT_TRUE(read_fixture(fixture_path));
+    TEST_ASSERT_EQUAL_INT(GN_STATUS_OK, load_public_fixture());
+    static const uint32_t inputs[] = {0u, GN_INPUT_LEFT, GN_INPUT_LEFT};
+    static const uint32_t expected_right_x[] = {16u, 17u, 18u};
+    gn_frame_result frame;
+    int rightward_trace_matched = 1;
+    for (size_t index = 0u; index < 3u; ++index) {
+        TEST_ASSERT_EQUAL_INT(GN_STATUS_OK, advance(inputs[index], &frame));
+        TEST_ASSERT_EQUAL_UINT32(16u, frame.marker_x);
+        TEST_ASSERT_EQUAL_UINT32(16u, frame.marker_y);
+        TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00ffffff), pixel_at(16u, 16u));
+        TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00000000), pixel_at(24u, 16u));
+        if (frame.marker_x != expected_right_x[index]) rightward_trace_matched = 0;
+        if (index > 0u) {
+            TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00000000),
+                                     pixel_at(expected_right_x[index] + 7u, 16u));
+        }
+    }
+    TEST_ASSERT_FALSE(rightward_trace_matched);
+}
+
+static void public_guest_no_input_control_fails_rightward_trace_safely(void) {
+    TEST_ASSERT_TRUE(read_fixture(fixture_path));
+    TEST_ASSERT_EQUAL_INT(GN_STATUS_OK, load_public_fixture());
+    static const uint32_t expected_right_x[] = {16u, 17u, 18u};
+    gn_frame_result frame;
+    int rightward_trace_matched = 1;
+    for (size_t index = 0u; index < 3u; ++index) {
+        TEST_ASSERT_EQUAL_INT(GN_STATUS_OK, advance(0u, &frame));
+        TEST_ASSERT_EQUAL_UINT32(16u, frame.marker_x);
+        TEST_ASSERT_EQUAL_UINT32(16u, frame.marker_y);
+        TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00ffffff), pixel_at(16u, 16u));
+        TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00000000), pixel_at(24u, 16u));
+        if (frame.marker_x != expected_right_x[index]) rightward_trace_matched = 0;
+        if (index > 0u) {
+            TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00000000),
+                                     pixel_at(expected_right_x[index] + 7u, 16u));
+        }
+    }
+    TEST_ASSERT_FALSE(rightward_trace_matched);
 }
 
 static void bounded_frame_metadata_and_canary_are_exact(void) {
@@ -189,17 +233,30 @@ int main(int argc, char **argv) {
         extern int public_guest_write(const char *path);
         return public_guest_write(argv[2]) ? 0 : 1;
     }
-    if (argc != 2) {
-        (void)fprintf(stderr, "usage: %s <public-playable.bin> | --write-fixture <path>\n", argv[0]);
+    if (argc != 2 && argc != 3) {
+        (void)fprintf(stderr, "usage: %s <public-playable.bin> [trace|negative-left|negative-none] | --write-fixture <path>\n", argv[0]);
         return 2;
     }
     extern size_t public_guest_content_size(void);
     fixture_path = argv[1];
     UNITY_BEGIN();
-    RUN_TEST(generated_guest_moves_guest_owned_marker);
-    RUN_TEST(bounded_frame_metadata_and_canary_are_exact);
-    RUN_TEST(frame_preflight_rejections_do_not_mutate_guest_or_touch_canary);
-    RUN_TEST(padded_pixel_pitch_and_supported_left_input_are_safe);
+    if (argc == 2 || strcmp(argv[2], "trace") == 0) {
+        RUN_TEST(public_guest_fixed_right_trace_has_guest_state_and_pixels);
+    }
+    if (argc == 2) {
+        RUN_TEST(bounded_frame_metadata_and_canary_are_exact);
+        RUN_TEST(frame_preflight_rejections_do_not_mutate_guest_or_touch_canary);
+        RUN_TEST(padded_pixel_pitch_and_supported_left_input_are_safe);
+        RUN_TEST(public_guest_left_control_fails_rightward_trace_safely);
+        RUN_TEST(public_guest_no_input_control_fails_rightward_trace_safely);
+    } else if (strcmp(argv[2], "negative-left") == 0) {
+        RUN_TEST(public_guest_left_control_fails_rightward_trace_safely);
+    } else if (strcmp(argv[2], "negative-none") == 0) {
+        RUN_TEST(public_guest_no_input_control_fails_rightward_trace_safely);
+    } else if (strcmp(argv[2], "trace") != 0) {
+        (void)fprintf(stderr, "unknown public fixture test case: %s\n", argv[2]);
+        return 2;
+    }
     const int failures = UNITY_END();
     return failures;
 }
