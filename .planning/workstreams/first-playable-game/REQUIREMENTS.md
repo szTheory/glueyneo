@@ -18,14 +18,14 @@ Here, `v1` means this workstream's scoped deliverable, not a software release ve
 
 ### Original Playable Fixture
 
-- [ ] **TRAC-01**: A maintainer can rebuild a tiny original Neo Geo fixture from tracked source and assets, with documented generation tools, redistribution rights, notices, and assertion-oracle ancestry, without commercial game or production BIOS inputs.
-- [ ] **TRAC-02**: A C consumer can execute that fixture through the ordinary native API and observe a software frame produced by guest-driven board/video behavior, with checked pixel format, dimensions, pitch, and buffer bounds.
-- [ ] **TRAC-03**: A C consumer can supply a fixed logical input sequence and observe the fixture change its guest state and visible output according to independently justified expected results; a wrong-input control fails the assertions.
+- [x] **TRAC-01**: A maintainer can rebuild a tiny original Neo Geo fixture from tracked source and assets, with documented generation tools, redistribution rights, notices, and assertion-oracle ancestry, without commercial game or production BIOS inputs.
+- [x] **TRAC-02**: A C consumer can execute that fixture through the ordinary native API and observe a software frame produced by guest-driven board/video behavior, with checked pixel format, dimensions, pitch, and buffer bounds.
+- [x] **TRAC-03**: A C consumer can supply a fixed logical input sequence and observe the fixture change its guest state and visible output according to independently justified expected results; a wrong-input control fails the assertions.
 
 ### Native and Frontend Integration
 
 - [ ] **HOST-02**: A user can load, run, and unload the fixture through a thin libretro adapter in an actual pinned macOS RetroArch build, using the ordinary native API, software video, documented controller mapping, and frontend-owned pacing.
-- [ ] **API-05**: A C integrator can advance the selected machine through a documented bounded frame operation with explicit input sampling, output-buffer ownership/lifetimes, video/audio capacities, audio sample format/channel layout/rate/produced count and relationship to emulated time, progress/stop information, and actionable errors, without native filesystem, device, network, or wall-clock services.
+- [x] **API-05**: A C integrator can advance the selected machine through a documented bounded frame operation with explicit input sampling, output-buffer ownership/lifetimes, video/audio capacities, audio sample format/channel layout/rate/produced count and relationship to emulated time, progress/stop information, and actionable errors, without native filesystem, device, network, or wall-clock services.
 - [ ] **API-06**: A maintainer can repeat and partition the supported fixture workload and run distinguishable native instances interleaved and concurrently while matching isolated-baseline guest, video, and audio results at equal emulated boundaries. This is native-instance evidence, not a claim of libretro frontend reentrancy or public snapshot compatibility.
 
 ### Private Game and BIOS Loading
@@ -101,11 +101,11 @@ Requirements and their primary phase allocation in [ROADMAP.md](ROADMAP.md) are 
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TRAC-01 | Phase 4 | Pending |
-| TRAC-02 | Phase 4 | Pending |
-| TRAC-03 | Phase 4 | Pending |
+| TRAC-01 | Phase 4 | Complete |
+| TRAC-02 | Phase 4 | Complete |
+| TRAC-03 | Phase 4 | Complete |
 | HOST-02 | Phase 4 | Pending |
-| API-05 | Phase 4 | Pending |
+| API-05 | Phase 4 | Complete |
 | API-06 | Phase 7 | Pending |
 | MEDIA-02 | Phase 5 | Pending |
 | MEDIA-03 | Phase 5 | Pending |
