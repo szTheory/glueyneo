@@ -105,6 +105,7 @@ set_target_properties(glueyneo PROPERTIES
   C_STANDARD 17
   C_STANDARD_REQUIRED YES
   C_EXTENSIONS NO
+  POSITION_INDEPENDENT_CODE ON
   C_VISIBILITY_PRESET hidden
 )
 target_include_directories(glueyneo
@@ -126,6 +127,29 @@ else()
   target_compile_options(glueyneo PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 glueyneo_apply_sdk_sanitizer(glueyneo)
+
+# The frontend adapter owns the Libretro ABI boundary; machine behavior and
+# deterministic frame buffers remain in the native C library.
+add_library(glueyneo_libretro SHARED src/libretro/libretro_core.c)
+target_compile_features(glueyneo_libretro PRIVATE c_std_17)
+set_target_properties(glueyneo_libretro PROPERTIES
+  C_STANDARD 17
+  C_STANDARD_REQUIRED YES
+  C_EXTENSIONS NO
+  C_VISIBILITY_PRESET hidden
+  OUTPUT_NAME glueyneo_libretro
+  PREFIX ""
+)
+target_include_directories(glueyneo_libretro PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libretro
+)
+target_link_libraries(glueyneo_libretro PRIVATE Glueyneo::glueyneo)
+if(MSVC)
+  target_compile_options(glueyneo_libretro PRIVATE /W4 /WX)
+else()
+  target_compile_options(glueyneo_libretro PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+glueyneo_apply_sdk_sanitizer(glueyneo_libretro)
 
 # Source identity belongs to the checkout, independently of the C compiler.
 # An offline source archive without Git retains the explicit unknown identity.
@@ -305,6 +329,30 @@ if(GLUEYNEO_BUILD_TESTS)
   set_tests_properties(public_guest_contract public_guest_trace
     public_guest_negative_left public_guest_negative_none PROPERTIES
     LABELS "public-fixture;native-tracer")
+
+  add_executable(libretro_callback_test tests/libretro/callback_harness.c)
+  target_include_directories(libretro_callback_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libretro
+  )
+  target_compile_features(libretro_callback_test PRIVATE c_std_17)
+  set_target_properties(libretro_callback_test PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS NO
+  )
+  target_link_libraries(libretro_callback_test PRIVATE
+    glueyneo_libretro Glueyneo::glueyneo ${CMAKE_DL_LIBS}
+  )
+  if(MSVC)
+    target_compile_options(libretro_callback_test PRIVATE /W4 /WX)
+  else()
+    target_compile_options(libretro_callback_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(libretro_callback_test)
+  add_dependencies(libretro_callback_test glueyneo-public-fixture)
+  add_test(NAME libretro_callback
+    COMMAND libretro_callback_test "${GLUEYNEO_PUBLIC_FIXTURE}")
+  set_tests_properties(libretro_callback PROPERTIES LABELS "libretro;callback-contract")
 
   add_executable(sdk_diagnostic tests/sdk/test_sdk.c tests/sdk/guest_fixture.c)
   target_include_directories(sdk_diagnostic PRIVATE tests/sdk src)
