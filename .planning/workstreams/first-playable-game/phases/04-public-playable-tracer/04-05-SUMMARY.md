@@ -139,8 +139,8 @@ The TDD RED record is `build/ym2610-admission/tdd-red.json`. The named create-in
 ## Self-Check: PASSED
 
 - All plan-created files exist and the five plan commits are ancestors of HEAD.
-- The machine report has all nine required gates set to `pass`; its static and shared consumer entries each record five tests and zero failures.
-- No YM2610 task stub or placeholder remains. The only known full-suite failures are the unrelated README path checks listed above.
+- The machine report has all nine required gates set to `pass`; its static and shared consumer entries each record five tests and zero test errors.
+- No YM2610 task stub or placeholder remains. The only outstanding full-suite checks are the unrelated README path checks listed above.
 
 ## Next Phase Readiness
 
