@@ -134,6 +134,7 @@ static void bounded_frame_metadata_and_canary_are_exact(void) {
     TEST_ASSERT_EQUAL_INT(GN_STATUS_OK, load_public_fixture());
     memset(pixels, 0xa5, sizeof(pixels));
     pixels[PUBLIC_PIXEL_BYTES] = 0xa5u;
+    memset(content, 0x5a, sizeof(content)); /* Successful gn_load owns code, seed, and tile bytes. */
     gn_frame_result frame;
     TEST_ASSERT_EQUAL_INT(GN_STATUS_OK, advance(0u, &frame));
     TEST_ASSERT_EQUAL_UINT64(UINT64_C(200000), frame.frame_time_numerator);
@@ -228,6 +229,25 @@ static void padded_pixel_pitch_and_supported_left_input_are_safe(void) {
     TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x00ffffff), pixel);
 }
 
+static void public_fixture_rejects_bad_envelopes_and_keeps_live_image(void) {
+    TEST_ASSERT_TRUE(read_fixture(fixture_path));
+    TEST_ASSERT_EQUAL_INT(GN_STATUS_OK, load_public_fixture());
+    uint8_t malformed[PUBLIC_CONTENT_SIZE];
+    memcpy(malformed, content, sizeof(malformed));
+    malformed[7] = 2u; /* Unsupported version in the strict GNFX v1 envelope. */
+    gn_manifest manifest;
+    memset(&manifest, 0, sizeof(manifest));
+    manifest.version = GN_MANIFEST_VERSION;
+    manifest.profile = GN_PROFILE_PUBLIC_FIXTURE;
+    manifest.region_count = 1u;
+    manifest.regions[0] = (gn_region){0u, PUBLIC_CONTENT_SIZE, malformed,
+                                      sizeof(malformed), GN_REGION_ROM};
+    TEST_ASSERT_EQUAL_INT(GN_STATUS_INVALID_MEDIA, gn_load(instance, &manifest));
+    gn_frame_result frame;
+    TEST_ASSERT_EQUAL_INT(GN_STATUS_OK, advance(GN_INPUT_RIGHT, &frame));
+    TEST_ASSERT_EQUAL_UINT32(17u, frame.marker_x);
+}
+
 int main(int argc, char **argv) {
     if (argc == 3 && strcmp(argv[1], "--write-fixture") == 0) {
         extern int public_guest_write(const char *path);
@@ -249,6 +269,7 @@ int main(int argc, char **argv) {
         RUN_TEST(padded_pixel_pitch_and_supported_left_input_are_safe);
         RUN_TEST(public_guest_left_control_fails_rightward_trace_safely);
         RUN_TEST(public_guest_no_input_control_fails_rightward_trace_safely);
+        RUN_TEST(public_fixture_rejects_bad_envelopes_and_keeps_live_image);
     } else if (strcmp(argv[2], "negative-left") == 0) {
         RUN_TEST(public_guest_left_control_fails_rightward_trace_safely);
     } else if (strcmp(argv[2], "negative-none") == 0) {
