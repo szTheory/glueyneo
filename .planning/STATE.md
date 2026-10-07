@@ -5,11 +5,11 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 03
 current_phase_name: Distributable release qualification
 status: executing
-stopped_at: "03-05 summary recorded: Task 1 complete; Task 2 halted with hosted evidence pending"
-last_updated: "2026-10-07T12:29:32.881Z"
+stopped_at: "Phase 03 verification: gaps_found (13/20); next /gsd-plan-phase 03 --gaps"
+last_updated: "2026-10-07T13:20:43.627Z"
 last_activity: 2026-10-07
-last_activity_desc: Phase 03 execution started
-state_head: 2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1
+last_activity_desc: "Phase 03 whole-phase verification found gaps; next: /gsd-plan-phase 03 --gaps"
+state_head: 2d3379777a8241fd2e2f3c5e835267dfb77e0e98
 progress:
   total_phases: 3
   completed_phases: 2
@@ -31,9 +31,9 @@ See: .planning/PROJECT.md (updated 2026-10-07)
 ## Current Position
 
 Phase: 03 (Distributable release qualification) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 03
-Last activity: 2026-10-07 — Phase 03 execution started
+Plan: 5 of 5
+Status: Phase 03 verification found gaps (13/20); gap-closure planning is next
+Last activity: 2026-10-07 — Phase 03 whole-phase verification found gaps; next: /gsd-plan-phase 03 --gaps
 
 Progress: [███████░░░] 67% (two of three phases complete)
 
@@ -157,7 +157,7 @@ None yet.
 - Preserve the historical odd-IRQ, fixture-UBSan, reset-accounting/NMI, BSD address-error and malformed-state/zero-request counterexamples.
 - Both original Musashi adaptation attempts are consumed. Do not repeat them automatically.
 - Original-silicon saved PC, unsupported platforms, public persistence formats, board/BIOS compatibility, and gameplay performance remain unknown or outside scope. WR-01 is a documentation warning carried into the Phase 02 plan; it does not block bounded CPU acceptance.
-- Plan 03-05 Task 1 is complete and has a passing current local policy test. Task 2 is halted at the hosted-evidence gate: the owner reports App ID 5217741 installed for szTheory/glueyneo and the Actions secret/variable configured; permissions and token/event behavior remain unverified. The first-time fork approval/run, independent GitHub review, protected merge, and release/download publication remain pending. The public repository, draft PR #1, sanitized publication audit, observed strict protection settings, six hosted matrix lanes and aggregate, and independent GSD review at source 2c7926383222cee174ede5ddde06374b43002191 remain recorded in the hosted receipt. Original private local refs must never be pushed. Resume the hosted portion of $gsd-execute-phase 03 when the independent fork and review actors are arranged.
+- Plan 03-05 Task 1 and its local policy test passed. The owner reports Release App 5217741 installed for szTheory/glueyneo and its Actions secret/variable configured; effective permissions and token/event behavior remain unverified. The first-time fork run, independent GitHub review, protected merge, release staging/download, and publication remain pending. Earlier receipts, CI lanes, protection settings, and review evidence are retained in 03-HOSTED-QUALIFICATION.md. The whole-phase verifier at commit 2d3379777a8241fd2e2f3c5e835267dfb77e0e98 returned gaps_found (13/20); see 03-VERIFICATION.md for three concrete gaps. Next: /gsd-plan-phase 03 --gaps, then execute the resulting gap plan and re-verify. Do not mark Phase 03 complete before the verifier passes. Original private local refs must never be pushed.
 
 ## Deferred Items
 
@@ -169,6 +169,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-07T12:05:34Z
-Stopped at: 03-05 summary recorded; Task 2 halted pending fork/review actors and hosted release events
-Resume file: .planning/phases/03-distributable-release-qualification/03-HOSTED-QUALIFICATION.md
+Last session: 2026-10-07T13:20:43.584Z
+Stopped at: Phase 03 verification: gaps_found (13/20); next /gsd-plan-phase 03 --gaps
+Resume file: .planning/phases/03-distributable-release-qualification/03-VERIFICATION.md
