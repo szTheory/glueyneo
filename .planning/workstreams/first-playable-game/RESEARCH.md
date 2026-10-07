@@ -1,7 +1,7 @@
 # First Playable Game — Milestone Research
 
 **Prepared:** 2026-10-07  
-**Status:** Research recommendations accepted in discussion; requirements and roadmap not yet created.  
+**Status:** Research recommendations accepted and reused for the user-approved [requirements](REQUIREMENTS.md) and [roadmap](ROADMAP.md). Milestone initialization is complete; implementation has not started.
 **Scope:** Decision input for the `first-playable-game` workstream. This note is not implementation evidence or a compatibility claim.
 
 **Discussion update — 2026-10-07:** The user approved evaluating/admitting `ymfm` as a narrow C++14 dependency behind a private C interface, subject to the admission checks below (PROJECT-D-48). C remains the default; incremental replacement or a licensed C port may be considered later, without adding a replacement framework or rewrite to this milestone. The supplied BIOS archive is now available in the Git-ignored local media directory; the copy matches its source and passes ZIP CRC validation. Its exact MVS profile and compatibility are not yet qualified. No private source path, media checksum or archive contents are recorded here.

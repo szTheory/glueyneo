@@ -14,7 +14,7 @@ Scope comes from the accepted [workstream research](RESEARCH.md), the user's BIO
 
 ## v1 Requirements
 
-Here, `v1` means this workstream's scoped deliverable, not a software release version. IDs continue existing category numbering; new categories begin at 01. Each ID will map to exactly one primary phase during roadmap creation.
+Here, `v1` means this workstream's scoped deliverable, not a software release version. IDs continue existing category numbering; new categories begin at 01. Each ID maps to exactly one primary phase in the proposed roadmap; implementation remains pending.
 
 ### Original Playable Fixture
 
@@ -97,17 +97,38 @@ All 20 current requirements have current-revision evidence, documentation, and i
 
 ## Traceability
 
-Requirements are approved; phase allocation is pending roadmap creation.
+Requirements and their primary phase allocation in [ROADMAP.md](ROADMAP.md) are user-approved; no implementation requirement is complete.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| TRAC-01 | Phase 4 | Pending |
+| TRAC-02 | Phase 4 | Pending |
+| TRAC-03 | Phase 4 | Pending |
+| HOST-02 | Phase 4 | Pending |
+| API-05 | Phase 4 | Pending |
+| API-06 | Phase 7 | Pending |
+| MEDIA-02 | Phase 5 | Pending |
+| MEDIA-03 | Phase 5 | Pending |
+| MEDIA-04 | Phase 5 | Pending |
+| GAME-02 | Phase 5 | Pending |
+| GAME-03 | Phase 6 | Pending |
+| GAME-04 | Phase 6 | Pending |
+| SND-01 | Phase 4 | Pending |
+| SND-02 | Phase 4 | Pending |
+| SND-03 | Phase 7 | Pending |
+| SND-04 | Phase 7 | Pending |
+| QUAL-01 | Phase 7 | Pending |
+| QUAL-02 | Phase 7 | Pending |
+| QUAL-03 | Phase 4 | Pending |
+| QUAL-04 | Phase 7 | Pending |
 
 **Coverage:**
 
 - Current requirements: 20
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 20 (expected at this checkpoint)
+- Mapped to one primary phase: 20 (approved roadmap)
+- Unmapped: 0
+- Implemented: 0
 
 ---
 *Requirements defined: 2026-10-07*
-*Last updated: 2026-10-07 — user approved all 20 requirements; roadmap creation follows.*
+*Last updated: 2026-10-07 — user approved the roadmap and all 20 primary phase allocations; milestone initialization complete.*
