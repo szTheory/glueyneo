@@ -1,287 +1,204 @@
 # Phase 04: Public Playable Tracer - Pattern Map
 
 **Mapped:** 2026-10-07  
-**Files analyzed:** 20 proposed files/modules (exact implementation paths remain planner decisions)  
-**Analogs found:** 15 / 20; the Libretro, renderer, and chip-adapter seams have no existing in-repository implementation analog.
+**Files analyzed:** 6 gap-closure paths (including two planned test paths)
+**Analogs found:** 4 / 5
 
-This map uses proposed paths from `04-RESEARCH.md` as planning targets, not as existing files. The closest analogs below were verified as git-tracked source. Phase 04 introduces new video/input/frontend behavior; the current SDK diagnostic is evidence only for ownership, bounded execution, fixture generation, and testing patterns.
+Scope is limited to closing the QUAL-03 source identity defect and resolving the existing actual RetroArch smoke outcome. This map does not plan a Phase 04 rebuild. Preserve the Phase 04 limits: C-first and small dependencies; exact identity of inputs actually compiled; original public fixture only; private ROMs, BIOS, captures and outputs remain private; unknown frontend behavior stays unknown until directly observed. The existing report says the qualification runner records `HEAD` plus eight selected hashes while building from the live checkout, and RetroArch exited `-6` before its first screenshot (`04-VERIFICATION.md`, gaps and Human Verification Required).
 
 ## File Classification
 
 | New/Modified File | Role | Data Flow | Closest Analog | Match Quality |
-|---|---|---|---|---|
-| `include/glueyneo/glueyneo.h` (modify) | provider / public API | request-response | same file, current lifecycle API | role-match |
-| `src/frame.c` (proposed) | service | request-response | `src/instance.c` | role-match |
-| `src/fixture_board.c` (proposed) | model / service | event-driven | `src/instance.c` bus callbacks | partial |
-| `src/video_software.c` (proposed) | utility / service | transform | none | none |
-| `src/libretro/libretro_core.c` (proposed) | adapter / controller | event-driven | none | none |
-| `tests/fixture/guest_fixture.c` (proposed) | fixture generator | transform | `tests/sdk/guest_fixture.c` | role-match |
-| `tests/fixture/guest_fixture.h` (proposed) | model/header | request-response | `tests/sdk/guest_fixture.h` | role-match |
-| `tests/fixture/test_fixture.c` (proposed) | test | request-response | `tests/sdk/test_sdk.c` | role-match |
-| `tests/fixture/ORACLE.md` (proposed) | test documentation | transform | `tests/sdk/ORACLE.md` | role-match |
-| `tests/fixture/rights-manifest.json` (proposed) | config/provenance | transform | `docs/rights-inventory.md` | role-match |
-| `tests/libretro/callback_harness.c` (proposed) | test | event-driven | none | none |
-| `tests/libretro/retroarch_smoke.*` (proposed) | test / runner | event-driven | `tools/verify_sdk.py` | partial |
-| `CMakeLists.txt` (modify) | config / build | transform | same file, SDK fixture rules | exact |
-| `tools/verify_sdk.py` (modify or new phase runner) | utility / runner | batch | same file | exact |
-| `docs/public-content.md` (modify) | documentation | transform | same file | exact |
-| `docs/rights-inventory.md` (modify) | documentation / manifest | transform | same file | exact |
-| `tests/sdk/ORACLE.md` (leave diagnostic scope; cross-reference only if needed) | test documentation | transform | same file | exact |
-| `src/z80_adapter.c` (candidate only) | adapter / service | request-response | none | none |
-| `src/ym2610_c_api.cpp` (candidate only) | adapter / service | request-response | none | none |
-| `tests/chips/*` (candidate admission suite; exact paths TBD) | tests | request-response | `tests/owned_cpu/*` isolation/continuation tests | partial |
+|-------------------|------|-----------|----------------|---------------|
+| `tools/verify_playable.py` | utility / qualification runner | batch | `tools/verify_sdk.py` | role-match; different evidence contract |
+| `tests/tools/test_verify_playable.py` (candidate path; no dedicated test currently exists) | test | transform / batch | `tests/sdk/test_evidence.py` | role-match; mutation-test shape |
+| `docs/first-playable-build.md` | procedure / evidence documentation | batch | same file | exact; existing procedure needs source-identity and outcome updates |
+| `tests/libretro/retroarch_smoke.py` | test / integration runner | event-driven | same file | exact; current actual frontend path and controls |
+| `tests/libretro/test_retroarch_smoke.py` | test | transform / event-driven | `tests/workflow/test_public_content.py` | role-match; isolated `unittest` controls and subprocess/temp-path handling, different domain |
+| `build/playable-qualification/receipt.json` (ignored generated evidence; if regenerated) | evidence artifact | batch | receipt assembly in `tools/verify_playable.py` | role-match; generated output, not tracked source |
 
-The Z80 and YM2610 files are conditional admission work, independent from the playable tracer. Research requires these gates but proposes no tracked implementation paths for them. Treat the above names as placeholders and search upstream candidate trees only after immutable revisions and license closure are selected. No `libretro.h`, RetroArch, or third-party chip source path is an existing project analog.
+All named source analogs were checked with `git ls-files`; each is tracked. No `.gsd/capabilities` mirror paths are used.
 
 ## Pattern Assignments
 
-### `include/glueyneo/glueyneo.h` (public API, request-response)
-
-**Analog:** `include/glueyneo/glueyneo.h`
-
-Public ABI types use standard integer/size types, opaque state, named status enums, and explicit lifecycle ownership. Keep the new frame contract similarly explicit; do not imply that old diagnostic profile behavior provides video/input.
-
-**Imports and ABI guard** (lines 5-22):
-
-```c
-#include <stddef.h>
-#include <stdint.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-```
-
-**Opaque instance and status conventions** (lines 30-40, 87-101):
-
-```c
-typedef struct gn_instance gn_instance;
-typedef enum {
-    GN_STATUS_OK = 0,
-    GN_STATUS_INVALID_ARGUMENT,
-    GN_STATUS_INVALID_STATE,
-    GN_STATUS_INVALID_MEDIA,
-    GN_STATUS_UNSUPPORTED_PROFILE,
-    GN_STATUS_OUT_OF_MEMORY,
-    GN_STATUS_CPU_FAILURE
-} gn_status;
-
-/* ...document pointer lifetime and per-instance threading... */
-GN_API gn_status gn_create(gn_instance **out_instance);
-GN_API gn_status gn_load(gn_instance *instance, const gn_manifest *manifest);
-```
-
-Add only contract fields required by API-05: sampled logical input, format/dimensions/pitch/capacities, produced audio count and metadata, progress/stop reason, and actionable status. Use a separate profile constant for the public fixture.
-
-### `src/frame.c` and `src/fixture_board.c` (service/model, request-response and event-driven)
-
-**Analog:** `src/instance.c`
-
-The existing instance implementation keeps mutable machine and memory data behind `gn_instance`, checks manifest bounds before access, and returns explicit statuses. Reuse its per-instance organization and preflight discipline. Do not copy its diagnostic address map or infer Neo Geo board semantics from it.
-
-**Per-instance ownership** (`src/instance.c`, lines 17-48):
-
-```c
-typedef struct {
-    gn_allocator allocator;
-    gn_memory_region rom;
-    gn_memory_region ram;
-    uint8_t *ram_seed;
-    size_t ram_seed_size;
-    owned_cpu *cpu;
-} gn_image;
-
-struct gn_instance {
-    gn_allocator allocator;
-    gn_image *image;
-};
-```
-
-**Validation before use** (`src/instance.c`, lines 160-213):
-
-```c
-if ((region->source == NULL && region->source_size != 0u) ||
-    region->mapped_size == 0u ||
-    region->source_size > (size_t)region->mapped_size) {
-    return GN_STATUS_INVALID_MEDIA;
-}
-const uint64_t start = (uint64_t)region->guest_base;
-const uint64_t end = start + (uint64_t)region->mapped_size;
-if (end > (UINT64_C(1) << 32)) return GN_STATUS_INVALID_MEDIA;
-```
-
-**Core callback and byte-order pattern** (`src/instance.c`, lines 93-119):
-
-```c
-if (image == NULL || value == NULL || (address & UINT32_C(1)) != 0u) {
-    return 0;
-}
-/* Resolve a mapped region and bounds before dereferencing. */
-observed = (uint16_t)(((uint16_t)image->rom.bytes[offset] << 8) |
-                      (uint16_t)image->rom.bytes[offset + 1u]);
-if (found == 0) return 0;
-*value = observed;
-return 1;
-```
-
-For frame code, preflight pointers, dimensions, pitch multiplication, format and capacities before advancing any guest state. Keep counters/time and board state in the instance. The board model owns input-latched guest effects and VRAM state; a renderer should consume that state without host-authored movement.
-
-### `src/video_software.c` (utility/service, transform)
-
-**Analog:** No renderer exists in tracked source.
-
-Use the project's explicit-width and checked-arithmetic style from `src/instance.c` validation above, but the rendering behavior itself has no analog. Follow the bounded sprite subset selected in planning, derive output only from guest-programmed board state and fixture graphics, and report unsupported formats/paths explicitly. The community Neo Geo references in RESEARCH.md are implementation guidance with stated uncertainty, not existing code or a hardware oracle.
-
-### `src/libretro/libretro_core.c` (adapter/controller, event-driven)
-
-**Analog:** No Libretro adapter or frontend callback implementation exists in tracked source.
-
-Keep this boundary thin: own a single frontend instance, map RetroPad state into logical native input, call one native frame per `retro_run`, and synchronously forward native pixels through Libretro's software-video callback. Content must enter via ordinary `retro_load_game()` bytes and be released by unload. Use pinned upstream header/API patterns during implementation research; never put frontend callbacks, pacing, filesystem access, or host drawing in the native service. Frontend threading/reentrancy is unqualified.
-
-### `tests/fixture/guest_fixture.c` and `.h` (generator/model, transform)
-
-**Analog:** `tests/sdk/guest_fixture.c`, `tests/sdk/guest_fixture.h`
-
-The current builder is a small deterministic C recipe over tracked source; it writes explicit big-endian guest words and initializes scenario bytes. Use that shape for one original fixture, not its CPU-only behavior.
-
-**Generator pattern** (`tests/sdk/guest_fixture.c`, lines 6-25):
-
-```c
-void guest_fixture_build(guest_fixture_image *image,
-                         guest_fixture_scenario scenario) {
-    static const uint16_t words[] = { UINT16_C(0x7007), UINT16_C(0x5680) };
-    if (image == NULL) return;
-    memset(image, 0, sizeof(*image));
-    for (size_t index = 0u; index < sizeof(words) / sizeof(words[0]); ++index) {
-        const size_t offset = 0x100u + index * 2u;
-        image->rom[offset] = (uint8_t)(words[index] >> 8);
-        image->rom[offset + 1u] = (uint8_t)words[index];
-    }
-}
-```
-
-Keep generated bytes in the build tree with one output producer. Same artifact should feed native and RetroArch consumers; document source, generator identity, rights, and generated digest separately.
-
-### `tests/fixture/test_fixture.c` (test, request-response)
-
-**Analog:** `tests/sdk/test_sdk.c`
-
-Tests use named cases and check status plus guest observations, boundary behavior, and explicit expected results. Keep expected pixels tied to an independently stated fixture rule; add wrong-direction/no-input controls that prove the expected assertion can fail.
-
-**Named result and run checks** (`tests/sdk/test_sdk.c`, lines 115-135):
-
-```c
-SDK_CASE("sdk.diagnostic.original-a");
-gn_run_result run;
-SDK_CHECK_STATUS("sdk.run.status", GN_STATUS_OK, gn_run(instance, 172u, &run));
-SDK_CHECK_U64("sdk.run.elapsed-cycles", 172u, run.elapsed_cycles);
-SDK_CHECK_STATUS("sdk.run.reason-stopped", GN_RUN_STOPPED, run.reason);
-SDK_CHECK_U64("sdk.observe.arithmetic", 10u, observations.arithmetic_result);
-```
-
-Assert guest-owned marker position and semantic output pixels at specified frame boundaries. Include exact-capacity, one-byte-short, padded-pitch, null, overflow, stop/error progress, and wrong-input cases as API-05/host-safety evidence. Frame hashes may supplement these checks, never replace them.
-
-### `tests/fixture/ORACLE.md` (test documentation, transform)
-
-**Analog:** `tests/sdk/ORACLE.md`
-
-Current oracle docs distinguish primary manual-derived instruction outcomes from project-defined bus contracts and call out what is not physical hardware evidence.
-
-**Ancestry boundary** (`tests/sdk/ORACLE.md`, lines 9-16):
-
-```markdown
-Expected effects are derived from ... primary manuals below. They are not
-copied from the owned CPU output or another emulator. ... the mapped ROM/RAM
-callback ordering is the project's functional diagnostic contract, not a
-physical Neo Geo bus capture.
-```
-
-Create a separate fixture oracle. Attribute guest instruction encoding, sprite/VRAM community documentation, pixel expectations, and any MAME differential comparison independently. State that none of these alone establish physical video accuracy.
-
-### `tests/fixture/rights-manifest.json`, `docs/rights-inventory.md`, `docs/public-content.md` (provenance/config)
-
-**Analogs:** `docs/rights-inventory.md`, `docs/public-content.md`
-
-Every public fixture/source/notice needs exact path and identity, rights basis, provenance, and retained notice. `rights-inventory.md` says unknown items are excluded and requires exact source revision/digest/license/notice (lines 20-29); `public-content.md` clearly limits scanner claims (lines 3-8). Add only original material or affirmative rights evidence. A hash binds bytes but does not establish permission.
-
-### `tests/libretro/callback_harness.c` (test, event-driven)
-
-**Analog:** No callback-driven frontend harness exists.
-
-Use a synthetic harness only to test callback ordering, input polling, one frame per run, content load/unload, and forwarding of the exact native output. It cannot satisfy HOST-02; retain the separate actual pinned macOS RetroArch consumer check.
-
-### `tests/libretro/retroarch_smoke.*` and `tools/verify_sdk.py` (runner, batch)
+### `tools/verify_playable.py` (utility, batch)
 
 **Analog:** `tools/verify_sdk.py`
 
-The existing runner uses named fail-closed suites, a bounded worker count and child timeout, and build-tree-only artifacts (`tools/verify_sdk.py`, lines 17-31, 33-57). Reuse suite naming and bounded process handling. Keep frontend identity/artifact digest and unsupported outcomes explicit; do not claim actual RetroArch behavior from a mock harness or an aborted version probe.
+**Imports and runner boundary** (`tools/verify_sdk.py`, lines 6-31):
 
-### `CMakeLists.txt` (config/build, transform)
+```python
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import time
 
-**Analog:** `CMakeLists.txt`
-
-The existing build has one generator executable, one `add_custom_command(OUTPUT ...)`, explicit `DEPENDS`, and one named custom target (lines 144-186). It also applies strict C17 target properties and target-scoped warning flags (lines 97-128).
-
-**Build-tree generator pattern** (lines 176-186):
-
-```cmake
-add_custom_command(
-  OUTPUT "${GLUEYNEO_DIAGNOSTIC_FIXTURE}"
-  COMMAND $<TARGET_FILE:glueyneo-diagnostic> --write-fixture
-          "${GLUEYNEO_DIAGNOSTIC_FIXTURE}"
-  DEPENDS glueyneo-diagnostic
-  VERBATIM
-)
-add_custom_target(glueyneo-original-fixture ALL
-  DEPENDS "${GLUEYNEO_DIAGNOSTIC_FIXTURE}")
+ROOT = Path(__file__).resolve().parents[1]
+MAX_WORKERS = 2
+CHILD_TIMEOUT_SECONDS = 600
+FILTERED_ENVIRONMENT = {
+    "CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS", "CMAKE_PREFIX_PATH",
+    "CMAKE_MODULE_PATH", "CMAKE_TOOLCHAIN_FILE", "CMAKE_PROJECT_INCLUDE",
+    "CMAKE_PROJECT_INCLUDE_BEFORE", "CMAKE_GENERATOR",
+}
 ```
 
-Use a single output rule for the new fixture. Add its runtime modules to the runtime target and matching test target deliberately; avoid accidentally linking a test-only implementation into production.
+**Named lanes and fail-closed identity precedent** (`tools/verify_sdk.py`, lines 33-57; `tools/sdk_evidence.py`, lines 375-390, 416-425):
 
-### `src/z80_adapter.c`, `src/ym2610_c_api.cpp`, `tests/chips/*` (conditional adapters and tests)
+```python
+SUITE_LABELS = {
+    "contract": "sdk-contract",
+    "diagnostic": "sdk-diagnostic",
+    "run": "sdk-run",
+    "controls": "sdk-controls",
+}
+```
 
-**Analogs:** no imported chip adapter exists. For instance and continuation test shape, see tracked `tests/owned_cpu/test_isolation.c`, `test_state.c`, and `test_timing.c`; each is a partial match only.
+```python
+def relevant_source_rows(root: Path = ROOT) -> list[dict[str, Any]]:
+    rows = []
+    for relative in sorted(RELEVANT_FILES):
+        path = root / relative
+        require(path.is_file(), "missing-identity-row", f"required identity file is missing: {relative}")
+        rows.append({"path": relative, "sha256": sha256_file(path), "bytes": path.stat().st_size})
+    return rows
 
-No code excerpt can establish admission for these absent dependencies. Preserve pinned source and license closure; inventory mutable globals/callbacks/init, then test cycle or clock behavior, interrupts/bus, continuation/reset, determinism, separate instances and failure containment. For ymfm, keep C++ objects/exceptions behind a private C ABI and verify static/shared linkage with a real C consumer. Do not couple either gate to fixture video correctness.
+def public_source_identity(root: Path = ROOT, ...) -> dict[str, Any]:
+    rows = relevant_source_rows(root)
+    relevant_digest = sha256_bytes(canonical_bytes(rows))
+    dirty = bool(_git("status", "--porcelain", "--untracked-files=all", "--", *RELEVANT_FILES))
+```
+
+For the gap fix, use these as evidence-format and fail-closed precedents only. The SDK's hand-maintained relevant-file allowlist is not sufficient evidence of a *complete* Phase 04 build input set. Bind the actual CMake inputs, generated fixture inputs, test/check scripts, dependency revisions and notices to the source identity; either reject any relevant dirty/untracked input before configure, or build a recorded clean source snapshot and digest its complete input inventory. Keep receipt generation and lane outcomes in the existing runner. It already provides bounded child timeouts, sanitized logs, exact app/core/fixture hashes, and makes a failed or missing actual smoke aggregate as fail (`verify_playable.py`, lines 58-80, 126-142, 169-182, 199-240, 244-298). `--clean` currently means new build/install directories only (`verify_playable.py`, lines 159-167, 199-215); do not treat it as a source-cleanliness check.
+
+**Shared identity safeguards:** the repo's evidence model rejects dirty passing evidence and records sorted source rows with per-file hashes and byte lengths (`tools/sdk_evidence.py`, lines 169-178, 375-390, 461-483). Reuse canonical ordering, explicit unknowns, sanitized logs, and exact identities. Do not broaden the Phase 04 claim to other configurations or treat a hash alone as rights evidence.
+
+---
+
+### `tests/tools/test_verify_playable.py` (candidate test, transform / batch)
+
+**Analog:** `tests/sdk/test_evidence.py`
+
+There is no existing dedicated test module for `verify_playable.py`; this is a suggested gap-plan path, not an existing file. Use small, named negative controls modeled on `expect_rejection` (`tests/sdk/test_evidence.py`, lines 123-131):
+
+```python
+def expect_rejection(name, action, expected_reason):
+    try:
+        action()
+    except evidence.EvidenceError as error:
+        if error.reason != expected_reason:
+            raise AssertionError(...) from error
+        return {"case_id": name, "outcome": "pass", ...}
+    raise AssertionError(f"{name}: malformed evidence was accepted")
+```
+
+Exercise at least a dirty tracked input, an untracked build input, a modified generated-fixture recipe/input, and a stale or incomplete receipt identity. Verify each fails before CMake consumes the mutable checkout, or that the clean snapshot digest names exactly what CMake consumes. Include a positive clean-tree case and ensure failure receipts preserve the reason. Prefer isolated temporary Git trees/fixtures so controls do not mutate this checkout. Do not create or commit test outputs containing private media or local machine paths.
+
+---
+
+### `docs/first-playable-build.md` and `build/playable-qualification/receipt.json` (procedure / generated evidence, batch)
+
+**Analog:** `docs/first-playable-build.md` for the existing procedure; `tools/verify_playable.py` for the generated receipt schema and writer.
+
+**Procedure command and evidence boundary** (`docs/first-playable-build.md`, lines 5-19, 36-48):
+
+```markdown
+python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean
+```
+
+```markdown
+A frontend process exit before the first screenshot is `unknown` for HOST-02, not a pass.
+```
+
+Retain a single maintainer command, explain what `--clean` guarantees after its semantics are corrected, and describe exact source snapshot/identity behavior. The current guide says “fresh checkout directory” while the runner configures from `ROOT`; reconcile that procedural claim with actual behavior. Regenerate the ignored receipt from the corrected runner and retain pass/fail/unknown distinctions, OS/compiler/SDK/frontend and artifact identities, and unsupported configurations. A successful build or callback harness cannot change HOST-02 from unknown. The existing documentation keeps the public GNFX fixture original and excludes game ROMs/BIOS/private media (`docs/first-playable-build.md`, lines 21-25); preserve that boundary and keep screenshots/logs in temporary or ignored locations, with path redaction.
+
+---
+
+### `tests/libretro/retroarch_smoke.py` (integration test / actual frontend runner, event-driven)
+
+**Analog:** `tests/libretro/retroarch_smoke.py` (exact current path; frontend result remains unresolved).
+
+**Pinned inputs and source-independent identity checks** (`tests/libretro/retroarch_smoke.py`, lines 183-219):
+
+```python
+if sys.platform != "darwin":
+    raise SmokeBlocked("identity", "actual frontend smoke is supported only on macOS")
+...
+if version != EXPECTED_VERSION:
+    raise SmokeBlocked("identity", ...)
+executable_hash = sha256(executable)
+if executable_hash != EXPECTED_EXECUTABLE_SHA256:
+    raise SmokeBlocked("identity", ...)
+...
+identity = {
+    "retroarch_version": version,
+    "retroarch_executable_sha256": executable_hash,
+    "core_sha256": sha256(core),
+    "fixture_sha256": hashlib.sha256(fixture).hexdigest(),
+    ...
+}
+```
+
+**Real load, observations, controls and unload** (`tests/libretro/retroarch_smoke.py`, lines 224-319):
+
+```python
+process = subprocess.Popen(
+    [str(executable), "--verbose", "--config", str(config),
+     "-L", str(core), str(content)],
+    stdout=log_stream, stderr=subprocess.STDOUT, start_new_session=True,
+)
+first = request_screenshot(process, screenshots, {}, args.timeout)
+...
+if second_marker != first_marker:
+    raise SmokeBlocked("input", "no-input control changed the guest marker")
+...
+if wrong_marker != first_marker:
+    raise SmokeBlocked("input", "Left Arrow wrong-input control moved the guest marker")
+...
+if right_marker[0] <= first_marker[0]:
+    raise SmokeBlocked("input", "mapped Right Arrow did not move the guest marker")
+...
+process.wait(timeout=args.timeout)
+if process.returncode != 0:
+    raise SmokeBlocked("unload", ...)
+```
+
+Keep the pinned macOS app invocation, same generated fixture, semantic screenshot checks, no-input stability, wrong-direction control, mapped direction and clean unload. Preserve temporary config/screenshot locations and bounded waits. The smoke itself reports an early app exit as a frontend failure (`lines 147-161`); the qualification wrapper intentionally reports that as `unknown` for the capability claim (`verify_playable.py`, lines 263-280). The observed `-6` before screenshot remains unknown until a new run completes all actual app observations. A callback harness, successful install, executable digest or relaunch without a complete observation cannot substitute.
+
+### `tests/libretro/test_retroarch_smoke.py` (test, isolated process/screenshot controls)
+
+**Analog:** `tests/workflow/test_public_content.py`
+
+Use its standard-library `unittest` structure, temporary-directory isolation, subprocess boundary and mocked external conditions as the closest existing Python test pattern (`tests/workflow/test_public_content.py`, tracked). Keep tests focused on deterministic helper behavior: stage/reason classification, fresh capture/config paths, stale screenshot rejection, bounded process handling and path redaction. Tests must not launch the pinned GUI or claim HOST-02; actual-app invocation remains the separate acceptance step in the smoke runner.
 
 ## Shared Patterns
 
-### Opaque per-instance state and explicit ownership
+### Exact source identity
 
-**Source:** `include/glueyneo/glueyneo.h` lines 87-100; `src/instance.c` lines 17-48.  
-**Apply to:** frame, board, video state and private chip adapters. Keep machine state on the instance, validate before mutation, and document caller buffer lifetimes.
+**Sources:** `tools/verify_playable.py` lines 169-175 and `tools/sdk_evidence.py` lines 375-390, 461-483. Make the qualification identity cover all inputs actually consumed and ensure the build runs from those identified bytes. Fail closed on dirty/untracked relevant inputs or snapshot first; retain sorted path/hash/size rows plus a canonical aggregate digest. Record environment and built artifact digests alongside source identity.
 
-### Bounded execution and progress
+### Evidence outcomes and privacy
 
-**Source:** `include/glueyneo/glueyneo.h` lines 62-78; `tests/sdk/test_sdk.c` lines 186-220.  
-**Apply to:** native frame API and guest execution. Preserve requested/actual work, stop/fault boundary and error status; do not use host elapsed time for machine progress.
+**Sources:** `tools/verify_playable.py` lines 244-298; `docs/first-playable-build.md` lines 19, 36, 46-48; `tests/libretro/retroarch_smoke.py` lines 224-254. Keep each lane's reason and exact identity, redact local paths, store reports/logs under ignored `build/`, and use only the public original fixture. Unknown frontend behavior stays unknown. Do not put BIOS, commercial ROMs, private captures, or private test output into the repository or public evidence.
 
-### Public rights and oracle ancestry
+### Actual frontend qualification
 
-**Source:** `tests/sdk/ORACLE.md` lines 3-16; `docs/rights-inventory.md` lines 20-29.  
-**Apply to:** new fixture source/assets/output, oracle docs, candidate code/notices, and public archives. Keep private media out of all tracked evidence.
-
-### Same generated artifact; real consumer evidence
-
-**Source:** `CMakeLists.txt` lines 176-186; `tools/verify_sdk.py` lines 33-57.  
-**Apply to:** native test and Libretro content load. One CMake output and named target prevent fixture divergence; mock callback tests supplement, rather than replace, a real RetroArch smoke.
-
-### Error and resource limits
-
-**Source:** `src/instance.c` lines 160-213.  
-**Apply to:** content envelope parsing and frame output. Check lengths, arithmetic, and capacities before allocation or state advancement; use the existing status vocabulary where suitable and add documented statuses if needed.
+**Source:** `tests/libretro/retroarch_smoke.py` lines 183-219, 255-319. The app must consume the pinned core and generated public fixture through its normal command path, produce inspectable software output, demonstrate stable/no-input and wrong/right controls, and unload cleanly. Synthetic callback checks remain integration diagnostics, not HOST-02 evidence.
 
 ## No Analog Found
 
-| File/area | Role | Data Flow | Reason |
-|---|---|---|---|
-| `src/video_software.c` | renderer | transform | No video/renderer implementation is tracked. |
-| `src/libretro/libretro_core.c` | frontend adapter | event-driven | No Libretro header, callback bridge, or frontend integration exists. |
-| `tests/libretro/callback_harness.c` | test | event-driven | No callback seam or harness exists. |
-| Z80/YM2610 adapter sources | chip adapters | request-response | These candidate dependencies are not currently admitted or vendored. |
+| File | Role | Data Flow | Reason |
+|------|------|-----------|--------|
+| `tests/tools/test_verify_playable.py` | test | transform / batch | No dedicated qualification-runner tests exist. `tests/sdk/test_evidence.py` is the closest mutation/rejection style, but its SDK evidence schema is not the playable receipt contract. |
 
 ## Metadata
 
-**Analog search scope:** `include/`, `src/`, `tests/`, `tools/`, `docs/`, and root CMake.  
-**Tracked-source gate:** all named existing analogs were checked with `git ls-files`; no ignored `.gsd/capabilities` mirror paths are used.  
-**Pattern extraction date:** 2026-10-07.
+**Analog search scope:** qualification tooling, SDK evidence helpers/tests, installed-consumer checks, Libretro smoke and build procedure.
+
+**Files scanned:** 9 tracked analog candidates.
+**Pattern extraction date:** 2026-10-07

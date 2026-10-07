@@ -30,7 +30,7 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 ## Current Position
 
-Phase: 04 (Public Playable Tracer) — READY FOR VERIFICATION
+Phase: 04 (Public Playable Tracer) — READY TO EXECUTE
 Plan: 6 of 6
 Status: Ready for verification
 Last activity: 2026-10-07 — Phase 04 Plan 06 complete; clean static/shared installs and 34/34 CTests passed; HOST-02 remains unknown
