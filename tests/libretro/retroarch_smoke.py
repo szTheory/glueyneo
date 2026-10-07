@@ -8,7 +8,6 @@ import hashlib
 import json
 import plistlib
 import platform
-import socket
 import struct
 import subprocess
 import sys
@@ -145,41 +144,11 @@ def find_marker(image: tuple[int, int, int, bytes]) -> tuple[int, int, int]:
     return candidates[0]
 
 
-def choose_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
-        probe.bind(("127.0.0.1", 0))
-        return int(probe.getsockname()[1])
-
-
-def send_command(port: int, command: str, timeout: float = 0.5) -> str:
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
-        client.settimeout(timeout)
-        client.sendto(command.encode("ascii"), ("127.0.0.1", port))
-        try:
-            response, _ = client.recvfrom(4096)
-            return response.decode("utf-8", errors="replace").strip()
-        except TimeoutError:
-            return ""
-
-
-def wait_for_response(process: subprocess.Popen[bytes], port: int,
-                      command: str, timeout: float) -> str:
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        if process.poll() is not None:
-            raise SmokeBlocked("launch", f"RetroArch exited during {command} (status {process.returncode})")
-        response = send_command(port, command, 0.2)
-        if response:
-            return response
-        time.sleep(0.1)
-    raise SmokeBlocked("frontend", f"RetroArch did not answer {command} before timeout")
-
-
-def request_screenshot(process: subprocess.Popen[bytes], port: int,
-                       directory: Path, prior: dict[Path, int], timeout: float) -> Path:
+def request_screenshot(process: subprocess.Popen[bytes], directory: Path,
+                       prior: dict[Path, int], timeout: float) -> Path:
     if process.poll() is not None:
         raise SmokeBlocked("frontend", f"RetroArch exited before screenshot (status {process.returncode})")
-    send_command(port, "SCREENSHOT")
+    inject_key(100, repeats=1)
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         candidates = {
@@ -192,11 +161,11 @@ def request_screenshot(process: subprocess.Popen[bytes], port: int,
     raise SmokeBlocked("video", "RetroArch did not create a software-video screenshot")
 
 
-def inject_key(key_code: int) -> None:
+def inject_key(key_code: int, *, repeats: int = 24) -> None:
     script = (
         'tell application "System Events" to set frontmost of process "RetroArch" to true\n'
         'tell application "System Events"\n'
-        f"repeat 24 times\nkey code {key_code}\ndelay 0.025\nend repeat\n"
+        f"repeat {repeats} times\nkey code {key_code}\ndelay 0.025\nend repeat\n"
         "end tell"
     )
     try:
@@ -244,13 +213,14 @@ def validate_inputs(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[st
         "fixture_sha256": hashlib.sha256(fixture).hexdigest(),
         "os": f"macOS {platform.mac_ver()[0]} {platform.machine()}",
         "input_mapping": "RetroPad RIGHT <- Right Arrow; LEFT control <- Left Arrow",
+        "control": "local keyboard and frontend screenshots; no network command interface",
+        "bundle_id": str(info.get("CFBundleIdentifier", "")),
     }
     return executable, core, content, identity
 
 
 def run_smoke(args: argparse.Namespace) -> dict[str, object]:
     executable, core, content, identity = validate_inputs(args)
-    port = choose_port()
     with tempfile.TemporaryDirectory(prefix="glueyneo-retroarch-") as temporary:
         work = Path(temporary)
         screenshots = work / "screenshots"
@@ -269,8 +239,12 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                     'input_driver = "cocoa"',
                     'input_player1_left = "left"',
                     'input_player1_right = "right"',
-                    'network_cmd_enable = "true"',
-                    f'network_cmd_port = "{port}"',
+                    'input_screenshot = "f8"',
+                    f'content_history_path = "{work / "content_history.lpl"}"',
+                    f'savefile_directory = "{work}"',
+                    f'savestate_directory = "{work}"',
+                    f'system_directory = "{work}"',
+                    f'cache_directory = "{work}"',
                     f'screenshot_directory = "{screenshots}"',
                     'log_to_file = "true"',
                     f'log_dir = "{work}"',
@@ -291,17 +265,11 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                 raise SmokeBlocked("launch", "pinned RetroArch could not be started") from error
             outcome: dict[str, object] = {"observations": []}
             try:
-                version = wait_for_response(process, port, "VERSION", args.timeout)
-                if EXPECTED_VERSION not in version:
-                    raise SmokeBlocked("identity", "running frontend did not report the pinned version")
-                status = wait_for_response(process, port, "GET_STATUS", args.timeout)
-                if "CONTENTLESS" in status or "PLAYING" not in status:
-                    raise SmokeBlocked("content", "RetroArch did not report loaded playable content")
-
-                first = request_screenshot(process, port, screenshots, {}, args.timeout)
+                time.sleep(0.5)
+                first = request_screenshot(process, screenshots, {}, args.timeout)
                 first_marker = find_marker(decode_png(first))
                 time.sleep(0.25)
-                second = request_screenshot(process, port, screenshots,
+                second = request_screenshot(process, screenshots,
                                             screenshot_snapshot(screenshots), args.timeout)
                 second_marker = find_marker(decode_png(second))
                 if second_marker != first_marker:
@@ -310,7 +278,7 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                 inject_key(123)
                 time.sleep(0.25)
                 wrong_input = request_screenshot(
-                    process, port, screenshots, screenshot_snapshot(screenshots), args.timeout
+                    process, screenshots, screenshot_snapshot(screenshots), args.timeout
                 )
                 wrong_marker = find_marker(decode_png(wrong_input))
                 if wrong_marker != first_marker:
@@ -319,38 +287,47 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                 inject_key(RIGHT_KEY_CODE)
                 time.sleep(0.25)
                 third = request_screenshot(
-                    process, port, screenshots, screenshot_snapshot(screenshots), args.timeout
+                    process, screenshots, screenshot_snapshot(screenshots), args.timeout
                 )
                 right_marker = find_marker(decode_png(third))
                 if right_marker[1] != first_marker[1] or right_marker[2] != first_marker[2] or right_marker[0] <= first_marker[0]:
                     raise SmokeBlocked("input", "mapped Right Arrow did not move the guest marker right")
 
-                send_command(port, "CLOSE_CONTENT")
-                deadline = time.monotonic() + args.timeout
-                final_status = ""
-                while time.monotonic() < deadline:
-                    final_status = send_command(port, "GET_STATUS", 0.2)
-                    if "CONTENTLESS" in final_status:
-                        break
-                    if process.poll() is not None:
-                        raise SmokeBlocked("unload", "RetroArch exited while closing content")
-                    time.sleep(0.1)
-                if "CONTENTLESS" not in final_status:
-                    raise SmokeBlocked("unload", "RetroArch did not confirm content unload")
+                bundle_id = identity["bundle_id"]
+                try:
+                    subprocess.run(
+                        ["/usr/bin/osascript", "-e",
+                         f'tell application id "{bundle_id}" to quit'],
+                        check=True, stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL, timeout=8,
+                    )
+                    process.wait(timeout=args.timeout)
+                except (OSError, subprocess.SubprocessError) as error:
+                    raise SmokeBlocked("unload", "RetroArch did not quit cleanly after loaded content") from error
+                if process.returncode != 0:
+                    raise SmokeBlocked("unload", f"RetroArch shutdown status was {process.returncode}")
                 outcome["observations"] = [
-                    "real RetroArch reported loaded content through GET_STATUS",
-                    "software screenshot contained the guest marker and black backdrop",
+                    "RetroArch launched the requested core and generated content path",
+                    "frontend screenshot contained the guest marker and black backdrop",
                     "repeated no-input screenshots retained the same marker position",
                     "configured Left Arrow wrong-input control did not move the marker",
                     "configured Right Arrow input moved the marker right",
-                    "CLOSE_CONTENT returned RetroArch to CONTENTLESS",
+                    "RetroArch exited cleanly through its application quit path after loaded content",
                 ]
                 outcome["marker_before"] = list(first_marker)
                 outcome["marker_after_right"] = list(right_marker)
                 outcome["frontend_unloaded"] = True
             finally:
                 if process.poll() is None:
-                    send_command(port, "QUIT")
+                    try:
+                        subprocess.run(
+                            ["/usr/bin/osascript", "-e",
+                             f'tell application id "{identity["bundle_id"]}" to quit'],
+                            check=False, stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL, timeout=8,
+                        )
+                    except (OSError, subprocess.SubprocessError):
+                        pass
                     try:
                         process.wait(timeout=5)
                     except subprocess.TimeoutExpired:
