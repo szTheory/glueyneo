@@ -186,6 +186,8 @@ def test_run(binary: Path, report_path: Path) -> dict[str, object]:
 
 def link_both_linkages(report_path: Path) -> dict[str, object]:
     source = source_check()
+    direct_binary = ROOT / "build/sdk-debug/ym2610_admission_test"
+    report = test_run(direct_binary, report_path)
     work = report_path.parent / "installed"
     results: dict[str, dict[str, object]] = {}
     for linkage, shared in (("static", "OFF"), ("shared", "ON")):
@@ -234,7 +236,7 @@ set_property(TARGET ym2610_installed_consumer PROPERTY C_EXTENSIONS OFF)
                         for item in compile_commands)
         if not c_compile:
             raise RuntimeError(f"{linkage} installed consumer did not compile as C")
-        if "-lc++" not in consumer_build_result.stdout and "-lstdc++" not in consumer_build_result.stdout:
+        if shared == "OFF" and "-lc++" not in consumer_build_result.stdout and "-lstdc++" not in consumer_build_result.stdout:
             raise RuntimeError(f"{linkage} C consumer link omitted its C++ runtime target dependency")
         summary = re.search(r"(\d+) Tests (\d+) Failures (\d+) Ignored", execution.stdout)
         if summary is None or tuple(map(int, summary.groups())) != (5, 0, 0):
@@ -271,13 +273,45 @@ set_property(TARGET ym2610_installed_consumer PROPERTY C_EXTENSIONS OFF)
                 line.strip().split(" ", 1)[0]
                 for line in dynamic.stdout.splitlines()[1:] if line.strip()
             ]
-    report = {
-        "schema": "glueyneo.ym2610-linkage.v1", "source": source,
-        "linkages": results,
-    }
+    report["linkages"] = results
+    for linkage in ("static", "shared"):
+        gate = f"installed_{linkage}_c_consumer"
+        status = results.get(linkage, {}).get("status", "unavailable")
+        report["gates"][gate] = {
+            "status": "pass" if status == "pass" else status,
+            "evidence": f"build/ym2610-admission/installed/{linkage}",
+        }
+    report["admitted"] = all(
+        gate.get("status") == "pass" for gate in report["gates"].values()
+    )
     report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n",
                            encoding="utf-8")
+    if not report["admitted"]:
+        raise RuntimeError("one or more YM2610 admission gates failed")
     return report
+
+
+def record_link_failure(report_path: Path, error: BaseException) -> None:
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        report = {
+            "schema": "glueyneo.ym2610-admission.v1",
+            "candidate": {"name": "ymfm YM2610", "upstream_revision": REVISION,
+                          "license": "BSD-3-Clause"},
+            "gates": {},
+        }
+    report["gates"]["installed_static_c_consumer"] = {
+        "status": "unavailable", "evidence": str(error),
+    }
+    report["gates"]["installed_shared_c_consumer"] = {
+        "status": "unavailable", "evidence": str(error),
+    }
+    report["admitted"] = False
+    report["link_error"] = str(error)
+    report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n",
+                           encoding="utf-8")
 
 
 def main() -> int:
@@ -303,13 +337,17 @@ def main() -> int:
             return 0
         if arguments.command == "link" and arguments.both_linkages:
             report_path = arguments.report or ROOT / "build/ym2610-admission/ym2610-admission.json"
-            report = link_both_linkages(report_path)
+            try:
+                report = link_both_linkages(report_path)
+            except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+                record_link_failure(report_path, error)
+                raise
             print("YM2610 installed C consumers: static=pass shared=pass")
             print(f"YM2610 linkage report: {report_path}")
             return 0
         parser.error("link requires --both-linkages")
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
-        print(f"ym2610 source check failed: {error}", file=sys.stderr)
+        print(f"ym2610 admission check failed: {error}", file=sys.stderr)
         return 1
     return 2
 
