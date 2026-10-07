@@ -144,7 +144,7 @@ The TDD RED record is `build/ym2610-admission/tdd-red.json`. The named create-in
 
 ## Next Phase Readiness
 
-Plan 04-05 and SND-02 candidate admission are complete; Phase 04 itself remains in progress. `SND-02` remains unchecked in workstream REQUIREMENTS until Plan 04-06 finishes because that plan also declares the shared requirement and must incorporate this report digest. HOST-02 remains blocked/unknown as already recorded. Next command: `$gsd-execute-phase 04 --ws first-playable-game`.
+Plan 04-05 and SND-02 candidate admission are complete; Phase 04 itself remains in progress. `SND-02` remains unchecked in workstream REQUIREMENTS until Plan 04-06 finishes because that plan also declares the shared requirement and must incorporate this report digest. HOST-02 remains unqualified/unknown as already recorded. Next command: `$gsd-execute-phase 04 --ws first-playable-game`.
 
 ---
 *Phase: 04-public-playable-tracer*
