@@ -24,6 +24,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 ## Phase Details
 
 ### Phase 4: Public Playable Tracer
+
 **Goal**: A maintainer can rebuild and run an original guest with visible, input-driven behavior through the ordinary native API and an actual pinned RetroArch build, while resolving the selected sound candidates' admission gates before full integration.
 **Depends on**: Phases 01/02 provide only bounded CPU/SDK foundations; no dependency on completing sibling Phase 03's hosted-release gate.
 **Requirements**: TRAC-01, TRAC-02, TRAC-03, HOST-02, API-05, SND-01, SND-02, QUAL-03
@@ -33,10 +34,28 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   3. A user can load, run, control, and unload that fixture in an actual pinned macOS RetroArch build with software video, documented controller mapping, and frontend-owned pacing.
   4. A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including license/source/state audits, cycle or clock and interrupt/bus behavior, deterministic timing, continuation and independent-instance evidence, contained C++ failures, and static/shared C-consumer linkage; a failed gate blocks admission and requires bounded replanning rather than phase completion.
   5. An integrator can follow the clean-tree build/install/load procedure for the native library and libretro adapter on the selected macOS configuration and identify exact dependency, compiler, SDK, OS, architecture, and frontend identities plus untested configurations.
-**Plans**: TBD
+
+**Plans**: 0/6 plans executed across 5 waves
+**Wave 1**
+- [ ] 04-01-PLAN.md
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 04-02-PLAN.md
+- [ ] 04-03-PLAN.md
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 04-04-PLAN.md
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 04-05-PLAN.md
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 04-06-PLAN.md
+
 **UI hint**: no
 
 ### Phase 5: Selected MVS Boot
+
 **Goal**: A user can load the selected private MVS media and see the guest-executed game reach its attract/start path with a documented, bounded configuration.
 **Depends on**: Phase 4; the sound-CPU interaction needed by BIOS/game boot is delivered here even though audible output is qualified in Phase 7.
 **Requirements**: MEDIA-02, MEDIA-03, MEDIA-04, GAME-02
@@ -45,18 +64,22 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   2. A user can load the selected unmodified local game and BIOS archives through a documented RetroArch/import path whose bounded archive handling stays outside the native core.
   3. A user gets distinct, actionable missing, incompatible, unsupported, malformed, and limit errors; after a rejected load, valid media can load or the instance can be destroyed safely.
   4. In the selected configuration, the guest reaches the game's attract/start path through the owned 68000 and required MVS banking, protection, timing, interrupts, and sound-CPU handshakes, with source-qualified regression evidence and no canned boot or fabricated handshake.
+
 **Plans**: TBD
 
 ### Phase 6: Active Title Control
+
 **Goal**: A user can enter and control one stated active Metal Slug X scene with the required visible board behavior.
 **Depends on**: Phase 5
 **Requirements**: GAME-03, GAME-04
 **Success Criteria** (what must be TRUE):
   1. A user can enter the selected active scene in RetroArch and use the documented mapping to move and fire; the effects come from guest execution and emulated input, not title-specific canned output.
   2. A user can see the scene's required graphics, layering, palettes, and scrolling, with the supported scene and unresolved raster/timing behavior stated precisely and original slowdown preserved where modeled.
+
 **Plans**: TBD
 
 ### Phase 7: Sound and Scenario Qualification
+
 **Goal**: The selected scene has representative guest-driven sound, and clean-tree public checks plus a separate private local run establish the exact native, libretro, and game claims.
 **Depends on**: Phase 6 and the sound admission evidence from Phase 4
 **Requirements**: API-06, SND-03, SND-04, QUAL-01, QUAL-02, QUAL-04
@@ -66,6 +89,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   3. A maintainer can repeat and partition the supported fixture workload and interleave or concurrently run distinguishable native instances while matching isolated-baseline guest, video, and audio results at equal emulated boundaries.
   4. A maintainer can run clean-tree, proportionate local and public-CI checks on the public fixture through native and real libretro consumers, comparing frame, input, and audio observations at matching emulated boundaries with documented conversion, and covering lifecycle, malformed inputs, relevant fuzz/sanitizer, and retained diagnostic SDK regressions.
   5. A consumer can identify the exact qualified private scenario, public fixture coverage, oracle ancestry, and unknown or unsupported behavior in current documentation; private media identities and derived evidence stay local, and fixture success, emulator agreement, or BIOS/archive integrity is not presented as broader hardware or game compatibility.
+
 **Plans**: TBD
 
 ## Sequencing and Evidence Boundaries
@@ -80,7 +104,7 @@ Each phase includes the automated evidence and independent review appropriate to
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. Public Playable Tracer | 0/TBD | Not started | - |
+| 4. Public Playable Tracer | 0/6 | Planned     | - |
 | 5. Selected MVS Boot | 0/TBD | Not started | - |
 | 6. Active Title Control | 0/TBD | Not started | - |
 | 7. Sound and Scenario Qualification | 0/TBD | Not started | - |
