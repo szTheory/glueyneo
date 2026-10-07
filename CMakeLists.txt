@@ -381,6 +381,35 @@ if(GLUEYNEO_BUILD_TESTS)
     target_compile_options(sdk_diagnostic PRIVATE -Wall -Wextra -Wpedantic -Werror)
   endif()
   glueyneo_apply_sdk_sanitizer(sdk_diagnostic)
+
+  # The pinned Z80 remains a private candidate until its admission gates pass.
+  add_executable(z80_admission_test
+    tests/chips/test_z80.c
+    src/chips/z80_candidate.c
+  )
+  target_include_directories(z80_admission_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/chips
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/chips
+  )
+  target_compile_features(z80_admission_test PRIVATE c_std_17)
+  set_target_properties(z80_admission_test PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS NO
+  )
+  target_link_libraries(z80_admission_test PRIVATE glueyneo_unity)
+  if(NOT WIN32)
+    target_link_libraries(z80_admission_test PRIVATE Threads::Threads)
+  endif()
+  if(MSVC)
+    target_compile_options(z80_admission_test PRIVATE /W4 /WX)
+  else()
+    target_compile_options(z80_admission_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(z80_admission_test)
+  add_test(NAME z80_admission_contract COMMAND z80_admission_test)
+  set_tests_properties(z80_admission_contract PROPERTIES LABELS "z80-admission")
+
   add_executable(sdk_mutation
     tests/fuzz/sdk_mutation.c
     tests/sdk/guest_fixture.c
