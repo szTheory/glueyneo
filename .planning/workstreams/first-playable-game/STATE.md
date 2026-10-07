@@ -17,10 +17,10 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Not started (creating roadmap)
 Plan: —
-Status: Defining requirements — draft awaiting user confirmation
-Last activity: 2026-10-07 — Reused accepted research and drafted 20 milestone requirements
+Status: Requirements approved — creating roadmap
+Last activity: 2026-10-07 — User approved all 20 milestone requirements
 
 ## Progress
 
@@ -29,12 +29,12 @@ Last activity: 2026-10-07 — Reused accepted research and drafted 20 milestone 
 
 ## Session Continuity
 
-**Stopped At:** `$gsd-new-milestone --ws first-playable-game` reached the requirements-confirmation gate. The user chose reuse of accepted research. [REQUIREMENTS.md](REQUIREMENTS.md) contains 20 draft requirements awaiting confirmation; commit requirements and create the roadmap only after confirmation. The v0.1 Phase 03 hosted-evidence gate remains unchanged.
+**Stopped At:** `$gsd-new-milestone --ws first-playable-game` is creating the roadmap after user approval of all 20 [requirements](REQUIREMENTS.md). Reuse the accepted research. Present the completed roadmap for approval before committing it; do not start phase discussion/planning. The v0.1 Phase 03 hosted-evidence gate remains unchanged.
 **Resume File:** `.planning/workstreams/first-playable-game/STATE.md`
 
 ## Scope Notes
 
-- Accepted research and primary-source references are preserved in [RESEARCH.md](RESEARCH.md). Outcome: locally reach interactive Metal Slug X gameplay with movement, firing, scrolling, and representative sound in one pinned MVS/macOS RetroArch setup; public CI uses a separate first-party fixture and never commercial game/BIOS data. Requirements are drafted; the roadmap remains to be created.
+- Accepted research and primary-source references are preserved in [RESEARCH.md](RESEARCH.md). Outcome: locally reach interactive Metal Slug X gameplay with movement, firing, scrolling, and representative sound in one pinned MVS/macOS RetroArch setup; public CI uses a separate first-party fixture and never commercial game/BIOS data. All 20 requirements are user-approved; the roadmap remains to be created.
 - Planning milestone ID: `first-playable-game`; release version remains unassigned. No phase or plan has started. Continue project phase numbering after Phase 03 when the roadmap is created; independent playable work does not close or depend on completion of the sibling hosted-release gate.
 - Milestone-start triage on 2026-10-07 found no open issues and one draft PR, [#1](https://github.com/szTheory/glueyneo/pull/1), for the separate diagnostic release work. It supplies no playable-game requirement or completion evidence.
 - Work is isolated on `docs/first-playable-game-milestone`. The existing 138 planning relocations into the diagnostic workstream were verified byte-identical and committed; unrelated pre-existing methodology/configuration/preparation edits remain outside this milestone's commits.

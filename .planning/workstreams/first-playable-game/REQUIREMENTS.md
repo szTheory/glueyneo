@@ -1,0 +1,113 @@
+# Requirements: First Playable Game
+
+**Defined:** 2026-10-07
+**Status:** Approved by the user on 2026-10-07; no requirements are complete.
+**Workstream / planning milestone ID:** `first-playable-game`
+**Release version:** Unassigned. This planning identifier is not v0.2 and does not complete v0.1.
+**Core Value:** Trustworthy Neo Geo emulation that other software can embed easily.
+
+## Milestone Goal
+
+A user can reach and control an active Metal Slug X scene, move and fire, see scrolling, and hear representative music and effects in one pinned MVS/macOS RetroArch setup using privately supplied game and BIOS media. Public CI proves a separate original fixture through the same native and libretro interfaces; it never establishes commercial-game compatibility by inference.
+
+Scope comes from the accepted [workstream research](RESEARCH.md), the user's BIOS provision and ymfm exception decision, and the decision to reuse that research on 2026-10-07. [PROJECT.md](../../PROJECT.md), [METHODOLOGY.md](../../METHODOLOGY.md), and [AGENTS.md](../../../AGENTS.md) supply engineering and delivery constraints. The sibling [v0.1 state](../cpu-bus-diagnostic-sdk-alpha/STATE.md) retains its separate open Phase 03 hosted-evidence gate.
+
+## v1 Requirements
+
+Here, `v1` means this workstream's scoped deliverable, not a software release version. IDs continue existing category numbering; new categories begin at 01. Each ID will map to exactly one primary phase during roadmap creation.
+
+### Original Playable Fixture
+
+- [ ] **TRAC-01**: A maintainer can rebuild a tiny original Neo Geo fixture from tracked source and assets, with documented generation tools, redistribution rights, notices, and assertion-oracle ancestry, without commercial game or production BIOS inputs.
+- [ ] **TRAC-02**: A C consumer can execute that fixture through the ordinary native API and observe a software frame produced by guest-driven board/video behavior, with checked pixel format, dimensions, pitch, and buffer bounds.
+- [ ] **TRAC-03**: A C consumer can supply a fixed logical input sequence and observe the fixture change its guest state and visible output according to independently justified expected results; a wrong-input control fails the assertions.
+
+### Native and Frontend Integration
+
+- [ ] **HOST-02**: A user can load, run, and unload the fixture through a thin libretro adapter in an actual pinned macOS RetroArch build, using the ordinary native API, software video, documented controller mapping, and frontend-owned pacing.
+- [ ] **API-05**: A C integrator can advance the selected machine through a documented bounded frame operation with explicit input sampling, output-buffer ownership/lifetimes, video/audio capacities, audio sample format/channel layout/rate/produced count and relationship to emulated time, progress/stop information, and actionable errors, without native filesystem, device, network, or wall-clock services.
+- [ ] **API-06**: A maintainer can repeat and partition the supported fixture workload and run distinguishable native instances interleaved and concurrently while matching isolated-baseline guest, video, and audio results at equal emulated boundaries. This is native-instance evidence, not a claim of libretro frontend reentrancy or public snapshot compatibility.
+
+### Private Game and BIOS Loading
+
+- [ ] **MEDIA-02**: A C integrator can supply normalized immutable cartridge and BIOS regions for one documented MVS configuration under explicit media lifetimes, region layout, byte order, and resource limits.
+- [ ] **MEDIA-03**: A user can load the selected local game and BIOS archives through one documented, tested RetroArch/import path, with archive/file handling outside the native core and without modifying the original archives. Required ZIP handling uses bounded parsing and an established decompressor.
+- [ ] **MEDIA-04**: A user receives distinct, actionable errors for missing or incompatible BIOS/media, unsupported sets, malformed archives, and exceeded limits; after a rejected load, the consumer can load valid media or destroy the instance safely.
+
+### Selected MVS Game Behavior
+
+- [ ] **GAME-02**: A user can boot the selected Metal Slug X revision and BIOS configuration to its attract/start path through guest execution on the owned 68000 and required MVS board behavior, with added CPU, banking, interrupt/timing, and protection behavior tied to source-qualified regression evidence.
+- [ ] **GAME-03**: A user can enter an active scene and control movement and firing through the documented RetroArch input mapping; results arise from the guest program and emulated machine rather than canned title-specific output.
+- [ ] **GAME-04**: A user can observe the selected active scene's required graphics, layering, palettes, and scrolling, with the supported scene and unresolved raster/timing limitations documented and original hardware slowdown preserved where modeled.
+
+### Sound Admission and Output
+
+- [ ] **SND-01**: A maintainer can reproduce admission of the pinned C Z80 candidate for the selected workload using license/source and mutable-state inventories plus cycle, interrupt, bus-effect, supported-boundary continuation, and independent-instance evidence.
+- [ ] **SND-02**: A maintainer can reproduce admission of a pinned ymfm YM2610 subset behind a private C interface under PROJECT-D-48, with license/source and mutable-state/callback inventories, deterministic clock/sample and instance-isolation evidence, contained C++ failure behavior, and exercised static/shared C-consumer linkage. The C++ exception alone is not admission.
+- [ ] **SND-03**: A maintainer can run a guest-driven public sound fixture through the Z80/YM2610 path and reproduce non-silent, signal-qualified output with justified expected controls, distinguishing native chip timing/output from adapter resampling and frontend audio-device behavior.
+- [ ] **SND-04**: A user hears representative game music and action-triggered effects while controlling the selected Metal Slug X scene in the pinned RetroArch setup; evidence identifies the covered scenario and any missing sound behavior.
+
+### Qualification and Consumer Handoff
+
+- [ ] **QUAL-01**: A maintainer can run clean-tree automated native and libretro-consumer checks using only the public fixture, covering equivalent frame/input/audio observations for the same guest/input sequence at matching emulated boundaries (accounting for documented audio conversion), lifecycle and malformed-input boundaries, relevant fuzz/sanitizer regressions, and retained diagnostic-SDK regressions through proportionate local/CI entrypoints.
+- [ ] **QUAL-02**: A maintainer can reproduce a private local qualification scenario from boot through active movement, firing, scrolling, and sound in the actual pinned RetroArch build, retaining exact private media identities and derived evidence locally and publishing only permitted generic outcomes and public build/configuration identities. Machine-observable checks are automated; only residual subjective or unavailable evidence needs a human.
+- [ ] **QUAL-03**: An integrator can follow the documented build/install/load procedure for the native library and libretro adapter from a clean source tree on the selected macOS configuration, with exact dependency/compiler/SDK/OS/architecture/frontend identities and untested configurations stated explicitly.
+- [ ] **QUAL-04**: A consumer can identify the exact qualified game scenario, public-fixture coverage, remaining unknown/unsupported behavior, and oracle ancestry in current documentation; emulator agreement, BIOS/archive integrity, and fixture success are not presented as broader hardware or game compatibility.
+
+## Future Requirements
+
+These are outlined follow-on work, not requirements for this milestone:
+
+- Public snapshots, deterministic restored continuation, and durable saves under separate version and loss/recovery contracts. The next milestone's ordering should follow actual gameplay evidence and user priorities.
+- Additional title/revision/BIOS/region/board scenarios, AES, broader protection and raster behavior, and full-game qualification.
+- Measured optimization, additional platform qualification, and Playstead/shared-host integration after a representative workload exists.
+- Incremental replacement of ymfm or an appropriately licensed C port if concrete portability, maintenance, or dependency costs justify it. Preserve provenance and behavioral regression evidence; no port or generic replacement framework is required now.
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Completing v0.1's hosted release/authority gates or assigning this workstream a release version | Separately scoped lifecycle; v0.1 Phase 03 remains open |
+| Full-game completion, broad cartridge compatibility, or hardware-perfect behavior | Acceptance is one stated scene/configuration with a bounded evidence claim |
+| Public commercial ROM/BIOS distribution, private media checksums, captures, traces, or logs | Private qualification assets and derived evidence stay ignored and outside CI/releases |
+| A core-owned GUI, device audio, filesystem, networking, or host pacing | RetroArch/import code owns host services; the native machine remains deterministic |
+| Public save states, durable saves, rewind, run-ahead, and rollback netplay | Separate state/side-effect contracts are deferred |
+| General archive support or a handwritten DEFLATE implementation | Prove the selected loading path with bounded established decompression only when needed |
+| General permission for C++ runtime engines | PROJECT-D-48 is limited to the admitted ymfm dependency; owned runtime stays C17 |
+| A ymfm C rewrite, plugin framework, JIT, speculative SIMD, or intra-machine threading | Not needed to establish this bounded playable result |
+| Performance guarantees or broad embedded-platform claims | Require representative measured workloads and actual toolchain/device evidence |
+
+## User Stories
+
+- As a player, I can load my local media in RetroArch and control a stated Metal Slug X scene with visible scrolling and representative sound.
+- As a C integrator, I can use explicit native media/input/output contracts without inheriting frontend or host-service dependencies.
+- As a maintainer, I can reproduce meaningful public regressions without commercial media and keep the private game claim separate.
+
+## Acceptance Criteria
+
+Plans must select the exact public fixture, local scenario, MVS profile, frontend revision, controlled input sequence, observation boundaries, execution limits, and commands before claiming success. The early playable tracer and sound admission spikes inform later scope; a failed admission or unexpectedly large CPU/board gap triggers explicit bounded replanning, not a silent fallback or reduced acceptance.
+
+Public fixture checks must assert guest-driven behavior and use meaningful wrong-behavior controls. Frame/audio hashes alone are not independent correctness oracles. Public C-consumer evidence must exercise actual static/shared linkage after adding the C++ dependency. Internal chip continuation checks do not establish a public board snapshot format. Passing fixture CI cannot close the private title requirement, and a mocked libretro consumer cannot establish actual RetroArch compatibility.
+
+Keep public-source oracles separate from private local captures. Record source/configuration identities, executed assertions, outcome denominators, limitations, and pass/fail/skipped/unsupported/unknown results. Do not publish private media-derived outputs or identifiers. Retain MIT for original work and all required imported notices.
+
+## Definition of Done
+
+All 20 current requirements have current-revision evidence, documentation, and independent review for the specified scope. The public fixture works through native and libretro consumers, the selected private game scenario works in actual RetroArch, and sound admission is supported by evidence. Public fixture success without local game qualification does not complete the milestone. No release publication, broad platform support, silicon-perfect behavior, or completion of the sibling v0.1 milestone is implied.
+
+## Traceability
+
+Requirements are approved; phase allocation is pending roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+
+**Coverage:**
+
+- Current requirements: 20
+- Mapped to phases: 0 (roadmap pending)
+- Unmapped: 20 (expected at this checkpoint)
+
+---
+*Requirements defined: 2026-10-07*
+*Last updated: 2026-10-07 — user approved all 20 requirements; roadmap creation follows.*
