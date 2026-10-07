@@ -5,11 +5,11 @@ milestone_name: CPU/bus diagnostic SDK alpha
 current_phase: 03
 current_phase_name: Distributable release qualification
 status: executing
-stopped_at: "03-05 Task 2: hosted CI passed; release App, fork/review actors and release events pending"
-last_updated: "2026-10-06T20:24:22.756Z"
-last_activity: 2026-10-06
-last_activity_desc: Six hosted CI lanes and aggregate passed; 03-05 release authority checkpoint remains
-state_head: 2c7926383222cee174ede5ddde06374b43002191
+stopped_at: "03-05 summary recorded: Task 1 complete; Task 2 halted with hosted evidence pending"
+last_updated: "2026-10-07T12:05:34Z"
+last_activity: 2026-10-07
+last_activity_desc: Closed existing Plan 03-05 commits with a halted summary; owner-reported App setup is recorded
+state_head: 00f7516ac4455a4eb3cd731ffbd5e676127d5911
 progress:
   total_phases: 3
   completed_phases: 2
@@ -22,7 +22,7 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-06)
+See: .planning/PROJECT.md (updated 2026-10-07)
 
 **Core value:** Trustworthy Neo Geo emulation that other software can embed easily.
 **Current focus:** Phase 03 — Distributable release qualification
@@ -33,7 +33,7 @@ See: .planning/PROJECT.md (updated 2026-10-06)
 Phase: 03 (Distributable release qualification) — EXECUTING
 Plan: 5 of 5
 Status: executing
-Last activity: 2026-10-06 — Six hosted CI lanes and aggregate passed; 03-05 release authority checkpoint remains
+Last activity: 2026-10-07 — Plan 03-05 halted summary recorded; hosted evidence still needs independent actors
 
 Progress: [███████░░░] 67% (two of three phases complete)
 
@@ -157,7 +157,7 @@ None yet.
 - Preserve the historical odd-IRQ, fixture-UBSan, reset-accounting/NMI, BSD address-error and malformed-state/zero-request counterexamples.
 - Both original Musashi adaptation attempts are consumed. Do not repeat them automatically.
 - Original-silicon saved PC, unsupported platforms, public persistence formats, board/BIOS compatibility, and gameplay performance remain unknown or outside scope. WR-01 is a documentation warning carried into the Phase 02 plan; it does not block bounded CPU acceptance.
-- 03-05 Task 2 is incomplete. The authorized public repository szTheory/glueyneo and draft PR #1 exist; sanitized publication history passed its bounded audit. Original private local refs must never be pushed. Strict protection settings are observed; all six hosted matrix lanes and the aggregate passed at 2c7926383222cee174ede5ddde06374b43002191 with 1,159,040 SDK assertion executions. Independent GSD review at that source has no open findings. No release App exists; App scope/token/events, first-time fork execution, independent GitHub approval, actual protected merge and release/download publication remain pending. See the exact hosted receipt and App setup checkpoint; resume $gsd-execute-phase 03 after account setup.
+- Plan 03-05 Task 1 is complete and has a passing current local policy test. Task 2 is halted at the hosted-evidence gate: the owner reports App ID 5217741 installed for szTheory/glueyneo and the Actions secret/variable configured; permissions and token/event behavior remain unverified. The first-time fork approval/run, independent GitHub review, protected merge, and release/download publication remain pending. The public repository, draft PR #1, sanitized publication audit, observed strict protection settings, six hosted matrix lanes and aggregate, and independent GSD review at source 2c7926383222cee174ede5ddde06374b43002191 remain recorded in the hosted receipt. Original private local refs must never be pushed. Resume the hosted portion of $gsd-execute-phase 03 when the independent fork and review actors are arranged.
 
 ## Deferred Items
 
@@ -169,6 +169,6 @@ Items acknowledged at milestone close (none yet); future scope is outlined in RO
 
 ## Session Continuity
 
-Last session: 2026-10-06T18:27:37.209Z
-Stopped at: 03-05 Task 2: hosted CI passed; release App, fork/review actors and release events pending
+Last session: 2026-10-07T12:05:34Z
+Stopped at: 03-05 summary recorded; Task 2 halted pending fork/review actors and hosted release events
 Resume file: .planning/phases/03-distributable-release-qualification/03-HOSTED-QUALIFICATION.md

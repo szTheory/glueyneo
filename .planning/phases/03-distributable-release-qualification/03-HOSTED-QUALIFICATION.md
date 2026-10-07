@@ -27,9 +27,17 @@ Actions default to read permissions and cannot approve PRs. First-time
 contributors require workflow approval, but no first-time fork event has been
 exercised. Repository secret scanning and push protection are enabled;
 non-provider patterns and validity checks are disabled. No live credential
-canary has been tested. No Actions secrets or variables exist. The owner
-confirmed no existing release App; no App key was created or exposed.
-See [03-RELEASE-APP-SETUP.md](03-RELEASE-APP-SETUP.md).
+canary has been tested.
+
+On 2026-10-07 the owner reported that release App ID `5217741` is installed
+for `szTheory/glueyneo`, and that the repository Actions secret
+`RELEASE_APP_PRIVATE_KEY` and variable
+`RELEASE_APP_ID` are configured. These setup details are not direct
+observations of GitHub's current App permission grant or secret/variable
+values. Requested permissions,
+effective token scope, expiration, revocation, and release-please events remain
+unqualified. No credential values are retained. See
+[03-RELEASE-APP-SETUP.md](03-RELEASE-APP-SETUP.md).
 
 ## Exact hosted CI evidence
 
@@ -114,7 +122,7 @@ published downloads remain unobserved.
 
 | Claim | Required actual evidence | External actor |
 | --- | --- | --- |
-| Release App authority | Selected-repository installation, permissions, token scope/expiry/revocation without credential values; Release Please and downstream job events | App owner and repository administrator |
+| Release App authority | Owner-reported App ID, repository target, and Actions secret/variable setup exist; still require observed permission grant, token scope/expiry/revocation without credential values, Release Please and downstream job events | App owner and repository administrator |
 | First-time fork boundary | A first-time fork PR, workflow approval event, effective read-only token and no-secret execution at exact head | Independent contributor; repository administrator approves run |
 | Protected merge | Independent GitHub approval after final push, exact-head GSD review and passing aggregate, observed protected merge commit | Reviewer other than author/latest pusher; qualifying maintainer |
 | Complete SDK release | Tested tag/commit, staged inventory/digests, no-new-release retry, downloaded platform consumers/source rebuild, publication and verified published downloads | Repository administrator after scoped App setup |
@@ -132,12 +140,12 @@ and phase verification have been satisfied.
 
 **Plan:** 03-05
 
-**Progress:** Task 1 complete; Task 2 partially observed and incomplete.
+**Progress:** Task 1 complete; Task 2 stopped at its hosted-evidence gate after owner-reported App setup.
 
-Plan 03-05 Task 2 requires a configured release App and necessary external
-account authority; its precondition says to record pending evidence and halt
-that hosted task when unavailable. Complete the concrete
-[App setup checkpoint](03-RELEASE-APP-SETUP.md), arrange the independent fork and
-review actors, then resume **`$gsd-execute-phase 03`**. Plans 03-01–04 are
-execution-complete; Phase 03 itself is not complete. No verification, shipping,
-next phase or milestone step has been started.
+Plan 03-05 Task 2's App setup checkpoint is now owner-reported, but the hosted
+token/event checks and external actors remain unavailable. Arrange a
+first-time fork contributor and an independent GitHub reviewer with approval
+authority, then resume the hosted portion. Plans 03-01–04 are complete; Plan
+03-05 is halted with its remaining evidence explicit, and Phase 03 itself is
+not complete. No phase verification, shipping, next phase, or milestone step
+has been started.

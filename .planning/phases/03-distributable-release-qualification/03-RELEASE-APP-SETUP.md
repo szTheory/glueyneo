@@ -1,11 +1,17 @@
-# Release App setup checkpoint
+# Release App setup and qualification checkpoint
 
-The owner confirmed on 2026-10-06 that there is no existing release App.
-Repository creation and CI do not establish this separate release authority.
-No App credential has been created, stored, or printed by this execution.
+## Owner-reported setup (2026-10-07)
 
-Register a private GitHub App for the `szTheory` account using
-[GitHub's registration page](https://github.com/settings/apps/new):
+The owner reports that a GitHub App with public App ID `5217741` is installed
+for `szTheory/glueyneo`. The owner also reports that repository Actions secret
+`RELEASE_APP_PRIVATE_KEY` and variable `RELEASE_APP_ID` are set, with the
+variable corrected to the App ID. These are user-reported setup facts; this
+execution did not inspect the live App settings, Actions secret, or variable
+value. No private key or token value is recorded here.
+
+## Expected App configuration
+
+The registration checklist for the private App under `szTheory` is:
 
 - Name: `szTheory-glueyneo-release` (use an available equivalent if occupied).
 - Homepage: `https://github.com/szTheory/glueyneo`.
@@ -15,26 +21,23 @@ Register a private GitHub App for the `szTheory` account using
 - Installation: only this account, selected repository `szTheory/glueyneo`.
 - User authorization during installation: unnecessary for installation tokens.
 
-Generate a private key in the App settings and store it directly in the
-repository Actions secret `RELEASE_APP_PRIVATE_KEY`. Store the public numeric
-App ID in the Actions variable `RELEASE_APP_ID`. Do not paste key or token
-values into chat, Git, logs, issues, or pull requests. Record only the public
-App ID, installation ID, repository selection and permissions in qualification
-receipts.
+The actual permission selection and grant have not been independently observed
+and remain pending qualification. The pinned token action requests only this
+repository and job-specific permissions. GitHub documents installation tokens
+as expiring after one hour; the token action's post-job revocation and actual
+scope/expiration remain unobserved until the trusted workflow runs. Capture
+that behavior without token values. Keep strict branch protection in force; an
+App credential does not authorize bypassing current-head checks or independent
+review.
 
-The pinned token action requests only this repository and job-specific
-permissions. GitHub documents installation tokens as expiring after one hour;
-the token action's post-job revocation and actual scope/expiration remain
-unobserved until the trusted workflow runs. Capture that behavior without token
-values. Keep strict branch protection in force; an App credential does not
-authorize bypassing the current-head checks or independent review.
+## Remaining hosted evidence
 
-The remaining hosted acceptance also needs an independent approval of PR #1
-after its final push and a first-time fork contributor to exercise approval and
-read-only/no-secret execution. Those facts cannot be simulated by the owner
-account's trusted PR or a local test. After account setup, resume
-`$gsd-execute-phase 03` to observe the protected merge, Release Please draft,
-retry, downloaded consumers and publication against exact source/asset hashes.
+Hosted acceptance still needs a first-time fork contributor to exercise
+workflow approval and the read-only/no-secret boundary, plus an independent
+approval of PR #1 after its final push. Those facts cannot be simulated by the
+owner's trusted PR or a local test. After those actors are available, qualify
+the protected merge, Release Please draft, retry, downloaded consumers, and
+publication against exact source and asset hashes.
 
 References checked 2026-10-06:
 [App registration](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app),

@@ -62,11 +62,13 @@ local release logic only. The public
 hosted CI and strict main protection. Exact observations and failed attempts
 are recorded in the
 [hosted qualification receipt](../.planning/phases/03-distributable-release-qualification/03-HOSTED-QUALIFICATION.md).
-The owner confirmed no existing release App; its
+The owner reports a release App installed for this repository and the
+`RELEASE_APP_ID` variable and `RELEASE_APP_PRIVATE_KEY` secret configured; the
 [setup checkpoint](../.planning/phases/03-distributable-release-qualification/03-RELEASE-APP-SETUP.md)
-names the repository scope, permissions, secret and nonsecret variable.
-App token/event behavior, first-time fork approval/execution, an independently
-approved protected merge and actual release publication remain pending.
+records that report without inspecting the live permission grant or secret
+value. App token/event behavior, first-time fork approval/execution, an
+independently approved protected merge and actual release publication remain
+pending.
 A clean scanner result
 is detector evidence; the affirmative item-level records in
 [`rights-inventory.md`](rights-inventory.md) remain the distribution-rights
