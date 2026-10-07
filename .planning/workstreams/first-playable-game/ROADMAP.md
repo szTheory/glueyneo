@@ -35,7 +35,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   4. A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including license/source/state audits, cycle or clock and interrupt/bus behavior, deterministic timing, continuation and independent-instance evidence, contained C++ failures, and static/shared C-consumer linkage; a failed gate blocks admission and requires bounded replanning rather than phase completion.
   5. An integrator can follow the clean-tree build/install/load procedure for the native library and libretro adapter on the selected macOS configuration and identify exact dependency, compiler, SDK, OS, architecture, and frontend identities plus untested configurations.
 
-**Plans**: 6/6 plans executed across 5 waves
+**Plans**: 6/8 plans executed; 2 gap-closure plans pending across 7 waves
 **Wave 1**
 - [x] 04-01-PLAN.md
 
@@ -51,6 +51,12 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [x] 04-06-PLAN.md
+
+**Wave 6** *(gap closure; blocked on Wave 5 completion)*
+- [ ] 04-07-PLAN.md — Bind qualification to a complete immutable source snapshot
+
+**Wave 7** *(gap closure; blocked on Wave 6 completion)*
+- [ ] 04-08-PLAN.md — Diagnose actual RetroArch exit and regenerate final qualification receipt
 
 **UI hint**: no
 
