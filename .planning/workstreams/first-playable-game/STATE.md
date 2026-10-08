@@ -5,17 +5,17 @@ milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
 current_plan: 13
-status: "Phase 04 incomplete: verifier found gaps (3/5 truths); four high-severity threats remain open; pinned frontend behavior is unknown; plan 04-13 is ready to execute"
-stopped_at: Plan 04-13 created and verified; pause at planning boundary, no phase advance
-last_updated: "2026-10-08T12:28:30.764Z"
+status: executing
+stopped_at: Completed 04-13-PLAN.md; Phase 04 remains incomplete pending independent security/review audits and fresh verification
+last_updated: "2026-10-08T13:00:00.269Z"
 last_activity: 2026-10-08
-last_activity_desc: Plan 04-13 verified; phase remains incomplete with security and frontend evidence open
-state_head: f3caa227d74630eabd6eae47852da2bca9fe383d
+last_activity_desc: Plan 04-13 executed; Phase 04 remains incomplete pending independent audits and fresh verification
+state_head: 4e07de478532d07ed29c267e770d8a29607599ce
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
   percent: 0
 ---
 
@@ -26,16 +26,16 @@ progress:
 See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 **Core value:** Trustworthy Neo Geo emulation that other software can embed easily.
-**Current focus:** Phase 04 — close two verification gaps and obtain pinned RetroArch evidence
+**Current focus:** Phase 04 — Plan 04-13 complete; phase acceptance remains incomplete
 
 ## Current Position
 
-Phase: 04 (Public Playable Tracer) — INCOMPLETE; gap-closure plan ready to execute
+Phase: 04 (Public Playable Tracer) — INCOMPLETE; all 13 plans have summaries, but security and actual frontend gates remain open
 Current Plan: 13
 Total Plans in Phase: 13
-Status: Phase 04 incomplete: verifier found gaps (3/5 truths); four high-severity threats remain open; pinned frontend behavior is unknown
-Last activity: 2026-10-08 — Phase 04 planning complete
-Last Activity Description: Plan 04-13 verified; phase remains incomplete with security and frontend evidence open
+Status: Plan 04-13 complete; awaiting independent security/code review and fresh phase verification
+Last activity: 2026-10-08 — Phase 04 plan execution complete
+Last Activity Description: Plan 04-13 closed repository gaps; HOST-02, frontend QUAL-03, and security remain unadmitted
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -46,7 +46,7 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
-**Plans completed:** 12 of 13 planned; Phase 04 acceptance remains incomplete.
+**Plans completed:** 13 of 13 planned; Phase 04 acceptance remains incomplete.
 **Per-Plan Metrics:**
 
 | Plan | Duration | Tasks | Files |
@@ -63,23 +63,23 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P10 | 7min | 3 tasks | 4 files |
 | Phase 04 P11 | 13min | 2 tasks | 8 files |
 | Phase 04 P12 | 9min | 3 tasks | 12 files |
-| Phase 04 P13 | planned | 2 tasks | 8 files |
+| Phase 04 P13 | 11min | 2 tasks | 8 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-08T11:50:07.122Z
+**Last session:** 2026-10-08T13:00:00.250Z
 
-**Stopped At:** Phase 04 plan 04-13 verified; paused before execution, no phase advance
+**Stopped At:** Completed 04-13-PLAN.md; Phase 04 remains incomplete pending independent security/review audits and fresh verification
 **Resume File:** None
 
 ## Scope Notes
 
 - Accepted research and primary-source references are preserved in [RESEARCH.md](RESEARCH.md). Outcome: locally reach interactive Metal Slug X gameplay with movement, firing, scrolling, and representative sound in one pinned MVS/macOS RetroArch setup; public CI uses a separate first-party fixture and never commercial game/BIOS data. All 20 requirements and their primary allocations in the roadmap are user-approved.
-- Planning milestone ID: `first-playable-game`; release version remains unassigned. Twelve Phase 04 plans have execution summaries; 04-13 is a new, unexecuted two-task repair plan. Earlier 04-12 focused suites and owned-debug CTests passed, but fresh evidence found escaped-quote path disclosure and a validation-map reconciliation regression. The latest independent security audit reports four high/open threats (T-04-11, T-04-15, T-04-18, T-04-20); security remains blocked. Project Phase 04 begins this workstream; independent playable work does not close or depend on completion of the sibling hosted-release gate.
+- Planning milestone ID: `first-playable-game`; release version remains unassigned. All thirteen Phase 04 plans now have execution summaries. Plan 04-13 repairs escaped-quote path disclosure behavior and the validation-map reconciliation gate; fresh repository checks pass, while the latest independent security audit's four high/open threats (T-04-11, T-04-15, T-04-18, T-04-20) remain blocked pending a new audit. Project Phase 04 begins this workstream; independent playable work does not close or depend on completion of the sibling hosted-release gate.
 - Milestone-start triage on 2026-10-07 found no open issues and one draft PR, [#1](https://github.com/szTheory/glueyneo/pull/1), for the separate diagnostic release work. It supplies no playable-game requirement or completion evidence.
 - Work is isolated on `docs/first-playable-game-milestone`. The existing 138 planning relocations into the diagnostic workstream were verified byte-identical and committed; unrelated pre-existing methodology/configuration/preparation edits remain outside this milestone's commits.
 - Carry-forward constraints: keep the owned native C17 core deterministic and host-independent; introduce the libretro/software-video path early; keep media/archive I/O outside the native core; retain the owned 68000 direction and gate Z80/YM2610 admission on evidence. PROJECT-D-48 permits the narrow ymfm C++14 exception behind a private C interface; a future C replacement is optional. The supplied BIOS is available locally, but the exact MVS profile and compatibility remain unqualified.
-- Approved Phase 04–07 sequencing is in [ROADMAP.md](ROADMAP.md): public playable tracer and early Z80/ymfm admission → selected MVS boot including required sound-CPU handshakes → active title control → sound and qualification. Twelve prior plans across ten waves have execution summaries; plan 04-13 is planned in wave 11. Four high-severity path-disclosure threats remain open. The disposition ledger has five open rows, including stale CR-01 and carried WR-02/WR-03; the latest review itself reports CR-02 and WR-01. HOST-02 and actual frontend QUAL-03 remain unknown.
+- Approved Phase 04–07 sequencing is in [ROADMAP.md](ROADMAP.md): public playable tracer and early Z80/ymfm admission → selected MVS boot including required sound-CPU handshakes → active title control → sound and qualification. All 13 Phase 04 plans have summaries across eleven waves, but Phase 04 remains in progress. Four high-severity path-disclosure threats remain open. CR-01 is retained as fixed history; current CR-02/WR-01 and carried WR-02/WR-03 remain open. HOST-02 and actual frontend QUAL-03 remain unknown.
 - Goal: advance from the diagnostic SDK toward a playable Neo Geo game.
 - Local qualification: a user-provided private game archive is stored under the Git-ignored `local/roms/` directory. Keep its contents and private checksums out of tracked files, CI, and release artifacts.
 - The user-provided BIOS archive is also stored under the Git-ignored `local/roms/` directory. The copy matches its source, passes ZIP CRC validation and is untracked; those checks do not establish BIOS compatibility.
@@ -109,11 +109,13 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 04]: Use bounded path-span redaction and fail closed through ambiguous unquoted line tails.
 - [Phase 04]: Require the documented public fixture digest and exact pinned RetroArch bundle identifier before frontend process actions.
 - [Phase 04]: Repository-backed receipt rows derive from bounded committed archive bytes; passing tests do not close security or actual frontend gates.
-- [Phase 04]: Plan 04-12 consumes ambiguous unquoted private path tails; owned compile flags follow CMake object target identity; frontend and independent security gates remain open.
+- [Phase 04]: Plan 04-13 validates escaped JSON quote boundaries and redacts ambiguous path spans through end of line; independent security and frontend gates remain open.
+- [Phase 04]: Valid JSON escape rules are required before preserving a diagnostic quote boundary; ambiguous apostrophe or malformed spans redact through end of line.
+- [Phase 04]: Plan 04-13 repository tests do not close the four high disclosure threats or establish pinned RetroArch HOST-02/QUAL-03 behavior.
 
 ### Blockers
 
-- T-04-11, T-04-15, T-04-18 and T-04-20 remain high/open and security is blocked pending independent post-fix audit. Escaped quotes still expose suffixes despite earlier passing path regressions; tests do not close threats.
-- The latest review reports CR-02 and WR-01; the disposition ledger retains five open rows, including the no-longer-current CR-01 and carried WR-02/WR-03. The validation-map regression rejects reconciled current review state. Plan 04-13 targets these bounded repository gaps; independent review must reconcile dispositions after execution.
+- T-04-11, T-04-15, T-04-18 and T-04-20 remain high/open and security is blocked pending independent post-fix audit. Plan 04-13's escaped-quote and apostrophe privacy regressions pass, but tests do not close threats.
+- Current CR-02 and WR-01, plus carried WR-02/WR-03, remain open for independent review; CR-01 remains visible as fixed history. The validation-map reconciliation suite and direct gate pass. A fresh independent review must confirm dispositions after execution.
 - Owned-debug is now 47/47 passing, including refreshed identity/source-manifest and target-scoped inventory checks. This repairs the prior deterministic failure without establishing frontend acceptance.
 - HOST-02 remains unknown: pinned RetroArch 1.22.2 aborts before the first screenshot in fresh no-content and core/content launches (EXC_CRASH SIGABRT, return -6). LaunchServices reported kLSNoExecutableErr despite bundle/executable/signature checks; unified-log inspection was sandbox-blocked. A functioning interactive macOS app launch context is still required; cause is not established. Preserve the screenshot, stable no-input frames, RIGHT/LEFT controls, unload and normal-exit observation; do not repeat the launch while its environment is unchanged.
