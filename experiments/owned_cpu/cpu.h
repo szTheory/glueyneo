@@ -93,7 +93,7 @@ typedef union {
  * not a public ABI, wire format, emulator snapshot, replay, or durable save. */
 #define OWNED_CPU_STATE_VERSION UINT32_C(1)
 #define OWNED_CPU_STATE_CORE_IDENTITY_SHA256 \
-    "f11a282d5f571a67fff687c08cc90a44f5b6ff54bb5334b9c21bf17a4abcbee7"
+    "b5b0c37df0a29b7639e35353b7d3320cda7a4169e6457d4039f13f8052beb6c8"
 #define OWNED_CPU_STATE_FIELD_DATA_REGISTERS (UINT64_C(1) << 0)
 #define OWNED_CPU_STATE_FIELD_ADDRESS_REGISTERS (UINT64_C(1) << 1)
 #define OWNED_CPU_STATE_FIELD_PC_AND_PREVIOUS_PC (UINT64_C(1) << 2)

@@ -68,6 +68,7 @@ EXECUTABLE_TARGETS = {
     "owned_cpu_faults",
     "owned_cpu_state",
 }
+OWNED_TARGETS = EXECUTABLE_TARGETS | {"owned_cpu", "owned_cpu_unity"}
 MANIFEST_PATH = Path("experiments/owned_cpu/source-manifest.json")
 
 
@@ -390,10 +391,20 @@ def compile_errors(root: Path, build_dir: Path, expected: list[str]) -> list[str
     errors: list[str] = []
     compiled: set[str] = set()
     cache = load_cache(build_dir)
+    targets: set[str] = set()
     for row in rows:
+        args = command_arguments(row)
+        # The same cpu.c/Unity source also builds for SDK targets with a
+        # different contract. Classify by the actual CMake object target,
+        # never by source extension or membership in the source allow-list.
+        output_index = args.index("-o") + 1 if "-o" in args else len(args)
+        output = args[output_index] if output_index < len(args) else str(row.get("output", ""))
+        target_match = re.search(r"(?:^|/)CMakeFiles/([^/]+)\.dir/", output)
+        if target_match is None or target_match.group(1) not in OWNED_TARGETS:
+            continue
+        targets.add(target_match.group(1))
         source = normalize_source(root, str(row.get("file", "")))
         compiled.add(source)
-        args = command_arguments(row)
         command = " ".join(args)
         if "-std=c17" not in args:
             errors.append(f"compile command is not strict C17: {source}")
@@ -412,6 +423,8 @@ def compile_errors(root: Path, build_dir: Path, expected: list[str]) -> list[str
         if "-fsanitize=" in command and sanitizer == "NONE":
             errors.append(f"unexpected sanitizer in NONE compile mode: {source}")
     expected_set = set(expected)
+    for target in sorted(OWNED_TARGETS - targets):
+        errors.append(f"missing owned compile target: {target}")
     for source in sorted(expected_set - compiled):
         errors.append(f"missing compiled source: {source}")
     for source in sorted(compiled - expected_set):
@@ -465,11 +478,9 @@ def check_inventory(root: Path, build_dir: Path, inventory: dict[str, Any]) -> l
     errors.extend(runtime_global_errors(runtime))
     manifest = json.loads((root / MANIFEST_PATH).read_text(encoding="utf-8"))
     errors.extend(manifest_errors(root, manifest))
-    # Preserve the earlier state audit; the current distribution manifest owns
-    # current hashes for files since changed by inventory/collector work.
-    current = {row["path"]: row["sha256"] for row in manifest["files"]}
-    errors.extend(hash_errors(root, {name: current.get(name, digest)
-                                    for name, digest in inventory.get("source_hashes", {}).items()}))
+    # This is the current state/source contract; dated audits remain in Git
+    # and their immutable receipts, rather than masking stale current hashes.
+    errors.extend(hash_errors(root, inventory.get("source_hashes", {})))
     errors.extend(file_scope_errors(root, inventory.get("file_scope_objects", [])))
     errors.extend(compile_errors(root, build_dir, inventory.get("compiled_sources", [])))
     fixture = (root / FIXTURE_PATH).read_text(encoding="utf-8")

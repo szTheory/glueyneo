@@ -22,9 +22,9 @@
     "third_party/unity/src/unity.c"
   ],
   "source_hashes": {
-    "experiments/owned_cpu/CMakeLists.txt": "990848e89ffbff684df06ba60414db7722078aed92e4c3431a96039f31b585a3",
-    "experiments/owned_cpu/cpu.c": "b03d3458c99012e7d20a21b408ea1b5e72ae4fa6ac2f36ac5078d349b0d953b8",
-    "experiments/owned_cpu/cpu.h": "df547f6291c6085eda4c8a195c16f46296c0ae91beae2e6daa9422733c20eedc",
+    "experiments/owned_cpu/CMakeLists.txt": "57f96d4a16b708f0db9eddba953654551b7f089a70694eea1faa6e791e1db9fb",
+    "experiments/owned_cpu/cpu.c": "b5b0c37df0a29b7639e35353b7d3320cda7a4169e6457d4039f13f8052beb6c8",
+    "experiments/owned_cpu/cpu.h": "ecdb34c5c56d376953d52e5785ba2b6ad6bed7223baa1e53d06aa04885328ea5",
     "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
     "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c",
     "tests/owned_cpu/cold.py": "4f0687b793cb04a4c61b31dc917ec7d08233e9a272bf2c0e41b274d06d604f84",
@@ -33,15 +33,15 @@
     "tests/owned_cpu/test_cold.c": "e2bcb33eea1a24cdc8c0a5340928e4b5d3705b4f0649b6299c370d5560e26d63",
     "tests/owned_cpu/test_diagnostic.c": "a3d7b2e60f2f0e4fd49042b069dc8729a268816c8bbfd42bfa3a34ed3121937a",
     "tests/owned_cpu/test_faults.c": "71e09309af7c556b907563229ae6e176958ee91dbe7ddad5ceff124fabe071fa",
-    "tests/owned_cpu/test_inventory.py": "247cf3edf0bb528b9fc6a3198846f7e759f1b147c5b1807761ad9a4c29af383f",
+    "tests/owned_cpu/test_inventory.py": "1e7de1d4866eea31ce22d168bf714b1b4f5e7a74c4aa030335c36f950d487c74",
     "tests/owned_cpu/test_isolation.c": "35a5a515e1df3798bcae4a190387e32c4ea6ce6a0aa2ac628789111d85d7e155",
-    "tests/owned_cpu/test_semantics.c": "871a7ff936d0a38cccba0a0e601a90bac37377f4fc62d2e687b8e5b76316e25f",
-    "tests/owned_cpu/test_state.c": "b8ceb6be17b209f661f5a55699460776f879f78dad8e395c9f973e6502edaae1",
+    "tests/owned_cpu/test_semantics.c": "cbc51ad448b4f59aae55208af09907c794bd72a73ae52b525b2b2edfc61b22b2",
+    "tests/owned_cpu/test_state.c": "02f7689a0f2f58d3ef402638c980a70e5d37b0f5da30cdeb7b14a55ae926f5d8",
     "tests/owned_cpu/test_timing.c": "606f7c2d2b08c368a65def9b25b0f36eb9122f0e751bd37c9ae5666d5493bbce",
     "third_party/unity/src/unity.c": "a6cc4b143075a03317d72c760b5ed67a4a12eeda1242f575464ad23f34042275",
     "third_party/unity/src/unity.h": "b30ba4db1e0be1a1f6c862d359d73c91025a114977e41d3dad17103363804334",
     "third_party/unity/src/unity_internals.h": "35bffad23ebc533977291e7a848c646027513572268fbfa9bd03d5ec21ee818a",
-    "tools/owned_cpu/inventory.py": "763785aef1b7497bcabaf304bcaeee2bbeadba1e573ab1e9b2b6e228ff34a0bf"
+    "tools/owned_cpu/inventory.py": "8d5be1ea3abc0dc51f1e1c7ef756798feae545d9a06fd2d8ead42d71961dff5b"
   },
   "build_contract": {
     "language": "C17, required, C extensions disabled",
@@ -1094,7 +1094,7 @@
     "record_kind": "fixed-size, named-field, in-memory continuation record; fields are read and written individually, never serialized as raw struct bytes",
     "version": 1,
     "core_identity": "full SHA-256 of experiments/owned_cpu/cpu.c; format version is checked separately",
-    "core_identity_sha256": "f11a282d5f571a67fff687c08cc90a44f5b6ff54bb5334b9c21bf17a4abcbee7",
+    "core_identity_sha256": "b5b0c37df0a29b7639e35353b7d3320cda7a4169e6457d4039f13f8052beb6c8",
     "presence_mask": "all sixteen field-group bits are required; missing groups reject before restore commit",
     "presence_groups": [
       "data_registers",

@@ -1,9 +1,18 @@
 # Owned MC68000 implemented subset
 
-Status: **implemented diagnostic slice; backend admission remains pending**.
+Status: **admitted for the bounded Phase 01 diagnostic subset**.
 This is a private authored C17 experiment for a narrow, manual-derived set of
 MC68000 behaviors. It is not a complete CPU implementation or a Neo Geo timing
 model.
+
+Phase 01 admission is recorded in the CPU/bus workstream's
+`01-VERIFICATION.md`. The Phase 04 public fixture adds only the two exact
+opcode/addressing pairs listed below; it does not broaden that admission to
+full ISA, BIOS, game or physical-hardware compatibility. The current private
+state source identity and distribution hashes are checked against exact
+tracked bytes by `tools/owned_cpu/inventory.py`; prior dated receipts remain
+historical evidence. Compile checks apply to the owned experiment's CMake
+targets, including owned Unity and tests, rather than unrelated SDK/C++ rows.
 
 ## Instance and reset behavior
 
@@ -111,7 +120,7 @@ This candidate boundary supersedes the former local fault-PC/vector-4 row,
 preserved in Git. Original MC68000 ILLEGAL encoding and vector semantics remain
 hardware facts; its saved-PC selection remains unknown under P01-C-13. No
 silicon PC value is selected. The frozen CONTRACT plus the P01-C-14 amendment
-in `illegal-reconciliation.json` defines active scope; admission remains pending.
+in `illegal-reconciliation.json` defines the admitted bounded diagnostic scope.
 
 ## Interrupts, frames, and bus effects
 
@@ -191,6 +200,7 @@ input, prefetch fidelity, wait states, arbitrary mid-instruction suspension,
 physical interrupt acknowledge, external RESET device behavior, full ISA or
 later CPU models, public or durable snapshots, BIOS/games, and Neo Geo board
 timing. No prefetch or buffered guest state exists in this implementation.
-An emulator's output is a comparison lead, not hardware truth. The experiment
-still has not passed independent review or phase admission; CPU-01–05 remain
-pending until the current roadmap's full gates are completed.
+An emulator's output is a comparison lead, not hardware truth. Phase 01's
+independent review and admission cover the documented diagnostic subset only;
+later public fixture instruction additions and changed source identities do
+not establish any of the excluded capabilities above.
