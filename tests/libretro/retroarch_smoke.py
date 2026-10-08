@@ -23,6 +23,7 @@ EXPECTED_VERSION = "1.22.2"
 EXPECTED_EXECUTABLE_SHA256 = (
     "ed90b54434a2899de0ddbfed59f335255fb462c8691bd970a1a761ebb5656d65"
 )
+EXPECTED_FIXTURE_SHA256 = "59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0"
 WIDTH = 320
 HEIGHT = 224
 RIGHT_KEY_CODE = 124
@@ -570,11 +571,14 @@ def validate_inputs(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[st
     fixture = content.read_bytes()
     if len(fixture) != 602 or fixture[:4] != b"GNFX" or fixture[4:8] != b"\0\0\0\1":
         raise SmokeBlocked("input", "content is not the generated bounded GNFX v1 fixture")
+    fixture_digest = hashlib.sha256(fixture).hexdigest()
+    if fixture_digest != EXPECTED_FIXTURE_SHA256:
+        raise SmokeBlocked("input", "content digest does not match the pinned public GNFX fixture")
     identity = {
         "retroarch_version": version,
         "retroarch_executable_sha256": executable_hash,
         "core_sha256": sha256(core),
-        "fixture_sha256": hashlib.sha256(fixture).hexdigest(),
+        "fixture_sha256": fixture_digest,
         "os": f"macOS {platform.mac_ver()[0]} {platform.machine()}",
         "input_mapping": "RetroPad RIGHT <- Right Arrow; LEFT control <- Left Arrow",
         "control": "local keyboard and frontend screenshots; no network command interface",
