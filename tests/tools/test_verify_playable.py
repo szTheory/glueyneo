@@ -8,6 +8,7 @@ import copy
 import io
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -493,6 +494,59 @@ class SnapshotTest(unittest.TestCase):
 
 
 class ConsumerInputTest(unittest.TestCase):
+    def copy_documentation(self, source_root: Path) -> Path:
+        guide = source_root / "docs/first-playable-build.md"
+        guide.parent.mkdir(parents=True)
+        shutil.copyfile(ROOT / "docs/first-playable-build.md", guide)
+        validation = source_root / ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md"
+        validation.parent.mkdir(parents=True)
+        shutil.copyfile(ROOT / ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md", validation)
+        return validation
+
+    def test_check_docs_accepts_controlled_review_states_and_pending_frontend_evidence(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-docs-positive-") as temporary:
+            self.copy_documentation(Path(temporary))
+            try:
+                playable.check_docs(Path(temporary))
+            except RuntimeError as error:
+                self.fail(f"valid controlled states and Pending/unknown evidence were rejected: {error}")
+
+    def test_check_docs_rejects_placeholders_and_missing_or_closed_frontend_evidence(self) -> None:
+        def update_row(text: str, task_id: str, status: str | None) -> str:
+            lines = text.splitlines()
+            for index, line in enumerate(lines):
+                if line.startswith(f"| {task_id} |"):
+                    if status is None:
+                        del lines[index]
+                    else:
+                        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+                        cells[-1] = status
+                        lines[index] = "| " + " | ".join(cells) + " |"
+                    return "\n".join(lines) + "\n"
+            raise AssertionError(f"validation row {task_id} is missing")
+
+        mutations = (
+            ("TBD", lambda text: re.sub(
+                r"(?m)^(\| CR-03 \|[^|]*\|[^|]*\|)[^|]*(\|)$", r"\1 TBD \2", text, count=1,
+            ), "controlled review disposition"),
+            ("planned", lambda text: update_row(
+                text, "04-15 T2", "HOST-02 planned; frontend QUAL-03 Pending; actual-app identities unavailable; frontend claim unknown",
+            ), "unfinished placeholder"),
+            ("missing frontend row", lambda text: update_row(text, "04-15 T2", None), "Pending/unknown"),
+            ("false frontend closure", lambda text: update_row(
+                text, "04-15 T2", "HOST-02 pass; frontend QUAL-03 pass; actual-app evidence unavailable; frontend claim unknown",
+            ), "Pending/unknown"),
+            ("missing unknown claim", lambda text: update_row(
+                text, "04-15 T2", "HOST-02 Pending; frontend QUAL-03 Pending; actual-app identities unavailable",
+            ), "Pending/unknown"),
+        )
+        for label, transform, expected_error in mutations:
+            with self.subTest(mutation=label), tempfile.TemporaryDirectory(prefix="playable-docs-negative-") as temporary:
+                validation = self.copy_documentation(Path(temporary))
+                validation.write_text(transform(validation.read_text(encoding="utf-8")), encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, expected_error):
+                    playable.check_docs(Path(temporary))
+
     def test_installed_consumer_check_uses_original_diagnostic_fixture(self) -> None:
         class CapturingRunner:
             def __init__(self) -> None:
