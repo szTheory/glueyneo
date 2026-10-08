@@ -362,6 +362,53 @@ class SnapshotTest(unittest.TestCase):
                 self.assertRegex(safe, r"(?:build|compile|tool|frontend) failed")
                 self.assertRegex(safe, r"(?:permission denied|exit 7|status 9|exit 2)")
 
+    def test_redact_json_escaped_quotes_and_apostrophes_across_sinks(self) -> None:
+        diagnostics = (
+            'build failed status 9: "/Users/synthetic home/private capture/secret\\"tail.rom" permission denied',
+            "build failed status 8: '/Users/synthetic home/O'Brien/private secret.rom' permission denied",
+        )
+        for diagnostic, private_parts in zip(
+            diagnostics,
+            (("synthetic home", "private capture", "secret", "tail.rom"),
+             ("synthetic home", "O'Brien", "private secret", "secret.rom")),
+        ):
+            with self.subTest(diagnostic=diagnostic):
+                safe = playable.redact(diagnostic)
+                self.assertEqual(playable.redact(safe), safe)
+                for private in private_parts:
+                    self.assertNotIn(private, safe)
+                self.assertIn("build failed status", safe)
+
+        commit = self.commit_fixture_project()
+        snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")
+        work = self.base / "qualification"
+        work.mkdir()
+        runner = playable.Runner(work, snapshot.root, snapshot)
+        output = diagnostics[0]
+        with mock.patch.object(playable.subprocess, "run", return_value=subprocess.CompletedProcess(
+            ["tool"], 9, output,
+        )):
+            result = runner.command("quoted-path", ["tool", output], allow_failure=True)
+        retained_log = (work / "quoted-path.log").read_text(encoding="utf-8")
+        self.assertIn("exit_code': 9", repr(runner.lanes))
+        self.assertIn("status", result.stdout)
+        for private in ("synthetic home", "private capture", "secret", "tail.rom"):
+            self.assertNotIn(private, retained_log + repr(runner.lanes) + result.stdout)
+
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            output_dir = Path(temporary) / "qualification"
+            receipt = {
+                "status": "fail", "reason": diagnostics[0],
+                "fixture": {}, "retroarch_smoke": {}, "identity": {},
+            }
+            stdout = io.StringIO()
+            with mock.patch.object(playable, "OUTPUT", output_dir), mock.patch("sys.stdout", stdout):
+                playable._write_receipt(receipt)
+            serialized = (output_dir / "receipt.json").read_text(encoding="utf-8") + stdout.getvalue()
+        for private in ("synthetic home", "private capture", "secret", "tail.rom"):
+            self.assertNotIn(private, serialized)
+        self.assertIn('"status": "fail"', serialized)
+
     def test_runner_redacts_command_metadata_and_persisted_log(self) -> None:
         commit = self.commit_fixture_project()
         snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")

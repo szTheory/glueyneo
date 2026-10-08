@@ -253,6 +253,32 @@ class ScreenshotFreshnessTests(unittest.TestCase):
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_json_escaped_quote_and_apostrophe_paths_are_removed_from_frontend_records(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="private-root-") as temporary:
+            root = Path(temporary)
+            diagnostics = (
+                f'video failed status -6: "{root}/private capture/secret\\"tail.rom" permission denied',
+                f"Exception Type: EXC_CRASH '{root}/O'Brien/private secret.rom' signal 6",
+            )
+            for diagnostic in diagnostics:
+                with self.subTest(diagnostic=diagnostic):
+                    safe = smoke.sanitize_diagnostic_text(diagnostic, temporary_root=root)
+                    self.assertEqual(smoke.sanitize_diagnostic_text(safe, temporary_root=root), safe)
+                    record = smoke.build_diagnostic(
+                        stage="video", return_code=-6, survived_before_screenshot=False,
+                        output=f"video failed status -6: {diagnostic}", temporary_root=root,
+                        crash_report=diagnostic if diagnostic.startswith("Exception") else None,
+                    )
+                    serialized = json.dumps(record, sort_keys=True)
+                    self.assertEqual(record["stage"], "video")
+                    self.assertEqual(record["return_code"], -6)
+                    self.assertIn("status -6", record["output"])
+                    self.assertNotIn(str(root), serialized)
+                    for private in ("private capture", "secret", "tail.rom", "O'Brien", "private secret", "secret.rom"):
+                        self.assertNotIn(private, serialized)
+                    if diagnostic.startswith("Exception"):
+                        self.assertIn("EXC_CRASH", serialized)
+
     def test_space_containing_private_paths_are_removed_from_all_diagnostic_forms(self) -> None:
         cases = (
             ('failed: "/Users/synthetic home/private capture/secret.rom": permission denied',
