@@ -114,7 +114,7 @@ The required precondition remains unavailable: the prior pinned RetroArch contex
 - Plan 04-14's final verification ran on source commit `8af6725`: qualification 20/20, frontend 26/26, review-map mutation suite 8/8, and `ctest --preset owned-debug --output-on-failure` 47/47. The direct evidence-map command passed. These are repository checks only and do not close the high disclosure threats or establish actual frontend behavior.
 - At the time of Plan 04-14, these focused suites verified repository behavior only; the later fresh review confirms CR-02 and WR-04 are fixed and identifies CR-03/WR-05. Security remains blocked with T-04-11/T-04-15/T-04-18/T-04-20 high/open. HOST-02 and actual frontend QUAL-03 remain Pending until the requested pinned-app observations exist.
 
-## Actual Frontend Evidence Handoff
+## Actual Frontend Evidence Handoff — Manual-Only / Unverified
 
 Human evidence is still required: run the generated public fixture in the pinned RetroArch 1.22.2 build and observe a fresh screenshot, repeated no-input frames, RIGHT movement, the LEFT negative control, content unload, and normal application exit. Expected behavior is guest-produced software pixels, stable no-input output, a RIGHT-driven marker change that LEFT does not reproduce, and successful unload and exit. The app previously aborted before its first screenshot; no GUI retry was made because the environment has not materially changed.
 
@@ -128,11 +128,11 @@ Human evidence is still required: run the generated public fixture in the pinned
 - [x] Every task maps to an executable command; full clean CTest provides a 34-test denominator.
 - [x] No watch-mode acceptance commands are used.
 
-Every plan task has an automated command or an explicit human-evidence route, but Nyquist validation is not compliant while WR-01 remains escalated. The Phase 04 goal is not accepted: HOST-02 remains unknown because the pinned frontend exited before producing a screenshot. The native fixture, Z80 synthetic workload and YM2610 candidate results do not resolve that frontend gap or establish BIOS/game compatibility.
+Every plan task has an automated command or an explicit human-evidence route. Nyquist validation remains partial because HOST-02 and the frontend portion of QUAL-03 require direct observation in a functioning pinned frontend; WR-01 was resolved by the Plan 04-16 reconciliation. Phase 04 is not accepted while actual frontend behavior remains unknown and the four high-severity disclosure threats remain open. Native fixture, Z80 synthetic-workload, and YM2610 candidate results do not establish BIOS/game compatibility.
 
 ---
 *Phase: 04-public-playable-tracer*
-*Updated: 2026-10-07*
+*Updated: 2026-10-08*
 
 ## Validation Audit 2026-10-07
 
@@ -199,3 +199,17 @@ The newline-path regression now removes the complete unstructured suffix in qual
 Current repository evidence was rerun: `python3 tests/tools/test_verify_playable.py -v` (23/23), `python3 tests/libretro/test_retroarch_smoke.py -v` (27/27), `python3 tests/tools/test_check_phase04_validation_map.py -v` (10/10), `python3 tools/verify_playable.py --check-docs`, and `python3 tests/tools/check_phase04_validation_map.py` all pass. The focused tests exercise newline-path redaction at retained/printed sinks, frontend diagnostic and crash serialization, exact normalized review states, contradictory-state rejection, and the reconciled-review mutation that previously triggered WR-01. No additional repository-test gap was found, so no test file was added. The direct evidence-map gate also reruns the qualification and frontend suites and preserves four high/open disclosure threats plus frontend unknown status.
 
 Manual-only/unverified: HOST-02 and the frontend portion of QUAL-03 still require an actual pinned RetroArch observation of content load, guest video, no-input stability, RIGHT/LEFT controls, unload and normal exit. No GUI was launched in this audit. The separate security review findings T-04-11, T-04-15, T-04-18 and T-04-20 also remain open by explicit project direction. These items do not convert the passing repository tests into phase acceptance; `nyquist_compliant` remains false.
+
+## Validation Audit 2026-10-08
+
+| Metric | Count |
+|---|---|
+| Gaps found | 1 |
+| Resolved | 0 |
+| Escalated | 1 |
+
+## Nyquist Audit After Plan 04-17 — 2026-10-08
+
+The auditor reran the relevant repository evidence: `python3 tests/libretro/test_retroarch_smoke.py -v` (27/27), `python3 tests/tools/test_verify_playable.py -v` (23/23), `python3 tests/tools/test_check_phase04_validation_map.py -v` (12/12), `ctest --test-dir build/owned-debug --output-on-failure -R '^libretro_callback$'` (1/1), `python3 tools/verify_playable.py --check-docs`, and the direct Phase 04 evidence-map checker; all passed. These checks cover the C callback contract and smoke-runner behavior but cannot prove that the actual RetroArch app loaded and presented the fixture or accepted input.
+
+Manual-only/unverified: HOST-02 and the frontend portion of QUAL-03 still require direct pinned RetroArch 1.22.2 observations of content load, guest video, stable no-input frames, RIGHT/LEFT controls, unload, and normal exit. No app launch was attempted. No additional automated test can establish those GUI observations without a functioning frontend oracle; adding a mock would only test the mock. Preserve both requirements as Pending/unknown and keep `nyquist_compliant: false`. The four high/open disclosure threats are unchanged.
