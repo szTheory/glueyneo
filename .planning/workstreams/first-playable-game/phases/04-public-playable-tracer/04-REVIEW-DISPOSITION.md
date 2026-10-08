@@ -52,8 +52,8 @@ recorded: 2026-10-08T23:13:27.868Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
+| WR-01 | warning | open | 04-REVIEW.md 2026-10-08T23:12:03Z, warning: paraphrases accepted by `check_docs()` at `tools/verify_playable.py:632-650`; reproduced `The frontend booted the game and showed its output.` and `The controls worked as expected in RetroArch.` |
+| WR-02 | warning | open | 04-REVIEW.md 2026-10-08T23:12:03Z, warning: stale current 23/23 claim in `tests/tools/check_phase04_validation_map.py`; `python3 tests/tools/test_verify_playable.py -v` reports 25 tests while direct checker preserves 23/23 |
 | WR-06 | warning | open | Post-fix independent review at `2a82c455f85671ba144a42923318c4ff7d53b9a2` still reproduces affirmative claims (“frontend booted the game and showed its output”; “controls worked as expected in RetroArch”) accepted by `check_docs()`; T-04-34 remains open. (not in the current review) |
 | WR-07 | warning | fixed | Current mutation fixture reads the actual verification source row before mutation; source-derived checker rows reject removal and false closure (14-test suite). (not in the current review) |
 | CR-03 | critical | fixed | Current qualification and frontend regressions remove the complete newline-containing private-path suffix at retained and printed sinks; reviewed at `9804351907e456b3ab85ebe4a49959c05b0714bb`. (not in the current review) |

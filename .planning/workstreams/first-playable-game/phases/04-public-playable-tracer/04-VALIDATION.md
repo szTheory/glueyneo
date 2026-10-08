@@ -75,6 +75,7 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | 04-19 T1 frontend | 04-19 | 17 | HOST-02 | T-04-11, T-04-15, T-04-18, T-04-20, T-04-37 | GUI-free frontend diagnostics redact private paths; no app claim is inferred from these tests | frontend diagnostic regression | `python3 tests/libretro/test_retroarch_smoke.py -v` | Yes | pass, 27 tests at `9804351`; no GUI launch; HOST-02 remains manual-only/unknown |
 | 04-19 T2 | 04-19 | 17 | QUAL-03 | T-04-34, T-04-SC (04-19) | Reject tested affirmative guide claims and preserve explicit negative statements; remaining alternate claims are recorded open under the bounded stop condition | qualification regression and docs gate | `python3 tests/tools/test_verify_playable.py -v`; `python3 tools/verify_playable.py --check-docs` | Yes | pass, 25 tests and docs gate at `2a82c455`; alternate-claim limitation remains open; no actual frontend observation |
 | 04-19 T3 | 04-19 | 17 | HOST-02, QUAL-03 | T-04-34, T-04-37, T-04-SC (04-19) | Reconcile one current open WR-06 disposition with medium/open T-04-34, preserve four high/open blockers and Pending/unknown frontend status | evidence-map mutation and direct checker | `python3 tests/tools/test_check_phase04_validation_map.py -v`; `python3 tests/tools/check_phase04_validation_map.py`; `python3 tools/verify_playable.py --check-docs` | Yes | pass, 14 mutation tests; direct checker and docs gate pass, checker reruns 25 qualification and 27 frontend tests; WR-06/T-04-34 remain open |
+| 04-20 T1 | 04-20 | 18 | HOST-02, QUAL-03 | T-04-38, T-04-39, T-04-40 | Current WR-01/WR-02 provenance is specific; copied current-report mutations preserve frontend unknown and reject stale qualification denominator | evidence-map mutation and direct gate | `python3 tests/tools/test_check_phase04_validation_map.py -v`; `python3 tests/tools/check_phase04_validation_map.py` | Yes | pass, 15 mutation tests including stale 23/23 rejection; direct checker observes current 25-test qualification count; no app behavior inferred |
 
 ## Threat Coverage
 
@@ -99,12 +100,16 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | WR-07 | warning | Evidence-map fixture source-faithful verification-row mutation contract | fixed |
 | CR-03 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, newline-containing path disclosure | fixed |
 | WR-05 | warning | Review disposition and validation crosswalk consistency | fixed |
-| WR-01 | warning | Current audit and validation-map evidence boundary | fixed |
+| WR-01 | warning | `check_docs()` accepts the two affirmative frontend paraphrases reproduced at 2026-10-08T23:12:03Z; actual frontend remains unknown | open |
 | CR-02 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, raw-literal-quote disclosure | fixed |
 | WR-04 | warning | Validation-map review grammar for informational findings | fixed |
 | CR-01 | critical | T-04-24, exact numeric receipt types | fixed |
-| WR-02 | warning | T-04-11 / T-04-15 / T-04-18 / T-04-20, space-containing path redaction | fixed |
-| WR-03 | warning | T-04-13 / T-04-23, receipt row-to-archive binding | fixed |
+| WR-03 | warning | T-04-13 / T-04-23, repository receipt validation rejects forged file-content hashes | fixed |
+| WR-02 | warning | `23/23` report claim disagrees with the live 25-test qualification suite at 2026-10-08T23:12:03Z | open |
+
+### Plan 04-20 Task 1 Current Evidence — 2026-10-08
+
+The copied mutation baseline retains the actual current `04-VERIFICATION.md`, `04-REVIEW.md`, disposition, and validation documents. No expected sentence or synthetic historical review is appended. The direct evidence checker reads the current report's Goal Achievement, Required Artifacts, Key Link Verification, Data-Flow Trace, Requirements Coverage, and Behavioral Spot-Checks sections. Its qualification denominator is read from the single current `Qualification/privacy tests` result and compared with a fresh `python3 tests/tools/test_verify_playable.py -v` run. The mutation suite passes 15/15, including a stale 23/23 mutation against the live 25-test count; the direct checker passes and preserves Pending/unknown frontend evidence. WR-01's reproduced guide paraphrases and WR-06/T-04-34 remain open; no actual-app claim is made.
 
 ## Plan 04-19 Current-Revision Reconciliation — 2026-10-08
 

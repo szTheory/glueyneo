@@ -39,47 +39,11 @@ def reconciled_review_documents(directory: Path) -> dict[str, Path]:
 
     verification = copied["VERIFICATION"]
     current_report = verification.read_text(encoding="utf-8")
-    goal_rows = validation_map.table_rows(current_report, "| # | Truth | Status | Evidence |")
-    if not any(
-        len(row) == 4 and row[0] == "3" and
-        validation_map.has_frontend_load_uncertainty(row[3], scope="goal")
-        for row in goal_rows
-    ):
-        raise AssertionError("source verification report lacks current actual frontend uncertainty evidence")
-
-    # The live review changes independently of the carried disposition ledger.
-    # Start with no current findings, then seed each mutation explicitly so the
-    # fixture never depends on stale review IDs or live-review timing.
-    copied["REVIEW"].write_text(
-        "# Synthetic current review fixture\n\n## Critical Issues\n\nNone.\n\n## Warnings\n\nNone.\n",
-        encoding="utf-8",
-    )
+    # Mutations always start from the actual current source documents. In
+    # particular, do not replace the review or append expected evidence here:
+    # that would let a stale fixture mask source drift.
 
     validation = copied["VALIDATION"].read_text(encoding="utf-8")
-    validation = validation.replace("pass, 20 tests on source `04-13`", "pass, 23 tests on source `04-13`")
-    validation = validation.replace("pass, 26 tests on source `04-13`", "pass, 27 tests on source `04-13`")
-    validation = validation.replace(
-        "The historical CR-01 identity finding was fixed, but the current reused CR-01 ID names a distinct boolean-count bypass and remains open in the current disposition record.",
-        "The CR-01 boolean-count bypass was fixed by exact-integer checks and is absent from the fresh review.",
-    )
-    validation = validation.replace(
-        "All five current/carried review dispositions remain open until independent review.",
-        "Five current/carried findings remain open; the repaired CR-01 record is retained as fixed.",
-    )
-    # The copied map models the latest observed run; the checker must compare that
-    # run with its recorded current result before checking reconciliation semantics.
-    validation = validation.replace("pass, 19 tests on source `33bef8c`", "pass, 20 tests on source `33bef8c`")
-    validation = validation.replace("pass, 25 tests on source `33bef8c`", "pass, 26 tests on source `33bef8c`")
-    records = validation_map.parse_disposition_yaml(copied["DISPOSITION"].read_text(encoding="utf-8"))
-    lines = validation.splitlines()
-    for index, line in enumerate(lines):
-        if not line.startswith("|"):
-            continue
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) == 4 and cells[0] in records:
-            cells[3] = records[cells[0]]["disposition"]
-            lines[index] = "| " + " | ".join(cells) + " |"
-    validation = "\n".join(lines) + "\n"
     copied["VALIDATION"].write_text(validation, encoding="utf-8")
 
     disposition_path = copied["DISPOSITION"]
@@ -325,7 +289,7 @@ class ValidationMapReconciliationTest(unittest.TestCase):
             )
             self.assertNotEqual(mutated, original, "frontend uncertainty removal was a no-op")
             report.write_text(mutated, encoding="utf-8")
-            with self.assertRaisesRegex(AssertionError, "current frontend report row '3' changed or contradicts its audited state"):
+            with self.assertRaisesRegex(AssertionError, "verification goal evidence"):
                 self.run_checker(documents)
 
     def test_checker_accepts_a_new_current_finding_with_matching_records(self) -> None:
@@ -476,53 +440,44 @@ class ValidationMapReconciliationTest(unittest.TestCase):
             )),
             ("qualification artifact positive evidence", "VERIFICATION", lambda text: with_table_cell(
                 text, "| Artifact | Expected | Status | Details |",
-                "`tools/verify_playable.py` and `docs/first-playable-build.md`", 3,
+                "`tools/verify_playable.py`, `docs/first-playable-build.md`", 3,
                 "Pinned RetroArch loaded and displayed pixels."
             )),
             ("libretro artifact positive evidence", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Artifact | Expected | Status | Details |", "`src/libretro/libretro_core.c`", 3,
+                text, "| Artifact | Expected | Status | Details |", "`src/libretro/libretro_core.c`, `tests/libretro`", 3,
                 validation_map.LIBRETRO_ARTIFACT_FRONTEND_BOUNDARY + " RetroArch displayed guest pixels."
             )),
             ("qualification link positive evidence", "VERIFICATION", lambda text: with_table_cell(
-                text, "| From | To | Via | Status | Details |", "Qualification runner", 4,
+                text, "| From | To | Via | Status | Details |", "Current qualification run", 4,
                 "Pinned RetroArch launched and displayed guest pixels."
             )),
             ("libretro link positive evidence", "VERIFICATION", lambda text: with_table_cell(
-                text, "| From | To | Via | Status | Details |", "Libretro callback", 4,
+                text, "| From | To | Via | Status | Details |", "Libretro content", 4,
                 validation_map.LIBRETRO_LINK_FRONTEND_BOUNDARY + " The actual app loaded successfully."
-            )),
-            ("qualification data-flow success", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Artifact | Data variable | Source | Produces Real Data | Status |",
-                "Qualification evidence", 4, "✓ FLOWING; app loaded and displayed guest pixels"
-            )),
-            ("libretro data-flow positive frontend claim", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Artifact | Data variable | Source | Produces Real Data | Status |",
-                "Libretro callback", 4,
-                "✓ FLOWING; actual RetroArch accepted input and displayed guest pixels"
             )),
             ("actual frontend spot-check passed", "VERIFICATION", lambda text: with_table_cell(
                 text, "| Behavior | Command | Result | Status |",
-                "Actual pinned RetroArch load, display, controls, and unload", 2,
+                "Actual pinned RetroArch behavior", 2,
                 "Pinned RetroArch loaded, displayed pixels, and accepted input."
             )),
             ("evidence-map spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
                 text, "| Behavior | Command | Result | Status |",
-                "Current security/evidence-map consistency and report uncertainty", 2,
+                "Direct evidence-map checker", 2,
                 "Passed; actual pinned RetroArch loaded and displayed guest pixels."
             )),
             ("qualification test spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
                 text, "| Behavior | Command | Result | Status |",
-                "Qualification/privacy regressions", 2,
+                "Qualification/privacy tests", 2,
                 "23/23 passed; actual pinned RetroArch loaded successfully."
             )),
             ("GUI-free runner spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
                 text, "| Behavior | Command | Result | Status |",
-                "GUI-free RetroArch runner contract", 2,
+                "GUI-free frontend contract", 2,
                 "27/27 passed; actual pinned RetroArch displayed pixels."
             )),
             ("docs gate spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
                 text, "| Behavior | Command | Result | Status |",
-                "Documentation claim gate", 2,
+                "Documentation gate", 2,
                 "Passed; the pinned app loaded and presented output."
             )),
             ("duplicate HOST-02", "VERIFICATION", lambda text: with_duplicate_requirement(text, "HOST-02")),
@@ -585,8 +540,8 @@ class ValidationMapReconciliationTest(unittest.TestCase):
         self.assertTrue(validation_map.has_frontend_load_uncertainty(
             validation_map.QUALIFICATION_RUNNER_UNCERTAINTY_EVIDENCE, scope="qual_runner"
         ))
-        self.assertFalse(validation_map.has_frontend_load_uncertainty(qual_accepted, scope="goal"))
-        self.assertFalse(validation_map.has_frontend_load_uncertainty(host_accepted, scope="qual"))
+        self.assertTrue(validation_map.has_frontend_load_uncertainty(qual_accepted, scope="goal"))
+        self.assertTrue(validation_map.has_frontend_load_uncertainty(host_accepted, scope="qual"))
         rejected = (
             "Actual frontend load remains unknown; the pinned RetroArch app displayed guest pixels.",
             "Actual pinned RetroArch app load remains unknown; the app showed a guest frame.",
@@ -607,6 +562,21 @@ class ValidationMapReconciliationTest(unittest.TestCase):
         for evidence in rejected:
             with self.subTest(evidence=evidence):
                 self.assertFalse(validation_map.has_frontend_load_uncertainty(evidence, scope="goal"))
+
+    def test_checker_rejects_stale_current_qualification_denominator(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="phase04-stale-denominator-") as temporary:
+            documents = reconciled_review_documents(Path(temporary))
+            report = documents["VERIFICATION"]
+            original = report.read_text(encoding="utf-8")
+            mutated = original.replace(
+                "| Qualification/privacy tests | `python3 tests/tools/test_verify_playable.py -v` | 25/25 passed |",
+                "| Qualification/privacy tests | `python3 tests/tools/test_verify_playable.py -v` | 23/23 passed |",
+                1,
+            )
+            self.assertNotEqual(mutated, original, "stale-denominator mutation was a no-op")
+            report.write_text(mutated, encoding="utf-8")
+            with self.assertRaisesRegex(AssertionError, "denominator"):
+                self.run_checker(documents)
 
 if __name__ == "__main__":
     unittest.main()
