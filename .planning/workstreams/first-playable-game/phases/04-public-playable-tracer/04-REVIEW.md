@@ -1,6 +1,6 @@
 ---
 phase: 04-public-playable-tracer
-reviewed: 2026-10-08T13:11:51Z
+reviewed: 2026-10-08T15:13:58Z
 depth: standard
 files_reviewed: 6
 files_reviewed_list:
@@ -20,41 +20,41 @@ status: issues_found
 
 # Phase 04: Code Review Report
 
-**Reviewed:** 2026-10-08T13:11:51Z  
-**Depth:** standard  
-**Files Reviewed:** 6  
+**Reviewed:** 2026-10-08T15:13:58Z
+**Depth:** standard
+**Files Reviewed:** 6
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the six Plan 04-13 source and test files, with the phase security register, review disposition, validation map and prior review as context. The reported raw-literal-quote sanitizer bypass reproduces independently in both diagnostic paths: `failed status 7: "/Users/synthetic/private"tail/sensitive.bin"` is reduced to `failed status 7: [user]tail/sensitive.bin"`. The leak reaches qualification receipts and printed results through `redact` and frontend diagnostics through `sanitize_diagnostic_text`. The validation-map parser also rejects a valid informational finding because it only recognizes `CR-` and `WR-` IDs and has no Info section mapping.
+Reviewed the exact six-file post-04-14 source scope and the prior review, security and validation records, disposition, and Plan 04-14 artifacts. The raw-literal-quote suffix case from CR-02 is now removed from qualification and frontend diagnostic sinks by line-tail redaction; the added test inputs exercise both sanitizer paths. WR-04 is also addressed: `IN-` findings map to `info`, crosswalk severity is compared with disposition severity, and tests cover a matching Info record plus a severity mismatch. Actual pinned RetroArch behavior remains unknown; the contract tests do not establish HOST-02.
 
-These findings retain the phase's existing open disclosure scope. Repository privacy regressions do not establish HOST-02 or actual pinned RetroArch QUAL-03 behavior; both remain unobserved, and the four high disclosure threats remain open.
+Two remaining defects were found. Both sanitizers treat a newline as a trustworthy private-path boundary even though arbitrary diagnostic text can contain newline bytes in a path. The validation-map checker also accepts a contradictory crosswalk disposition such as `not open` for a record whose disposition is `open`.
 
 ## Narrative Findings (AI reviewer)
 
 ## Critical Issues
 
-### CR-02: Literal quotes inside private paths still expose suffixes [BLOCKER]
+### CR-03: Newline in diagnostic path exposes the remaining private path [BLOCKER]
 
-**File:** `tools/verify_playable.py:484-493`; `tests/libretro/retroarch_smoke.py:68-76`
+**File:** `tools/verify_playable.py:478-488`; `tests/libretro/retroarch_smoke.py:62-71`
 
-**Issue:** Both sanitizers treat the first quote returned by `_json_string_end` as a proven close to the quoted path. That helper validates JSON string escaping, but these diagnostics are arbitrary text and may contain an unescaped literal quote in a filename. For example, the input `failed status 7: "/Users/synthetic/private"tail/sensitive.bin"` is sanitized to `failed status 7: [user]tail/sensitive.bin"` by both functions. The suffix is therefore still present after a second pass and is carried into `_write_receipt`'s persisted JSON and printed result or the frontend's diagnostic/crash-reason record. This independently confirms the raw-literal-quote bypass recorded in the security audit and keeps T-04-11, T-04-15, T-04-18 and T-04-20 open.
+**Issue:** Both sanitizers split arbitrary diagnostics into lines before redacting and stop at the first line ending after a private root. A private path can contain a newline, so input such as `failed: /Users/synthetic/private\n/tail/sensitive.bin` becomes `failed: [user]\n/tail/sensitive.bin`; the suffix remains in the sanitized text. `Runner.command` persists the qualification output and receipts consume sanitized strings; frontend diagnostics and crash reasons also pass through `sanitize_diagnostic_text`. The raw-quote regression is fixed, but this newline variant still exposes private path components.
 
-**Fix:** For arbitrary diagnostic text, do not infer a closing boundary from a quote after a private root. Redact from the root through the end of that line unless the caller supplies a structured, parsed diagnostic format with an unambiguous path field. Add raw unescaped quote regressions alongside the escaped-quote cases and pass them through both sinks, repeat sanitation, persisted/printed receipt output, and frontend crash-reason output.
+**Fix:** For arbitrary diagnostic text, redact from the first recognized private root through the end of the entire diagnostic value, or use a structured parser that proves the path boundary. Add newline-containing path regressions through qualification logs, receipt JSON and printed output, frontend diagnostics and crash-reason output, including repeat sanitation.
 
 ## Warnings
 
-### WR-04: Validation-map parser rejects valid Info findings [WARNING]
+### WR-05: Crosswalk disposition check accepts contradictory wording [WARNING]
 
-**File:** `tests/tools/check_phase04_validation_map.py:58-75`
+**File:** `tests/tools/check_phase04_validation_map.py:187-188`
 
-**Issue:** `parse_review_findings` recognizes only headings matching `CR-` or `WR-` at line 64 and maps only `critical issues` and `warnings` at lines 69-74. The review schema permits Info findings (`IN-` IDs under `## Info`). Adding a valid informational finding to the current review makes the validation-map gate fail with “outside a severity section,” even when the disposition and crosswalk consistently record it. This couples a valid review outcome to an incomplete parser grammar.
+**Issue:** The checker searches for the recorded disposition as a word anywhere in the crosswalk text. For a record marked `open`, a crosswalk value such as `fixed; not open` still contains the word `open` and passes this check. That allows the evidence gate to accept conflicting disposition claims even though severity reconciliation now compares values explicitly.
 
-**Fix:** Accept `IN-` finding IDs and map the `info` section to `info` severity. Extend disposition and crosswalk reconciliation to preserve and compare that severity, and add a fixture containing a matching informational finding that passes while inconsistent severity still fails.
+**Fix:** Parse the crosswalk disposition into a controlled state or require the disposition field to begin with the exact recorded state and reject contradictory state terms. Add a negative-control fixture where the crosswalk says `not open` or `fixed` while the disposition record remains `open`.
 
 ---
 
-_Reviewed: 2026-10-08T13:11:51Z_  
-_Reviewer: the agent (gsd-code-reviewer)_  
+_Reviewed: 2026-10-08T15:13:58Z_
+_Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_

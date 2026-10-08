@@ -12,7 +12,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 
 ## first-playable-game — First Playable Game
 
-**Status:** Approved by the user on 2026-10-07. Phases 4–7; release version unassigned. Plans 04-01 through 04-15 are executed. Plan 04-14 repaired the recorded privacy and Info/IN parser cases; Plan 04-15 preserved the unavailable actual-frontend prerequisite. Fresh independent review and whole-phase verification remain. Four high-severity disclosure threats remain open; CR-02 and WR-04 plus carried WR-01/WR-02/WR-03 remain open, while CR-01 is fixed history. Actual pinned-app evidence remains unknown. Phases 05–07 have not started.
+**Status:** Approved by the user on 2026-10-07. Phases 4–7; release version unassigned. Plans 04-01 through 04-15 are executed. Fresh security review counted 46 threats (42 closed, four high disclosure threats remain open by user direction). Fresh code review confirms CR-02 and WR-04 fixed and records CR-03/WR-05 open; carried WR-01/WR-02/WR-03 remain open, while CR-01 is fixed history. HOST-02 and frontend QUAL-03 remain Pending. Phase 04 is blocked pending a new gap plan and later actual pinned-app evidence. Phases 05–07 have not started.
 
 ## Phases
 
@@ -35,7 +35,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   4. A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including license/source/state audits, cycle or clock and interrupt/bus behavior, deterministic timing, continuation and independent-instance evidence, contained C++ failures, and static/shared C-consumer linkage; a failed gate blocks admission and requires bounded replanning rather than phase completion.
   5. An integrator can follow the clean-tree build/install/load procedure for the native library and libretro adapter on the selected macOS configuration and identify exact dependency, compiler, SDK, OS, architecture, and frontend identities plus untested configurations.
 
-**Plans**: 15/15 plans executed across 13 waves. Gap-closure plans 04-14 and 04-15 are complete in Waves 12 and 13. Phase 04 remains incomplete pending fresh independent security/review assessment, whole-phase verification and actual pinned-app evidence.
+**Plans**: 15/15 plans executed across 13 waves. Gap-closure plans 04-14 and 04-15 are complete in Waves 12 and 13. The fresh security and code-review audits are recorded; Phase 04 remains blocked by four high disclosure threats and open review findings, and still needs actual pinned-app evidence before completion.
 **Wave 1**
 - [x] 04-01-PLAN.md
 
@@ -125,7 +125,7 @@ Each phase includes the automated evidence and independent review appropriate to
 
 ## Progress
 
-**Execution Order:** Phase 4 → Phase 5 → Phase 6 → Phase 7. Plans 04-01 through 04-15 are executed and summarized. T-04-11/T-04-15/T-04-18/T-04-20 remain high/open; current CR-02 and WR-04 plus carried WR-01/WR-02/WR-03 remain open. Plan 04-14 repaired repository evidence gaps; Plan 04-15 preserved the unavailable actual pinned-app prerequisite and kept HOST-02/frontend QUAL-03 pending. Next: fresh independent security and code-review audits, then whole-phase verification under the project's direct-verifier workaround. Actual RetroArch behavior remains unknown; do not advance to Phase 5.
+**Execution Order:** Phase 4 → Phase 5 → Phase 6 → Phase 7. Plans 04-01 through 04-15 are executed and summarized. T-04-11/T-04-15/T-04-18/T-04-20 remain high/open; CR-02/WR-04 are fixed, while CR-03/WR-05 and carried WR-01/WR-02/WR-03 remain open. Plan 04-15 preserved the unavailable actual pinned-app prerequisite; HOST-02/frontend QUAL-03 remain Pending. Next: plan Phase 04 gap closure, execute it, rerun independent audits, then attempt whole-phase verification only if the security gate clears. Actual RetroArch behavior remains unknown; do not advance to Phase 5.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|

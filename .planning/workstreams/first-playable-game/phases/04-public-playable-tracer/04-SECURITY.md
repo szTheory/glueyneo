@@ -61,6 +61,16 @@ updated: "2026-10-08"
 | T-04-SC (04-11) | Tampering | archive parsing/dependency closure | high | mitigate | Plan 04-11 uses the existing bounded Git-archive path and Python standard library; unsafe members reject without a package install. | closed |
 | T-04-24 | Tampering | receipt numeric type validation | high | mitigate | `tools/verify_playable.py` rejects JSON booleans in byte/count fields before aggregate and committed archive comparison. | closed |
 | T-04-SC (04-12) | Tampering | dependency/source closure | high | mitigate | Plan 04-12 uses existing pinned source and Python standard library only; no package install or new source import. | closed |
+| T-04-25 | Information disclosure | quoted qualification/frontend diagnostic paths | high | mitigate | Plan 04-13 covers escaped quotes and repeated sanitation through qualification receipts and frontend diagnostics; later review found a separate newline-boundary variant within the four existing open disclosure threats. | closed |
+| T-04-26 | Tampering | review/disposition/validation evidence | medium | mitigate | Plan 04-13 reconciles review history, disposition, validation crosswalk and counts with contradiction controls. | closed |
+| T-04-SC (04-13) | Tampering | dependency/source closure | high | mitigate | Plan 04-13 uses existing pinned inputs and Python standard library only; no package install or new imported source. | closed |
+| T-04-27 | Information disclosure | qualification/frontend diagnostic redaction | high | mitigate | Plan 04-14 closes the raw-literal-quote boundary through both sanitizers and sinks; newline-containing paths remain covered by T-04-11, T-04-15, T-04-18 and T-04-20, which stay open. | closed |
+| T-04-28 | Tampering | review severity reconciliation | medium | mitigate | `IN-`/Info findings and severity-bearing crosswalk reconciliation are covered by focused mutation tests. | closed |
+| T-04-29 | Repudiation | sound admission requirement ledger | low | mitigate | SND-01/02 completion is tied to exact existing verifier evidence and bounded workload language. | closed |
+| T-04-SC (04-14) | Tampering | source/dependency closure | high | mitigate | Plan 04-14 uses already pinned source and Python standard library; no dependencies or imports were added. | closed |
+| T-04-30 | Repudiation | actual frontend evidence and requirement disposition | high | mitigate | Plan 04-15 records unavailable app/core/fixture identities and direct observations as unknown; HOST-02 and frontend QUAL-03 remain Pending. | closed |
+| T-04-31 | Tampering | frontend input/video/lifecycle claim | high | mitigate | Plan 04-15 requires screenshot, stable no-input, RIGHT, LEFT negative control, unload and normal exit before any actual-app claim; unavailable precondition preserves unknown. | closed |
+| T-04-SC (04-15) | Tampering | source/dependency closure | high | mitigate | Plan 04-15 uses the existing pinned app/core/fixture and standard-library harness; no dependencies or sources were added. | closed |
 
 ## Threat Flags
 
@@ -112,7 +122,7 @@ No accepted risks.
 | Closed | 32 |
 | Open | 4 |
 
-The fresh ASVS L1 audit verified every threat authored in the 12 phase plans. T-04-11, T-04-15, T-04-18 and T-04-20 remain HIGH/open because escaped embedded quotes can expose private path suffixes in qualification and frontend diagnostics, including persisted and printed receipts. T-04-21 through T-04-24 and the plan-specific dependency-closure threats are closed. HOST-02 remains unknown; no actual RetroArch acceptance is implied.
+The earlier ASVS L1 audit verified threats authored in the first 12 phase plans. T-04-11, T-04-15, T-04-18 and T-04-20 remain HIGH/open; the post-04-14 review found a newline-containing path variant, so these threats remain open pending complete-span redaction. HOST-02 remains unknown; no actual RetroArch acceptance is implied.
 
 ## Security Audit 2026-10-08
 
@@ -123,4 +133,14 @@ The fresh ASVS L1 audit verified every threat authored in the 12 phase plans. T-
 | Open | 4 |
 | Bypass variants reproduced | 1 |
 
-The independent post-04-13 audit reproduced a literal-quote bypass in arbitrary diagnostic text: both sanitizers accepted the first quote as a JSON boundary and retained `tail/sensitive.bin`. Repeat sanitation and the frontend diagnostic/crash-reason record also retained the suffix; the qualification runner, receipt JSON and printed reason consume the same exposed text. The new escaped-quote tests do not cover this input. T-04-11, T-04-15, T-04-18 and T-04-20 remain high/open pending a corrective plan and another independent audit. No GUI launch was repeated.
+The independent post-04-13 audit reproduced a literal-quote bypass in arbitrary diagnostic text. Plan 04-14 repaired that case and the fresh post-04-14 audit verified the declared plan mitigations; a separate code review then reproduced a newline-boundary bypass. T-04-11, T-04-15, T-04-18 and T-04-20 remain high/open pending redaction through the complete diagnostic value and another independent audit. No GUI launch was repeated.
+
+## Security Audit 2026-10-08
+
+| Metric | Count |
+|---|---|
+| Threats found | 46 |
+| Closed | 42 |
+| Open | 4 |
+
+The fresh ASVS L1 audit verified the Phase 04 threat register. T-04-11, T-04-15, T-04-18 and T-04-20 remain HIGH/open as directed. The independent review separately found a newline-containing path variant within this same disclosure scope; the security count does not treat that variant as a resolved risk. HOST-02 and frontend QUAL-03 remain unknown/Pending because no functioning pinned RetroArch observation was available.

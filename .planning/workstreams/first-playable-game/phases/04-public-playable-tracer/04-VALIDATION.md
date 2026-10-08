@@ -81,14 +81,20 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 
 | Review Finding | Severity | Existing Threat Scope | Disposition |
 |----------------|----------|-----------------------|-------------|
-| CR-01 | critical | T-04-24, exact numeric receipt types | Fixed by Plan 04-12 exact-integer validation; absent from the fresh narrative review and retained here as fixed history. |
-| CR-02 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, ambiguous path disclosure | Independent security audit and code review both reproduce a raw-literal-quote suffix leak after Plan 04-13; open pending a fresh independent audit of the fix. |
-| WR-01 | warning | Current audit and validation-map evidence boundary | Plan 04-13 reconciles findings and current test denominators; carried open from an earlier review, absent from the fresh review. |
-| WR-02 | warning | T-04-11 / T-04-15 / T-04-18 / T-04-20, complete path redaction | Carried from the earlier review with no independent disposition evidence; open. No separate threat scope. |
-| WR-03 | warning | T-04-13 / T-04-23, receipt row-to-archive binding | Carried from the earlier review with no independent disposition evidence; open. |
-| WR-04 | warning | Validation-map review grammar for informational findings | Plan 04-14 adds `IN-` / `Info` parser and severity-crosswalk regressions; remains open pending fresh independent review. |
+| CR-03 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, newline-containing path disclosure | Fresh post-04-14 review reproduces the suffix leak through both diagnostic sanitizers; open pending whole-value redaction and regression coverage. |
+| WR-05 | warning | Review disposition and validation crosswalk consistency | Fresh review shows the checker can accept contradictory wording such as `fixed; not open` for an `open` record; open pending strict-state parsing and negative controls. |
+| WR-01 | warning | Current audit and validation-map evidence boundary | Carried open from an earlier review without independent disposition evidence. |
+| CR-02 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, raw-literal-quote disclosure | Plan 04-14 closes this specific quote-boundary case and the fresh review confirms its fix; retained as fixed history. The broader disclosure threats remain open for CR-03. |
+| WR-04 | warning | Validation-map review grammar for informational findings | fixed — Plan 04-14 adds `IN-` / `Info` parsing and severity reconciliation; fresh review confirms this specific fix. |
+| CR-01 | critical | T-04-24, exact numeric receipt types | Fixed by Plan 04-12 exact-integer validation; absent from the fresh narrative review and retained as fixed history. |
+| WR-02 | warning | T-04-11 / T-04-15 / T-04-18 / T-04-20, complete path redaction | Carried open from an earlier review without independent disposition evidence; overlaps the disclosure scope now recorded under CR-03. |
+| WR-03 | warning | T-04-13 / T-04-23, receipt row-to-archive binding | Carried open from an earlier review without independent disposition evidence. |
 
 ## Revision Context
+
+### Fresh Post-04-14 Audit and Review
+
+The security audit assessed 46 threats: 42 closed and four high-severity disclosure threats remain open by user direction. The independent code review confirms CR-02 and WR-04 are fixed and identifies CR-03 and WR-05 as current open findings. The disposition ledger and crosswalk above reflect the new review; older Plan 04-13/04-14 notes below describe their execution-time state. HOST-02 and frontend QUAL-03 remain Pending because the required functioning pinned RetroArch context was unavailable; no launch was attempted.
 
 ### Plan 04-15 Frontend Evidence Boundary
 
@@ -100,7 +106,7 @@ The required precondition remains unavailable: the prior pinned RetroArch contex
 - Plan 04-13 observes 20 qualification tests, 26 frontend-smoke tests, and 5 validation-map mutation tests. The privacy tests cover escaped JSON quotes, apostrophes, repeat sanitation, retained and printed receipts, structured stage/status, crash reason, and a supplied temporary-root descendant. The direct gate reruns both real privacy suites and reconciles retained review history with the current narrative.
 - Plan 04-14 adds a synthetic `IN-` finding under `Info`, checks its `info` severity across review, disposition and crosswalk, and rejects a severity mismatch. WR-04 remains open pending independent review; this repository regression does not revise the review report or close security findings.
 - Plan 04-14's final verification ran on source commit `8af6725`: qualification 20/20, frontend 26/26, review-map mutation suite 8/8, and `ctest --preset owned-debug --output-on-failure` 47/47. The direct evidence-map command passed. These are repository checks only and do not close the high disclosure threats or establish actual frontend behavior.
-- These focused suites verify repository behavior only. Security stays blocked with T-04-11/T-04-15/T-04-18/T-04-20 high/open after the independent audit and review reproduced the raw-quote suffix leak. CR-01 is retained as fixed; current CR-02 and WR-04, plus carried WR-01/WR-02/WR-03, remain open in the disposition ledger. HOST-02 and actual frontend QUAL-03 remain unknown until the requested pinned-app observations exist.
+- At the time of Plan 04-14, these focused suites verified repository behavior only; the later fresh review confirms CR-02 and WR-04 are fixed and identifies CR-03/WR-05. Security remains blocked with T-04-11/T-04-15/T-04-18/T-04-20 high/open. HOST-02 and actual frontend QUAL-03 remain Pending until the requested pinned-app observations exist.
 
 ## Actual Frontend Evidence Handoff
 
@@ -173,3 +179,7 @@ The checker mutation suite accepts a repaired CR-01 absent from the fresh review
 | Gaps found | 1 |
 | Resolved | 1 |
 | Escalated | 0 |
+
+## Post-04-15 Review Reconciliation — 2026-10-08
+
+The direct gate `python3 tests/tools/check_phase04_validation_map.py` passes after recording the fresh threat and review dispositions; it also runs the current qualification and frontend privacy suites. The focused mutation suite `python3 -m unittest discover -s tests/tools -p 'test_check_phase04_validation_map.py' -v` ran 8 tests with 4 failures: fixtures still hardcode the former review IDs/disposition wording and do not add a disposition record for the synthetic Info finding. No assertions were relaxed. These fixture failures and the newly reported WR-05 need resolution in a later gap plan; the four high disclosure threats remain open.
