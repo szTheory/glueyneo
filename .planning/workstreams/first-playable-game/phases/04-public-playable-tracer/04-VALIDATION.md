@@ -54,16 +54,19 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | 04-12 T1 tools | 04-12 | 10 | QUAL-03, TRAC-01 | T-04-11, T-04-15, T-04-18, T-04-24 | Exact integer receipt fields and complete ambiguous path redaction, including persisted and printed receipts | repository/privacy regression | `python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py' -v` | Yes | pass, 19 tests on source `33bef8c`; 2026-10-08 |
 | 04-12 T1 frontend | 04-12 | 10 | HOST-02, QUAL-03 | T-04-11, T-04-15, T-04-18, T-04-24 | Complete path spans and supplied temporary-root descendants removed from diagnostics and crash reasons; no GUI launch | GUI-free privacy regression | `python3 -m unittest discover -s tests/libretro -p 'test_retroarch_smoke.py' -v` | Yes | pass, 25 tests on source `33bef8c`; 2026-10-08; actual frontend unknown |
 | 04-12 T2 | 04-12 | 10 | HOST-02, QUAL-03 | T-04-11, T-04-15, T-04-18 | Parse current audit register and unresolved review rows; preserve frontend unknown | evidence-map check | `python3 tests/tools/check_phase04_validation_map.py` | Yes | historical pass recorded in 04-12-SUMMARY.md; current direct gate fails at the hardcoded current-review-ID assertion after review `df9e2c4`; see Nyquist WR-01 |
-| Nyquist WR-01 | 04-12 | 10 | Review audit | WR-01 | Accept reconciled current review IDs and dispositions, while rejecting contradictory records | checker regression | `python3 -m unittest discover -s tests/tools -p 'test_check_phase04_validation_map.py' -v` | Yes | escalated: fails at the hardcoded current review ID assertion (line 110) when repaired CR-01 is absent from a reconciled review/disposition fixture |
+| 04-13 T1 tools | 04-13 | 11 | QUAL-03 | T-04-11, T-04-15, T-04-18, T-04-20 | Escaped JSON quotes and embedded apostrophes cannot expose qualification path suffixes through repeated sanitation, logs, receipts or printed output | privacy regression | `python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py' -v` | Yes | pass, 20 tests on source `04-13`; repository privacy evidence only |
+| 04-13 T1 frontend | 04-13 | 11 | HOST-02, QUAL-03 | T-04-11, T-04-15, T-04-18, T-04-20 | Escaped JSON quotes and embedded apostrophes cannot expose frontend or crash-diagnostic suffixes; actual app remains unobserved | GUI-free privacy regression | `python3 -m unittest discover -s tests/libretro -p 'test_retroarch_smoke.py' -v` | Yes | pass, 26 tests on source `04-13`; no GUI launch |
+| 04-13 T2 | 04-13 | 11 | Review audit | T-04-26 | Current review findings and carried history reconcile across YAML, table, crosswalk, severity, disposition and counts | checker mutation controls | `python3 -m unittest discover -s tests/tools -p 'test_check_phase04_validation_map.py' -v` | Yes | pass, 5 tests; direct gate runs both current privacy suites |
+| Nyquist WR-01 | 04-12 | 10 | Review audit | WR-01 | Accept reconciled current review IDs and dispositions, while rejecting contradictory records | checker regression | `python3 -m unittest discover -s tests/tools -p 'test_check_phase04_validation_map.py' -v` | Yes | escalated: historical result failed at the hardcoded current review ID assertion (line 110) when repaired CR-01 was absent from a reconciled review/disposition fixture |
 
 ## Threat Coverage
 
 | Threat | Evidence and disposition |
 |--------|--------------------------|
-| T-04-11 information disclosure | Plan 04-10 adds whitespace-containing path redaction regressions in the tools and frontend suites. Retained evidence stays under ignored `build/`; private media is not copied into tracked output. Finding remains open pending independent audit. |
+| T-04-11 information disclosure | Plan 04-13 adds escaped-quote, apostrophe, second-pass, retained-log, receipt and printed-output regressions. Synthetic roots and suffixes are absent from captured sinks. Finding remains open pending independent audit. |
 | T-04-12 repudiation | Receipt records source revision and selected source hashes, compiler/CMake/SDK/OS/architecture, fixture/core/frontend hashes, candidate revisions, command status and log hashes. |
 | T-04-SC dependency closure | Z80 and ymfm immutable source checks passed; YM2610 report records the pinned source and license evidence. Candidate outcomes remain separate from runtime integration. |
-| T-04-20 → T-04-11/T-04-15/T-04-18 | Plan 04-10 adds complete path-span redaction and path-with-spaces regression coverage; these older high findings remain open pending independent audit. |
+| T-04-20 → T-04-11/T-04-15/T-04-18 | Plan 04-13 recognizes a closing quote only inside a valid escaped JSON string; otherwise it removes the ambiguous line remainder. The four high disclosure findings remain open pending independent audit. |
 | T-04-21 → T-04-16 | Plan 04-10 checks the pinned public fixture digest before frontend launch; T-04-16 is closed by the current independent audit. Actual app behavior remains unknown. |
 | T-04-22 → T-04-17 | Plan 04-10 validates the pinned bundle identifier before quit commands; T-04-17 is closed by the current independent audit. |
 | T-04-23 → T-04-13 | Plan 04-11 derives archive rows from committed member bytes and rejects forged receipt rows; T-04-13 is closed by the current independent audit, while carried WR-03 remains open pending independent review. |
@@ -73,18 +76,19 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 
 | Review Finding | Existing Threat Scope | Disposition |
 |----------------|-----------------------|-------------|
-| CR-01 | T-04-24, exact numeric receipt types | Plan 04-12 fixes the boolean-count bypass and the fresh review no longer reports CR-01. The stale current-state row remains in the disposition/crosswalk and is part of Nyquist WR-01. |
-| CR-02 | T-04-11 / T-04-15 / T-04-18, ambiguous path disclosure | Plan 04-12 supplies complete-span regressions. Disposition remains open pending independent review. |
-| WR-01 | Current audit and validation-map evidence boundary | Current stale-checker finding, distinct from historical WR-01 fixture identity. Disposition remains open pending independent review. |
-| WR-02 | T-04-11 / T-04-15 / T-04-18 / T-04-20, complete path redaction | Corroborates the same disclosure findings; no separate threat scope. Disposition remains open pending independent review. |
-| WR-03 | T-04-13 / T-04-23, receipt row-to-archive binding | Same finding scope; code repair is present and disposition remains open pending independent review. |
+| CR-01 | T-04-24, exact numeric receipt types | Fixed by Plan 04-12 exact-integer validation; absent from the fresh narrative review and retained here as fixed history. |
+| CR-02 | T-04-11 / T-04-15 / T-04-18, ambiguous path disclosure | Plan 04-13 adds escaped-quote and apostrophe cases across retained/printed paths. Open pending independent security and code-review audits. |
+| WR-01 | Current audit and validation-map evidence boundary | Plan 04-13 reconciles findings and current test denominators; current review disposition remains open pending independent review. |
+| WR-02 | T-04-11 / T-04-15 / T-04-18 / T-04-20, complete path redaction | Carried from the earlier review with no independent disposition evidence; open. No separate threat scope. |
+| WR-03 | T-04-13 / T-04-23, receipt row-to-archive binding | Carried from the earlier review with no independent disposition evidence; open. |
 
 ## Revision Context
 
-- Plan 04-07's immutable source snapshot implementation is recorded in [04-07-SUMMARY.md](04-07-SUMMARY.md), including commit `36df674`. [04-VERIFICATION.md](04-VERIFICATION.md) preserves that source identity evidence. Plan 04-12 fixes the later boolean-count bypass; the fresh review no longer reports CR-01, but its stale disposition/crosswalk row remains unresolved under Nyquist WR-01.
+- Plan 04-07's immutable source snapshot implementation is recorded in [04-07-SUMMARY.md](04-07-SUMMARY.md), including commit `36df674`. [04-VERIFICATION.md](04-VERIFICATION.md) preserves that source identity evidence. Plan 04-12 fixes the later boolean-count bypass. Plan 04-13 retains CR-01 as fixed history while reconciling the fresh review and crosswalk.
 - Plan 04-10's historical focused runs were 14 tools tests and 24 frontend smoke tests, recorded in [04-10-SUMMARY.md](04-10-SUMMARY.md) at commit `e7aa255`. After the Plan 04-11 implementation commit `a2ea677`, the tools suite was rerun with 17 tests and the frontend smoke suite with 24 tests. The three added tools regressions account for the tools denominator change.
 - Plan 04-12 reran the focused suites on implementation `33bef8c`: 19 tools tests and 25 frontend smoke tests passed. Earlier denominators above remain dated history. New controls cover booleans equal to integer values, punctuation/phrase path components, quoted controls and supplied temporary-root descendants. Conservative unquoted redaction intentionally removes ambiguous trailing status; status preceding a private span and bounded structured diagnostics survive.
-- These focused suites verify repository behavior only. The current independent audit has T-04-13/T-04-16/T-04-17 closed and T-04-11/T-04-15/T-04-18 open, with security blocked. The disposition ledger still has five open rows, including CR-01 which the fresh review no longer reports; WR-01 keeps that map unreconciled. HOST-02 and actual frontend QUAL-03 remain unknown until the requested pinned-app observations exist.
+- Plan 04-13 observes 20 qualification tests, 26 frontend-smoke tests, and 5 validation-map mutation tests. The privacy tests cover escaped JSON quotes, apostrophes, repeat sanitation, retained and printed receipts, structured stage/status, crash reason, and a supplied temporary-root descendant. The direct gate reruns both real privacy suites and reconciles retained review history with the current narrative.
+- These focused suites verify repository behavior only. Security stays blocked with T-04-11/T-04-15/T-04-18/T-04-20 high/open pending independent security audit. CR-01 is retained as fixed after exact-integer validation; current CR-02 and WR-01, plus carried WR-02/WR-03, remain open in the disposition ledger. HOST-02 and actual frontend QUAL-03 remain unknown until the requested pinned-app observations exist.
 
 ## Actual Frontend Evidence Handoff
 
@@ -134,8 +138,8 @@ Every plan task has an automated command or an explicit human-evidence route, bu
 
 ## Historical Post-Audit Execution Checks (before Plan 04-12; superseded)
 
-- At that earlier source state, `python3 tests/tools/check_phase04_validation_map.py` failed because it expected six open security findings. Plan 04-12 refreshed the threat assertions; the current gate instead fails at the hardcoded current review-ID assertion documented under Nyquist WR-01. No assertions or goldens were relaxed to make either run pass.
-- Read-only reproductions confirmed that a repository receipt with a one-byte row changed from `bytes: 1` to `bytes: true` and a recomputed aggregate digest is accepted, and that commas inside unquoted private paths leave suffixes in both qualification and frontend diagnostic output. These are current code-review blockers.
+- At the pre-04-12 source state, `python3 tests/tools/check_phase04_validation_map.py` failed because it expected six open security findings. After Plan 04-12, the historical direct-gate failure was the hardcoded current review-ID assertion documented under Nyquist WR-01. No assertions or goldens were relaxed to make either historical run pass.
+- Read-only reproductions at their recorded revisions confirmed a forged boolean-byte receipt and disclosure through then-current quoted/unquoted path sanitizers. Plan 04-12 repaired the boolean case; Plan 04-13 adds escaped-quote and apostrophe regression coverage for the sanitizer boundary.
 - The earlier post-wave CTest result was 46/47, with only `owned_cpu_inventory_check` failing because of stale CPU identity/source-manifest and strict compile-command expectations. Plan 04-12 later refreshed that evidence and its summary records 47/47. The pinned RetroArch GUI result remains unknown; no new GUI observation was made.
 
 ## Validation Audit 2026-10-08
@@ -145,3 +149,7 @@ Every plan task has an automated command or an explicit human-evidence route, bu
 | Gaps found | 1 |
 | Resolved | 0 |
 | Escalated | 1 |
+
+## Plan 04-13 Reconciliation Run — 2026-10-08
+
+The checker mutation suite accepts a repaired CR-01 absent from the fresh review, current CR-02/WR-01 and carried WR-02/WR-03, and a new finding when every record agrees. It rejects severity, disposition, duplicate or missing IDs, count, crosswalk, security-register, and frontend-status contradictions. The direct gate reruns the real 20-test and 26-test privacy suites. These repository checks do not disposition the current review findings or close security threats.

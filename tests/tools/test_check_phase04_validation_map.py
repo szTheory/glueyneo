@@ -38,7 +38,11 @@ def reconciled_review_documents(directory: Path) -> dict[str, Path]:
         copied[name] = destination
 
     validation = copied["VALIDATION"].read_text(encoding="utf-8")
-    validation = re.sub(r"(?m)^\| CR-01 \|[^\n]*\n", "", validation)
+    validation = re.sub(
+        r"(?m)^\| CR-01 \|[^\n]*$",
+        "| CR-01 | T-04-24 receipt numeric types | Fixed after exact-integer receipt validation |",
+        validation,
+    )
     validation = validation.replace(
         "The historical CR-01 identity finding was fixed, but the current reused CR-01 ID names a distinct boolean-count bypass and remains open in the current disposition record.",
         "The CR-01 boolean-count bypass was fixed by exact-integer checks and is absent from the fresh review.",
@@ -65,22 +69,12 @@ def reconciled_review_documents(directory: Path) -> dict[str, Path]:
     frontmatter = sections[1].replace(block.group(0), updated_block)
     frontmatter = re.sub(r"(?m)^open: 5$", "open: 4", frontmatter)
     body = re.sub(r"(?m)^\| CR-01 \|[^\n]*$", "| CR-01 | critical | fixed | 04-12 exact integer receipt validation |", sections[2])
+    body = body.replace("| CR-02 | critical | open | - |", "| CR-02 | critical | open | 04-REVIEW.md current |")
+    body = body.replace("| WR-01 | warning | open | - |", "| WR-01 | warning | open | 04-REVIEW.md current |")
+    body = body.replace("| WR-02 | warning | open | - (not in the current review) |", "| WR-02 | warning | open | Carried from prior review; no new independent evidence |")
+    body = body.replace("| WR-03 | warning | open | - (not in the current review) |", "| WR-03 | warning | open | Carried from prior review; no new independent evidence |")
     disposition_path.write_text(f"---{frontmatter}---{body}", encoding="utf-8")
-    _append_plan13_map_rows(copied["VALIDATION"])
     return copied
-
-
-def _append_plan13_map_rows(path: Path) -> None:
-    text = path.read_text(encoding="utf-8")
-    marker = "| Nyquist WR-01 |"
-    index = text.index(marker)
-    text = text[:index] + (
-        "| 04-13 T1 tools | 04-13 | 11 | QUAL-03 | T-04-11/T-04-15/T-04-20 | Quoted path suffixes removed from qualification sinks | privacy regression | `python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py' -v` | Yes | pass, 20 tests on source `04-13` |\n"
-        "| 04-13 T1 frontend | 04-13 | 11 | HOST-02, QUAL-03 | T-04-18/T-04-20 | Quoted path suffixes removed from frontend diagnostics; actual app remains unknown | GUI-free privacy regression | `python3 -m unittest discover -s tests/libretro -p 'test_retroarch_smoke.py' -v` | Yes | pass, 26 tests on source `04-13`; no GUI launch |\n"
-        "| 04-13 T2 | 04-13 | 11 | Review audit | T-04-26 | Current review and retained history reconcile across records | checker mutation controls | `python3 -m unittest discover -s tests/tools -p 'test_check_phase04_validation_map.py' -v` | Yes | pass |\n"
-        + text[index:]
-    )
-    path.write_text(text, encoding="utf-8")
 
 
 def mutate_document(documents: dict[str, Path], name: str, transform) -> None:
@@ -113,23 +107,29 @@ class ValidationMapReconciliationTest(unittest.TestCase):
                 "## Warnings\n", "## Warnings\n\n### WR-04: New current warning [WARNING]\n\n**Issue:** Synthetic finding.\n\n**Fix:** Track it.\n", 1))
             path = documents["DISPOSITION"]
             content = path.read_text(encoding="utf-8")
-            content = content.replace("open: 4\ntotal: 5", "open: 5\ntotal: 6")
-            content = content.replace("recorded:", '  - id: WR-04\n    severity: warning\n    disposition: open\n    title: "New current warning"\nrecorded:')
+            content = content.replace(
+                '    title: "Repository-backed receipt validation accepts forged file-content hashes"\nopen: 4',
+                '    title: "Repository-backed receipt validation accepts forged file-content hashes"\n'
+                '  - id: WR-04\n    severity: warning\n    disposition: open\n    title: "New current warning"\nopen: 5',
+            )
+            content = content.replace("total: 5", "total: 6", 1)
             content = content.replace("| CR-01 | critical | fixed | 04-12 exact integer receipt validation |", "| CR-01 | critical | fixed | 04-12 exact integer receipt validation |\n| WR-04 | warning | open | 04-13 current review |")
             path.write_text(content, encoding="utf-8")
             validation = documents["VALIDATION"]
             text = validation.read_text(encoding="utf-8")
-            row = "| Review Finding | Existing Threat Scope | Disposition |\n|----------------|----------------------|-------------|\n"
-            text = text.replace(row, row + "| WR-04 | new review scope | Open pending independent review |\n")
+            separator = "|----------------|-----------------------|-------------|\n"
+            text = text.replace(separator, separator + "| WR-04 | new review scope | Open pending independent review |\n")
             validation.write_text(text, encoding="utf-8")
             self.run_checker(documents)
 
     def test_checker_rejects_contradictory_records(self) -> None:
         mutations = {
             "yaml disposition": lambda text: text.replace("disposition: open", "disposition: fixed", 1),
+            "yaml severity": lambda text: text.replace("severity: critical", "severity: warning", 1),
             "table disposition": lambda text: text.replace("| CR-02 | critical | open |", "| CR-02 | critical | fixed |"),
             "severity": lambda text: text.replace("| CR-02 | critical | open |", "| CR-02 | warning | open |"),
             "duplicate id": lambda text: text.replace("| CR-02 | critical | open |", "| CR-02 | critical | open |\n| CR-02 | critical | open |"),
+            "drop yaml id": lambda text: re.sub(r"(?ms)^  - id: WR-03\n.*?(?=^  - id:|^open:)", "", text),
             "count": lambda text: text.replace("open: 4", "open: 99", 1),
         }
         for label, transform in mutations.items():
@@ -154,7 +154,8 @@ class ValidationMapReconciliationTest(unittest.TestCase):
         mutations = (
             ("security count", "SECURITY", lambda text: text.replace("threats_open: 4", "threats_open: 3", 1)),
             ("security row", "SECURITY", lambda text: re.sub(r"(?m)^(\| T-04-11 \|[^\n]*\| )open(\s*\|)$", r"\1closed\2", text)),
-            ("frontend observed", "VERIFICATION", lambda text: text.replace("? NEEDS HUMAN", "pass", 1)),
+            ("HOST-02 observed", "VERIFICATION", lambda text: re.sub(r"(?m)^(\| HOST-02 \|.*\| )\? NEEDS HUMAN( \|.*)$", r"\1pass\2", text)),
+            ("QUAL-03 observed", "VERIFICATION", lambda text: re.sub(r"(?m)^(\| QUAL-03 \|.*\| )\? NEEDS HUMAN( \|.*)$", r"\1pass\2", text)),
         )
         for label, name, transform in mutations:
             with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:

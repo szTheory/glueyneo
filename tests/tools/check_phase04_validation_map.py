@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Re-run the Phase 04 focused suites and check their validation-map claims."""
+"""Re-run current Phase 04 suites and reconcile their evidence records."""
 
 from __future__ import annotations
 
@@ -36,6 +36,12 @@ def table_rows(document: str, header: str) -> list[list[str]]:
     return rows
 
 
+def frontmatter(document: str, label: str) -> str:
+    sections = document.split("---", 2)
+    require(len(sections) == 3 and sections[0].strip() == "", f"{label} lacks YAML frontmatter")
+    return sections[1]
+
+
 def run_suite(command: str) -> tuple[int, int, str]:
     result = subprocess.run(
         shlex.split(command), cwd=ROOT, text=True, stdout=subprocess.PIPE,
@@ -49,6 +55,46 @@ def run_suite(command: str) -> tuple[int, int, str]:
     return result.returncode, int(count.group(1)), result.stdout
 
 
+def parse_review_findings(review: str) -> dict[str, tuple[str, str]]:
+    findings: dict[str, tuple[str, str]] = {}
+    section = ""
+    for line in review.splitlines():
+        if line.startswith("## "):
+            section = line[3:].strip().lower()
+        match = re.match(r"^### ((?:CR|WR)-\d+):\s*(.*?)\s*$", line)
+        if not match:
+            continue
+        finding_id, title = match.groups()
+        require(finding_id not in findings, f"duplicate current review finding {finding_id}")
+        if section == "critical issues":
+            severity = "critical"
+        elif section == "warnings":
+            severity = "warning"
+        else:
+            raise AssertionError(f"phase04 validation map: {finding_id} is outside a severity section")
+        findings[finding_id] = (severity, title)
+    return findings
+
+
+def parse_disposition_yaml(document: str) -> dict[str, dict[str, str]]:
+    yaml = frontmatter(document, "disposition")
+    findings_section = re.search(r"(?ms)^findings:\s*\n(.*?)(?=^[A-Za-z_][A-Za-z0-9_-]*:|\Z)", yaml)
+    require(findings_section is not None, "disposition YAML has no findings list")
+    blocks = re.findall(r"(?ms)^  - id: (\S+)\n(.*?)(?=^  - id: |\Z)", findings_section.group(1))
+    records: dict[str, dict[str, str]] = {}
+    for finding_id, block in blocks:
+        require(finding_id not in records, f"duplicate disposition YAML ID {finding_id}")
+        record: dict[str, str] = {}
+        for key in ("severity", "disposition", "title"):
+            value = re.search(rf"(?m)^    {key}:\s*(.*?)\s*$", block)
+            require(value is not None, f"{finding_id} lacks YAML {key}")
+            record[key] = value.group(1).strip('"')
+        require(record["disposition"] in {"open", "fixed", "skipped", "deferred"},
+                f"{finding_id} has invalid disposition {record['disposition']!r}")
+        records[finding_id] = record
+    return records
+
+
 def main() -> None:
     validation = VALIDATION.read_text(encoding="utf-8")
     security = SECURITY.read_text(encoding="utf-8")
@@ -56,108 +102,117 @@ def main() -> None:
     disposition = DISPOSITION.read_text(encoding="utf-8")
     review = REVIEW.read_text(encoding="utf-8")
 
+    # The current row must reflect this exact source's run. Prior rows remain dated history.
     header = "| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |"
     rows = table_rows(validation, header)
-    # Earlier rows are dated history, with their original denominators intact.
-    selected = [row for row in rows if row[1] == "04-12" and row[0].startswith("04-12 T1")]
-    require(len(selected) == 2, "validation map lacks the two current 04-12 focused suite rows")
-
+    selected = [row for row in rows if len(row) == 10 and row[1] == "04-13" and row[0].startswith("04-13 T1")]
+    require(len(selected) == 2, "validation map lacks the two current 04-13 privacy-suite rows")
     expected_commands = {
         "python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py' -v",
         "python3 -m unittest discover -s tests/libretro -p 'test_retroarch_smoke.py' -v",
     }
-    mapped_commands: set[str] = set()
-    rows_by_command: dict[str, list[list[str]]] = {}
+    mapped: dict[str, list[list[str]]] = {}
     for row in selected:
-        require(len(row) == 10, f"malformed validation-map row for {row[0]}")
         commands = re.findall(r"`([^`]+)`", row[7])
-        require(bool(commands), f"{row[0]} has no runnable command in its command cell")
-        mapped_commands.update(commands)
-        for command in commands:
-            rows_by_command.setdefault(command, []).append(row)
-        require("pass" in row[9].lower(), f"{row[0]} does not record a passing observed result")
-    require(mapped_commands == expected_commands,
-            f"focused command rows differ from the required exact commands: {sorted(mapped_commands)}")
-
-    observed: dict[str, tuple[int, int, str]] = {}
-    for command in sorted(mapped_commands):
-        observed[command] = run_suite(command)
-    for command, command_rows in rows_by_command.items():
-        actual_status, actual_count, _output = observed[command]
+        require(len(commands) == 1, f"{row[0]} must identify one exact suite command")
+        mapped.setdefault(commands[0], []).append(row)
+        require("pass" in row[9].lower(), f"{row[0]} does not record a passing result")
+        require(row[8].lower() == "yes", f"{row[0]} test file is not recorded present")
+    require(set(mapped) == expected_commands, "current focused-suite commands differ from the required pair")
+    observed = {command: run_suite(command) for command in sorted(expected_commands)}
+    for command, command_rows in mapped.items():
+        status, count, _output = observed[command]
         for row in command_rows:
-            claimed = re.search(r"pass,\s*(\d+) tests", row[9])
-            require(claimed is not None, f"{row[0]} lacks an explicit observed test count")
-            require(actual_status == 0 and int(claimed.group(1)) == actual_count,
-                    f"{row[0]} records {claimed.group(1)} tests but {command!r} observed {actual_count}")
+            claimed = re.search(r"pass,\s*(\d+) tests", row[9], re.IGNORECASE)
+            require(claimed is not None, f"{row[0]} lacks its observed test denominator")
+            require(status == 0 and int(claimed.group(1)) == count,
+                    f"{row[0]} records {claimed.group(1)} tests but {command!r} observed {count}")
 
     threat_rows = table_rows(validation, "| Threat | Evidence and disposition |")
-    crosswalks = {row[0]: row[1] for row in threat_rows if len(row) == 2}
-    expected_crosswalks = {
+    threat_map = {row[0]: row[1] for row in threat_rows if len(row) == 2}
+    required_threat_links = {
         "T-04-20 → T-04-11/T-04-15/T-04-18",
         "T-04-21 → T-04-16",
         "T-04-22 → T-04-17",
         "T-04-23 → T-04-13",
         "T-04-24 receipt numeric types",
     }
-    require(expected_crosswalks <= set(crosswalks), "one or more T-04-20..23 old-finding crosswalks are missing")
+    require(required_threat_links <= set(threat_map), "historical T-04-20..24 threat coverage is missing")
     for row in selected:
-        refs = row[4]
-        require(all(f"T-04-{number}" in refs for number in ("11", "15", "18", "24")),
-                f"{row[0]} omits an applicable Plan 04-12 threat reference")
-    review_crosswalks = table_rows(validation, "| Review Finding | Existing Threat Scope | Disposition |")
-    review_links = {row[0]: " ".join(row[1:]) for row in review_crosswalks if len(row) == 3}
-    current_findings = set(re.findall(r"(?m)^### ((?:CR|WR)-\d+):", review))
-    require(current_findings == {"CR-01", "CR-02", "WR-01"}, "current review IDs changed")
-    unresolved = current_findings | {"WR-02", "WR-03"}
-    require(set(review_links) == unresolved, "review finding crosswalk differs from unresolved findings")
-    require(all("remains open pending independent review" in review_links[finding].lower()
-                for finding in unresolved),
-            "a review finding is not kept open pending independent review")
-    require("no separate threat scope" in review_links["WR-02"].lower(),
-            "WR-02 is described as separate from its existing threat scope")
+        require(all(f"T-04-{number}" in row[4] for number in ("11", "15", "18", "20")),
+                f"{row[0]} omits a relevant current disclosure threat")
 
-    frontmatter = security.split("---", 2)[1]
-    require(re.search(r"(?m)^status: blocked$", frontmatter) is not None,
-            "security status is no longer blocked")
+    review_findings = parse_review_findings(review)
+    records = parse_disposition_yaml(disposition)
+    for finding_id, (severity, _title) in review_findings.items():
+        require(finding_id in records, f"current review finding {finding_id} has no disposition record")
+        require(records[finding_id]["severity"] == severity,
+                f"{finding_id} severity differs between current review and disposition")
+        require(records[finding_id]["disposition"] == "open",
+                f"current finding {finding_id} is recorded as {records[finding_id]['disposition']}")
+
+    disposition_rows = table_rows(disposition, "| Finding | Severity | Disposition | Source |")
+    require(all(len(row) == 4 for row in disposition_rows), "malformed disposition table row")
+    table_records: dict[str, tuple[str, str, str]] = {}
+    for row in disposition_rows:
+        finding_id, severity, state, source = row
+        require(finding_id not in table_records, f"duplicate disposition table ID {finding_id}")
+        require(source and source != "-", f"{finding_id} has no provenance source")
+        table_records[finding_id] = (severity, state, source)
+    require(set(table_records) == set(records), "disposition YAML and table IDs differ")
+    require(set(review_findings) <= set(records), "a current review finding is missing from disposition history")
+    for finding_id, record in records.items():
+        require(table_records[finding_id][:2] == (record["severity"], record["disposition"]),
+                f"{finding_id} severity or disposition differs between YAML and table")
+    yaml_open = re.search(r"(?m)^open: (\d+)$", frontmatter(disposition, "disposition"))
+    yaml_total = re.search(r"(?m)^total: (\d+)$", frontmatter(disposition, "disposition"))
+    require(yaml_open is not None and int(yaml_open.group(1)) == sum(r["disposition"] == "open" for r in records.values()),
+            "disposition YAML open count differs from its records")
+    require(yaml_total is not None and int(yaml_total.group(1)) == len(records),
+            "disposition YAML total count differs from its records")
+
+    crosswalk_rows = table_rows(validation, "| Review Finding | Existing Threat Scope | Disposition |")
+    require(all(len(row) == 3 for row in crosswalk_rows), "malformed review-finding crosswalk")
+    crosswalk: dict[str, str] = {}
+    for finding_id, scope, recorded_state in crosswalk_rows:
+        require(finding_id not in crosswalk, f"duplicate validation crosswalk ID {finding_id}")
+        require(scope.strip(), f"{finding_id} has no existing threat scope")
+        crosswalk[finding_id] = recorded_state.lower()
+    require(set(crosswalk) == set(records), "review crosswalk differs from retained disposition history")
+    for finding_id, record in records.items():
+        require(re.search(rf"\b{re.escape(record['disposition'])}\b", crosswalk[finding_id]) is not None,
+                f"{finding_id} disposition differs between crosswalk and records")
+    require("04-07-SUMMARY.md" in validation and "04-VERIFICATION.md" in validation,
+            "validation map does not preserve source revision context")
+
+    security_yaml = frontmatter(security, "security")
+    require(re.search(r"(?m)^status: blocked$", security_yaml) is not None,
+            "security status is not blocked")
     register = table_rows(security, "| Threat ID | Category | Component | Severity | Disposition | Mitigation | Status |")
     require(all(len(row) == 7 for row in register), "malformed security register row")
-    threats = {row[0]: row[-1] for row in register}
-    require(len(threats) == len(register), "duplicate security register IDs")
-    require(re.search(r"(?m)^threats_open: 3$", frontmatter) is not None,
-            "security register no longer reports three open threats")
-    require({key for key, value in threats.items() if value == "open"} == {"T-04-11", "T-04-15", "T-04-18"},
-            "open security register rows differ from the current audit")
-    for threat in ("T-04-13", "T-04-16", "T-04-17"):
-        require(threats.get(threat) == "closed", f"audited closed finding {threat} is missing or reopened")
+    threats: dict[str, tuple[str, str, str]] = {}
+    for row in register:
+        threat_id, _category, _component, severity, action, _mitigation, status = row
+        require(threat_id not in threats, f"duplicate security register ID {threat_id}")
+        threats[threat_id] = (severity, action, status)
+    open_threats = {key for key, value in threats.items() if value[2] == "open"}
+    high_open = {key for key, value in threats.items() if value[0] == "high" and value[2] == "open"}
+    count = re.search(r"(?m)^threats_open: (\d+)$", security_yaml)
+    require(count is not None and int(count.group(1)) == len(open_threats),
+            "security frontmatter open count differs from register")
+    required_open = {"T-04-11", "T-04-15", "T-04-18", "T-04-20"}
+    require(high_open == required_open, "four high/open disclosure threats differ from the active security register")
+    require(open_threats == required_open, "unexpected open security threat outside the four disclosure findings")
 
     requirement_rows = table_rows(verification, "| Requirement | Source Plan | Description | Status | Evidence |")
     requirement_status = {row[0]: row[3] for row in requirement_rows if len(row) == 5}
     for requirement in ("HOST-02", "QUAL-03"):
         require(requirement_status.get(requirement) == "? NEEDS HUMAN",
-                f"{requirement} is not explicitly marked human-needed")
-    require("actual frontend load remains unobserved" in verification.lower(),
+                f"{requirement} is not explicitly marked as awaiting human evidence")
+    require("actual frontend load is unobserved" in verification.lower(),
             "verification no longer states that actual frontend load is unobserved")
 
-    disposition_frontmatter = disposition.split("---", 2)[1]
-    disposition_rows = table_rows(disposition, "| Finding | Severity | Disposition | Source |")
-    require(all(len(row) == 4 for row in disposition_rows), "malformed disposition table")
-    require({row[0] for row in disposition_rows} == unresolved and len(disposition_rows) == len(unresolved),
-            "disposition table differs from unresolved findings")
-    yaml_ids = re.findall(r"(?m)^  - id: (\S+)$", disposition_frontmatter)
-    require(set(yaml_ids) == unresolved and len(yaml_ids) == len(unresolved), "disposition YAML IDs differ from table")
-    for finding in unresolved:
-        block = re.search(rf"(?ms)^  - id: {finding}\n(.*?)(?=^  - id:|\Z)", disposition_frontmatter)
-        require(block is not None and re.search(r"(?m)^    disposition: open$", block.group(1)) is not None,
-                f"{finding} is not open in disposition YAML")
-        severity = "critical" if finding.startswith("CR-") else "warning"
-        require(re.search(rf"(?m)^\| {finding} \| {severity} \| open \|", disposition) is not None,
-                f"{finding} is not open in the disposition table")
-    require(re.search(rf"(?m)^open: {len(disposition_rows)}$", disposition_frontmatter) is not None,
-            "disposition YAML open counter differs from its unresolved rows")
-    require("04-07-SUMMARY.md" in validation and "04-VERIFICATION.md" in validation,
-            "validation map does not preserve the CR-01 source revision context")
-
-    print("Phase 04 validation map matches current focused test results and preserves all open gates.")
+    print("Phase 04 validation map matches current focused test results and preserves open security and frontend gates.")
 
 
 if __name__ == "__main__":
