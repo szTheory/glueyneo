@@ -143,7 +143,7 @@ class BundleIdentifierTests(unittest.TestCase):
                         "CFBundleShortVersionString": smoke.EXPECTED_VERSION,
                         "CFBundleExecutable": "RetroArch",
                         "CFBundleIdentifier": bundle_id,
-                    }))
+                    }, fmt=plistlib.FMT_BINARY))
                     args = type("Args", (), {
                         "retroarch": bundle, "core": directory / "core", "content": directory / "fixture",
                     })()

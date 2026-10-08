@@ -24,6 +24,7 @@ EXPECTED_EXECUTABLE_SHA256 = (
     "ed90b54434a2899de0ddbfed59f335255fb462c8691bd970a1a761ebb5656d65"
 )
 EXPECTED_FIXTURE_SHA256 = "59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0"
+EXPECTED_BUNDLE_IDENTIFIER = "com.libretro.dist.RetroArch"
 WIDTH = 320
 HEIGHT = 224
 RIGHT_KEY_CODE = 124
@@ -437,25 +438,27 @@ def write_frontend_config(work: Path, screenshots: Path) -> Path:
     return config
 
 
-def request_frontend_quit(bundle_id: str, process: subprocess.Popen[bytes], timeout: float) -> None:
-    if process.poll() is None:
+def request_frontend_quit(bundle_id: str, process: subprocess.Popen[bytes], timeout: float) -> bool:
+    if process.poll() is not None:
+        return process.returncode == 0
+    if bundle_id == EXPECTED_BUNDLE_IDENTIFIER:
         try:
             subprocess.run(
                 ["/usr/bin/osascript", "-e", f'tell application id "{bundle_id}" to quit'],
-                check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 timeout=min(8.0, timeout),
             )
+            process.wait(timeout=min(8.0, timeout))
+            return process.returncode == 0
         except (OSError, subprocess.SubprocessError):
             pass
-        try:
-            process.wait(timeout=min(5.0, timeout))
-        except subprocess.TimeoutExpired:
-            process.terminate()
-            try:
-                process.wait(timeout=2.0)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=2.0)
+    process.terminate()
+    try:
+        process.wait(timeout=2.0)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=2.0)
+    return process.returncode == 0
 
 
 def run_launch_probe(
@@ -556,6 +559,11 @@ def validate_inputs(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[st
         raise SmokeBlocked("identity", "RetroArch bundle or Info.plist is missing")
     with plist_path.open("rb") as stream:
         info = plistlib.load(stream)
+    bundle_id = info.get("CFBundleIdentifier")
+    if (not isinstance(bundle_id, str) or
+            bundle_id != EXPECTED_BUNDLE_IDENTIFIER or
+            re.fullmatch(r"[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+", bundle_id) is None):
+        raise SmokeBlocked("identity", "RetroArch bundle identifier does not match the pinned application")
     version = str(info.get("CFBundleShortVersionString", ""))
     executable_name = str(info.get("CFBundleExecutable", ""))
     executable = bundle / "Contents" / "MacOS" / executable_name
@@ -582,7 +590,7 @@ def validate_inputs(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[st
         "os": f"macOS {platform.mac_ver()[0]} {platform.machine()}",
         "input_mapping": "RetroPad RIGHT <- Right Arrow; LEFT control <- Left Arrow",
         "control": "local keyboard and frontend screenshots; no network command interface",
-        "bundle_id": str(info.get("CFBundleIdentifier", "")),
+        "bundle_id": bundle_id,
     }
     return executable, core, content, identity
 
@@ -647,19 +655,8 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                 if right_marker[1] != first_marker[1] or right_marker[2] != first_marker[2] or right_marker[0] <= first_marker[0]:
                     raise SmokeBlocked("input", "mapped Right Arrow did not move the guest marker right")
 
-                bundle_id = identity["bundle_id"]
-                try:
-                    subprocess.run(
-                        ["/usr/bin/osascript", "-e",
-                         f'tell application id "{bundle_id}" to quit'],
-                        check=True, stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL, timeout=8,
-                    )
-                    process.wait(timeout=args.timeout)
-                except (OSError, subprocess.SubprocessError) as error:
-                    raise SmokeBlocked("unload", "RetroArch did not quit cleanly after loaded content") from error
-                if process.returncode != 0:
-                    raise SmokeBlocked("unload", f"RetroArch shutdown status was {process.returncode}")
+                if not request_frontend_quit(identity["bundle_id"], process, args.timeout):
+                    raise SmokeBlocked("unload", "RetroArch did not quit cleanly after loaded content")
                 outcome["observations"] = [
                     "RetroArch launched the requested core and generated content path",
                     "frontend screenshot contained the guest marker and black backdrop",
