@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
-current_plan: 19
-status: executing
-stopped_at: Completed 04-19-PLAN.md; awaiting execute-phase post hooks
-last_updated: "2026-10-08T23:31:54.613Z"
+current_plan: 20
+status: verifying
+stopped_at: Completed 04-20-PLAN.md
+last_updated: "2026-10-08T23:50:16.582Z"
 last_activity: 2026-10-08
-last_activity_desc: Phase 04 planning complete — 20 plans ready
-state_head: 910fc380ed28293efd09d6ebfa388ac88d5542da
+last_activity_desc: Phase 04 execution started
+state_head: a87abde033ce72b95b36969ac5c1ae9587c82226
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 20
-  completed_plans: 19
+  completed_plans: 20
   percent: 0
 ---
 
@@ -30,19 +30,19 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 ## Current Position
 
-Phase: 04 (Public Playable Tracer) — READY TO EXECUTE
+Phase: 04 (Public Playable Tracer) — EXECUTING
 Current Plan: 19 (completed; awaiting fresh post-execution audits and verification)
 Total Plans in Phase: 20
-Status: Awaiting execute-phase post hooks; Phase 04 remains blocked
+Status: Phase complete — ready for verification
 Last activity: 2026-10-08 — Phase 04 execution started
-Last Activity Description: Phase 04 planning complete — 20 plans ready
+Last Activity Description: Phase 04 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 19 (completed)
+**Current Plan:** 20
 
 ## Performance Metrics
 
@@ -70,12 +70,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P17 | 23 min | 2 tasks | 6 files |
 | Phase 04 P18 | 5 min | 3 tasks | 4 files |
 | Phase 04 P19 | 15 min | 3 tasks | 8 files |
+| Phase 04 P20 | 11min | 3 tasks | 5 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-08T23:05:15.500Z
+**Last session:** 2026-10-08T23:50:16.546Z
 
-**Stopped At:** Completed 04-19-PLAN.md; awaiting execute-phase post hooks
+**Stopped At:** Completed 04-20-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
@@ -127,6 +128,9 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 04]: HOST-02 and frontend QUAL-03 remain Pending/unknown without actual pinned-app evidence.
 - [Phase 04]: Retain WR-06/T-04-34 medium/open because independent code review reproduced affirmative frontend-claim paraphrases after bounded repairs.
 - [Phase 04]: Keep HOST-02 and frontend QUAL-03 Pending/unknown and manual-only until direct pinned RetroArch observations exist.
+- [Phase 04]: WR-02 is fixed after independent current-revision review confirms the live qualification denominator and rejects stale 23/23.
+- [Phase 04]: WR-01 and WR-06/T-04-34 remain open; the four directed high-severity threats and actual pinned frontend unknown remain unresolved.
+- [Phase 04]: Current-source mutation fixtures preserve the actual report baseline and compare qualification counts with a live suite run.
 
 ### Blockers
 
