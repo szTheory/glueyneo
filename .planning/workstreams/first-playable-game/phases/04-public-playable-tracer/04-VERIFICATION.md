@@ -119,6 +119,35 @@ human_verification:
 
 # Phase 04: Public Playable Tracer Verification Report
 
+## Plan 04-15 Actual Frontend Observation
+
+The launch precondition was not met: no materially changed functioning launch context is independently confirmed. The retained prerequisite evidence is the prior pre-screenshot exit `-6`, LaunchServices `kLSNoExecutableErr`, blocked unified-log inspection, and the current inventory showing no RetroArch window or process. RetroArch was not invoked. The focused smoke-script contract suite passed 26 tests, which provide no actual-app evidence. App/core/fixture identities are null because they were not independently established from current evidence. The current frontend claim is `unknown`; HOST-02 and frontend QUAL-03 remain Pending. The exact external prerequisite is a materially changed, functioning macOS launch context for the pinned RetroArch 1.22.2 executable, independently confirmed before any app observation.
+
+FRONTEND-OBSERVATION-JSON-BEGIN
+```json
+{
+  "changed_context_confirmed": false,
+  "screenshot_captured": false,
+  "stable_no_input_frames": null,
+  "right_input_observed": null,
+  "left_negative_control_passed": null,
+  "content_unloaded": null,
+  "normal_exit": null,
+  "ordinary_native_content_load_observed": null,
+  "guest_software_video_observed": null,
+  "frontend_owned_pacing_observed": null,
+  "controller_mapping_documented": true,
+  "qual03_clean_source_build_install_load_documented": true,
+  "qual03_exact_dependency_compiler_sdk_os_arch_frontend_identities_documented": true,
+  "qual03_untested_configurations_documented": true,
+  "app_identity": null,
+  "core_identity": null,
+  "fixture_identity": null,
+  "frontend_claim": "unknown"
+}
+```
+FRONTEND-OBSERVATION-JSON-END
+
 **Phase Goal:** A maintainer can rebuild and run an original guest with visible, input-driven behavior through the ordinary native API and an actual pinned RetroArch build, while resolving the selected sound candidates' admission gates before full integration.
 
 **Verified:** 2026-10-08T13:16:16Z
@@ -133,9 +162,9 @@ human_verification:
 |---|---|---|---|
 | 1 | A maintainer can rebuild the rights-audited original fixture, run it through a C consumer, and observe a guest-produced software frame with checked dimensions, format, pitch, and bounds. | ✓ VERIFIED | `tests/fixture/public_guest.c`, `test_public_guest.c`, `ORACLE.md`, rights manifest and checker are present and connected through CMake. The retained latest owned-debug CTest result is 47/47, including the public guest contract, trace and negative controls. |
 | 2 | A C integrator can advance bounded frames with explicit sampled input and owned video/audio buffers, capacities, timing and produced-count semantics, progress/stop information and actionable errors; controlled input changes guest/output and wrong-input controls fail. | ✓ VERIFIED | The public header and `src/instance.c` implement the frame contract; native trace and LEFT/no-input negative controls run through `public_guest_test`. The same generated GNFX artifact is consumed by native and libretro paths. |
-| 3 | A user can load, run, control and unload the fixture in an actual pinned macOS RetroArch build with software video, documented mapping and frontend-owned pacing. | ? UNCERTAIN | The retained pinned RetroArch 1.22.2 launch aborted with exit -6 before its first screenshot. There is no observation of pixels, controls, unload or normal exit. Callback-harness and GUI-free tests do not prove this truth. |
+| 3 | A user can load, run, control and unload the fixture in an actual pinned macOS RetroArch build with software video, documented mapping and frontend-owned pacing. | ? UNCERTAIN | Plan 04-15 could not satisfy its changed-functioning-context precondition and did not invoke RetroArch. The prior pinned launch aborted with exit -6 before a screenshot; no pixels, controls, unload or normal exit were observed. Callback-harness and GUI-free tests do not prove this truth. |
 | 4 | A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including source/state audits, timing and bus behavior, continuation, isolation, contained C++ failures and static/shared C-consumer linkage. | ✓ VERIFIED | CTest includes Z80 and YM2610 admission paths; the pinned source/notice and state inventories, candidate wrappers, C tests and static/shared consumer checks are present. This verifies the declared candidate workloads only; it does not prove audible game sound, integration into the game machine or silicon fidelity. |
-| 5 | An integrator can follow the clean-tree build/install/load procedure for native and libretro artifacts on selected macOS and identify tested/untested environment identities. | ? UNCERTAIN | Build/install documentation, immutable source snapshot receipts and environment identities exist. The actual frontend load portion remains unobserved, so the complete load procedure is not established. |
+| 5 | An integrator can follow the clean-tree build/install/load procedure for native and libretro artifacts on selected macOS and identify tested/untested environment identities. | ? UNCERTAIN | The documented clean-source procedure, selected dependency/compiler/SDK/OS/architecture/frontend identities, and explicit untested configurations are present; the frontend load portion remains unobserved, so complete load qualification remains pending. |
 
 **Score:** 3/5 roadmap truths verified; 2 remain uncertain.  
 **Human verification:** pinned RetroArch behavior remains outstanding; gaps take precedence in the overall status.
@@ -180,11 +209,11 @@ The GSD artifact/key-link query helper in installed 1.16.0 returned `invalid` fo
 | TRAC-01 | 04-01, 03, 06–08, 10–12 | Rebuild rights-audited original fixture | ✓ SATISFIED | Source, deterministic generator/checker, rights and oracle records; CMake consumers. |
 | TRAC-02 | 04-01, 02 | Native guest-produced software frame | ✓ SATISFIED | Bounded API, guest-driven renderer, geometry/format/pitch/bounds assertions. |
 | TRAC-03 | 04-01–03, 08 | Fixed input trace changes guest and output; wrong-input controls fail | ✓ SATISFIED | Native RIGHT trace plus LEFT/no-input controls. Actual frontend control mapping is separately pending under HOST-02. |
-| HOST-02 | 04-02, 06, 08–10, 12–13 | Load/control/unload through actual pinned RetroArch | ? NEEDS HUMAN / PENDING | Pinned launch exits before screenshot; no GUI behavior has been observed. |
+| HOST-02 | 04-02, 06, 08–10, 12–15 | Load/control/unload through actual pinned RetroArch | ? NEEDS HUMAN / PENDING | Plan 04-15 records `frontend_claim: unknown`: the changed functioning launch context is unavailable and no app was invoked; no screenshot or app/core/fixture identities are available. |
 | API-05 | 04-01 | Bounded frame API and ownership/timing/error semantics | ✓ SATISFIED | Public contract and native behavioral tests. |
 | SND-01 | 04-04, 06 | Pinned Z80 admission for selected workload | ✓ EVIDENCE PRESENT; workstream requirement still unchecked | Source/license/state and cycle/interrupt/bus/continuation/isolation gates; scope does not establish game workload. |
 | SND-02 | 04-05, 06 | Pinned ymfm YM2610 subset behind private C API | ✓ EVIDENCE PRESENT; workstream requirement still unchecked | Source/state, timing/isolation/failure and static/shared C consumer evidence. No game sound claim. |
-| QUAL-03 | 04-06–13 | Clean-tree native/libretro build/install/load procedure and identities | ? NEEDS HUMAN / PENDING | Native build/install and identities are recorded; frontend load part is unobserved. |
+| QUAL-03 | 04-06–15 | Clean-tree native/libretro build/install/load procedure and identities | ? NEEDS HUMAN / PENDING | Documentation, environment identities and untested configurations are present, but actual frontend load remains unobserved; the load-dependent requirement predicate is false. |
 
 Requirement allocation cross-check: REQUIREMENTS.md maps these same eight IDs to Phase 4, and every one appears in one or more plan frontmatter fields. There are no orphaned Phase 4 requirements. TRAC-01/02/03 and API-05 are checked in REQUIREMENTS.md; HOST-02, SND-01/02 and QUAL-03 remain unchecked/pending there, even where candidate evidence is present.
 
