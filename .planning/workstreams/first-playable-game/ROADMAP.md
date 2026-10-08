@@ -35,7 +35,8 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   4. A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including license/source/state audits, cycle or clock and interrupt/bus behavior, deterministic timing, continuation and independent-instance evidence, contained C++ failures, and static/shared C-consumer linkage; a failed gate blocks admission and requires bounded replanning rather than phase completion.
   5. An integrator can follow the clean-tree build/install/load procedure for the native library and libretro adapter on the selected macOS configuration and identify exact dependency, compiler, SDK, OS, architecture, and frontend identities plus untested configurations.
 
-**Plans**: 16/16 plans executed across 14 waves. Gap-closure plans 04-14 and 04-15 are complete in Waves 12 and 13; Plan 04-16 is planned in Wave 14. The fresh security and code-review audits are recorded; Phase 04 remains blocked by four high disclosure threats and open review findings, and still needs actual pinned-app evidence before completion.
+**Plans**: 16/17 plans executed across 15 waves. Gap-closure plans 04-14, 04-15, and 04-16 are executed in Waves 12–14; Plan 04-17 is ready for execution in Wave 15. Phase 04 remains blocked by four high disclosure threats, WR-06 pending independent review, and actual pinned-app evidence; HOST-02 and frontend QUAL-03 remain Pending/unknown.
+
 **Wave 1**
 - [x] 04-01-PLAN.md
 
@@ -79,6 +80,9 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 
 **Wave 14** *(gap closure; follows Waves 12 and 13)*
 - [x] 04-16-PLAN.md — Repair newline-path diagnostic disclosure and contradictory review-state acceptance
+
+**Wave 15** *(gap closure; follows Wave 14)*
+- [ ] 04-17-PLAN.md — Reject contradictory frontend closure claims and reconcile WR-06 evidence
 
 **UI hint**: no
 
@@ -132,7 +136,7 @@ Each phase includes the automated evidence and independent review appropriate to
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. Public Playable Tracer | 16/16 | In Progress | - |
+| 4. Public Playable Tracer | 16/17 | In Progress | - |
 | 5. Selected MVS Boot | 0/TBD | Not started | - |
 | 6. Active Title Control | 0/TBD | Not started | - |
 | 7. Sound and Scenario Qualification | 0/TBD | Not started | - |
