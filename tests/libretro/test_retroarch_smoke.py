@@ -41,6 +41,46 @@ class ScreenshotFreshnessTests(unittest.TestCase):
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_space_containing_private_paths_are_removed_from_all_diagnostic_forms(self) -> None:
+        cases = (
+            ('failed: "/Users/synthetic home/private capture/secret.rom": permission denied',
+             ("synthetic home", "private capture", "secret.rom")),
+            ("failed: /tmp/temporary work/private file.rom: exit 5", ("temporary work", "private file.rom")),
+            ("failed: /private/var/folders/cache root/private cache/secret.bin\ncontinued", 
+             ("cache root", "private cache", "secret.bin")),
+            ("failed: /Volumes/private drive/private media/secret.rom: exit 6\nready", 
+             ("private drive", "private media", "secret.rom")),
+        )
+        for diagnostic, private_parts in cases:
+            with self.subTest(prefix=diagnostic.split(":", 1)[0]):
+                safe = smoke.sanitize_diagnostic_text(diagnostic)
+                for private in private_parts:
+                    self.assertNotIn(private, safe)
+                self.assertIn("failed", safe)
+                self.assertTrue("permission denied" in safe or "exit 5" in safe or "exit 6" in safe)
+                if "continued" in diagnostic:
+                    self.assertIn("continued", safe)
+                if "ready" in diagnostic:
+                    self.assertIn("ready", safe)
+
+    def test_crash_reason_and_serialized_diagnostic_redact_complete_paths(self) -> None:
+        report = (
+            'Exception Type: EXC_CRASH /Users/synthetic home/private capture/secret.rom: ' 
+            'signal 6\nTermination Reason: namespace POSIX, code 9'
+        )
+        reason = smoke.extract_crash_reason(report)
+        record = smoke.build_diagnostic(
+            stage="frontend", return_code=-6, survived_before_screenshot=False,
+            output='stderr: /Volumes/private drive/private media/secret.rom: exit 6',
+            crash_report=report,
+        )
+        serialized = json.dumps(record, sort_keys=True) + reason
+
+        for private in ("synthetic home", "private capture", "secret.rom", "private drive", "private media"):
+            self.assertNotIn(private, serialized)
+        self.assertIn("EXC_CRASH", serialized)
+        self.assertIn("Termination Reason", serialized)
+        self.assertIn("exit 6", serialized)
     def test_failure_diagnostic_preserves_stage_exit_and_survival(self) -> None:
         builder = getattr(smoke, "build_diagnostic", None)
         record = builder(

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import copy
+import io
 import os
 from pathlib import Path
 import shutil
@@ -225,6 +226,61 @@ class SnapshotTest(unittest.TestCase):
         self.assertEqual((overlay / "generated.txt").read_text(encoding="utf-8"), "output")
         self.assertFalse((snapshot.root / "build").exists())
         playable.verify_snapshot(snapshot)
+
+    def test_redact_removes_complete_space_containing_private_path_spans(self) -> None:
+        diagnostics = (
+            'build failed: "/Users/synthetic home/private capture/secret.rom": permission denied',
+            "compile failed: /tmp/temporary work/secret object.o: exit 7",
+            "tool failed: /private/var/folders/ab/private cache/run output/tool: status 9",
+            "frontend failed: /Volumes/private drive/private media/secret.rom: exit 2",
+        )
+
+        for diagnostic in diagnostics:
+            with self.subTest(diagnostic=diagnostic.split(":", 1)[0]):
+                safe = playable.redact(diagnostic)
+                for private in ("synthetic home", "private capture", "secret.rom", "temporary work",
+                                "secret object.o", "private cache", "run output", "private drive",
+                                "private media"):
+                    self.assertNotIn(private, safe)
+                self.assertRegex(safe, r"(?:build|compile|tool|frontend) failed")
+                self.assertRegex(safe, r"(?:permission denied|exit 7|status 9|exit 2)")
+
+    def test_runner_redacts_command_metadata_and_persisted_log(self) -> None:
+        commit = self.commit_fixture_project()
+        snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")
+        work = self.base / "qualification"
+        work.mkdir()
+        runner = playable.Runner(work, snapshot.root, snapshot)
+        private_argument = "/Volumes/private drive/private capture/secret.rom"
+        emitted = f"tool failed: {private_argument}: exit 6"
+        with mock.patch.object(playable.subprocess, "run", return_value=subprocess.CompletedProcess(
+            ["tool"], 6, emitted,
+        )):
+            result = runner.command("private-path", ["tool", private_argument], allow_failure=True)
+
+        retained = (work / "private-path.log").read_text(encoding="utf-8") + repr(runner.lanes) + result.stdout
+        self.assertNotIn("private drive", retained)
+        self.assertNotIn("private capture", retained)
+        self.assertNotIn("secret.rom", retained)
+        self.assertIn("exit 6", retained)
+
+    def test_receipt_writer_sanitizes_retained_and_printed_reason(self) -> None:
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            output = Path(temporary) / "qualification"
+            reason = "failed at /Users/synthetic home/private capture/secret.rom: exit 12"
+            receipt = {
+                "status": "fail", "reason": reason,
+                "fixture": {}, "retroarch_smoke": {}, "identity": {},
+            }
+            stdout = io.StringIO()
+            with mock.patch.object(playable, "OUTPUT", output), mock.patch("sys.stdout", stdout):
+                playable._write_receipt(receipt)
+            serialized = (output / "receipt.json").read_text(encoding="utf-8") + stdout.getvalue()
+
+        self.assertNotIn("synthetic home", serialized)
+        self.assertNotIn("private capture", serialized)
+        self.assertNotIn("secret.rom", serialized)
+        self.assertIn("exit 12", serialized)
 
 
 class ConsumerInputTest(unittest.TestCase):
