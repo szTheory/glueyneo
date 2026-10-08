@@ -109,9 +109,9 @@ def add_info_finding(documents: dict[str, Path], crosswalk_severity: str = "info
     disposition = documents["DISPOSITION"]
     text = disposition.read_text(encoding="utf-8")
     text = text.replace(
-        "open: 5\ntotal: 8",
+        "open: 6\ntotal: 9",
         '  - id: IN-01\n    severity: info\n    disposition: open\n'
-        '    title: "Informational diagnostic note"\nopen: 6\ntotal: 9',
+        '    title: "Informational diagnostic note"\nopen: 7\ntotal: 10',
         1,
     )
     text = text.replace(
@@ -154,25 +154,25 @@ class ValidationMapReconciliationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="phase04-new-finding-") as temporary:
             documents = reconciled_review_documents(Path(temporary))
             mutate_document(documents, "REVIEW", lambda text: text.replace(
-                "## Warnings\n", "## Warnings\n\n### WR-06: New current warning [WARNING]\n\n**Issue:** Synthetic finding.\n\n**Fix:** Track it.\n", 1))
+                "## Warnings\n", "## Warnings\n\n### WR-07: New current warning [WARNING]\n\n**Issue:** Synthetic finding.\n\n**Fix:** Track it.\n", 1))
             path = documents["DISPOSITION"]
             content = path.read_text(encoding="utf-8")
             content = content.replace(
-                '    title: "Repository-backed receipt validation accepts forged file-content hashes"\nopen: 5',
+                '    title: "Repository-backed receipt validation accepts forged file-content hashes"\nopen: 6',
                 '    title: "Repository-backed receipt validation accepts forged file-content hashes"\n'
-                '  - id: WR-06\n    severity: warning\n    disposition: open\n    title: "New current warning"\nopen: 6',
+                '  - id: WR-07\n    severity: warning\n    disposition: open\n    title: "New current warning"\nopen: 7',
             )
-            content = content.replace("total: 8", "total: 9", 1)
+            content = content.replace("total: 9", "total: 10", 1)
             disposition_lines = content.splitlines()
             table_header = next(index for index, line in enumerate(disposition_lines) if line.startswith("| Finding | Severity | Disposition | Source |"))
-            disposition_lines.insert(table_header + 2, "| WR-06 | warning | open | synthetic current review |")
+            disposition_lines.insert(table_header + 2, "| WR-07 | warning | open | synthetic current review |")
             content = "\n".join(disposition_lines) + "\n"
             path.write_text(content, encoding="utf-8")
             validation = documents["VALIDATION"]
             text = validation.read_text(encoding="utf-8")
             lines = text.splitlines()
             header = next(index for index, line in enumerate(lines) if line.startswith("| Review Finding |"))
-            lines.insert(header + 2, "| WR-06 | warning | new review scope | open |")
+            lines.insert(header + 2, "| WR-07 | warning | new review scope | open |")
             text = "\n".join(lines) + "\n"
             validation.write_text(text, encoding="utf-8")
             self.run_checker(documents)
@@ -218,8 +218,8 @@ class ValidationMapReconciliationTest(unittest.TestCase):
             "severity": lambda text: text.replace("| CR-03 | critical | open |", "| CR-03 | warning | open |"),
             "duplicate id": lambda text: text.replace("| CR-03 | critical | open |", "| CR-03 | critical | open |\n| CR-03 | critical | open |"),
             "drop yaml id": lambda text: re.sub(r"(?ms)^  - id: WR-03\n.*?(?=^  - id:|^open:)", "", text),
-            "count": lambda text: text.replace("open: 5", "open: 99", 1),
-            "total count": lambda text: text.replace("total: 8", "total: 99", 1),
+            "count": lambda text: text.replace("open: 6", "open: 99", 1),
+            "total count": lambda text: text.replace("total: 9", "total: 99", 1),
         }
         for label, transform in mutations.items():
             with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:
@@ -238,6 +238,36 @@ class ValidationMapReconciliationTest(unittest.TestCase):
                 mutate_document(documents, name, transform)
                 with self.assertRaises(AssertionError):
                     self.run_checker(documents)
+
+    def test_checker_rejects_missing_or_duplicate_wr06_provenance_and_crosswalk(self) -> None:
+        mutations = (
+            ("missing provenance", "DISPOSITION", lambda text: text.replace(
+                "| WR-06 | warning | open | 04-REVIEW.md current |", "| WR-06 | warning | open | - |", 1)),
+            ("missing crosswalk", "VALIDATION", lambda text: re.sub(r"(?m)^\| WR-06 \|[^\n]*\n", "", text, count=1)),
+            ("duplicate crosswalk", "VALIDATION", lambda text: text.replace(
+                "| WR-06 | warning | contradictory frontend documentation-gate claim | open |\n",
+                "| WR-06 | warning | contradictory frontend documentation-gate claim | open |\n"
+                "| WR-06 | warning | duplicate frontend documentation-gate claim | open |\n", 1)),
+        )
+        for label, name, transform in mutations:
+            with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:
+                documents = reconciled_review_documents(Path(temporary))
+                mutate_document(documents, name, transform)
+                with self.assertRaises(AssertionError):
+                    self.run_checker(documents)
+
+    def test_checker_rejects_coherent_false_closure_of_current_wr06(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="phase04-wr06-closure-") as temporary:
+            documents = reconciled_review_documents(Path(temporary))
+            disposition = documents["DISPOSITION"]
+            text = disposition.read_text(encoding="utf-8")
+            text = text.replace("    disposition: open\n    title: \"Documentation gate accepts contradictory frontend status", "    disposition: fixed\n    title: \"Documentation gate accepts contradictory frontend status", 1)
+            text = text.replace("open: 6\ntotal: 9", "open: 5\ntotal: 9", 1)
+            text = text.replace("| WR-06 | warning | open | 04-REVIEW.md current |", "| WR-06 | warning | fixed | 04-REVIEW.md current |", 1)
+            disposition.write_text(text, encoding="utf-8")
+            set_crosswalk_disposition(documents, "WR-06", "fixed")
+            with self.assertRaisesRegex(AssertionError, "current finding WR-06 is recorded as fixed"):
+                self.run_checker(documents)
 
     def test_checker_rejects_security_or_frontend_claim_contradictions(self) -> None:
         mutations = (
