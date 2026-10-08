@@ -47,7 +47,7 @@ class FixtureIdentityTests(unittest.TestCase):
         (bundle / "Contents" / "Info.plist").write_bytes(plistlib.dumps({
             "CFBundleShortVersionString": smoke.EXPECTED_VERSION,
             "CFBundleExecutable": "RetroArch",
-            "CFBundleIdentifier": "org.example.RetroArch",
+            "CFBundleIdentifier": "com.libretro.dist.RetroArch",
         }))
         core = directory / "glueyneo_libretro.dylib"
         core.write_bytes(b"core")
@@ -98,6 +98,109 @@ class FixtureIdentityTests(unittest.TestCase):
         self.assertEqual(raised.exception.stage, "input")
         self.assertIn("digest", str(raised.exception))
         popen.assert_not_called()
+
+
+class BundleIdentifierTests(unittest.TestCase):
+    VALID_BUNDLE_ID = "com.libretro.dist.RetroArch"
+    INVALID_BUNDLE_IDS = (
+        "", "com.libretro.dist.RetroArch\"; do shell script \"open /tmp/private\"; --",
+        "com.libretro.dist.RetroArch\nquit", "com.libretro.dist.RetroArch'",
+        "com.libretro.dist.RetroArch\x01",
+    )
+
+    class RunningProcess:
+        returncode: int | None = None
+
+        def __init__(self) -> None:
+            self.terminated = False
+            self.killed = False
+
+        def poll(self) -> int | None:
+            return self.returncode
+
+        def wait(self, timeout: float | None = None) -> int:
+            self.returncode = 0
+            return 0
+
+        def terminate(self) -> None:
+            self.terminated = True
+
+        def kill(self) -> None:
+            self.killed = True
+
+    def test_plist_identifier_must_match_pinned_app_before_input_validation(self) -> None:
+        for bundle_id in self.INVALID_BUNDLE_IDS:
+            with self.subTest(bundle_id="malformed"):
+                with tempfile.TemporaryDirectory() as temporary:
+                    directory = Path(temporary)
+                    bundle = directory / "RetroArch.app"
+                    contents = bundle / "Contents"
+                    contents.mkdir(parents=True)
+                    executable = contents / "MacOS" / "RetroArch"
+                    executable.parent.mkdir()
+                    executable.write_bytes(b"placeholder executable")
+                    (contents / "Info.plist").write_bytes(plistlib.dumps({
+                        "CFBundleShortVersionString": smoke.EXPECTED_VERSION,
+                        "CFBundleExecutable": "RetroArch",
+                        "CFBundleIdentifier": bundle_id,
+                    }))
+                    args = type("Args", (), {
+                        "retroarch": bundle, "core": directory / "core", "content": directory / "fixture",
+                    })()
+                    with (
+                        mock.patch.object(smoke.sys, "platform", "darwin"),
+                        mock.patch.object(smoke.subprocess, "run") as run,
+                    ):
+                        with self.assertRaises(smoke.SmokeBlocked) as raised:
+                            smoke.validate_inputs(args)
+
+                self.assertEqual(raised.exception.stage, "identity")
+                self.assertIn("bundle identifier", str(raised.exception))
+                if bundle_id:
+                    self.assertNotIn(bundle_id, str(raised.exception))
+                run.assert_not_called()
+
+    def test_quit_helper_uses_one_bounded_fixed_command_for_pinned_identifier(self) -> None:
+        process = self.RunningProcess()
+        with mock.patch.object(smoke.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)) as run:
+            smoke.request_frontend_quit(self.VALID_BUNDLE_ID, process, 20.0)
+
+        run.assert_called_once()
+        args, kwargs = run.call_args
+        self.assertEqual(args[0][0:2], ["/usr/bin/osascript", "-e"])
+        self.assertEqual(args[0][2], 'tell application id "com.libretro.dist.RetroArch" to quit')
+        self.assertTrue(kwargs["check"])
+        self.assertLessEqual(kwargs["timeout"], 8.0)
+        self.assertFalse(process.terminated)
+
+    def test_invalid_identifier_skips_quit_subprocess_and_terminates_owned_process(self) -> None:
+        for bundle_id in self.INVALID_BUNDLE_IDS:
+            with self.subTest(bundle_id="malformed"):
+                process = self.RunningProcess()
+                with mock.patch.object(smoke.subprocess, "run") as run:
+                    smoke.request_frontend_quit(bundle_id, process, 20.0)
+
+                run.assert_not_called()
+                self.assertTrue(process.terminated)
+
+    def test_cleanup_after_smoke_failure_cannot_launch_quit_for_bad_identifier(self) -> None:
+        process = self.RunningProcess()
+        identity = {"bundle_id": self.INVALID_BUNDLE_IDS[1]}
+        args = mock.Mock(timeout=1.0)
+        with (
+            mock.patch.object(smoke, "validate_inputs", return_value=(Path("/app"), Path("/core"), Path("/fixture"), identity)),
+            mock.patch.object(smoke, "crash_report_snapshot", return_value={}),
+            mock.patch.object(smoke, "request_screenshot", side_effect=smoke.SmokeBlocked("video", "expected test failure")),
+            mock.patch.object(smoke, "collect_frontend_output", return_value=""),
+            mock.patch.object(smoke.subprocess, "Popen", return_value=process),
+            mock.patch.object(smoke.subprocess, "run") as run,
+            mock.patch.object(smoke.time, "sleep"),
+        ):
+            with self.assertRaises(smoke.SmokeBlocked):
+                smoke.run_smoke(args)
+
+        run.assert_not_called()
+        self.assertTrue(process.terminated)
 
 
 class ScreenshotFreshnessTests(unittest.TestCase):
