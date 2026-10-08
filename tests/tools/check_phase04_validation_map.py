@@ -14,6 +14,7 @@ VALIDATION = PHASE / "04-VALIDATION.md"
 SECURITY = PHASE / "04-SECURITY.md"
 VERIFICATION = PHASE / "04-VERIFICATION.md"
 DISPOSITION = PHASE / "04-REVIEW-DISPOSITION.md"
+REVIEW = PHASE / "04-REVIEW.md"
 
 
 def require(condition: bool, message: str) -> None:
@@ -53,12 +54,13 @@ def main() -> None:
     security = SECURITY.read_text(encoding="utf-8")
     verification = VERIFICATION.read_text(encoding="utf-8")
     disposition = DISPOSITION.read_text(encoding="utf-8")
+    review = REVIEW.read_text(encoding="utf-8")
 
     header = "| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |"
     rows = table_rows(validation, header)
-    selected = [row for row in rows if row[1] in {"04-10", "04-11"}]
-    require(any(row[1] == "04-10" for row in selected), "validation map has no 04-10 row")
-    require(any(row[1] == "04-11" for row in selected), "validation map has no 04-11 row")
+    # Earlier rows are dated history, with their original denominators intact.
+    selected = [row for row in rows if row[1] == "04-12" and row[0].startswith("04-12 T1")]
+    require(len(selected) == 2, "validation map lacks the two current 04-12 focused suite rows")
 
     expected_commands = {
         "python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py' -v",
@@ -95,20 +97,21 @@ def main() -> None:
         "T-04-21 → T-04-16",
         "T-04-22 → T-04-17",
         "T-04-23 → T-04-13",
+        "T-04-24 receipt numeric types",
     }
     require(expected_crosswalks <= set(crosswalks), "one or more T-04-20..23 old-finding crosswalks are missing")
     for row in selected:
         refs = row[4]
-        require(all(f"T-04-{number}" in refs for number in ("20", "21", "22") if row[1] == "04-10"),
-                f"{row[0]} omits an applicable Plan 04-10 threat reference")
-        if row[1] == "04-11":
-            require("T-04-23" in refs, "04-11 row omits T-04-23")
+        require(all(f"T-04-{number}" in refs for number in ("11", "15", "18", "24")),
+                f"{row[0]} omits an applicable Plan 04-12 threat reference")
     review_crosswalks = table_rows(validation, "| Review Finding | Existing Threat Scope | Disposition |")
     review_links = {row[0]: " ".join(row[1:]) for row in review_crosswalks if len(row) == 3}
-    require(set(review_links) == {"WR-01", "WR-02", "WR-03"},
-            "review finding crosswalk does not contain exactly WR-01/02/03")
+    current_findings = set(re.findall(r"(?m)^### ((?:CR|WR)-\d+):", review))
+    require(current_findings == {"CR-01", "CR-02", "WR-01"}, "current review IDs changed")
+    unresolved = current_findings | {"WR-02", "WR-03"}
+    require(set(review_links) == unresolved, "review finding crosswalk differs from unresolved findings")
     require(all("remains open pending independent review" in review_links[finding].lower()
-                for finding in ("WR-01", "WR-02", "WR-03")),
+                for finding in unresolved),
             "a review finding is not kept open pending independent review")
     require("no separate threat scope" in review_links["WR-02"].lower(),
             "WR-02 is described as separate from its existing threat scope")
@@ -116,35 +119,41 @@ def main() -> None:
     frontmatter = security.split("---", 2)[1]
     require(re.search(r"(?m)^status: blocked$", frontmatter) is not None,
             "security status is no longer blocked")
-    require(re.search(r"(?m)^threats_open: 6$", frontmatter) is not None,
-            "security register no longer reports six open threats")
-    for threat in ("T-04-11", "T-04-13", "T-04-15", "T-04-16", "T-04-17", "T-04-18"):
-        require(re.search(rf"(?m)^\| {threat} \|[^\n]*\| open \|$", security) is not None,
-                f"security finding {threat} is missing or no longer open")
+    register = table_rows(security, "| Threat ID | Category | Component | Severity | Disposition | Mitigation | Status |")
+    require(all(len(row) == 7 for row in register), "malformed security register row")
+    threats = {row[0]: row[-1] for row in register}
+    require(len(threats) == len(register), "duplicate security register IDs")
+    require(re.search(r"(?m)^threats_open: 3$", frontmatter) is not None,
+            "security register no longer reports three open threats")
+    require({key for key, value in threats.items() if value == "open"} == {"T-04-11", "T-04-15", "T-04-18"},
+            "open security register rows differ from the current audit")
+    for threat in ("T-04-13", "T-04-16", "T-04-17"):
+        require(threats.get(threat) == "closed", f"audited closed finding {threat} is missing or reopened")
 
-    require(re.search(r"(?m)^\| HOST-02 \| \? NEEDS HUMAN \|", verification) is not None,
-            "HOST-02 is not explicitly marked human-needed")
-    require(re.search(r"(?m)^\| QUAL-03 \| \? NEEDS HUMAN \|", verification) is not None,
-            "actual frontend QUAL-03 is not explicitly marked human-needed")
+    requirement_rows = table_rows(verification, "| Requirement | Source Plan | Description | Status | Evidence |")
+    requirement_status = {row[0]: row[3] for row in requirement_rows if len(row) == 5}
+    for requirement in ("HOST-02", "QUAL-03"):
+        require(requirement_status.get(requirement) == "? NEEDS HUMAN",
+                f"{requirement} is not explicitly marked human-needed")
     require("actual frontend load remains unobserved" in verification.lower(),
             "verification no longer states that actual frontend load is unobserved")
 
     disposition_frontmatter = disposition.split("---", 2)[1]
-    for finding in ("WR-01", "WR-02", "WR-03"):
+    disposition_rows = table_rows(disposition, "| Finding | Severity | Disposition | Source |")
+    require(all(len(row) == 4 for row in disposition_rows), "malformed disposition table")
+    require({row[0] for row in disposition_rows} == unresolved and len(disposition_rows) == len(unresolved),
+            "disposition table differs from unresolved findings")
+    yaml_ids = re.findall(r"(?m)^  - id: (\S+)$", disposition_frontmatter)
+    require(set(yaml_ids) == unresolved and len(yaml_ids) == len(unresolved), "disposition YAML IDs differ from table")
+    for finding in unresolved:
         block = re.search(rf"(?ms)^  - id: {finding}\n(.*?)(?=^  - id:|\Z)", disposition_frontmatter)
         require(block is not None and re.search(r"(?m)^    disposition: open$", block.group(1)) is not None,
                 f"{finding} is not open in disposition YAML")
-        require(re.search(rf"(?m)^\| {finding} \| warning \| open \|", disposition) is not None,
+        severity = "critical" if finding.startswith("CR-") else "warning"
+        require(re.search(rf"(?m)^\| {finding} \| {severity} \| open \|", disposition) is not None,
                 f"{finding} is not open in the disposition table")
-    cr_block = re.search(r"(?ms)^  - id: CR-01\n(.*?)(?=^  - id:|\Z)", disposition_frontmatter)
-    require(cr_block is not None and re.search(r"(?m)^    disposition: fixed$", cr_block.group(1)) is not None,
-            "CR-01 is not fixed in disposition YAML")
-    require("04-07-SUMMARY.md" in cr_block.group(1) and "04-VERIFICATION.md" in cr_block.group(1),
-            "CR-01 YAML source does not cite both identity records")
-    require(re.search(r"(?m)^open: 3$", disposition_frontmatter) is not None,
-            "disposition YAML does not report three open findings")
-    require(re.search(r"(?m)^\| CR-01 \| critical \| fixed \|.*04-07-SUMMARY\.md.*04-VERIFICATION\.md", disposition) is not None,
-            "CR-01 is not fixed with both sources in the disposition table")
+    require(re.search(rf"(?m)^open: {len(disposition_rows)}$", disposition_frontmatter) is not None,
+            "disposition YAML open counter differs from its unresolved rows")
     require("04-07-SUMMARY.md" in validation and "04-VERIFICATION.md" in validation,
             "validation map does not preserve the CR-01 source revision context")
 

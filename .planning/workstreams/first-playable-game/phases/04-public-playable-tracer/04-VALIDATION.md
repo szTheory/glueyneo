@@ -51,6 +51,9 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | 04-10 T1 | 04-10 | 8 | QUAL-03, TRAC-01 | T-04-20, T-04-21, T-04-22 | Qualification path redaction, fixture digest enforcement, and pinned app quit identity have focused regression coverage; gates remain open for independent audit | focused regression | `python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py' -v` | Yes | pass, 17 tests on source `a2ea677` (current tree includes 3 Plan 04-11 tests); historical Plan 04-10 result was 14 tests at `e7aa255` |
 | 04-10 T2-T3 | 04-10 | 8 | HOST-02, QUAL-03 | T-04-20, T-04-21, T-04-22 | Frontend diagnostic redaction, fixture pinning, and fixed-shape quit handling are covered without launching the GUI; actual app behavior remains unknown | GUI-free focused regression | `python3 -m unittest discover -s tests/libretro -p 'test_retroarch_smoke.py' -v` | Yes | pass, 24 tests on source `a2ea677`; the actual pinned app was not launched |
 | 04-11 T1 | 04-11 | 9 | QUAL-03, TRAC-01 | T-04-23, T-04-SC | Every receipt row is compared with the corresponding committed archive bytes, mode, digest, and symlink target | repository-backed receipt regression | `python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py' -v` | Yes | pass, 17 tests on source `a2ea677`; no live checkout input is used |
+| 04-12 T1 tools | 04-12 | 10 | QUAL-03, TRAC-01 | T-04-11, T-04-15, T-04-18, T-04-24 | Exact integer receipt fields and complete ambiguous path redaction, including persisted and printed receipts | repository/privacy regression | `python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py' -v` | Yes | pass, 19 tests on source `33bef8c`; 2026-10-08 |
+| 04-12 T1 frontend | 04-12 | 10 | HOST-02, QUAL-03 | T-04-11, T-04-15, T-04-18, T-04-24 | Complete path spans and supplied temporary-root descendants removed from diagnostics and crash reasons; no GUI launch | GUI-free privacy regression | `python3 -m unittest discover -s tests/libretro -p 'test_retroarch_smoke.py' -v` | Yes | pass, 25 tests on source `33bef8c`; 2026-10-08; actual frontend unknown |
+| 04-12 T2 | 04-12 | 10 | HOST-02, QUAL-03 | T-04-11, T-04-15, T-04-18 | Parse current audit register and unresolved review rows; preserve frontend unknown | evidence-map check | `python3 tests/tools/check_phase04_validation_map.py` | Yes | passing run recorded in 04-12-SUMMARY.md; independent security audit remains required |
 
 ## Threat Coverage
 
@@ -60,23 +63,27 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | T-04-12 repudiation | Receipt records source revision and selected source hashes, compiler/CMake/SDK/OS/architecture, fixture/core/frontend hashes, candidate revisions, command status and log hashes. |
 | T-04-SC dependency closure | Z80 and ymfm immutable source checks passed; YM2610 report records the pinned source and license evidence. Candidate outcomes remain separate from runtime integration. |
 | T-04-20 → T-04-11/T-04-15/T-04-18 | Plan 04-10 adds complete path-span redaction and path-with-spaces regression coverage; these older high findings remain open pending independent audit. |
-| T-04-21 → T-04-16 | Plan 04-10 checks the pinned public fixture digest before frontend launch; the security disposition remains open pending independent audit. |
-| T-04-22 → T-04-17 | Plan 04-10 validates the pinned bundle identifier before quit commands; the security disposition remains open pending independent audit. |
-| T-04-23 → T-04-13 | Plan 04-11 derives archive rows from committed member bytes and rejects forged receipt rows; WR-03 remains open pending independent audit. |
+| T-04-21 → T-04-16 | Plan 04-10 checks the pinned public fixture digest before frontend launch; T-04-16 is closed by the current independent audit. Actual app behavior remains unknown. |
+| T-04-22 → T-04-17 | Plan 04-10 validates the pinned bundle identifier before quit commands; T-04-17 is closed by the current independent audit. |
+| T-04-23 → T-04-13 | Plan 04-11 derives archive rows from committed member bytes and rejects forged receipt rows; T-04-13 is closed by the current independent audit, while carried WR-03 remains open pending independent review. |
+| T-04-24 receipt numeric types | Plan 04-12 rejects booleans in bytes, entry_count, file_count and symlink_count before aggregate/archive comparison. Fresh repository-backed regressions pass; independent post-fix audit is still required. |
 
 ## Review Finding Crosswalk
 
 | Review Finding | Existing Threat Scope | Disposition |
 |----------------|-----------------------|-------------|
-| WR-01 | T-04-16 / T-04-21, pinned fixture identity | Same finding scope; code repair is present and disposition remains open pending independent review. |
+| CR-01 | T-04-24, exact numeric receipt types | Current boolean-count bypass; Plan 04-12 supplies regression evidence. Disposition remains open pending independent review. |
+| CR-02 | T-04-11 / T-04-15 / T-04-18, ambiguous path disclosure | Plan 04-12 supplies complete-span regressions. Disposition remains open pending independent review. |
+| WR-01 | Current audit and validation-map evidence boundary | Current stale-checker finding, distinct from historical WR-01 fixture identity. Disposition remains open pending independent review. |
 | WR-02 | T-04-11 / T-04-15 / T-04-18 / T-04-20, complete path redaction | Corroborates the same disclosure findings; no separate threat scope. Disposition remains open pending independent review. |
 | WR-03 | T-04-13 / T-04-23, receipt row-to-archive binding | Same finding scope; code repair is present and disposition remains open pending independent review. |
 
 ## Revision Context
 
-- Plan 04-07's immutable source snapshot implementation is recorded in [04-07-SUMMARY.md](04-07-SUMMARY.md), including commit `36df674`. The fresh [04-VERIFICATION.md](04-VERIFICATION.md) identifies current source identity as protected; together these records support marking historical CR-01 fixed.
+- Plan 04-07's immutable source snapshot implementation is recorded in [04-07-SUMMARY.md](04-07-SUMMARY.md), including commit `36df674`. [04-VERIFICATION.md](04-VERIFICATION.md) preserves that source identity evidence. The historical CR-01 identity finding was fixed, but the current reused CR-01 ID names a distinct boolean-count bypass and remains open in the current disposition record.
 - Plan 04-10's historical focused runs were 14 tools tests and 24 frontend smoke tests, recorded in [04-10-SUMMARY.md](04-10-SUMMARY.md) at commit `e7aa255`. After the Plan 04-11 implementation commit `a2ea677`, the tools suite was rerun with 17 tests and the frontend smoke suite with 24 tests. The three added tools regressions account for the tools denominator change.
-- These focused suites verify repository behavior only. They do not close any security finding; the independent audit must decide all six open high-severity dispositions. HOST-02 and actual frontend QUAL-03 remain unknown until the requested pinned-app observations exist.
+- Plan 04-12 reran the focused suites on implementation `33bef8c`: 19 tools tests and 25 frontend smoke tests passed. Earlier denominators above remain dated history. New controls cover booleans equal to integer values, punctuation/phrase path components, quoted controls and supplied temporary-root descendants. Conservative unquoted redaction intentionally removes ambiguous trailing status; status preceding a private span and bounded structured diagnostics survive.
+- These focused suites verify repository behavior only. The current independent audit has T-04-13/T-04-16/T-04-17 closed and T-04-11/T-04-15/T-04-18 open, with security blocked. All five current/carried review dispositions remain open until independent review. HOST-02 and actual frontend QUAL-03 remain unknown until the requested pinned-app observations exist.
 
 ## Actual Frontend Evidence Handoff
 
