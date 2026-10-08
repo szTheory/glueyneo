@@ -1,20 +1,15 @@
 ---
 phase: 04-public-playable-tracer
-reviewed: 2026-10-08T11:57:29Z
+reviewed: 2026-10-08T13:11:51Z
 depth: standard
-files_reviewed: 11
+files_reviewed: 6
 files_reviewed_list:
   - tools/verify_playable.py
   - tests/tools/test_verify_playable.py
   - tests/libretro/retroarch_smoke.py
   - tests/libretro/test_retroarch_smoke.py
   - tests/tools/check_phase04_validation_map.py
-  - tools/owned_cpu/inventory.py
-  - tests/owned_cpu/test_inventory.py
-  - experiments/owned_cpu/cpu.h
-  - experiments/owned_cpu/state-inventory.json
-  - experiments/owned_cpu/source-manifest.json
-  - experiments/owned_cpu/SUBSET.md
+  - tests/tools/test_check_phase04_validation_map.py
 findings:
   critical: 1
   warning: 1
@@ -25,43 +20,41 @@ status: issues_found
 
 # Phase 04: Code Review Report
 
-**Reviewed:** 2026-10-08T11:57:29Z
-**Depth:** standard
-**Files Reviewed:** 11
+**Reviewed:** 2026-10-08T13:11:51Z  
+**Depth:** standard  
+**Files Reviewed:** 6  
 **Status:** issues_found
 
 ## Summary
 
-Reviewed Plan 04-12 changes since `7e0d68930b25c91f5da28845a8a21e260cc38ec0` at source revision `d98c61574cd6d0c527aa74a39489fcf0a8b1e672`. The supplied summary and validation document were read as provenance and excluded from the source-file count. Quoted private paths still leak suffixes, and the validation-map checker freezes historical findings and dispositions instead of accepting reconciled review outcomes.
+Reviewed the six Plan 04-13 source and test files, with the phase security register, review disposition, validation map and prior review as context. The reported raw-literal-quote sanitizer bypass reproduces independently in both diagnostic paths: `failed status 7: "/Users/synthetic/private"tail/sensitive.bin"` is reduced to `failed status 7: [user]tail/sensitive.bin"`. The leak reaches qualification receipts and printed results through `redact` and frontend diagnostics through `sanitize_diagnostic_text`. The validation-map parser also rejects a valid informational finding because it only recognizes `CR-` and `WR-` IDs and has no Info section mapping.
 
-Fresh execution passed 19 qualification tests, 25 GUI-free frontend tests, and 11 owned-inventory controls. `python3 tools/owned_cpu/inventory.py check --build-dir build/owned-debug` passed against the existing build. The validation-map checker passed against the pre-review artifacts, but an in-memory control removing the repaired CR-01 finding was rejected with `current review IDs changed`. The disclosure below was reproduced in both sanitizers, a persisted qualification receipt, and its printed result. No GUI smoke, full clean qualification, or independent security audit was run. Security dispositions are unchanged; HOST-02 and actual frontend QUAL-03 remain unknown.
-
-The former CR-01 boolean-count bypass is no longer reported: exact integer checks reject the reproduced malformed receipts. CR-02 retains the private-path disclosure scope with the remaining quoted-boundary counterexample. WR-01 retains the validation-map checking scope with its remaining hardcoded review-state failure. Carried WR-02/WR-03 decisions remain owned by `04-REVIEW-DISPOSITION.md`; this review does not rewrite them.
+These findings retain the phase's existing open disclosure scope. Repository privacy regressions do not establish HOST-02 or actual pinned RetroArch QUAL-03 behavior; both remain unobserved, and the four high disclosure threats remain open.
 
 ## Narrative Findings (AI reviewer)
 
 ## Critical Issues
 
-### CR-02: Quoted private paths still expose filename suffixes [BLOCKER]
+### CR-02: Literal quotes inside private paths still expose suffixes [BLOCKER]
 
-**File:** `tools/verify_playable.py:484-492`; `tests/libretro/retroarch_smoke.py:68-73`
+**File:** `tools/verify_playable.py:484-493`; `tests/libretro/retroarch_smoke.py:68-76`
 
-**Issue:** Both quoted-path branches use `body.find` to treat the next matching quote as a proven closing boundary. Quotes are legal POSIX filename bytes, and formats such as JSON escape them. A diagnostic produced by `"failed status 7: " + json.dumps('/Users/synthetic/private"tail/sensitive.bin')` becomes `failed status 7: [user]tail/sensitive.bin"` in both sanitizers: the escaped quote inside the filename terminates redaction and leaves the private suffix. A second sanitizer pass cannot recover the lost root. `_write_receipt` persists this suffix in `receipt.json` and prints it in the machine-readable result; this was reproduced with synthetic inputs. A raw single-quoted filename containing an apostrophe has the same ambiguity. The new punctuation/space tests omit embedded and escaped quotes. This remains within T-04-11/T-04-15/T-04-18's existing disclosure scope, without changing any security disposition.
+**Issue:** Both sanitizers treat the first quote returned by `_json_string_end` as a proven close to the quoted path. That helper validates JSON string escaping, but these diagnostics are arbitrary text and may contain an unescaped literal quote in a filename. For example, the input `failed status 7: "/Users/synthetic/private"tail/sensitive.bin"` is sanitized to `failed status 7: [user]tail/sensitive.bin"` by both functions. The suffix is therefore still present after a second pass and is carried into `_write_receipt`'s persisted JSON and printed result or the frontend's diagnostic/crash-reason record. This independently confirms the raw-literal-quote bypass recorded in the security audit and keeps T-04-11, T-04-15, T-04-18 and T-04-20 open.
 
-**Fix:** Recognize a quoted boundary only under an explicit diagnostic grammar with correct escape handling. For arbitrary subprocess text, redact the remainder of the line when the boundary cannot be established, including apparently quoted spans. Add JSON-escaped double-quote and embedded-apostrophe filename regressions through both sanitizers, `build_diagnostic`, persisted/printed receipts, and repeated sanitization. When structured JSON status must survive, parse it and sanitize its path-bearing string values before serialization.
+**Fix:** For arbitrary diagnostic text, do not infer a closing boundary from a quote after a private root. Redact from the root through the end of that line unless the caller supplies a structured, parsed diagnostic format with an unambiguous path field. Add raw unescaped quote regressions alongside the escaped-quote cases and pass them through both sinks, repeat sanitation, persisted/printed receipt output, and frontend crash-reason output.
 
 ## Warnings
 
-### WR-01: Validation-map checks require historical findings to stay reported and open [WARNING]
+### WR-04: Validation-map parser rejects valid Info findings [WARNING]
 
-**File:** `tests/tools/check_phase04_validation_map.py:109-117`; `tests/tools/check_phase04_validation_map.py:141-156`
+**File:** `tests/tools/check_phase04_validation_map.py:58-75`
 
-**Issue:** The checker reads the current review but requires its IDs to equal exactly `{CR-01, CR-02, WR-01}`, appends historical WR-02/WR-03, and requires every corresponding disposition to remain `open`. An independent re-review that stops reporting the repaired boolean bypass fails at line 110 even if the focused suites and document crosswalks agree. This was reproduced without editing source or evidence files by changing only the CR-01 heading in the in-memory review read while retaining the observed suite counts. Independently recording a finding as `fixed` also necessarily fails lines 149-155. Updating the six-threat assumption repaired the immediate old-audit mismatch but left the same stale-state failure at the review boundary; this report itself removes repaired CR-01 and triggers it.
+**Issue:** `parse_review_findings` recognizes only headings matching `CR-` or `WR-` at line 64 and maps only `critical issues` and `warnings` at lines 69-74. The review schema permits Info findings (`IN-` IDs under `## Info`). Adding a valid informational finding to the current review makes the validation-map gate fail with “outside a severity section,” even when the disposition and crosswalk consistently record it. This couples a valid review outcome to an incomplete parser grammar.
 
-**Fix:** Derive retained IDs and actual dispositions from the current disposition record, compare its YAML/table representations, and derive unresolved findings from `disposition: open` instead of a fixed ID union. Require current narrative findings to have matching records and the validation crosswalk to reflect each record's actual disposition, preserving carried historical rows. Keep security audit assertions separate from review disposition handling. Add controls for a repaired finding absent from the current review, a retained finding marked fixed, and a newly discovered finding; valid reconciliation should pass and contradictory records should fail.
+**Fix:** Accept `IN-` finding IDs and map the `info` section to `info` severity. Extend disposition and crosswalk reconciliation to preserve and compare that severity, and add a fixture containing a matching informational finding that passes while inconsistent severity still fails.
 
 ---
 
-_Reviewed: 2026-10-08T11:57:29Z_
-_Reviewer: the agent (gsd-code-reviewer)_
+_Reviewed: 2026-10-08T13:11:51Z_  
+_Reviewer: the agent (gsd-code-reviewer)_  
 _Depth: standard_
