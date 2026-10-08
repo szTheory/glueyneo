@@ -1,219 +1,215 @@
 ---
 phase: 04-public-playable-tracer
-verified: 2026-10-08T03:44:49Z
+verified: 2026-10-08T12:11:12Z
 status: gaps_found
 score: 3/5 roadmap truths verified
-covered_files: [".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-01-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-01-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-02-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-02-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-03-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-03-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-04-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-04-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-05-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-05-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-06-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-06-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-07-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-07-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-08-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-08-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-09-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-09-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-10-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-10-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-11-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-11-SUMMARY.md", "tests/libretro/retroarch_smoke.py", "tests/libretro/test_retroarch_smoke.py", "tests/tools/check_phase04_validation_map.py", "tests/tools/test_verify_playable.py", "tools/verify_playable.py"]
-covered_digest: "v3:sha256:b7b45a2b99c7a9722971a4d9f0387ea87e63ae49446d7905fd467bb112d365a1"
+covered_files: [".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-01-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-01-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-02-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-02-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-03-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-03-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-04-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-04-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-05-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-05-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-06-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-06-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-07-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-07-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-08-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-08-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-09-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-09-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-10-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-10-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-11-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-11-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-12-PLAN.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-12-SUMMARY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-REVIEW-DISPOSITION.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-REVIEW.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-SECURITY.md", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md", "experiments/owned_cpu/SUBSET.md", "experiments/owned_cpu/cpu.h", "experiments/owned_cpu/source-manifest.json", "experiments/owned_cpu/state-inventory.json", "tests/libretro/retroarch_smoke.py", "tests/libretro/test_retroarch_smoke.py", "tests/owned_cpu/test_inventory.py", "tests/tools/check_phase04_validation_map.py", "tests/tools/test_check_phase04_validation_map.py", "tests/tools/test_verify_playable.py", "tools/owned_cpu/inventory.py", "tools/verify_playable.py"]
+covered_digest: "v3:sha256:32637c212398673c77f3bcb1dc3573049dde97b3678b80e040b2de19af34a48a"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
   previous_status: gaps_found
   previous_score: 3/5
   gaps_closed:
-    - "The security audit now closes T-04-13 receipt/archive binding, T-04-16 fixture digest enforcement, and T-04-17 pinned bundle identity checks."
+    - "Owned CPU identity and target-scoped compile evidence now pass the inventory check and full 47-test owned-debug CTest run."
+    - "Exact integer checks reject boolean receipt counts; the focused tools suite passes 19 tests."
   gaps_remaining:
-    - "T-04-11, T-04-15, and T-04-18 remain open, and current review reproduced path-suffix disclosure in both redactors."
-    - "Actual pinned RetroArch behavior remains unknown; the prior run aborted before its first screenshot."
-    - "The current validation-map checker still asserts superseded audit state and fails."
-    - "The owned-debug CTest suite remains 46/47 because owned_cpu_inventory_check fails."
+    - "Private diagnostic path redaction remains incomplete: escaped quotes expose path suffixes, with four high-severity threats open."
+    - "The validation-map checker still fails its regression test when a repaired review finding is removed from reconciled current state."
+    - "Actual pinned RetroArch behavior and the frontend portion of QUAL-03 remain unobserved."
   regressions:
-    - "A boolean bytes value passes repository-backed receipt row comparison as integer 1 (CR-01)."
-    - "Comma-delimited unquoted private paths leave suffixes visible in both diagnostic redactors (CR-02)."
+    - "A new adversarial re-review reproduced escaped-quote path disclosure in qualification and frontend sanitizers, receipts, and printed output."
 gaps:
-  - truth: "Qualification receipt validation rejects malformed row values, and retained diagnostics remove complete private paths."
+  - truth: "Private filesystem paths are completely removed from retained and printed qualification/frontend diagnostics, and the security gate has no unresolved high-severity disclosure threats."
     status: failed
-    reason: "Two current review blockers are reproducible in modified files. Python accepts bool as int, so bytes: true compares equal to a committed one-byte row after aggregate recomputation. Both redactors stop an unquoted path at a comma and leave the path suffix in output. The independent security audit closed T-04-13/T-04-16/T-04-17, but T-04-11/T-04-15/T-04-18 remain open; these current reproductions mean the security gate is not closed."
+    reason: "A reproducible JSON-escaped quote in a private filename is treated as the quoted path boundary. Both sanitizers output `[user]tail/sensitive.bin\"`, so the suffix survives in diagnostics; the audit marks T-04-11, T-04-15, T-04-18, and T-04-20 high/open and SECURITY.md blocked."
     artifacts:
       - path: "tools/verify_playable.py"
-        issue: "validate_snapshot_record uses isinstance(byte_count, int) and equality permits True == 1; redact stops at comma delimiters."
+        issue: "redact() uses the next matching quote as a boundary without JSON escape parsing."
       - path: "tests/libretro/retroarch_smoke.py"
-        issue: "sanitize_diagnostic_text also stops at comma delimiters in valid unquoted paths."
-      - path: "tests/tools/test_verify_playable.py"
-        issue: "No exact-type regression currently rejects boolean numeric receipt fields."
-      - path: "tests/libretro/test_retroarch_smoke.py"
-        issue: "No regression currently proves full-path redaction for commas and other valid delimiters."
+        issue: "sanitize_diagnostic_text() repeats the same ambiguous quoted-boundary parsing."
+      - path: ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-SECURITY.md"
+        issue: "Four high-severity information-disclosure threats remain open; security status is blocked."
     missing:
-      - "Require exact integer types for numeric receipt fields before comparison, including byte and row counts."
-      - "Redact the full ambiguous unquoted path span, including temporary-root descendants, and add delimiter regressions to both test suites."
-      - "Resolve all remaining high-severity path-disclosure threats and obtain a fresh independent security disposition."
-  - truth: "Phase 04 validation tooling reflects current audit and review dispositions and passes against current evidence."
+      - "For arbitrary subprocess/crash text, redact the remainder of the line unless a boundary is proven by a grammar with correct escape handling."
+      - "Add escaped-double-quote and embedded-apostrophe regressions through both sanitizers, receipt persistence, and printed output; obtain a fresh independent audit."
+  - truth: "Phase 04 validation tooling accepts reconciled current review IDs and dispositions and rejects contradictory evidence."
     status: failed
-    reason: "Running python3 tests/tools/check_phase04_validation_map.py exits 1 at the assertion requiring threats_open: 6. The current security register has threats_open: 3, with T-04-13/T-04-16/T-04-17 closed and T-04-11/T-04-15/T-04-18 open. The checker also encodes obsolete review disposition assumptions."
+    reason: "The named regression test deterministically fails: `python3 -m unittest discover -s tests/tools -p 'test_check_phase04_validation_map.py' -v` exits 1 at check_phase04_validation_map.py:110 because the checker hardcodes `{CR-01, CR-02, WR-01}` although repaired CR-01 is absent from the current review. The direct checker also exits 1 at that assertion."
     artifacts:
       - path: "tests/tools/check_phase04_validation_map.py"
-        issue: "The declared evidence checker fails against the current security audit and current review dispositions."
-      - path: ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-SECURITY.md"
-        issue: "Current audit state is blocked with three open threats, contradicting the checker's expected six-open state."
+        issue: "Line 110 freezes the exact current finding-ID set; later assertions also require historical findings to stay open."
+      - path: "tests/tools/test_check_phase04_validation_map.py"
+        issue: "The reconciled-review regression fails against the current implementation."
     missing:
-      - "Reconcile checker assertions with current threat and review dispositions, preserving explicit blockers and unknowns."
-      - "Rerun the exact focused suites and update the map only from observed current results."
-  - truth: "The original fixture loads, runs, responds to input, presents software video, and unloads in the actual pinned RetroArch build."
-    status: partial
-    reason: "The pinned RetroArch 1.22.2 process aborted with status -6/SIGABRT before a screenshot. There is no observation of rendering, mapped input, unload, or normal exit; no GUI retry was made."
-    artifacts:
-      - path: "tests/libretro/retroarch_smoke.py"
-        issue: "The real-app run did not reach the first screenshot or any observable frontend behavior."
-      - path: "tests/libretro/callback_harness.c"
-        issue: "The callback harness exercises the core contract but cannot establish real RetroArch behavior."
-    missing:
-      - "A successful actual pinned-app observation of screenshot, stable no-input frames, RIGHT movement, LEFT negative control, unload, and normal exit when an interactive app-launch context is available."
-  - truth: "The Phase 04 owned-debug regression suite passes with the phase implementation and current source inventory."
-    status: failed
-    reason: "Fresh ctest --preset owned-debug --output-on-failure ran 47 tests; 46 passed and owned_cpu_inventory_check failed. It reports stale CPU identity/source-manifest entries and strict compile-command expectations."
-    artifacts:
-      - path: "tests/owned_cpu/check_inventory.py"
-        issue: "The inventory checker rejects the current source identity, manifest, and compile-command configuration."
-      - path: "experiments/owned_cpu/SUBSET.md"
-        issue: "The checked CPU identity/source manifest does not match current tracked files and build commands."
-    missing:
-      - "Reconcile the owned CPU inventory and expected compile-command records with the current tree, then rerun the owned-debug CTest suite."
-advisory: []
+      - "Derive current findings and unresolved dispositions from reconciled review/disposition records, retaining historical rows without requiring stale IDs or states."
+      - "Make the existing named regression pass and keep contradictory-record controls."
+deferred:
+  - truth: "Phase 05 selected MVS boot, private game media, and BIOS behavior."
+    addressed_in: "Phase 5"
+    evidence: "ROADMAP.md Phase 5 goal and success criteria explicitly cover selected private MVS media and BIOS/game boot."
+  - truth: "Active Metal Slug X scene control and scrolling."
+    addressed_in: "Phase 6"
+    evidence: "ROADMAP.md Phase 6 goal and success criteria explicitly cover an active scene with movement, firing, graphics, and scrolling."
+  - truth: "Representative game sound and private local scenario qualification."
+    addressed_in: "Phase 7"
+    evidence: "ROADMAP.md Phase 7 goal explicitly covers representative sound and separate private local qualification."
 human_verification:
-  - test: "Run the generated public fixture in the pinned RetroArch 1.22.2 build and inspect fresh screenshots, repeated no-input frames, RIGHT movement, the LEFT negative control, content unload, and normal application exit."
-    expected: "The app remains alive and presents guest-produced software pixels; no-input frames are stable, RIGHT moves the guest marker, LEFT does not reproduce that trace, and unload and normal exit complete."
-    why_human: "The retained attempt aborted before its first screenshot. Native and callback tests cannot verify actual frontend rendering, input mapping, or application lifecycle. The current environment has not materially changed, so the GUI run remains unknown."
+  - test: "Run the generated public fixture in the pinned RetroArch 1.22.2 build; inspect a fresh screenshot, stable repeated no-input frames, RIGHT movement, LEFT negative control, content unload, and normal application exit."
+    expected: "Guest-produced software pixels appear; no-input frames are stable; RIGHT changes the guest marker and visible output while LEFT does not reproduce that trace; unload and normal exit complete."
+    why_human: "The pinned process previously exited -6 before its first screenshot. Native and callback tests cannot establish actual frontend rendering, input mapping, or application lifecycle."
 ---
 
 # Phase 04: Public Playable Tracer Verification Report
 
 **Phase Goal:** A maintainer can rebuild and run an original guest with visible, input-driven behavior through the ordinary native API and an actual pinned RetroArch build, while resolving the selected sound candidates' admission gates before full integration.
 
-**Verified:** 2026-10-08T03:44:49Z  
-**Status:** gaps_found  
-**Re-verification:** Yes — after gap-only Plans 04-10/04-11 and the latest independent security and code-review audits.
+**Verified:** 2026-10-08T12:11:12Z
+**Status:** gaps_found
+**Re-verification:** Yes — after Plan 04-12 gap closure and the fresh security and code-review audits.
 
 ## Goal Achievement
-
-The public native fixture path and the two bounded sound-candidate admission paths still have implementation and test evidence. Current verification exposed receipt-type and redaction defects, the Phase 04 evidence-map checker fails against the latest audit state, and the full owned-debug suite has one reproducible inventory failure. The actual pinned RetroArch flow remains unknown. The phase goal is not achieved.
 
 ### Observable Truths
 
 | # | Truth | Status | Evidence |
 |---|---|---|---|
-| 1 | A maintainer can rebuild the rights-audited original fixture, run it through a C consumer, and observe a guest-produced frame with checked geometry, format, pitch, and bounds. | ✓ VERIFIED | Current `owned-debug` CTest run passes `public_guest_contract`, `public_guest_trace`, `public_guest_negative_left`, and `public_guest_negative_none`; the fixture recipe, rights manifest, and oracle are tracked. The suite's separate owned-CPU inventory failure is recorded below. |
-| 2 | A C integrator can advance a bounded frame with explicit sampled input and owned buffers, observe controlled guest/output changes, and reject wrong-input controls. | ✓ VERIFIED | The four public-guest CTest cases pass and assert frame metadata/bounds, guest state and pixel changes, and LEFT/no-input negative controls. |
-| 3 | The fixture loads, runs, responds to input, presents software video, and unloads in the actual pinned macOS RetroArch build. | ? UNCERTAIN | The recorded RetroArch 1.22.2 process exited -6/SIGABRT before its first screenshot. No actual rendering, input, unload, or clean-exit observation exists. Callback tests do not prove frontend behavior. |
-| 4 | The pinned Z80 and private-interface ymfm YM2610 candidates have reproducible admission evidence for their declared Phase 04 workloads before full integration. | ✓ VERIFIED | Current CTest passes all six `z80_admission*` cases and `ym2610_admission`; retained source/license inventories and the installed static/shared C-consumer admission report identify exact bounded workloads. These results do not claim game sound or physical-hardware fidelity. |
-| 5 | An integrator can follow the clean-source native/libretro build, install and load procedure and identify the tested environment and untested configurations. | ? UNCERTAIN | The documented static/shared build and install procedures and environment identities are present. Actual frontend load is unobserved, so the complete build/install/load truth is not established. |
+| 1 | A maintainer can rebuild the rights-audited original fixture, run it through a C consumer, and observe a guest-produced frame with checked geometry, format, pitch, and bounds. | ✓ VERIFIED | Current `ctest --preset owned-debug --output-on-failure` passed 47/47, including `public_guest_contract` and `public_guest_trace`; fixture source, rights, and oracle artifacts remain tracked. |
+| 2 | A C integrator can advance bounded frames with explicit sampled input and owned video/audio buffers, timing and produced-count semantics, progress/stop information, and actionable errors; controlled input changes guest/output and wrong-input controls fail. | ✓ VERIFIED | The 47/47 CTest run includes public guest trace and LEFT/no-input negative controls; API/ownership/error contracts and installed consumer checks are present. |
+| 3 | A user can load, run, control, and unload the fixture in an actual pinned macOS RetroArch build with software video, documented mapping, and frontend-owned pacing. | ? UNCERTAIN | The retained pinned RetroArch attempt exited -6 before its first screenshot. No actual video, input, unload, or normal exit has been observed; no GUI retry occurred. |
+| 4 | A maintainer can reproduce the selected pinned Z80 and private-interface ymfm YM2610 admission evidence before full integration. | ✓ VERIFIED | Current CTest passes all Z80 admission and mutation cases plus `ym2610_admission`; 04-12 records source/state, deterministic behavior, isolation, failure containment and static/shared C-consumer evidence. This is bounded candidate evidence, not game sound or silicon fidelity. |
+| 5 | An integrator can follow the clean-tree native/libretro build, install, and load procedure on the selected macOS configuration and identify exact tested and untested environment identities. | ? UNCERTAIN | Clean static/shared build and installed-consumer evidence and environment identities exist, but actual frontend load is unobserved, so the complete load procedure is not verified. |
 
 **Score:** 3/5 roadmap truths verified; 2 remain uncertain.  
-**Human verification:** actual pinned RetroArch behavior remains outstanding.  
-**Additional deterministic failures:** two security/code-review blockers, stale validation-map checker, and one failing owned-debug CTest.
+**Human verification:** actual pinned RetroArch behavior remains outstanding.
 
-## Re-verification Evidence
+### Re-verification Evidence
 
-The previous report listed six open security threats and the actual frontend gap. The latest security audit closes T-04-13, T-04-16, and T-04-17, but leaves T-04-11, T-04-15, and T-04-18 open. Current code review also records CR-01 and CR-02 as open blockers. I reproduced both against current code:
+The prior four findings were checked against current code rather than accepted from summaries. The boolean numeric-field defect is fixed: the 19-test tools suite passes and includes `test_repository_receipt_rejects_boolean_numeric_fields`. The owned CPU identity is also repaired: the direct inventory check passes and the complete owned-debug suite passes 47/47. The broader private-path truth remains failed because the review's escaped-quote case still reproduces. The validation-map gap remains failed on its targeted regression.
 
 | Check | Command or input | Result |
 |---|---|---|
-| Boolean byte-count receipt | In an isolated committed Git fixture, changed the one-byte row's `bytes` from integer `1` to boolean `true`, recomputed `inventory_sha256`, and called `validate_snapshot_record(..., repository=repo)`. | Accepted; defect reproduced. Python equality and `isinstance(bool, int)` permit the malformed row. |
-| Qualification redaction | `/Users/alice/private,capture/secret.rom` in unquoted diagnostic text | Output retained `,capture/secret.rom` after `[user]`. |
-| Frontend redaction | Same comma-delimited unquoted path through `sanitize_diagnostic_text` | Output retained `,capture/secret.rom` after `[user]`. |
-| Validation-map check | `python3 tests/tools/check_phase04_validation_map.py` | Exit 1 at `threats_open: 6`; current security register reports three open threats. |
-| Owned-debug CTest | `ctest --preset owned-debug --output-on-failure` | Exit 8; 46/47 passed. Only `owned_cpu_inventory_check` failed on stale CPU identity/source-manifest and strict compile-command expectations. |
-
-No GUI retry was performed. The latest pinned-app evidence remains the prior pre-screenshot abort, and its outcome stays unknown.
+| Full owned-debug regression | `ctest --preset owned-debug --output-on-failure` | Exit 0; 47/47 passed, including `owned_cpu_inventory_check`. |
+| Qualification/privacy suite | `python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py' -v` | 19/19 passed; this does not cover escaped quotes embedded in quoted path text. |
+| Frontend/privacy suite | `python3 -m unittest discover -s tests/libretro -p 'test_retroarch_smoke.py' -v` | 25/25 passed; this does not cover escaped quotes embedded in quoted path text. |
+| Owned CPU identity | `python3 tools/owned_cpu/inventory.py check --build-dir build/owned-debug` | PASS: 26 fields, 10 compiled source files, zero runtime mutable globals/callback owner mutations. |
+| Escaped quote redaction | JSON encoding of synthetic `/Users/synthetic/private\"tail/sensitive.bin`, passed to both current sanitizers | Both return `failure: [user]tail/sensitive.bin\"`; private suffix remains. The input is synthetic and not a real user path. |
+| Validation-map direct gate | `python3 tests/tools/check_phase04_validation_map.py` | Exit 1 at line 110: `current review IDs changed`. |
+| Validation-map regression | `python3 -m unittest discover -s tests/tools -p 'test_check_phase04_validation_map.py' -v` | Exit 1; the one named test fails at line 110 for the reconciled state where repaired CR-01 is absent. |
+| Security audit | Current `04-SECURITY.md` | 32/36 threats closed; T-04-11, T-04-15, T-04-18, T-04-20 remain high/open; status blocked. |
+| Review disposition | Current `04-REVIEW-DISPOSITION.md` | 5/5 rows remain open, including repaired CR-01 and carried WR-02/WR-03. |
+| Actual pinned frontend | Retained RetroArch attempt | Exit -6 before screenshot; unknown, not pass. |
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |---|---|---|---|
-| `tests/fixture/public_guest.c`, `tests/fixture/test_public_guest.c` | Original fixture and behavioral C consumer | ✓ VERIFIED | Tracked implementation; public fixture contract and trace/control tests pass. |
-| `include/glueyneo/glueyneo.h`, `src/instance.c` | Bounded native API and guest-driven frame | ✓ VERIFIED | Native guest state flows to caller-owned pixels; public contract tests pass. |
-| `src/libretro/libretro_core.c`, `tests/libretro/retroarch_smoke.py` | Adapter, real frontend smoke path | ⚠️ PARTIAL | Adapter is wired and callback CTest passes; pinned application behavior is not observed. Smoke redaction has a reproduced disclosure defect. |
-| `src/chips/z80_candidate.c`, `tests/chips/test_z80.c` | Pinned bounded Z80 candidate and admission suite | ✓ VERIFIED | Current CTest admission cases pass; source/workload claim remains synthetic and bounded. |
-| `src/chips/ym2610_candidate.cpp`, `tests/chips/test_ym2610.c` | Private C interface and candidate admission | ✓ VERIFIED | Current CTest passes; retained source, failure containment, deterministic behavior, and installed static/shared consumer evidence remain candidate-only. |
-| `tools/verify_playable.py` | Snapshot receipt and diagnostic validation | ✗ FAILED | Current bool byte-count case is accepted; ambiguous comma paths leak suffixes. |
-| `tests/tools/check_phase04_validation_map.py` | Current evidence-map gate | ✗ FAILED | Exact invocation exits 1 because assertions encode the superseded six-open security state. |
+| `tests/fixture/public_guest.c`, `tests/fixture/test_public_guest.c` | Original fixture and behavioral C consumer | ✓ VERIFIED | Tracked source and rights/oracle records; public guest behavioral CTests pass. |
+| `include/glueyneo/glueyneo.h`, `src/instance.c` | Bounded native API and guest-produced frame | ✓ VERIFIED | Native tests and static/shared installed consumers exercise frame/input contracts. |
+| `src/libretro/libretro_core.c`, `tests/libretro/retroarch_smoke.py` | Adapter and actual frontend path | ⚠️ PARTIAL | Adapter callback test passes; actual application behavior remains unknown. Diagnostic sanitization leaks escaped-quote suffixes. |
+| `src/chips/z80_candidate.c`, `tests/chips/test_z80.c` | Pinned bounded Z80 candidate and admission suite | ✓ VERIFIED | Current full CTest includes passing admission and mutation cases for the declared workload. |
+| `src/chips/ym2610_candidate.cpp`, `tests/chips/test_ym2610.c` | Private C interface and candidate admission | ✓ VERIFIED | Current admission test and retained static/shared C-consumer evidence pass; no broad game-sound claim. |
+| `tools/verify_playable.py` | Snapshot receipt and diagnostic validation | ⚠️ PARTIAL | Exact boolean checks and archive row binding pass focused regressions; escaped quoted private paths still leak suffixes. |
+| `tests/tools/check_phase04_validation_map.py` | Current evidence-map gate | ✗ FAILED | Direct command and named reconciled-review regression fail at fixed current finding-ID assertion. |
+| `tools/owned_cpu/inventory.py`, `experiments/owned_cpu/source-manifest.json` | Current owned CPU identity and target-scoped build evidence | ✓ VERIFIED | Direct inventory check passes; full CTest inventory gate passes. |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |---|---|---|---|---|
-| Generated public fixture | Guest execution and native output frame | `gn_load` → guest board state → renderer → caller buffer | ✓ WIRED | Public fixture tests pass and assert pixel/state response. |
-| Native frame/input | Libretro callbacks | Adapter forwards input and synchronously submits frame pixels | ✓ WIRED; app unknown | Callback contract passes, but actual RetroArch presentation/input/lifecycle remain unobserved. |
-| Pinned Z80 | Per-instance adapter and admission tests | Private C adapter → CTest | ✓ WIRED | Six current CTest cases pass. |
-| Pinned ymfm | Private C shim and installed C consumers | Opaque C API → static/shared library targets | ✓ WIRED | Current admission test and retained link report support candidate admission. |
-| Committed Git source | Qualification snapshot receipt | Archive inventory → row validation | ⚠️ PARTIAL | Archive-derived row binding is present, but bool/int equality accepts a forged byte-count type. |
-| Diagnostic path sources | Persisted or printed diagnostic text | Qualification/frontend redactors | ✗ FAILED | Both leave a comma-delimited private path suffix. |
+| Public fixture | Guest execution and native output frame | `gn_load` → guest state → renderer → caller buffer | ✓ WIRED | Public fixture CTests pass and verify pixels/state changes and boundaries. |
+| Native frame/input | Libretro callbacks | Adapter forwards sampled input and submits native pixels synchronously | ✓ WIRED; app unknown | Callback CTest passes; this does not prove actual RetroArch behavior. |
+| Pinned Z80 | Per-instance adapter and admission tests | Private C adapter → CTest | ✓ WIRED | Admission and mutation tests pass in current 47-test suite. |
+| Pinned ymfm | Private C shim and installed C consumers | Opaque C API → static/shared library targets | ✓ WIRED | Candidate admission and consumer evidence pass. |
+| Committed Git source | Qualification receipt | Archive inventory → exact row validation | ✓ WIRED | Archive-bound validation and forged-row regressions pass. |
+| Diagnostic path sources | Persisted/printed diagnostic text | Qualification and frontend redactors | ✗ FAILED | JSON-escaped quote causes both implementations to stop early and retain private path suffix. |
+| Current review/disposition | Evidence-map checker | Parsed review, dispositions, map and reconciled-state regression | ✗ FAILED | Hardcoded current ID set rejects the legitimate disappearance of repaired CR-01. |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data variable | Source | Produces real data | Status |
 |---|---|---|---|---|
-| `src/instance.c` | Guest marker position and pixel buffer | Executed fixture state and caller-owned output storage | Yes; covered by passing native fixture cases | ✓ FLOWING |
-| `src/libretro/libretro_core.c` | Input sample and submitted frame | Frontend callback values and native frame result | Yes in callback harness; actual pinned frontend unavailable | ⚠️ FRONTEND UNKNOWN |
-| `tools/verify_playable.py` | Receipt inventory rows | Bounded committed Git archive bytes | Yes, with malformed bool row accepted by equality | ⚠️ VALIDATION DEFECT |
+| `src/instance.c` | Guest marker and pixel buffer | Executed fixture state and caller-owned output | Yes; current public guest tests assert guest-produced output | ✓ FLOWING |
+| `src/libretro/libretro_core.c` | Input sample and submitted frame | Frontend callbacks and native frame result | Callback harness exercises it; actual pinned frontend observation is absent | ⚠️ FRONTEND UNKNOWN |
+| `tools/verify_playable.py` | Receipt inventory rows | Bounded committed Git archive bytes | Yes; exact archive rows are checked; unrelated diagnostic string path has a reproduced sanitizer defect | ✓ FLOWING / SECURITY GAP |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |---|---|---|---|
-| Public fixture output/input controls | `ctest --preset owned-debug --output-on-failure` | Four `public_guest_*` tests pass | ✓ PASS |
-| Z80 and YM2610 candidate admission | Same CTest invocation | Six Z80 cases and `ym2610_admission` pass | ✓ PASS |
-| Actual pinned RetroArch flow | Existing recorded run | Exit -6/SIGABRT before first screenshot; not retried | ? UNKNOWN — human evidence required |
-| Receipt boolean rejection | Isolated repository-backed reproduction | `bytes: true` accepted after aggregate recomputation | ✗ FAIL |
-| Full diagnostic path removal | Direct redactor reproduction against both modules | Both leave `,capture/secret.rom` | ✗ FAIL |
-| Validation-map consistency | `python3 tests/tools/check_phase04_validation_map.py` | Exit 1 at stale six-open threat assertion | ✗ FAIL |
+| Native fixture frame and input controls | `ctest --preset owned-debug --output-on-failure` | `public_guest_*` tests pass in the 47/47 run | ✓ PASS |
+| Z80/YM2610 candidate admission | Same CTest invocation | Z80 admission/mutation cases and `ym2610_admission` pass | ✓ PASS, BOUNDED |
+| Owned CPU inventory | Same CTest invocation; direct inventory command above | Both pass against current compiler database | ✓ PASS |
+| Actual pinned RetroArch flow | Existing app attempt | Exit -6 before first screenshot; no retry | ? UNKNOWN — human evidence required |
+| Private-path redaction | Reproduced escaped quote against both sanitizers | Both leave `tail/sensitive.bin\"` visible | ✗ FAIL |
+| Reconciled validation-map state | Named unittest and direct checker | Both fail at current finding-ID assertion | ✗ FAIL |
+
+### Probe Execution
+
+Not applicable: Phase 04 declares no migration/tooling `probe-*.sh` acceptance probe. The actual frontend smoke path is reported separately and remains unknown.
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 |---|---|---|---|---|
-| TRAC-01 | 04-01, 04-03, 04-07, 04-10, 04-11 | Rebuild original rights-audited fixture | ✓ SATISFIED | Tracked recipe/rights/oracle and passing public guest tests. |
-| TRAC-02 | 04-01, 04-02 | Native C consumer observes guest-driven checked frame | ✓ SATISFIED | Public guest contract tests pass. |
-| TRAC-03 | 04-01, 04-08 | Controlled input changes guest state/output; wrong controls fail | ✓ SATISFIED | RIGHT trace and LEFT/no-input controls pass. |
-| HOST-02 | 04-02, 04-08, 04-09, 04-10 | Actual pinned RetroArch load, input, video and unload | ? NEEDS HUMAN | App aborts before screenshot; no actual frontend behavior observed. |
-| API-05 | 04-01 | Bounded frame input/output/time/error contract | ✓ SATISFIED | Passing public guest contract tests cover buffers, metadata, input and errors. |
-| SND-01 | 04-04 | Pinned Z80 admission for selected synthetic workload | ✓ SATISFIED, BOUNDED | Current admission cases pass; no private game workload claim. |
-| SND-02 | 04-05 | Pinned ymfm YM2610 admission behind private C boundary | ✓ SATISFIED, CANDIDATE-ONLY | Current admission case and retained installed static/shared C linkage evidence pass. |
-| QUAL-03 | 04-06, 04-07, 04-08, 04-10, 04-11 | Clean-source build/install/load procedure with environment identities | ? NEEDS HUMAN | Build/install evidence and identities exist; actual frontend load remains unobserved. |
+| TRAC-01 | 04-01, 04-03, 04-07, 04-10–04-12 | Rebuild original rights-audited fixture | ✓ SATISFIED | Tracked recipe/rights/oracle and current passing guest tests. |
+| TRAC-02 | 04-01, 04-02 | Native C consumer sees checked guest-driven frame | ✓ SATISFIED | Current public guest tests and installed C consumers pass. |
+| TRAC-03 | 04-01, 04-08 | Controlled input changes output; wrong controls fail | ✓ SATISFIED | RIGHT trace and LEFT/no-input negative controls pass. |
+| HOST-02 | 04-02, 04-08–04-10, 04-12 | Actual pinned RetroArch load, input, video, unload | ? NEEDS HUMAN | Existing process aborted before screenshot; actual behavior is unknown. |
+| API-05 | 04-01 | Bounded frame/input/output/time/error contract | ✓ SATISFIED | Current CTest and consumer contract checks pass. |
+| SND-01 | 04-04 | Pinned Z80 admission for declared workload | ✓ EVIDENCE PRESENT; REQUIREMENT PENDING | Candidate tests and source checks pass, but REQUIREMENTS.md remains unchecked pending phase admission. |
+| SND-02 | 04-05 | Pinned ymfm subset behind private C boundary | ✓ EVIDENCE PRESENT; REQUIREMENT PENDING | Admission and static/shared linkage evidence pass; REQUIREMENTS.md remains unchecked pending phase admission. |
+| QUAL-03 | 04-06–04-12 | Clean macOS build/install/load procedure and identities | ? NEEDS HUMAN | Build/install/consumer evidence and identities exist; actual pinned load remains unknown. |
 
-All eight requirement IDs are allocated by the phase plans. No additional Phase 04 requirement mapping is orphaned.
-
-### Behavioral and Test Quality Audit
-
-The native guest and both sound candidates have active, passing behavior tests in the current CTest run. No disabled requirement-linked tests were identified in the reviewed Phase 04 suites. The Phase 04 validation-map checker itself is failing against the current audit state. Its assertion is deterministic and in scope because Plan 04-11 requires the checker to represent current audit and frontend gates accurately.
-
-### Probe Execution
-
-Not applicable. This phase is not a migration/tooling phase with declared `probe-*.sh` acceptance probes; its named tests and audit commands are recorded above.
+No Phase 04 requirement allocation is orphaned; all eight IDs above are declared in the phase plans and workstream requirements.
 
 ### Decision Coverage
 
-The installed decision-coverage gate reports 3/3 trackable Phase 04 context decisions honored by shipped artifacts.
+The installed decision-coverage gate's latest retained result reports 3/3 trackable Phase 04 context decisions honored. This is advisory and does not affect the verdict.
 
-### Advisory (New Scope, Unevidenced)
+### Test Quality Audit
 
-None. Re-verification findings that block are tied to carried-forward gaps, current changed files, or reproducible command/input evidence.
+| Test File | Linked requirements | Active evidence | Disabled-only coverage | Circular | Verdict |
+|---|---|---|---|---|---|
+| `tests/fixture/test_public_guest.c` | TRAC-01/02/03, API-05 | Passing native behavioral CTests with exact frame/control assertions | None identified | None identified | Adequate for bounded fixture contract |
+| `tests/chips/test_z80.c` | SND-01 | Passing admission and mutation cases in current CTest | None identified | None identified | Adequate for declared synthetic candidate workload |
+| `tests/chips/test_ym2610.c` | SND-02 | Passing candidate admission; installed linkage report retained | None identified | None identified | Bounded candidate evidence; not game sound |
+| `tests/tools/test_verify_playable.py` | TRAC-01, QUAL-03 | 19 active tests pass; quoted escaped filename case is missing | None identified | None identified | Incomplete privacy edge coverage; reproduced redaction defect |
+| `tests/libretro/test_retroarch_smoke.py` | HOST-02, QUAL-03 | 25 active GUI-free tests pass; quoted escaped filename case is missing | None identified | None identified | Incomplete privacy edge coverage; GUI evidence remains unknown |
+| `tests/tools/test_check_phase04_validation_map.py` | Phase evidence gate | One active test fails on reconciled review state | None identified | None identified | BLOCKER: checker does not accept current reconciled evidence |
+
+No disabled-only requirement test or circular expected-value generation was identified in the reviewed paths. Passing tests do not establish actual frontend behavior or cover the reproduced escaped-quote case.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |---|---:|---|---|---|
-| `tools/verify_playable.py` | 417 | `isinstance(bool, int)` plus equality accepts `bytes: true` for a one-byte file | 🛑 BLOCKER | Reproduced against repository-backed receipt validation. |
-| `tools/verify_playable.py` | 490 | Redactor treats comma as a path terminator | 🛑 BLOCKER | Reproduced private path suffix disclosure. |
-| `tests/libretro/retroarch_smoke.py` | 75 | Frontend redactor treats comma as a path terminator | 🛑 BLOCKER | Reproduced private path suffix disclosure. |
-| `tests/tools/check_phase04_validation_map.py` | 119 | Checker requires superseded six-open audit state | 🛑 BLOCKER | Named checker exits 1 against current audit state. |
-| `experiments/owned_cpu/SUBSET.md` and source inventory inputs | — | Stale source identity/manifest and compile-command expectations | ⚠️ WARNING | The owned-debug suite is 46/47; `owned_cpu_inventory_check` fails. |
+| `tools/verify_playable.py` | 483–492 | Quoted path ends at the next quote without handling escapes | 🛑 BLOCKER | Synthetic JSON-escaped path leaves `tail/sensitive.bin` visible in retained/printed output. |
+| `tests/libretro/retroarch_smoke.py` | 66–74 | Same ambiguous quoted-boundary parsing | 🛑 BLOCKER | Frontend/crash diagnostic path suffix disclosure. |
+| `tests/tools/check_phase04_validation_map.py` | 110–156 | Exact historical finding IDs and open states are hardcoded | 🛑 BLOCKER | Reconciled review regression and direct gate fail. |
+| `experiments/owned_cpu/SUBSET.md`, source/state inventory | — | Previously stale identity/compile evidence | Resolved | Current inventory check and CTest pass; no longer a phase gap. |
 
-No unreferenced `TBD`, `FIXME`, or `XXX` debt markers were found in the changed implementation and test files. The `return {}` in `crash_report_snapshot()` is the intentional empty result on non-macOS platforms and is not a stub.
+No unreferenced `TBD`, `FIXME`, or `XXX` markers were found in the reviewed implementation files. The platform-specific empty dictionary in `crash_report_snapshot()` and empty-list default in the inventory parser are intentional return/default paths, not stubs.
+
+### Advisory (New Scope, Unevidenced)
+
+None. Blocking findings are either carried forward or supported by the named failing regression/direct command and the reproduced sanitization output.
 
 ## Human Verification Required
 
 ### Pinned RetroArch public-fixture flow
 
-**Test:** Run the generated fixture in the identified pinned RetroArch 1.22.2 build; capture a fresh screenshot, compare repeated no-input frames, exercise RIGHT and LEFT controls, unload content, and quit normally.
+**Test:** Run the generated fixture in the pinned RetroArch 1.22.2 build; capture a fresh screenshot, compare repeated no-input frames, exercise RIGHT and LEFT controls, unload content, and quit normally.
 
-**Expected:** Guest-produced software pixels appear; no-input output remains stable; RIGHT moves the guest marker; LEFT does not reproduce the trace; unload and normal exit complete.
+**Expected:** Guest-produced software pixels appear; no-input output remains stable; RIGHT moves the guest marker; LEFT does not reproduce that trace; unload and normal exit complete.
 
-**Why human:** The recorded app process aborted before its first screenshot. Native and callback tests cannot establish actual frontend rendering, input mapping, or process lifecycle. The GUI run remains unknown because the environment has not materially changed.
+**Why human:** The recorded actual-app attempt exited -6 before its first screenshot. Native and callback tests cannot establish real frontend rendering, input mapping, or lifecycle.
 
 ## Gaps Summary
 
-Four deterministic gaps remain: receipt validation accepts a boolean byte count; two diagnostic redactors leak valid comma-delimited path suffixes while three high-severity path threats remain open; the Phase 04 validation-map checker fails because its expected security/review state is stale; and the owned-debug CTest suite has one stale CPU inventory failure. Separately, HOST-02 and the actual frontend portion of QUAL-03 remain unknown pending successful pinned-app observations. The native fixture and bounded Z80/YM2610 admission evidence do not resolve these gaps or establish broader game, BIOS, or hardware compatibility.
+Two in-scope automated gaps remain: escaped quotes in otherwise valid private filenames bypass both diagnostic sanitizers and leave high-severity threats T-04-11/T-04-15/T-04-18/T-04-20 open; and the validation-map checker fails its regression for a reconciled current review. The earlier boolean-receipt and owned CPU inventory defects are fixed and verified by focused tests and the 47/47 full CTest run. HOST-02 and actual frontend QUAL-03 remain unknown pending a successful pinned-app observation. Native fixture behavior and bounded sound-candidate tests pass, but the unresolved security gate and frontend evidence prevent Phase 04 completion.
 
 ---
-*Verified: 2026-10-08T03:44:49Z*  
-*Verifier: the agent (gsd-verifier)*
+
+_Verified: 2026-10-08T12:11:12Z_
+_Verifier: the agent (gsd-verifier)_

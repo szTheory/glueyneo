@@ -5,12 +5,12 @@ milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
 current_plan: 12
-status: Plan 04-12 executed; Phase 04 incomplete pending independent audit and frontend evidence
-stopped_at: Completed 04-12-PLAN.md; independent security audit next; Phase 04 incomplete
-last_updated: "2026-10-08T11:50:54.816Z"
+status: "Phase 04 incomplete: verifier found gaps (3/5 truths); four high-severity threats remain open; pinned frontend behavior is unknown"
+stopped_at: Phase 04 verifier returned gaps_found (3/5); no phase advance
+last_updated: "2026-10-08T12:14:04.341Z"
 last_activity: 2026-10-08
-last_activity_desc: Plan 04-12 repository repairs completed; independent security audit next
-state_head: 3072f2097cf586315228cc9f1e5f2b9bc8f2baea
+last_activity_desc: Fresh Phase 04 security and goal audits completed; escaped-quote disclosure and review-map reconciliation remain; next $gsd-plan-phase 04 --gaps --ws first-playable-game
+state_head: 8c88bf1b5a5a7c71327e6bb8a3d9fd0ea261a33e
 progress:
   total_phases: 4
   completed_phases: 0
@@ -26,16 +26,16 @@ progress:
 See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 **Core value:** Trustworthy Neo Geo emulation that other software can embed easily.
-**Current focus:** Phase 04 — Public Playable Tracer
+**Current focus:** Phase 04 — close two verification gaps and obtain pinned RetroArch evidence
 
 ## Current Position
 
 Phase: 04 (Public Playable Tracer) — INCOMPLETE; execution plans finished
 Current Plan: 12
 Total Plans in Phase: 12
-Status: Plan 04-12 executed; Phase 04 incomplete pending independent audit and frontend evidence
-Last activity: 2026-10-08 — Plan 04-12 repository repairs completed
-Last Activity Description: Plan 04-12 repository repairs completed; independent security audit next
+Status: Phase 04 incomplete: verifier found gaps (3/5 truths); four high-severity threats remain open; pinned frontend behavior is unknown
+Last activity: 2026-10-08
+Last Activity Description: Fresh Phase 04 security and goal audits completed; escaped-quote disclosure and review-map reconciliation remain; next $gsd-plan-phase 04 --gaps --ws first-playable-game
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -68,7 +68,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Last session:** 2026-10-08T11:50:07.122Z
 
-**Stopped At:** Completed 04-12-PLAN.md; independent security audit next; Phase 04 incomplete
+**Stopped At:** Phase 04 verifier returned gaps_found (3/5); no phase advance
 **Resume File:** None
 
 ## Scope Notes
