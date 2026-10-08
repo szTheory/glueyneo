@@ -55,6 +55,7 @@ coverage:
         ref: "build/playable-qualification/receipt.json#retroarch_smoke; fresh no-content and core/content diagnosis"
         status: unknown
     human_judgment: true
+    rationale: "The pinned app aborted before a screenshot in both fresh launch modes. HOST-02 needs real screenshot, control, unload, and exit observations, which remain unavailable until the pinned app launches in a functioning interactive macOS context."
   - id: D2
     description: "The final qualification binds source, fixture, installed artifacts, consumers, candidate gates, tests, and frontend outcome to one committed snapshot."
     requirement: QUAL-03
@@ -63,6 +64,7 @@ coverage:
         ref: "build/playable-qualification/receipt.json; source snapshot 5e2b3799c981d1987404c65138a69fc09b20613d"
         status: unknown
     human_judgment: true
+    rationale: "The receipt binds the exact source and successful native build/install/consumer lanes, but its overall status is fail because the actual frontend lane is unknown. The clean install/load claim remains incomplete until that frontend evidence exists."
   - id: D3
     description: "Generated public fixture rebuild and native consumer checks remain covered by the final clean qualification."
     requirement: TRAC-01
