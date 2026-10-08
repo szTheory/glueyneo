@@ -212,3 +212,17 @@ The current register was reconciled against the 18 plan threat models and the pr
 | T-04-11, T-04-15, T-04-18, T-04-20 | OPEN — high, retained by explicit direction | No closure is inferred from the checker tests or this review. The four disclosure threats continue to block the phase. |
 
 The 54-row inventory remains 49 closed and 5 open: the four directed high-severity disclosure threats and T-04-34 at medium severity. Thus `threats_open: 4` remains the severity-filtered blocking count. HOST-02 and frontend QUAL-03 remain Pending/unknown, and actual pinned RetroArch load, display, controls, unload, and exit remain manual-only and unobserved; GUI-free tests are not frontend proof.
+
+## Security Audit 2026-10-08 — Plan 04-19 independent current-revision pass
+
+| Metric | Count |
+|---|---:|
+| Reviewed source revision | `9804351907e456b3ab85ebe4a49959c05b0714bb` |
+| Current threat rows reviewed | 54 |
+| Closed | 49 |
+| Open | 5 |
+| Blocking open (`block_on: high`) | 4 |
+
+The independent ASVS L1 audit covered `tools/verify_playable.py`, the read-only frontend diagnostic sanitizer in `tests/libretro/retroarch_smoke.py`, focused tests, evidence-map checker/mutations, and current Phase 04 security, review, disposition, validation, verification, and plan records. The qualification suite passed 23/23, frontend contract suite 27/27, and evidence-map mutation suite 14/14; the docs-only gate and direct evidence-map checker passed. Forged receipt file rows remain rejected after aggregate recomputation; newline, space, escaped-quote and apostrophe path controls pass across retained/printed sinks. No GUI was launched. These checks do not establish actual RetroArch loading or behavior.
+
+The code reviewer reproduced WR-06 in the consumer guide even though the independent auditor initially inferred closure from the exact verification-row gate: an affirmative app-load/pixel sentence and a separate RIGHT-input/unload sentence were both accepted when appended to a temporary guide. T-04-34 therefore remains medium/open pending a focused correction and independent post-fix review. T-04-11, T-04-15, T-04-18, and T-04-20 remain high/open by direction. No risks are accepted; HOST-02 and frontend QUAL-03 remain Pending/unknown and manual-only.
