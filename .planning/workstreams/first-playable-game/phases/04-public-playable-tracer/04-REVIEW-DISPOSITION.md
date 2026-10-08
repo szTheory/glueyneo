@@ -3,6 +3,14 @@ phase: 04
 review: 04-REVIEW.md
 titles: json
 findings:
+  - id: WR-01
+    severity: warning
+    disposition: open
+    title: "Guide claim filter accepts affirmative frontend paraphrases"
+  - id: WR-02
+    severity: warning
+    disposition: open
+    title: "Evidence checker accepts a stale current qualification denominator"
   - id: WR-06
     severity: warning
     disposition: open
@@ -19,10 +27,6 @@ findings:
     severity: warning
     disposition: fixed
     title: "Crosswalk disposition check accepts contradictory wording [WARNING]"
-  - id: WR-01
-    severity: warning
-    disposition: fixed
-    title: "Validation-map checks require historical findings to stay reported and open [WARNING]"
   - id: CR-02
     severity: critical
     disposition: fixed
@@ -35,33 +39,29 @@ findings:
     severity: critical
     disposition: fixed
     title: "Boolean byte count bypass fixed by exact integer validation"
-  - id: WR-02
-    severity: warning
-    disposition: fixed
-    title: "Diagnostic path sanitization leaks path suffixes when paths contain spaces"
   - id: WR-03
     severity: warning
     disposition: fixed
     title: "Repository-backed receipt validation accepts forged file-content hashes"
-open: 1
+open: 3
 total: 10
-recorded: 2026-10-08
+recorded: 2026-10-08T23:13:27.868Z
 ---
 
 # Phase 04: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-06 | warning | open | Post-fix independent review at `2a82c455f85671ba144a42923318c4ff7d53b9a2` still reproduces affirmative claims (“frontend booted the game and showed its output”; “controls worked as expected in RetroArch”) accepted by `check_docs()`; T-04-34 remains open. |
-| WR-07 | warning | fixed | Current mutation fixture reads the actual verification source row before mutation; source-derived checker rows reject removal and false closure (14-test suite). |
-| CR-03 | critical | fixed | Current qualification and frontend regressions remove the complete newline-containing private-path suffix at retained and printed sinks; reviewed at `9804351907e456b3ab85ebe4a49959c05b0714bb`. |
-| WR-05 | warning | fixed | Current checker reconciles normalized exact crosswalk state against disposition records and mutation tests reject contradiction/duplicates. |
-| WR-01 | warning | fixed | Current checker accepts repaired historical findings absent from the fresh review while retaining their fixed dispositions; mutation test passes. |
+| WR-01 | warning | open | - |
+| WR-02 | warning | open | - |
+| WR-06 | warning | open | Post-fix independent review at `2a82c455f85671ba144a42923318c4ff7d53b9a2` still reproduces affirmative claims (“frontend booted the game and showed its output”; “controls worked as expected in RetroArch”) accepted by `check_docs()`; T-04-34 remains open. (not in the current review) |
+| WR-07 | warning | fixed | Current mutation fixture reads the actual verification source row before mutation; source-derived checker rows reject removal and false closure (14-test suite). (not in the current review) |
+| CR-03 | critical | fixed | Current qualification and frontend regressions remove the complete newline-containing private-path suffix at retained and printed sinks; reviewed at `9804351907e456b3ab85ebe4a49959c05b0714bb`. (not in the current review) |
+| WR-05 | warning | fixed | Current checker reconciles normalized exact crosswalk state against disposition records and mutation tests reject contradiction/duplicates. (not in the current review) |
 | CR-02 | critical | fixed | Plan 04-14 closes the raw-literal-quote case; fresh review confirms that specific suffix case is removed. CR-03 remains open for newline-containing paths. (not in the current review) |
 | WR-04 | warning | fixed | Plan 04-14 adds Info/IN parsing and severity reconciliation; fresh review confirms this finding is addressed. (not in the current review) |
 | CR-01 | critical | fixed | Plan 04-12 exact-integer receipt validation; absent from the fresh current review. (not in the current review) |
-| WR-02 | warning | fixed | Space-containing paths are removed as complete spans by both sanitizers; current retained/printed sink regressions pass. |
-| WR-03 | warning | fixed | Repository receipt validates committed archive rows and rejects forged file rows after aggregate recomputation; current qualification regression passes. |
+| WR-03 | warning | fixed | Repository receipt validates committed archive rows and rejects forged file rows after aggregate recomputation; current qualification regression passes. (not in the current review) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
