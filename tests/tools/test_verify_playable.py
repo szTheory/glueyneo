@@ -202,6 +202,56 @@ class SnapshotTest(unittest.TestCase):
             playable.validate_snapshot_record(stale)
         self.assertEqual(raised.exception.reason, "snapshot-record-digest-mismatch")
 
+    def test_repository_receipt_rejects_forged_file_rows_after_aggregate_recompute(self) -> None:
+        self.commit_fixture_project()
+        script = self.repository / "tests/libretro/test_smoke.py"
+        script.chmod(0o755)
+        subprocess.run(["git", "-C", str(self.repository), "add", "tests/libretro/test_smoke.py"], check=True)
+        subprocess.run(["git", "-C", str(self.repository), "commit", "-qm", "executable source"], check=True)
+        commit = subprocess.run(
+            ["git", "-C", str(self.repository), "rev-parse", "HEAD"],
+            check=True, text=True, stdout=subprocess.PIPE,
+        ).stdout.strip()
+        snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")
+        original = playable.snapshot_record(snapshot)
+        target_index = next(i for i, row in enumerate(original["entries"]) if row["path"] == "writer.c")
+
+        forged_rows = (
+            {"sha256": "0" * 64},
+            {"bytes": original["entries"][target_index]["bytes"] + 1},
+            {"mode": "executable"},
+        )
+        for change in forged_rows:
+            with self.subTest(change=change):
+                record = copy.deepcopy(original)
+                record["entries"][target_index].update(change)
+                record["inventory_sha256"] = playable.inventory_digest(record["entries"])
+                with self.assertRaises(playable.SnapshotError) as raised:
+                    playable.validate_snapshot_record(record, repository=self.repository)
+                self.assertTrue(raised.exception.reason.startswith("snapshot-record-"))
+
+    def test_repository_receipt_rejects_forged_symlink_target_after_aggregate_recompute(self) -> None:
+        self.commit_fixture_project()
+        (self.repository / "inside-link").symlink_to("writer.c")
+        subprocess.run(["git", "-C", str(self.repository), "add", "inside-link"], check=True)
+        subprocess.run(["git", "-C", str(self.repository), "commit", "-qm", "safe symlink"], check=True)
+        commit = subprocess.run(
+            ["git", "-C", str(self.repository), "rev-parse", "HEAD"],
+            check=True, text=True, stdout=subprocess.PIPE,
+        ).stdout.strip()
+        snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")
+        record = playable.snapshot_record(snapshot)
+        link = next(row for row in record["entries"] if row["path"] == "inside-link")
+        link["target"] = "tests/libretro/test_smoke.py"
+        target = link["target"].encode("utf-8")
+        link["bytes"] = len(target)
+        link["sha256"] = hashlib.sha256(target).hexdigest()
+        record["inventory_sha256"] = playable.inventory_digest(record["entries"])
+
+        with self.assertRaises(playable.SnapshotError) as raised:
+            playable.validate_snapshot_record(record, repository=self.repository)
+        self.assertEqual(raised.exception.reason, "snapshot-record-source-mismatch")
+
     def test_build_environment_drops_checkout_and_toolchain_injection(self) -> None:
         with mock.patch.dict(os.environ, {
             "CFLAGS": "-include injected.h", "CMAKE_TOOLCHAIN_FILE": "/checkout/toolchain.cmake",
