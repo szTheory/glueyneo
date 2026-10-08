@@ -4,12 +4,15 @@
 from __future__ import annotations
 
 import hashlib
+import copy
+import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -28,20 +31,30 @@ class SnapshotTest(unittest.TestCase):
         subprocess.run(["git", "-C", str(self.repository), "config", "user.email", "snapshot@example.invalid"], check=True)
 
     def commit_fixture_project(self) -> str:
+        (self.repository / "tests/fixture").mkdir(parents=True)
+        (self.repository / "tests/libretro").mkdir(parents=True)
+        (self.repository / "third_party/vendor/include").mkdir(parents=True)
         (self.repository / "CMakeLists.txt").write_text(
             "cmake_minimum_required(VERSION 3.20)\n"
             "project(snapshot_fixture C)\n"
-            "add_executable(fixture_writer writer.c public_guest.c)\n",
+            "add_executable(fixture_writer writer.c tests/fixture/public_guest.c)\n"
+            "target_include_directories(fixture_writer PRIVATE third_party/vendor/include)\n",
             encoding="utf-8",
         )
         (self.repository / "writer.c").write_text(
-            "#include <stddef.h>\n"
+            "#include <fixture_vendor.h>\n"
             "int public_guest_write(const char *);\n"
-            "int main(int argc, char **argv) { return argc == 2 && public_guest_write(argv[1]) ? 0 : 1; }\n",
+            "int main(int argc, char **argv) { return argc == 2 && FIXTURE_VENDOR_ABI == 1 && public_guest_write(argv[1]) ? 0 : 1; }\n",
             encoding="utf-8",
         )
-        shutil.copyfile(ROOT / "tests/fixture/public_guest.c", self.repository / "public_guest.c")
-        subprocess.run(["git", "-C", str(self.repository), "add", "CMakeLists.txt", "writer.c", "public_guest.c"], check=True)
+        shutil.copyfile(ROOT / "tests/fixture/public_guest.c", self.repository / "tests/fixture/public_guest.c")
+        (self.repository / "third_party/vendor/include/fixture_vendor.h").write_text(
+            "#define FIXTURE_VENDOR_ABI 1\n", encoding="utf-8"
+        )
+        (self.repository / "tests/libretro/test_smoke.py").write_text(
+            "# committed source-only test input\n", encoding="utf-8"
+        )
+        subprocess.run(["git", "-C", str(self.repository), "add", "CMakeLists.txt", "writer.c", "tests", "third_party"], check=True)
         subprocess.run(["git", "-C", str(self.repository), "commit", "-qm", "fixture source"], check=True)
         return subprocess.run(
             ["git", "-C", str(self.repository), "rev-parse", "HEAD"],
@@ -62,24 +75,36 @@ class SnapshotTest(unittest.TestCase):
 
     def test_dirty_and_untracked_checkout_inputs_do_not_change_snapshot_build(self) -> None:
         commit = self.commit_fixture_project()
-        (self.repository / "public_guest.c").write_text("#error checkout injection\n", encoding="utf-8")
+        (self.repository / "tests/fixture/public_guest.c").write_text("#error checkout injection\n", encoding="utf-8")
+        (self.repository / "third_party/vendor/include/fixture_vendor.h").write_text(
+            "#error vendored checkout injection\n", encoding="utf-8"
+        )
+        (self.repository / "tests/libretro/test_smoke.py").write_text("raise RuntimeError('checkout injection')\n", encoding="utf-8")
         (self.repository / "injected.c").write_text("#error untracked injection\n", encoding="utf-8")
         snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")
         rows, digest = playable.verify_snapshot(snapshot)
         self.assertEqual(snapshot.commit, commit)
         self.assertEqual(snapshot.digest, digest)
-        self.assertEqual([row["path"] for row in rows], ["CMakeLists.txt", "public_guest.c", "writer.c"])
+        self.assertEqual(
+            [row["path"] for row in rows],
+            ["CMakeLists.txt", "tests/fixture/public_guest.c", "tests/libretro/test_smoke.py",
+             "third_party/vendor/include/fixture_vendor.h", "writer.c"],
+        )
         self.assertNotIn("injected.c", {row["path"] for row in rows})
 
         build = self.base / "build"
+        environment = playable.clean_environment()
         subprocess.run(["cmake", "-S", str(snapshot.root), "-B", str(build), "-G", "Ninja"], check=True,
+                       env=environment,
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         subprocess.run(["cmake", "--build", str(build), "--parallel", "2"], check=True,
+                       env=environment,
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         fixture = self.base / "public-playable.bin"
         subprocess.run([str(build / "fixture_writer"), str(fixture)], check=True)
         self.assertEqual(fixture.stat().st_size, 602)
         self.assertEqual(playable.sha256(fixture), "59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0")
+        playable.verify_snapshot(snapshot)
 
     def test_snapshot_detects_materialized_source_mutation(self) -> None:
         commit = self.commit_fixture_project()
@@ -115,6 +140,91 @@ class SnapshotTest(unittest.TestCase):
         with self.assertRaises(playable.SnapshotError) as raised:
             playable.create_snapshot(self.repository, escape_commit, self.base / "bad-snapshot")
         self.assertEqual(raised.exception.reason, "unsafe-symlink")
+
+    def test_snapshot_preserves_committed_executable_modes(self) -> None:
+        self.commit_fixture_project()
+        script = self.repository / "tests/libretro/test_smoke.py"
+        script.chmod(0o755)
+        subprocess.run(["git", "-C", str(self.repository), "add", "tests/libretro/test_smoke.py"], check=True)
+        subprocess.run(["git", "-C", str(self.repository), "commit", "-qm", "make smoke script executable"], check=True)
+        commit = subprocess.run(
+            ["git", "-C", str(self.repository), "rev-parse", "HEAD"],
+            check=True, text=True, stdout=subprocess.PIPE,
+        ).stdout.strip()
+        snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")
+        row = next(row for row in snapshot.inventory if row["path"] == "tests/libretro/test_smoke.py")
+        self.assertEqual(row["mode"], "executable")
+        self.assertTrue(os.access(snapshot.root / row["path"], os.X_OK))
+
+    def test_fixture_vendor_and_test_inputs_change_the_aggregate_identity(self) -> None:
+        commit = self.commit_fixture_project()
+        previous = playable.create_snapshot(self.repository, commit, self.base / "baseline")
+        paths = (
+            "tests/fixture/public_guest.c",
+            "third_party/vendor/include/fixture_vendor.h",
+            "tests/libretro/test_smoke.py",
+        )
+        for index, relative in enumerate(paths):
+            path = self.repository / relative
+            path.write_bytes(path.read_bytes() + f"\n/* identity probe {index} */\n".encode())
+            subprocess.run(["git", "-C", str(self.repository), "add", relative], check=True)
+            subprocess.run(["git", "-C", str(self.repository), "commit", "-qm", f"change {index}"], check=True)
+            commit = subprocess.run(
+                ["git", "-C", str(self.repository), "rev-parse", "HEAD"],
+                check=True, text=True, stdout=subprocess.PIPE,
+            ).stdout.strip()
+            current = playable.create_snapshot(self.repository, commit, self.base / f"changed-{index}")
+            self.assertNotEqual(current.digest, previous.digest, relative)
+            old_row = next(row for row in previous.inventory if row["path"] == relative)
+            new_row = next(row for row in current.inventory if row["path"] == relative)
+            self.assertNotEqual(new_row["sha256"], old_row["sha256"], relative)
+            previous = current
+
+    def test_snapshot_receipt_rejects_missing_or_stale_inventory_rows(self) -> None:
+        commit = self.commit_fixture_project()
+        snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")
+        record = playable.snapshot_record(snapshot)
+        self.assertIsNone(playable.validate_snapshot_record(record))
+
+        missing = copy.deepcopy(record)
+        missing["entries"].pop()
+        missing["entry_count"] -= 1
+        missing["file_count"] -= 1
+        missing["inventory_sha256"] = playable.inventory_digest(missing["entries"])
+        with self.assertRaises(playable.SnapshotError) as raised:
+            playable.validate_snapshot_record(missing, repository=self.repository)
+        self.assertEqual(raised.exception.reason, "snapshot-record-incomplete")
+
+        stale = copy.deepcopy(record)
+        stale["inventory_sha256"] = "0" * 64
+        with self.assertRaises(playable.SnapshotError) as raised:
+            playable.validate_snapshot_record(stale)
+        self.assertEqual(raised.exception.reason, "snapshot-record-digest-mismatch")
+
+    def test_build_environment_drops_checkout_and_toolchain_injection(self) -> None:
+        with mock.patch.dict(os.environ, {
+            "CFLAGS": "-include injected.h", "CMAKE_TOOLCHAIN_FILE": "/checkout/toolchain.cmake",
+            "CPATH": "/checkout/include", "PYTHONPATH": "/checkout/python",
+        }, clear=False):
+            environment = playable.clean_environment()
+        for name in ("CFLAGS", "CMAKE_TOOLCHAIN_FILE", "CPATH", "PYTHONPATH"):
+            self.assertNotIn(name, environment)
+
+    def test_generated_build_overlay_is_outside_and_removed_from_snapshot(self) -> None:
+        commit = self.commit_fixture_project()
+        snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")
+        work = self.base / "qualification"
+        work.mkdir()
+        overlay = work / "generated-build"
+        runner = playable.Runner(work, snapshot.root, snapshot)
+        runner.command(
+            "overlay-control",
+            [sys.executable, "-c", "from pathlib import Path; Path('build/generated.txt').write_text('output')"],
+            source_build_overlay=overlay,
+        )
+        self.assertEqual((overlay / "generated.txt").read_text(encoding="utf-8"), "output")
+        self.assertFalse((snapshot.root / "build").exists())
+        playable.verify_snapshot(snapshot)
 
 
 if __name__ == "__main__":

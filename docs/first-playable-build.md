@@ -1,6 +1,6 @@
 # First Playable public tracer build and load
 
-This procedure builds the public GNFX v1 tracer from a fresh checkout directory, installs the native package and Libretro core into a temporary prefix under ignored `build/`, and checks both static and shared native consumers. It uses only the original 602-byte public fixture. It does not read or package a game ROM or BIOS.
+This procedure builds the public GNFX v1 tracer from a complete committed Git snapshot, installs the native package and Libretro core into temporary prefixes under ignored `build/`, and checks both static and shared native consumers. It uses only the original 602-byte public fixture. It does not read or package a game ROM or BIOS.
 
 ## Run the qualification
 
@@ -16,7 +16,11 @@ The runner configures fresh static and shared CMake builds, builds `glueyneo-ori
 python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean --check-docs
 ```
 
-The receipt is written to ignored `build/playable-qualification/receipt.json`; sanitized per-command logs and the fresh build/install prefixes are retained in the ignored run directory there. A zero exit means every required lane passed. A nonzero exit preserves each lane's result so the failed or unknown lane can be addressed; mock Libretro harnesses never count as an actual frontend pass.
+The runner resolves `HEAD` to one full commit ID, creates a complete committed Git archive under a fresh ignored run directory, and compares the executing runner with the archived runner before qualification begins. Every CMake configure/build/install, consumer, test, candidate gate, documentation check, and actual frontend invocation uses that snapshot as its source root. A complete tree comparison rejects omitted archive files (including `export-ignore` omissions), submodules, unsafe paths or symlinks, and ambiguous names. Any mutation of the materialized snapshot is checked before and after each source-consuming command and fails the receipt.
+
+Therefore dirty and untracked checkout files do not enter the build; the archived commit is the sole source. If `tools/verify_playable.py` itself differs from the archived copy, the runner writes a failed receipt with `runner-source-mismatch`. Build, install, fixture, and admission outputs stay in the ignored run directory outside the archived source tree. CMake and Python injection variables are removed from subprocess environments, and CMake's user package registry is disabled.
+
+The receipt is written to ignored `build/playable-qualification/receipt.json`; sanitized per-command logs and fresh build/install prefixes are retained in that run directory. `identity.source_snapshot` records the full commit, archive SHA-256, inventory schema and algorithm, aggregate inventory SHA-256, entry counts, and every archived regular file and symlink. Each entry has a repository-relative path, type, byte length, and SHA-256; regular-file entries preserve the executable bit, while symlink entries also contain the exact relative target. `artifacts` separately records generated fixture/core hashes, installed-tree inventories, and the YM2610 report/build identities. Toolchain, OS, SDK, and pinned frontend identities remain in the receipt. A zero exit means every required lane passed. A nonzero exit preserves lane outcomes and a named failure reason; mock Libretro harnesses never count as an actual frontend pass.
 
 ## Fixture and consumer paths
 
@@ -35,7 +39,11 @@ python3 tests/libretro/retroarch_smoke.py \
 
 The smoke pins RetroArch 1.22.2 by executable digest. It expects software-visible output, no-input stability, a Left Arrow negative control, Right Arrow movement, and clean application exit after content unload. A frontend process exit before the first screenshot is `unknown` for HOST-02, not a pass. In the recorded run below, RetroArch exited with status `-6` before a screenshot; the frontend behavior therefore remains unknown.
 
-## Recorded qualification identity
+## Previous qualification observation
+
+The values below are from the 2026-10-07 run made before complete source snapshots were introduced. They remain useful as toolchain and artifact history, but that receipt is superseded for QUAL-03 because it did not bind every input to its source. Plan 04-08 regenerates the receipt using the snapshot procedure above.
+
+## Historical toolchain and frontend observation
 
 The clean run was performed 2026-10-07 at source revision `290e218fe4bed3f11f984fef0d4f2f768d23917d`: macOS 26.6.2, arm64, AppleClang C/C++ 21.0.0.21000101, macOS SDK 26.5, CMake 4.4.3, Ninja 1.13.2 and Python 3.14.4. CMake used Debug configuration, Ninja, C17 owned targets and C++14 only for the private YM2610 candidate. The selected RetroArch artifact was 1.22.2, bundle ID `com.libretro.dist.RetroArch`, executable SHA-256 `ed90b54434a2899de0ddbfed59f335255fb462c8691bd970a1a761ebb5656d65`.
 
