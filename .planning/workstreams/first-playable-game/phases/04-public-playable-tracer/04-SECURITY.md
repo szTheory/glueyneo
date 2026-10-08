@@ -2,7 +2,7 @@
 phase: "04"
 slug: "public-playable-tracer"
 status: blocked
-threats_open: 3
+threats_open: 4
 asvs_level: 1
 created: "2026-10-07"
 updated: "2026-10-08"
@@ -40,19 +40,27 @@ updated: "2026-10-08"
 | T-04-09 | Denial of service | C/C++ YM2610 shim | high | mitigate | `src/chips/ym2610_candidate.cpp` checks callback bounds and reentry, limits clock/capacity and catches exceptions at the C boundary; failure tests cover these paths. | closed |
 | T-04-10 | Denial of service | installed consumer linkage | medium | mitigate | `tests/chips/check_ym2610.py` compiles and runs installed static/shared C consumers and inspects exports and runtime dependencies. | closed |
 | T-04-SC (04-05) | Tampering | ymfm source closure | high | mitigate | `tests/chips/check_ym2610.py` gates the pinned Git source closure and BSD notice without a registry install. | closed |
-| T-04-11 | Information disclosure | qualification logs | high | mitigate | Redact full paths before retaining qualification diagnostics. Ambiguous delimiters inside an unquoted private path still leave a suffix visible in both qualification and frontend sanitizers. | open |
+| T-04-11 | Information disclosure | qualification logs | high | mitigate | Redact complete private paths before retaining qualification diagnostics. JSON-escaped embedded quotes still expose the path suffix `tail/sensitive.bin`. | open |
 | T-04-12 | Repudiation | qualification receipt | medium | mitigate | `tools/verify_playable.py` records command status and log hashes with source, toolchain, frontend, fixture and artifact identities. | closed |
 | T-04-SC (04-06) | Tampering | qualification dependency closure | high | mitigate | The clean runner requires pinned Z80 and ymfm source and installed-linkage gates; it contains no package-manager install. | closed |
 | T-04-13 | Tampering | snapshot/receipt binding | high | mitigate | Derive bounded rows from the committed archive and compare the complete row list, including type, size, mode, digest and symlink target. | closed |
 | T-04-14 | Elevation of privilege | archived path/symlink execution | high | mitigate | `tools/verify_playable.py` rejects unsafe archive paths and links, sanitizes the build environment and routes lanes through the snapshot root. | closed |
 | T-04-SC (04-07) | Tampering | dependency/source closure | high | mitigate | `tools/verify_playable.py` reuses the pinned Z80 and ymfm source gates without package-manager installation. | closed |
-| T-04-15 | Information disclosure | receipt and qualification logs | high | mitigate | Redact complete home, temporary and private paths before persisting diagnostics. Ambiguous delimiters inside unquoted paths can still leave filename/path suffixes visible. | open |
+| T-04-15 | Information disclosure | receipt and qualification logs | high | mitigate | Redact complete home, temporary and private paths before persisting diagnostics. JSON-escaped embedded quotes still expose suffixes in the receipt and printed result. | open |
 | T-04-16 | Tampering | frontend process/input evidence | high | mitigate | Hash the fixture bytes and reject any mismatch against the pinned public fixture digest before launching the direct smoke. | closed |
 | T-04-17 | Elevation of privilege | local app/script execution | high | mitigate | Check the exact pinned bundle identifier before constructing AppleScript quit commands; the shared quit helper enforces it for normal and cleanup paths. | closed |
-| T-04-18 | Information disclosure | screenshots/crash logs | high | mitigate | Redact complete frontend and crash diagnostics before machine output or receipt persistence. Ambiguous delimiters inside unquoted paths can still leave suffixes visible. | open |
+| T-04-18 | Information disclosure | screenshots/crash logs | high | mitigate | Redact complete frontend and crash diagnostics before machine output or receipt persistence. JSON-escaped embedded quotes still expose path suffixes. | open |
 | T-04-SC (04-08) | Tampering | installed runtime/dependency closure | high | mitigate | The final qualification uses the committed snapshot and existing pinned source and linkage gates without new package installation. | closed |
 | T-04-19 | Tampering | P04-02-HOST coverage metadata | high | mitigate | `04-02-SUMMARY.md` retains `automated_ui`/`unknown` and `human_judgment: true`; the installed classifier reports zero errors, routes HOST to `present[]`, and excludes it from `auto_passed[]`. | closed |
 | T-04-SC (04-09) | Tampering | installed GSD classifier/template | high | mitigate | Plan 04-09 uses the installed local classifier and template without package installation. | closed |
+| T-04-20 | Information disclosure | qualification/frontend diagnostics | high | mitigate | Plan 04-10 redacts whitespace-containing paths, but escaped embedded quotes still leave `tail/sensitive.bin` visible in both sanitizers. | open |
+| T-04-21 | Tampering | direct smoke fixture identity | high | mitigate | `tests/libretro/retroarch_smoke.py` checks the generated fixture SHA-256 against the documented digest before launch. | closed |
+| T-04-22 | Elevation of privilege | app bundle quit target | high | mitigate | `tests/libretro/retroarch_smoke.py` validates the pinned Info.plist identifier before constructing either AppleScript quit path. | closed |
+| T-04-SC (04-10) | Tampering | dependency closure | high | mitigate | Plan 04-10 uses the Python standard library and existing test infrastructure; no package or runtime dependency was added. | closed |
+| T-04-23 | Tampering | snapshot receipt row binding | high | mitigate | `tools/verify_playable.py` derives bounded archive inventory from committed bytes and compares every receipt row exactly. | closed |
+| T-04-SC (04-11) | Tampering | archive parsing/dependency closure | high | mitigate | Plan 04-11 uses the existing bounded Git-archive path and Python standard library; unsafe members reject without a package install. | closed |
+| T-04-24 | Tampering | receipt numeric type validation | high | mitigate | `tools/verify_playable.py` rejects JSON booleans in byte/count fields before aggregate and committed archive comparison. | closed |
+| T-04-SC (04-12) | Tampering | dependency/source closure | high | mitigate | Plan 04-12 uses existing pinned source and Python standard library only; no package install or new source import. | closed |
 
 ## Threat Flags
 
@@ -69,12 +77,13 @@ No accepted risks.
 | Audit Date | Threats Total | Closed | Open | Run By |
 |------------|---------------|--------|------|--------|
 | 2026-10-07 | 18 | 18 | 0 | gsd-security-auditor |
+| 2026-10-08 | 36 | 32 | 4 | gsd-security-auditor |
 
 ## Sign-Off
 
 - [x] All declared threats have a disposition (mitigate / accept / transfer)
 - [x] Accepted risks documented in Accepted Risks Log
-- [ ] `threats_open: 0` confirmed — T-04-11, T-04-15 and T-04-18 remain HIGH/open
+- [ ] `threats_open: 0` confirmed — T-04-11, T-04-15, T-04-18 and T-04-20 remain HIGH/open
 - [ ] `status: verified` set in frontmatter — status is blocked pending mitigation
 
 **Approval:** blocked 2026-10-08; user selected to keep unresolved high-severity threats open.
@@ -94,3 +103,13 @@ No accepted risks.
 | Threats found | 28 |
 | Closed | 25 |
 | Open | 3 |
+
+## Security Audit 2026-10-08 — post-04-12 source
+
+| Metric | Count |
+|---|---|
+| Threats found | 36 |
+| Closed | 32 |
+| Open | 4 |
+
+The fresh ASVS L1 audit verified every threat authored in the 12 phase plans. T-04-11, T-04-15, T-04-18 and T-04-20 remain HIGH/open because escaped embedded quotes can expose private path suffixes in qualification and frontend diagnostics, including persisted and printed receipts. T-04-21 through T-04-24 and the plan-specific dependency-closure threats are closed. HOST-02 remains unknown; no actual RetroArch acceptance is implied.
