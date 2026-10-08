@@ -49,7 +49,7 @@ def reconciled_review_documents(directory: Path) -> dict[str, Path]:
     )
     validation = validation.replace(
         "All five current/carried review dispositions remain open until independent review.",
-        "Four current/carried findings remain open; the repaired CR-01 record is retained as fixed.",
+        "Five current/carried findings remain open; the repaired CR-01 record is retained as fixed.",
     )
     # The copied map models the latest observed run; the checker must compare that
     # run with its recorded current result before checking reconciliation semantics.
@@ -67,7 +67,6 @@ def reconciled_review_documents(directory: Path) -> dict[str, Path]:
     updated_block = re.sub(r"(?m)^    severity:.*$", "    severity: critical", updated_block)
     sections = disposition.split("---", 2)
     frontmatter = sections[1].replace(block.group(0), updated_block)
-    frontmatter = re.sub(r"(?m)^open: 5$", "open: 4", frontmatter)
     body = re.sub(r"(?m)^\| CR-01 \|[^\n]*$", "| CR-01 | critical | fixed | 04-12 exact integer receipt validation |", sections[2])
     body = body.replace("| CR-02 | critical | open | - |", "| CR-02 | critical | open | 04-REVIEW.md current |")
     body = body.replace("| WR-01 | warning | open | - |", "| WR-01 | warning | open | 04-REVIEW.md current |")
@@ -80,6 +79,37 @@ def reconciled_review_documents(directory: Path) -> dict[str, Path]:
 def mutate_document(documents: dict[str, Path], name: str, transform) -> None:
     path = documents[name]
     path.write_text(transform(path.read_text(encoding="utf-8")), encoding="utf-8")
+
+
+def add_info_finding(documents: dict[str, Path], crosswalk_severity: str = "info") -> None:
+    mutate_document(documents, "REVIEW", lambda text: text + (
+        "\n## Info\n\n### IN-01: Informational diagnostic note [INFO]\n\n"
+        "**Issue:** Synthetic informational finding.\n\n**Fix:** Record consistently.\n"
+    ))
+    disposition = documents["DISPOSITION"]
+    text = disposition.read_text(encoding="utf-8")
+    text = text.replace(
+        "open: 5\ntotal: 6",
+        '  - id: IN-01\n    severity: info\n    disposition: open\n'
+        '    title: "Informational diagnostic note"\nopen: 6\ntotal: 7',
+        1,
+    )
+    text = text.replace(
+        "| CR-02 | critical | open |",
+        "| CR-02 | critical | open |", 1,
+    )
+    disposition_separator = "|---------|----------|-------------|--------|\n"
+    text = text.replace(
+        disposition_separator,
+        disposition_separator + "| IN-01 | info | open | 04-14 synthetic Info fixture |\n",
+        1,
+    )
+    disposition.write_text(text, encoding="utf-8")
+    validation = documents["VALIDATION"]
+    lines = validation.read_text(encoding="utf-8").splitlines()
+    header = next(index for index, line in enumerate(lines) if line.startswith("| Review Finding |"))
+    lines.insert(header + 2, f"| IN-01 | {crosswalk_severity} | synthetic Info scope | Open pending review |")
+    validation.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 class ValidationMapReconciliationTest(unittest.TestCase):
@@ -121,6 +151,25 @@ class ValidationMapReconciliationTest(unittest.TestCase):
             text = text.replace(separator, separator + "| WR-04 | new review scope | Open pending independent review |\n")
             validation.write_text(text, encoding="utf-8")
             self.run_checker(documents)
+
+    def test_checker_accepts_info_finding_with_matching_severity(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="phase04-info-finding-") as temporary:
+            documents = reconciled_review_documents(Path(temporary))
+            add_info_finding(documents)
+            self.run_checker(documents)
+
+    def test_review_parser_maps_info_and_in_ids_to_info_severity(self) -> None:
+        parsed = validation_map.parse_review_findings(
+            "## Info\n\n### IN-01: Informational diagnostic note [INFO]\n"
+        )
+        self.assertEqual(parsed, {"IN-01": ("info", "Informational diagnostic note [INFO]")})
+
+    def test_checker_rejects_info_finding_with_mismatched_crosswalk_severity(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="phase04-info-mismatch-") as temporary:
+            documents = reconciled_review_documents(Path(temporary))
+            add_info_finding(documents, crosswalk_severity="warning")
+            with self.assertRaisesRegex(AssertionError, r"IN-01.*severity"):
+                self.run_checker(documents)
 
     def test_checker_rejects_contradictory_records(self) -> None:
         mutations = {
