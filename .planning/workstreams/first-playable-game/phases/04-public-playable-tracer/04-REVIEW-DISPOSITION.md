@@ -3,10 +3,18 @@ phase: 04
 review: 04-REVIEW.md
 titles: json
 findings:
+  - id: CR-01
+    severity: critical
+    disposition: open
+    title: "Boolean byte counts bypass repository receipt equality"
+  - id: CR-02
+    severity: critical
+    disposition: open
+    title: "Unquoted private paths can leak suffixes at valid path delimiters"
   - id: WR-01
     severity: warning
     disposition: open
-    title: "Frontend smoke does not enforce the pinned fixture identity"
+    title: "Validation-map checker requires superseded security findings to remain open"
   - id: WR-02
     severity: warning
     disposition: open
@@ -15,24 +23,20 @@ findings:
     severity: warning
     disposition: open
     title: "Repository-backed receipt validation accepts forged file-content hashes"
-  - id: CR-01
-    severity: critical
-    disposition: fixed
-    title: "[BLOCKER] Qualification receipt can identify the wrong source revision"
-    source: "04-07-SUMMARY.md immutable source snapshot; 04-VERIFICATION.md current source identity finding"
-open: 3
-total: 4
-recorded: 2026-10-08T03:23:56.000Z
+open: 5
+total: 5
+recorded: 2026-10-08T03:41:52.756Z
 ---
 
 # Phase 04: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
-| CR-01 | critical | fixed | 04-07-SUMMARY.md immutable source snapshot; 04-VERIFICATION.md current source identity finding |
+| CR-01 | critical | open | 04-REVIEW.md: current finding; prior CR-01 fixed decision refers to a different finding ID/title |
+| CR-02 | critical | open | 04-REVIEW.md |
+| WR-01 | warning | open | 04-REVIEW.md |
+| WR-02 | warning | open | - (not in the current review) |
+| WR-03 | warning | open | - (not in the current review) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
