@@ -347,9 +347,9 @@ class SnapshotTest(unittest.TestCase):
     def test_redact_removes_complete_space_containing_private_path_spans(self) -> None:
         diagnostics = (
             'build failed: "/Users/synthetic home/private capture/secret.rom": permission denied',
-            "compile failed: /tmp/temporary work/secret object.o: exit 7",
-            "tool failed: /private/var/folders/ab/private cache/run output/tool: status 9",
-            "frontend failed: /Volumes/private drive/private media/secret.rom: exit 2",
+            "compile failed exit 7: /tmp/temporary work/secret object.o",
+            "tool failed status 9: /private/var/folders/ab/private cache/run output/tool",
+            "frontend failed exit 2: /Volumes/private drive/private media/secret.rom",
         )
 
         for diagnostic in diagnostics:
@@ -369,7 +369,7 @@ class SnapshotTest(unittest.TestCase):
         work.mkdir()
         runner = playable.Runner(work, snapshot.root, snapshot)
         private_argument = "/Volumes/private drive/private capture/secret.rom"
-        emitted = f"tool failed: {private_argument}: exit 6"
+        emitted = f"tool failed exit 6: {private_argument}"
         with mock.patch.object(playable.subprocess, "run", return_value=subprocess.CompletedProcess(
             ["tool"], 6, emitted,
         )):
@@ -384,7 +384,7 @@ class SnapshotTest(unittest.TestCase):
     def test_receipt_writer_sanitizes_retained_and_printed_reason(self) -> None:
         with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
             output = Path(temporary) / "qualification"
-            reason = "failed at /Users/synthetic home/private capture/secret.rom: exit 12"
+            reason = "failed exit 12 at /Users/synthetic home/private capture/secret.rom"
             receipt = {
                 "status": "fail", "reason": reason,
                 "fixture": {}, "retroarch_smoke": {}, "identity": {},

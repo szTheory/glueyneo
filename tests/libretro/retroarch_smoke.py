@@ -52,10 +52,10 @@ def sha256(path: Path) -> str:
 
 
 def sanitize_diagnostic_text(text: str, *, temporary_root: Path | None = None) -> str:
-    if temporary_root is not None:
-        text = text.replace(str(temporary_root), "[temporary]")
     roots = [str(Path.home()), "/Users/", "/Volumes/", "/tmp/", "/private/tmp/",
              "/var/folders/", "/private/var/folders/", str(Path(__file__).resolve().parents[2])]
+    if temporary_root is not None:
+        roots.append(str(temporary_root))
     roots = sorted({root for root in roots if root}, key=len, reverse=True)
     root_pattern = re.compile(r"(?<![A-Za-z0-9._-])(?:" + "|".join(re.escape(root) for root in roots) + r")")
     safe_lines: list[str] = []
@@ -72,15 +72,15 @@ def sanitize_diagnostic_text(text: str, *, temporary_root: Path | None = None) -
                 end = body.find(opening_quote, match.end())
                 position = len(body) if end < 0 else end + 1
             else:
-                ends = [index for delimiter in (":", ";", ",", "\t", " -- ", " (", " — ", " in ")
-                        if (index := body.find(delimiter, match.end())) >= 0]
-                position = min(ends) if ends else len(body)
+                # Arbitrary subprocess/crash text has no reliable unquoted
+                # path grammar; redact the ambiguous remainder, descendants too.
+                position = len(body)
             root = match.group()
             if root.startswith(str(Path(__file__).resolve().parents[2])):
                 marker = "[repo]"
             elif root == str(Path.home()):
                 marker = "[home]"
-            elif "/tmp/" in root or "var/folders" in root:
+            elif (temporary_root is not None and root == str(temporary_root)) or "/tmp/" in root or "var/folders" in root:
                 marker = "[temporary]"
             else:
                 marker = "[user]"
@@ -160,6 +160,8 @@ def build_diagnostic(
         "output_available": bool(output.strip()),
     }
     reason = extract_crash_reason(crash_report or "")
+    if reason:
+        reason = sanitize_diagnostic_text(reason, temporary_root=temporary_root)
     if not reason and crash_report:
         reason = sanitize_diagnostic_text(crash_report, temporary_root=temporary_root)
     record["macos_crash_reason_available"] = bool(reason)

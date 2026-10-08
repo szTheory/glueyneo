@@ -257,10 +257,10 @@ class DiagnosticTests(unittest.TestCase):
         cases = (
             ('failed: "/Users/synthetic home/private capture/secret.rom": permission denied',
              ("synthetic home", "private capture", "secret.rom")),
-            ("failed: /tmp/temporary work/private file.rom: exit 5", ("temporary work", "private file.rom")),
+            ("failed exit 5: /tmp/temporary work/private file.rom", ("temporary work", "private file.rom")),
             ("failed: /private/var/folders/cache root/private cache/secret.bin\ncontinued", 
              ("cache root", "private cache", "secret.bin")),
-            ("failed: /Volumes/private drive/private media/secret.rom: exit 6\nready", 
+            ("failed exit 6: /Volumes/private drive/private media/secret.rom\nready",
              ("private drive", "private media", "secret.rom")),
         )
         for diagnostic, private_parts in cases:
@@ -285,7 +285,7 @@ class DiagnosticTests(unittest.TestCase):
         reason = smoke.extract_crash_reason(report)
         record = smoke.build_diagnostic(
             stage="frontend", return_code=-6, survived_before_screenshot=False,
-            output='stderr: /Volumes/private drive/private media/secret.rom: exit 6',
+            output='stderr exit 6: /Volumes/private drive/private media/secret.rom',
             crash_report=report,
         )
         serialized = json.dumps(record, sort_keys=True) + reason
@@ -315,7 +315,7 @@ class DiagnosticTests(unittest.TestCase):
             stage="core-content-load",
             return_code=1,
             survived_before_screenshot=False,
-            output="failed /Users/alice/private/game.rom in /private/var/folders/xy/temp and /Users/bob/worktree",
+            output="failed /Users/alice/private/game.rom\ntemporary /private/var/folders/xy/temp\ncheckout /Users/bob/worktree",
             temporary_root=Path("/private/var/folders/xy/temp"),
         ) if callable(builder) else {}
 

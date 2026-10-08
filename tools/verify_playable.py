@@ -396,6 +396,10 @@ def validate_snapshot_record(record: dict[str, Any], repository: Path | None = N
     entries = record.get("entries")
     if not isinstance(entries, list):
         raise SnapshotError("snapshot-record-invalid", "source snapshot receipt has no inventory rows")
+    for field in ("entry_count", "file_count", "symlink_count"):
+        value = record.get(field)
+        if type(value) is not int or value < 0:
+            raise SnapshotError("snapshot-record-invalid", f"source snapshot receipt has an invalid {field}")
     paths: set[str] = set()
     folded: set[str] = set()
     previous = b""
@@ -414,7 +418,7 @@ def validate_snapshot_record(record: dict[str, Any], repository: Path | None = N
         folded.add(path.casefold())
         digest = row.get("sha256")
         byte_count = row.get("bytes")
-        if not isinstance(byte_count, int) or byte_count < 0 or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+        if type(byte_count) is not int or byte_count < 0 or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
             raise SnapshotError("snapshot-record-invalid", "source snapshot receipt contains an invalid byte identity")
         if row.get("type") == "file":
             mode = row.get("mode")
@@ -487,10 +491,9 @@ def redact(text: str) -> str:
                 else:
                     position = end + 1
             else:
-                ends = [index for delimiter in (":", ";", ",", "\t", " -- ", " (", " — ", " in ")
-                        if (index := body.find(delimiter, match.end())) >= 0]
-                end = min(ends) if ends else len(body)
-                position = end
+                # Punctuation and spaces are legal path bytes. Arbitrary tool
+                # output has no trustworthy unquoted path boundary grammar.
+                position = len(body)
             if match.group().startswith(str(ROOT)):
                 marker = "[repo]"
             elif match.group().startswith(str(Path.home())):
