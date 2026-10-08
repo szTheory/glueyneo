@@ -38,10 +38,12 @@ def reconciled_review_documents(directory: Path) -> dict[str, Path]:
         copied[name] = destination
 
     verification = copied["VERIFICATION"]
-    verification.write_text(
-        verification.read_text(encoding="utf-8") + "\nThe actual frontend load portion remains unobserved.\n",
-        encoding="utf-8",
-    )
+    current_report = verification.read_text(encoding="utf-8")
+    goal_rows = validation_map.table_rows(current_report, "| # | Truth | Status | Evidence |")
+    if not any(len(row) == 4 and row[0] == "3" and
+               "actual app/load/presentation/input/unload/exit were not observed" in row[3]
+               for row in goal_rows):
+        raise AssertionError("source verification report lacks current actual frontend uncertainty evidence")
 
     validation = copied["VALIDATION"].read_text(encoding="utf-8")
     validation = validation.replace("pass, 20 tests on source `04-13`", "pass, 23 tests on source `04-13`")
@@ -107,35 +109,63 @@ def set_crosswalk_disposition(documents: dict[str, Path], finding_id: str, state
     raise AssertionError(f"crosswalk row for {finding_id} is missing")
 
 
-def add_info_finding(documents: dict[str, Path], crosswalk_severity: str = "info") -> None:
+def close_disposition_record(text: str, finding_id: str) -> str:
+    sections = text.split("---", 2)
+    if len(sections) != 3:
+        raise AssertionError("disposition frontmatter is malformed")
+    block = re.search(rf"(?ms)^  - id: {re.escape(finding_id)}\n(.*?)(?=^  - id: |^open:)", sections[1])
+    if block is None:
+        raise AssertionError(f"disposition record {finding_id} is missing")
+    changed_block = re.sub(r"(?m)^    disposition: open$", "    disposition: fixed", block.group(0), count=1)
+    if changed_block == block.group(0):
+        raise AssertionError(f"disposition record {finding_id} was not open")
+    frontmatter = sections[1].replace(block.group(0), changed_block, 1)
+    count = re.search(r"(?m)^open: (\d+)$", frontmatter)
+    if count is None:
+        raise AssertionError("disposition open count is missing")
+    frontmatter = re.sub(r"(?m)^open: \d+$", f"open: {int(count.group(1)) - 1}", frontmatter, count=1)
+    body, changed_rows = re.subn(
+        rf"(?m)^\| {re.escape(finding_id)} \| ([^|]+) \| open \|",
+        rf"| {finding_id} | \1 | fixed |", sections[2], count=1,
+    )
+    if changed_rows != 1:
+        raise AssertionError(f"disposition table row {finding_id} was not changed")
+    return f"---{frontmatter}---{body}"
+
+
+def add_info_finding(documents: dict[str, Path], crosswalk_severity: str = "info") -> str:
+    finding_id = "IN-99"
+    records = validation_map.parse_disposition_yaml(documents["DISPOSITION"].read_text(encoding="utf-8"))
+    review_ids = validation_map.parse_review_findings(documents["REVIEW"].read_text(encoding="utf-8"))
+    if finding_id in records or finding_id in review_ids:
+        raise AssertionError(f"synthetic Info ID collides with current records: {finding_id}")
     mutate_document(documents, "REVIEW", lambda text: text + (
-        "\n## Info\n\n### IN-01: Informational diagnostic note [INFO]\n\n"
+        f"\n## Info\n\n### {finding_id}: Informational diagnostic note [INFO]\n\n"
         "**Issue:** Synthetic informational finding.\n\n**Fix:** Record consistently.\n"
     ))
     disposition = documents["DISPOSITION"]
     text = disposition.read_text(encoding="utf-8")
-    text = text.replace(
-        "open: 6\ntotal: 9",
-        '  - id: IN-01\n    severity: info\n    disposition: open\n'
-        '    title: "Informational diagnostic note"\nopen: 7\ntotal: 10',
-        1,
-    )
-    text = text.replace(
-        "| CR-02 | critical | open |",
-        "| CR-02 | critical | open |", 1,
-    )
+    counts = re.search(r"(?m)^open: (\d+)\ntotal: (\d+)$", text)
+    if counts is None:
+        raise AssertionError("current disposition counts are missing")
+    open_count, total_count = map(int, counts.groups())
+    text = re.sub(r"(?m)^open: \d+\ntotal: \d+$",
+        f'  - id: {finding_id}\n    severity: info\n    disposition: open\n'
+        f'    title: "Informational diagnostic note"\nopen: {open_count + 1}\ntotal: {total_count + 1}',
+        text, count=1)
     disposition_separator = "|---------|----------|-------------|--------|\n"
     text = text.replace(
         disposition_separator,
-        disposition_separator + "| IN-01 | info | open | 04-14 synthetic Info fixture |\n",
+        disposition_separator + f"| {finding_id} | info | open | synthetic Info fixture |\n",
         1,
     )
     disposition.write_text(text, encoding="utf-8")
     validation = documents["VALIDATION"]
     lines = validation.read_text(encoding="utf-8").splitlines()
     header = next(index for index, line in enumerate(lines) if line.startswith("| Review Finding |"))
-    lines.insert(header + 2, f"| IN-01 | {crosswalk_severity} | synthetic Info scope | open |")
+    lines.insert(header + 2, f"| {finding_id} | {crosswalk_severity} | synthetic Info scope | open |")
     validation.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return finding_id
 
 
 class ValidationMapReconciliationTest(unittest.TestCase):
@@ -155,38 +185,53 @@ class ValidationMapReconciliationTest(unittest.TestCase):
                 self.run_checker(documents)
             except AssertionError as error:
                 self.fail(f"reconciled records were rejected: {error}")
+            report = documents["VERIFICATION"]
+            original = report.read_text(encoding="utf-8")
+            mutated = original.replace(
+                "The actual app/load/presentation/input/unload/exit were not observed. ",
+                "The frontend was observed. ", 1,
+            )
+            self.assertNotEqual(mutated, original, "frontend uncertainty removal was a no-op")
+            report.write_text(mutated, encoding="utf-8")
+            with self.assertRaisesRegex(AssertionError, "actual pinned-app observations are unobserved"):
+                self.run_checker(documents)
 
     def test_checker_accepts_a_new_current_finding_with_matching_records(self) -> None:
         with tempfile.TemporaryDirectory(prefix="phase04-new-finding-") as temporary:
             documents = reconciled_review_documents(Path(temporary))
+            self.assertNotIn("WR-99", validation_map.parse_review_findings(documents["REVIEW"].read_text(encoding="utf-8")))
             mutate_document(documents, "REVIEW", lambda text: text.replace(
-                "## Warnings\n", "## Warnings\n\n### WR-07: New current warning [WARNING]\n\n**Issue:** Synthetic finding.\n\n**Fix:** Track it.\n", 1))
+                "## Warnings\n", "## Warnings\n\n### WR-99: New current warning [WARNING]\n\n**Issue:** Synthetic finding.\n\n**Fix:** Track it.\n", 1))
             path = documents["DISPOSITION"]
             content = path.read_text(encoding="utf-8")
-            content = content.replace(
-                '    title: "Repository-backed receipt validation accepts forged file-content hashes"\nopen: 6',
-                '    title: "Repository-backed receipt validation accepts forged file-content hashes"\n'
-                '  - id: WR-07\n    severity: warning\n    disposition: open\n    title: "New current warning"\nopen: 7',
-            )
-            content = content.replace("total: 9", "total: 10", 1)
+            counts = re.search(r"(?m)^open: (\d+)\ntotal: (\d+)$", content)
+            if counts is None:
+                raise AssertionError("current disposition counts are missing")
+            open_count, total_count = map(int, counts.groups())
+            content = re.sub(r"(?m)^open: \d+\ntotal: \d+$",
+                f'  - id: WR-99\n    severity: warning\n    disposition: open\n'
+                f'    title: "New current warning"\nopen: {open_count + 1}\ntotal: {total_count + 1}',
+                content, count=1)
             disposition_lines = content.splitlines()
             table_header = next(index for index, line in enumerate(disposition_lines) if line.startswith("| Finding | Severity | Disposition | Source |"))
-            disposition_lines.insert(table_header + 2, "| WR-07 | warning | open | synthetic current review |")
+            disposition_lines.insert(table_header + 2, "| WR-99 | warning | open | synthetic current review |")
             content = "\n".join(disposition_lines) + "\n"
             path.write_text(content, encoding="utf-8")
             validation = documents["VALIDATION"]
             text = validation.read_text(encoding="utf-8")
             lines = text.splitlines()
             header = next(index for index, line in enumerate(lines) if line.startswith("| Review Finding |"))
-            lines.insert(header + 2, "| WR-07 | warning | new review scope | open |")
+            lines.insert(header + 2, "| WR-99 | warning | new review scope | open |")
             text = "\n".join(lines) + "\n"
             validation.write_text(text, encoding="utf-8")
+            self.assertIn("WR-99", validation_map.parse_review_findings(documents["REVIEW"].read_text(encoding="utf-8")))
             self.run_checker(documents)
 
     def test_checker_accepts_info_finding_with_matching_severity(self) -> None:
         with tempfile.TemporaryDirectory(prefix="phase04-info-finding-") as temporary:
             documents = reconciled_review_documents(Path(temporary))
-            add_info_finding(documents)
+            finding_id = add_info_finding(documents)
+            self.assertIn(finding_id, validation_map.parse_review_findings(documents["REVIEW"].read_text(encoding="utf-8")))
             self.run_checker(documents)
 
     def test_checker_accepts_normalized_exact_crosswalk_disposition(self) -> None:
@@ -212,8 +257,8 @@ class ValidationMapReconciliationTest(unittest.TestCase):
     def test_checker_rejects_info_finding_with_mismatched_crosswalk_severity(self) -> None:
         with tempfile.TemporaryDirectory(prefix="phase04-info-mismatch-") as temporary:
             documents = reconciled_review_documents(Path(temporary))
-            add_info_finding(documents, crosswalk_severity="warning")
-            with self.assertRaisesRegex(AssertionError, r"IN-01.*severity"):
+            finding_id = add_info_finding(documents, crosswalk_severity="warning")
+            with self.assertRaisesRegex(AssertionError, rf"{finding_id}.*severity"):
                 self.run_checker(documents)
 
     def test_checker_rejects_contradictory_records(self) -> None:
@@ -224,13 +269,16 @@ class ValidationMapReconciliationTest(unittest.TestCase):
             "severity": lambda text: text.replace("| CR-03 | critical | open |", "| CR-03 | warning | open |"),
             "duplicate id": lambda text: text.replace("| CR-03 | critical | open |", "| CR-03 | critical | open |\n| CR-03 | critical | open |"),
             "drop yaml id": lambda text: re.sub(r"(?ms)^  - id: WR-03\n.*?(?=^  - id:|^open:)", "", text),
-            "count": lambda text: text.replace("open: 6", "open: 99", 1),
-            "total count": lambda text: text.replace("total: 9", "total: 99", 1),
+            "count": lambda text: re.sub(r"(?m)^open: (\d+)$", lambda match: f"open: {int(match.group(1)) + 1}", text, count=1),
+            "total count": lambda text: re.sub(r"(?m)^total: (\d+)$", lambda match: f"total: {int(match.group(1)) + 1}", text, count=1),
         }
         for label, transform in mutations.items():
             with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:
                 documents = reconciled_review_documents(Path(temporary))
-                mutate_document(documents, "DISPOSITION", transform)
+                before = documents["DISPOSITION"].read_text(encoding="utf-8")
+                after = transform(before)
+                self.assertNotEqual(after, before, f"{label} mutation did not change its fixture")
+                mutate_document(documents, "DISPOSITION", lambda _text: after)
                 with self.assertRaises(AssertionError):
                     self.run_checker(documents)
 
@@ -251,14 +299,17 @@ class ValidationMapReconciliationTest(unittest.TestCase):
                 "| WR-06 | warning | open | 04-REVIEW.md current |", "| WR-06 | warning | open | - |", 1)),
             ("missing crosswalk", "VALIDATION", lambda text: re.sub(r"(?m)^\| WR-06 \|[^\n]*\n", "", text, count=1)),
             ("duplicate crosswalk", "VALIDATION", lambda text: text.replace(
-                "| WR-06 | warning | Contradictory frontend documentation-gate claim | open |\n",
-                "| WR-06 | warning | Contradictory frontend documentation-gate claim | open |\n"
+                "| WR-06 | warning | Alternate affirmative frontend app-load claim passes alongside Pending/unknown | open |\n",
+                "| WR-06 | warning | Alternate affirmative frontend app-load claim passes alongside Pending/unknown | open |\n"
                 "| WR-06 | warning | duplicate frontend documentation-gate claim | open |\n", 1)),
         )
         for label, name, transform in mutations:
             with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:
                 documents = reconciled_review_documents(Path(temporary))
-                mutate_document(documents, name, transform)
+                before = documents[name].read_text(encoding="utf-8")
+                after = transform(before)
+                self.assertNotEqual(after, before, f"{label} mutation did not change its fixture")
+                mutate_document(documents, name, lambda _text: after)
                 with self.assertRaises(AssertionError):
                     self.run_checker(documents)
 
@@ -266,10 +317,9 @@ class ValidationMapReconciliationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="phase04-wr06-closure-") as temporary:
             documents = reconciled_review_documents(Path(temporary))
             disposition = documents["DISPOSITION"]
-            text = disposition.read_text(encoding="utf-8")
-            text = text.replace("    disposition: open\n    title: \"Documentation gate accepts contradictory frontend status", "    disposition: fixed\n    title: \"Documentation gate accepts contradictory frontend status", 1)
-            text = text.replace("open: 6\ntotal: 9", "open: 5\ntotal: 9", 1)
-            text = text.replace("| WR-06 | warning | open | 04-REVIEW.md current |", "| WR-06 | warning | fixed | 04-REVIEW.md current |", 1)
+            original = disposition.read_text(encoding="utf-8")
+            text = close_disposition_record(original, "WR-06")
+            self.assertNotEqual(text, original, "WR-06 closure fixture was a no-op")
             disposition.write_text(text, encoding="utf-8")
             set_crosswalk_disposition(documents, "WR-06", "fixed")
             with self.assertRaisesRegex(AssertionError, "current finding WR-06 is recorded as fixed"):
@@ -287,10 +337,12 @@ class ValidationMapReconciliationTest(unittest.TestCase):
         for label, name, transform in mutations:
             with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:
                 documents = reconciled_review_documents(Path(temporary))
-                mutate_document(documents, name, transform)
+                before = documents[name].read_text(encoding="utf-8")
+                after = transform(before)
+                self.assertNotEqual(after, before, f"{label} mutation did not change its fixture")
+                mutate_document(documents, name, lambda _text: after)
                 with self.assertRaises(AssertionError):
                     self.run_checker(documents)
-
 
 if __name__ == "__main__":
     unittest.main()
