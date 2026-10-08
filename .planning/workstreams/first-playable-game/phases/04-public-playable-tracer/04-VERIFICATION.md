@@ -137,7 +137,7 @@ human_verification:
 - **Blocking security gate:** The independent security artifact remains blocked with T-04-11, T-04-15, T-04-18 and T-04-20 high/open, as explicitly directed. This report does not close or accept them.
 - **Actionable WR-06:** A temporary current-map mutation made check_docs accept the contradictory status “HOST-02 Pending; frontend QUAL-03 Pending; unknown; both requirements pass.” The current negative test only checks pass text without Pending/unknown.
 - **Current review map is stale:** The latest review includes WR-06, but the validation crosswalk omits it and the disposition source is -. The evidence-map suite fails 9/10; the direct checker exits 1 with “WR-06 has no provenance source.”
-- **Separate frontend evidence:** HOST-02 and frontend QUAL-03 remain Pending. No functioning changed launch context or direct app observation exists.
+- **Separate frontend evidence:** HOST-02 and frontend QUAL-03 remain Pending. No functioning changed launch context or direct app observation exists. The actual frontend load portion remains unobserved.
 
 ### Required Artifacts
 

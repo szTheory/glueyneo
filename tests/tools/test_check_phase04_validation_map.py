@@ -37,6 +37,12 @@ def reconciled_review_documents(directory: Path) -> dict[str, Path]:
         destination.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
         copied[name] = destination
 
+    verification = copied["VERIFICATION"]
+    verification.write_text(
+        verification.read_text(encoding="utf-8") + "\nThe actual frontend load portion remains unobserved.\n",
+        encoding="utf-8",
+    )
+
     validation = copied["VALIDATION"].read_text(encoding="utf-8")
     validation = validation.replace("pass, 20 tests on source `04-13`", "pass, 23 tests on source `04-13`")
     validation = validation.replace("pass, 26 tests on source `04-13`", "pass, 27 tests on source `04-13`")
@@ -245,8 +251,8 @@ class ValidationMapReconciliationTest(unittest.TestCase):
                 "| WR-06 | warning | open | 04-REVIEW.md current |", "| WR-06 | warning | open | - |", 1)),
             ("missing crosswalk", "VALIDATION", lambda text: re.sub(r"(?m)^\| WR-06 \|[^\n]*\n", "", text, count=1)),
             ("duplicate crosswalk", "VALIDATION", lambda text: text.replace(
-                "| WR-06 | warning | contradictory frontend documentation-gate claim | open |\n",
-                "| WR-06 | warning | contradictory frontend documentation-gate claim | open |\n"
+                "| WR-06 | warning | Contradictory frontend documentation-gate claim | open |\n",
+                "| WR-06 | warning | Contradictory frontend documentation-gate claim | open |\n"
                 "| WR-06 | warning | duplicate frontend documentation-gate claim | open |\n", 1)),
         )
         for label, name, transform in mutations:

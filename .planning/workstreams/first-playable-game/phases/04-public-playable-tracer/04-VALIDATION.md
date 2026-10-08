@@ -65,6 +65,8 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | 04-16 T1 qualification | 04-16 | 14 | QUAL-03 | T-04-11, T-04-15, T-04-18, T-04-20 | Remove the entire unstructured diagnostic suffix after a private-root match across retained and printed sinks | privacy regression | `python3 tests/tools/test_verify_playable.py -v` | Yes | pass, 23 tests; no new dependency |
 | 04-16 T1 frontend | 04-16 | 14 | HOST-02 | T-04-11, T-04-15, T-04-18, T-04-20 | Remove the entire unstructured diagnostic suffix after a private-root match across frontend serialization sinks | privacy regression | `python3 tests/libretro/test_retroarch_smoke.py -v` | Yes | pass, 27 tests; no app launch |
 | 04-16 T2 | 04-16 | 14 | Review audit | T-04-33 | Compare one normalized controlled crosswalk state with each recorded disposition; reject contradiction and placeholders | checker mutation controls | `python3 tests/tools/test_check_phase04_validation_map.py -v` | Yes | pass, 10 tests; direct documentation and crosswalk gates pass; four high/open threats and frontend unknown preserved |
+| 04-17 T1 | 04-17 | 15 | QUAL-03 | T-04-34, T-04-SC | Reject mixed Pending/unknown and affirmative frontend-closure claims while retaining the truthful current status | docs gate and mutation controls | `python3 tests/tools/test_verify_playable.py -v`; `python3 tools/verify_playable.py --check-docs` | Yes | pass, 23 tests; docs-only gate passes; no app launch |
+| 04-17 T2 | 04-17 | 15 | Review audit | WR-06 | Reconcile current finding provenance, one open crosswalk row, and adversarial false-closure controls | checker mutation controls | `python3 tests/tools/test_check_phase04_validation_map.py -v`; `python3 tests/tools/check_phase04_validation_map.py` | Yes | pass, 12 tests; direct gate passes; four high/open threats and frontend unknown preserved |
 | Nyquist WR-01 | 04-12 / 04-16 | 10 / 14 | Review audit | WR-01 / T-04-33 | Accept reconciled current review IDs and dispositions; reject contradictory and placeholder states | checker regression | `python3 tests/tools/test_check_phase04_validation_map.py -v` | Yes | resolved by 04-16: current suite passes 10/10, including the repaired-finding-absent mutation case and exact-state contradiction controls; the earlier line-110 failure remains historical |
 
 ## Threat Coverage
@@ -84,6 +86,7 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 
 | Review Finding | Severity | Existing Threat Scope | Disposition |
 |----------------|----------|-----------------------|-------------|
+| WR-06 | warning | Contradictory frontend documentation-gate claim | open |
 | CR-03 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, newline-containing path disclosure | open |
 | WR-05 | warning | Review disposition and validation crosswalk consistency | open |
 | WR-01 | warning | Current audit and validation-map evidence boundary | open |

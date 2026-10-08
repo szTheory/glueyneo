@@ -48,7 +48,7 @@ recorded: 2026-10-08T16:20:59.468Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-06 | warning | open | - |
+| WR-06 | warning | open | 04-REVIEW.md current |
 | CR-03 | critical | open | Fresh post-04-14 review reproduces a newline-boundary suffix leak through both sanitizers and their diagnostic sinks. (not in the current review) |
 | WR-05 | warning | open | Fresh review shows contradictory crosswalk wording can satisfy the open-state check. (not in the current review) |
 | WR-01 | warning | open | Historical checker issue remains carried without independent disposition evidence. (not in the current review) |
