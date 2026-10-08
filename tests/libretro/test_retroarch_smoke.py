@@ -73,6 +73,29 @@ class DiagnosticTests(unittest.TestCase):
         self.assertIn("[user]", serialized)
         self.assertIn("[temporary]", serialized)
 
+    def test_diagnostic_output_redacts_the_full_home_relative_path(self) -> None:
+        text = f"file load failed: {Path.home()}/projects/private-data/rom.bin"
+
+        sanitized = smoke.sanitize_diagnostic_text(text)
+
+        self.assertNotIn("projects/private-data/rom.bin", sanitized)
+        self.assertNotIn(str(Path.home()), sanitized)
+
+    def test_frontend_and_subprocess_logs_are_captured_separately(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            work = Path(temporary)
+            process_log = work / "process-output.log"
+            frontend_log = work / "retroarch.log"
+            process_log.write_text("stdout and stderr", encoding="utf-8")
+            frontend_log.write_text("frontend startup trace", encoding="utf-8")
+
+            output = smoke.collect_frontend_output(process_log, frontend_log, work)
+
+        self.assertIn("stdout and stderr", output)
+        self.assertIn("frontend startup trace", output)
+        self.assertIn("stdout/stderr", output)
+        self.assertIn("RetroArch file log", output)
+
     def test_crash_parser_keeps_only_bounded_reason_fields(self) -> None:
         report = """Process: RetroArch [123]
 Path: /Users/alice/Applications/RetroArch.app/Contents/MacOS/RetroArch
@@ -123,6 +146,17 @@ Sensitive unrelated line: private capture name
         self.assertIn("EXC_CRASH", reason)
         self.assertIn("DYLD", reason)
 
+    def test_diagnostic_preserves_pre_extracted_macos_crash_reason(self) -> None:
+        record = smoke.build_diagnostic(
+            stage="no-content-startup", return_code=-6,
+            survived_before_screenshot=None, output="",
+            crash_report="Exception: EXC_CRASH SIGABRT\nTermination: SIGNAL 6 Abort trap: 6",
+        )
+
+        self.assertTrue(record["macos_crash_reason_available"])
+        self.assertIn("EXC_CRASH", record["macos_crash_reason"])
+        self.assertIn("Abort trap", record["macos_crash_reason"])
+
     def test_diagnostic_tail_is_bounded(self) -> None:
         record = smoke.build_diagnostic(
             stage="frontend", return_code=1, survived_before_screenshot=False,
@@ -146,6 +180,8 @@ Sensitive unrelated line: private capture name
             )),
             mock.patch.object(smoke, "crash_report_snapshot", return_value={}),
             mock.patch.object(smoke, "find_recent_crash_reason", return_value=None),
+            mock.patch.object(smoke, "wait_for_recent_crash_reason", return_value=None),
+            mock.patch.object(smoke, "CRASH_REPORT_WAIT_SECONDS", 0),
             mock.patch.object(smoke.subprocess, "Popen", return_value=ExitedProcess()),
             mock.patch.object(smoke, "request_frontend_quit"),
             mock.patch.object(smoke.time, "sleep"),
@@ -216,6 +252,8 @@ Sensitive unrelated line: private capture name
             mock.patch.object(smoke.subprocess, "Popen", side_effect=[FakeProcess(None), FakeProcess(-6)]) as popen,
             mock.patch.object(smoke, "request_frontend_quit"),
             mock.patch.object(smoke, "find_recent_crash_reason", return_value=None),
+            mock.patch.object(smoke, "wait_for_recent_crash_reason", return_value=None),
+            mock.patch.object(smoke, "CRASH_REPORT_WAIT_SECONDS", 0),
             mock.patch.object(smoke, "DIAGNOSTIC_PROBE_SECONDS", 0.01),
         ):
             no_content = smoke.run_launch_probe(

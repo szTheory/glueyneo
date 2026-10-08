@@ -28,6 +28,7 @@ HEIGHT = 224
 RIGHT_KEY_CODE = 124
 DIAGNOSTIC_OUTPUT_LIMIT = 12 * 1024
 DIAGNOSTIC_PROBE_SECONDS = 1.0
+CRASH_REPORT_WAIT_SECONDS = 8.0
 
 
 class SmokeBlocked(RuntimeError):
@@ -53,7 +54,7 @@ def sanitize_diagnostic_text(text: str, *, temporary_root: Path | None = None) -
         text = text.replace(str(temporary_root), "[temporary]")
     home = str(Path.home())
     if home:
-        text = text.replace(home, "[home]")
+        text = re.sub(re.escape(home) + r"[^\s\"'<>]*", "[home]", text)
     text = re.sub(r"/(?:Users|Volumes)/[^\s\"'<>]+", "[user]", text)
     text = re.sub(r"/(?:private/)?var/folders/[^\s\"'<>]+", "[temporary]", text)
     text = re.sub(r"/tmp/[^\s\"'<>]+", "[temporary]", text)
@@ -126,8 +127,12 @@ def build_diagnostic(
         "return_code": return_code,
         "survived_before_screenshot": survived_before_screenshot,
         "output": sanitize_diagnostic_text(output, temporary_root=temporary_root),
+        "output_available": bool(output.strip()),
     }
     reason = extract_crash_reason(crash_report or "")
+    if not reason and crash_report:
+        reason = sanitize_diagnostic_text(crash_report, temporary_root=temporary_root)
+    record["macos_crash_reason_available"] = bool(reason)
     if reason:
         record["macos_crash_reason"] = reason
     return record
@@ -162,6 +167,17 @@ def read_bounded_text(
     except OSError:
         return ""
     return data.decode("utf-8", errors="replace")
+
+
+def collect_frontend_output(process_log: Path, frontend_log: Path, temporary_root: Path) -> str:
+    process_text = read_bounded_text(process_log, DIAGNOSTIC_OUTPUT_LIMIT // 2)
+    frontend_text = read_bounded_text(frontend_log, DIAGNOSTIC_OUTPUT_LIMIT // 2)
+    sections = []
+    if process_text:
+        sections.append("stdout/stderr:\n" + process_text)
+    if frontend_text:
+        sections.append("RetroArch file log:\n" + frontend_text)
+    return sanitize_diagnostic_text("\n".join(sections), temporary_root=temporary_root)
 
 
 def crash_report_snapshot() -> dict[Path, tuple[int, int]]:
@@ -207,6 +223,22 @@ def find_recent_crash_reason(
         if reason:
             return reason
     return None
+
+
+def wait_for_recent_crash_reason(
+    started_at: float,
+    prior_reports: dict[Path, tuple[int, int]] | None = None,
+    timeout: float = CRASH_REPORT_WAIT_SECONDS,
+) -> str | None:
+    deadline = time.monotonic() + timeout
+    while True:
+        reason = find_recent_crash_reason(started_at, prior_reports)
+        if reason:
+            return reason
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None
+        time.sleep(min(0.1, remaining))
 
 
 def decode_png(path: Path) -> tuple[int, int, int, bytes]:
@@ -412,13 +444,14 @@ def run_launch_probe(
         screenshots.mkdir()
         config = write_frontend_config(work, screenshots)
         log = work / "retroarch.log"
+        process_log = work / "process-output.log"
         prior_crash_reports = crash_report_snapshot()
         arguments = [str(executable), "--verbose", "--config", str(config)]
         if probe == "core_content":
             arguments.extend(["-L", str(core), str(content)])
         started_at = time.time()
         try:
-            with log.open("wb") as log_stream:
+            with process_log.open("wb") as log_stream:
                 process = subprocess.Popen(
                     arguments, stdout=log_stream, stderr=subprocess.STDOUT,
                     start_new_session=True,
@@ -429,13 +462,18 @@ def run_launch_probe(
                 except subprocess.TimeoutExpired:
                     survived_window = True
                 return_code = process.poll()
+                crash_reason = (
+                    wait_for_recent_crash_reason(started_at, prior_crash_reports)
+                    if return_code is not None and return_code < 0
+                    else find_recent_crash_reason(started_at, prior_crash_reports)
+                )
                 diagnostic = build_diagnostic(
                     stage="no-content-startup" if probe == "no_content" else "core-content-load",
                     return_code=return_code,
                     survived_before_screenshot=None,
-                    output=read_bounded_text(log),
+                    output=collect_frontend_output(process_log, log, work),
                     temporary_root=work,
-                    crash_report=find_recent_crash_reason(started_at, prior_crash_reports),
+                    crash_report=crash_reason,
                 )
                 request_frontend_quit(bundle_id, process, timeout)
                 cleanup_return_code = process.poll()
@@ -525,9 +563,10 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
         screenshots.mkdir()
         config = write_frontend_config(work, screenshots)
         log = work / "retroarch.log"
+        process_log = work / "process-output.log"
         prior_crash_reports = crash_report_snapshot()
         started_at = time.time()
-        with log.open("wb") as log_stream:
+        with process_log.open("wb") as log_stream:
             try:
                 process = subprocess.Popen(
                     [str(executable), "--verbose", "--config", str(config),
@@ -601,13 +640,19 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                 outcome["marker_after_right"] = list(right_marker)
                 outcome["frontend_unloaded"] = True
             except SmokeBlocked as error:
+                return_code = process.poll()
+                crash_reason = (
+                    wait_for_recent_crash_reason(started_at, prior_crash_reports)
+                    if return_code is not None and return_code < 0
+                    else find_recent_crash_reason(started_at, prior_crash_reports)
+                )
                 error.diagnostic = build_diagnostic(
                     stage=error.stage,
-                    return_code=process.poll(),
+                    return_code=return_code,
                     survived_before_screenshot=survived_before_screenshot,
-                    output=read_bounded_text(log),
+                    output=collect_frontend_output(process_log, log, work),
                     temporary_root=work,
-                    crash_report=find_recent_crash_reason(started_at, prior_crash_reports),
+                    crash_report=crash_reason,
                 )
                 raise
             finally:
