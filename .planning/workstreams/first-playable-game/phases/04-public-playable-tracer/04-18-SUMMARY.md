@@ -99,7 +99,7 @@ actuals:
 
 ## Deviations from Plan
 
-None — plan executed as written.
+The plan's original three tasks completed as written. After the fresh scoped code review replaced the current report with a clean review, three mutation tests exposed an assumption that WR-06 remained in the live report. The copied-review tests now seed the exact synthetic current finding they exercise, so they remain meaningful with either clean or non-clean live review output. The test count and intended open dispositions are unchanged.
 
 ## Checks Run
 
@@ -111,6 +111,8 @@ None — plan executed as written.
 ## Issues Encountered
 
 The managed filesystem initially denied writes to `.git`. The task commits and ledger were completed through reviewed escalation; only task-owned files were staged.
+
+The post-plan correction was limited to the test fixture: the `WR-99` case now creates its own Warning section, the WR-06 closure case explicitly seeds WR-06 into its copied review, and the missing-provenance mutation matches the ledger's current carried-source marker. All twelve tests pass with the current live review clean.
 
 ## Next Phase Readiness
 

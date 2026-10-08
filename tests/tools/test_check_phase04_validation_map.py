@@ -96,6 +96,33 @@ def mutate_document(documents: dict[str, Path], name: str, transform) -> None:
     path.write_text(transform(path.read_text(encoding="utf-8")), encoding="utf-8")
 
 
+def add_current_warning(
+    documents: dict[str, Path], finding_id: str, title: str, *, existing_record: bool = True
+) -> None:
+    """Seed one warning into the copied review, independent of the live report."""
+    review_path = documents["REVIEW"]
+    review = review_path.read_text(encoding="utf-8")
+    if finding_id in validation_map.parse_review_findings(review):
+        raise AssertionError(f"synthetic review ID already exists: {finding_id}")
+    review_path.write_text(
+        review + f"\n\n## Warnings\n\n### {finding_id}: {title}\n\n"
+        "**Issue:** Synthetic current warning.\n\n**Fix:** Keep the fixture self-contained.\n",
+        encoding="utf-8",
+    )
+    if existing_record:
+        disposition = documents["DISPOSITION"]
+        text = disposition.read_text(encoding="utf-8")
+        text, changed = re.subn(
+            rf"(?m)^(\| {re.escape(finding_id)} \| warning \| open \| )[^\n]*( \|)$",
+            rf"\g<1>04-REVIEW.md current\g<2>",
+            text,
+            count=1,
+        )
+        if changed != 1:
+            raise AssertionError(f"disposition provenance for {finding_id} is missing")
+        disposition.write_text(text, encoding="utf-8")
+
+
 def set_crosswalk_disposition(documents: dict[str, Path], finding_id: str, state: str) -> None:
     path = documents["VALIDATION"]
     lines = path.read_text(encoding="utf-8").splitlines()
@@ -200,8 +227,7 @@ class ValidationMapReconciliationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="phase04-new-finding-") as temporary:
             documents = reconciled_review_documents(Path(temporary))
             self.assertNotIn("WR-99", validation_map.parse_review_findings(documents["REVIEW"].read_text(encoding="utf-8")))
-            mutate_document(documents, "REVIEW", lambda text: text.replace(
-                "## Warnings\n", "## Warnings\n\n### WR-99: New current warning [WARNING]\n\n**Issue:** Synthetic finding.\n\n**Fix:** Track it.\n", 1))
+            add_current_warning(documents, "WR-99", "New current warning [WARNING]", existing_record=False)
             path = documents["DISPOSITION"]
             content = path.read_text(encoding="utf-8")
             counts = re.search(r"(?m)^open: (\d+)\ntotal: (\d+)$", content)
@@ -296,7 +322,7 @@ class ValidationMapReconciliationTest(unittest.TestCase):
     def test_checker_rejects_missing_or_duplicate_wr06_provenance_and_crosswalk(self) -> None:
         mutations = (
             ("missing provenance", "DISPOSITION", lambda text: text.replace(
-                "| WR-06 | warning | open | 04-REVIEW.md current |", "| WR-06 | warning | open | - |", 1)),
+                "| WR-06 | warning | open | 04-REVIEW.md current (not in the current review) |", "| WR-06 | warning | open | - |", 1)),
             ("missing crosswalk", "VALIDATION", lambda text: re.sub(r"(?m)^\| WR-06 \|[^\n]*\n", "", text, count=1)),
             ("duplicate crosswalk", "VALIDATION", lambda text: text.replace(
                 "| WR-06 | warning | Alternate affirmative frontend app-load claim passes alongside Pending/unknown | open |\n",
@@ -316,6 +342,8 @@ class ValidationMapReconciliationTest(unittest.TestCase):
     def test_checker_rejects_coherent_false_closure_of_current_wr06(self) -> None:
         with tempfile.TemporaryDirectory(prefix="phase04-wr06-closure-") as temporary:
             documents = reconciled_review_documents(Path(temporary))
+            records = validation_map.parse_disposition_yaml(documents["DISPOSITION"].read_text(encoding="utf-8"))
+            add_current_warning(documents, "WR-06", records["WR-06"]["title"])
             disposition = documents["DISPOSITION"]
             original = disposition.read_text(encoding="utf-8")
             text = close_disposition_record(original, "WR-06")

@@ -45,15 +45,15 @@ findings:
     title: "Repository-backed receipt validation accepts forged file-content hashes"
 open: 7
 total: 10
-recorded: 2026-10-08T17:39:55.739Z
+recorded: 2026-10-08T18:21:12.000Z
 ---
 
 # Phase 04: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-06 | warning | open | 04-REVIEW.md current |
-| WR-07 | warning | open | 04-REVIEW.md current |
+| WR-06 | warning | open | 04-REVIEW.md current (not in the current review) |
+| WR-07 | warning | open | 04-REVIEW.md current (not in the current review) |
 | CR-03 | critical | open | Fresh post-04-14 review reproduces a newline-boundary suffix leak through both sanitizers and their diagnostic sinks. (not in the current review) |
 | WR-05 | warning | open | Fresh review shows contradictory crosswalk wording can satisfy the open-state check. (not in the current review) |
 | WR-01 | warning | open | Historical checker issue remains carried without independent disposition evidence. (not in the current review) |
