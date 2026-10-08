@@ -1,7 +1,7 @@
 # Requirements: First Playable Game
 
 **Defined:** 2026-10-07
-**Status:** Approved by the user on 2026-10-07; no requirements are complete.
+**Status:** Approved by the user on 2026-10-07; six requirements are complete: TRAC-01/02/03, API-05, and the bounded SND-01/02 candidate admissions documented below.
 **Workstream / planning milestone ID:** `first-playable-game`
 **Release version:** Unassigned. This planning identifier is not v0.2 and does not complete v0.1.
 **Core Value:** Trustworthy Neo Geo emulation that other software can embed easily.
@@ -42,8 +42,10 @@ Here, `v1` means this workstream's scoped deliverable, not a software release ve
 
 ### Sound Admission and Output
 
-- [ ] **SND-01**: A maintainer can reproduce admission of the pinned C Z80 candidate for the selected workload using license/source and mutable-state inventories plus cycle, interrupt, bus-effect, supported-boundary continuation, and independent-instance evidence.
-- [ ] **SND-02**: A maintainer can reproduce admission of a pinned ymfm YM2610 subset behind a private C interface under PROJECT-D-48, with license/source and mutable-state/callback inventories, deterministic clock/sample and instance-isolation evidence, contained C++ failure behavior, and exercised static/shared C-consumer linkage. The C++ exception alone is not admission.
+- [x] **SND-01**: A maintainer can reproduce admission of the pinned C Z80 candidate for the selected workload using license/source and mutable-state inventories plus cycle, interrupt, bus-effect, supported-boundary continuation, and independent-instance evidence.
+- [x] **SND-02**: A maintainer can reproduce admission of a pinned ymfm YM2610 subset behind a private C interface under PROJECT-D-48, with license/source and mutable-state/callback inventories, deterministic clock/sample and instance-isolation evidence, contained C++ failure behavior, and exercised static/shared C-consumer linkage. The C++ exception alone is not admission.
+
+The two completed sound requirements admit only the named synthetic Phase 04 Z80 workload and the selected pinned ymfm YM2610 candidate behind its private C interface. They do not establish a game sound-driver workload, audible game sound, silicon fidelity, or broad compatibility; SND-03/04 and Phase 5 handshakes remain pending.
 - [ ] **SND-03**: A maintainer can run a guest-driven public sound fixture through the Z80/YM2610 path and reproduce non-silent, signal-qualified output with justified expected controls, distinguishing native chip timing/output from adapter resampling and frontend audio-device behavior.
 - [ ] **SND-04**: A user hears representative game music and action-triggered effects while controlling the selected Metal Slug X scene in the pinned RetroArch setup; evidence identifies the covered scenario and any missing sound behavior.
 
@@ -97,7 +99,7 @@ All 20 current requirements have current-revision evidence, documentation, and i
 
 ## Traceability
 
-Requirements and their primary phase allocation in [ROADMAP.md](ROADMAP.md) are user-approved; no implementation requirement is complete.
+Requirements and their primary phase allocation in [ROADMAP.md](ROADMAP.md) are user-approved. Six requirements are complete: TRAC-01/02/03, API-05, and bounded candidate-admission SND-01/02. HOST-02 and frontend QUAL-03 remain pending actual pinned-app evidence.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
@@ -113,8 +115,8 @@ Requirements and their primary phase allocation in [ROADMAP.md](ROADMAP.md) are 
 | GAME-02 | Phase 5 | Pending |
 | GAME-03 | Phase 6 | Pending |
 | GAME-04 | Phase 6 | Pending |
-| SND-01 | Phase 4 | Pending |
-| SND-02 | Phase 4 | Pending |
+| SND-01 | Phase 4 | Complete |
+| SND-02 | Phase 4 | Complete |
 | SND-03 | Phase 7 | Pending |
 | SND-04 | Phase 7 | Pending |
 | QUAL-01 | Phase 7 | Pending |
@@ -127,7 +129,7 @@ Requirements and their primary phase allocation in [ROADMAP.md](ROADMAP.md) are 
 - Current requirements: 20
 - Mapped to one primary phase: 20 (approved roadmap)
 - Unmapped: 0
-- Implemented: 0
+- Implemented: 6
 
 ---
 *Requirements defined: 2026-10-07*
