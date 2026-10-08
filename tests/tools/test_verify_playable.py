@@ -227,5 +227,29 @@ class SnapshotTest(unittest.TestCase):
         playable.verify_snapshot(snapshot)
 
 
+class ConsumerInputTest(unittest.TestCase):
+    def test_installed_consumer_check_uses_original_diagnostic_fixture(self) -> None:
+        class CapturingRunner:
+            def __init__(self) -> None:
+                self.work = Path("/qualification")
+                self.commands: list[tuple[str, list[str]]] = []
+
+            def command(self, name: str, argv: list[str], **_: object) -> None:
+                self.commands.append((name, argv))
+
+        runner = CapturingRunner()
+        build = Path("/qualification/static-build")
+        public_fixture = build / "public-playable.bin"
+
+        playable.run_consumer(
+            runner, Path("/snapshot"), Path("/install"), public_fixture,
+            Path("/install/lib/libretro/glueyneo_libretro.dylib"), "static",
+        )
+
+        check_command = runner.commands[-1][1]
+        fixture = Path(check_command[check_command.index("--fixture") + 1])
+        self.assertEqual(fixture, build / "diagnostic-original-a.bin")
+
+
 if __name__ == "__main__":
     unittest.main()
