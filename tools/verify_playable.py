@@ -529,6 +529,7 @@ def run_consumer(runner: Runner, source_root: Path, prefix: Path, fixture: Path,
                  variant: str) -> None:
     consumer_source = source_root / "tests" / "consumers"
     consumer_build = runner.work / f"consumer-{variant}"
+    diagnostic_fixture = fixture.with_name("diagnostic-original-a.bin")
     runner.command(f"consumer-{variant}-configure", [
         "cmake", "-S", str(consumer_source), "-B", str(consumer_build),
         f"-DGlueyneo_DIR={prefix / 'lib/cmake/Glueyneo'}",
@@ -539,7 +540,7 @@ def run_consumer(runner: Runner, source_root: Path, prefix: Path, fixture: Path,
     consumer = consumer_build / "glueyneo-installed-c"
     runner.command(f"consumer-{variant}-check", [
         sys.executable, str(source_root / "tests/consumers/test_playable_install.py"),
-        "--prefix", str(prefix), "--consumer", str(consumer), "--fixture", str(fixture),
+        "--prefix", str(prefix), "--consumer", str(consumer), "--fixture", str(diagnostic_fixture),
         "--core", str(core),
     ])
 
