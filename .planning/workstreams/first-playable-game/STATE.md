@@ -6,7 +6,7 @@ current_phase: 04
 current_phase_name: public-playable-tracer
 current_plan: 15
 status: blocked
-stopped_at: Security/review audit complete; Phase 04 gap plan required
+stopped_at: Plan 04-16 ready for gap-only execution
 last_updated: "2026-10-08T15:49:14.849Z"
 last_activity: 2026-10-08
 last_activity_desc: Phase 04 planning complete — 16 plans ready
@@ -26,15 +26,15 @@ progress:
 See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 **Core value:** Trustworthy Neo Geo emulation that other software can embed easily.
-**Current focus:** Phase 04 — all 15 plans have summaries; fresh audits found blockers requiring a new gap plan
+**Current focus:** Phase 04 — Plan 04-16 is ready to repair CR-03 and WR-05; 15 earlier plans have execution summaries
 
 ## Current Position
 
 Phase: 04 (public-playable-tracer) — READY TO EXECUTE
 Current Plan: 15
 Total Plans in Phase: 16
-Status: Blocked pending gap closure for four high disclosure threats and review findings CR-03/WR-05; actual frontend behavior remains unknown
-Last activity: 2026-10-08 — fresh Phase 04 security and code-review audits completed
+Status: Plan 04-16 is ready to repair CR-03/WR-05; four high disclosure threats and the unavailable actual frontend evidence still block phase completion
+Last activity: 2026-10-08 — Phase 04 gap planning completed after fresh audits
 Last Activity Description: Phase 04 planning complete — 16 plans ready
 
 Progress: [░░░░░░░░░░] 0%
@@ -81,13 +81,13 @@ Progress: [░░░░░░░░░░] 0%
 - Milestone-start triage on 2026-10-07 found no open issues and one draft PR, [#1](https://github.com/szTheory/glueyneo/pull/1), for the separate diagnostic release work. It supplies no playable-game requirement or completion evidence.
 - Work is isolated on `docs/first-playable-game-milestone`. The existing 138 planning relocations into the diagnostic workstream were verified byte-identical and committed; unrelated pre-existing methodology/configuration/preparation edits remain outside this milestone's commits.
 - Carry-forward constraints: keep the owned native C17 core deterministic and host-independent; introduce the libretro/software-video path early; keep media/archive I/O outside the native core; retain the owned 68000 direction and gate Z80/YM2610 admission on evidence. PROJECT-D-48 permits the narrow ymfm C++14 exception behind a private C interface; a future C replacement is optional. The supplied BIOS is available locally, but the exact MVS profile and compatibility remain unqualified.
-- Approved Phase 04–07 sequencing is in [ROADMAP.md](ROADMAP.md): public playable tracer and early Z80/ymfm admission → selected MVS boot including required sound-CPU handshakes → active title control → sound and qualification. Plans 04-01 through 04-15 have summaries. Phase 04 remains blocked. Four high-severity path-disclosure threats remain open. CR-02/WR-04 are fixed; CR-03/WR-05 and carried WR-01/WR-02/WR-03 remain open. HOST-02 and frontend QUAL-03 remain Pending.
+- Approved Phase 04–07 sequencing is in [ROADMAP.md](ROADMAP.md): public playable tracer and early Z80/ymfm admission → selected MVS boot including required sound-CPU handshakes → active title control → sound and qualification. Plans 04-01 through 04-15 have summaries; Plan 04-16 is ready for execution. Phase 04 remains incomplete. Four high-severity path-disclosure threats remain open. CR-02/WR-04 are fixed; CR-03/WR-05 and carried WR-01/WR-02/WR-03 remain open. HOST-02 and frontend QUAL-03 remain Pending.
 - Goal: advance from the diagnostic SDK toward a playable Neo Geo game.
 - Local qualification: a user-provided private game archive is stored under the Git-ignored `local/roms/` directory. Keep its contents and private checksums out of tracked files, CI, and release artifacts.
 - The user-provided BIOS archive is also stored under the Git-ignored `local/roms/` directory. The copy matches its source, passes ZIP CRC validation and is untracked; those checks do not establish BIOS compatibility.
 - Public CI: use original fixtures and/or homebrew assets only after confirming redistribution rights for the specific ROM assets; a source-code license alone is not sufficient evidence for bundled game data.
 - The local archive passed ZIP CRC checks and matched all 13 ROM size/SHA-1 entries in MAME's current Neo Geo software list. That confirms the archive identity, not emulator compatibility.
-- Next GSD work: plan Phase 04 gap closure for CR-03, WR-05, carried review findings as warranted, and the four open security threats. Then execute the gap plan, rerun independent audits, and attempt whole-phase verification only after the security gate clears. HOST-02/frontend QUAL-03 still need actual pinned-app evidence; do not start Phase 05.
+- Next GSD work: execute Phase 04 Plan 04-16 with `--gaps-only`, then rerun the independent security/code-review audits and whole-phase verification after the bounded repairs. HOST-02/frontend QUAL-03 still need actual pinned-app evidence; do not start Phase 05.
 
 ## Decisions
 
