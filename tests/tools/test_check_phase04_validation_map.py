@@ -131,6 +131,7 @@ class ValidationMapReconciliationTest(unittest.TestCase):
             "duplicate id": lambda text: text.replace("| CR-02 | critical | open |", "| CR-02 | critical | open |\n| CR-02 | critical | open |"),
             "drop yaml id": lambda text: re.sub(r"(?ms)^  - id: WR-03\n.*?(?=^  - id:|^open:)", "", text),
             "count": lambda text: text.replace("open: 4", "open: 99", 1),
+            "total count": lambda text: text.replace("total: 5", "total: 99", 1),
         }
         for label, transform in mutations.items():
             with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:
