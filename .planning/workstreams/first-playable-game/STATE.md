@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
-current_plan: 9
-status: verifying
-stopped_at: Fresh phase verification found gaps; gap-closure Plans 04-10 and 04-11 are ready to execute
-last_updated: "2026-10-08T02:04:44.769Z"
+current_plan: 10
+status: executing
+stopped_at: Completed 04-10-PLAN.md
+last_updated: "2026-10-08T03:16:09.324Z"
 last_activity: 2026-10-07
-last_activity_desc: Phase 04 planning complete — 11 plans ready
-state_head: 36dc58ebdd998950618a571cfaaa493f766a74c5
+last_activity_desc: Phase 04 execution started
+state_head: 86b8262835e459f7c8468b153a4089a1017acda5
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
   percent: 0
 ---
 
@@ -30,23 +30,23 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 ## Current Position
 
-Phase: 04 (Public Playable Tracer) — READY TO EXECUTE
-Current Plan: 9
+Phase: 04 (Public Playable Tracer) — EXECUTING
+Current Plan: 10
 Total Plans in Phase: 11
-Status: Ready to execute gap-closure Plans 04-10 and 04-11
-Last Activity: 2026-10-07 — Phase 04 planning complete
-Last Activity Description: Phase 04 planning complete — 11 plans ready
+Status: Ready to execute
+Last activity: 2026-10-07 — Phase 04 execution started
+Last Activity Description: Phase 04 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 9
+**Current Plan:** 10
 
 ## Performance Metrics
 
-**Plans completed:** 9 of 11 planned.
+**Plans completed:** 10 of 11 planned.
 **Per-Plan Metrics:**
 
 | Plan | Duration | Tasks | Files |
@@ -60,12 +60,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P07 | 13min | 2 tasks | 4 files |
 | Phase 04 P08 | 12min | 2 tasks | 6 files |
 | Phase 04 P09 | 6min | 1 tasks | 1 files |
+| Phase 04 P10 | 0 min | 3 tasks | 4 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-08T01:00:05.799Z
+**Last session:** 2026-10-08T03:14:43.202Z
 
-**Stopped At:** Completed 04-09; awaiting fresh phase-goal verification
+**Stopped At:** Completed 04-10-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
@@ -102,6 +103,8 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 04]: Keep the RetroArch smoke unknown after exit -6 before screenshot; callback tests do not qualify HOST-02.
 - [Phase 04]: Keep Z80 synthetic-workload and YM2610 candidate-only claim boundaries.
 - [Phase 04]: Keep HOST-02 unknown after fresh no-content and core/content launches abort before screenshot; preserve exact precondition and do not attribute failure to core or fixture without evidence.
+- [Phase 04]: Use bounded path-span redaction and fail closed through ambiguous unquoted line tails.
+- [Phase 04]: Require the documented public fixture digest and exact pinned RetroArch bundle identifier before frontend process actions.
 
 ### Blockers
 
