@@ -12,7 +12,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 
 ## first-playable-game — First Playable Game
 
-**Status:** Approved by the user on 2026-10-07. Phases 4–7; release version unassigned. All eleven Phase 04 plans are executed, but acceptance remains open: the security audit left three high-severity disclosure threats open, the latest code review found receipt-type and path-redaction blockers, the evidence checker is stale, owned-debug CTest is 46/47, and actual pinned-app evidence is unknown. Phases 05–07 have not started.
+**Status:** Approved by the user on 2026-10-07. Phases 4–7; release version unassigned. All twelve Phase 04 plans are executed. Plan 04-12 supplies passing receipt/privacy regressions, current evidence-map assertions and 47/47 owned-debug CTests. Acceptance remains open: three high-severity disclosure threats and five review dispositions await independent post-fix assessment, and actual pinned-app evidence is unknown. Phases 05–07 have not started.
 
 ## Phases
 
@@ -35,7 +35,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   4. A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including license/source/state audits, cycle or clock and interrupt/bus behavior, deterministic timing, continuation and independent-instance evidence, contained C++ failures, and static/shared C-consumer linkage; a failed gate blocks admission and requires bounded replanning rather than phase completion.
   5. An integrator can follow the clean-tree build/install/load procedure for the native library and libretro adapter on the selected macOS configuration and identify exact dependency, compiler, SDK, OS, architecture, and frontend identities plus untested configurations.
 
-**Plans**: 11/12 plans executed across 9 completed waves; gap-closure plan 04-12 is ready in Wave 10. Phase execution and acceptance remain incomplete pending repository repairs, the independent security audit, and actual pinned-app evidence.
+**Plans**: 12/12 plans executed across 10 waves. Phase 04 remains incomplete pending independent post-fix security/review assessment, fresh phase verification and actual pinned-app evidence.
 **Wave 1**
 - [x] 04-01-PLAN.md
 
@@ -66,7 +66,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 - [x] 04-11-PLAN.md — Bind receipt rows to committed archive bytes and reconcile the validation map
 
 **Wave 10** *(gap closure; blocked on Wave 9 completion)*
-- [ ] 04-12-PLAN.md — Repair receipt types, complete path redaction, validation-map state and CPU inventory evidence
+- [x] 04-12-PLAN.md — Repair receipt types, complete path redaction, validation-map state and CPU inventory evidence
 
 **UI hint**: no
 
@@ -116,11 +116,11 @@ Each phase includes the automated evidence and independent review appropriate to
 
 ## Progress
 
-**Execution Order:** Phase 4 → Phase 5 → Phase 6 → Phase 7. All Phase 04 plans are executed. The latest security audit closed T-04-13, T-04-16 and T-04-17 but left T-04-11, T-04-15 and T-04-18 open. Phase verification also records current receipt/redaction defects, a stale validation-map checker, one failing owned-debug test, and the still-unknown actual RetroArch behavior. Plan gap closure before advancing to Phase 5.
+**Execution Order:** Phase 4 → Phase 5 → Phase 6 → Phase 7. All Phase 04 plans are executed. The latest security audit closed T-04-13, T-04-16 and T-04-17 but left T-04-11, T-04-15 and T-04-18 open. Plan 04-12 repairs the four deterministic repository gaps with passing evidence. Next: `$gsd-secure-phase 04 --ws first-playable-game`, then fresh whole-phase verification under the project's direct-verifier workaround. Actual RetroArch behavior remains unknown; do not advance to Phase 5.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. Public Playable Tracer | 11/11 | In Progress | - |
+| 4. Public Playable Tracer | 12/12 | In Progress | - |
 | 5. Selected MVS Boot | 0/TBD | Not started | - |
 | 6. Active Title Control | 0/TBD | Not started | - |
 | 7. Sound and Scenario Qualification | 0/TBD | Not started | - |
