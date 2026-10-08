@@ -12,7 +12,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 
 ## first-playable-game — First Playable Game
 
-**Status:** Approved by the user on 2026-10-07. Phases 4–7; release version unassigned. Plans 04-01 through 04-13 are executed; additive gap-closure plans 04-14 and 04-15 are planned in Waves 12 and 13. Fresh review reproduces a raw-literal-quote path suffix leak and a valid Info/IN- parser gap. Four high-severity disclosure threats remain open; CR-02 and WR-04 plus carried WR-01/WR-02/WR-03 remain open, while CR-01 is fixed history. Actual pinned-app evidence remains unknown. Phases 05–07 have not started.
+**Status:** Approved by the user on 2026-10-07. Phases 4–7; release version unassigned. Plans 04-01 through 04-15 are executed. Plan 04-14 repaired the recorded privacy and Info/IN parser cases; Plan 04-15 preserved the unavailable actual-frontend prerequisite. Fresh independent review and whole-phase verification remain. Four high-severity disclosure threats remain open; CR-02 and WR-04 plus carried WR-01/WR-02/WR-03 remain open, while CR-01 is fixed history. Actual pinned-app evidence remains unknown. Phases 05–07 have not started.
 
 ## Phases
 
@@ -35,7 +35,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   4. A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including license/source/state audits, cycle or clock and interrupt/bus behavior, deterministic timing, continuation and independent-instance evidence, contained C++ failures, and static/shared C-consumer linkage; a failed gate blocks admission and requires bounded replanning rather than phase completion.
   5. An integrator can follow the clean-tree build/install/load procedure for the native library and libretro adapter on the selected macOS configuration and identify exact dependency, compiler, SDK, OS, architecture, and frontend identities plus untested configurations.
 
-**Plans**: 14/15 plans executed across 11 completed waves. Gap-closure plan 04-14 is planned for Wave 12; plan 04-15 is planned for Wave 13 after 04-14. Phase 04 remains incomplete pending these fixes, fresh independent security/review assessment, whole-phase verification and actual pinned-app evidence.
+**Plans**: 15/15 plans executed across 13 waves. Gap-closure plans 04-14 and 04-15 are complete in Waves 12 and 13. Phase 04 remains incomplete pending fresh independent security/review assessment, whole-phase verification and actual pinned-app evidence.
 **Wave 1**
 - [x] 04-01-PLAN.md
 
@@ -75,7 +75,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 - [x] 04-14-PLAN.md — Redact raw-quoted diagnostic paths, parse Info findings, and reconcile bounded sound-admission statuses
 
 **Wave 13** *(actual frontend evidence; follows Wave 12)*
-- [ ] 04-15-PLAN.md — Observe pinned RetroArch only in a materially changed, functioning launch context
+- [x] 04-15-PLAN.md — Observe pinned RetroArch only in a materially changed, functioning launch context
 
 **UI hint**: no
 
@@ -125,11 +125,11 @@ Each phase includes the automated evidence and independent review appropriate to
 
 ## Progress
 
-**Execution Order:** Phase 4 → Phase 5 → Phase 6 → Phase 7. Plans 04-01 through 04-13 are executed; gap-only plans 04-14 and 04-15 are ready in Waves 12 and 13. T-04-11/T-04-15/T-04-18/T-04-20 remain high/open; current CR-02 and WR-04 plus carried WR-01/WR-02/WR-03 remain open. Plan 04-14 addresses the raw-literal-quote disclosure, Info/IN- parser gap and SND-01/02 ledger evidence; Plan 04-15 retains actual pinned-app observations behind a materially changed, functioning launch context. Next: `$gsd-execute-phase 04 --gaps-only --ws first-playable-game`, then fresh independent security and code-review audits and whole-phase verification under the project's direct-verifier workaround. Actual RetroArch behavior remains unknown; do not advance to Phase 5.
+**Execution Order:** Phase 4 → Phase 5 → Phase 6 → Phase 7. Plans 04-01 through 04-15 are executed and summarized. T-04-11/T-04-15/T-04-18/T-04-20 remain high/open; current CR-02 and WR-04 plus carried WR-01/WR-02/WR-03 remain open. Plan 04-14 repaired repository evidence gaps; Plan 04-15 preserved the unavailable actual pinned-app prerequisite and kept HOST-02/frontend QUAL-03 pending. Next: fresh independent security and code-review audits, then whole-phase verification under the project's direct-verifier workaround. Actual RetroArch behavior remains unknown; do not advance to Phase 5.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. Public Playable Tracer | 14/15 | In Progress | - |
+| 4. Public Playable Tracer | 15/15 | In Progress | - |
 | 5. Selected MVS Boot | 0/TBD | Not started | - |
 | 6. Active Title Control | 0/TBD | Not started | - |
 | 7. Sound and Scenario Qualification | 0/TBD | Not started | - |
