@@ -1,13 +1,10 @@
 ---
 phase: 04-public-playable-tracer
-reviewed: 2026-10-08T18:20:12Z
+reviewed: 2026-10-08T18:24:13Z
 depth: standard
-files_reviewed: 4
+files_reviewed: 1
 files_reviewed_list:
-  - tests/tools/check_phase04_validation_map.py
   - tests/tools/test_check_phase04_validation_map.py
-  - tests/tools/test_verify_playable.py
-  - tools/verify_playable.py
 findings:
   critical: 0
   warning: 0
@@ -18,14 +15,14 @@ status: clean
 
 # Phase 04: Code Review Report
 
-**Reviewed:** 2026-10-08T18:20:12Z  
+**Reviewed:** 2026-10-08T18:24:13Z  
 **Depth:** standard  
-**Files Reviewed:** 4  
+**Files Reviewed:** 1  
 **Status:** clean
 
 ## Summary
 
-The four scoped files were reviewed for correctness, security, error handling, and test reliability. The validation-map checker now distinguishes the four blocking high/open threats from medium/open T-04-34, checks the frontend status against the required pending/unknown record, and verifies the verification report's actual-app uncertainty sentence directly. The focused reconciliation tests exercise those constraints and pass. No issues were found. The four high/open disclosure threats, medium/open T-04-34, and HOST-02/frontend QUAL-03 Pending/unknown remain intentional states; no actual RetroArch behavior is claimed.
+Reviewed the updated evidence-map mutation tests, including fixture generation and assertions with a clean live review. The helper verifies the source verification report contains the actual-frontend uncertainty evidence before copying, and each synthetic warning is seeded in the copied review with provenance edits limited to copied files. The focused suite passes 12/12. The four high/open disclosure threats, T-04-34 medium/open, and HOST-02/frontend QUAL-03 Pending/unknown remain unchanged; actual RetroArch behavior remains unobserved.
 
 ## Narrative Findings (AI reviewer)
 
@@ -33,6 +30,6 @@ No findings.
 
 ---
 
-_Reviewed: 2026-10-08T18:20:12Z_  
+_Reviewed: 2026-10-08T18:24:13Z_  
 _Reviewer: the agent (gsd-code-reviewer)_  
 _Depth: standard_
