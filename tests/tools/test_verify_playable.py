@@ -214,6 +214,7 @@ class SnapshotTest(unittest.TestCase):
         ).stdout.strip()
         snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")
         original = playable.snapshot_record(snapshot)
+        self.assertIsNone(playable.validate_snapshot_record(original, repository=self.repository))
         target_index = next(i for i, row in enumerate(original["entries"]) if row["path"] == "writer.c")
 
         forged_rows = (
@@ -251,6 +252,28 @@ class SnapshotTest(unittest.TestCase):
         with self.assertRaises(playable.SnapshotError) as raised:
             playable.validate_snapshot_record(record, repository=self.repository)
         self.assertEqual(raised.exception.reason, "snapshot-record-source-mismatch")
+
+    def test_repository_receipt_rejects_path_type_count_and_archive_digest_changes(self) -> None:
+        commit = self.commit_fixture_project()
+        snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")
+        original = playable.snapshot_record(snapshot)
+
+        path_change = copy.deepcopy(original)
+        writer = next(row for row in path_change["entries"] if row["path"] == "writer.c")
+        writer["path"] = "writer-renamed.c"
+        path_change["entries"].sort(key=lambda row: row["path"].encode("utf-8"))
+        path_change["inventory_sha256"] = playable.inventory_digest(path_change["entries"])
+        type_change = copy.deepcopy(original)
+        type_change["entries"][0]["type"] = "unknown"
+        count_change = copy.deepcopy(original)
+        count_change["entry_count"] += 1
+        archive_change = copy.deepcopy(original)
+        archive_change["archive_sha256"] = "0" * 64
+
+        for record in (path_change, type_change, count_change, archive_change):
+            with self.subTest(record=record):
+                with self.assertRaises(playable.SnapshotError):
+                    playable.validate_snapshot_record(record, repository=self.repository)
 
     def test_build_environment_drops_checkout_and_toolchain_injection(self) -> None:
         with mock.patch.dict(os.environ, {

@@ -246,13 +246,10 @@ def inventory_digest(rows: tuple[dict[str, Any], ...] | list[dict[str, Any]]) ->
     return hashlib.sha256(canonical).hexdigest()
 
 
-def create_snapshot(repository: Path, revision: str, destination: Path) -> SourceSnapshot:
-    """Materialize and verify the complete committed Git archive without checkout inputs."""
-    repository = repository.resolve()
-    commit = _commit_id(repository, revision)
-    expected = _expected_tree(repository, commit)
-    archive = _git_archive(repository, commit)
-
+def _archive_members(
+    archive: bytes, expected: dict[str, str],
+) -> tuple[dict[str, tuple[bytes, bool]], dict[str, str], tuple[dict[str, Any], ...]]:
+    """Parse a bounded Git archive once and derive rows from its actual member bytes."""
     files: dict[str, tuple[bytes, bool]] = {}
     symlinks: dict[str, str] = {}
     directories: set[str] = set()
@@ -271,6 +268,8 @@ def create_snapshot(repository: Path, revision: str, destination: Path) -> Sourc
                 if member.isdir():
                     directories.add(name)
                 elif member.isfile():
+                    if member.size < 0 or member.size > MAX_ARCHIVE_BYTES:
+                        raise SnapshotError("archive-size-limit", "Git archive member exceeds the configured size bound")
                     stream = tar.extractfile(member)
                     if stream is None:
                         raise SnapshotError("archive-read-failed", "Git archive file entry could not be read")
@@ -299,6 +298,30 @@ def create_snapshot(repository: Path, revision: str, destination: Path) -> Sourc
     for path, target in symlinks.items():
         _validate_symlink(path, target, expected)
 
+    rows: list[dict[str, Any]] = []
+    for path, (data, executable) in files.items():
+        rows.append({"path": path, "type": "file", "mode": "executable" if executable else "regular",
+                     "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()})
+    for path, target in symlinks.items():
+        try:
+            encoded = target.encode("utf-8", errors="strict")
+        except UnicodeError as error:
+            raise SnapshotError("unsafe-symlink", "source archive contains a non-UTF-8 symlink target") from error
+        rows.append({"path": path, "type": "symlink", "target": target,
+                     "bytes": len(encoded), "sha256": hashlib.sha256(encoded).hexdigest()})
+    rows.sort(key=lambda row: row["path"].encode("utf-8"))
+    return files, symlinks, tuple(rows)
+
+
+def create_snapshot(repository: Path, revision: str, destination: Path) -> SourceSnapshot:
+    """Materialize and verify the complete committed Git archive without checkout inputs."""
+    repository = repository.resolve()
+    commit = _commit_id(repository, revision)
+    expected = _expected_tree(repository, commit)
+    archive = _git_archive(repository, commit)
+
+    files, symlinks, archive_rows = _archive_members(archive, expected)
+
     destination = destination.absolute()
     if destination.exists() or destination.is_symlink():
         raise SnapshotError("snapshot-destination-exists", "source snapshot destination must be fresh")
@@ -319,6 +342,8 @@ def create_snapshot(repository: Path, revision: str, destination: Path) -> Sourc
         raise SnapshotError("snapshot-materialization-failed", "committed source snapshot could not be materialized") from error
 
     rows = inventory_tree(destination)
+    if rows != archive_rows:
+        raise SnapshotError("snapshot-inventory-mismatch", "materialized source inventory differs from archived member bytes")
     for path, target in symlinks.items():
         _validate_symlink(path, target, expected)
     actual_types = {
@@ -427,6 +452,9 @@ def validate_snapshot_record(record: dict[str, Any], repository: Path | None = N
         archive = _git_archive(repository, str(record["commit"]))
         if hashlib.sha256(archive).hexdigest() != record["archive_sha256"]:
             raise SnapshotError("snapshot-record-source-mismatch", "source snapshot receipt archive digest does not match its commit")
+        _files, _symlinks, archive_rows = _archive_members(archive, expected)
+        if list(archive_rows) != entries:
+            raise SnapshotError("snapshot-record-source-mismatch", "source snapshot receipt rows do not match committed archive bytes")
 
 
 def sha256(path: Path) -> str:
