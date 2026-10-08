@@ -43,6 +43,10 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | 04-04 T1-T3 | 04-04 | 3 | SND-01 | T-04-06, T-04-07 | Pinned Z80 source and exact synthetic cycle/bus/IRQ/reset/continuation/instance workload | candidate conformance | `python3 tests/chips/check_z80_source.py`; full clean CTest `z80_admission*` | Yes | pass for the documented synthetic workload only |
 | 04-05 T1-T3 | 04-05 | 4 | SND-02 | T-04-08, T-04-09, T-04-10 | Pinned ymfm source/state/clock/isolation/callback behavior and real C linkage | candidate conformance/consumer | `python3 tests/chips/check_ym2610.py source`; full clean CTest `ym2610_admission`; `python3 tests/chips/check_ym2610.py link --both-linkages` | Yes | pass; candidate-only, report SHA-256 `a6faf3de0dc68dec67e80743413d4e53de6ade6620123db5ccb6d3fec2e02` |
 | 04-06 T1-T2 | 04-06 | 5 | QUAL-03 | T-04-11, T-04-12, T-04-SC | Clean static/shared install and C consumers with exact identity; actual frontend outcome retained | clean package/consumer/frontend smoke | `python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean --check-docs` | Yes | native static/shared build, install and consumer pass; actual frontend load unknown |
+| 04-07 T1-T2 | 04-07 | 6 | QUAL-03, TRAC-01 | T-04-13, T-04-14, T-04-15, T-04-SC | Complete committed snapshot inventory binds fixture, tests, dependencies and all source-consuming qualification lanes; mutation and checkout-injection controls fail closed | snapshot integration/privacy | `python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py' -v` | Yes | 11 focused tests pass; final receipt binds native qualification lanes; frontend remains unknown |
+| 04-08 T1 | 04-08 | 7 | HOST-02 | T-04-16, T-04-17, T-04-18, T-04-SC | Fresh app profiles and screenshots; bounded process/crash diagnostics; private paths redacted; unavailable GUI authority remains unknown | GUI-free smoke regression | `python3 -m unittest discover -s tests/libretro -p 'test_retroarch_smoke.py' -v` | Yes | 16 focused tests pass; actual pinned app exits `-6` before screenshot, so HOST-02 remains unknown |
+| 04-08 T2 | 04-08 | 7 | HOST-02, QUAL-03, TRAC-01, TRAC-03 | T-04-16, T-04-17, T-04-18, T-04-SC | One committed snapshot feeds native builds, installed consumers, candidate gates and actual frontend; unknown frontend observations cannot pass | clean qualification integration | `python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean --check-docs` | Yes | static/shared builds, consumers, candidate gates and 34 CTests pass; receipt fails closed because actual frontend is unknown |
+| 04-09 T1 | 04-09 | 8 | HOST-02 | T-04-19, T-04-SC | Installed coverage schema routes unresolved pinned-app evidence to human review and excludes it from automatic passes | coverage classifier | `node "$HOME/.codex/gsd-core/bin/gsd-tools.cjs" uat classify-coverage --summary .planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-02-SUMMARY.md` | Yes | classifier passes with zero errors; HOST-02 remains human-needed and unknown |
 
 ## Threat Coverage
 
@@ -69,6 +73,14 @@ The validation strategy and its automation are complete. The Phase 04 goal is no
 *Updated: 2026-10-07*
 
 ## Validation Audit 2026-10-07
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+## Validation Audit 2026-10-08
 
 | Metric | Count |
 |---|---|
