@@ -12,7 +12,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 
 ## first-playable-game — First Playable Game
 
-**Status:** Approved by the user on 2026-10-07. Phases 4–7; release version unassigned. Plans 04-01 through 04-15 are executed. Fresh security review counted 46 threats (42 closed, four high disclosure threats remain open by user direction). Fresh code review confirms CR-02 and WR-04 fixed and records CR-03/WR-05 open; carried WR-01/WR-02/WR-03 remain open, while CR-01 is fixed history. HOST-02 and frontend QUAL-03 remain Pending. Phase 04 is blocked pending a new gap plan and later actual pinned-app evidence. Phases 05–07 have not started.
+**Status:** Approved by the user on 2026-10-07. Phases 4–7; release version unassigned. Plans 04-01 through 04-15 are executed; gap-closure Plan 04-16 is planned. Fresh security review counted 46 threats (42 closed, four high disclosure threats remain open). Fresh code review confirms CR-02 and WR-04 fixed and records CR-03/WR-05 open; carried WR-01/WR-02/WR-03 remain open, while CR-01 is fixed history. HOST-02 and frontend QUAL-03 remain Pending. Phase 04 is incomplete pending the two repository repairs, fresh independent audit/review, and later actual pinned-app evidence. Phases 05–07 have not started.
 
 ## Phases
 
@@ -35,7 +35,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   4. A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including license/source/state audits, cycle or clock and interrupt/bus behavior, deterministic timing, continuation and independent-instance evidence, contained C++ failures, and static/shared C-consumer linkage; a failed gate blocks admission and requires bounded replanning rather than phase completion.
   5. An integrator can follow the clean-tree build/install/load procedure for the native library and libretro adapter on the selected macOS configuration and identify exact dependency, compiler, SDK, OS, architecture, and frontend identities plus untested configurations.
 
-**Plans**: 15/15 plans executed across 13 waves. Gap-closure plans 04-14 and 04-15 are complete in Waves 12 and 13. The fresh security and code-review audits are recorded; Phase 04 remains blocked by four high disclosure threats and open review findings, and still needs actual pinned-app evidence before completion.
+**Plans**: 15/16 plans executed across 14 waves. Gap-closure plans 04-14 and 04-15 are complete in Waves 12 and 13; Plan 04-16 is planned in Wave 14. The fresh security and code-review audits are recorded; Phase 04 remains blocked by four high disclosure threats and open review findings, and still needs actual pinned-app evidence before completion.
 **Wave 1**
 - [x] 04-01-PLAN.md
 
@@ -76,6 +76,9 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 
 **Wave 13** *(actual frontend evidence; follows Wave 12)*
 - [x] 04-15-PLAN.md — Observe pinned RetroArch only in a materially changed, functioning launch context
+
+**Wave 14** *(gap closure; follows Waves 12 and 13)*
+- [ ] 04-16-PLAN.md — Repair newline-path diagnostic disclosure and contradictory review-state acceptance
 
 **UI hint**: no
 
