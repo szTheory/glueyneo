@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
-current_plan: 10
+current_plan: 11
 status: executing
-stopped_at: Completed 04-10-PLAN.md
-last_updated: "2026-10-08T03:16:09.324Z"
+stopped_at: Completed 04-11-PLAN.md
+last_updated: "2026-10-08T03:28:43.211Z"
 last_activity: 2026-10-07
 last_activity_desc: Phase 04 execution started
-state_head: 86b8262835e459f7c8468b153a4089a1017acda5
+state_head: cf5cb66df0665f97a00e839eedce56fcf853762b
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 ## Current Position
 
 Phase: 04 (Public Playable Tracer) — EXECUTING
-Current Plan: 10
+Current Plan: 11
 Total Plans in Phase: 11
 Status: Ready to execute
 Last activity: 2026-10-07 — Phase 04 execution started
@@ -42,11 +42,11 @@ Progress: [░░░░░░░░░░] 0%
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 10
+**Current Plan:** 11
 
 ## Performance Metrics
 
-**Plans completed:** 10 of 11 planned.
+**Plans completed:** 11 of 11 planned.
 **Per-Plan Metrics:**
 
 | Plan | Duration | Tasks | Files |
@@ -61,12 +61,14 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P08 | 12min | 2 tasks | 6 files |
 | Phase 04 P09 | 6min | 1 tasks | 1 files |
 | Phase 04 P10 | 0 min | 3 tasks | 4 files |
+| Phase 04 P11 | 10min | 2 tasks | 8 files |
+| Phase 04 P11 | 13min | 2 tasks | 8 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-08T03:14:43.202Z
+**Last session:** 2026-10-08T03:27:58.550Z
 
-**Stopped At:** Completed 04-10-PLAN.md
+**Stopped At:** Completed 04-11-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
@@ -76,13 +78,13 @@ Progress: [░░░░░░░░░░] 0%
 - Milestone-start triage on 2026-10-07 found no open issues and one draft PR, [#1](https://github.com/szTheory/glueyneo/pull/1), for the separate diagnostic release work. It supplies no playable-game requirement or completion evidence.
 - Work is isolated on `docs/first-playable-game-milestone`. The existing 138 planning relocations into the diagnostic workstream were verified byte-identical and committed; unrelated pre-existing methodology/configuration/preparation edits remain outside this milestone's commits.
 - Carry-forward constraints: keep the owned native C17 core deterministic and host-independent; introduce the libretro/software-video path early; keep media/archive I/O outside the native core; retain the owned 68000 direction and gate Z80/YM2610 admission on evidence. PROJECT-D-48 permits the narrow ymfm C++14 exception behind a private C interface; a future C replacement is optional. The supplied BIOS is available locally, but the exact MVS profile and compatibility remain unqualified.
-- Approved Phase 04–07 sequencing is in [ROADMAP.md](ROADMAP.md): public playable tracer and early Z80/ymfm admission → selected MVS boot including required sound-CPU handshakes → active title control → sound and qualification. Phase 04 has eleven plans across nine waves; Plans 01–09 are complete and gap-closure Plans 04-10/04-11 are ready to execute. HOST-02 remains human-needed until the pinned RetroArch build produces fresh screenshots and input-control evidence.
+- Approved Phase 04–07 sequencing is in [ROADMAP.md](ROADMAP.md): public playable tracer and early Z80/ymfm admission → selected MVS boot including required sound-CPU handshakes → active title control → sound and qualification. All eleven Phase 04 plans across nine waves have execution summaries. Phase 04 acceptance remains open pending independent review of six security findings and fresh pinned RetroArch observations; HOST-02 and actual frontend QUAL-03 remain unknown.
 - Goal: advance from the diagnostic SDK toward a playable Neo Geo game.
 - Local qualification: a user-provided private game archive is stored under the Git-ignored `local/roms/` directory. Keep its contents and private checksums out of tracked files, CI, and release artifacts.
 - The user-provided BIOS archive is also stored under the Git-ignored `local/roms/` directory. The copy matches its source, passes ZIP CRC validation and is untracked; those checks do not establish BIOS compatibility.
 - Public CI: use original fixtures and/or homebrew assets only after confirming redistribution rights for the specific ROM assets; a source-code license alone is not sufficient evidence for bundled game data.
 - The local archive passed ZIP CRC checks and matched all 13 ROM size/SHA-1 entries in MAME's current Neo Geo software list. That confirms the archive identity, not emulator compatibility.
-- Next GSD command: `$gsd-execute-phase 04 --gaps-only --ws first-playable-game` to execute the two security/evidence gap-closure plans. The phase remains incomplete afterward until a separate security audit and the required pinned-app evidence are resolved.
+- Next GSD command: `$gsd-secure-phase 04 --ws first-playable-game` for the independent audit of the six repaired security findings. Phase 04 remains incomplete until that audit and the required pinned-app evidence are resolved.
 
 ## Decisions
 
@@ -105,6 +107,7 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 04]: Keep HOST-02 unknown after fresh no-content and core/content launches abort before screenshot; preserve exact precondition and do not attribute failure to core or fixture without evidence.
 - [Phase 04]: Use bounded path-span redaction and fail closed through ambiguous unquoted line tails.
 - [Phase 04]: Require the documented public fixture digest and exact pinned RetroArch bundle identifier before frontend process actions.
+- [Phase 04]: Repository-backed receipt rows derive from bounded committed archive bytes; passing tests do not close security or actual frontend gates.
 
 ### Blockers
 

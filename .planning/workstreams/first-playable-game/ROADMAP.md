@@ -12,7 +12,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 
 ## first-playable-game — First Playable Game
 
-**Status:** Approved by the user on 2026-10-07. Phases 4–7; release version unassigned. Milestone initialization is complete; phase work has not started.
+**Status:** Approved by the user on 2026-10-07. Phases 4–7; release version unassigned. Phase 04 plan execution is complete; phase acceptance remains open pending the independent security audit and actual pinned-app evidence. Phases 05–07 have not started.
 
 ## Phases
 
@@ -35,7 +35,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   4. A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including license/source/state audits, cycle or clock and interrupt/bus behavior, deterministic timing, continuation and independent-instance evidence, contained C++ failures, and static/shared C-consumer linkage; a failed gate blocks admission and requires bounded replanning rather than phase completion.
   5. An integrator can follow the clean-tree build/install/load procedure for the native library and libretro adapter on the selected macOS configuration and identify exact dependency, compiler, SDK, OS, architecture, and frontend identities plus untested configurations.
 
-**Plans**: 10/11 plans executed; gap-closure Plans 04-10 and 04-11 pending across 9 waves
+**Plans**: 11/11 plans executed across 9 waves; plan execution is complete. Phase acceptance remains open pending the independent security audit and actual pinned-app evidence.
 **Wave 1**
 - [x] 04-01-PLAN.md
 
@@ -63,7 +63,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 - [x] 04-10-PLAN.md — Repair diagnostic path redaction, fixture identity, and pinned app quit target
 
 **Wave 9** *(gap closure; blocked on Wave 8 completion)*
-- [ ] 04-11-PLAN.md — Bind receipt rows to committed archive bytes and reconcile the validation map
+- [x] 04-11-PLAN.md — Bind receipt rows to committed archive bytes and reconcile the validation map
 
 **UI hint**: no
 
@@ -113,11 +113,11 @@ Each phase includes the automated evidence and independent review appropriate to
 
 ## Progress
 
-**Execution Order:** Phase 4 → Phase 5 → Phase 6 → Phase 7. Phase 04 gap-closure Plans 04-10 and 04-11 are pending. The security gate remains blocked pending an independent audit after those repairs, and the actual RetroArch evidence gate remains open until the pinned app produces the required observations.
+**Execution Order:** Phase 4 → Phase 5 → Phase 6 → Phase 7. All Phase 04 plans are executed. The security gate remains blocked pending an independent audit after the repairs, and the actual RetroArch evidence gate remains open until the pinned app produces the required observations.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. Public Playable Tracer | 10/11 | In Progress | - |
+| 4. Public Playable Tracer | 11/11 | In Progress | - |
 | 5. Selected MVS Boot | 0/TBD | Not started | - |
 | 6. Active Title Control | 0/TBD | Not started | - |
 | 7. Sound and Scenario Qualification | 0/TBD | Not started | - |
