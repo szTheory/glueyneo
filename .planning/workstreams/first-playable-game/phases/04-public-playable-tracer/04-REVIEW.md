@@ -41,13 +41,15 @@ None.
 
 ## Warnings
 
-### WR-06: Consumer guide admits an affirmative app claim alongside unknown status
+### WR-06: Consumer guide admits equivalent affirmative app claims alongside unknown status
 
 **Severity:** warning
 **Disposition:** open pending focused guide check and independent re-review
 **Reproduction:** append `The actual frontend app loaded successfully and displayed pixels.` to a temporary copy of `docs/first-playable-build.md`; `check_docs()` accepts it. A second probe with `The frontend accepted RIGHT input and unloaded cleanly.` is also accepted.
 **Impact:** a documentation gate can pass while the guide overstates unobserved actual RetroArch behavior.
 **Scope:** `tools/verify_playable.py::check_docs()` and its guide-consumer regression.
+
+Post-fix reviews at `2a82c455f85671ba144a42923318c4ff7d53b9a2` confirmed that the added known-phrase checks reject the originally reproduced examples, but the code reviewer still accepted `The frontend booted the game and showed its output.` and `The controls worked as expected in RetroArch.` The security auditor considered the bounded detector sufficient for its tested scope; the remaining direct code-review counterexamples mean WR-06 and T-04-34 stay open. Task 2 stopped at its three-attempt bound, leaving the broader natural-language claim gap explicit rather than claiming a complete semantic proof.
 
 | Finding | Current disposition | Evidence |
 |---|---|---|
@@ -57,7 +59,7 @@ None.
 | WR-05 | fixed | Exact controlled crosswalk/ledger-state equality, duplicate and contradiction mutations pass. |
 | WR-01 | fixed | The checker accepts a repaired finding absent from current review while preserving its historical fixed disposition; mutation coverage passes. |
 | WR-07 | fixed with test-scope note | The current checker pins source-derived frontend rows; the fixture first requires source uncertainty, then its mutation removes the source evidence. This differs from earlier behavior that appended a replacement row. |
-| WR-06 | open; one bounded correction required | The independent reviewer appended `The actual frontend app loaded successfully and displayed pixels.` to a temporary copy of `docs/first-playable-build.md`; `check_docs()` accepted it. A second probe with `The frontend accepted RIGHT input and unloaded cleanly.` was also accepted. This conflicts with the Pending/unknown evidence recorded elsewhere. |
+| WR-06 | open; broader claim gap remains after bounded repairs | The independent reviewer found affirmative claims still accepted after the documented correction attempts; the Pending/unknown evidence remains authoritative and T-04-34 stays medium/open. |
 
 The security reviewer initially considered WR-06's mitigation supported from the exact-row checker and validation-map mutations. The code reviewer's direct consumer-guide counterexample is stronger for this specific claim: the docs gate checks required guide terms but did not reject an affirmative claim in that guide. Therefore T-04-34 remains medium/open pending the focused fix and independent re-review. This report does not close the four directed high/open disclosure threats. HOST-02 and frontend QUAL-03 remain Pending/unknown; no actual frontend behavior is inferred from the GUI-free tests.
 

@@ -258,11 +258,11 @@ def main() -> None:
     disposition = DISPOSITION.read_text(encoding="utf-8")
     review = REVIEW.read_text(encoding="utf-8")
 
-    # The current row must reflect this exact source's run. Prior rows remain dated history.
+    # The current rows must reflect the latest bounded 04-19 audit run. Prior rows remain dated history.
     header = "| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |"
     rows = table_rows(validation, header)
-    selected = [row for row in rows if len(row) == 10 and row[1] == "04-16" and row[0].startswith("04-16 T1")]
-    require(len(selected) == 2, "validation map lacks the two current 04-16 privacy-suite rows")
+    selected = [row for row in rows if len(row) == 10 and row[1] == "04-19" and row[0].startswith("04-19 T1")]
+    require(len(selected) == 2, "validation map lacks the two current 04-19 privacy-suite rows")
     expected_commands = {
         "python3 tests/tools/test_verify_playable.py -v",
         "python3 tests/libretro/test_retroarch_smoke.py -v",

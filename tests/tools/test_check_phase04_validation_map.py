@@ -17,7 +17,7 @@ import check_phase04_validation_map as validation_map  # noqa: E402
 
 PHASE = ROOT / ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer"
 COMMANDS = {
-    "python3 tests/tools/test_verify_playable.py -v": 23,
+    "python3 tests/tools/test_verify_playable.py -v": 25,
     "python3 tests/libretro/test_retroarch_smoke.py -v": 27,
 }
 
@@ -368,15 +368,15 @@ class ValidationMapReconciliationTest(unittest.TestCase):
     def test_checker_accepts_normalized_exact_crosswalk_disposition(self) -> None:
         with tempfile.TemporaryDirectory(prefix="phase04-normalized-disposition-") as temporary:
             documents = reconciled_review_documents(Path(temporary))
-            set_crosswalk_disposition(documents, "CR-03", "  OpEn  ")
+            set_crosswalk_disposition(documents, "WR-06", "  OpEn  ")
             self.run_checker(documents)
 
     def test_checker_rejects_contradictory_or_extra_crosswalk_states(self) -> None:
         for state in ("fixed; not open", "not open", "open; fixed", "unrecognized"):
             with self.subTest(state=state), tempfile.TemporaryDirectory() as temporary:
                 documents = reconciled_review_documents(Path(temporary))
-                set_crosswalk_disposition(documents, "CR-03", state)
-                with self.assertRaisesRegex(AssertionError, r"CR-03 disposition"):
+                set_crosswalk_disposition(documents, "WR-06", state)
+                with self.assertRaisesRegex(AssertionError, r"WR-06 disposition"):
                     self.run_checker(documents)
 
     def test_review_parser_maps_info_and_in_ids_to_info_severity(self) -> None:
@@ -396,9 +396,9 @@ class ValidationMapReconciliationTest(unittest.TestCase):
         mutations = {
             "yaml disposition": lambda text: text.replace("disposition: open", "disposition: fixed", 1),
             "yaml severity": lambda text: text.replace("severity: critical", "severity: warning", 1),
-            "table disposition": lambda text: text.replace("| CR-03 | critical | open |", "| CR-03 | critical | fixed |"),
-            "severity": lambda text: text.replace("| CR-03 | critical | open |", "| CR-03 | warning | open |"),
-            "duplicate id": lambda text: text.replace("| CR-03 | critical | open |", "| CR-03 | critical | open |\n| CR-03 | critical | open |"),
+            "table disposition": lambda text: text.replace("| WR-06 | warning | open |", "| WR-06 | warning | fixed |"),
+            "severity": lambda text: text.replace("| CR-03 | critical | fixed |", "| CR-03 | warning | fixed |"),
+            "duplicate id": lambda text: text.replace("| CR-03 | critical | fixed |", "| CR-03 | critical | fixed |\n| CR-03 | critical | fixed |"),
             "drop yaml id": lambda text: re.sub(r"(?ms)^  - id: WR-03\n.*?(?=^  - id:|^open:)", "", text),
             "count": lambda text: re.sub(r"(?m)^open: (\d+)$", lambda match: f"open: {int(match.group(1)) + 1}", text, count=1),
             "total count": lambda text: re.sub(r"(?m)^total: (\d+)$", lambda match: f"total: {int(match.group(1)) + 1}", text, count=1),
@@ -416,7 +416,6 @@ class ValidationMapReconciliationTest(unittest.TestCase):
     def test_checker_rejects_missing_crosswalk_and_closed_current_finding(self) -> None:
         for label, name, transform in (
             ("crosswalk", "VALIDATION", lambda text: re.sub(r"(?m)^\| WR-01 \|[^\n]*\n", "", text)),
-            ("current closure", "DISPOSITION", lambda text: text.replace("| CR-03 | critical | open |", "| CR-03 | critical | fixed |")),
         ):
             with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:
                 documents = reconciled_review_documents(Path(temporary))
@@ -426,13 +425,13 @@ class ValidationMapReconciliationTest(unittest.TestCase):
 
     def test_checker_rejects_missing_or_duplicate_wr06_provenance_and_crosswalk(self) -> None:
         mutations = (
-            ("missing provenance", "DISPOSITION", lambda text: text.replace(
-                "| WR-06 | warning | open | 04-REVIEW.md current (not in the current review) |", "| WR-06 | warning | open | - |", 1)),
+            ("missing provenance", "DISPOSITION", lambda text: re.sub(
+                r"(?m)^(\| WR-06 \| warning \| open \| ).*( \|)$", r"\1-\2", text, count=1)),
             ("missing crosswalk", "VALIDATION", lambda text: re.sub(r"(?m)^\| WR-06 \|[^\n]*\n", "", text, count=1)),
-            ("duplicate crosswalk", "VALIDATION", lambda text: text.replace(
-                "| WR-06 | warning | Alternate affirmative frontend app-load claim passes alongside Pending/unknown | open |\n",
-                "| WR-06 | warning | Alternate affirmative frontend app-load claim passes alongside Pending/unknown | open |\n"
-                "| WR-06 | warning | duplicate frontend documentation-gate claim | open |\n", 1)),
+            ("duplicate crosswalk", "VALIDATION", lambda text: re.sub(
+                r"(?m)^(\| WR-06 \| warning \|[^\n]+\| open \|)$",
+                lambda match: match.group(1) + chr(10) + "| WR-06 | warning | duplicate frontend documentation-gate claim | open |",
+                text, count=1)),
         )
         for label, name, transform in mutations:
             with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:

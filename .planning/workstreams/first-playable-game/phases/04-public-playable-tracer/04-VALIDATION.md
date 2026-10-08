@@ -65,12 +65,16 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | 04-16 T1 qualification | 04-16 | 14 | QUAL-03 | T-04-11, T-04-15, T-04-18, T-04-20 | Remove the entire unstructured diagnostic suffix after a private-root match across retained and printed sinks | privacy regression | `python3 tests/tools/test_verify_playable.py -v` | Yes | pass, 23 tests; no new dependency |
 | 04-16 T1 frontend | 04-16 | 14 | HOST-02 | T-04-11, T-04-15, T-04-18, T-04-20 | Remove the entire unstructured diagnostic suffix after a private-root match across frontend serialization sinks | privacy regression | `python3 tests/libretro/test_retroarch_smoke.py -v` | Yes | pass, 27 tests; no app launch |
 | 04-16 T2 | 04-16 | 14 | Review audit | T-04-33 | Compare one normalized controlled crosswalk state with each recorded disposition; reject contradiction and placeholders | checker mutation controls | `python3 tests/tools/test_check_phase04_validation_map.py -v` | Yes | pass, 10 tests; direct documentation and crosswalk gates pass; four high/open threats and frontend unknown preserved |
-| 04-17 T1 | 04-17 | 15 | QUAL-03 | T-04-34, T-04-SC | Reject mixed Pending/unknown and affirmative frontend-closure claims while retaining the truthful current status | docs gate and mutation controls | `python3 tests/tools/test_verify_playable.py -v`; `python3 tools/verify_playable.py --check-docs` | Yes | pass, 23 tests; docs-only gate passes; no app launch |
+| 04-17 T1 | 04-17 | 15 | QUAL-03 | T-04-34, T-04-SC | Reject mixed Pending/unknown and affirmative frontend-closure claims while retaining the truthful current status | docs gate and mutation controls | `python3 tests/tools/test_verify_playable.py -v`; `python3 tools/verify_playable.py --check-docs` | Yes | historical pass, 23 tests at Plan 04-17; current source is covered by Plan 04-19 rows |
 | 04-17 T2 | 04-17 | 15 | Review audit | WR-06, WR-07 | Reconcile current finding provenance, open crosswalk rows, and adversarial false-closure controls | checker mutation controls | `python3 tests/tools/test_check_phase04_validation_map.py -v`; `python3 tests/tools/check_phase04_validation_map.py` | Yes | original Plan run passed 12/12; current post-review run has 6/12 failures, including synthetic WR-07 collision and medium T-04-34/open-count mismatch; direct gate fails at the security open-count assertion |
 | Nyquist WR-01 | 04-12 / 04-16 | 10 / 14 | Review audit | WR-01 / T-04-33 | Accept reconciled current review IDs and dispositions; reject contradictory and placeholder states | checker regression | `python3 tests/tools/test_check_phase04_validation_map.py -v` | Yes | resolved by 04-16: current suite passes 10/10, including the repaired-finding-absent mutation case and exact-state contradiction controls; the earlier line-110 failure remains historical |
 | 04-18 T1 | 04-18 | 16 | Review audit, HOST-02, QUAL-03 | T-04-35, T-04-SC | Reconcile the four high/open disclosure IDs and medium/open T-04-34 with the severity-aware count; require current-report frontend uncertainty and preserve pending/unknown requirements | direct evidence-map checker | `python3 tests/tools/check_phase04_validation_map.py` | Yes | pass; current security/review/report crosswalk reconciles; four high/open threats and T-04-34 medium/open remain; actual pinned frontend remains unobserved |
 | 04-18 T2 | 04-18 | 16 | Review audit, HOST-02, QUAL-03 | T-04-35, T-04-SC | Source-faithful mutations reject colliding IDs, malformed/duplicate requirement rows, inconsistent review/disposition/crosswalk counts, changed report status, and positive claims in every current frontend evidence row | checker mutation controls | `python3 tests/tools/test_check_phase04_validation_map.py -v` | Yes | pass, 14 tests; source-derived exact report rows reject appended/paraphrased frontend success claims; HOST-02 and frontend QUAL-03 remain Pending/unknown |
-| 04-18 T3 | 04-18 | 16 | HOST-02, QUAL-03 | T-04-36, T-04-SC | Constrained 04-15 T2 Pending/unknown cell rejects affirmative load, display, input, or unload claims; docs gate does not establish actual RetroArch behavior | qualification regression and docs gate | `python3 tests/tools/test_verify_playable.py -v`; `python3 tools/verify_playable.py --check-docs`; `python3 tests/tools/test_check_phase04_validation_map.py -v` | Yes | pass, 23 qualification tests; docs-only gate passes; evidence-map suite passes 14 tests; app behavior remains manual-only/unobserved |
+| 04-18 T3 | 04-18 | 16 | HOST-02, QUAL-03 | T-04-36, T-04-SC | Constrained 04-15 T2 Pending/unknown cell rejects tested affirmative load, display, input, or unload claims; docs gate does not establish actual RetroArch behavior | qualification regression and docs gate | `python3 tests/tools/test_verify_playable.py -v`; `python3 tools/verify_playable.py --check-docs`; `python3 tests/tools/test_check_phase04_validation_map.py -v` | Yes | historical pass, 23 qualification tests and 14 evidence-map tests at Plan 04-18; current source is covered by Plan 04-19 rows |
+| 04-19 T1 qualification | 04-19 | 17 | QUAL-03 | T-04-11, T-04-15, T-04-18, T-04-20, T-04-37 | Independent review triages retained/printed diagnostics, forged receipt rows, and consumer documentation; four directed threats remain open | privacy and docs-claim regression | `python3 tests/tools/test_verify_playable.py -v` | Yes | pass, 25 tests at `2a82c455`; code review still reproduced alternate affirmative guide claims, so WR-06/T-04-34 remain open |
+| 04-19 T1 frontend | 04-19 | 17 | HOST-02 | T-04-11, T-04-15, T-04-18, T-04-20, T-04-37 | GUI-free frontend diagnostics redact private paths; no app claim is inferred from these tests | frontend diagnostic regression | `python3 tests/libretro/test_retroarch_smoke.py -v` | Yes | pass, 27 tests at `9804351`; no GUI launch; HOST-02 remains manual-only/unknown |
+| 04-19 T2 | 04-19 | 17 | QUAL-03 | T-04-34, T-04-SC (04-19) | Reject tested affirmative guide claims and preserve explicit negative statements; remaining alternate claims are recorded open under the bounded stop condition | qualification regression and docs gate | `python3 tests/tools/test_verify_playable.py -v`; `python3 tools/verify_playable.py --check-docs` | Yes | pass, 25 tests and docs gate at `2a82c455`; alternate-claim limitation remains open; no actual frontend observation |
+| 04-19 T3 | 04-19 | 17 | HOST-02, QUAL-03 | T-04-34, T-04-37, T-04-SC (04-19) | Reconcile one current open WR-06 disposition with medium/open T-04-34, preserve four high/open blockers and Pending/unknown frontend status | evidence-map mutation and direct checker | `python3 tests/tools/test_check_phase04_validation_map.py -v`; `python3 tests/tools/check_phase04_validation_map.py`; `python3 tools/verify_playable.py --check-docs` | Yes | pass, 14 mutation tests; direct checker and docs gate pass, checker reruns 25 qualification and 27 frontend tests; WR-06/T-04-34 remain open |
 
 ## Threat Coverage
 
@@ -84,22 +88,34 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | T-04-22 → T-04-17 | Plan 04-10 validates the pinned bundle identifier before quit commands; T-04-17 is closed by the current independent audit. |
 | T-04-23 → T-04-13 | Plan 04-11 derives archive rows from committed member bytes and rejects forged receipt rows; T-04-13 is closed by the current independent audit, while carried WR-03 remains open pending independent review. |
 | T-04-24 receipt numeric types | Plan 04-12 rejects booleans in bytes, entry_count, file_count and symlink_count before aggregate/archive comparison. Fresh repository-backed regressions pass; independent post-fix audit is still required. |
-| T-04-34 | Plan 04-18 constrains the current Pending/unknown status cell and mutation-tests affirmative load, display, input, and unload claims. This medium threat remains open under WR-06 pending independent post-fix review. |
+| T-04-34 | Plan 04-18 constrains the current Pending/unknown status cell; Plan 04-19 adds regression-tested guide claim checks. The post-fix independent code review still reproduced alternate affirmative claim wording, so this medium threat remains open under WR-06. |
+| T-04-37 | Plan 04-19 records revision-scoped independent review, exact counterexamples, dispositions, commands, denominators, and limitations; unresolved WR-06 remains open. |
 
 ## Review Finding Crosswalk
 
 | Review Finding | Severity | Existing Threat Scope | Disposition |
 |----------------|----------|-----------------------|-------------|
-| WR-06 | warning | Alternate affirmative frontend app-load claim passes alongside Pending/unknown | open |
-| WR-07 | warning | Evidence-map fixture restores the required verification sentence and masks its removal from the source report | open |
-| CR-03 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, newline-containing path disclosure | open |
-| WR-05 | warning | Review disposition and validation crosswalk consistency | open |
-| WR-01 | warning | Current audit and validation-map evidence boundary | open |
+| WR-06 | warning | Alternate affirmative frontend success paraphrases pass beside Pending/unknown in the consumer guide | open |
+| WR-07 | warning | Evidence-map fixture source-faithful verification-row mutation contract | fixed |
+| CR-03 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, newline-containing path disclosure | fixed |
+| WR-05 | warning | Review disposition and validation crosswalk consistency | fixed |
+| WR-01 | warning | Current audit and validation-map evidence boundary | fixed |
 | CR-02 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, raw-literal-quote disclosure | fixed |
 | WR-04 | warning | Validation-map review grammar for informational findings | fixed |
 | CR-01 | critical | T-04-24, exact numeric receipt types | fixed |
-| WR-02 | warning | T-04-11 / T-04-15 / T-04-18 / T-04-20, path redaction | open |
-| WR-03 | warning | T-04-13 / T-04-23, receipt row-to-archive binding | open |
+| WR-02 | warning | T-04-11 / T-04-15 / T-04-18 / T-04-20, space-containing path redaction | fixed |
+| WR-03 | warning | T-04-13 / T-04-23, receipt row-to-archive binding | fixed |
+
+## Plan 04-19 Current-Revision Reconciliation — 2026-10-08
+
+The current qualification suite passed 25/25, frontend smoke-contract suite 27/27, and evidence-map mutation suite 14/14. `python3 tests/tools/check_phase04_validation_map.py`, `python3 tools/verify_playable.py --check-docs`, and the direct evidence-map checker passed; the direct checker reran the focused qualification and frontend suites with their current denominators. The first independent security/code-review pass at `9804351907e456b3ab85ebe4a49959c05b0714bb` resolved six carried review findings and reproduced WR-06 in the consumer guide. Three bounded correction commits added focused guide-claim controls. The post-fix code review at `2a82c455f85671ba144a42923318c4ff7d53b9a2` still reproduced two affirmative app/control claims accepted by the docs gate, so WR-06 remains open and T-04-34 stays medium/open. This is the bounded stop condition, not a pass. T-04-11, T-04-15, T-04-18, and T-04-20 remain high/open by direction. HOST-02 and frontend QUAL-03 remain Pending/unknown and manual-only; no GUI was launched. `nyquist_compliant` remains false.
+
+| Metric | Count |
+|---|---:|
+| Carried review findings dispositioned | 7 |
+| Fixed with current evidence | 6 |
+| Retained open | 1 (WR-06 / T-04-34) |
+| Directed high blockers | 4 |
 
 ## Revision Context
 

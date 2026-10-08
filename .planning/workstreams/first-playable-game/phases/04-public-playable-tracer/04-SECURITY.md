@@ -74,11 +74,13 @@ updated: "2026-10-08"
 | T-04-32 | Information disclosure | qualification and frontend diagnostic sinks | high | mitigate | Both sanitizers remove the complete unstructured diagnostic suffix after a private-root match; retained and printed sinks have newline-path regressions. | closed |
 | T-04-33 | Tampering | review validation crosswalk | medium | mitigate | The direct checker compares one normalized controlled state exactly with the disposition record; mutation tests reject contradictory state text. | closed |
 | T-04-SC (04-16) | Tampering | source/dependency closure | high | mitigate | Plan 04-16 uses Python standard-library and repository code only; no dependency or external source was added. | closed |
-| T-04-34 | Tampering | `check_docs()` frontend qualification status | medium | mitigate | `check_docs()` now requires the constrained current-state grammar and cross-checks the controlled disposition; mutations cover affirmative-claim, duplicate-row, and controlled-state contradictions. It remains open pending independent post-fix review under WR-06. | open |
+| T-04-34 | Tampering | `check_docs()` frontend qualification status | medium | mitigate | The current-state row and known affirmative-claim controls are checked, but fresh independent code review still reproduced alternate positive claims in the consumer guide; retain open under WR-06. | open |
 | T-04-SC (04-17) | Tampering | source/dependency closure | high | mitigate | Plan 04-17 uses existing Python standard-library tooling and tracked documents; no package install or external source is added. | closed |
 | T-04-35 | Tampering | validation-map authorization and status rows | medium | mitigate | The evidence-map checker binds each row to the current controlled threat and requirement states; mutation tests reject stale and invented authorities. | closed |
 | T-04-36 | Tampering | frontend documentation closure grammar | medium | mitigate | `tools/verify_playable.py` constrains frontend state claims and cross-checks controlled requirement rows; mutation tests cover contradictory and unsupported claims. | closed |
 | T-04-SC (04-18) | Tampering | source/dependency closure | high | mitigate | Plan 04-18 changes tracked Python standard-library tooling and documentation only; it adds no dependency or external source. | closed |
+| T-04-37 | Repudiation | review/disposition/evidence crosswalk | medium | mitigate | Plan 04-19 records revision-scoped independent findings, commands, denominators, limits, and explicit unresolved dispositions; mutation-checked records retain WR-06 as open. | closed |
+| T-04-SC (04-19) | Tampering | source/dependency closure | high | mitigate | Plan 04-19 uses tracked Python standard-library code and existing tests only; no dependency or external source was added. | closed |
 
 ## Threat Flags
 
@@ -208,10 +210,10 @@ The current register was reconciled against the 18 plan threat models and the pr
 |---|---|---|
 | T-04-35 | CLOSED | `tests/tools/check_phase04_validation_map.py` parses all current security rows, rejects duplicate IDs, counts only high/open blockers, requires the exact four high/open IDs plus T-04-34 medium/open, rejects other open rows, and requires the blocking count to equal the parsed rows. It pins current frontend requirement/report rows; `tests/tools/test_check_phase04_validation_map.py` exercises count, severity, status, duplicate-row, and contradictory-evidence mutations. The direct checker and 14-test mutation suite pass. |
 | T-04-36 | CLOSED | `tools/verify_playable.py::check_docs()` requires exactly one current `04-15 T2` row, checks that both requirements are named, and full-matches the status against the Pending/unknown grammar. Its tests accept the canonical pending state and reject affirmative, appended, placeholder, missing, and contradictory status claims. The 23-test qualification suite and docs-only gate pass. |
-| T-04-34 | OPEN — medium, retained pending independent post-fix review | The constrained grammar and negative controls are present and pass; the register keeps this threat open until the separately required independent review/disposition resolves WR-06. It does not count toward `threats_open` because `block_on: high`. |
+| T-04-34 | OPEN — medium, retained after independent post-fix review | The known-phrase detector rejects enumerated mutations, but the code reviewer reproduced alternate app-run and control-success claims. It does not count toward `threats_open` because `block_on: high`. |
 | T-04-11, T-04-15, T-04-18, T-04-20 | OPEN — high, retained by explicit direction | No closure is inferred from the checker tests or this review. The four disclosure threats continue to block the phase. |
 
-The 54-row inventory remains 49 closed and 5 open: the four directed high-severity disclosure threats and T-04-34 at medium severity. Thus `threats_open: 4` remains the severity-filtered blocking count. HOST-02 and frontend QUAL-03 remain Pending/unknown, and actual pinned RetroArch load, display, controls, unload, and exit remain manual-only and unobserved; GUI-free tests are not frontend proof.
+That audit's 54-row inventory had 49 closed and 5 open: the four directed high-severity disclosure threats and T-04-34 at medium severity. Thus `threats_open: 4` remains the severity-filtered blocking count. HOST-02 and frontend QUAL-03 remain Pending/unknown, and actual pinned RetroArch load, display, controls, unload, and exit remain manual-only and unobserved; GUI-free tests are not frontend proof.
 
 ## Security Audit 2026-10-08 — Plan 04-19 independent current-revision pass
 
@@ -225,4 +227,15 @@ The 54-row inventory remains 49 closed and 5 open: the four directed high-severi
 
 The independent ASVS L1 audit covered `tools/verify_playable.py`, the read-only frontend diagnostic sanitizer in `tests/libretro/retroarch_smoke.py`, focused tests, evidence-map checker/mutations, and current Phase 04 security, review, disposition, validation, verification, and plan records. The qualification suite passed 23/23, frontend contract suite 27/27, and evidence-map mutation suite 14/14; the docs-only gate and direct evidence-map checker passed. Forged receipt file rows remain rejected after aggregate recomputation; newline, space, escaped-quote and apostrophe path controls pass across retained/printed sinks. No GUI was launched. These checks do not establish actual RetroArch loading or behavior.
 
-The code reviewer reproduced WR-06 in the consumer guide even though the independent auditor initially inferred closure from the exact verification-row gate: an affirmative app-load/pixel sentence and a separate RIGHT-input/unload sentence were both accepted when appended to a temporary guide. T-04-34 therefore remains medium/open pending a focused correction and independent post-fix review. T-04-11, T-04-15, T-04-18, and T-04-20 remain high/open by direction. No risks are accepted; HOST-02 and frontend QUAL-03 remain Pending/unknown and manual-only.
+The code reviewer reproduced WR-06 in the consumer guide even though the independent auditor initially inferred closure from the exact verification-row gate: an affirmative app-load/pixel sentence and a separate RIGHT-input/unload sentence were both accepted when appended to a temporary guide. T-04-34 therefore remains medium/open. T-04-11, T-04-15, T-04-18, and T-04-20 remain high/open by direction. No risks are accepted; HOST-02 and frontend QUAL-03 remain Pending/unknown and manual-only.
+
+## Security Audit 2026-10-08 — Plan 04-19 post-fix reconciliation
+
+| Metric | Count |
+|---|---:|
+| Current threat rows | 56 |
+| Closed | 51 |
+| Open | 5 |
+| Blocking open (`block_on: high`) | 4 |
+
+The independent security auditor reviewed the bounded docs-check patch at `2a82c455f85671ba144a42923318c4ff7d53b9a2` and found the original and enumerated paraphrases rejected by the 25/25 qualification suite and `--check-docs`; it supported closing T-04-34 for that tested set. The independent code reviewer then reproduced further affirmative claims in temporary guide copies: `The frontend booted the game and showed its output.` and `The controls worked as expected in RetroArch.` Since a direct contradictory claim still passes, this register conservatively keeps T-04-34 medium/open. The new Plan 04-19 threats are closed: review provenance is recorded under T-04-37, and no dependency or external source was added under T-04-SC (04-19). Four directed high/open disclosures remain blockers. HOST-02 and frontend QUAL-03 remain Pending/unknown; no GUI was launched.
