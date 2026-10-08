@@ -57,10 +57,11 @@ coverage:
     description: Actual pinned RetroArch load, input, software video, and unload behavior.
     requirement: HOST-02
     verification:
-      - kind: frontend
+      - kind: automated_ui
         ref: "retroarch_smoke.py matched app version 1.22.2 and executable digest ed90b54434a2899de0ddbfed59f335255fb462c8691bd970a1a761ebb5656d65; the process exited with status -6 before a screenshot"
-        status: blocked_unknown
-    human_judgment: false
+        status: unknown
+    human_judgment: true
+    rationale: "The pinned RetroArch 1.22.2 process exited -6/SIGABRT before its first screenshot. Human evidence is still needed from a fresh run covering no-input, LEFT/RIGHT controls, software video, core unload, and normal exit."
 duration: 11min
 completed: 2026-10-07
 status: complete
