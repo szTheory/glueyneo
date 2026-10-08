@@ -540,6 +540,13 @@ class ConsumerInputTest(unittest.TestCase):
                 text, "04-15 T2", "HOST-02 Pending; frontend QUAL-03 Pending; frontend claim unknown; both requirements pass",
             ), "Pending/unknown"),
             *[
+                (f"mixed pending and affirmative frontend claim: {claim}", lambda text, claim=claim: update_row(
+                    text, "04-15 T2",
+                    f"HOST-02 Pending; frontend QUAL-03 Pending; actual-app identities and observations unavailable; frontend app {claim}; frontend claim unknown",
+                ), "Pending/unknown")
+                for claim in ("loaded successfully", "pixels were presented", "accepted RIGHT input", "unloaded cleanly")
+            ],
+            *[
                 (f"mixed pending and {claim} closure", lambda text, claim=claim: update_row(
                     text, "04-15 T2", f"HOST-02 Pending; frontend QUAL-03 Pending; frontend claim unknown; HOST-02 {claim}",
                 ), "Pending/unknown")
@@ -552,7 +559,10 @@ class ConsumerInputTest(unittest.TestCase):
         for label, transform, expected_error in mutations:
             with self.subTest(mutation=label), tempfile.TemporaryDirectory(prefix="playable-docs-negative-") as temporary:
                 validation = self.copy_documentation(Path(temporary))
-                validation.write_text(transform(validation.read_text(encoding="utf-8")), encoding="utf-8")
+                original = validation.read_text(encoding="utf-8")
+                mutated = transform(original)
+                self.assertNotEqual(mutated, original, f"{label} mutation did not change the target row")
+                validation.write_text(mutated, encoding="utf-8")
                 with self.assertRaisesRegex(RuntimeError, expected_error):
                     playable.check_docs(Path(temporary))
 
