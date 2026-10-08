@@ -3,18 +3,18 @@ phase: 04
 review: 04-REVIEW.md
 titles: json
 findings:
+  - id: CR-02
+    severity: critical
+    disposition: open
+    title: "Quoted private paths still expose filename suffixes [BLOCKER]"
+  - id: WR-01
+    severity: warning
+    disposition: open
+    title: "Validation-map checks require historical findings to stay reported and open [WARNING]"
   - id: CR-01
     severity: critical
     disposition: open
     title: "Boolean byte counts bypass repository receipt equality"
-  - id: CR-02
-    severity: critical
-    disposition: open
-    title: "Unquoted private paths can leak suffixes at valid path delimiters"
-  - id: WR-01
-    severity: warning
-    disposition: open
-    title: "Validation-map checker requires superseded security findings to remain open"
   - id: WR-02
     severity: warning
     disposition: open
@@ -25,16 +25,16 @@ findings:
     title: "Repository-backed receipt validation accepts forged file-content hashes"
 open: 5
 total: 5
-recorded: 2026-10-08T03:41:52.756Z
+recorded: 2026-10-08T12:09:32.441Z
 ---
 
 # Phase 04: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | open | 04-REVIEW.md: current finding; prior CR-01 fixed decision refers to a different finding ID/title |
-| CR-02 | critical | open | 04-REVIEW.md |
-| WR-01 | warning | open | 04-REVIEW.md |
+| CR-02 | critical | open | - |
+| WR-01 | warning | open | - |
+| CR-01 | critical | open | 04-REVIEW.md: current finding; prior CR-01 fixed decision refers to a different finding ID/title (not in the current review) |
 | WR-02 | warning | open | - (not in the current review) |
 | WR-03 | warning | open | - (not in the current review) |
 
