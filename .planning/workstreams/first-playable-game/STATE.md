@@ -69,7 +69,6 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P16 | 10min | 2 tasks | 7 files |
 | Phase 04 P17 | 23 min | 2 tasks | 6 files |
 | Phase 04 P18 | 5 min | 3 tasks | 4 files |
-| Phase 04 P18 | 5min | 3 tasks | 4 files |
 
 ## Session Continuity
 
