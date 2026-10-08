@@ -2,7 +2,7 @@
 phase: "04"
 slug: "public-playable-tracer"
 status: validated
-nyquist_compliant: true
+nyquist_compliant: false
 wave_0_complete: true
 created: "2026-10-07"
 completed: "2026-10-07"
@@ -53,7 +53,8 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | 04-11 T1 | 04-11 | 9 | QUAL-03, TRAC-01 | T-04-23, T-04-SC | Every receipt row is compared with the corresponding committed archive bytes, mode, digest, and symlink target | repository-backed receipt regression | `python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py' -v` | Yes | pass, 17 tests on source `a2ea677`; no live checkout input is used |
 | 04-12 T1 tools | 04-12 | 10 | QUAL-03, TRAC-01 | T-04-11, T-04-15, T-04-18, T-04-24 | Exact integer receipt fields and complete ambiguous path redaction, including persisted and printed receipts | repository/privacy regression | `python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py' -v` | Yes | pass, 19 tests on source `33bef8c`; 2026-10-08 |
 | 04-12 T1 frontend | 04-12 | 10 | HOST-02, QUAL-03 | T-04-11, T-04-15, T-04-18, T-04-24 | Complete path spans and supplied temporary-root descendants removed from diagnostics and crash reasons; no GUI launch | GUI-free privacy regression | `python3 -m unittest discover -s tests/libretro -p 'test_retroarch_smoke.py' -v` | Yes | pass, 25 tests on source `33bef8c`; 2026-10-08; actual frontend unknown |
-| 04-12 T2 | 04-12 | 10 | HOST-02, QUAL-03 | T-04-11, T-04-15, T-04-18 | Parse current audit register and unresolved review rows; preserve frontend unknown | evidence-map check | `python3 tests/tools/check_phase04_validation_map.py` | Yes | passing run recorded in 04-12-SUMMARY.md; independent security audit remains required |
+| 04-12 T2 | 04-12 | 10 | HOST-02, QUAL-03 | T-04-11, T-04-15, T-04-18 | Parse current audit register and unresolved review rows; preserve frontend unknown | evidence-map check | `python3 tests/tools/check_phase04_validation_map.py` | Yes | historical pass recorded in 04-12-SUMMARY.md; current direct gate fails at the hardcoded current-review-ID assertion after review `df9e2c4`; see Nyquist WR-01 |
+| Nyquist WR-01 | 04-12 | 10 | Review audit | WR-01 | Accept reconciled current review IDs and dispositions, while rejecting contradictory records | checker regression | `python3 -m unittest discover -s tests/tools -p 'test_check_phase04_validation_map.py' -v` | Yes | escalated: fails at the hardcoded current review ID assertion (line 110) when repaired CR-01 is absent from a reconciled review/disposition fixture |
 
 ## Threat Coverage
 
@@ -72,7 +73,7 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 
 | Review Finding | Existing Threat Scope | Disposition |
 |----------------|-----------------------|-------------|
-| CR-01 | T-04-24, exact numeric receipt types | Current boolean-count bypass; Plan 04-12 supplies regression evidence. Disposition remains open pending independent review. |
+| CR-01 | T-04-24, exact numeric receipt types | Plan 04-12 fixes the boolean-count bypass and the fresh review no longer reports CR-01. The stale current-state row remains in the disposition/crosswalk and is part of Nyquist WR-01. |
 | CR-02 | T-04-11 / T-04-15 / T-04-18, ambiguous path disclosure | Plan 04-12 supplies complete-span regressions. Disposition remains open pending independent review. |
 | WR-01 | Current audit and validation-map evidence boundary | Current stale-checker finding, distinct from historical WR-01 fixture identity. Disposition remains open pending independent review. |
 | WR-02 | T-04-11 / T-04-15 / T-04-18 / T-04-20, complete path redaction | Corroborates the same disclosure findings; no separate threat scope. Disposition remains open pending independent review. |
@@ -80,10 +81,10 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 
 ## Revision Context
 
-- Plan 04-07's immutable source snapshot implementation is recorded in [04-07-SUMMARY.md](04-07-SUMMARY.md), including commit `36df674`. [04-VERIFICATION.md](04-VERIFICATION.md) preserves that source identity evidence. The historical CR-01 identity finding was fixed, but the current reused CR-01 ID names a distinct boolean-count bypass and remains open in the current disposition record.
+- Plan 04-07's immutable source snapshot implementation is recorded in [04-07-SUMMARY.md](04-07-SUMMARY.md), including commit `36df674`. [04-VERIFICATION.md](04-VERIFICATION.md) preserves that source identity evidence. Plan 04-12 fixes the later boolean-count bypass; the fresh review no longer reports CR-01, but its stale disposition/crosswalk row remains unresolved under Nyquist WR-01.
 - Plan 04-10's historical focused runs were 14 tools tests and 24 frontend smoke tests, recorded in [04-10-SUMMARY.md](04-10-SUMMARY.md) at commit `e7aa255`. After the Plan 04-11 implementation commit `a2ea677`, the tools suite was rerun with 17 tests and the frontend smoke suite with 24 tests. The three added tools regressions account for the tools denominator change.
 - Plan 04-12 reran the focused suites on implementation `33bef8c`: 19 tools tests and 25 frontend smoke tests passed. Earlier denominators above remain dated history. New controls cover booleans equal to integer values, punctuation/phrase path components, quoted controls and supplied temporary-root descendants. Conservative unquoted redaction intentionally removes ambiguous trailing status; status preceding a private span and bounded structured diagnostics survive.
-- These focused suites verify repository behavior only. The current independent audit has T-04-13/T-04-16/T-04-17 closed and T-04-11/T-04-15/T-04-18 open, with security blocked. All five current/carried review dispositions remain open until independent review. HOST-02 and actual frontend QUAL-03 remain unknown until the requested pinned-app observations exist.
+- These focused suites verify repository behavior only. The current independent audit has T-04-13/T-04-16/T-04-17 closed and T-04-11/T-04-15/T-04-18 open, with security blocked. The disposition ledger still has five open rows, including CR-01 which the fresh review no longer reports; WR-01 keeps that map unreconciled. HOST-02 and actual frontend QUAL-03 remain unknown until the requested pinned-app observations exist.
 
 ## Actual Frontend Evidence Handoff
 
@@ -99,7 +100,7 @@ Human evidence is still required: run the generated public fixture in the pinned
 - [x] Every task maps to an executable command; full clean CTest provides a 34-test denominator.
 - [x] No watch-mode acceptance commands are used.
 
-The validation strategy and its automation are complete. The Phase 04 goal is not yet accepted: HOST-02 remains unknown because the pinned frontend exited before producing a screenshot. The native fixture, Z80 synthetic workload and YM2610 candidate results do not resolve that frontend gap or establish BIOS/game compatibility.
+Every plan task has an automated command or an explicit human-evidence route, but Nyquist validation is not compliant while WR-01 remains escalated. The Phase 04 goal is not accepted: HOST-02 remains unknown because the pinned frontend exited before producing a screenshot. The native fixture, Z80 synthetic workload and YM2610 candidate results do not resolve that frontend gap or establish BIOS/game compatibility.
 
 ---
 *Phase: 04-public-playable-tracer*
@@ -121,8 +122,26 @@ The validation strategy and its automation are complete. The Phase 04 goal is no
 | Resolved | 0 |
 | Escalated | 0 |
 
-## Post-Audit Execution Checks 2026-10-08
+## Adversarial Nyquist Probe 2026-10-08 — WR-01
 
-- `python3 tests/tools/check_phase04_validation_map.py` now fails at its assertion that the security register still has six open findings. The current independent audit closed T-04-13, T-04-16 and T-04-17, leaving T-04-11, T-04-15 and T-04-18 open. The checker’s expected security and review-disposition state is stale and remains a follow-up finding; no assertions or goldens were relaxed to make it pass.
+| Metric | Count |
+|---|---|
+| Gaps found | 1 |
+| Resolved | 0 |
+| Escalated | 1 |
+
+`python3 -m unittest discover -s tests/tools -p 'test_check_phase04_validation_map.py' -v` constructs a temporary, internally reconciled review state where the repaired CR-01 finding is absent from both the fresh review and disposition, and the validation crosswalk and disposition totals reflect the change. The checker rejects it at `tests/tools/check_phase04_validation_map.py:110` with `current review IDs changed`. This is an implementation defect in the checker and remains escalated; no implementation assertions were changed during this audit. The direct gate also currently exits 1 at that same assertion against the fresh review.
+
+## Historical Post-Audit Execution Checks (before Plan 04-12; superseded)
+
+- At that earlier source state, `python3 tests/tools/check_phase04_validation_map.py` failed because it expected six open security findings. Plan 04-12 refreshed the threat assertions; the current gate instead fails at the hardcoded current review-ID assertion documented under Nyquist WR-01. No assertions or goldens were relaxed to make either run pass.
 - Read-only reproductions confirmed that a repository receipt with a one-byte row changed from `bytes: 1` to `bytes: true` and a recomputed aggregate digest is accepted, and that commas inside unquoted private paths leave suffixes in both qualification and frontend diagnostic output. These are current code-review blockers.
-- The post-wave full CTest result remains 46/47, with only `owned_cpu_inventory_check` failing because of stale CPU identity/source-manifest and strict compile-command expectations. The pinned RetroArch GUI result remains unknown; no new GUI observation was made.
+- The earlier post-wave CTest result was 46/47, with only `owned_cpu_inventory_check` failing because of stale CPU identity/source-manifest and strict compile-command expectations. Plan 04-12 later refreshed that evidence and its summary records 47/47. The pinned RetroArch GUI result remains unknown; no new GUI observation was made.
+
+## Validation Audit 2026-10-08
+
+| Metric | Count |
+|---|---|
+| Gaps found | 1 |
+| Resolved | 0 |
+| Escalated | 1 |
