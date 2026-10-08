@@ -6,7 +6,11 @@ findings:
   - id: WR-06
     severity: warning
     disposition: open
-    title: "Documentation gate accepts contradictory frontend status [WARNING]"
+    title: "Frontend closure blacklist misses equivalent success claims [WARNING]"
+  - id: WR-07
+    severity: warning
+    disposition: open
+    title: "Evidence-map fixtures mask removal of the required verification sentence [WARNING]"
   - id: CR-03
     severity: critical
     disposition: open
@@ -39,16 +43,17 @@ findings:
     severity: warning
     disposition: open
     title: "Repository-backed receipt validation accepts forged file-content hashes"
-open: 6
-total: 9
-recorded: 2026-10-08T16:20:59.468Z
+open: 7
+total: 10
+recorded: 2026-10-08T17:39:55.739Z
 ---
 
 # Phase 04: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-06 | warning | open | 04-REVIEW.md current |
+| WR-06 | warning | open | - |
+| WR-07 | warning | open | - |
 | CR-03 | critical | open | Fresh post-04-14 review reproduces a newline-boundary suffix leak through both sanitizers and their diagnostic sinks. (not in the current review) |
 | WR-05 | warning | open | Fresh review shows contradictory crosswalk wording can satisfy the open-state check. (not in the current review) |
 | WR-01 | warning | open | Historical checker issue remains carried without independent disposition evidence. (not in the current review) |
