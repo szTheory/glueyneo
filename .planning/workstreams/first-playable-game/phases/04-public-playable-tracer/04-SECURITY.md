@@ -1,10 +1,11 @@
 ---
 phase: "04"
 slug: "public-playable-tracer"
-status: verified
-threats_open: 0
+status: blocked
+threats_open: 6
 asvs_level: 1
 created: "2026-10-07"
+updated: "2026-10-08"
 ---
 
 # Phase 04 — Security
@@ -39,15 +40,25 @@ created: "2026-10-07"
 | T-04-09 | Denial of service | C/C++ YM2610 shim | high | mitigate | `src/chips/ym2610_candidate.cpp` checks callback bounds and reentry, limits clock/capacity and catches exceptions at the C boundary; failure tests cover these paths. | closed |
 | T-04-10 | Denial of service | installed consumer linkage | medium | mitigate | `tests/chips/check_ym2610.py` compiles and runs installed static/shared C consumers and inspects exports and runtime dependencies. | closed |
 | T-04-SC (04-05) | Tampering | ymfm source closure | high | mitigate | `tests/chips/check_ym2610.py` gates the pinned Git source closure and BSD notice without a registry install. | closed |
-| T-04-11 | Information disclosure | qualification logs | high | mitigate | `tools/verify_playable.py` redacts local paths in retained logs and commands; receipts stay under ignored `build/`. | closed |
+| T-04-11 | Information disclosure | qualification logs | high | mitigate | Redact full paths before retaining qualification diagnostics. A path containing spaces leaves a private suffix in smoke output after the outer receipt redactor has removed its absolute prefix. | open |
 | T-04-12 | Repudiation | qualification receipt | medium | mitigate | `tools/verify_playable.py` records command status and log hashes with source, toolchain, frontend, fixture and artifact identities. | closed |
 | T-04-SC (04-06) | Tampering | qualification dependency closure | high | mitigate | The clean runner requires pinned Z80 and ymfm source and installed-linkage gates; it contains no package-manager install. | closed |
+| T-04-13 | Tampering | snapshot/receipt binding | high | mitigate | Compare every receipt file row's byte count, mode and SHA-256 with the committed archive. Repository-backed validation currently checks tree shape and archive digest but accepts a changed file hash when the aggregate inventory digest is recomputed. | open |
+| T-04-14 | Elevation of privilege | archived path/symlink execution | high | mitigate | `tools/verify_playable.py` rejects unsafe archive paths and links, sanitizes the build environment and routes lanes through the snapshot root. | closed |
+| T-04-SC (04-07) | Tampering | dependency/source closure | high | mitigate | `tools/verify_playable.py` reuses the pinned Z80 and ymfm source gates without package-manager installation. | closed |
+| T-04-15 | Information disclosure | receipt and qualification logs | high | mitigate | Redact complete home, temporary and private paths before persisting diagnostics. Current sanitization stops at whitespace and leaves filename/path suffixes visible. | open |
+| T-04-16 | Tampering | frontend process/input evidence | high | mitigate | Enforce the pinned public fixture SHA-256 before launching the direct smoke. The runner currently checks size, magic and version, then records whichever digest it receives. | open |
+| T-04-17 | Elevation of privilege | local app/script execution | high | mitigate | Validate the app bundle identifier before interpolating it into AppleScript quit commands. The current value comes from mutable `Info.plist` metadata. | open |
+| T-04-18 | Information disclosure | screenshots/crash logs | high | mitigate | Redact complete frontend and crash diagnostics, including paths with spaces, before machine output or receipt persistence. Suffixes currently survive sanitization. | open |
+| T-04-SC (04-08) | Tampering | installed runtime/dependency closure | high | mitigate | The final qualification uses the committed snapshot and existing pinned source and linkage gates without new package installation. | closed |
+| T-04-19 | Tampering | P04-02-HOST coverage metadata | high | mitigate | `04-02-SUMMARY.md` retains `automated_ui`/`unknown` and `human_judgment: true`; the installed classifier reports zero errors, routes HOST to `present[]`, and excludes it from `auto_passed[]`. | closed |
+| T-04-SC (04-09) | Tampering | installed GSD classifier/template | high | mitigate | Plan 04-09 uses the installed local classifier and template without package installation. | closed |
 
-## Unregistered Threat Flags
+## Threat Flags
 
 | Flag | Source | Audit note |
 |------|--------|------------|
-| `threat_flag: native-module-load` | 04-06 SUMMARY, `CMakeLists.txt` | The installed Libretro module is loaded by an external frontend. The smoke runner records its digest, but the pinned RetroArch process exited `-6` before a screenshot, so actual loading remains unknown. This is a verification limitation; this audit does not claim HOST-02 or successful frontend loading. |
+| `threat_flag: native-module-load` | 04-06 SUMMARY, `CMakeLists.txt` | Mapped to T-04-16, frontend process/core evidence. The pinned RetroArch process exited `-6` before a screenshot, so actual loading remains unknown; this security review does not claim HOST-02 acceptance. |
 
 ## Accepted Risks Log
 
@@ -63,7 +74,15 @@ No accepted risks.
 
 - [x] All declared threats have a disposition (mitigate / accept / transfer)
 - [x] Accepted risks documented in Accepted Risks Log
-- [x] `threats_open: 0` confirmed
-- [x] `status: verified` set in frontmatter
+- [ ] `threats_open: 0` confirmed — T-04-11, T-04-13, T-04-15, T-04-16, T-04-17 and T-04-18 remain HIGH/open
+- [ ] `status: verified` set in frontmatter — status is blocked pending mitigation
 
-**Approval:** verified 2026-10-07
+**Approval:** blocked 2026-10-08; user selected to keep the six high-severity threats open.
+
+## Security Audit 2026-10-08
+
+| Metric | Count |
+|---|---|
+| Threats found | 28 |
+| Closed | 22 |
+| Open | 6 |
