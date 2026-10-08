@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: public-playable-tracer
-current_plan: 16
+current_plan: 17
 status: blocked
-stopped_at: Phase 04 verification found gaps after Plan 04-16
-last_updated: "2026-10-08T16:59:17.719Z"
+stopped_at: Completed 04-17-PLAN.md
+last_updated: "2026-10-08T17:25:00.796Z"
 last_activity: 2026-10-08
 last_activity_desc: Phase 04 planning complete — 17 plans ready
-state_head: f5d1b0a9f67732bd9ad70024a8499bc0c8d9996a
+state_head: 4d7b2d2e5731bb0e09ad686a26a6a00cf5112636
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 17
-  completed_plans: 16
+  completed_plans: 17
   percent: 0
 ---
 
@@ -26,12 +26,12 @@ progress:
 See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 **Core value:** Trustworthy Neo Geo emulation that other software can embed easily.
-**Current focus:** Phase 04 — Plan 04-16 complete; verification found gaps; phase remains blocked
+**Current focus:** Phase 04 — Plan 04-17 complete; documentation and evidence-map checks pass, but the phase remains blocked
 
 ## Current Position
 
-Phase: 04 (public-playable-tracer) — READY TO EXECUTE
-Current Plan: 16
+Phase: 04 (public-playable-tracer) — Plan 04-17 complete; acceptance remains blocked
+Current Plan: 17
 Total Plans in Phase: 17
 Status: blocked
 Last activity: 2026-10-08 — Phase 04 gap planning completed after fresh audits
@@ -42,11 +42,11 @@ Progress: [░░░░░░░░░░] 0%
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 16
+**Current Plan:** 17
 
 ## Performance Metrics
 
-**Plans completed:** 16 of 16; Phase 04 acceptance remains incomplete
+**Plans completed:** 17 of 17; Phase 04 acceptance remains incomplete
 **Per-Plan Metrics:**
 
 | Plan | Duration | Tasks | Files |
@@ -67,12 +67,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P14 | 54m 46s | 3 tasks | 9 files |
 | Phase 04 P15 | 6min | 2 tasks | 3 files |
 | Phase 04 P16 | 10min | 2 tasks | 7 files |
+| Phase 04 P17 | 23 min | 2 tasks | 6 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-08T16:31:50.551Z
+**Last session:** 2026-10-08T17:24:36.517Z
 
-**Stopped At:** Phase 04 verification found gaps after Plan 04-16
+**Stopped At:** Completed 04-17-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
@@ -82,13 +83,13 @@ Progress: [░░░░░░░░░░] 0%
 - Milestone-start triage on 2026-10-07 found no open issues and one draft PR, [#1](https://github.com/szTheory/glueyneo/pull/1), for the separate diagnostic release work. It supplies no playable-game requirement or completion evidence.
 - Work is isolated on `docs/first-playable-game-milestone`. The existing 138 planning relocations into the diagnostic workstream were verified byte-identical and committed; unrelated pre-existing methodology/configuration/preparation edits remain outside this milestone's commits.
 - Carry-forward constraints: keep the owned native C17 core deterministic and host-independent; introduce the libretro/software-video path early; keep media/archive I/O outside the native core; retain the owned 68000 direction and gate Z80/YM2610 admission on evidence. PROJECT-D-48 permits the narrow ymfm C++14 exception behind a private C interface; a future C replacement is optional. The supplied BIOS is available locally, but the exact MVS profile and compatibility remain unqualified.
-- Approved Phase 04–07 sequencing is in [ROADMAP.md](ROADMAP.md): public playable tracer and early Z80/ymfm admission → selected MVS boot including required sound-CPU handshakes → active title control → sound and qualification. Plans 04-01 through 04-15 have summaries; Plan 04-16 is ready for execution. Phase 04 remains incomplete. Four high-severity path-disclosure threats remain open. CR-02/WR-04 are fixed; CR-03/WR-05 and carried WR-01/WR-02/WR-03 remain open. HOST-02 and frontend QUAL-03 remain Pending.
+- Approved Phase 04–07 sequencing is in [ROADMAP.md](ROADMAP.md): public playable tracer and early Z80/ymfm admission → selected MVS boot including required sound-CPU handshakes → active title control → sound and qualification. Plans 04-01 through 04-17 have summaries. Phase 04 remains incomplete. T-04-11, T-04-15, T-04-18 and T-04-20 remain high/open. CR-02/WR-04 are fixed; CR-03/WR-05 and carried WR-01/WR-02/WR-03 remain open. WR-06's provenance and crosswalk now reconcile, while the finding remains open pending independent review. HOST-02 and frontend QUAL-03 remain Pending/unknown.
 - Goal: advance from the diagnostic SDK toward a playable Neo Geo game.
 - Local qualification: a user-provided private game archive is stored under the Git-ignored `local/roms/` directory. Keep its contents and private checksums out of tracked files, CI, and release artifacts.
 - The user-provided BIOS archive is also stored under the Git-ignored `local/roms/` directory. The copy matches its source, passes ZIP CRC validation and is untracked; those checks do not establish BIOS compatibility.
 - Public CI: use original fixtures and/or homebrew assets only after confirming redistribution rights for the specific ROM assets; a source-code license alone is not sufficient evidence for bundled game data.
 - The local archive passed ZIP CRC checks and matched all 13 ROM size/SHA-1 entries in MAME's current Neo Geo software list. That confirms the archive identity, not emulator compatibility.
-- Next GSD work: execute Phase 04 Plan 04-16 with `--gaps-only`, then rerun the independent security/code-review audits and whole-phase verification after the bounded repairs. HOST-02/frontend QUAL-03 still need actual pinned-app evidence; do not start Phase 05.
+- Next GSD work: rerun the independent security/code-review audits and whole-phase verification after the bounded repairs. HOST-02/frontend QUAL-03 still need actual pinned-app evidence; do not start Phase 05.
 
 ## Decisions
 
@@ -119,10 +120,11 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 04]: Derive HOST-02 and QUAL-03 separately; neither passes without the actual frontend load evidence.
 - [Phase 04]: After a private root appears in unstructured diagnostics, discard the entire remaining value because newline and punctuation do not prove a path boundary.
 - [Phase 04]: Accept only one normalized open/fixed/skipped/deferred disposition matching its record; keep actual frontend requirements Pending/unknown without app evidence.
+- [Phase 04]: Reject frontend closure language that conflicts with Pending/unknown status; keep WR-06 open with current-review provenance pending independent review.
 
 ### Blockers
 
 - Owned-debug is now 47/47 passing, including refreshed identity/source-manifest and target-scoped inventory checks. This repairs the prior deterministic failure without establishing frontend acceptance.
 - HOST-02 remains unknown: pinned RetroArch 1.22.2 aborts before the first screenshot in fresh no-content and core/content launches (EXC_CRASH SIGABRT, return -6). LaunchServices reported kLSNoExecutableErr despite bundle/executable/signature checks; unified-log inspection was sandbox-blocked. A functioning interactive macOS app launch context is still required; cause is not established. Preserve the screenshot, stable no-input frames, RIGHT/LEFT controls, unload and normal-exit observation; do not repeat the launch while its environment is unchanged.
-- WR-06 remains open: the docs gate accepts contradictory Pending/unknown plus closure text, and the current validation-map suite fails 9/10 because WR-06 has no provenance or crosswalk row.
+- WR-06 remains open pending independent review. The docs gate now rejects contradictory Pending/unknown plus closure text, and the current evidence-map suite and direct checker pass with WR-06 provenance and one open crosswalk row.
 - T-04-11, T-04-15, T-04-18, and T-04-20 remain high/open by user direction; Plan 04-16 sanitizer tests pass, but no threat closure was granted.
