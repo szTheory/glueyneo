@@ -153,3 +153,11 @@ Every plan task has an automated command or an explicit human-evidence route, bu
 ## Plan 04-13 Reconciliation Run — 2026-10-08
 
 The checker mutation suite accepts a repaired CR-01 absent from the fresh review, current CR-02/WR-01 and carried WR-02/WR-03, and a new finding when every record agrees. It rejects severity, disposition, duplicate or missing IDs, count, crosswalk, security-register, and frontend-status contradictions. The direct gate reruns the real 20-test and 26-test privacy suites. These repository checks do not disposition the current review findings or close security threats.
+
+## Validation Audit 2026-10-08
+
+| Metric | Count |
+|---|---|
+| Gaps found | 1 |
+| Resolved | 1 |
+| Escalated | 0 |
