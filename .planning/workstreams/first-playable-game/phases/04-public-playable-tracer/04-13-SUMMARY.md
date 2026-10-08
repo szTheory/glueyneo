@@ -11,12 +11,12 @@ provides:
   - Reconciled review disposition and validation-map gate with real focused-suite denominators
 affects: [first-playable-game-security-audit, first-playable-game-code-review, phase-04-verification]
 actuals:
-  tokens: 10646
+  tokens: 10667
   tasks: 2
-  commits: 4
-commits: 4
+  commits: 6
+commits: 6
 plan_head_before: f4c3707c03b23324998f6667fbcfcba08fa50d5e
-plan_head_after: 4e07de478532d07ed29c267e770d8a29607599ce
+plan_head_after: 73398f64e7895265a0abf7146d0b007d6fcc5c85
 tech-stack:
   added: []
   patterns: [Validate escaped JSON string boundaries before preserving diagnostic suffixes, Derive evidence consistency from current records and retained dispositions]
@@ -36,7 +36,7 @@ key-decisions:
   - "Keep CR-01 as fixed history, current CR-02/WR-01 and carried WR-02/WR-03 open, and all four high disclosure threats open pending independent audit."
   - "Repository regression success does not establish HOST-02 or actual pinned frontend QUAL-03 behavior."
 requirements-completed: []
-duration: 11min
+duration: 15min
 completed: 2026-10-08
 status: complete
 ---
@@ -48,10 +48,10 @@ status: complete
 ## Performance
 
 - **Started:** 2026-10-08T12:47:15Z
-- **Completed:** 2026-10-08T12:58:17Z
+- **Completed:** 2026-10-08T13:02:39Z
 - **Tasks:** 2
 - **Files modified:** 8
-- **Plan commits:** 4, measured from `plan_head_before` to `plan_head_after`
+- **Plan commits:** 6, measured from `plan_head_before` to `plan_head_after` (five task commits plus the earlier plan metadata commit)
 
 ## Accomplishments
 
@@ -65,6 +65,7 @@ status: complete
 - `test_retroarch_smoke.py`: 26/26 passed; no GUI launch was made.
 - `test_check_phase04_validation_map.py`: 5/5 passed, including acceptance of a newly discovered reconciled finding and rejection mutation controls.
 - `python3 tests/tools/check_phase04_validation_map.py`: passed and reran both real privacy suites at 20 and 26 tests.
+- The validation-map mutation controls explicitly reject both inconsistent open and total counts.
 - `ctest --preset owned-debug --output-on-failure`: 47/47 passed.
 - `git diff --check`: passed.
 - Tested implementation revision before summary: `4e07de478532d07ed29c267e770d8a29607599ce`.
@@ -84,6 +85,8 @@ No REFACTOR commit was needed. The final focused suites passed after the GREEN c
 2. **Task 1 GREEN:** `1aab865` — `fix(04-13): redact quoted path suffixes safely`
 3. **Task 2 RED:** `dec0068` — `test(04-13): add review reconciliation controls`
 4. **Task 2 GREEN:** `4e07de4` — `feat(04-13): reconcile phase review evidence`
+5. **Task 2 test control:** `73398f6` — `test(04-13): cover disposition total mismatch`
+6. **Earlier metadata commit in the measured plan range:** `c3d9936` — `docs(04-13): complete public playable tracer plan`
 
 ## Claim Boundary and Remaining Work
 
