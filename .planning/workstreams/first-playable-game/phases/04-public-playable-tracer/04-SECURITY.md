@@ -74,7 +74,7 @@ updated: "2026-10-08"
 | T-04-32 | Information disclosure | qualification and frontend diagnostic sinks | high | mitigate | Both sanitizers remove the complete unstructured diagnostic suffix after a private-root match; retained and printed sinks have newline-path regressions. | closed |
 | T-04-33 | Tampering | review validation crosswalk | medium | mitigate | The direct checker compares one normalized controlled state exactly with the disposition record; mutation tests reject contradictory state text. | closed |
 | T-04-SC (04-16) | Tampering | source/dependency closure | high | mitigate | Plan 04-16 uses Python standard-library and repository code only; no dependency or external source was added. | closed |
-| T-04-34 | Tampering | `check_docs()` frontend qualification status | medium | mitigate | `tools/verify_playable.py` requires Pending/unknown evidence and rejects affirmative frontend-closure claims; positive and mutation controls are in `tests/tools/test_verify_playable.py`. WR-06 remains open pending independent code review. | closed |
+| T-04-34 | Tampering | `check_docs()` frontend qualification status | medium | mitigate | The gate rejects enumerated closure phrases, but the independent review reproduced acceptance of “frontend app loaded successfully” alongside Pending/unknown; broader closure validation and a matching regression remain open under WR-06. | open |
 | T-04-SC (04-17) | Tampering | source/dependency closure | high | mitigate | Plan 04-17 uses existing Python standard-library tooling and tracked documents; no package install or external source is added. | closed |
 
 ## Threat Flags
@@ -168,3 +168,13 @@ The fresh ASVS L1 audit verified the Phase 04 threat register. T-04-11, T-04-15,
 | Open | 4 |
 
 The ASVS L1 audit inspected all 51 plan-authored threats. Mitigations were verified for 47, including new Plan 04-17 threats T-04-34 and T-04-SC (04-17). T-04-11, T-04-15, T-04-18, and T-04-20 remain high/open by explicit user direction; no risks were accepted, and the phase remains blocked. The sole summary threat flag, `native-module-load`, maps to T-04-16. HOST-02 and frontend QUAL-03 remain Pending/unknown because actual pinned-app behavior was not observed.
+
+## Security Audit 2026-10-08
+
+| Metric | Count |
+|---|---|
+| Threats found | 51 |
+| Closed | 46 |
+| Open | 5 |
+
+Subsequent independent code review found that T-04-34's frontend closure mitigation is incomplete: `check_docs()` still accepts an alternate affirmative app-load claim alongside Pending/unknown. T-04-34 is therefore open at medium severity pending a constrained status check and regression. The four explicitly reserved high findings remain open, so `threats_open` stays 4 under the high-severity blocking threshold; Phase 04 remains blocked.
