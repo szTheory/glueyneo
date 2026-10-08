@@ -17,8 +17,8 @@ import check_phase04_validation_map as validation_map  # noqa: E402
 
 PHASE = ROOT / ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer"
 COMMANDS = {
-    "python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py' -v": 23,
-    "python3 -m unittest discover -s tests/libretro -p 'test_retroarch_smoke.py' -v": 27,
+    "python3 tests/tools/test_verify_playable.py -v": 23,
+    "python3 tests/libretro/test_retroarch_smoke.py -v": 27,
 }
 
 

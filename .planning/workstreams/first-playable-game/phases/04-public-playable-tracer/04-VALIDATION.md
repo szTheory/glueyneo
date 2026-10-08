@@ -61,7 +61,10 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | 04-14 T1 frontend | 04-14 | 12 | HOST-02, QUAL-03 | T-04-11, T-04-15, T-04-18, T-04-20 | Raw literal quotes cannot expose frontend diagnostic or crash-reason suffixes; actual app remains unobserved | GUI-free privacy regression | `python3 -m unittest discover -s tests/libretro -p 'test_retroarch_smoke.py' -v` | Yes | pass, 26 tests on source `e4e63b0`; no GUI launch |
 | 04-14 T2 | 04-14 | 12 | Review audit | T-04-26 | Info/IN findings reconcile across narrative, disposition and severity-bearing crosswalk; mismatches fail closed | checker mutation controls | `python3 -m unittest discover -s tests/tools -p 'test_check_phase04_validation_map.py' -v` | Yes | pass, 8 tests on source `10a0cbe`; direct gate passes with four high/open threats and frontend unknown |
 | 04-15 T1 | 04-15 | 13 | HOST-02, QUAL-03 | T-04-30, T-04-31 | Fresh actual-app evidence only from a materially changed functioning launch context; otherwise retain explicit unknown and prerequisite | smoke-script contract | `python3 -m unittest discover -s tests/libretro -p 'test_retroarch_smoke.py' -v` | Yes | 26 tests pass; launch precondition unavailable, no RetroArch invocation, no screenshot, frontend claim unknown |
-| 04-15 T2 | 04-15 | 13 | HOST-02, QUAL-03 | T-04-30, T-04-31 | Reconcile each requirement from the machine-readable direct-observation predicate | evidence reconciliation | Task 1 observation JSON predicate; focused smoke suite only | Yes | HOST-02 Pending; frontend QUAL-03 Pending; actual-app identities and observations unavailable |
+| 04-15 T2 | 04-15 | 13 | HOST-02, QUAL-03 | T-04-30, T-04-31 | Reconcile each requirement from the machine-readable direct-observation predicate | evidence reconciliation | Task 1 observation JSON predicate; focused smoke suite only | Yes | HOST-02 Pending; frontend QUAL-03 Pending; actual-app identities and observations unavailable; frontend claim unknown |
+| 04-16 T1 qualification | 04-16 | 14 | QUAL-03 | T-04-11, T-04-15, T-04-18, T-04-20 | Remove the entire unstructured diagnostic suffix after a private-root match across retained and printed sinks | privacy regression | `python3 tests/tools/test_verify_playable.py -v` | Yes | pass, 23 tests; no new dependency |
+| 04-16 T1 frontend | 04-16 | 14 | HOST-02 | T-04-11, T-04-15, T-04-18, T-04-20 | Remove the entire unstructured diagnostic suffix after a private-root match across frontend serialization sinks | privacy regression | `python3 tests/libretro/test_retroarch_smoke.py -v` | Yes | pass, 27 tests; no app launch |
+| 04-16 T2 | 04-16 | 14 | Review audit | T-04-33 | Compare one normalized controlled crosswalk state with each recorded disposition; reject contradiction and placeholders | checker mutation controls | `python3 tests/tools/test_check_phase04_validation_map.py -v` | Yes | pass, 10 tests; direct documentation and crosswalk gates pass; four high/open threats and frontend unknown preserved |
 | Nyquist WR-01 | 04-12 | 10 | Review audit | WR-01 | Accept reconciled current review IDs and dispositions, while rejecting contradictory records | checker regression | `python3 -m unittest discover -s tests/tools -p 'test_check_phase04_validation_map.py' -v` | Yes | escalated: historical result failed at the hardcoded current review ID assertion (line 110) when repaired CR-01 was absent from a reconciled review/disposition fixture |
 
 ## Threat Coverage
@@ -81,14 +84,14 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 
 | Review Finding | Severity | Existing Threat Scope | Disposition |
 |----------------|----------|-----------------------|-------------|
-| CR-03 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, newline-containing path disclosure | Fresh post-04-14 review reproduces the suffix leak through both diagnostic sanitizers; open pending whole-value redaction and regression coverage. |
-| WR-05 | warning | Review disposition and validation crosswalk consistency | Fresh review shows the checker can accept contradictory wording such as `fixed; not open` for an `open` record; open pending strict-state parsing and negative controls. |
-| WR-01 | warning | Current audit and validation-map evidence boundary | Carried open from an earlier review without independent disposition evidence. |
-| CR-02 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, raw-literal-quote disclosure | Plan 04-14 closes this specific quote-boundary case and the fresh review confirms its fix; retained as fixed history. The broader disclosure threats remain open for CR-03. |
-| WR-04 | warning | Validation-map review grammar for informational findings | fixed — Plan 04-14 adds `IN-` / `Info` parsing and severity reconciliation; fresh review confirms this specific fix. |
-| CR-01 | critical | T-04-24, exact numeric receipt types | Fixed by Plan 04-12 exact-integer validation; absent from the fresh narrative review and retained as fixed history. |
-| WR-02 | warning | T-04-11 / T-04-15 / T-04-18 / T-04-20, complete path redaction | Carried open from an earlier review without independent disposition evidence; overlaps the disclosure scope now recorded under CR-03. |
-| WR-03 | warning | T-04-13 / T-04-23, receipt row-to-archive binding | Carried open from an earlier review without independent disposition evidence. |
+| CR-03 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, newline-containing path disclosure | open |
+| WR-05 | warning | Review disposition and validation crosswalk consistency | open |
+| WR-01 | warning | Current audit and validation-map evidence boundary | open |
+| CR-02 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, raw-literal-quote disclosure | fixed |
+| WR-04 | warning | Validation-map review grammar for informational findings | fixed |
+| CR-01 | critical | T-04-24, exact numeric receipt types | fixed |
+| WR-02 | warning | T-04-11 / T-04-15 / T-04-18 / T-04-20, path redaction | open |
+| WR-03 | warning | T-04-13 / T-04-23, receipt row-to-archive binding | open |
 
 ## Revision Context
 
@@ -182,4 +185,8 @@ The checker mutation suite accepts a repaired CR-01 absent from the fresh review
 
 ## Post-04-15 Review Reconciliation — 2026-10-08
 
-The direct gate `python3 tests/tools/check_phase04_validation_map.py` passes after recording the fresh threat and review dispositions; it also runs the current qualification and frontend privacy suites. The focused mutation suite `python3 -m unittest discover -s tests/tools -p 'test_check_phase04_validation_map.py' -v` ran 8 tests with 4 failures: fixtures still hardcode the former review IDs/disposition wording and do not add a disposition record for the synthetic Info finding. No assertions were relaxed. These fixture failures and the newly reported WR-05 need resolution in a later gap plan; the four high disclosure threats remain open.
+The direct gate `python3 tests/tools/check_phase04_validation_map.py` passed after recording the fresh threat and review dispositions; it also ran the qualification and frontend privacy suites. The then-current focused mutation suite recorded eight tests with four fixture failures, and WR-05 remained unresolved at that point. No assertions were relaxed.
+
+## Plan 04-16 Reconciliation — 2026-10-08
+
+The newline-path regression now removes the complete unstructured suffix in qualification and frontend diagnostics. The controlled review crosswalk contains one exact state per finding, and the docs gate accepts the explicit HOST-02/frontend QUAL-03 Pending/unknown boundary while rejecting placeholders and false closure. The focused suites report 23 qualification tests, 27 frontend contract tests, and 10 evidence-map mutation tests; the direct documentation and crosswalk gates pass. No RetroArch app was launched. T-04-11, T-04-15, T-04-18 and T-04-20 remain high/open pending independent security review, and actual frontend evidence remains unavailable.

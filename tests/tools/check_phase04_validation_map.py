@@ -107,11 +107,11 @@ def main() -> None:
     # The current row must reflect this exact source's run. Prior rows remain dated history.
     header = "| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |"
     rows = table_rows(validation, header)
-    selected = [row for row in rows if len(row) == 10 and row[1] == "04-13" and row[0].startswith("04-13 T1")]
-    require(len(selected) == 2, "validation map lacks the two current 04-13 privacy-suite rows")
+    selected = [row for row in rows if len(row) == 10 and row[1] == "04-16" and row[0].startswith("04-16 T1")]
+    require(len(selected) == 2, "validation map lacks the two current 04-16 privacy-suite rows")
     expected_commands = {
-        "python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py' -v",
-        "python3 -m unittest discover -s tests/libretro -p 'test_retroarch_smoke.py' -v",
+        "python3 tests/tools/test_verify_playable.py -v",
+        "python3 tests/libretro/test_retroarch_smoke.py -v",
     }
     mapped: dict[str, list[list[str]]] = {}
     for row in selected:
@@ -179,13 +179,13 @@ def main() -> None:
     for finding_id, severity, scope, recorded_state in crosswalk_rows:
         require(finding_id not in crosswalk, f"duplicate validation crosswalk ID {finding_id}")
         require(scope.strip(), f"{finding_id} has no existing threat scope")
-        crosswalk[finding_id] = (severity.lower(), recorded_state.lower())
+        crosswalk[finding_id] = (severity.lower(), recorded_state.strip().lower())
     require(set(crosswalk) == set(records), "review crosswalk differs from retained disposition history")
     for finding_id, record in records.items():
         require(crosswalk[finding_id][0] == record["severity"],
                 f"{finding_id} severity differs between validation crosswalk and disposition records")
-        require(re.search(rf"\b{re.escape(record['disposition'])}\b", crosswalk[finding_id][1]) is not None,
-                f"{finding_id} disposition differs between crosswalk and records")
+        require(crosswalk[finding_id][1] == record["disposition"],
+                f"{finding_id} disposition must be exactly one normalized controlled state matching its record")
     require("04-07-SUMMARY.md" in validation and "04-VERIFICATION.md" in validation,
             "validation map does not preserve source revision context")
 

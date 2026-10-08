@@ -612,6 +612,20 @@ def frontend_identity(bundle: Path) -> dict[str, str]:
         return {"status": "unknown", "reason": "RetroArch identity could not be read"}
 
 
+def _markdown_table_rows(document: str, header: str) -> list[list[str]]:
+    lines = document.splitlines()
+    try:
+        start = next(index for index, line in enumerate(lines) if line.startswith(header))
+    except StopIteration as error:
+        raise RuntimeError(f"validation map is missing table {header!r}") from error
+    rows: list[list[str]] = []
+    for line in lines[start + 2:]:
+        if not line.startswith("|"):
+            break
+        rows.append([cell.strip() for cell in line.strip().strip("|").split("|")])
+    return rows
+
+
 def check_docs(source_root: Path) -> None:
     guide = (source_root / "docs/first-playable-build.md").read_text(encoding="utf-8")
     validation = (source_root / ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md").read_text(encoding="utf-8")
@@ -624,8 +638,44 @@ def check_docs(source_root: Path) -> None:
     missing = [term for term in required if term not in guide]
     if missing:
         raise RuntimeError(f"integrator documentation omits: {', '.join(missing)}")
-    if re.search(r"\b(TBD|pending|planned)\b", validation, re.IGNORECASE):
-        raise RuntimeError("validation map still contains TBD/pending/planned status")
+
+    crosswalk = _markdown_table_rows(
+        validation, "| Review Finding | Severity | Existing Threat Scope | Disposition |",
+    )
+    if not crosswalk:
+        raise RuntimeError("validation map has no current review dispositions")
+    seen_findings: set[str] = set()
+    controlled_states = {"open", "fixed", "skipped", "deferred"}
+    for row in crosswalk:
+        if len(row) != 4:
+            raise RuntimeError("validation map has a malformed review disposition row")
+        finding_id, _severity, scope, recorded_state = row
+        state = recorded_state.strip().lower()
+        if finding_id in seen_findings or not scope.strip() or state not in controlled_states:
+            raise RuntimeError("review crosswalk controlled review disposition must be one controlled state")
+        seen_findings.add(finding_id)
+
+    task_rows = _markdown_table_rows(
+        validation,
+        "| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |",
+    )
+    frontend_rows = [
+        row for row in task_rows
+        if len(row) == 10 and row[0] == "04-15 T2" and row[1] == "04-15"
+    ]
+    if len(frontend_rows) != 1:
+        raise RuntimeError("HOST-02 and frontend QUAL-03 must remain Pending/unknown in the current validation map")
+    requirement_ids = {item.strip() for item in frontend_rows[0][3].split(",")}
+    frontend_status = frontend_rows[0][9]
+    if re.search(r"\b(TBD|planned)\b", frontend_status, re.IGNORECASE):
+        raise RuntimeError("unfinished placeholder in current frontend status")
+    if (
+        not {"HOST-02", "QUAL-03"}.issubset(requirement_ids)
+        or re.search(r"\bHOST-02\s+pending\b", frontend_status, re.IGNORECASE) is None
+        or re.search(r"\bQUAL-03\s+pending\b", frontend_status, re.IGNORECASE) is None
+        or re.search(r"\bunknown\b", frontend_status, re.IGNORECASE) is None
+    ):
+        raise RuntimeError("HOST-02 and frontend QUAL-03 must remain Pending/unknown in the current validation map")
 
 
 def _tool_record(name: str) -> dict[str, str]:
@@ -683,10 +733,20 @@ def _write_receipt(receipt: dict[str, Any]) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--retroarch", type=Path, required=True)
+    parser.add_argument("--retroarch", type=Path)
     parser.add_argument("--clean", action="store_true", help="qualify a fresh committed-source snapshot and fresh build/install directories")
     parser.add_argument("--check-docs", action="store_true")
     args = parser.parse_args()
+    if args.check_docs and not args.clean:
+        try:
+            check_docs(ROOT)
+        except RuntimeError as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        print("Phase 04 documentation gate passed.")
+        return 0
+    if args.retroarch is None:
+        parser.error("--retroarch is required unless --check-docs is used without --clean")
     OUTPUT.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix="clean-", dir=OUTPUT))
     snapshot: SourceSnapshot | None = None
