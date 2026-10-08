@@ -35,7 +35,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   4. A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including license/source/state audits, cycle or clock and interrupt/bus behavior, deterministic timing, continuation and independent-instance evidence, contained C++ failures, and static/shared C-consumer linkage; a failed gate blocks admission and requires bounded replanning rather than phase completion.
   5. An integrator can follow the clean-tree build/install/load procedure for the native library and libretro adapter on the selected macOS configuration and identify exact dependency, compiler, SDK, OS, architecture, and frontend identities plus untested configurations.
 
-**Plans**: 18/19 plans executed across 17 waves. Plan 04-19 is the single bounded follow-up for fresh independent security/code-review dispositions and any directly reproduced same-scope repair. Phase 04 remains incomplete while the four reserved high/open threats, T-04-34 medium/open, other review findings, and actual pinned-app evidence remain unresolved; HOST-02 and frontend QUAL-03 remain Pending/unknown.
+**Plans**: 19/19 plans executed across 17 waves. Bounded follow-up Plan 04-19 is complete. Phase 04 remains incomplete while the four reserved high/open threats, T-04-34 medium/open, other review findings, and actual pinned-app evidence remain unresolved; HOST-02 and frontend QUAL-03 remain Pending/unknown.
 
 **Wave 1**
 - [x] 04-01-PLAN.md
@@ -88,7 +88,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 - [x] 04-18-PLAN.md — Repair security-count, current evidence-map, and frontend claim gates
 
 **Wave 17** *(bounded gap closure; follows Wave 16)*
-- [ ] 04-19-PLAN.md — Independently review and reconcile security/review dispositions with direct regressions
+- [x] 04-19-PLAN.md — Independently review and reconcile security/review dispositions with direct regressions
 
 **UI hint**: no
 
@@ -138,11 +138,11 @@ Each phase includes the automated evidence and independent review appropriate to
 
 ## Progress
 
-**Execution Order:** Phase 4 → Phase 5 → Phase 6 → Phase 7. Plans 04-01 through 04-18 are executed and summarized; bounded gap plan 04-19 is ready. T-04-11/T-04-15/T-04-18/T-04-20 remain high/open and T-04-34 remains medium/open; seven review dispositions remain open pending independent current-scope evidence. Execute 04-19 for fresh independent security/code-review disposition and any directly reproduced same-scope repair, then obtain fresh whole-phase verification. Actual RetroArch behavior remains unknown and manual-only; do not advance to Phase 5.
+**Execution Order:** Phase 4 → Phase 5 → Phase 6 → Phase 7. Plans 04-01 through 04-19 are executed and summarized. T-04-11/T-04-15/T-04-18/T-04-20 remain high/open and T-04-34 remains medium/open; independent review still reproduces affirmative paraphrases outside the bounded guide filter. The execute-phase post hooks must now run fresh security/code-review audits and whole-phase verification on the final revision. Actual RetroArch behavior remains unknown and manual-only; do not advance to Phase 5.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. Public Playable Tracer | 18/18 | In Progress | - |
+| 4. Public Playable Tracer | 19/19 | In Progress | - |
 | 5. Selected MVS Boot | 0/TBD | Not started | - |
 | 6. Active Title Control | 0/TBD | Not started | - |
 | 7. Sound and Scenario Qualification | 0/TBD | Not started | - |
