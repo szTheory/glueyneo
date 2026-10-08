@@ -12,7 +12,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 
 ## first-playable-game — First Playable Game
 
-**Status:** Approved by the user on 2026-10-07. Phases 4–7; release version unassigned. Phase 04 plan execution is complete; phase acceptance remains open pending the independent security audit and actual pinned-app evidence. Phases 05–07 have not started.
+**Status:** Approved by the user on 2026-10-07. Phases 4–7; release version unassigned. All eleven Phase 04 plans are executed, but acceptance remains open: the security audit left three high-severity disclosure threats open, the latest code review found receipt-type and path-redaction blockers, the evidence checker is stale, owned-debug CTest is 46/47, and actual pinned-app evidence is unknown. Phases 05–07 have not started.
 
 ## Phases
 
@@ -113,7 +113,7 @@ Each phase includes the automated evidence and independent review appropriate to
 
 ## Progress
 
-**Execution Order:** Phase 4 → Phase 5 → Phase 6 → Phase 7. All Phase 04 plans are executed. The security gate remains blocked pending an independent audit after the repairs, and the actual RetroArch evidence gate remains open until the pinned app produces the required observations.
+**Execution Order:** Phase 4 → Phase 5 → Phase 6 → Phase 7. All Phase 04 plans are executed. The latest security audit closed T-04-13, T-04-16 and T-04-17 but left T-04-11, T-04-15 and T-04-18 open. Phase verification also records current receipt/redaction defects, a stale validation-map checker, one failing owned-debug test, and the still-unknown actual RetroArch behavior. Plan gap closure before advancing to Phase 5.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
