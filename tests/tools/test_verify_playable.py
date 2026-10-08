@@ -366,11 +366,13 @@ class SnapshotTest(unittest.TestCase):
         diagnostics = (
             'build failed status 9: "/Users/synthetic home/private capture/secret\\"tail.rom" permission denied',
             "build failed status 8: '/Users/synthetic home/O'Brien/private secret.rom' permission denied",
+            'failed status 7: "/Users/synthetic/private"tail/sensitive.bin"',
         )
         for diagnostic, private_parts in zip(
             diagnostics,
             (("synthetic home", "private capture", "secret", "tail.rom"),
-             ("synthetic home", "O'Brien", "private secret", "secret.rom")),
+             ("synthetic home", "O'Brien", "private secret", "secret.rom"),
+             ("/Users/synthetic/private", "tail/sensitive.bin")),
         ):
             with self.subTest(diagnostic=diagnostic):
                 safe = playable.redact(diagnostic)
@@ -384,7 +386,7 @@ class SnapshotTest(unittest.TestCase):
         work = self.base / "qualification"
         work.mkdir()
         runner = playable.Runner(work, snapshot.root, snapshot)
-        output = diagnostics[0]
+        output = diagnostics[2]
         with mock.patch.object(playable.subprocess, "run", return_value=subprocess.CompletedProcess(
             ["tool"], 9, output,
         )):
@@ -392,7 +394,7 @@ class SnapshotTest(unittest.TestCase):
         retained_log = (work / "quoted-path.log").read_text(encoding="utf-8")
         self.assertIn("exit_code': 9", repr(runner.lanes))
         self.assertIn("status", result.stdout)
-        for private in ("synthetic home", "private capture", "secret", "tail.rom"):
+        for private in ("/Users/synthetic/private", "tail/sensitive.bin"):
             self.assertNotIn(private, retained_log + repr(runner.lanes) + result.stdout)
 
         with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
@@ -405,7 +407,7 @@ class SnapshotTest(unittest.TestCase):
             with mock.patch.object(playable, "OUTPUT", output_dir), mock.patch("sys.stdout", stdout):
                 playable._write_receipt(receipt)
             serialized = (output_dir / "receipt.json").read_text(encoding="utf-8") + stdout.getvalue()
-        for private in ("synthetic home", "private capture", "secret", "tail.rom"):
+        for private in ("/Users/synthetic/private", "tail/sensitive.bin"):
             self.assertNotIn(private, serialized)
         self.assertIn('"status": "fail"', serialized)
 

@@ -259,6 +259,7 @@ class DiagnosticTests(unittest.TestCase):
             diagnostics = (
                 f'video failed status -6: "{root}/private capture/secret\\"tail.rom" permission denied',
                 f"Exception Type: EXC_CRASH '{root}/O'Brien/private secret.rom' signal 6",
+                f'video failed status -6: "{root}/private"tail/sensitive.bin"',
             )
             for diagnostic in diagnostics:
                 with self.subTest(diagnostic=diagnostic):
@@ -274,7 +275,7 @@ class DiagnosticTests(unittest.TestCase):
                     self.assertEqual(record["return_code"], -6)
                     self.assertIn("status -6", record["output"])
                     self.assertNotIn(str(root), serialized)
-                    for private in ("private capture", "secret", "tail.rom", "O'Brien", "private secret", "secret.rom"):
+                    for private in ("private capture", "secret", "tail.rom", "O'Brien", "private secret", "secret.rom", "tail/sensitive.bin"):
                         self.assertNotIn(private, serialized)
                     if diagnostic.startswith("Exception"):
                         self.assertIn("EXC_CRASH", serialized)
