@@ -511,6 +511,20 @@ class ConsumerInputTest(unittest.TestCase):
             except RuntimeError as error:
                 self.fail(f"valid controlled states and Pending/unknown evidence were rejected: {error}")
 
+    def test_check_docs_rejects_affirmative_frontend_claims_in_build_guide(self) -> None:
+        claims = (
+            "The actual frontend app loaded successfully and displayed pixels.",
+            "The frontend accepted RIGHT input and unloaded cleanly.",
+        )
+        for claim in claims:
+            with self.subTest(claim=claim), tempfile.TemporaryDirectory(prefix="playable-docs-guide-claim-") as temporary:
+                source_root = Path(temporary)
+                self.copy_documentation(source_root)
+                guide = source_root / "docs/first-playable-build.md"
+                guide.write_text(guide.read_text(encoding="utf-8") + "\n" + claim + "\n", encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, "affirmative frontend claim"):
+                    playable.check_docs(source_root)
+
     def test_check_docs_rejects_placeholders_and_missing_or_closed_frontend_evidence(self) -> None:
         def update_row(text: str, task_id: str, status: str | None) -> str:
             lines = text.splitlines()

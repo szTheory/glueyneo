@@ -629,6 +629,15 @@ def _markdown_table_rows(document: str, header: str) -> list[list[str]]:
 def check_docs(source_root: Path) -> None:
     guide = (source_root / "docs/first-playable-build.md").read_text(encoding="utf-8")
     validation = (source_root / ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md").read_text(encoding="utf-8")
+    affirmative_frontend_claims = (
+        r"\b(?:frontend\s+)?(?:app|retroarch)\s+(?:has\s+)?(?:loaded|started)\s+successfully\b",
+        r"\b(?:loaded|started)\s+(?:the\s+)?(?:frontend\s+)?(?:app|retroarch)\s+successfully\b",
+        r"\b(?:displayed|presented|rendered)\s+(?:guest\s+)?pixels?\b",
+        r"\b(?:frontend\s+)?(?:accepted|registered)\s+(?:right|left|mapped)\s+input\b",
+        r"\b(?:content|game)\s+unloaded\s+(?:cleanly|successfully)\b",
+    )
+    if any(re.search(pattern, guide, re.IGNORECASE) for pattern in affirmative_frontend_claims):
+        raise RuntimeError("integrator documentation contains an affirmative frontend claim while actual behavior is unknown")
     required = (
         "python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean",
         "public-playable.bin", "RetroArch", "macOS", "unsupported", "unknown",
