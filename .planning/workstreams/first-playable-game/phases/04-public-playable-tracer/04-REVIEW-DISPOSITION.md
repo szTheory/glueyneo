@@ -3,20 +3,35 @@ phase: 04
 review: 04-REVIEW.md
 titles: json
 findings:
+  - id: WR-01
+    severity: warning
+    disposition: open
+    title: "Frontend smoke does not enforce the pinned fixture identity"
+  - id: WR-02
+    severity: warning
+    disposition: open
+    title: "Diagnostic path sanitization leaks path suffixes when paths contain spaces"
+  - id: WR-03
+    severity: warning
+    disposition: open
+    title: "Repository-backed receipt validation accepts forged file-content hashes"
   - id: CR-01
     severity: critical
     disposition: open
     title: "[BLOCKER] Qualification receipt can identify the wrong source revision"
-open: 1
-total: 1
-recorded: 2026-10-07T22:16:16.982Z
+open: 4
+total: 4
+recorded: 2026-10-08T01:05:02.095Z
 ---
 
 # Phase 04: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | open | - |
+| WR-01 | warning | open | - |
+| WR-02 | warning | open | - |
+| WR-03 | warning | open | - |
+| CR-01 | critical | open | - (not in the current review) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
