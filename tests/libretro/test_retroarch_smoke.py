@@ -280,6 +280,32 @@ class DiagnosticTests(unittest.TestCase):
                     if diagnostic.startswith("Exception"):
                         self.assertIn("EXC_CRASH", serialized)
 
+    def test_newline_private_path_suffix_is_removed_from_frontend_and_crash_sinks(self) -> None:
+        root = Path("/tmp/synthetic-frontend-temp")
+        output = f"video failed status -6: {root}/private\n/tail/sensitive.bin"
+        crash_report = (
+            f"Exception Type: EXC_CRASH {root}/private\n"
+            "Termination Reason: namespace POSIX, code 9, /tail/sensitive.bin"
+        )
+
+        safe = smoke.sanitize_diagnostic_text(output, temporary_root=root)
+        reason = smoke.extract_crash_reason(crash_report)
+        record = smoke.build_diagnostic(
+            stage="video", return_code=-6, survived_before_screenshot=False,
+            output=output, temporary_root=root, crash_report=crash_report,
+        )
+        serialized = json.dumps(record, sort_keys=True)
+        retained = safe + reason + serialized
+
+        self.assertEqual(smoke.sanitize_diagnostic_text(safe, temporary_root=root), safe)
+        self.assertIn("video failed status -6", retained)
+        self.assertIn("EXC_CRASH", retained)
+        self.assertEqual(record["stage"], "video")
+        self.assertEqual(record["return_code"], -6)
+        self.assertFalse(record["survived_before_screenshot"])
+        self.assertNotIn("/tail/sensitive.bin", retained)
+        self.assertNotIn("private", retained)
+
     def test_space_containing_private_paths_are_removed_from_all_diagnostic_forms(self) -> None:
         cases = (
             ('failed: "/Users/synthetic home/private capture/secret.rom": permission denied',
@@ -300,9 +326,9 @@ class DiagnosticTests(unittest.TestCase):
                 if any(detail in diagnostic for detail in details):
                     self.assertTrue(any(detail in safe for detail in details))
                 if "continued" in diagnostic:
-                    self.assertIn("continued", safe)
+                    self.assertNotIn("continued", safe)
                 if "ready" in diagnostic:
-                    self.assertIn("ready", safe)
+                    self.assertNotIn("ready", safe)
 
     def test_crash_reason_and_serialized_diagnostic_redact_complete_paths(self) -> None:
         report = (

@@ -411,6 +411,49 @@ class SnapshotTest(unittest.TestCase):
             self.assertNotIn(private, serialized)
         self.assertIn('"status": "fail"', serialized)
 
+    def test_newline_private_path_suffix_is_removed_from_qualification_sinks(self) -> None:
+        for root in ("/Users/synthetic-home", "/tmp/synthetic-temp-root"):
+            diagnostic = f"compile failed status 7: {root}/private\n/tail/sensitive.bin"
+            with self.subTest(root_kind=root.split("/")[1]):
+                safe = playable.redact(diagnostic)
+                self.assertEqual(playable.redact(safe), safe)
+                self.assertIn("compile failed status 7", safe)
+                self.assertNotIn("/tail/sensitive.bin", safe)
+                self.assertNotIn("private", safe)
+
+        diagnostic = "compile failed status 7: /tmp/synthetic-temp-root/private\n/tail/sensitive.bin"
+        commit = self.commit_fixture_project()
+        snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")
+        work = self.base / "qualification"
+        work.mkdir()
+        runner = playable.Runner(work, snapshot.root, snapshot)
+        with mock.patch.object(playable.subprocess, "run", return_value=subprocess.CompletedProcess(
+            ["tool"], 7, diagnostic,
+        )):
+            result = runner.command("newline-path", ["tool", diagnostic], allow_failure=True)
+
+        retained = ((work / "newline-path.log").read_text(encoding="utf-8")
+                    + repr(runner.lanes) + result.stdout)
+        self.assertIn("status 7", retained)
+        self.assertNotIn("/tail/sensitive.bin", retained)
+        self.assertNotIn("private", retained)
+        self.assertEqual(playable.redact(result.stdout), result.stdout)
+
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            output_dir = Path(temporary) / "qualification"
+            stdout = io.StringIO()
+            receipt = {
+                "status": "fail", "reason": diagnostic,
+                "fixture": {}, "retroarch_smoke": {}, "identity": {},
+            }
+            with mock.patch.object(playable, "OUTPUT", output_dir), mock.patch("sys.stdout", stdout):
+                playable._write_receipt(receipt)
+            serialized = (output_dir / "receipt.json").read_text(encoding="utf-8") + stdout.getvalue()
+
+        self.assertIn('"status": "fail"', serialized)
+        self.assertNotIn("/tail/sensitive.bin", serialized)
+        self.assertNotIn("private", serialized)
+
     def test_runner_redacts_command_metadata_and_persisted_log(self) -> None:
         commit = self.commit_fixture_project()
         snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")
