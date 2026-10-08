@@ -231,6 +231,50 @@ class SnapshotTest(unittest.TestCase):
                     playable.validate_snapshot_record(record, repository=self.repository)
                 self.assertTrue(raised.exception.reason.startswith("snapshot-record-"))
 
+    def test_repository_receipt_rejects_boolean_numeric_fields(self) -> None:
+        (self.repository / "one-byte").write_bytes(b"x")
+        subprocess.run(["git", "-C", str(self.repository), "add", "one-byte"], check=True)
+        subprocess.run(["git", "-C", str(self.repository), "commit", "-qm", "one byte"], check=True)
+        snapshot = playable.create_snapshot(self.repository, "HEAD", self.base / "snapshot")
+        original = playable.snapshot_record(snapshot)
+        playable.validate_snapshot_record(original, repository=self.repository)
+        for field, value in (("bytes", True), ("entry_count", True),
+                             ("file_count", True), ("symlink_count", False)):
+            with self.subTest(field=field):
+                record = copy.deepcopy(original)
+                if field == "bytes":
+                    record["entries"][0][field] = value
+                else:
+                    record[field] = value
+                record["inventory_sha256"] = playable.inventory_digest(record["entries"])
+                with self.assertRaises(playable.SnapshotError) as raised:
+                    playable.validate_snapshot_record(record, repository=self.repository)
+                self.assertEqual(raised.exception.reason, "snapshot-record-invalid")
+
+    def test_ambiguous_private_paths_are_removed_from_retained_and_printed_evidence(self) -> None:
+        for root in ("/Users/synthetic", "/Volumes/synthetic", "/tmp/synthetic",
+                     "/private/var/folders/synthetic", str(ROOT), str(Path.home())):
+            for component in ("private,tail", "private:tail", "private in tail"):
+                for quote in ("", '"', "'"):
+                    with self.subTest(root_kind=root.split("/")[1], component=component, quoted=bool(quote)):
+                        path = f"{root}/{component}/sensitive.bin"
+                        diagnostic = f"compile failed status 7: {quote}{path}{quote}"
+                        safe = playable.redact(diagnostic)
+                        self.assertNotIn(component, safe)
+                        self.assertNotIn("sensitive.bin", safe)
+                        self.assertIn("compile failed status 7", safe)
+                        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+                            output = Path(temporary) / "qualification"
+                            stdout = io.StringIO()
+                            receipt = {"status": "fail", "reason": diagnostic,
+                                       "fixture": {}, "retroarch_smoke": {}, "identity": {}}
+                            with mock.patch.object(playable, "OUTPUT", output), mock.patch("sys.stdout", stdout):
+                                playable._write_receipt(receipt)
+                            retained = (output / "receipt.json").read_text() + stdout.getvalue()
+                        self.assertNotIn(component, retained)
+                        self.assertNotIn("sensitive.bin", retained)
+                        self.assertIn("compile failed status 7", retained)
+
     def test_repository_receipt_rejects_forged_symlink_target_after_aggregate_recompute(self) -> None:
         self.commit_fixture_project()
         (self.repository / "inside-link").symlink_to("writer.c")

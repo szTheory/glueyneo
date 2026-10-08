@@ -204,6 +204,28 @@ class BundleIdentifierTests(unittest.TestCase):
 
 
 class ScreenshotFreshnessTests(unittest.TestCase):
+    def test_ambiguous_paths_and_temporary_descendants_are_fully_redacted(self) -> None:
+        roots = ("/Users/synthetic", "/Volumes/synthetic", "/tmp/synthetic",
+                 "/private/var/folders/synthetic", str(Path.home()),
+                 str(Path(__file__).resolve().parents[2]), "/custom/synthetic-root")
+        for root in roots:
+            for component in ("private,tail", "private:tail", "private in tail"):
+                for quote in ("", '"', "'"):
+                    with self.subTest(component=component, quoted=bool(quote)):
+                        path = f"{root}/{component}/sensitive.bin"
+                        text = f"video failed status -6: {quote}{path}{quote}"
+                        safe = smoke.sanitize_diagnostic_text(text, temporary_root=Path(root))
+                        record = smoke.build_diagnostic(
+                            stage="video", return_code=-6, survived_before_screenshot=False,
+                            output=text, temporary_root=Path(root),
+                            crash_report=f"Exception Type: EXC_CRASH {quote}{path}{quote}",
+                        )
+                        retained = safe + json.dumps(record)
+                        self.assertNotIn(root, retained)
+                        self.assertNotIn(component, retained)
+                        self.assertNotIn("sensitive.bin", retained)
+                        self.assertIn("video failed status -6", retained)
+
     def test_old_screenshot_is_not_selected_for_a_new_run(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
