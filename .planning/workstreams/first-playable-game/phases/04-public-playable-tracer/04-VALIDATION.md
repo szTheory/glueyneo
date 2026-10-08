@@ -307,3 +307,11 @@ The whole-phase verifier regenerated the actual-app uncertainty with different c
 | Gaps found | 1 |
 | Resolved | 1 |
 | Escalated | 0 |
+
+## Validation Audit 2026-10-08
+
+| Metric | Count |
+|---|---|
+| Gaps found | 1 |
+| Resolved | 0 |
+| Escalated | 1 |
