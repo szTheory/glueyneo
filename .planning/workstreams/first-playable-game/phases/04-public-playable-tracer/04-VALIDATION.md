@@ -66,7 +66,7 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | 04-16 T1 frontend | 04-16 | 14 | HOST-02 | T-04-11, T-04-15, T-04-18, T-04-20 | Remove the entire unstructured diagnostic suffix after a private-root match across frontend serialization sinks | privacy regression | `python3 tests/libretro/test_retroarch_smoke.py -v` | Yes | pass, 27 tests; no app launch |
 | 04-16 T2 | 04-16 | 14 | Review audit | T-04-33 | Compare one normalized controlled crosswalk state with each recorded disposition; reject contradiction and placeholders | checker mutation controls | `python3 tests/tools/test_check_phase04_validation_map.py -v` | Yes | pass, 10 tests; direct documentation and crosswalk gates pass; four high/open threats and frontend unknown preserved |
 | 04-17 T1 | 04-17 | 15 | QUAL-03 | T-04-34, T-04-SC | Reject mixed Pending/unknown and affirmative frontend-closure claims while retaining the truthful current status | docs gate and mutation controls | `python3 tests/tools/test_verify_playable.py -v`; `python3 tools/verify_playable.py --check-docs` | Yes | pass, 23 tests; docs-only gate passes; no app launch |
-| 04-17 T2 | 04-17 | 15 | Review audit | WR-06 | Reconcile current finding provenance, one open crosswalk row, and adversarial false-closure controls | checker mutation controls | `python3 tests/tools/test_check_phase04_validation_map.py -v`; `python3 tests/tools/check_phase04_validation_map.py` | Yes | pass, 12 tests; direct gate passes; four high/open threats and frontend unknown preserved |
+| 04-17 T2 | 04-17 | 15 | Review audit | WR-06, WR-07 | Reconcile current finding provenance, open crosswalk rows, and adversarial false-closure controls | checker mutation controls | `python3 tests/tools/test_check_phase04_validation_map.py -v`; `python3 tests/tools/check_phase04_validation_map.py` | Yes | original Plan run passed 12/12; current post-review run has 6/12 failures, including synthetic WR-07 collision and medium T-04-34/open-count mismatch; direct gate fails at the security open-count assertion |
 | Nyquist WR-01 | 04-12 / 04-16 | 10 / 14 | Review audit | WR-01 / T-04-33 | Accept reconciled current review IDs and dispositions; reject contradictory and placeholder states | checker regression | `python3 tests/tools/test_check_phase04_validation_map.py -v` | Yes | resolved by 04-16: current suite passes 10/10, including the repaired-finding-absent mutation case and exact-state contradiction controls; the earlier line-110 failure remains historical |
 
 ## Threat Coverage
@@ -81,12 +81,14 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | T-04-22 → T-04-17 | Plan 04-10 validates the pinned bundle identifier before quit commands; T-04-17 is closed by the current independent audit. |
 | T-04-23 → T-04-13 | Plan 04-11 derives archive rows from committed member bytes and rejects forged receipt rows; T-04-13 is closed by the current independent audit, while carried WR-03 remains open pending independent review. |
 | T-04-24 receipt numeric types | Plan 04-12 rejects booleans in bytes, entry_count, file_count and symlink_count before aggregate/archive comparison. Fresh repository-backed regressions pass; independent post-fix audit is still required. |
+| T-04-34 | `check_docs()` still accepts an alternate affirmative app-load claim alongside Pending/unknown; this medium threat remains open under WR-06 pending a constrained status check and regression. |
 
 ## Review Finding Crosswalk
 
 | Review Finding | Severity | Existing Threat Scope | Disposition |
 |----------------|----------|-----------------------|-------------|
-| WR-06 | warning | Contradictory frontend documentation-gate claim | open |
+| WR-06 | warning | Alternate affirmative frontend app-load claim passes alongside Pending/unknown | open |
+| WR-07 | warning | Evidence-map fixture restores the required verification sentence and masks its removal from the source report | open |
 | CR-03 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, newline-containing path disclosure | open |
 | WR-05 | warning | Review disposition and validation crosswalk consistency | open |
 | WR-01 | warning | Current audit and validation-map evidence boundary | open |
@@ -213,3 +215,9 @@ Manual-only/unverified: HOST-02 and the frontend portion of QUAL-03 still requir
 The auditor reran the relevant repository evidence: `python3 tests/libretro/test_retroarch_smoke.py -v` (27/27), `python3 tests/tools/test_verify_playable.py -v` (23/23), `python3 tests/tools/test_check_phase04_validation_map.py -v` (12/12), `ctest --test-dir build/owned-debug --output-on-failure -R '^libretro_callback$'` (1/1), `python3 tools/verify_playable.py --check-docs`, and the direct Phase 04 evidence-map checker; all passed. These checks cover the C callback contract and smoke-runner behavior but cannot prove that the actual RetroArch app loaded and presented the fixture or accepted input.
 
 Manual-only/unverified: HOST-02 and the frontend portion of QUAL-03 still require direct pinned RetroArch 1.22.2 observations of content load, guest video, stable no-input frames, RIGHT/LEFT controls, unload, and normal exit. No app launch was attempted. No additional automated test can establish those GUI observations without a functioning frontend oracle; adding a mock would only test the mock. Preserve both requirements as Pending/unknown and keep `nyquist_compliant: false`. The four high/open disclosure threats are unchanged.
+
+## Post-Plan 04-17 Code Review Reconciliation — 2026-10-08
+
+The current standard-depth review reports two open warnings: WR-06 remains because `check_docs()` accepts “frontend app loaded successfully” alongside Pending/unknown, and WR-07 because the evidence-map fixture appends the required verification sentence instead of testing whether the source report retains it. The disposition ledger and crosswalk now record both findings with current-review provenance. The incomplete WR-06 mitigation reopens plan-authored T-04-34 at medium severity; the four reserved high-severity findings remain open, so `threats_open: 4` and Phase 04 stays blocked.
+
+The latest `python3 tests/tools/test_check_phase04_validation_map.py -v` run reports 12 tests with 6 failures. Failures include a synthetic WR-07 ID collision, fixture expectations that omit the current findings, and the current direct gate stopping at “security frontmatter open count differs from register.” The gate assumes every open register row contributes to `threats_open`, while the active security contract counts blocking severities and leaves medium T-04-34 open but nonblocking. No test assertions, goldens, or threat statuses were relaxed. HOST-02 and frontend QUAL-03 remain Pending/unknown; no RetroArch launch occurred.
