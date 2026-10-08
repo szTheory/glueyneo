@@ -3,7 +3,9 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import plistlib
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -11,6 +13,91 @@ import unittest
 from unittest import mock
 
 import retroarch_smoke as smoke
+
+
+class FixtureIdentityTests(unittest.TestCase):
+    EXPECTED_FIXTURE_SHA256 = "59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0"
+    EXPECTED_APP_SHA256 = smoke.EXPECTED_EXECUTABLE_SHA256
+
+    def make_fixture(self, directory: Path) -> Path:
+        compiler = shutil.which("cc")
+        self.assertIsNotNone(compiler, "the project C compiler is required to generate its public fixture")
+        writer = directory / "fixture_writer.c"
+        writer.write_text(
+            '#include "public_guest.c"\n'
+            'int main(int argc, char **argv) { return argc == 2 && public_guest_write(argv[1]) ? 0 : 1; }\n',
+            encoding="utf-8",
+        )
+        executable = directory / "fixture_writer"
+        root = Path(__file__).resolve().parents[2]
+        subprocess.run(
+            [compiler, "-std=c17", "-I", str(root / "tests/fixture"), str(writer), "-o", str(executable)],
+            cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        fixture = directory / "public-playable.bin"
+        subprocess.run([str(executable), str(fixture)], check=True,
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return fixture
+
+    def make_inputs(self, directory: Path, fixture: Path) -> tuple[object, Path]:
+        bundle = directory / "RetroArch.app"
+        executable = bundle / "Contents" / "MacOS" / "RetroArch"
+        executable.parent.mkdir(parents=True)
+        executable.write_bytes(b"pinned app placeholder")
+        (bundle / "Contents" / "Info.plist").write_bytes(plistlib.dumps({
+            "CFBundleShortVersionString": smoke.EXPECTED_VERSION,
+            "CFBundleExecutable": "RetroArch",
+            "CFBundleIdentifier": "org.example.RetroArch",
+        }))
+        core = directory / "glueyneo_libretro.dylib"
+        core.write_bytes(b"core")
+        args = type("Args", (), {"retroarch": bundle, "core": core, "content": fixture, "timeout": 20.0})()
+        return args, executable
+
+    def validate(self, args: object, executable: Path) -> dict[str, str]:
+        actual_sha = smoke.sha256
+        with (
+            mock.patch.object(smoke.sys, "platform", "darwin"),
+            mock.patch.object(smoke, "sha256", side_effect=lambda path: (
+                self.EXPECTED_APP_SHA256 if Path(path).resolve() == executable.resolve() else actual_sha(Path(path))
+            )),
+        ):
+            return smoke.validate_inputs(args)[3]
+
+    def test_generated_public_fixture_is_accepted_as_the_pinned_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            fixture = self.make_fixture(directory)
+            args, executable = self.make_inputs(directory, fixture)
+
+            identity = self.validate(args, executable)
+
+        self.assertEqual(identity["fixture_sha256"], self.EXPECTED_FIXTURE_SHA256)
+
+    def test_wrong_digest_fixture_is_rejected_before_frontend_launch(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            fixture = self.make_fixture(directory)
+            content = bytearray(fixture.read_bytes())
+            self.assertEqual(len(content), 602)
+            self.assertEqual(content[:8], b"GNFX\0\0\0\1")
+            content[-1] ^= 1
+            fixture.write_bytes(content)
+            args, executable = self.make_inputs(directory, fixture)
+            actual_sha = smoke.sha256
+            with (
+                mock.patch.object(smoke.sys, "platform", "darwin"),
+                mock.patch.object(smoke, "sha256", side_effect=lambda path: (
+                    self.EXPECTED_APP_SHA256 if Path(path).resolve() == executable.resolve() else actual_sha(Path(path))
+                )),
+                mock.patch.object(smoke.subprocess, "Popen", side_effect=OSError("launch attempted")) as popen,
+            ):
+                with self.assertRaises(smoke.SmokeBlocked) as raised:
+                    smoke.run_smoke(args)
+
+        self.assertEqual(raised.exception.stage, "input")
+        self.assertIn("digest", str(raised.exception))
+        popen.assert_not_called()
 
 
 class ScreenshotFreshnessTests(unittest.TestCase):
