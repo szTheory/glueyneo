@@ -37,7 +37,7 @@ recorded: 2026-10-08T13:13:20Z
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
 | CR-02 | critical | open | 04-SECURITY.md and 04-REVIEW.md independently reproduce the suffix leak; unresolved pending a fix |
-| WR-04 | warning | open | 04-REVIEW.md current finding; parser grammar gap awaits plan |
+| WR-04 | warning | open | 04-REVIEW.md current finding; Plan 04-14 regression passes, pending fresh independent review |
 | WR-01 | warning | open | 04-REVIEW.md current finding; implementation awaits independent code-review audit (not in the current review) |
 | CR-01 | critical | fixed | Plan 04-12 exact-integer receipt validation and focused regression; absent from the fresh current review |
 | WR-02 | warning | open | Carried from the earlier review with no independent disposition evidence; open. No separate threat scope. (not in the current review) |

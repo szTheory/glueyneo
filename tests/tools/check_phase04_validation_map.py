@@ -61,7 +61,7 @@ def parse_review_findings(review: str) -> dict[str, tuple[str, str]]:
     for line in review.splitlines():
         if line.startswith("## "):
             section = line[3:].strip().lower()
-        match = re.match(r"^### ((?:CR|WR)-\d+):\s*(.*?)\s*$", line)
+        match = re.match(r"^### ((?:CR|WR|IN)-\d+):\s*(.*?)\s*$", line)
         if not match:
             continue
         finding_id, title = match.groups()
@@ -70,6 +70,8 @@ def parse_review_findings(review: str) -> dict[str, tuple[str, str]]:
             severity = "critical"
         elif section == "warnings":
             severity = "warning"
+        elif section == "info":
+            severity = "info"
         else:
             raise AssertionError(f"phase04 validation map: {finding_id} is outside a severity section")
         findings[finding_id] = (severity, title)
@@ -171,16 +173,18 @@ def main() -> None:
     require(yaml_total is not None and int(yaml_total.group(1)) == len(records),
             "disposition YAML total count differs from its records")
 
-    crosswalk_rows = table_rows(validation, "| Review Finding | Existing Threat Scope | Disposition |")
-    require(all(len(row) == 3 for row in crosswalk_rows), "malformed review-finding crosswalk")
-    crosswalk: dict[str, str] = {}
-    for finding_id, scope, recorded_state in crosswalk_rows:
+    crosswalk_rows = table_rows(validation, "| Review Finding | Severity | Existing Threat Scope | Disposition |")
+    require(all(len(row) == 4 for row in crosswalk_rows), "malformed review-finding crosswalk")
+    crosswalk: dict[str, tuple[str, str]] = {}
+    for finding_id, severity, scope, recorded_state in crosswalk_rows:
         require(finding_id not in crosswalk, f"duplicate validation crosswalk ID {finding_id}")
         require(scope.strip(), f"{finding_id} has no existing threat scope")
-        crosswalk[finding_id] = recorded_state.lower()
+        crosswalk[finding_id] = (severity.lower(), recorded_state.lower())
     require(set(crosswalk) == set(records), "review crosswalk differs from retained disposition history")
     for finding_id, record in records.items():
-        require(re.search(rf"\b{re.escape(record['disposition'])}\b", crosswalk[finding_id]) is not None,
+        require(crosswalk[finding_id][0] == record["severity"],
+                f"{finding_id} severity differs between validation crosswalk and disposition records")
+        require(re.search(rf"\b{re.escape(record['disposition'])}\b", crosswalk[finding_id][1]) is not None,
                 f"{finding_id} disposition differs between crosswalk and records")
     require("04-07-SUMMARY.md" in validation and "04-VERIFICATION.md" in validation,
             "validation map does not preserve source revision context")
@@ -204,12 +208,12 @@ def main() -> None:
     require(high_open == required_open, "four high/open disclosure threats differ from the active security register")
     require(open_threats == required_open, "unexpected open security threat outside the four disclosure findings")
 
-    requirement_rows = table_rows(verification, "| Requirement | Source Plan | Description | Status | Evidence |")
+    requirement_rows = table_rows(verification, "| Requirement | Source plans | Description | Status | Evidence |")
     requirement_status = {row[0]: row[3] for row in requirement_rows if len(row) == 5}
     for requirement in ("HOST-02", "QUAL-03"):
-        require(requirement_status.get(requirement) == "? NEEDS HUMAN",
+        require((requirement_status.get(requirement) or "").startswith("? NEEDS HUMAN"),
                 f"{requirement} is not explicitly marked as awaiting human evidence")
-    require("actual frontend load is unobserved" in verification.lower(),
+    require("actual frontend load portion remains unobserved" in verification.lower(),
             "verification no longer states that actual frontend load is unobserved")
 
     print("Phase 04 validation map matches current focused test results and preserves open security and frontend gates.")
