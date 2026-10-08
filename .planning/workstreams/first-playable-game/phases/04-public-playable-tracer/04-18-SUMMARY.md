@@ -112,7 +112,7 @@ The plan's original three tasks completed as written. After the fresh scoped cod
 
 The managed filesystem initially denied writes to `.git`. The task commits and ledger were completed through reviewed escalation; only task-owned files were staged.
 
-The post-plan correction was limited to the test fixture: the `WR-99` case now creates its own Warning section, the WR-06 closure case explicitly seeds WR-06 into its copied review, and the missing-provenance mutation matches the ledger's current carried-source marker. The fresh verifier also changed the current uncertainty sentence's capitalization and punctuation; the fixture now matches that evidence semantically and mutates it reliably. All twelve tests pass with the current live review clean and the fresh verification report.
+Post-plan review corrections made the `WR-99` case create its own Warning section, explicitly seeded WR-06 for its closure mutation, and matched the disposition's carried-source marker. The fresh verifier also varied the uncertainty sentence and requirement-table wording across regenerations. The evidence checker now validates actual frontend load uncertainty semantically, rejects contradictory success claims, accepts only controlled open HOST-02/QUAL-03 states, and handles the singular/plural Source Plan header. The mutation suite exercises claim removal and contradictory success. All twelve tests pass against the latest report, with the live review clean.
 
 ## Next Phase Readiness
 

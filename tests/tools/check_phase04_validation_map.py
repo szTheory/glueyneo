@@ -78,6 +78,31 @@ def parse_review_findings(review: str) -> dict[str, tuple[str, str]]:
     return findings
 
 
+def has_frontend_load_uncertainty(evidence: str) -> bool:
+    """Require actual app-load uncertainty without accepting a contradictory success claim."""
+    normalized = " ".join(evidence.split()).casefold()
+    has_actual_app = re.search(r"\bactual\b", normalized) and re.search(
+        r"\b(?:pinned(?: macos)?(?: retroarch)?[- ]?(?:app|frontend)?|retroarch|app|frontend)\b",
+        normalized,
+    )
+    has_load = re.search(r"\bload(?:ed|ing)?\b", normalized)
+    has_uncertainty = re.search(
+        r"\b(?:remain(?:s|ed)? unobserved|unobserved|not observed|unknown|unverified|not established)\b",
+        normalized,
+    )
+    has_success_claim = re.search(
+        r"\b(?:loaded successfully|load succeeded|successfully loaded|"
+        r"(?:app|fixture|content) (?:loaded|loads) successfully|"
+        r"(?:was|were|is|are) observed successfully|"
+        r"(?:was|were|is|are) observed|"
+        r"presented (?:the )?(?:fixture|pixels|video)|"
+        r"displayed (?:the )?(?:fixture|pixels|video)|"
+        r"input (?:worked|responded)|unloaded successfully|exited normally)\b",
+        normalized,
+    )
+    return bool(has_actual_app and has_load and has_uncertainty and not has_success_claim)
+
+
 def parse_disposition_yaml(document: str) -> dict[str, dict[str, str]]:
     yaml = frontmatter(document, "disposition")
     findings_section = re.search(r"(?ms)^findings:\s*\n(.*?)(?=^[A-Za-z_][A-Za-z0-9_-]*:|\Z)", yaml)
@@ -217,19 +242,19 @@ def main() -> None:
     actual_frontend = [row for row in goal_rows if len(row) == 4 and row[0] == "3"]
     require(len(actual_frontend) == 1 and actual_frontend[0][2] == "? UNCERTAIN",
             "current verification report does not mark actual pinned frontend load as uncertain")
-    require(re.search(r"\bactual app/load/presentation/input/unload/exit were not observed\b",
-                      actual_frontend[0][3], re.IGNORECASE) is not None,
-            "current verification goal evidence no longer states actual pinned-app observations are unobserved")
+    require(has_frontend_load_uncertainty(actual_frontend[0][3]),
+            "current verification goal evidence must explicitly mark actual pinned-app load unobserved or unknown and contain no success claim")
 
-    requirement_rows = table_rows(verification, "| Requirement | Source Plans | Description | Status | Evidence |")
+    requirement_rows = table_rows(verification, "| Requirement | Source Plan")
     requirement_status = {row[0]: row[3] for row in requirement_rows if len(row) == 5}
     require((requirement_status.get("HOST-02") or "").startswith("? NEEDS HUMAN / PENDING"),
             "HOST-02 is not explicitly marked as awaiting human evidence")
-    require((requirement_status.get("QUAL-03") or "").startswith("✗ BLOCKED / PARTIAL"),
-            "QUAL-03 is not explicitly marked blocked/partial")
+    qual_status = requirement_status.get("QUAL-03") or ""
+    require(qual_status.startswith(("✗ BLOCKED / PARTIAL", "? NEEDS HUMAN / PENDING")),
+            "QUAL-03 is not explicitly marked blocked, partial, or pending human evidence")
     qual_row = next(row for row in requirement_rows if row[0] == "QUAL-03")
-    require("frontend portion remains unknown" in qual_row[4].lower(),
-            "QUAL-03 frontend portion is no longer explicitly unknown")
+    require(has_frontend_load_uncertainty(qual_row[4]),
+            "QUAL-03 evidence no longer explicitly marks actual frontend load unobserved or unknown")
     print("Phase 04 validation map matches current focused test results and preserves open security and frontend gates.")
 
 

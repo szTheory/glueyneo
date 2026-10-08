@@ -41,10 +41,8 @@ def reconciled_review_documents(directory: Path) -> dict[str, Path]:
     current_report = verification.read_text(encoding="utf-8")
     goal_rows = validation_map.table_rows(current_report, "| # | Truth | Status | Evidence |")
     if not any(
-        len(row) == 4 and row[0] == "3" and re.search(
-            r"\bactual app/load/presentation/input/unload/exit were not observed\b",
-            row[3], re.IGNORECASE,
-        ) is not None
+        len(row) == 4 and row[0] == "3" and
+        validation_map.has_frontend_load_uncertainty(row[3])
         for row in goal_rows
     ):
         raise AssertionError("source verification report lacks current actual frontend uncertainty evidence")
@@ -98,6 +96,44 @@ def reconciled_review_documents(directory: Path) -> dict[str, Path]:
 def mutate_document(documents: dict[str, Path], name: str, transform) -> None:
     path = documents[name]
     path.write_text(transform(path.read_text(encoding="utf-8")), encoding="utf-8")
+
+
+def with_frontend_goal_evidence(text: str, evidence: str) -> str:
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        if not line.startswith("| 3 |"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) != 4:
+            raise AssertionError("frontend goal row is malformed")
+        cells[3] = evidence
+        lines[index] = "| " + " | ".join(cells) + " |"
+        return "\n".join(lines) + "\n"
+    raise AssertionError("frontend goal row is missing")
+
+
+def add_frontend_success_claim(text: str) -> str:
+    rows = validation_map.table_rows(text, "| # | Truth | Status | Evidence |")
+    frontend = next((row for row in rows if len(row) == 4 and row[0] == "3"), None)
+    if frontend is None:
+        raise AssertionError("frontend goal row is missing")
+    return with_frontend_goal_evidence(
+        text, frontend[3] + " Actual pinned RetroArch app loaded successfully."
+    )
+
+
+def with_requirement_status(text: str, requirement_id: str, status: str) -> str:
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        if not line.startswith(f"| {requirement_id} |"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) != 5:
+            raise AssertionError(f"requirement row {requirement_id} is malformed")
+        cells[3] = status
+        lines[index] = "| " + " | ".join(cells) + " |"
+        return "\n".join(lines) + "\n"
+    raise AssertionError(f"requirement row {requirement_id} is missing")
 
 
 def add_current_warning(
@@ -218,14 +254,12 @@ class ValidationMapReconciliationTest(unittest.TestCase):
                 self.fail(f"reconciled records were rejected: {error}")
             report = documents["VERIFICATION"]
             original = report.read_text(encoding="utf-8")
-            mutated, changed = re.subn(
-                r"\bactual app/load/presentation/input/unload/exit were not observed\b:?\s*",
-                "The frontend was observed. ", original, count=1, flags=re.IGNORECASE,
+            mutated = with_frontend_goal_evidence(
+                original, "Actual pinned RetroArch fixture load and input were observed."
             )
-            self.assertEqual(changed, 1, "frontend uncertainty removal did not find the source sentence")
             self.assertNotEqual(mutated, original, "frontend uncertainty removal was a no-op")
             report.write_text(mutated, encoding="utf-8")
-            with self.assertRaisesRegex(AssertionError, "actual pinned-app observations are unobserved"):
+            with self.assertRaisesRegex(AssertionError, "actual pinned-app load unobserved or unknown"):
                 self.run_checker(documents)
 
     def test_checker_accepts_a_new_current_finding_with_matching_records(self) -> None:
@@ -365,7 +399,8 @@ class ValidationMapReconciliationTest(unittest.TestCase):
             ("missing required medium threat", "SECURITY", lambda text: re.sub(r"(?m)^\| T-04-34 \|[^\n]*\n", "", text, count=1)),
             ("medium threat downgraded", "SECURITY", lambda text: text.replace("| T-04-34 | Tampering | `check_docs()` frontend qualification status | medium | mitigate |", "| T-04-34 | Tampering | `check_docs()` frontend qualification status | low | mitigate |", 1)),
             ("HOST-02 observed", "VERIFICATION", lambda text: re.sub(r"(?m)^(\| HOST-02 \|.*\| )\? NEEDS HUMAN(?: / PENDING)?( \|.*)$", r"\1pass\2", text)),
-            ("QUAL-03 observed", "VERIFICATION", lambda text: re.sub(r"(?m)^(\| QUAL-03 \|[^\n]*\| )✗ BLOCKED / PARTIAL( \|.*)$", r"\1✓ SATISFIED\2", text)),
+            ("QUAL-03 observed", "VERIFICATION", lambda text: with_requirement_status(text, "QUAL-03", "✓ SATISFIED")),
+            ("actual frontend success claim", "VERIFICATION", add_frontend_success_claim),
         )
         for label, name, transform in mutations:
             with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:

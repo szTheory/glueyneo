@@ -253,7 +253,15 @@ The fresh scoped code review produced a clean current report, which exposed thre
 
 ## Fresh Verification Wording Regression — 2026-10-08
 
-The new whole-phase verification retained the required actual-app uncertainty but changed the sentence capitalization and punctuation. The source-report fixture and mutation now match the explicit uncertainty claim case-insensitively, then verify that removing the claim changes the fixture and is rejected. `python3 tests/tools/test_check_phase04_validation_map.py -v` passes 12/12 against the fresh report.
+The whole-phase verifier regenerated the actual-app uncertainty with different capitalization and punctuation, then changed the requirement table header and rendered QUAL-03 as Pending. The evidence checker now matches the explicit actual-app/load uncertainty semantically, rejects contradictory success claims, accepts the controlled incomplete requirement states, and recognizes either Source Plan header form. Mutations verify actual uncertainty removal and an affirmative success claim are rejected. `python3 tests/tools/test_check_phase04_validation_map.py -v` passes 12/12 against the fresh report, and the direct evidence gate passes while rerunning the current qualification and GUI-free frontend suites.
+
+## Validation Audit 2026-10-08
+
+| Metric | Count |
+|---|---|
+| Gaps found | 1 |
+| Resolved | 1 |
+| Escalated | 0 |
 
 ## Validation Audit 2026-10-08
 
