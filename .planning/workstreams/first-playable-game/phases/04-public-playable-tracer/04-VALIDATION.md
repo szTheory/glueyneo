@@ -77,10 +77,11 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | Review Finding | Existing Threat Scope | Disposition |
 |----------------|-----------------------|-------------|
 | CR-01 | T-04-24, exact numeric receipt types | Fixed by Plan 04-12 exact-integer validation; absent from the fresh narrative review and retained here as fixed history. |
-| CR-02 | T-04-11 / T-04-15 / T-04-18, ambiguous path disclosure | Plan 04-13 adds escaped-quote and apostrophe cases across retained/printed paths. Open pending independent security and code-review audits. |
-| WR-01 | Current audit and validation-map evidence boundary | Plan 04-13 reconciles findings and current test denominators; current review disposition remains open pending independent review. |
+| CR-02 | T-04-11 / T-04-15 / T-04-18 / T-04-20, ambiguous path disclosure | Independent security audit and code review both reproduce a raw-literal-quote suffix leak after Plan 04-13; open pending a fix. |
+| WR-01 | Current audit and validation-map evidence boundary | Plan 04-13 reconciles findings and current test denominators; carried open from an earlier review, absent from the fresh review. |
 | WR-02 | T-04-11 / T-04-15 / T-04-18 / T-04-20, complete path redaction | Carried from the earlier review with no independent disposition evidence; open. No separate threat scope. |
 | WR-03 | T-04-13 / T-04-23, receipt row-to-archive binding | Carried from the earlier review with no independent disposition evidence; open. |
+| WR-04 | Validation-map review grammar for informational findings | Current review identifies missing `IN-` / `Info` parsing in the reconciliation gate; open pending a checker fix and focused fixture. |
 
 ## Revision Context
 
@@ -88,7 +89,7 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 - Plan 04-10's historical focused runs were 14 tools tests and 24 frontend smoke tests, recorded in [04-10-SUMMARY.md](04-10-SUMMARY.md) at commit `e7aa255`. After the Plan 04-11 implementation commit `a2ea677`, the tools suite was rerun with 17 tests and the frontend smoke suite with 24 tests. The three added tools regressions account for the tools denominator change.
 - Plan 04-12 reran the focused suites on implementation `33bef8c`: 19 tools tests and 25 frontend smoke tests passed. Earlier denominators above remain dated history. New controls cover booleans equal to integer values, punctuation/phrase path components, quoted controls and supplied temporary-root descendants. Conservative unquoted redaction intentionally removes ambiguous trailing status; status preceding a private span and bounded structured diagnostics survive.
 - Plan 04-13 observes 20 qualification tests, 26 frontend-smoke tests, and 5 validation-map mutation tests. The privacy tests cover escaped JSON quotes, apostrophes, repeat sanitation, retained and printed receipts, structured stage/status, crash reason, and a supplied temporary-root descendant. The direct gate reruns both real privacy suites and reconciles retained review history with the current narrative.
-- These focused suites verify repository behavior only. Security stays blocked with T-04-11/T-04-15/T-04-18/T-04-20 high/open pending independent security audit. CR-01 is retained as fixed after exact-integer validation; current CR-02 and WR-01, plus carried WR-02/WR-03, remain open in the disposition ledger. HOST-02 and actual frontend QUAL-03 remain unknown until the requested pinned-app observations exist.
+- These focused suites verify repository behavior only. Security stays blocked with T-04-11/T-04-15/T-04-18/T-04-20 high/open after the independent audit and review reproduced the raw-quote suffix leak. CR-01 is retained as fixed; current CR-02 and WR-04, plus carried WR-01/WR-02/WR-03, remain open in the disposition ledger. HOST-02 and actual frontend QUAL-03 remain unknown until the requested pinned-app observations exist.
 
 ## Actual Frontend Evidence Handoff
 
