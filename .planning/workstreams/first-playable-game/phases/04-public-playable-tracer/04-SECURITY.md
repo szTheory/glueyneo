@@ -239,3 +239,11 @@ The code reviewer reproduced WR-06 in the consumer guide even though the indepen
 | Blocking open (`block_on: high`) | 4 |
 
 The independent security auditor reviewed the bounded docs-check patch at `2a82c455f85671ba144a42923318c4ff7d53b9a2` and found the original and enumerated paraphrases rejected by the 25/25 qualification suite and `--check-docs`; it supported closing T-04-34 for that tested set. The independent code reviewer then reproduced further affirmative claims in temporary guide copies: `The frontend booted the game and showed its output.` and `The controls worked as expected in RetroArch.` Since a direct contradictory claim still passes, this register conservatively keeps T-04-34 medium/open. The new Plan 04-19 threats are closed: review provenance is recorded under T-04-37, and no dependency or external source was added under T-04-SC (04-19). Four directed high/open disclosures remain blockers. HOST-02 and frontend QUAL-03 remain Pending/unknown; no GUI was launched.
+
+## Security Audit 2026-10-08
+
+| Metric | Count |
+|---|---|
+| Threats found | 56 |
+| Closed | 51 |
+| Open | 5 |
