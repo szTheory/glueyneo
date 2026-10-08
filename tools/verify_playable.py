@@ -438,9 +438,43 @@ def sha256(path: Path) -> str:
 
 
 def redact(text: str) -> str:
-    text = text.replace(str(ROOT), "[repo]").replace(str(Path.home()), "[home]")
-    text = re.sub(r"/(?:private/)?(?:var/folders|tmp)/[^\s:'\"]+", "[temporary-path]", text)
-    return text
+    roots = [str(ROOT), str(Path.home()), "/Users/", "/Volumes/", "/tmp/",
+             "/private/tmp/", "/var/folders/", "/private/var/folders/"]
+    roots = sorted({root for root in roots if root}, key=len, reverse=True)
+    root_pattern = re.compile(r"(?<![A-Za-z0-9._-])(?:" + "|".join(re.escape(root) for root in roots) + r")")
+    redacted: list[str] = []
+    for line in text.splitlines(keepends=True):
+        body = line.rstrip("\r\n")
+        newline = line[len(body):]
+        result: list[str] = []
+        position = 0
+        while match := root_pattern.search(body, position):
+            quote = body[match.start() - 1] if match.start() > 0 and body[match.start() - 1] in "\"'" else ""
+            result.append(body[position:match.start() - int(bool(quote))])
+            if quote:
+                end = body.find(quote, match.end())
+                if end < 0:
+                    end = len(body)
+                    position = end
+                else:
+                    position = end + 1
+            else:
+                ends = [index for delimiter in (":", ";", ",", "\t", " -- ", " (", " — ", " in ")
+                        if (index := body.find(delimiter, match.end())) >= 0]
+                end = min(ends) if ends else len(body)
+                position = end
+            if match.group().startswith(str(ROOT)):
+                marker = "[repo]"
+            elif match.group().startswith(str(Path.home())):
+                marker = "[home]"
+            elif "/tmp/" in match.group() or "var/folders" in match.group():
+                marker = "[temporary-path]"
+            else:
+                marker = "[user]"
+            result.append(marker)
+        result.append(body[position:])
+        redacted.append("".join(result) + newline)
+    return "".join(redacted)
 
 
 class Runner:
@@ -489,7 +523,7 @@ class Runner:
         }
         if code != 0 and not allow_failure:
             raise RuntimeError(f"{name} failed; see ignored build/playable-qualification logs")
-        return subprocess.CompletedProcess(argv, code, output)
+        return subprocess.CompletedProcess([redact(part) for part in argv], code, safe_output)
 
 
 def cache_identity(cache: Path) -> dict[str, str]:
@@ -610,13 +644,25 @@ def _write_receipt(receipt: dict[str, Any]) -> None:
     OUTPUT.mkdir(parents=True, exist_ok=True)
     temporary_path = OUTPUT / "receipt.json.tmp"
     receipt_path = OUTPUT / "receipt.json"
-    temporary_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    def sanitize(value: Any) -> Any:
+        if isinstance(value, str):
+            return redact(value)
+        if isinstance(value, list):
+            return [sanitize(item) for item in value]
+        if isinstance(value, tuple):
+            return [sanitize(item) for item in value]
+        if isinstance(value, dict):
+            return {key: sanitize(item) for key, item in value.items()}
+        return value
+
+    safe_receipt = sanitize(receipt)
+    temporary_path.write_text(json.dumps(safe_receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     temporary_path.replace(receipt_path)
     print(json.dumps({
-        "status": receipt["status"], "receipt": "build/playable-qualification/receipt.json",
-        "fixture_sha256": receipt.get("fixture", {}).get("sha256", "unknown"),
-        "retroarch_status": receipt.get("retroarch_smoke", {}).get("status", "unknown"),
-        "reason": receipt.get("reason", ""),
+        "status": safe_receipt["status"], "receipt": "build/playable-qualification/receipt.json",
+        "fixture_sha256": safe_receipt.get("fixture", {}).get("sha256", "unknown"),
+        "retroarch_status": safe_receipt.get("retroarch_smoke", {}).get("status", "unknown"),
+        "reason": safe_receipt.get("reason", ""),
     }, sort_keys=True))
 
 

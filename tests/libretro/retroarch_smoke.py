@@ -52,12 +52,40 @@ def sha256(path: Path) -> str:
 def sanitize_diagnostic_text(text: str, *, temporary_root: Path | None = None) -> str:
     if temporary_root is not None:
         text = text.replace(str(temporary_root), "[temporary]")
-    home = str(Path.home())
-    if home:
-        text = re.sub(re.escape(home) + r"[^\s\"'<>]*", "[home]", text)
-    text = re.sub(r"/(?:Users|Volumes)/[^\s\"'<>]+", "[user]", text)
-    text = re.sub(r"/(?:private/)?var/folders/[^\s\"'<>]+", "[temporary]", text)
-    text = re.sub(r"/tmp/[^\s\"'<>]+", "[temporary]", text)
+    roots = [str(Path.home()), "/Users/", "/Volumes/", "/tmp/", "/private/tmp/",
+             "/var/folders/", "/private/var/folders/", str(Path(__file__).resolve().parents[2])]
+    roots = sorted({root for root in roots if root}, key=len, reverse=True)
+    root_pattern = re.compile(r"(?<![A-Za-z0-9._-])(?:" + "|".join(re.escape(root) for root in roots) + r")")
+    safe_lines: list[str] = []
+    for line in text.splitlines(keepends=True):
+        body = line.rstrip("\r\n")
+        newline = line[len(body):]
+        result: list[str] = []
+        position = 0
+        while match := root_pattern.search(body, position):
+            quoted = match.start() > 0 and body[match.start() - 1] in "\"'"
+            opening_quote = body[match.start() - 1] if quoted else ""
+            result.append(body[position:match.start() - int(quoted)])
+            if quoted:
+                end = body.find(opening_quote, match.end())
+                position = len(body) if end < 0 else end + 1
+            else:
+                ends = [index for delimiter in (":", ";", ",", "\t", " -- ", " (", " — ", " in ")
+                        if (index := body.find(delimiter, match.end())) >= 0]
+                position = min(ends) if ends else len(body)
+            root = match.group()
+            if root.startswith(str(Path(__file__).resolve().parents[2])):
+                marker = "[repo]"
+            elif root == str(Path.home()):
+                marker = "[home]"
+            elif "/tmp/" in root or "var/folders" in root:
+                marker = "[temporary]"
+            else:
+                marker = "[user]"
+            result.append(marker)
+        result.append(body[position:])
+        safe_lines.append("".join(result) + newline)
+    text = "".join(safe_lines)
     if len(text) > DIAGNOSTIC_OUTPUT_LIMIT:
         marker = "\n[diagnostic output truncated]"
         text = text[-(DIAGNOSTIC_OUTPUT_LIMIT - len(marker)):] + marker
@@ -686,7 +714,7 @@ def main() -> int:
         result: dict[str, object] = {
             "status": "blocked_or_unknown",
             "stage": error.stage,
-            "reason": str(error),
+            "reason": sanitize_diagnostic_text(str(error)),
             "identity": identity,
         }
         if error.diagnostic is not None:
