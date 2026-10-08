@@ -74,8 +74,11 @@ updated: "2026-10-08"
 | T-04-32 | Information disclosure | qualification and frontend diagnostic sinks | high | mitigate | Both sanitizers remove the complete unstructured diagnostic suffix after a private-root match; retained and printed sinks have newline-path regressions. | closed |
 | T-04-33 | Tampering | review validation crosswalk | medium | mitigate | The direct checker compares one normalized controlled state exactly with the disposition record; mutation tests reject contradictory state text. | closed |
 | T-04-SC (04-16) | Tampering | source/dependency closure | high | mitigate | Plan 04-16 uses Python standard-library and repository code only; no dependency or external source was added. | closed |
-| T-04-34 | Tampering | `check_docs()` frontend qualification status | medium | mitigate | The gate rejects enumerated closure phrases, but the independent review reproduced acceptance of “frontend app loaded successfully” alongside Pending/unknown; broader closure validation and a matching regression remain open under WR-06. | open |
+| T-04-34 | Tampering | `check_docs()` frontend qualification status | medium | mitigate | `check_docs()` now requires the constrained current-state grammar and cross-checks the controlled disposition; mutations cover affirmative-claim, duplicate-row, and controlled-state contradictions. It remains open pending independent post-fix review under WR-06. | open |
 | T-04-SC (04-17) | Tampering | source/dependency closure | high | mitigate | Plan 04-17 uses existing Python standard-library tooling and tracked documents; no package install or external source is added. | closed |
+| T-04-35 | Tampering | validation-map authorization and status rows | medium | mitigate | The evidence-map checker binds each row to the current controlled threat and requirement states; mutation tests reject stale and invented authorities. | closed |
+| T-04-36 | Tampering | frontend documentation closure grammar | medium | mitigate | `tools/verify_playable.py` constrains frontend state claims and cross-checks controlled requirement rows; mutation tests cover contradictory and unsupported claims. | closed |
+| T-04-SC (04-18) | Tampering | source/dependency closure | high | mitigate | Plan 04-18 changes tracked Python standard-library tooling and documentation only; it adds no dependency or external source. | closed |
 
 ## Threat Flags
 
@@ -94,6 +97,7 @@ No accepted risks.
 | 2026-10-07 | 18 | 18 | 0 | gsd-security-auditor |
 | 2026-10-08 | 36 | 32 | 4 | gsd-security-auditor |
 | 2026-10-08 | 49 | 45 | 4 | gsd-security-auditor |
+| 2026-10-08 | 54 | 49 | 5 | gsd-security-auditor |
 
 ## Sign-Off
 
@@ -178,3 +182,13 @@ The ASVS L1 audit inspected all 51 plan-authored threats. Mitigations were verif
 | Open | 5 |
 
 Subsequent independent code review found that T-04-34's frontend closure mitigation is incomplete: `check_docs()` still accepts an alternate affirmative app-load claim alongside Pending/unknown. T-04-34 is therefore open at medium severity pending a constrained status check and regression. The four explicitly reserved high findings remain open, so `threats_open` stays 4 under the high-severity blocking threshold; Phase 04 remains blocked.
+
+## Security Audit 2026-10-08 — post-04-18
+
+| Metric | Count |
+|---|---|
+| Threats found | 54 |
+| Closed | 49 |
+| Open | 5 |
+
+The fresh ASVS L1 review verified Plan 04-18's three additions: T-04-35, T-04-36, and T-04-SC (04-18). T-04-34 remains medium/open pending independent post-fix review; T-04-11, T-04-15, T-04-18, and T-04-20 remain high/open by explicit direction. The high-severity blocking count stays 4, no risks were accepted, and the phase remains blocked. HOST-02 and frontend QUAL-03 remain Pending/unknown because actual pinned RetroArch behavior was not observed.
