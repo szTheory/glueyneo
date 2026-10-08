@@ -474,30 +474,22 @@ def redact(text: str) -> str:
              "/private/tmp/", "/var/folders/", "/private/var/folders/"]
     roots = sorted({root for root in roots if root}, key=len, reverse=True)
     root_pattern = re.compile(r"(?<![A-Za-z0-9._-])(?:" + "|".join(re.escape(root) for root in roots) + r")")
-    redacted: list[str] = []
-    for line in text.splitlines(keepends=True):
-        body = line.rstrip("\r\n")
-        newline = line[len(body):]
-        result: list[str] = []
-        position = 0
-        while match := root_pattern.search(body, position):
-            # Subprocess output is arbitrary text: quotes and punctuation do
-            # not establish a trustworthy path boundary. Fail closed for the
-            # remainder of this line.
-            result.append(body[position:match.start()])
-            position = len(body)
-            if match.group().startswith(str(ROOT)):
-                marker = "[repo]"
-            elif match.group().startswith(str(Path.home())):
-                marker = "[home]"
-            elif "/tmp/" in match.group() or "var/folders" in match.group():
-                marker = "[temporary-path]"
-            else:
-                marker = "[user]"
-            result.append(marker)
-        result.append(body[position:])
-        redacted.append("".join(result) + newline)
-    return "".join(redacted)
+    match = root_pattern.search(text)
+    if match is None:
+        return text
+
+    # Subprocess output is one unstructured value: a newline, quote or other
+    # punctuation cannot prove where a private path ends. Drop the entire tail.
+    root = match.group()
+    if root.startswith(str(ROOT)):
+        marker = "[repo]"
+    elif root.startswith(str(Path.home())):
+        marker = "[home]"
+    elif "/tmp/" in root or "var/folders" in root:
+        marker = "[temporary-path]"
+    else:
+        marker = "[user]"
+    return text[:match.start()] + marker
 
 
 class Runner:

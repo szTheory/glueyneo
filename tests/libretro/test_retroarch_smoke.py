@@ -346,7 +346,7 @@ class DiagnosticTests(unittest.TestCase):
         for private in ("synthetic home", "private capture", "secret.rom", "private drive", "private media"):
             self.assertNotIn(private, serialized)
         self.assertIn("EXC_CRASH", serialized)
-        self.assertIn("Termination Reason", serialized)
+        self.assertNotIn("Termination Reason", serialized)
         self.assertIn("exit 6", serialized)
     def test_failure_diagnostic_preserves_stage_exit_and_survival(self) -> None:
         builder = getattr(smoke, "build_diagnostic", None)
@@ -378,7 +378,8 @@ class DiagnosticTests(unittest.TestCase):
         self.assertNotIn("private/game.rom", serialized)
         self.assertNotIn("/private/var/folders/xy/temp", serialized)
         self.assertIn("[user]", serialized)
-        self.assertIn("[temporary]", serialized)
+        self.assertNotIn("temporary", serialized)
+        self.assertNotIn("checkout", serialized)
 
     def test_diagnostic_output_redacts_the_full_home_relative_path(self) -> None:
         text = f"file load failed: {Path.home()}/projects/private-data/rom.bin"
