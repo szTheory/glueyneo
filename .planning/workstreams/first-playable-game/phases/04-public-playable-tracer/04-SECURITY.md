@@ -81,6 +81,9 @@ updated: "2026-10-08"
 | T-04-SC (04-18) | Tampering | source/dependency closure | high | mitigate | Plan 04-18 changes tracked Python standard-library tooling and documentation only; it adds no dependency or external source. | closed |
 | T-04-37 | Repudiation | review/disposition/evidence crosswalk | medium | mitigate | Plan 04-19 records revision-scoped independent findings, commands, denominators, limits, and explicit unresolved dispositions; mutation-checked records retain WR-06 as open. | closed |
 | T-04-SC (04-19) | Tampering | source/dependency closure | high | mitigate | Plan 04-19 uses tracked Python standard-library code and existing tests only; no dependency or external source was added. | closed |
+| T-04-38 | Repudiation | current review provenance and sanitizer coverage | medium | mitigate | `04-REVIEW.md` names the sanitizer path and revision, but the evidence-map checker does not require `files_reviewed_list`, `reviewed_revision`, or that path; retain open. | open |
+| T-04-39 | Tampering | qualification result crosswalk | medium | mitigate | `tests/tools/check_phase04_validation_map.py` compares the report denominator with the live `run_suite()` count and rejects stale, absent, duplicate, or malformed rows. | closed |
+| T-04-40 | Tampering | source/dependency closure (04-20) | high | mitigate | Plan 04-20 checker and test imports use tracked repository code and Python standard library only; no external dependency or source was added. | closed |
 
 ## Threat Flags
 
@@ -100,6 +103,7 @@ No accepted risks.
 | 2026-10-08 | 36 | 32 | 4 | gsd-security-auditor |
 | 2026-10-08 | 49 | 45 | 4 | gsd-security-auditor |
 | 2026-10-08 | 54 | 49 | 5 | gsd-security-auditor |
+| 2026-10-08 | 59 | 53 | 6 | gsd-security-auditor |
 
 ## Sign-Off
 
@@ -240,6 +244,10 @@ The code reviewer reproduced WR-06 in the consumer guide even though the indepen
 
 The independent security auditor reviewed the bounded docs-check patch at `2a82c455f85671ba144a42923318c4ff7d53b9a2` and found the original and enumerated paraphrases rejected by the 25/25 qualification suite and `--check-docs`; it supported closing T-04-34 for that tested set. The independent code reviewer then reproduced further affirmative claims in temporary guide copies: `The frontend booted the game and showed its output.` and `The controls worked as expected in RetroArch.` Since a direct contradictory claim still passes, this register conservatively keeps T-04-34 medium/open. The new Plan 04-19 threats are closed: review provenance is recorded under T-04-37, and no dependency or external source was added under T-04-SC (04-19). Four directed high/open disclosures remain blockers. HOST-02 and frontend QUAL-03 remain Pending/unknown; no GUI was launched.
 
+## Plan 04-20 ASVS L1 Audit — 2026-10-08
+
+The phase register contains 59 plan-authored threats: 53 closed and 6 open. The four directed high-severity disclosure threats T-04-11, T-04-15, T-04-18, and T-04-20 remain blockers. T-04-34 and T-04-38 are medium/open and do not increase `threats_open` under `block_on: high`; no risk was accepted. T-04-38 remains open because the review report records the sanitizer path and revision, but the evidence-map checker does not enforce those fields or path. T-04-39 is closed by the live denominator comparison and T-04-40 by the standard-library-only source closure. The `native-module-load` summary flag maps to T-04-16. HOST-02 and frontend QUAL-03 remain Pending/unknown because actual pinned RetroArch behavior was not observed.
+
 ## Security Audit 2026-10-08
 
 | Metric | Count |
@@ -247,3 +255,11 @@ The independent security auditor reviewed the bounded docs-check patch at `2a82c
 | Threats found | 56 |
 | Closed | 51 |
 | Open | 5 |
+
+## Security Audit 2026-10-08
+
+| Metric | Count |
+|---|---|
+| Threats found | 59 |
+| Closed | 53 |
+| Open | 6 |
