@@ -536,6 +536,15 @@ class ConsumerInputTest(unittest.TestCase):
             ("false frontend closure", lambda text: update_row(
                 text, "04-15 T2", "HOST-02 pass; frontend QUAL-03 pass; actual-app evidence unavailable; frontend claim unknown",
             ), "Pending/unknown"),
+            ("mixed pending and collective closure", lambda text: update_row(
+                text, "04-15 T2", "HOST-02 Pending; frontend QUAL-03 Pending; frontend claim unknown; both requirements pass",
+            ), "Pending/unknown"),
+            *[
+                (f"mixed pending and {claim} closure", lambda text, claim=claim: update_row(
+                    text, "04-15 T2", f"HOST-02 Pending; frontend QUAL-03 Pending; frontend claim unknown; HOST-02 {claim}",
+                ), "Pending/unknown")
+                for claim in ("pass", "passed", "closed", "complete", "completed", "verified", "satisfied")
+            ],
             ("missing unknown claim", lambda text: update_row(
                 text, "04-15 T2", "HOST-02 Pending; frontend QUAL-03 Pending; actual-app identities unavailable",
             ), "Pending/unknown"),
