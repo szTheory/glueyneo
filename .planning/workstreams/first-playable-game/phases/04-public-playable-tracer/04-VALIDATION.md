@@ -250,3 +250,15 @@ The fresh scoped code review produced a clean current report, which exposed thre
 | Gaps found | 1 |
 | Resolved | 1 |
 | Escalated | 0 |
+
+## Fresh Verification Wording Regression — 2026-10-08
+
+The new whole-phase verification retained the required actual-app uncertainty but changed the sentence capitalization and punctuation. The source-report fixture and mutation now match the explicit uncertainty claim case-insensitively, then verify that removing the claim changes the fixture and is rejected. `python3 tests/tools/test_check_phase04_validation_map.py -v` passes 12/12 against the fresh report.
+
+## Validation Audit 2026-10-08
+
+| Metric | Count |
+|---|---|
+| Gaps found | 1 |
+| Resolved | 1 |
+| Escalated | 0 |

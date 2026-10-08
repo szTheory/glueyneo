@@ -40,9 +40,13 @@ def reconciled_review_documents(directory: Path) -> dict[str, Path]:
     verification = copied["VERIFICATION"]
     current_report = verification.read_text(encoding="utf-8")
     goal_rows = validation_map.table_rows(current_report, "| # | Truth | Status | Evidence |")
-    if not any(len(row) == 4 and row[0] == "3" and
-               "actual app/load/presentation/input/unload/exit were not observed" in row[3]
-               for row in goal_rows):
+    if not any(
+        len(row) == 4 and row[0] == "3" and re.search(
+            r"\bactual app/load/presentation/input/unload/exit were not observed\b",
+            row[3], re.IGNORECASE,
+        ) is not None
+        for row in goal_rows
+    ):
         raise AssertionError("source verification report lacks current actual frontend uncertainty evidence")
 
     validation = copied["VALIDATION"].read_text(encoding="utf-8")
@@ -214,10 +218,11 @@ class ValidationMapReconciliationTest(unittest.TestCase):
                 self.fail(f"reconciled records were rejected: {error}")
             report = documents["VERIFICATION"]
             original = report.read_text(encoding="utf-8")
-            mutated = original.replace(
-                "The actual app/load/presentation/input/unload/exit were not observed. ",
-                "The frontend was observed. ", 1,
+            mutated, changed = re.subn(
+                r"\bactual app/load/presentation/input/unload/exit were not observed\b:?\s*",
+                "The frontend was observed. ", original, count=1, flags=re.IGNORECASE,
             )
+            self.assertEqual(changed, 1, "frontend uncertainty removal did not find the source sentence")
             self.assertNotEqual(mutated, original, "frontend uncertainty removal was a no-op")
             report.write_text(mutated, encoding="utf-8")
             with self.assertRaisesRegex(AssertionError, "actual pinned-app observations are unobserved"):
