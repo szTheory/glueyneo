@@ -113,3 +113,9 @@ The validation strategy and its automation are complete. The Phase 04 goal is no
 | Gaps found | 0 |
 | Resolved | 0 |
 | Escalated | 0 |
+
+## Post-Audit Execution Checks 2026-10-08
+
+- `python3 tests/tools/check_phase04_validation_map.py` now fails at its assertion that the security register still has six open findings. The current independent audit closed T-04-13, T-04-16 and T-04-17, leaving T-04-11, T-04-15 and T-04-18 open. The checker’s expected security and review-disposition state is stale and remains a follow-up finding; no assertions or goldens were relaxed to make it pass.
+- Read-only reproductions confirmed that a repository receipt with a one-byte row changed from `bytes: 1` to `bytes: true` and a recomputed aggregate digest is accepted, and that commas inside unquoted private paths leave suffixes in both qualification and frontend diagnostic output. These are current code-review blockers.
+- The post-wave full CTest result remains 46/47, with only `owned_cpu_inventory_check` failing because of stale CPU identity/source-manifest and strict compile-command expectations. The pinned RetroArch GUI result remains unknown; no new GUI observation was made.
