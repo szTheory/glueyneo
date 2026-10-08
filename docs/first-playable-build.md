@@ -37,7 +37,23 @@ python3 tests/libretro/retroarch_smoke.py \
   --content <build-directory>/public-playable.bin
 ```
 
-The smoke pins RetroArch 1.22.2 by executable digest. It expects software-visible output, no-input stability, a Left Arrow negative control, Right Arrow movement, and clean application exit after content unload. A frontend process exit before the first screenshot is `unknown` for HOST-02, not a pass. In the recorded run below, RetroArch exited with status `-6` before a screenshot; the frontend behavior therefore remains unknown.
+The smoke pins RetroArch 1.22.2 by executable digest. It expects software-visible output, no-input stability, a Left Arrow negative control, Right Arrow movement, and clean application exit after content unload. A frontend process exit before the first screenshot is `unknown` for HOST-02, not a pass. The runner records the failed stage, process status, bounded stdout/stderr and RetroArch log output, and a sanitized macOS crash reason when available. An `input` failure caused by macOS rejecting keyboard automation is reported as unavailable; it cannot satisfy the input controls.
+
+For bounded diagnosis before the acceptance run, add `--diagnose` to the direct smoke command. It launches the pinned app once without content and once with the installed core and generated fixture. Each probe receives a fresh temporary RetroArch config and capture directory; the result is explicitly `diagnostic_only` and never counts as HOST-02 evidence:
+
+```sh
+python3 tests/libretro/retroarch_smoke.py \
+  --retroarch /Applications/RetroArch.app \
+  --core <installed-prefix>/lib/libretro/glueyneo_libretro.dylib \
+  --content <build-directory>/public-playable.bin \
+  --diagnose
+```
+
+## Current pinned frontend diagnosis
+
+The 2026-10-07 probes used RetroArch 1.22.2 (`ed90b54434a2899de0ddbfed59f335255fb462c8691bd970a1a761ebb5656d65`), the installed core (`9d26c9a63493dcaf4fc021dc003d89b9879df521dce60db0059a7556fa1d914e`), and the expected 602-byte fixture (`59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0`). Both the no-content startup and ordinary core/content launch exited with status `-6` before a screenshot. Fresh macOS crash reports identified `EXC_CRASH SIGABRT` and `SIGNAL 6 Abort trap: 6`; neither stdout/stderr nor RetroArch's own log contained startup output. Since no-content startup fails the same way, these observations do not implicate the core or fixture and do not justify changing the Libretro adapter.
+
+A separate LaunchServices check (`open -n -W -a ...`) returned `kLSNoExecutableErr` even though the pinned bundle declares an executable that exists, is executable, and passes code-signature verification. The macOS unified log query was unavailable in this execution environment, so the underlying abort cause remains unknown. The required external precondition is a working interactive macOS launch context for this pinned app, with its startup failure diagnosable. HOST-02 remains unknown; neither launch probe is acceptance evidence.
 
 ## Previous qualification observation
 
