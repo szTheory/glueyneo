@@ -35,7 +35,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   4. A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including license/source/state audits, cycle or clock and interrupt/bus behavior, deterministic timing, continuation and independent-instance evidence, contained C++ failures, and static/shared C-consumer linkage; a failed gate blocks admission and requires bounded replanning rather than phase completion.
   5. An integrator can follow the clean-tree build/install/load procedure for the native library and libretro adapter on the selected macOS configuration and identify exact dependency, compiler, SDK, OS, architecture, and frontend identities plus untested configurations.
 
-**Plans**: 13/15 plans executed across 11 completed waves. Gap-closure plan 04-14 is planned for Wave 12; plan 04-15 is planned for Wave 13 after 04-14. Phase 04 remains incomplete pending these fixes, fresh independent security/review assessment, whole-phase verification and actual pinned-app evidence.
+**Plans**: 14/15 plans executed across 11 completed waves. Gap-closure plan 04-14 is planned for Wave 12; plan 04-15 is planned for Wave 13 after 04-14. Phase 04 remains incomplete pending these fixes, fresh independent security/review assessment, whole-phase verification and actual pinned-app evidence.
 **Wave 1**
 - [x] 04-01-PLAN.md
 
@@ -72,7 +72,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 - [x] 04-13-PLAN.md — Close escaped-quote path disclosure and reconcile review evidence
 
 **Wave 12** *(gap closure; blocked on Wave 11 completion)*
-- [ ] 04-14-PLAN.md — Redact raw-quoted diagnostic paths, parse Info findings, and reconcile bounded sound-admission statuses
+- [x] 04-14-PLAN.md — Redact raw-quoted diagnostic paths, parse Info findings, and reconcile bounded sound-admission statuses
 
 **Wave 13** *(actual frontend evidence; follows Wave 12)*
 - [ ] 04-15-PLAN.md — Observe pinned RetroArch only in a materially changed, functioning launch context
@@ -129,7 +129,7 @@ Each phase includes the automated evidence and independent review appropriate to
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. Public Playable Tracer | 13/15 | In Progress | - |
+| 4. Public Playable Tracer | 14/15 | In Progress | - |
 | 5. Selected MVS Boot | 0/TBD | Not started | - |
 | 6. Active Title Control | 0/TBD | Not started | - |
 | 7. Sound and Scenario Qualification | 0/TBD | Not started | - |
