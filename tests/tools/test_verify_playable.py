@@ -518,6 +518,10 @@ class ConsumerInputTest(unittest.TestCase):
             "The game appeared on screen in RetroArch.",
             "The game ran successfully in RetroArch.",
             "The frontend accepted the mapped controller input.",
+            "The frontend successfully presented the game to the user.",
+            "Gameplay was confirmed in RetroArch.",
+            "No screenshot was obtained, but the game appeared on screen in RetroArch.",
+            "The app did not fail; the game appeared on screen in RetroArch.",
         )
         for claim in claims:
             with self.subTest(claim=claim), tempfile.TemporaryDirectory(prefix="playable-docs-guide-claim-") as temporary:
@@ -535,7 +539,7 @@ class ConsumerInputTest(unittest.TestCase):
             guide = source_root / "docs/first-playable-build.md"
             guide.write_text(
                 guide.read_text(encoding="utf-8")
-                + "\nThe guide does not claim the app loaded successfully or that the game appeared on screen in RetroArch.\n",
+                + "\nThe guide does not claim that the app loaded successfully. The guide does not claim that the game appeared on screen in RetroArch.\n",
                 encoding="utf-8",
             )
             playable.check_docs(source_root)
