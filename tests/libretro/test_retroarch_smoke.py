@@ -43,7 +43,7 @@ class FixtureIdentityTests(unittest.TestCase):
         bundle = directory / "RetroArch.app"
         executable = bundle / "Contents" / "MacOS" / "RetroArch"
         executable.parent.mkdir(parents=True)
-        executable.write_bytes(b"pinned app placeholder")
+        executable.write_bytes(b"mock pinned app bytes")
         (bundle / "Contents" / "Info.plist").write_bytes(plistlib.dumps({
             "CFBundleShortVersionString": smoke.EXPECTED_VERSION,
             "CFBundleExecutable": "RetroArch",
@@ -138,7 +138,7 @@ class BundleIdentifierTests(unittest.TestCase):
                     contents.mkdir(parents=True)
                     executable = contents / "MacOS" / "RetroArch"
                     executable.parent.mkdir()
-                    executable.write_bytes(b"placeholder executable")
+                    executable.write_bytes(b"mock executable bytes")
                     (contents / "Info.plist").write_bytes(plistlib.dumps({
                         "CFBundleShortVersionString": smoke.EXPECTED_VERSION,
                         "CFBundleExecutable": "RetroArch",
