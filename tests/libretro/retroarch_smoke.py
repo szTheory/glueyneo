@@ -6,8 +6,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import plistlib
 import platform
+import re
 import struct
 import subprocess
 import sys
@@ -24,12 +26,18 @@ EXPECTED_EXECUTABLE_SHA256 = (
 WIDTH = 320
 HEIGHT = 224
 RIGHT_KEY_CODE = 124
+DIAGNOSTIC_OUTPUT_LIMIT = 12 * 1024
+DIAGNOSTIC_PROBE_SECONDS = 1.0
 
 
 class SmokeBlocked(RuntimeError):
-    def __init__(self, stage: str, detail: str) -> None:
+    def __init__(self, stage: str, detail: str, *, diagnostic: dict[str, object] | None = None) -> None:
         super().__init__(detail)
         self.stage = stage
+        self.diagnostic = diagnostic
+        self.availability = (
+            "unavailable" if stage == "input" and "could not inject" in detail else None
+        )
 
 
 def sha256(path: Path) -> str:
@@ -38,6 +46,167 @@ def sha256(path: Path) -> str:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def sanitize_diagnostic_text(text: str, *, temporary_root: Path | None = None) -> str:
+    if temporary_root is not None:
+        text = text.replace(str(temporary_root), "[temporary]")
+    home = str(Path.home())
+    if home:
+        text = text.replace(home, "[home]")
+    text = re.sub(r"/(?:Users|Volumes)/[^\s\"'<>]+", "[user]", text)
+    text = re.sub(r"/(?:private/)?var/folders/[^\s\"'<>]+", "[temporary]", text)
+    text = re.sub(r"/tmp/[^\s\"'<>]+", "[temporary]", text)
+    if len(text) > DIAGNOSTIC_OUTPUT_LIMIT:
+        marker = "\n[diagnostic output truncated]"
+        text = text[-(DIAGNOSTIC_OUTPUT_LIMIT - len(marker)):] + marker
+    return text.strip()
+
+
+def extract_crash_reason(report: str) -> str:
+    selected: list[str] = []
+    for line in report.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("{"):
+            try:
+                record = json.loads(stripped)
+            except json.JSONDecodeError:
+                record = None
+            if isinstance(record, dict):
+                exception = record.get("exception")
+                termination = record.get("termination")
+                if isinstance(exception, dict):
+                    fields = [str(exception.get(key, "")) for key in ("type", "signal", "subtype")]
+                    value = " ".join(field for field in fields if field)
+                    if value:
+                        selected.append("Exception: " + value)
+                if isinstance(termination, dict):
+                    fields = [str(termination.get(key, "")) for key in ("namespace", "code", "indicator")]
+                    value = " ".join(field for field in fields if field)
+                    if value:
+                        selected.append("Termination: " + value)
+            continue
+        if re.search(
+            r"(?i)(exception type|termination reason|dyld error message|library not loaded|namespace dyld)",
+            stripped,
+        ):
+            selected.append(stripped)
+    if not selected and report.lstrip().startswith("{"):
+        for section, label, keys in (
+            ("exception", "Exception", ("type", "signal", "subtype")),
+            ("termination", "Termination", ("namespace", "code", "indicator")),
+        ):
+            match = re.search(rf'"{section}"\s*:\s*\{{([^}}]*)\}}', report, re.DOTALL)
+            if not match:
+                continue
+            values: list[str] = []
+            for key in keys:
+                field = re.search(
+                    rf'"{key}"\s*:\s*(?:"((?:\\.|[^"\\])*)"|(-?\d+))',
+                    match.group(1),
+                )
+                if field:
+                    values.append(field.group(1) if field.group(1) is not None else field.group(2))
+            if values:
+                selected.append(f"{label}: " + " ".join(values))
+    return sanitize_diagnostic_text("\n".join(dict.fromkeys(selected)))
+
+
+def build_diagnostic(
+    *,
+    stage: str,
+    return_code: int | None,
+    survived_before_screenshot: bool | None,
+    output: str,
+    temporary_root: Path | None = None,
+    crash_report: str | None = None,
+) -> dict[str, object]:
+    record: dict[str, object] = {
+        "stage": stage,
+        "return_code": return_code,
+        "survived_before_screenshot": survived_before_screenshot,
+        "output": sanitize_diagnostic_text(output, temporary_root=temporary_root),
+    }
+    reason = extract_crash_reason(crash_report or "")
+    if reason:
+        record["macos_crash_reason"] = reason
+    return record
+
+
+def compare_launch_probes(no_content: dict[str, object], core_content: dict[str, object]) -> str:
+    if not bool(no_content.get("survived_window")):
+        return "frontend-startup-failed"
+    if not bool(core_content.get("survived_window")):
+        return "core-or-content-invocation-failed"
+    return "both-launch-probes-survived"
+
+
+def select_fresh_screenshot(directory: Path, prior: dict[Path, int]) -> Path | None:
+    candidates = [
+        path for path in directory.glob("*.png")
+        if path not in prior or path.stat().st_mtime_ns > prior[path]
+    ]
+    return max(candidates, key=lambda path: path.stat().st_mtime_ns) if candidates else None
+
+
+def read_bounded_text(
+    path: Path, limit: int = DIAGNOSTIC_OUTPUT_LIMIT, *, tail: bool = True
+) -> str:
+    try:
+        with path.open("rb") as stream:
+            if tail:
+                stream.seek(0, os.SEEK_END)
+                size = stream.tell()
+                stream.seek(max(0, size - limit))
+            data = stream.read(limit)
+    except OSError:
+        return ""
+    return data.decode("utf-8", errors="replace")
+
+
+def crash_report_snapshot() -> dict[Path, tuple[int, int]]:
+    if sys.platform != "darwin":
+        return {}
+    reports = Path.home() / "Library" / "Logs" / "DiagnosticReports"
+    snapshot: dict[Path, tuple[int, int]] = {}
+    try:
+        for pattern in ("RetroArch*.crash", "RetroArch*.ips"):
+            for path in reports.glob(pattern):
+                if path.is_file():
+                    stat = path.stat()
+                    snapshot[path] = (stat.st_mtime_ns, stat.st_size)
+    except OSError:
+        return snapshot
+    return snapshot
+
+
+def find_recent_crash_reason(
+    started_at: float, prior_reports: dict[Path, tuple[int, int]] | None = None
+) -> str | None:
+    if sys.platform != "darwin":
+        return None
+    reports = Path.home() / "Library" / "Logs" / "DiagnosticReports"
+    candidates: list[tuple[float, Path]] = []
+    for pattern in ("RetroArch*.crash", "RetroArch*.ips"):
+        try:
+            paths = reports.glob(pattern)
+            for path in paths:
+                try:
+                    stat = path.stat()
+                except OSError:
+                    continue
+                identity = (stat.st_mtime_ns, stat.st_size)
+                if (path.is_file() and stat.st_mtime >= started_at - 1.0
+                        and (prior_reports is None or prior_reports.get(path) != identity)):
+                    candidates.append((stat.st_mtime, path))
+        except OSError:
+            continue
+    for _, path in sorted(candidates, reverse=True)[:3]:
+        report = read_bounded_text(path, DIAGNOSTIC_OUTPUT_LIMIT, tail=False)
+        reason = extract_crash_reason(report)
+        if reason:
+            return reason
+    return None
 
 
 def decode_png(path: Path) -> tuple[int, int, int, bytes]:
@@ -147,16 +316,13 @@ def find_marker(image: tuple[int, int, int, bytes]) -> tuple[int, int, int]:
 def request_screenshot(process: subprocess.Popen[bytes], directory: Path,
                        prior: dict[Path, int], timeout: float) -> Path:
     if process.poll() is not None:
-        raise SmokeBlocked("frontend", f"RetroArch exited before screenshot (status {process.returncode})")
+        raise SmokeBlocked("first-screenshot", f"RetroArch exited before screenshot (status {process.returncode})")
     inject_key(100, repeats=1)
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        candidates = {
-            path for path in directory.glob("*.png")
-            if path not in prior or path.stat().st_mtime_ns > prior[path]
-        }
-        if candidates:
-            return max(candidates, key=lambda path: path.stat().st_mtime_ns)
+        fresh = select_fresh_screenshot(directory, prior)
+        if fresh is not None:
+            return fresh
         time.sleep(0.1)
     raise SmokeBlocked("video", "RetroArch did not create a software-video screenshot")
 
@@ -178,6 +344,138 @@ def inject_key(key_code: int, *, repeats: int = 24) -> None:
 
 def screenshot_snapshot(directory: Path) -> dict[Path, int]:
     return {path: path.stat().st_mtime_ns for path in directory.glob("*.png")}
+
+
+def write_frontend_config(work: Path, screenshots: Path) -> Path:
+    config = work / "retroarch.cfg"
+    config.write_text(
+        "\n".join(
+            [
+                'video_driver = "gl"',
+                'video_fullscreen = "false"',
+                'video_windowed_fullscreen = "false"',
+                'video_scale = "2"',
+                'video_smooth = "false"',
+                'video_vsync = "true"',
+                'input_driver = "cocoa"',
+                'input_player1_left = "left"',
+                'input_player1_right = "right"',
+                'input_screenshot = "f8"',
+                f'content_history_path = "{work / "content_history.lpl"}"',
+                f'savefile_directory = "{work}"',
+                f'savestate_directory = "{work}"',
+                f'system_directory = "{work}"',
+                f'cache_directory = "{work}"',
+                f'screenshot_directory = "{screenshots}"',
+                'log_to_file = "true"',
+                f'log_dir = "{work}"',
+            ]
+        ) + "\n",
+        encoding="utf-8",
+    )
+    return config
+
+
+def request_frontend_quit(bundle_id: str, process: subprocess.Popen[bytes], timeout: float) -> None:
+    if process.poll() is None:
+        try:
+            subprocess.run(
+                ["/usr/bin/osascript", "-e", f'tell application id "{bundle_id}" to quit'],
+                check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                timeout=min(8.0, timeout),
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+        try:
+            process.wait(timeout=min(5.0, timeout))
+        except subprocess.TimeoutExpired:
+            process.terminate()
+            try:
+                process.wait(timeout=2.0)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=2.0)
+
+
+def run_launch_probe(
+    executable: Path,
+    core: Path,
+    content: Path,
+    bundle_id: str,
+    *,
+    probe: str,
+    timeout: float,
+) -> dict[str, object]:
+    with tempfile.TemporaryDirectory(prefix=f"glueyneo-retroarch-{probe}-") as temporary:
+        work = Path(temporary)
+        screenshots = work / "screenshots"
+        screenshots.mkdir()
+        config = write_frontend_config(work, screenshots)
+        log = work / "retroarch.log"
+        prior_crash_reports = crash_report_snapshot()
+        arguments = [str(executable), "--verbose", "--config", str(config)]
+        if probe == "core_content":
+            arguments.extend(["-L", str(core), str(content)])
+        started_at = time.time()
+        try:
+            with log.open("wb") as log_stream:
+                process = subprocess.Popen(
+                    arguments, stdout=log_stream, stderr=subprocess.STDOUT,
+                    start_new_session=True,
+                )
+                try:
+                    process.wait(timeout=min(DIAGNOSTIC_PROBE_SECONDS, timeout))
+                    survived_window = False
+                except subprocess.TimeoutExpired:
+                    survived_window = True
+                return_code = process.poll()
+                diagnostic = build_diagnostic(
+                    stage="no-content-startup" if probe == "no_content" else "core-content-load",
+                    return_code=return_code,
+                    survived_before_screenshot=None,
+                    output=read_bounded_text(log),
+                    temporary_root=work,
+                    crash_report=find_recent_crash_reason(started_at, prior_crash_reports),
+                )
+                request_frontend_quit(bundle_id, process, timeout)
+                cleanup_return_code = process.poll()
+        except OSError as error:
+            survived_window = False
+            return_code = None
+            cleanup_return_code = None
+            diagnostic = build_diagnostic(
+                stage="launch",
+                return_code=None,
+                survived_before_screenshot=None,
+                output=str(error),
+                temporary_root=work,
+            )
+        return {
+            "return_code": return_code,
+            "survived_window": survived_window,
+            "cleanup_return_code": cleanup_return_code,
+            "diagnostic": diagnostic,
+            "profile": "fresh temporary config and capture directory",
+        }
+
+
+def run_diagnostics(args: argparse.Namespace) -> dict[str, object]:
+    executable, core, content, identity = validate_inputs(args)
+    no_content = run_launch_probe(
+        executable, core, content, identity["bundle_id"],
+        probe="no_content", timeout=args.timeout,
+    )
+    core_content = run_launch_probe(
+        executable, core, content, identity["bundle_id"],
+        probe="core_content", timeout=args.timeout,
+    )
+    return {
+        "status": "diagnostic_only",
+        "finding": compare_launch_probes(no_content, core_content),
+        "identity": identity,
+        "probes": {"no_content": no_content, "core_content": core_content},
+        "acceptance": "diagnostic probes do not satisfy HOST-02",
+    }
 
 
 def validate_inputs(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[str, str]]:
@@ -225,33 +523,10 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
         work = Path(temporary)
         screenshots = work / "screenshots"
         screenshots.mkdir()
-        config = work / "retroarch.cfg"
+        config = write_frontend_config(work, screenshots)
         log = work / "retroarch.log"
-        config.write_text(
-            "\n".join(
-                [
-                    'video_driver = "gl"',
-                    'video_fullscreen = "false"',
-                    'video_windowed_fullscreen = "false"',
-                    'video_scale = "2"',
-                    'video_smooth = "false"',
-                    'video_vsync = "true"',
-                    'input_driver = "cocoa"',
-                    'input_player1_left = "left"',
-                    'input_player1_right = "right"',
-                    'input_screenshot = "f8"',
-                    f'content_history_path = "{work / "content_history.lpl"}"',
-                    f'savefile_directory = "{work}"',
-                    f'savestate_directory = "{work}"',
-                    f'system_directory = "{work}"',
-                    f'cache_directory = "{work}"',
-                    f'screenshot_directory = "{screenshots}"',
-                    'log_to_file = "true"',
-                    f'log_dir = "{work}"',
-                ]
-            ) + "\n",
-            encoding="utf-8",
-        )
+        prior_crash_reports = crash_report_snapshot()
+        started_at = time.time()
         with log.open("wb") as log_stream:
             try:
                 process = subprocess.Popen(
@@ -262,10 +537,18 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                     start_new_session=True,
                 )
             except OSError as error:
-                raise SmokeBlocked("launch", "pinned RetroArch could not be started") from error
+                diagnostic = build_diagnostic(
+                    stage="launch", return_code=None, survived_before_screenshot=False,
+                    output=str(error), temporary_root=work,
+                )
+                raise SmokeBlocked(
+                    "launch", "pinned RetroArch could not be started", diagnostic=diagnostic
+                ) from error
             outcome: dict[str, object] = {"observations": []}
+            survived_before_screenshot = False
             try:
                 time.sleep(0.5)
+                survived_before_screenshot = process.poll() is None
                 first = request_screenshot(process, screenshots, {}, args.timeout)
                 first_marker = find_marker(decode_png(first))
                 time.sleep(0.25)
@@ -317,26 +600,18 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                 outcome["marker_before"] = list(first_marker)
                 outcome["marker_after_right"] = list(right_marker)
                 outcome["frontend_unloaded"] = True
+            except SmokeBlocked as error:
+                error.diagnostic = build_diagnostic(
+                    stage=error.stage,
+                    return_code=process.poll(),
+                    survived_before_screenshot=survived_before_screenshot,
+                    output=read_bounded_text(log),
+                    temporary_root=work,
+                    crash_report=find_recent_crash_reason(started_at, prior_crash_reports),
+                )
+                raise
             finally:
-                if process.poll() is None:
-                    try:
-                        subprocess.run(
-                            ["/usr/bin/osascript", "-e",
-                             f'tell application id "{identity["bundle_id"]}" to quit'],
-                            check=False, stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL, timeout=8,
-                        )
-                    except (OSError, subprocess.SubprocessError):
-                        pass
-                    try:
-                        process.wait(timeout=5)
-                    except subprocess.TimeoutExpired:
-                        process.terminate()
-                        try:
-                            process.wait(timeout=3)
-                        except subprocess.TimeoutExpired:
-                            process.kill()
-                            process.wait(timeout=3)
+                request_frontend_quit(identity["bundle_id"], process, args.timeout)
             return {"status": "pass", "identity": identity, **outcome}
 
 
@@ -345,12 +620,16 @@ def main() -> int:
     parser.add_argument("--retroarch", type=Path, required=True, help="RetroArch .app bundle")
     parser.add_argument("--core", type=Path, required=True, help="built glueyneo_libretro.dylib")
     parser.add_argument("--content", type=Path, required=True, help="CMake-generated public-playable.bin")
+    parser.add_argument(
+        "--diagnose", action="store_true",
+        help="compare fresh no-content and core/content launches; this is not acceptance",
+    )
     parser.add_argument("--timeout", type=float, default=20.0)
     args = parser.parse_args()
     if args.timeout <= 0 or args.timeout > 120:
         parser.error("--timeout must be greater than 0 and at most 120 seconds")
     try:
-        result = run_smoke(args)
+        result = run_diagnostics(args) if args.diagnose else run_smoke(args)
         print(json.dumps(result, sort_keys=True))
         return 0
     except SmokeBlocked as error:
@@ -359,12 +638,17 @@ def main() -> int:
             _, _, _, identity = validate_inputs(args)
         except SmokeBlocked:
             pass
-        print(json.dumps({
+        result: dict[str, object] = {
             "status": "blocked_or_unknown",
             "stage": error.stage,
             "reason": str(error),
             "identity": identity,
-        }, sort_keys=True))
+        }
+        if error.diagnostic is not None:
+            result["diagnostic"] = error.diagnostic
+        if error.availability is not None:
+            result["availability"] = error.availability
+        print(json.dumps(result, sort_keys=True))
         return 1
 
 
