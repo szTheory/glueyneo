@@ -1,50 +1,59 @@
 ---
 phase: 04-public-playable-tracer
-reviewed: 2026-10-08T23:12:03Z
-depth: standard
+reviewed: 2026-10-08T23:46:34Z
+depth: deep
+reviewed_revision: 870848e553aca6e43f6fec8ae0acefac87270f5b
 files_reviewed: 4
 files_reviewed_list:
-  - tools/verify_playable.py
-  - tests/tools/test_verify_playable.py
+  - tests/libretro/retroarch_smoke.py
+  - tests/libretro/test_retroarch_smoke.py
   - tests/tools/check_phase04_validation_map.py
   - tests/tools/test_check_phase04_validation_map.py
 findings:
   critical: 0
-  warning: 2
+  warning: 1
   info: 0
-  total: 2
+  total: 1
 status: issues_found
 ---
 
 # Phase 04: Code Review Report
 
-**Reviewed:** 2026-10-08T23:12:03Z
-**Depth:** standard
-**Files Reviewed:** 4
-**Status:** two warnings remain open
+**Reviewed:** 2026-10-08T23:46:34Z  
+**Revision:** `870848e553aca6e43f6fec8ae0acefac87270f5b`  
+**Depth:** deep  
+**Files Reviewed:** 4  
+**Status:** WR-01 remains open
 
 ## Summary
 
-The current qualification/privacy suite passes 25/25 and the validation-map mutation suite passes 14/14. Neither result establishes actual pinned RetroArch behavior, which remains manual-only and unknown. I reproduced two accepted affirmative claims in temporary copies of the consumer guide, and the evidence checker still preserves a stale 23/23 qualification result in the current verification report without comparing it to the observed 25-test run.
+Reviewed the frontend smoke diagnostic path end to end: subprocess stdout/stderr and RetroArch file logs are bounded and collected, sanitation runs before diagnostic retention and JSON printing, exception text is sanitized, and macOS crash reasons are selected and sanitized before serialization. The frontend focused suite passes 27/27. Five direct adversarial cases covering newline, escaped quote, apostrophe, spaces, and a temporary-root suffix spanning a newline left no tested private suffix in sanitized text or serialized diagnostics. No sanitizer defect was reproduced in these cases.
+
+Independent review of the evidence-map checker found that it runs the qualification suite, parses its live test count, and compares the current verification report's numerator and denominator with that count. The 15-test mutation suite includes a stale 23/23 mutation against its observed 25-test fixture and rejects it; the live qualification suite also passed 25/25, and the direct checker passed. This closes WR-02 at this revision. WR-01 and security threat T-04-34 remain open. The tests cover repository behavior only; RetroArch was not launched, and this review makes no actual frontend behavior claim.
 
 ## Warnings
 
 ### WR-01: Guide claim filter accepts affirmative frontend paraphrases
 
-**Severity:** warning
-**File:** `tools/verify_playable.py:632-650`
-**Issue:** `check_docs()` uses a finite set of phrase patterns to reject frontend success claims. In a temporary copy of the current guide, both `The frontend booted the game and showed its output.` and `The controls worked as expected in RetroArch.` were accepted by `check_docs()`. The explicit Pending/unknown record therefore does not prevent all contradictory prose from passing this gate. This is the known bounded WR-06 paraphrase gap; it does not imply that actual frontend behavior was observed.
-**Fix:** Keep WR-06/T-04-34 open until the gate checks a structured, authoritative evidence/status field or the documented claim surface is constrained so arbitrary prose cannot assert success. Add these exact counterexamples as regressions before changing the open disposition.
+**Severity:** warning  
+**File:** `tools/verify_playable.py:632-650`  
+**Issue:** Carried from the prior review and disposition. Existing evidence reproduces two affirmative frontend claims accepted by `check_docs()`, despite frontend status remaining Pending/unknown. This review did not rerun that separate guide check; the prior warning remains open.  
+**Fix:** Keep WR-06/T-04-34 open until the claim gate uses authoritative status evidence or constrains the claim surface, and add the recorded paraphrases as regressions.
 
-### WR-02: Evidence checker accepts a stale current qualification denominator
+## Review Evidence
 
-**Severity:** warning
-**File:** `tests/tools/check_phase04_validation_map.py:176-180, 430`
-**Issue:** The current verification spot-check is pinned to `23/23 passed`, but the current qualification suite reports 25 tests. `require_current_frontend_row()` checks the spot-check row against that stale constant; `main()` does not compare its denominator with the live result returned by `run_suite()`. As a result, the direct evidence-map checker can pass while the current verification report states the wrong test denominator. Historical rows may retain their historical counts, but this current spot-check is not reconciled.
-**Fix:** Compare the current verification spot-check denominator with the observed qualification suite count, or generate that row from the same observed result. Add a mutation test that changes only the spot-check denominator and requires the checker to reject it.
+- `git rev-parse HEAD`: `870848e553aca6e43f6fec8ae0acefac87270f5b`.
+- `python3 tests/libretro/test_retroarch_smoke.py -v`: 27 tests passed, 27 run.
+- Focused inline counterexample probe: five cases (newline, escaped quote, apostrophe, spaces, and temporary-root suffix); all five had no tested private suffix in sanitized output or serialized diagnostic.
+- `python3 tests/tools/test_check_phase04_validation_map.py -v`: 15 tests passed, 15 run. `test_checker_rejects_stale_current_qualification_denominator` passed; it changes the current report from 25/25 to 23/23 and requires a denominator assertion against the live-count fixture.
+- `python3 tests/tools/test_verify_playable.py -v`: 25 tests passed, 25 run.
+- `python3 tests/tools/check_phase04_validation_map.py`: passed. This direct run invokes the live qualification suite and validates the report count against it.
+- WR-02 disposition: fixed at this revision. `main()` at `tests/tools/check_phase04_validation_map.py:264-277` obtains the current count from `run_suite()` and rejects any report count other than `(count, count)`; both the stale-denominator mutation and direct checker passed.
+- Review scope: `tests/libretro/retroarch_smoke.py`, `tests/libretro/test_retroarch_smoke.py`, `tests/tools/check_phase04_validation_map.py`, and `tests/tools/test_check_phase04_validation_map.py`.
+- Limits: no RetroArch/GUI launch, no dependency installation, no frontend behavior assertion. WR-01's guide paraphrase evidence remains carried from the prior review; WR-01 and T-04-34 stay open.
 
 ---
 
-_Reviewed: 2026-10-08T23:12:03Z_
-_Reviewer: the agent (gsd-code-reviewer)_
-_Depth: standard_
+_Reviewed: 2026-10-08T23:46:34Z_  
+_Reviewer: the agent (gsd-code-reviewer)_  
+_Depth: deep_
