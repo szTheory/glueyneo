@@ -635,9 +635,16 @@ def check_docs(source_root: Path) -> None:
         r"\b(?:displayed|presented|rendered)\s+(?:guest\s+)?pixels?\b",
         r"\b(?:frontend\s+)?(?:accepted|registered)\s+(?:right|left|mapped)\s+input\b",
         r"\b(?:content|game)\s+unloaded\s+(?:cleanly|successfully)\b",
+        r"\bgame\s+(?:appeared|was\s+visible|ran|played)\b.{0,80}\b(?:screen|retroarch|successfully|pixels?)\b",
+        r"\b(?:frontend|retroarch)\s+(?:accepted|registered)\s+(?:the\s+)?(?:(?:mapped|right|left)\s+)?(?:controller\s+)?input\b",
+        r"\b(?:frontend|retroarch)\s+(?:loaded|started|presented|displayed|rendered)\b.{0,80}\b(?:successfully|pixels?|fixture|content)\b",
     )
-    if any(re.search(pattern, guide, re.IGNORECASE) for pattern in affirmative_frontend_claims):
-        raise RuntimeError("integrator documentation contains an affirmative frontend claim while actual behavior is unknown")
+    negation = re.compile(r"\b(?:not|never|no|unknown|unobserved|unverified)\b", re.IGNORECASE)
+    for pattern in affirmative_frontend_claims:
+        for match in re.finditer(pattern, guide, re.IGNORECASE):
+            sentence_start = max(guide.rfind(mark, 0, match.start()) for mark in (".", "!", "?", "\n")) + 1
+            if not negation.search(guide[sentence_start:match.start()]):
+                raise RuntimeError("integrator documentation contains an affirmative frontend claim while actual behavior is unknown")
     required = (
         "python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean",
         "public-playable.bin", "RetroArch", "macOS", "unsupported", "unknown",

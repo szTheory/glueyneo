@@ -515,6 +515,9 @@ class ConsumerInputTest(unittest.TestCase):
         claims = (
             "The actual frontend app loaded successfully and displayed pixels.",
             "The frontend accepted RIGHT input and unloaded cleanly.",
+            "The game appeared on screen in RetroArch.",
+            "The game ran successfully in RetroArch.",
+            "The frontend accepted the mapped controller input.",
         )
         for claim in claims:
             with self.subTest(claim=claim), tempfile.TemporaryDirectory(prefix="playable-docs-guide-claim-") as temporary:
@@ -524,6 +527,18 @@ class ConsumerInputTest(unittest.TestCase):
                 guide.write_text(guide.read_text(encoding="utf-8") + "\n" + claim + "\n", encoding="utf-8")
                 with self.assertRaisesRegex(RuntimeError, "affirmative frontend claim"):
                     playable.check_docs(source_root)
+
+    def test_check_docs_allows_explicit_negation_of_frontend_claim(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-docs-negated-claim-") as temporary:
+            source_root = Path(temporary)
+            self.copy_documentation(source_root)
+            guide = source_root / "docs/first-playable-build.md"
+            guide.write_text(
+                guide.read_text(encoding="utf-8")
+                + "\nThe guide does not claim the app loaded successfully or that the game appeared on screen in RetroArch.\n",
+                encoding="utf-8",
+            )
+            playable.check_docs(source_root)
 
     def test_check_docs_rejects_placeholders_and_missing_or_closed_frontend_evidence(self) -> None:
         def update_row(text: str, task_id: str, status: str | None) -> str:
