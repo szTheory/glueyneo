@@ -28,7 +28,7 @@ coverage:
         ref: "python3 tests/tools/check_phase04_validation_map.py"
         status: pass
       - kind: unit
-        ref: "python3 tests/tools/test_check_phase04_validation_map.py -v (12 tests)"
+        ref: "python3 tests/tools/test_check_phase04_validation_map.py -v (14 tests)"
         status: pass
     human_judgment: false
   - id: D2
@@ -73,9 +73,9 @@ actuals:
 ## Accomplishments
 
 - Reconciled the security blocking count against high/open register rows while requiring the exact four reserved high/open IDs and T-04-34 medium/open.
-- Updated the 12 existing evidence-map tests to copy current documents unchanged, use noncolliding synthetic review IDs, reconcile current counts, and reject removal of the report's actual frontend uncertainty evidence.
+- Updated the evidence-map mutation suite to copy current documents unchanged, use noncolliding synthetic review IDs, reconcile current counts, reject malformed/duplicate requirement rows, and guard all current frontend evidence rows against added or rewritten claims.
 - Constrained the current `04-15 T2` status cell to its explicit Pending/unknown grammar; affirmative claims about load, presentation, input, and unload now fail.
-- Kept HOST-02 Pending, frontend QUAL-03 blocked/partial with its frontend portion unknown, and all five specified open threats unchanged.
+- Kept HOST-02 and frontend QUAL-03 Pending/unknown, and all five specified open threats unchanged.
 
 ## Task Commits
 
@@ -104,7 +104,7 @@ The plan's original three tasks completed as written. After the fresh scoped cod
 ## Checks Run
 
 - `python3 tests/tools/check_phase04_validation_map.py` — passed; the checker also reran and reconciled the current 23-test qualification suite and 27-test GUI-free frontend suite.
-- `python3 tests/tools/test_check_phase04_validation_map.py -v` — passed, 12/12.
+- `python3 tests/tools/test_check_phase04_validation_map.py -v` — passed, 14/14.
 - `python3 tests/tools/test_verify_playable.py -v` — passed, 23/23.
 - `python3 tools/verify_playable.py --check-docs` — passed.
 
@@ -112,7 +112,7 @@ The plan's original three tasks completed as written. After the fresh scoped cod
 
 The managed filesystem initially denied writes to `.git`. The task commits and ledger were completed through reviewed escalation; only task-owned files were staged.
 
-Post-plan review corrections made the `WR-99` case create its own Warning section, explicitly seeded WR-06 for its closure mutation, and matched the disposition's carried-source marker. The fresh verifier also varied the uncertainty sentence and requirement-table wording across regenerations. The evidence checker now validates actual frontend load uncertainty semantically, rejects contradictory success claims, accepts only controlled open HOST-02/QUAL-03 states, and handles the singular/plural Source Plan header. The mutation suite exercises claim removal and contradictory success. All twelve tests pass against the latest report, with the live review clean.
+Post-plan review corrections made the `WR-99` case create its own Warning section, explicitly seeded WR-06 for its closure mutation, and matched the disposition's carried-source marker. Independent review then found that free-form semantic matching kept admitting paraphrased success claims and that several current report cells were unchecked. The checker now requires exact source-derived rows for every current frontend-related report surface, including goals, artifacts, links, data flow, behavioral spot-checks, and HOST-02/QUAL-03. It rejects appended claims, malformed rows, and duplicate requirements. The current review is clean, all fourteen mutation tests pass, and the five security findings plus manual-only frontend status remain open.
 
 ## Next Phase Readiness
 

@@ -23,7 +23,7 @@ COMMANDS = {
 
 
 def reconciled_review_documents(directory: Path) -> dict[str, Path]:
-    """Return internally consistent records after the repaired CR-01 is no longer current."""
+    """Build a controlled current-review baseline over copied phase evidence."""
     sources = {
         "VALIDATION": PHASE / "04-VALIDATION.md",
         "SECURITY": PHASE / "04-SECURITY.md",
@@ -42,10 +42,18 @@ def reconciled_review_documents(directory: Path) -> dict[str, Path]:
     goal_rows = validation_map.table_rows(current_report, "| # | Truth | Status | Evidence |")
     if not any(
         len(row) == 4 and row[0] == "3" and
-        validation_map.has_frontend_load_uncertainty(row[3])
+        validation_map.has_frontend_load_uncertainty(row[3], scope="goal")
         for row in goal_rows
     ):
         raise AssertionError("source verification report lacks current actual frontend uncertainty evidence")
+
+    # The live review changes independently of the carried disposition ledger.
+    # Start with no current findings, then seed each mutation explicitly so the
+    # fixture never depends on stale review IDs or live-review timing.
+    copied["REVIEW"].write_text(
+        "# Synthetic current review fixture\n\n## Critical Issues\n\nNone.\n\n## Warnings\n\nNone.\n",
+        encoding="utf-8",
+    )
 
     validation = copied["VALIDATION"].read_text(encoding="utf-8")
     validation = validation.replace("pass, 20 tests on source `04-13`", "pass, 23 tests on source `04-13`")
@@ -118,8 +126,16 @@ def add_frontend_success_claim(text: str) -> str:
     if frontend is None:
         raise AssertionError("frontend goal row is missing")
     return with_frontend_goal_evidence(
-        text, frontend[3] + " Actual pinned RetroArch app loaded successfully."
+        text, frontend[3] + " The pinned RetroArch app displayed guest pixels."
     )
+
+
+def add_frontend_claim(text: str, claim: str) -> str:
+    rows = validation_map.table_rows(text, "| # | Truth | Status | Evidence |")
+    frontend = next((row for row in rows if len(row) == 4 and row[0] == "3"), None)
+    if frontend is None:
+        raise AssertionError("frontend goal row is missing")
+    return with_frontend_goal_evidence(text, frontend[3] + " " + claim)
 
 
 def with_requirement_status(text: str, requirement_id: str, status: str) -> str:
@@ -133,6 +149,56 @@ def with_requirement_status(text: str, requirement_id: str, status: str) -> str:
         cells[3] = status
         lines[index] = "| " + " | ".join(cells) + " |"
         return "\n".join(lines) + "\n"
+    raise AssertionError(f"requirement row {requirement_id} is missing")
+
+
+def with_requirement_evidence(text: str, requirement_id: str, evidence: str) -> str:
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        if not line.startswith(f"| {requirement_id} |"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) != 5:
+            raise AssertionError(f"requirement row {requirement_id} is malformed")
+        cells[4] = evidence
+        lines[index] = "| " + " | ".join(cells) + " |"
+        return "\n".join(lines) + "\n"
+    raise AssertionError(f"requirement row {requirement_id} is missing")
+
+
+def with_table_cell(text: str, header: str, key: str, column: int, value: str) -> str:
+    lines = text.splitlines()
+    header_index = next((i for i, line in enumerate(lines) if line.startswith(header)), None)
+    if header_index is None:
+        raise AssertionError(f"table header is missing: {header}")
+    for index in range(header_index + 2, len(lines)):
+        if not lines[index].startswith("|"):
+            break
+        cells = [cell.strip() for cell in lines[index].strip().strip("|").split("|")]
+        if cells and cells[0] == key:
+            if not 0 <= column < len(cells):
+                raise AssertionError(f"column {column} is outside row {key}")
+            cells[column] = value
+            lines[index] = "| " + " | ".join(cells) + " |"
+            return "\n".join(lines) + "\n"
+    raise AssertionError(f"row is missing for {key!r} in {header}")
+
+
+def with_duplicate_requirement(text: str, requirement_id: str) -> str:
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        if line.startswith(f"| {requirement_id} |"):
+            lines.insert(index + 1, line)
+            return "\n".join(lines) + "\n"
+    raise AssertionError(f"requirement row {requirement_id} is missing")
+
+
+def with_malformed_duplicate_requirement(text: str, requirement_id: str) -> str:
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        if line.startswith(f"| {requirement_id} |"):
+            lines.insert(index + 1, line[:-1] + " | contradictory extra status |")
+            return "\n".join(lines) + "\n"
     raise AssertionError(f"requirement row {requirement_id} is missing")
 
 
@@ -259,7 +325,7 @@ class ValidationMapReconciliationTest(unittest.TestCase):
             )
             self.assertNotEqual(mutated, original, "frontend uncertainty removal was a no-op")
             report.write_text(mutated, encoding="utf-8")
-            with self.assertRaisesRegex(AssertionError, "actual pinned-app load unobserved or unknown"):
+            with self.assertRaisesRegex(AssertionError, "current frontend report row '3' changed or contradicts its audited state"):
                 self.run_checker(documents)
 
     def test_checker_accepts_a_new_current_finding_with_matching_records(self) -> None:
@@ -400,7 +466,73 @@ class ValidationMapReconciliationTest(unittest.TestCase):
             ("medium threat downgraded", "SECURITY", lambda text: text.replace("| T-04-34 | Tampering | `check_docs()` frontend qualification status | medium | mitigate |", "| T-04-34 | Tampering | `check_docs()` frontend qualification status | low | mitigate |", 1)),
             ("HOST-02 observed", "VERIFICATION", lambda text: re.sub(r"(?m)^(\| HOST-02 \|.*\| )\? NEEDS HUMAN(?: / PENDING)?( \|.*)$", r"\1pass\2", text)),
             ("QUAL-03 observed", "VERIFICATION", lambda text: with_requirement_status(text, "QUAL-03", "✓ SATISFIED")),
+            ("HOST-02 positive evidence", "VERIFICATION", lambda text: with_requirement_evidence(
+                text, "HOST-02", "Actual pinned RetroArch app loaded and accepted input; game output was visible."
+            )),
+            ("QUAL-03 positive evidence", "VERIFICATION", lambda text: with_requirement_evidence(
+                text, "QUAL-03", "Procedure documented; successful actual frontend load remains unknown; the app displayed pixels."
+            )),
+            ("qualification goal positive evidence", "VERIFICATION", lambda text: with_table_cell(
+                text, "| # | Truth | Status | Evidence |", "5", 3, "Actual pinned frontend loaded successfully."
+            )),
+            ("qualification artifact positive evidence", "VERIFICATION", lambda text: with_table_cell(
+                text, "| Artifact | Expected | Status | Details |",
+                "`tools/verify_playable.py` and `docs/first-playable-build.md`", 3,
+                "Pinned RetroArch loaded and displayed pixels."
+            )),
+            ("libretro artifact positive evidence", "VERIFICATION", lambda text: with_table_cell(
+                text, "| Artifact | Expected | Status | Details |", "`src/libretro/libretro_core.c`", 3,
+                validation_map.LIBRETRO_ARTIFACT_FRONTEND_BOUNDARY + " RetroArch displayed guest pixels."
+            )),
+            ("qualification link positive evidence", "VERIFICATION", lambda text: with_table_cell(
+                text, "| From | To | Via | Status | Details |", "Qualification runner", 4,
+                "Pinned RetroArch launched and displayed guest pixels."
+            )),
+            ("libretro link positive evidence", "VERIFICATION", lambda text: with_table_cell(
+                text, "| From | To | Via | Status | Details |", "Libretro callback", 4,
+                validation_map.LIBRETRO_LINK_FRONTEND_BOUNDARY + " The actual app loaded successfully."
+            )),
+            ("qualification data-flow success", "VERIFICATION", lambda text: with_table_cell(
+                text, "| Artifact | Data variable | Source | Produces Real Data | Status |",
+                "Qualification evidence", 4, "✓ FLOWING; app loaded and displayed guest pixels"
+            )),
+            ("libretro data-flow positive frontend claim", "VERIFICATION", lambda text: with_table_cell(
+                text, "| Artifact | Data variable | Source | Produces Real Data | Status |",
+                "Libretro callback", 4,
+                "✓ FLOWING; actual RetroArch accepted input and displayed guest pixels"
+            )),
+            ("actual frontend spot-check passed", "VERIFICATION", lambda text: with_table_cell(
+                text, "| Behavior | Command | Result | Status |",
+                "Actual pinned RetroArch load, display, controls, and unload", 2,
+                "Pinned RetroArch loaded, displayed pixels, and accepted input."
+            )),
+            ("evidence-map spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
+                text, "| Behavior | Command | Result | Status |",
+                "Current security/evidence-map consistency and report uncertainty", 2,
+                "Passed; actual pinned RetroArch loaded and displayed guest pixels."
+            )),
+            ("qualification test spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
+                text, "| Behavior | Command | Result | Status |",
+                "Qualification/privacy regressions", 2,
+                "23/23 passed; actual pinned RetroArch loaded successfully."
+            )),
+            ("GUI-free runner spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
+                text, "| Behavior | Command | Result | Status |",
+                "GUI-free RetroArch runner contract", 2,
+                "27/27 passed; actual pinned RetroArch displayed pixels."
+            )),
+            ("docs gate spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
+                text, "| Behavior | Command | Result | Status |",
+                "Documentation claim gate", 2,
+                "Passed; the pinned app loaded and presented output."
+            )),
+            ("duplicate HOST-02", "VERIFICATION", lambda text: with_duplicate_requirement(text, "HOST-02")),
+            ("duplicate QUAL-03", "VERIFICATION", lambda text: with_duplicate_requirement(text, "QUAL-03")),
+            ("malformed duplicate HOST-02", "VERIFICATION", lambda text: with_malformed_duplicate_requirement(text, "HOST-02")),
+            ("malformed duplicate QUAL-03", "VERIFICATION", lambda text: with_malformed_duplicate_requirement(text, "QUAL-03")),
             ("actual frontend success claim", "VERIFICATION", add_frontend_success_claim),
+            ("confirmed gameplay presentation", "VERIFICATION", lambda text: add_frontend_claim(text, "Gameplay presentation was confirmed.")),
+            ("successful display output", "VERIFICATION", lambda text: add_frontend_claim(text, "Display output was successful.")),
         )
         for label, name, transform in mutations:
             with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:
@@ -411,6 +543,71 @@ class ValidationMapReconciliationTest(unittest.TestCase):
                 mutate_document(documents, name, lambda _text: after)
                 with self.assertRaises(AssertionError):
                     self.run_checker(documents)
+
+    def test_pending_status_cells_reject_appended_frontend_observations(self) -> None:
+        observations = (
+            "actual pinned RetroArch app loaded successfully",
+            "pinned RetroArch app displayed guest pixels",
+            "RIGHT input moved the marker",
+            "content unloaded and RetroArch exited normally",
+        )
+        for requirement_id in ("HOST-02", "QUAL-03"):
+            for observation in observations:
+                with self.subTest(requirement=requirement_id, observation=observation), tempfile.TemporaryDirectory() as temporary:
+                    documents = reconciled_review_documents(Path(temporary))
+                    status = "? NEEDS HUMAN / PENDING — " + observation
+                    mutate_document(
+                        documents,
+                        "VERIFICATION",
+                        lambda text, rid=requirement_id, value=status: with_requirement_status(text, rid, value),
+                    )
+                    with self.assertRaises(AssertionError):
+                        self.run_checker(documents)
+
+    def test_frontend_uncertainty_is_bound_to_pinned_app_and_rejects_success_paraphrases(self) -> None:
+        accepted = validation_map.PINNED_FRONTEND_UNCERTAINTY_EVIDENCE
+        host_accepted = validation_map.HOST_FRONTEND_UNCERTAINTY_EVIDENCE
+        qual_accepted = validation_map.QUAL_FRONTEND_UNCERTAINTY_EVIDENCE
+        self.assertTrue(validation_map.has_frontend_load_uncertainty(accepted, scope="goal"))
+        self.assertTrue(validation_map.has_frontend_load_uncertainty(host_accepted, scope="host"))
+        self.assertTrue(validation_map.has_frontend_load_uncertainty(qual_accepted, scope="qual"))
+        self.assertTrue(validation_map.has_frontend_load_uncertainty(
+            validation_map.QUALIFICATION_GOAL_UNCERTAINTY_EVIDENCE, scope="qual_goal"
+        ))
+        self.assertTrue(validation_map.has_frontend_load_uncertainty(
+            validation_map.QUALIFICATION_ARTIFACT_UNCERTAINTY_EVIDENCE, scope="qual_artifact"
+        ))
+        self.assertTrue(validation_map.has_frontend_load_uncertainty(
+            validation_map.LIBRETRO_ARTIFACT_FRONTEND_BOUNDARY, scope="libretro_artifact"
+        ))
+        self.assertTrue(validation_map.has_frontend_load_uncertainty(
+            validation_map.LIBRETRO_LINK_FRONTEND_BOUNDARY, scope="libretro_link"
+        ))
+        self.assertTrue(validation_map.has_frontend_load_uncertainty(
+            validation_map.QUALIFICATION_RUNNER_UNCERTAINTY_EVIDENCE, scope="qual_runner"
+        ))
+        self.assertFalse(validation_map.has_frontend_load_uncertainty(qual_accepted, scope="goal"))
+        self.assertFalse(validation_map.has_frontend_load_uncertainty(host_accepted, scope="qual"))
+        rejected = (
+            "Actual frontend load remains unknown; the pinned RetroArch app displayed guest pixels.",
+            "Actual pinned RetroArch app load remains unknown; the app showed a guest frame.",
+            "Actual pinned RetroArch app load remains unknown; the game screen was visible in the app.",
+            "Actual pinned RetroArch app load remains unknown; gameplay presentation was confirmed.",
+            "Actual pinned RetroArch app load remains unknown; display output was successful.",
+            "Actual pinned RetroArch app load remains unknown; we saw the game screen.",
+            "Actual pinned RetroArch app load remains unknown; video output passed.",
+            "Actual pinned RetroArch app load remains unknown; the app produced guest video.",
+            "Actual pinned RetroArch app load remains unknown; the screenshot contained game pixels.",
+            "Actual pinned RetroArch app load remains unknown; we can see the game screen.",
+            "Actual pinned RetroArch app load remains unknown; RetroArch launched.",
+            "Actual pinned RetroArch app load remains unknown; logs confirm video output.",
+            "Actual pinned RetroArch app load remains unknown; RIGHT input moved the marker.",
+            "Actual pinned RetroArch app load remains unknown; content unloaded and RetroArch exited normally.",
+            "Actual app load remains unknown; the app displayed guest pixels.",
+        )
+        for evidence in rejected:
+            with self.subTest(evidence=evidence):
+                self.assertFalse(validation_map.has_frontend_load_uncertainty(evidence, scope="goal"))
 
 if __name__ == "__main__":
     unittest.main()

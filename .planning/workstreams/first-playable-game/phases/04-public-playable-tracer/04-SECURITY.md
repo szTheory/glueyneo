@@ -192,3 +192,23 @@ Subsequent independent code review found that T-04-34's frontend closure mitigat
 | Open | 5 |
 
 The fresh ASVS L1 review verified Plan 04-18's three additions: T-04-35, T-04-36, and T-04-SC (04-18). T-04-34 remains medium/open pending independent post-fix review; T-04-11, T-04-15, T-04-18, and T-04-20 remain high/open by explicit direction. The high-severity blocking count stays 4, no risks were accepted, and the phase remains blocked. HOST-02 and frontend QUAL-03 remain Pending/unknown because actual pinned RetroArch behavior was not observed.
+
+## Security Audit 2026-10-08 — final current-source review
+
+| Metric | Count |
+|---|---|
+| Current register rows reviewed | 54 |
+| Closed | 49 |
+| Open | 5 |
+| Blocking open (`block_on: high`) | 4 |
+
+The current register was reconciled against the 18 plan threat models and the prior ASVS L1 evidence; the active source delta since the 54-row audit is limited to Phase 04 evidence checkers, their tests, and the validation record. The checker changes were reviewed at ASVS L1 against the exact paths and current controlled records, and the full register still has no accepted risks or unmapped summary threat flag.
+
+| Threat ID | ASVS L1 result | Current evidence |
+|---|---|---|
+| T-04-35 | CLOSED | `tests/tools/check_phase04_validation_map.py` parses all current security rows, rejects duplicate IDs, counts only high/open blockers, requires the exact four high/open IDs plus T-04-34 medium/open, rejects other open rows, and requires the blocking count to equal the parsed rows. It pins current frontend requirement/report rows; `tests/tools/test_check_phase04_validation_map.py` exercises count, severity, status, duplicate-row, and contradictory-evidence mutations. The direct checker and 14-test mutation suite pass. |
+| T-04-36 | CLOSED | `tools/verify_playable.py::check_docs()` requires exactly one current `04-15 T2` row, checks that both requirements are named, and full-matches the status against the Pending/unknown grammar. Its tests accept the canonical pending state and reject affirmative, appended, placeholder, missing, and contradictory status claims. The 23-test qualification suite and docs-only gate pass. |
+| T-04-34 | OPEN — medium, retained pending independent post-fix review | The constrained grammar and negative controls are present and pass; the register keeps this threat open until the separately required independent review/disposition resolves WR-06. It does not count toward `threats_open` because `block_on: high`. |
+| T-04-11, T-04-15, T-04-18, T-04-20 | OPEN — high, retained by explicit direction | No closure is inferred from the checker tests or this review. The four disclosure threats continue to block the phase. |
+
+The 54-row inventory remains 49 closed and 5 open: the four directed high-severity disclosure threats and T-04-34 at medium severity. Thus `threats_open: 4` remains the severity-filtered blocking count. HOST-02 and frontend QUAL-03 remain Pending/unknown, and actual pinned RetroArch load, display, controls, unload, and exit remain manual-only and unobserved; GUI-free tests are not frontend proof.

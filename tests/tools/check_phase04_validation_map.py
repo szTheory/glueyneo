@@ -78,29 +78,158 @@ def parse_review_findings(review: str) -> dict[str, tuple[str, str]]:
     return findings
 
 
-def has_frontend_load_uncertainty(evidence: str) -> bool:
-    """Require actual app-load uncertainty without accepting a contradictory success claim."""
+PINNED_FRONTEND_UNCERTAINTY_EVIDENCE = (
+    "Actual pinned-app load, presentation, input, unload, and exit remain unobserved. "
+    "The recorded app launch aborted with exit -6 before screenshot; GUI-free callback "
+    "and runner tests do not establish this truth."
+)
+HOST_FRONTEND_UNCERTAINTY_EVIDENCE = (
+    "No fresh screenshot or actual app input/unload observation; launch previously aborted before screenshot."
+)
+QUAL_FRONTEND_UNCERTAINTY_EVIDENCE = (
+    "Procedure and identities are documented; successful actual frontend load remains unknown."
+)
+QUALIFICATION_GOAL_UNCERTAINTY_EVIDENCE = (
+    "`docs/first-playable-build.md` records the procedure and environment identities, and the qualification runner checks its documentation contract. "
+    "Its actual frontend load lane remains unknown, so successful load on the pinned frontend is not established."
+)
+QUALIFICATION_ARTIFACT_UNCERTAINTY_EVIDENCE = (
+    "Documentation and automated gates are substantive; actual pinned frontend load remains unknown."
+)
+LIBRETRO_ARTIFACT_FRONTEND_BOUNDARY = (
+    "Callback contract is linked to native frame advancement; `libretro_callback` passes. "
+    "This does not prove actual RetroArch behavior."
+)
+LIBRETRO_LINK_FRONTEND_BOUNDARY = (
+    "`libretro_callback` passes; actual frontend remains unobserved."
+)
+QUALIFICATION_RUNNER_UNCERTAINTY_EVIDENCE = (
+    "Runner/document contract is tested; app launch is unknown and was not retried."
+)
+QUALIFICATION_FLOW_UNCERTAINTY_STATUS = "⚠️ UNKNOWN, correctly fail-closed"
+ACTUAL_FRONTEND_SPOTCHECK_RESULT = "User direction keeps this manual-only; no GUI launch was made."
+CURRENT_FRONTEND_ROWS = {
+    "goal": [
+        "3",
+        "A user can load, run, control, and unload the fixture in an actual pinned macOS RetroArch build with software video, documented controller mapping, and frontend-owned pacing.",
+        "? UNCERTAIN",
+        PINNED_FRONTEND_UNCERTAINTY_EVIDENCE,
+    ],
+    "qualification_goal": [
+        "5",
+        "An integrator can follow the clean-tree build/install/load procedure for the native library and libretro adapter on the selected macOS configuration and identify exact dependency, compiler, SDK, OS, architecture, and frontend identities plus untested configurations.",
+        "? UNCERTAIN",
+        QUALIFICATION_GOAL_UNCERTAINTY_EVIDENCE,
+    ],
+    "qualification_artifact": [
+        "`tools/verify_playable.py` and `docs/first-playable-build.md`",
+        "Clean qualification procedure and identity reporting",
+        "⚠️ PARTIAL",
+        QUALIFICATION_ARTIFACT_UNCERTAINTY_EVIDENCE,
+    ],
+    "libretro_artifact": [
+        "`src/libretro/libretro_core.c`",
+        "Thin consumer forwarding input, video, and lifecycle",
+        "✓ VERIFIED",
+        LIBRETRO_ARTIFACT_FRONTEND_BOUNDARY,
+    ],
+    "qualification_link": [
+        "Qualification runner",
+        "pinned RetroArch process",
+        "identity-checked smoke lane and status receipt",
+        "⚠️ PARTIAL",
+        QUALIFICATION_RUNNER_UNCERTAINTY_EVIDENCE,
+    ],
+    "libretro_link": [
+        "Libretro callback",
+        "native frame API",
+        "callback forwards sampled input and frame output",
+        "✓ WIRED",
+        LIBRETRO_LINK_FRONTEND_BOUNDARY,
+    ],
+    "qualification_flow": [
+        "Qualification evidence",
+        "frontend status",
+        "actual app observation or explicit unknown",
+        "No actual app result exists",
+        QUALIFICATION_FLOW_UNCERTAINTY_STATUS,
+    ],
+    "libretro_flow": [
+        "Libretro callback",
+        "video/input",
+        "frontend callback input is forwarded to the native instance; output pixels are submitted through callback",
+        "Yes in callback harness",
+        "✓ FLOWING; actual frontend observation remains human-only",
+    ],
+    "actual_spotcheck": [
+        "Actual pinned RetroArch load, display, controls, and unload",
+        "Not run",
+        ACTUAL_FRONTEND_SPOTCHECK_RESULT,
+        "? HUMAN",
+    ],
+    "evidence_map_spotcheck": [
+        "Current security/evidence-map consistency and report uncertainty",
+        "`python3 tests/tools/check_phase04_validation_map.py`",
+        "Passed; preserves four high/open threats, T-04-34 medium/open, and Pending/unknown frontend state.",
+        "✓ PASS",
+    ],
+    "qualification_spotcheck": [
+        "Qualification/privacy regressions",
+        "`python3 tests/tools/test_verify_playable.py -v`",
+        "23/23 passed.",
+        "✓ PASS",
+    ],
+    "runner_spotcheck": [
+        "GUI-free RetroArch runner contract",
+        "`python3 tests/libretro/test_retroarch_smoke.py -v`",
+        "27/27 passed.",
+        "✓ PASS",
+    ],
+    "docs_spotcheck": [
+        "Documentation claim gate",
+        "`python3 tools/verify_playable.py --check-docs`",
+        "Passed.",
+        "✓ PASS",
+    ],
+    "host_requirement": [
+        "HOST-02",
+        "04-02, 04-08, 04-15, 04-18",
+        "Actual pinned RetroArch load, run, control, and unload",
+        "? NEEDS HUMAN / PENDING",
+        HOST_FRONTEND_UNCERTAINTY_EVIDENCE,
+    ],
+    "qual_requirement": [
+        "QUAL-03",
+        "04-06, 04-08, 04-15, 04-18",
+        "Clean-tree build/install/load steps and selected macOS identities",
+        "? NEEDS HUMAN / PENDING",
+        QUAL_FRONTEND_UNCERTAINTY_EVIDENCE,
+    ],
+}
+
+
+def has_frontend_load_uncertainty(evidence: str, *, scope: str) -> bool:
+    """Accept only the exact current report evidence for each frontend scope."""
     normalized = " ".join(evidence.split()).casefold()
-    has_actual_app = re.search(r"\bactual\b", normalized) and re.search(
-        r"\b(?:pinned(?: macos)?(?: retroarch)?[- ]?(?:app|frontend)?|retroarch|app|frontend)\b",
-        normalized,
-    )
-    has_load = re.search(r"\bload(?:ed|ing)?\b", normalized)
-    has_uncertainty = re.search(
-        r"\b(?:remain(?:s|ed)? unobserved|unobserved|not observed|unknown|unverified|not established)\b",
-        normalized,
-    )
-    has_success_claim = re.search(
-        r"\b(?:loaded successfully|load succeeded|successfully loaded|"
-        r"(?:app|fixture|content) (?:loaded|loads) successfully|"
-        r"(?:was|were|is|are) observed successfully|"
-        r"(?:was|were|is|are) observed|"
-        r"presented (?:the )?(?:fixture|pixels|video)|"
-        r"displayed (?:the )?(?:fixture|pixels|video)|"
-        r"input (?:worked|responded)|unloaded successfully|exited normally)\b",
-        normalized,
-    )
-    return bool(has_actual_app and has_load and has_uncertainty and not has_success_claim)
+    expected_by_scope = {
+        "goal": PINNED_FRONTEND_UNCERTAINTY_EVIDENCE,
+        "host": HOST_FRONTEND_UNCERTAINTY_EVIDENCE,
+        "qual": QUAL_FRONTEND_UNCERTAINTY_EVIDENCE,
+        "qual_goal": QUALIFICATION_GOAL_UNCERTAINTY_EVIDENCE,
+        "qual_artifact": QUALIFICATION_ARTIFACT_UNCERTAINTY_EVIDENCE,
+        "libretro_artifact": LIBRETRO_ARTIFACT_FRONTEND_BOUNDARY,
+        "libretro_link": LIBRETRO_LINK_FRONTEND_BOUNDARY,
+        "qual_runner": QUALIFICATION_RUNNER_UNCERTAINTY_EVIDENCE,
+    }
+    expected = expected_by_scope.get(scope)
+    return expected is not None and normalized == " ".join(expected.split()).casefold()
+
+
+def require_current_frontend_row(rows: list[list[str]], key: str, scope: str) -> None:
+    expected = CURRENT_FRONTEND_ROWS[scope]
+    matches = [row for row in rows if row and row[0] == key]
+    require(len(matches) == 1 and matches[0] == expected,
+            f"current frontend report row {key!r} changed or contradicts its audited state")
 
 
 def parse_disposition_yaml(document: str) -> dict[str, dict[str, str]]:
@@ -239,21 +368,95 @@ def main() -> None:
             "unexpected open security threat outside the four disclosure findings and T-04-34")
 
     goal_rows = table_rows(verification, "| # | Truth | Status | Evidence |")
+    require(all(len(row) == 4 for row in goal_rows), "malformed phase-goal verification row")
+    require_current_frontend_row(goal_rows, "3", "goal")
+    require_current_frontend_row(goal_rows, "5", "qualification_goal")
     actual_frontend = [row for row in goal_rows if len(row) == 4 and row[0] == "3"]
     require(len(actual_frontend) == 1 and actual_frontend[0][2] == "? UNCERTAIN",
             "current verification report does not mark actual pinned frontend load as uncertain")
-    require(has_frontend_load_uncertainty(actual_frontend[0][3]),
+    require(has_frontend_load_uncertainty(actual_frontend[0][3], scope="goal"),
             "current verification goal evidence must explicitly mark actual pinned-app load unobserved or unknown and contain no success claim")
+    qualification_goal = [row for row in goal_rows if row[0] == "5"]
+    require(len(qualification_goal) == 1 and qualification_goal[0][2] == "? UNCERTAIN",
+            "current qualification goal does not retain its uncertain status")
+    require(has_frontend_load_uncertainty(qualification_goal[0][3], scope="qual_goal"),
+            "current qualification goal evidence no longer preserves the actual frontend unknown boundary")
+
+    artifact_rows = table_rows(verification, "| Artifact | Expected | Status | Details |")
+    require(all(len(row) == 4 for row in artifact_rows), "malformed required-artifact verification row")
+    require_current_frontend_row(
+        artifact_rows, "`tools/verify_playable.py` and `docs/first-playable-build.md`", "qualification_artifact"
+    )
+    require_current_frontend_row(artifact_rows, "`src/libretro/libretro_core.c`", "libretro_artifact")
+    qualification_artifact = [row for row in artifact_rows if row[0] == "`tools/verify_playable.py` and `docs/first-playable-build.md`"]
+    require(len(qualification_artifact) == 1 and qualification_artifact[0][2] == "⚠️ PARTIAL",
+            "qualification artifact status differs from the current report")
+    require(has_frontend_load_uncertainty(qualification_artifact[0][3], scope="qual_artifact"),
+            "qualification artifact evidence no longer records actual frontend uncertainty")
+    libretro_artifact = [row for row in artifact_rows if row[0] == "`src/libretro/libretro_core.c`"]
+    require(len(libretro_artifact) == 1 and
+            has_frontend_load_uncertainty(libretro_artifact[0][3], scope="libretro_artifact"),
+            "libretro artifact evidence overstates actual frontend behavior")
+
+    link_rows = table_rows(verification, "| From | To | Via | Status | Details |")
+    require(all(len(row) == 5 for row in link_rows), "malformed key-link verification row")
+    require_current_frontend_row(link_rows, "Qualification runner", "qualification_link")
+    require_current_frontend_row(link_rows, "Libretro callback", "libretro_link")
+    qualification_link = [row for row in link_rows if row[0] == "Qualification runner"]
+    require(len(qualification_link) == 1 and qualification_link[0][3] == "⚠️ PARTIAL" and
+            has_frontend_load_uncertainty(qualification_link[0][4], scope="qual_runner"),
+            "qualification runner link no longer preserves unknown actual-app evidence")
+    libretro_link = [row for row in link_rows if row[0] == "Libretro callback"]
+    require(len(libretro_link) == 1 and
+            has_frontend_load_uncertainty(libretro_link[0][4], scope="libretro_link"),
+            "libretro link overstates actual frontend behavior")
+
+    flow_rows = table_rows(verification, "| Artifact | Data variable | Source | Produces Real Data | Status |")
+    require(all(len(row) == 5 for row in flow_rows), "malformed data-flow verification row")
+    require_current_frontend_row(flow_rows, "Qualification evidence", "qualification_flow")
+    require_current_frontend_row(flow_rows, "Libretro callback", "libretro_flow")
+    qualification_flow = [row for row in flow_rows if len(row) == 5 and row[0] == "Qualification evidence"]
+    require(len(qualification_flow) == 1 and qualification_flow[0][3] == "No actual app result exists" and
+            qualification_flow[0][4] == QUALIFICATION_FLOW_UNCERTAINTY_STATUS,
+            "qualification data-flow row claims actual frontend evidence")
+
+    spotcheck_rows = table_rows(verification, "| Behavior | Command | Result | Status |")
+    require_current_frontend_row(
+        spotcheck_rows, "Actual pinned RetroArch load, display, controls, and unload", "actual_spotcheck"
+    )
+    require_current_frontend_row(
+        spotcheck_rows, "Current security/evidence-map consistency and report uncertainty", "evidence_map_spotcheck"
+    )
+    require_current_frontend_row(spotcheck_rows, "Qualification/privacy regressions", "qualification_spotcheck")
+    require_current_frontend_row(spotcheck_rows, "GUI-free RetroArch runner contract", "runner_spotcheck")
+    require_current_frontend_row(spotcheck_rows, "Documentation claim gate", "docs_spotcheck")
+    actual_frontend_spotcheck = [
+        row for row in spotcheck_rows
+        if len(row) == 4 and row[0] == "Actual pinned RetroArch load, display, controls, and unload"
+    ]
+    require(len(actual_frontend_spotcheck) == 1 and actual_frontend_spotcheck[0][1] == "Not run" and
+            actual_frontend_spotcheck[0][2] == ACTUAL_FRONTEND_SPOTCHECK_RESULT and
+            actual_frontend_spotcheck[0][3] == "? HUMAN",
+            "actual frontend spot-check is no longer marked manual-only and unrun")
 
     requirement_rows = table_rows(verification, "| Requirement | Source Plan")
-    requirement_status = {row[0]: row[3] for row in requirement_rows if len(row) == 5}
-    require((requirement_status.get("HOST-02") or "").startswith("? NEEDS HUMAN / PENDING"),
+    require(all(len(row) == 5 for row in requirement_rows), "malformed requirement coverage row")
+    require_current_frontend_row(requirement_rows, "HOST-02", "host_requirement")
+    require_current_frontend_row(requirement_rows, "QUAL-03", "qual_requirement")
+    requirement_ids = [row[0] for row in requirement_rows]
+    require(len(requirement_ids) == len(set(requirement_ids)),
+            "requirements coverage contains duplicate requirement rows")
+    requirement_status = {row[0]: row[3] for row in requirement_rows}
+    require(requirement_status.get("HOST-02") == "? NEEDS HUMAN / PENDING",
             "HOST-02 is not explicitly marked as awaiting human evidence")
+    host_row = next(row for row in requirement_rows if row[0] == "HOST-02")
+    require(has_frontend_load_uncertainty(host_row[4], scope="host"),
+            "HOST-02 evidence no longer matches the current actual-app uncertainty record")
     qual_status = requirement_status.get("QUAL-03") or ""
-    require(qual_status.startswith(("✗ BLOCKED / PARTIAL", "? NEEDS HUMAN / PENDING")),
+    require(qual_status in {"✗ BLOCKED / PARTIAL", "? NEEDS HUMAN / PENDING"},
             "QUAL-03 is not explicitly marked blocked, partial, or pending human evidence")
     qual_row = next(row for row in requirement_rows if row[0] == "QUAL-03")
-    require(has_frontend_load_uncertainty(qual_row[4]),
+    require(has_frontend_load_uncertainty(qual_row[4], scope="qual"),
             "QUAL-03 evidence no longer explicitly marks actual frontend load unobserved or unknown")
     print("Phase 04 validation map matches current focused test results and preserves open security and frontend gates.")
 
