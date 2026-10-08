@@ -65,15 +65,10 @@ def sanitize_diagnostic_text(text: str, *, temporary_root: Path | None = None) -
         result: list[str] = []
         position = 0
         while match := root_pattern.search(body, position):
-            opening_quote = body[match.start() - 1] if match.start() > 0 else ""
-            end = _json_string_end(body, match.start() - 1) if opening_quote == '"' else None
-            result.append(body[position:match.start() - 1] if end is not None else body[position:match.start()])
-            if end is not None:
-                position = end + 1
-            else:
-                # Arbitrary subprocess/crash text has no reliable unquoted
-                # path grammar; only a valid JSON string proves a quoted end.
-                position = len(body)
+            # Subprocess and crash text is arbitrary: a quote cannot prove a
+            # path boundary, so redact through the end of this line.
+            result.append(body[position:match.start()])
+            position = len(body)
             root = match.group()
             if root.startswith(str(Path(__file__).resolve().parents[2])):
                 marker = "[repo]"
@@ -91,32 +86,6 @@ def sanitize_diagnostic_text(text: str, *, temporary_root: Path | None = None) -
         marker = "\n[diagnostic output truncated]"
         text = text[-(DIAGNOSTIC_OUTPUT_LIMIT - len(marker)):] + marker
     return text.strip()
-
-
-def _json_string_end(text: str, opening_quote: int) -> int | None:
-    if opening_quote < 0 or text[opening_quote] != '"':
-        return None
-    index = opening_quote + 1
-    while index < len(text):
-        char = text[index]
-        if char == '"':
-            return index
-        if ord(char) < 0x20:
-            return None
-        if char == "\\":
-            index += 1
-            if index >= len(text):
-                return None
-            escaped = text[index]
-            if escaped == "u":
-                digits = text[index + 1:index + 5]
-                if len(digits) != 4 or not all(value in "0123456789abcdefABCDEF" for value in digits):
-                    return None
-                index += 4
-            elif escaped not in '"\\/bfnrt':
-                return None
-        index += 1
-    return None
 
 
 def extract_crash_reason(report: str) -> str:

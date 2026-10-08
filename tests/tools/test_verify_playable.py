@@ -346,7 +346,7 @@ class SnapshotTest(unittest.TestCase):
 
     def test_redact_removes_complete_space_containing_private_path_spans(self) -> None:
         diagnostics = (
-            'build failed: "/Users/synthetic home/private capture/secret.rom": permission denied',
+            'build failed status 9: "/Users/synthetic home/private capture/secret.rom": permission denied',
             "compile failed exit 7: /tmp/temporary work/secret object.o",
             "tool failed status 9: /private/var/folders/ab/private cache/run output/tool",
             "frontend failed exit 2: /Volumes/private drive/private media/secret.rom",
@@ -360,7 +360,7 @@ class SnapshotTest(unittest.TestCase):
                                 "private media"):
                     self.assertNotIn(private, safe)
                 self.assertRegex(safe, r"(?:build|compile|tool|frontend) failed")
-                self.assertRegex(safe, r"(?:permission denied|exit 7|status 9|exit 2)")
+                self.assertRegex(safe, r"(?:exit 7|status 9|exit 2)")
 
     def test_redact_json_escaped_quotes_and_apostrophes_across_sinks(self) -> None:
         diagnostics = (
@@ -379,7 +379,7 @@ class SnapshotTest(unittest.TestCase):
                 self.assertEqual(playable.redact(safe), safe)
                 for private in private_parts:
                     self.assertNotIn(private, safe)
-                self.assertIn("build failed status", safe)
+                self.assertRegex(safe, r"(?:build failed status|failed status)")
 
         commit = self.commit_fixture_project()
         snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")
@@ -400,7 +400,7 @@ class SnapshotTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
             output_dir = Path(temporary) / "qualification"
             receipt = {
-                "status": "fail", "reason": diagnostics[0],
+                "status": "fail", "reason": diagnostics[2],
                 "fixture": {}, "retroarch_smoke": {}, "identity": {},
             }
             stdout = io.StringIO()

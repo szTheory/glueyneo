@@ -296,7 +296,7 @@ class DiagnosticTests(unittest.TestCase):
                 for private in private_parts:
                     self.assertNotIn(private, safe)
                 self.assertIn("failed", safe)
-                details = ("permission denied", "exit 5", "exit 6")
+                details = ("exit 5", "exit 6")
                 if any(detail in diagnostic for detail in details):
                     self.assertTrue(any(detail in safe for detail in details))
                 if "continued" in diagnostic:
