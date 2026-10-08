@@ -5,17 +5,17 @@ milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
 current_plan: 9
-status: executing
-stopped_at: Phase 04 gap-closure Plan 04-09 is ready; execute it next while HOST-02 remains human-needed
-last_updated: "2026-10-08T00:52:57.300Z"
+status: verifying
+stopped_at: Completed 04-09; awaiting fresh phase-goal verification
+last_updated: "2026-10-08T01:00:05.837Z"
 last_activity: 2026-10-07
-last_activity_desc: "Phase 04 Plan 04-09 is ready to normalize HOST coverage metadata; actual RetroArch evidence remains human-needed"
-state_head: a3d8ec75d25a20b16aeefd551c6d5aafb5e7c2e0
+last_activity_desc: Phase 04 Plans 01–09 are complete; fresh goal verification is pending and HOST-02 remains human-needed
+state_head: 3ce98fc5ce18bfeaf081f2b59d19e4b866145c58
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
   percent: 0
 ---
 
@@ -30,12 +30,12 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 ## Current Position
 
-Phase: 04 (Public Playable Tracer) — READY TO EXECUTE
+Phase: 04 (Public Playable Tracer) — READY FOR VERIFICATION
 Current Plan: 9
 Total Plans in Phase: 9
-Status: Ready to execute
+Status: Ready for phase-goal verification
 Last Activity: 2026-10-07
-Last Activity Description: Phase 04 Plan 04-09 is ready; actual RetroArch evidence remains human-needed
+Last Activity Description: Plans 01–09 are complete; fresh verification is pending and HOST-02 remains human-needed
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -46,7 +46,7 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
-**Plans completed:** 6 of 6 planned.
+**Plans completed:** 9 of 9 planned.
 **Per-Plan Metrics:**
 
 | Plan | Duration | Tasks | Files |
@@ -59,28 +59,29 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P06 | 9min | 2 tasks | 6 files |
 | Phase 04 P07 | 13min | 2 tasks | 4 files |
 | Phase 04 P08 | 12min | 2 tasks | 6 files |
+| Phase 04 P09 | 6min | 1 tasks | 1 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-08T00:19:51.667Z
+**Last session:** 2026-10-08T01:00:05.799Z
 
-**Stopped At:** Completed 04-08-PLAN.md; phase goal verification pending
+**Stopped At:** Completed 04-09; awaiting fresh phase-goal verification
 **Resume File:** None
 
 ## Scope Notes
 
 - Accepted research and primary-source references are preserved in [RESEARCH.md](RESEARCH.md). Outcome: locally reach interactive Metal Slug X gameplay with movement, firing, scrolling, and representative sound in one pinned MVS/macOS RetroArch setup; public CI uses a separate first-party fixture and never commercial game/BIOS data. All 20 requirements and their primary allocations in the roadmap are user-approved.
-- Planning milestone ID: `first-playable-game`; release version remains unassigned. Phase 04 Plans 01–08 are complete and gap-closure Plan 09 is pending; clean install/consumer and 34-test CTest evidence passed, while HOST-02 remains human-needed pending a successful actual RetroArch screenshot run. Project Phase 04 begins this workstream; independent playable work does not close or depend on completion of the sibling hosted-release gate.
+- Planning milestone ID: `first-playable-game`; release version remains unassigned. Phase 04 Plans 01–09 are complete; clean install/consumer and 34-test CTest evidence passed, while phase-goal verification and HOST-02 remain open pending a successful actual RetroArch screenshot run. Project Phase 04 begins this workstream; independent playable work does not close or depend on completion of the sibling hosted-release gate.
 - Milestone-start triage on 2026-10-07 found no open issues and one draft PR, [#1](https://github.com/szTheory/glueyneo/pull/1), for the separate diagnostic release work. It supplies no playable-game requirement or completion evidence.
 - Work is isolated on `docs/first-playable-game-milestone`. The existing 138 planning relocations into the diagnostic workstream were verified byte-identical and committed; unrelated pre-existing methodology/configuration/preparation edits remain outside this milestone's commits.
 - Carry-forward constraints: keep the owned native C17 core deterministic and host-independent; introduce the libretro/software-video path early; keep media/archive I/O outside the native core; retain the owned 68000 direction and gate Z80/YM2610 admission on evidence. PROJECT-D-48 permits the narrow ymfm C++14 exception behind a private C interface; a future C replacement is optional. The supplied BIOS is available locally, but the exact MVS profile and compatibility remain unqualified.
-- Approved Phase 04–07 sequencing is in [ROADMAP.md](ROADMAP.md): public playable tracer and early Z80/ymfm admission → selected MVS boot including required sound-CPU handshakes → active title control → sound and qualification. Phase 04 has nine plans across eight waves; Plans 01–08 are complete, Plan 09 is pending, and phase goal verification is pending. HOST-02 remains human-needed until the pinned RetroArch build produces fresh screenshots and input-control evidence.
+- Approved Phase 04–07 sequencing is in [ROADMAP.md](ROADMAP.md): public playable tracer and early Z80/ymfm admission → selected MVS boot including required sound-CPU handshakes → active title control → sound and qualification. Phase 04 has nine plans across eight waves; Plans 01–09 are complete, and fresh phase-goal verification is pending. HOST-02 remains human-needed until the pinned RetroArch build produces fresh screenshots and input-control evidence.
 - Goal: advance from the diagnostic SDK toward a playable Neo Geo game.
 - Local qualification: a user-provided private game archive is stored under the Git-ignored `local/roms/` directory. Keep its contents and private checksums out of tracked files, CI, and release artifacts.
 - The user-provided BIOS archive is also stored under the Git-ignored `local/roms/` directory. The copy matches its source, passes ZIP CRC validation and is untracked; those checks do not establish BIOS compatibility.
 - Public CI: use original fixtures and/or homebrew assets only after confirming redistribution rights for the specific ROM assets; a source-code license alone is not sufficient evidence for bundled game data.
 - The local archive passed ZIP CRC checks and matched all 13 ROM size/SHA-1 entries in MAME's current Neo Geo software list. That confirms the archive identity, not emulator compatibility.
-- Next GSD command: `$gsd-execute-phase 04 --gaps-only --ws first-playable-game`.
+- Next GSD command: `$gsd-execute-phase 04 --ws first-playable-game` to refresh the stale phase-goal verification.
 
 ## Decisions
 
