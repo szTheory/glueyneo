@@ -35,7 +35,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   4. A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including license/source/state audits, cycle or clock and interrupt/bus behavior, deterministic timing, continuation and independent-instance evidence, contained C++ failures, and static/shared C-consumer linkage; a failed gate blocks admission and requires bounded replanning rather than phase completion.
   5. An integrator can follow the clean-tree build/install/load procedure for the native library and libretro adapter on the selected macOS configuration and identify exact dependency, compiler, SDK, OS, architecture, and frontend identities plus untested configurations.
 
-**Plans**: 11/11 plans executed across 9 waves; plan execution is complete. Phase acceptance remains open pending the independent security audit and actual pinned-app evidence.
+**Plans**: 11/12 plans executed across 9 completed waves; gap-closure plan 04-12 is ready in Wave 10. Phase execution and acceptance remain incomplete pending repository repairs, the independent security audit, and actual pinned-app evidence.
 **Wave 1**
 - [x] 04-01-PLAN.md
 
@@ -64,6 +64,9 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 
 **Wave 9** *(gap closure; blocked on Wave 8 completion)*
 - [x] 04-11-PLAN.md — Bind receipt rows to committed archive bytes and reconcile the validation map
+
+**Wave 10** *(gap closure; blocked on Wave 9 completion)*
+- [ ] 04-12-PLAN.md — Repair receipt types, complete path redaction, validation-map state and CPU inventory evidence
 
 **UI hint**: no
 
