@@ -279,8 +279,10 @@ class ValidationMapReconciliationTest(unittest.TestCase):
         mutations = (
             ("security count", "SECURITY", lambda text: text.replace("threats_open: 4", "threats_open: 3", 1)),
             ("security row", "SECURITY", lambda text: re.sub(r"(?m)^(\| T-04-11 \|[^\n]*\| )open(\s*\|)$", r"\1closed\2", text)),
+            ("missing required medium threat", "SECURITY", lambda text: re.sub(r"(?m)^\| T-04-34 \|[^\n]*\n", "", text, count=1)),
+            ("medium threat downgraded", "SECURITY", lambda text: text.replace("| T-04-34 | Tampering | `check_docs()` frontend qualification status | medium | mitigate |", "| T-04-34 | Tampering | `check_docs()` frontend qualification status | low | mitigate |", 1)),
             ("HOST-02 observed", "VERIFICATION", lambda text: re.sub(r"(?m)^(\| HOST-02 \|.*\| )\? NEEDS HUMAN(?: / PENDING)?( \|.*)$", r"\1pass\2", text)),
-            ("QUAL-03 observed", "VERIFICATION", lambda text: re.sub(r"(?m)^(\| QUAL-03 \|.*\| )\? NEEDS HUMAN(?: / PENDING)?( \|.*)$", r"\1pass\2", text)),
+            ("QUAL-03 observed", "VERIFICATION", lambda text: re.sub(r"(?m)^(\| QUAL-03 \|[^\n]*\| )✗ BLOCKED / PARTIAL( \|.*)$", r"\1✓ SATISFIED\2", text)),
         )
         for label, name, transform in mutations:
             with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:

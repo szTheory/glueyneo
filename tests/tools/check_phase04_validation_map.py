@@ -202,20 +202,34 @@ def main() -> None:
     open_threats = {key for key, value in threats.items() if value[2] == "open"}
     high_open = {key for key, value in threats.items() if value[0] == "high" and value[2] == "open"}
     count = re.search(r"(?m)^threats_open: (\d+)$", security_yaml)
-    require(count is not None and int(count.group(1)) == len(open_threats),
-            "security frontmatter open count differs from register")
-    required_open = {"T-04-11", "T-04-15", "T-04-18", "T-04-20"}
-    require(high_open == required_open, "four high/open disclosure threats differ from the active security register")
-    require(open_threats == required_open, "unexpected open security threat outside the four disclosure findings")
+    required_high_open = {"T-04-11", "T-04-15", "T-04-18", "T-04-20"}
+    required_medium_open = {"T-04-34"}
+    require(count is not None and int(count.group(1)) == len(high_open),
+            "security frontmatter blocking count differs from high/open register rows")
+    require(high_open == required_high_open,
+            "four high/open disclosure threats differ from the active security register")
+    require({key for key in open_threats if threats[key][0] == "medium"} == required_medium_open,
+            "required medium/open T-04-34 differs from the active security register")
+    require(open_threats == required_high_open | required_medium_open,
+            "unexpected open security threat outside the four disclosure findings and T-04-34")
 
-    requirement_rows = table_rows(verification, "| Requirement | Source plans | Description | Status | Evidence |")
+    goal_rows = table_rows(verification, "| # | Truth | Status | Evidence |")
+    actual_frontend = [row for row in goal_rows if len(row) == 4 and row[0] == "3"]
+    require(len(actual_frontend) == 1 and actual_frontend[0][2] == "? UNCERTAIN",
+            "current verification report does not mark actual pinned frontend load as uncertain")
+    require(re.search(r"\bactual app/load/presentation/input/unload/exit were not observed\b",
+                      actual_frontend[0][3], re.IGNORECASE) is not None,
+            "current verification goal evidence no longer states actual pinned-app observations are unobserved")
+
+    requirement_rows = table_rows(verification, "| Requirement | Source Plans | Description | Status | Evidence |")
     requirement_status = {row[0]: row[3] for row in requirement_rows if len(row) == 5}
-    for requirement in ("HOST-02", "QUAL-03"):
-        require((requirement_status.get(requirement) or "").startswith("? NEEDS HUMAN"),
-                f"{requirement} is not explicitly marked as awaiting human evidence")
-    require("actual frontend load portion remains unobserved" in verification.lower(),
-            "verification no longer states that actual frontend load is unobserved")
-
+    require((requirement_status.get("HOST-02") or "").startswith("? NEEDS HUMAN / PENDING"),
+            "HOST-02 is not explicitly marked as awaiting human evidence")
+    require((requirement_status.get("QUAL-03") or "").startswith("✗ BLOCKED / PARTIAL"),
+            "QUAL-03 is not explicitly marked blocked/partial")
+    qual_row = next(row for row in requirement_rows if row[0] == "QUAL-03")
+    require("frontend portion remains unknown" in qual_row[4].lower(),
+            "QUAL-03 frontend portion is no longer explicitly unknown")
     print("Phase 04 validation map matches current focused test results and preserves open security and frontend gates.")
 
 
