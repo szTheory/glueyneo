@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: public-playable-tracer
-current_plan: 15
+current_plan: 16
 status: blocked
-stopped_at: Plan 04-16 ready for gap-only execution
-last_updated: "2026-10-08T15:49:14.849Z"
+stopped_at: Phase 04 verification found gaps after Plan 04-16
+last_updated: "2026-10-08T16:32:34.394Z"
 last_activity: 2026-10-08
-last_activity_desc: Phase 04 planning complete — 16 plans ready
-state_head: 7b5e08c4a44cdc7524a61d1233c047d67b1a72a1
+last_activity_desc: Plan 04-16 completed; whole-phase verification found gaps
+state_head: fe0f3b44184c331145e31b47724b1f606f2f3d90
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 16
-  completed_plans: 15
+  completed_plans: 16
   percent: 0
 ---
 
@@ -26,27 +26,27 @@ progress:
 See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 **Core value:** Trustworthy Neo Geo emulation that other software can embed easily.
-**Current focus:** Phase 04 — Plan 04-16 is ready to repair CR-03 and WR-05; 15 earlier plans have execution summaries
+**Current focus:** Phase 04 — Plan 04-16 complete; verification found gaps; phase remains blocked
 
 ## Current Position
 
-Phase: 04 (public-playable-tracer) — READY TO EXECUTE
-Current Plan: 15
+Phase: 04 (public-playable-tracer)
+Current Plan: 16
 Total Plans in Phase: 16
-Status: Plan 04-16 is ready to repair CR-03/WR-05; four high disclosure threats and the unavailable actual frontend evidence still block phase completion
+Status: blocked
 Last activity: 2026-10-08 — Phase 04 gap planning completed after fresh audits
-Last Activity Description: Phase 04 planning complete — 16 plans ready
+Last Activity Description: Plan 04-16 completed; whole-phase verification found gaps
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 15
+**Current Plan:** 16
 
 ## Performance Metrics
 
-**Plans completed:** 15 of 15; Phase 04 acceptance remains incomplete.
+**Plans completed:** 16 of 16; Phase 04 acceptance remains incomplete
 **Per-Plan Metrics:**
 
 | Plan | Duration | Tasks | Files |
@@ -66,12 +66,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P13 | 15min | 2 tasks | 8 files |
 | Phase 04 P14 | 54m 46s | 3 tasks | 9 files |
 | Phase 04 P15 | 6min | 2 tasks | 3 files |
+| Phase 04 P16 | 10min | 2 tasks | 7 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-08T15:17:19Z
+**Last session:** 2026-10-08T16:31:50.551Z
 
-**Stopped At:** Fresh security and code-review audits recorded; Phase 04 remains blocked
+**Stopped At:** Phase 04 verification found gaps after Plan 04-16
 **Resume File:** None
 
 ## Scope Notes
@@ -116,10 +117,12 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 04]: Plan 04-13 repository tests do not close the four high disclosure threats or establish pinned RetroArch HOST-02/QUAL-03 behavior.
 - [Phase 04]: Keep the frontend claim unknown when the materially changed functioning launch context is unavailable.
 - [Phase 04]: Derive HOST-02 and QUAL-03 separately; neither passes without the actual frontend load evidence.
+- [Phase 04]: After a private root appears in unstructured diagnostics, discard the entire remaining value because newline and punctuation do not prove a path boundary.
+- [Phase 04]: Accept only one normalized open/fixed/skipped/deferred disposition matching its record; keep actual frontend requirements Pending/unknown without app evidence.
 
 ### Blockers
 
-- T-04-11, T-04-15, T-04-18 and T-04-20 remain high/open after the fresh audit, as directed. The raw-quote case is fixed, but CR-03 reproduces a newline-containing path suffix leak; tests do not close the broader threats.
-- CR-02 and WR-04 are fixed by Plan 04-14 and confirmed by fresh review. CR-03 and WR-05 plus carried WR-01/WR-02/WR-03 remain open; CR-01 remains fixed history. Phase 04 stays blocked pending gap closure and later evidence gates.
 - Owned-debug is now 47/47 passing, including refreshed identity/source-manifest and target-scoped inventory checks. This repairs the prior deterministic failure without establishing frontend acceptance.
 - HOST-02 remains unknown: pinned RetroArch 1.22.2 aborts before the first screenshot in fresh no-content and core/content launches (EXC_CRASH SIGABRT, return -6). LaunchServices reported kLSNoExecutableErr despite bundle/executable/signature checks; unified-log inspection was sandbox-blocked. A functioning interactive macOS app launch context is still required; cause is not established. Preserve the screenshot, stable no-input frames, RIGHT/LEFT controls, unload and normal-exit observation; do not repeat the launch while its environment is unchanged.
+- WR-06 remains open: the docs gate accepts contradictory Pending/unknown plus closure text, and the current validation-map suite fails 9/10 because WR-06 has no provenance or crosswalk row.
+- T-04-11, T-04-15, T-04-18, and T-04-20 remain high/open by user direction; Plan 04-16 sanitizer tests pass, but no threat closure was granted.

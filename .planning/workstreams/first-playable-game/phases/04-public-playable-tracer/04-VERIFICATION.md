@@ -1,9 +1,10 @@
 ---
 phase: 04-public-playable-tracer
-verified: 2026-10-08T13:16:16Z
+verified: 2026-10-08T16:29:00Z
 status: gaps_found
 score: 3/5 roadmap truths verified
 covered_files:
+  - ".planning/workstreams/first-playable-game/REQUIREMENTS.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-01-PLAN.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-01-SUMMARY.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-02-PLAN.md"
@@ -30,44 +31,34 @@ covered_files:
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-12-SUMMARY.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-13-PLAN.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-13-SUMMARY.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-14-PLAN.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-14-SUMMARY.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-15-PLAN.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-15-SUMMARY.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-16-PLAN.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-16-SUMMARY.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-REVIEW-DISPOSITION.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-REVIEW.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-SECURITY.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md"
-  - "CMakeLists.txt"
   - "docs/first-playable-build.md"
-  - "docs/public-content.md"
-  - "docs/rights-inventory.md"
-  - "experiments/owned_cpu/SUBSET.md"
-  - "experiments/owned_cpu/cpu.h"
-  - "experiments/owned_cpu/source-manifest.json"
-  - "experiments/owned_cpu/state-inventory.json"
   - "include/glueyneo/glueyneo.h"
   - "src/chips/ym2610_candidate.cpp"
-  - "src/chips/ym2610_candidate.h"
   - "src/chips/z80_candidate.c"
   - "src/instance.c"
   - "src/libretro/libretro_core.c"
-  - "tests/chips/Z80-ADMISSION.md"
-  - "tests/chips/check_ym2610.py"
-  - "tests/chips/check_z80_source.py"
   - "tests/chips/test_ym2610.c"
   - "tests/chips/test_z80.c"
-  - "tests/fixture/ORACLE.md"
-  - "tests/fixture/check_fixture.py"
-  - "tests/fixture/public_guest.c"
-  - "tests/fixture/rights-manifest.json"
   - "tests/fixture/test_public_guest.c"
   - "tests/libretro/callback_harness.c"
   - "tests/libretro/retroarch_smoke.py"
   - "tests/libretro/test_retroarch_smoke.py"
-  - "tests/owned_cpu/test_inventory.py"
   - "tests/tools/check_phase04_validation_map.py"
   - "tests/tools/test_check_phase04_validation_map.py"
   - "tests/tools/test_verify_playable.py"
-  - "tools/owned_cpu/inventory.py"
+  - "third_party/chips/z80.h"
   - "tools/verify_playable.py"
-covered_digest: "v3:sha256:8a706825c780940852568a8b84cd1719bd51146eac1e2ec120a9946255b6422b"
+covered_digest: "v3:sha256:e3903afb49c2c503294def5a767d09196ebc365d7e53f37ab5e7a6f5d3e823d6"
 behavior_unverified: 0
 overrides_applied: 0
 decision_coverage:
@@ -76,83 +67,54 @@ decision_coverage:
   not_honored: []
 re_verification:
   previous_status: gaps_found
-  previous_score: 3/5
+  previous_score: 3/5 roadmap truths verified
   gaps_closed:
-    - "Plan 04-13 repaired the validation-map stale-ID regression; its five focused mutation tests and direct gate now pass."
-    - "Plan 04-13 adds regression coverage for escaped JSON quotes and apostrophes through the qualification and frontend sanitizers and sinks."
+    - "Plan 04-16 removes newline-containing private-path suffixes in both sanitizers; current qualification and frontend suites pass 23/23 and 27/27."
+    - "The crosswalk predicate now requires one normalized controlled state; contradiction and normalization controls pass against a coherent temporary evidence map."
   gaps_remaining:
-    - "A new independent review reproduces raw-literal-quote path suffix disclosure; four high-severity threats remain open."
-    - "The validation-map parser still rejects a valid informational IN finding (WR-04)."
-    - "Actual pinned RetroArch behavior and frontend QUAL-03 remain unobserved."
+    - "T-04-11, T-04-15, T-04-18 and T-04-20 remain high/open by user direction."
+    - "WR-06 is actionable: check_docs accepts contradictory Pending/unknown plus closure text, and current review evidence is not reconciled into the map."
+    - "Actual pinned RetroArch behavior and frontend QUAL-03 load evidence remain unknown."
   regressions:
-    - "Independent review found the sanitizer still treats a literal quote in arbitrary diagnostic text as a trusted path boundary."
+    - "A temporary document mutation reproduced check_docs accepting both frontend requirements as passing while also labeled Pending/unknown."
+    - "The current validation-map suite fails 9/10 because WR-06 lacks reconciled evidence and provenance."
 gaps:
-  - truth: "Private filesystem paths are completely removed from retained and printed qualification/frontend diagnostics, and the security gate has no unresolved high-severity disclosure threats."
+  - truth: "Phase 04 security review has no unresolved high-severity disclosure threats."
     status: failed
-    reason: "The current independent review reproduces `failed status 7: \"/Users/synthetic/private\"tail/sensitive.bin\"` becoming `failed status 7: [user]tail/sensitive.bin\"` in both sanitizers. The suffix can reach retained/printed qualification output and frontend diagnostics. T-04-11, T-04-15, T-04-18 and T-04-20 remain high/open; the security verdict is blocked."
+    reason: "The current security register is blocked with four high/open findings: T-04-11, T-04-15, T-04-18 and T-04-20. Plan 04-16 regression suites pass, but the user explicitly directed that these threats stay open and block completion."
+    artifacts:
+      - path: ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-SECURITY.md"
+        issue: "The security status is blocked and threats_open is 4."
+    missing:
+      - "A future security disposition supported by independent evidence; do not close or accept these threats in this verification."
+  - truth: "Documentation and validation gates reject contradictory frontend closure claims and reconcile every current review finding."
+    status: failed
+    reason: "WR-06 reproduces: check_docs accepts HOST-02 Pending; frontend QUAL-03 Pending; unknown; both requirements pass. The mutation suite runs 10 tests and fails 9; the direct checker exits 1 with WR-06 has no provenance source. The validation crosswalk lacks WR-06."
     artifacts:
       - path: "tools/verify_playable.py"
-        issue: "redact() accepts the next syntactically escaped JSON quote as a boundary even though arbitrary diagnostic text may contain a raw quote inside a path."
-      - path: "tests/libretro/retroarch_smoke.py"
-        issue: "sanitize_diagnostic_text() has the same raw-literal-quote disclosure."
-      - path: ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-SECURITY.md"
-        issue: "Four high-severity disclosure threats remain open and the security audit is blocked."
+        issue: "The status check requires Pending and unknown substrings but does not reject conflicting pass/closed/complete claims."
+      - path: "tests/tools/test_verify_playable.py"
+        issue: "The false-closure mutation omits Pending, so it does not test mixed Pending/unknown and closure text."
+      - path: ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-REVIEW-DISPOSITION.md"
+        issue: "WR-06 is recorded with source -, which the evidence gate rejects."
+      - path: ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md"
+        issue: "The current review crosswalk has no WR-06 row."
     missing:
-      - "For arbitrary subprocess and crash text, redact from a private root through line end unless the source supplies an unambiguous parsed path field."
-      - "Add raw-literal-quote regressions through both sanitizers and their retained/printed sinks, then obtain a fresh independent security audit."
-  - truth: "The phase validation-map parser accepts reconciled current review IDs and severities, including valid informational findings, and rejects contradictory evidence."
-    status: failed
-    reason: "The current review identifies WR-04: parse_review_findings accepts only CR-/WR- headings and Critical Issues/Warnings sections. A valid IN- finding under Info is rejected as outside a severity section. Plan 04-13 fixed the stale historical-ID regression, but its mutation suite does not cover the newly reported Info grammar case."
-    artifacts:
-      - path: "tests/tools/check_phase04_validation_map.py"
-        issue: "Current parser has no IN- identifier or Info section mapping."
-      - path: ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-REVIEW.md"
-        issue: "WR-04 documents the reproducible parser coverage defect."
-    missing:
-      - "Parse IN- findings under Info severity and reconcile them with disposition/crosswalk records."
-      - "Add a passing consistent-Info fixture and a failing inconsistent-severity control."
+      - "Reject contradictory frontend closure claims and add a mixed-status mutation test."
+      - "Add WR-06 provenance and a matching crosswalk row; update mutation fixtures and rerun the evidence-map tests and direct gate."
+advisory: []
 human_verification:
-  - test: "Run the generated public fixture in the pinned RetroArch 1.22.2 build; inspect a fresh screenshot, stable repeated no-input frames, RIGHT movement, LEFT negative control, content unload, and normal application exit."
-    expected: "Guest-produced software pixels appear; no-input output remains stable; RIGHT changes the guest marker and visible output while LEFT does not reproduce that trace; content unload and normal exit complete."
-    why_human: "The retained actual-app attempt aborted with exit -6 before its first screenshot. Native and callback tests do not establish real frontend rendering, input mapping, or application lifecycle."
+  - test: "Observe the public fixture in actual pinned RetroArch 1.22.2 after the required materially changed functioning launch context is independently available."
+    expected: "A fresh screenshot shows guest-produced pixels; no-input frames are stable; RIGHT changes guest state and output while LEFT does not reproduce that trace; content unload and normal exit succeed."
+    why_human: "The prior attempt exited -6 before a screenshot, LaunchServices reported kLSNoExecutableErr, and the required changed launch context is unavailable. Native/callback evidence cannot establish actual frontend behavior."
 ---
 
-# Phase 04: Public Playable Tracer Verification Report
-
-## Plan 04-15 Actual Frontend Observation
-
-The launch precondition was not met: no materially changed functioning launch context is independently confirmed. The retained prerequisite evidence is the prior pre-screenshot exit `-6`, LaunchServices `kLSNoExecutableErr`, blocked unified-log inspection, and the current inventory showing no RetroArch window or process. RetroArch was not invoked. The focused smoke-script contract suite passed 26 tests, which provide no actual-app evidence. App/core/fixture identities are null because they were not independently established from current evidence. The current frontend claim is `unknown`; HOST-02 and frontend QUAL-03 remain Pending. The exact external prerequisite is a materially changed, functioning macOS launch context for the pinned RetroArch 1.22.2 executable, independently confirmed before any app observation.
-
-FRONTEND-OBSERVATION-JSON-BEGIN
-```json
-{
-  "changed_context_confirmed": false,
-  "screenshot_captured": false,
-  "stable_no_input_frames": null,
-  "right_input_observed": null,
-  "left_negative_control_passed": null,
-  "content_unloaded": null,
-  "normal_exit": null,
-  "ordinary_native_content_load_observed": null,
-  "guest_software_video_observed": null,
-  "frontend_owned_pacing_observed": null,
-  "controller_mapping_documented": true,
-  "qual03_clean_source_build_install_load_documented": true,
-  "qual03_exact_dependency_compiler_sdk_os_arch_frontend_identities_documented": true,
-  "qual03_untested_configurations_documented": true,
-  "app_identity": null,
-  "core_identity": null,
-  "fixture_identity": null,
-  "frontend_claim": "unknown"
-}
-```
-FRONTEND-OBSERVATION-JSON-END
+# Phase 4: Public Playable Tracer Verification Report
 
 **Phase Goal:** A maintainer can rebuild and run an original guest with visible, input-driven behavior through the ordinary native API and an actual pinned RetroArch build, while resolving the selected sound candidates' admission gates before full integration.
-
-**Verified:** 2026-10-08T13:16:16Z
+**Verified:** 2026-10-08T16:29:00Z
 **Status:** gaps_found
-**Re-verification:** Yes — after Plan 04-13 execution and the fresh independent security and code-review audits.
+**Re-verification:** Yes — after Plan 04-16 and fresh security/code-review audits.
 
 ## Goal Achievement
 
@@ -160,121 +122,136 @@ FRONTEND-OBSERVATION-JSON-END
 
 | # | Truth | Status | Evidence |
 |---|---|---|---|
-| 1 | A maintainer can rebuild the rights-audited original fixture, run it through a C consumer, and observe a guest-produced software frame with checked dimensions, format, pitch, and bounds. | ✓ VERIFIED | `tests/fixture/public_guest.c`, `test_public_guest.c`, `ORACLE.md`, rights manifest and checker are present and connected through CMake. The retained latest owned-debug CTest result is 47/47, including the public guest contract, trace and negative controls. |
-| 2 | A C integrator can advance bounded frames with explicit sampled input and owned video/audio buffers, capacities, timing and produced-count semantics, progress/stop information and actionable errors; controlled input changes guest/output and wrong-input controls fail. | ✓ VERIFIED | The public header and `src/instance.c` implement the frame contract; native trace and LEFT/no-input negative controls run through `public_guest_test`. The same generated GNFX artifact is consumed by native and libretro paths. |
-| 3 | A user can load, run, control and unload the fixture in an actual pinned macOS RetroArch build with software video, documented mapping and frontend-owned pacing. | ? UNCERTAIN | Plan 04-15 could not satisfy its changed-functioning-context precondition and did not invoke RetroArch. The prior pinned launch aborted with exit -6 before a screenshot; no pixels, controls, unload or normal exit were observed. Callback-harness and GUI-free tests do not prove this truth. |
-| 4 | A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including source/state audits, timing and bus behavior, continuation, isolation, contained C++ failures and static/shared C-consumer linkage. | ✓ VERIFIED | CTest includes Z80 and YM2610 admission paths; the pinned source/notice and state inventories, candidate wrappers, C tests and static/shared consumer checks are present. This verifies the declared candidate workloads only; it does not prove audible game sound, integration into the game machine or silicon fidelity. |
-| 5 | An integrator can follow the clean-tree build/install/load procedure for native and libretro artifacts on selected macOS and identify tested/untested environment identities. | ? UNCERTAIN | The documented clean-source procedure, selected dependency/compiler/SDK/OS/architecture/frontend identities, and explicit untested configurations are present; the actual frontend load portion remains unobserved, so complete load qualification remains pending. |
+| 1 | A maintainer can rebuild the original rights-audited fixture, run it through a C consumer, and observe a guest-produced frame with checked dimensions, format, pitch, and bounds. | ✓ VERIFIED | Current owned-debug CTests public_guest_contract, public_guest_trace, sdk_fixture_write and sdk_provenance pass. |
+| 2 | A C integrator can advance bounded frames with sampled input and owned buffers; controlled input changes guest/output and wrong-input controls fail. | ✓ VERIFIED | Current public_guest_contract, public_guest_trace, public_guest_negative_left and public_guest_negative_none tests pass. |
+| 3 | A user can load, run, control and unload the fixture in an actual pinned macOS RetroArch build. | ? UNCERTAIN | Actual app launch, screenshot, input, unload and exit observations remain absent. No RetroArch app was launched during this verification. |
+| 4 | A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including timing, continuation, isolation, failure containment and C linkage. | ✓ VERIFIED | Current owned-debug z80_admission_contract and ym2610_admission tests pass; source/state records and consumer evidence bound these claims to selected workloads. |
+| 5 | An integrator can follow the clean-tree build/install/load procedure and identify tested and untested environment identities. | ? UNCERTAIN | The guide and identity list exist and the docs gate passes, but WR-06 makes its contradiction check incomplete and actual frontend load remains unknown. |
 
-**Score:** 3/5 roadmap truths verified; 2 remain uncertain.  
-**Human verification:** pinned RetroArch behavior remains outstanding; gaps take precedence in the overall status.
+**Score:** 3/5 roadmap truths verified; 2 remain uncertain. The unresolved security and documentation-gate findings block phase completion.
 
-### Plan Must-Haves and Artifacts
+### Re-verification Findings
 
-All 13 PLAN and SUMMARY files were read. Their artifacts were checked against the current source, CMake wiring, validation records and the later independent audit evidence. The 13 plans declare only the eight requirements listed below; no plan requirement was silently dropped. Plans 04-01, 04-03, 04-04, 04-05, 04-07 and 04-09 have substantive artifacts and wiring supporting their native fixture/provenance, bounded candidate, snapshot identity and coverage-metadata claims. The libretro callback bridge exists and is wired, but actual RetroArch behavior is unverified (04-02/04-08). Qualification receipts and repository-backed checks are implemented, but current sanitizer and review-parser defects fail 04-10 through 04-13's privacy/reconciliation claims. Plan 04-06's identities and clean build/install procedure are evidenced; its actual frontend load remains pending. Plan 04-11 receipt row binding is covered by the security register's closed T-04-23 entry; carried review row WR-03 remains explicitly open without a fresh disposition.
+- **Closed — newline redaction:** Both sanitizers remove the complete remaining diagnostic value after a private-root match. Current suites pass 23/23 qualification tests and 27/27 frontend contract tests.
+- **Closed — exact crosswalk-state predicate:** The checker accepts one normalized controlled state matching its record. Targeted contradiction and normalization controls pass against a coherent temporary evidence map. The actual current evidence map still fails because WR-06 lacks provenance and a crosswalk row.
+- **Blocking security gate:** The independent security artifact remains blocked with T-04-11, T-04-15, T-04-18 and T-04-20 high/open, as explicitly directed. This report does not close or accept them.
+- **Actionable WR-06:** A temporary current-map mutation made check_docs accept the contradictory status “HOST-02 Pending; frontend QUAL-03 Pending; unknown; both requirements pass.” The current negative test only checks pass text without Pending/unknown.
+- **Current review map is stale:** The latest review includes WR-06, but the validation crosswalk omits it and the disposition source is -. The evidence-map suite fails 9/10; the direct checker exits 1 with “WR-06 has no provenance source.”
+- **Separate frontend evidence:** HOST-02 and frontend QUAL-03 remain Pending. No functioning changed launch context or direct app observation exists.
 
-| Artifact group | Level 1: exists | Level 2: substantive | Level 3: wired | Result |
-|---|---|---|---|---|
-| Native fixture, public API, rights/oracle and CMake consumer (`tests/fixture/*`, `include/glueyneo/glueyneo.h`, `src/instance.c`) | Yes | Guest execution, rendering, bounds, expected trace and rights checks are implemented | Generated fixture feeds native C consumer and tests | ✓ VERIFIED |
-| Libretro bridge and frontend smoke (`src/libretro/libretro_core.c`, `tests/libretro/*`) | Yes | Load/run/input/video/unload calls are implemented; smoke requires pinned app observations | Adapter calls ordinary native load/frame API; installed core/fixture are used by smoke runner | ⚠️ PARTIAL — application behavior unknown; sanitizer has CR-02 |
-| Z80 and YM2610 candidates (`src/chips/*`, `tests/chips/*`, source notices/inventories) | Yes | Private adapters, test suites, source/license/state evidence and candidate gates exist | CMake admission tests and installed C-consumer checks are connected | ✓ VERIFIED for declared admission workloads |
-| Qualification and validation (`tools/verify_playable.py`, `tests/tools/*`, `docs/first-playable-build.md`) | Yes | Snapshot/receipt validation and regression checks exist | Build lanes and evidence-map checker are wired | ✗ FAILED for raw-quote privacy and Info-finding parser cases |
-| Owned CPU identity (`tools/owned_cpu/inventory.py`, `experiments/owned_cpu/*`) | Yes | Source/state/target compile evidence is substantive | CTest inventory gate consumes actual build commands | ✓ VERIFIED; latest retained result 47/47 |
+### Required Artifacts
 
-The GSD artifact/key-link query helper in installed 1.16.0 returned `invalid` for these PLAN paths; therefore the artifact conclusions above come from direct source/build wiring inspection and the referenced retained test/audit evidence, not a claimed successful helper verdict.
+| Artifact | Expected | Status | Details |
+|---|---|---|---|
+| tests/fixture, include/glueyneo/glueyneo.h, src/instance.c | Rights-audited source, ordinary native load/frame and guest-produced output | ✓ VERIFIED | Artifacts are substantive and wired through the generated fixture path; current consumer and provenance checks pass. |
+| src/libretro/libretro_core.c, tests/libretro | Ordinary content/input/video/unload adapter and actual frontend path | ⚠️ PARTIAL | Callback and sanitizer tests pass; real pinned-app presentation and lifecycle remain unobserved. |
+| src/chips, tests/chips and notices/inventories | Bounded Z80 and ymfm admission evidence | ✓ VERIFIED | Candidate tests pass for their documented workloads. |
+| tools/verify_playable.py, tests/tools/test_verify_playable.py | Snapshot-bound qualification, private-safe diagnostics and truthful documentation gate | ✗ FAILED | Whole-value redaction passes, but WR-06’s mixed Pending/unknown closure mutation is accepted. |
+| tests/tools/check_phase04_validation_map.py and its tests | Current review/threat evidence reconciliation | ✗ FAILED | Current review ID WR-06 lacks provenance/crosswalk data; 9/10 tests and the direct gate fail. |
+| 04-SECURITY.md, 04-REVIEW.md, 04-REVIEW-DISPOSITION.md | Current audit evidence and dispositions | ⚠️ BLOCKED | Four high/open threats remain; WR-06 lacks evidence-map provenance. |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |---|---|---|---|---|
-| Fixture CMake producer | Native guest load/frame | Generated GNFX → `gn_load` → `gn_frame` | ✓ WIRED | `CMakeLists.txt`, public guest test and native instance source connect producer, load, guest execution and caller-owned pixels. |
-| Libretro content | Native frame/video callback | `retro_load_game` → `gn_load`; `retro_run` → `gn_frame` → video refresh | ✓ WIRED / runtime unverified | Direct adapter calls are present. Actual pinned frontend did not reach screenshot. |
-| Pinned Z80/ymfm source | Candidate admission | private adapter → tests and source checks → CTest/report | ✓ WIRED | CMake registers candidate admission paths and the installed C-consumer gate; claim remains bounded to selected workloads. |
-| Qualification snapshot | Build/tests/receipt | committed archive → inventory → qualification lanes → receipt | ✓ WIRED / privacy gap | Source-snapshot and row binding exist; raw-literal-quote sanitization still exposes suffixes. |
-| Review/security records | Evidence-map checker | parsed current review + dispositions + threat register | ⚠️ PARTIAL | Reconciled current/history case passes after Plan 04-13; current review's valid `IN-`/Info case still fails parser grammar (WR-04). |
+| Generated fixture | Native guest frame | CMake producer → gn_load → gn_frame | ✓ WIRED | Current fixture, trace and provenance checks pass. |
+| Libretro content | Native frame/video callback | retro_load_game → gn_load; retro_run → gn_frame → video_refresh | ✓ WIRED / runtime unknown | Callback test passes; actual frontend was not run. |
+| Pinned candidate sources | Admission criteria | Private adapters → tests/source checks → CTest/installed consumers | ✓ WIRED | Current candidate admission tests pass for declared workloads. |
+| Qualification diagnostics | Retained logs/receipts/output | Command runner → redactor → receipt and output sinks | ✓ WIRED | 23-test suite covers newline paths through retained and printed sinks. |
+| Frontend diagnostics | Sanitizer | Diagnostic/crash output → sanitizer → serialized result | ✓ WIRED | 27-test suite covers newline paths through diagnostic and crash sinks. |
+| Review/disposition/crosswalk | Validation evidence gate | Current review → disposition records → controlled crosswalk comparison | ✗ PARTIAL | Exact state predicate exists, but current WR-06 lacks provenance/crosswalk data, so the evidence gate fails. |
+| Frontend status | Documentation gate | Validation row → check_docs | ✗ PARTIAL | Required substrings are checked, but contradictory closure language is accepted. |
 
 ### Data-Flow Trace
 
 | Artifact | Data | Source | Produces real data | Status |
 |---|---|---|---|---|
-| Native guest renderer | frame pixels and guest marker | guest instructions and board state in the GNFX fixture | Yes; C consumer observes guest-produced pixels | ✓ FLOWING |
-| Libretro video callback | frame pixels | native `gn_frame` output | Yes in adapter contract; actual frontend presentation unobserved | ⚠️ Runtime unknown |
-| Qualification receipts | build identity, statuses and output digests | committed source snapshot and executed build/test lanes | Yes for repository lanes; private paths can leak through diagnostic text | ⚠️ PARTIAL |
-| Candidate admission records | Z80/YM2610 results | pinned sources, bounded tests and installed C consumers | Yes for candidate workloads | ✓ FLOWING |
+| Native guest renderer | Pixels and guest marker | Guest instructions and board state in GNFX fixture | Yes; C consumer observes guest-produced pixels | ✓ FLOWING |
+| Libretro video callback | Pixels | Native frame output | Real adapter buffer in callback test; frontend presentation unknown | ⚠️ Runtime unknown |
+| Qualification receipt | Identity/status/output digest | Committed snapshot and build/test lanes | Yes; newline diagnostic suffixes are removed | ✓ FLOWING |
+| Candidate admission | Cycle/sample and consumer results | Pinned sources and bounded tests | Yes for named candidate workloads only | ✓ FLOWING |
+| Frontend requirement status | Pending/unknown disposition | Validation status row | Actual row is pending, but validator accepts conflicting claims | ⚠️ Validation incomplete |
 
 ### Requirements Coverage
 
 | Requirement | Source plans | Description | Status | Evidence |
 |---|---|---|---|---|
-| TRAC-01 | 04-01, 03, 06–08, 10–12 | Rebuild rights-audited original fixture | ✓ SATISFIED | Source, deterministic generator/checker, rights and oracle records; CMake consumers. |
-| TRAC-02 | 04-01, 02 | Native guest-produced software frame | ✓ SATISFIED | Bounded API, guest-driven renderer, geometry/format/pitch/bounds assertions. |
-| TRAC-03 | 04-01–03, 08 | Fixed input trace changes guest and output; wrong-input controls fail | ✓ SATISFIED | Native RIGHT trace plus LEFT/no-input controls. Actual frontend control mapping is separately pending under HOST-02. |
-| HOST-02 | 04-02, 06, 08–10, 12–15 | Load/control/unload through actual pinned RetroArch | ? NEEDS HUMAN / PENDING | Plan 04-15 records `frontend_claim: unknown`: the changed functioning launch context is unavailable and no app was invoked; no screenshot or app/core/fixture identities are available. |
-| API-05 | 04-01 | Bounded frame API and ownership/timing/error semantics | ✓ SATISFIED | Public contract and native behavioral tests. |
-| SND-01 | 04-04, 06 | Pinned Z80 admission for selected workload | ✓ EVIDENCE PRESENT; workstream requirement still unchecked | Source/license/state and cycle/interrupt/bus/continuation/isolation gates; scope does not establish game workload. |
-| SND-02 | 04-05, 06 | Pinned ymfm YM2610 subset behind private C API | ✓ EVIDENCE PRESENT; workstream requirement still unchecked | Source/state, timing/isolation/failure and static/shared C consumer evidence. No game sound claim. |
-| QUAL-03 | 04-06–15 | Clean-tree native/libretro build/install/load procedure and identities | ? NEEDS HUMAN / PENDING | Documentation, environment identities and untested configurations are present, but actual frontend load remains unobserved; the load-dependent requirement predicate is false. |
+| TRAC-01 | 04-01, 03, 06–14 | Rebuild rights-audited original fixture | ✓ SATISFIED | Tracked generator, rights/oracle records, current fixture and provenance CTests. |
+| TRAC-02 | 04-01, 02 | Native guest-produced software frame | ✓ SATISFIED | Bounded API and current guest contract test. |
+| TRAC-03 | 04-01–03, 08 | Input trace changes guest/output; wrong-input controls fail | ✓ SATISFIED | Current RIGHT trace and LEFT/no-input controls pass. |
+| HOST-02 | 04-02, 06, 08–10, 12–15 | Actual pinned RetroArch load/control/unload | ? NEEDS HUMAN / PENDING | No app launch, screenshot, input, unload or exit observation is available. |
+| API-05 | 04-01 | Bounded frame API and ownership/timing/error semantics | ✓ SATISFIED | Public contract and current native frame tests. |
+| SND-01 | 04-04, 06, 14 | Pinned Z80 admission for named synthetic workload | ✓ SATISFIED (bounded) | Current admission test passes; claims remain limited to the declared workload. |
+| SND-02 | 04-05, 06, 14 | Pinned ymfm YM2610 behind private C API | ✓ SATISFIED (bounded) | Current admission test passes; no game-sound or silicon-fidelity claim. |
+| QUAL-03 | 04-06–16 | Clean-tree build/install/load and environment identities | ? NEEDS HUMAN / PENDING | Procedure and identities are documented; actual frontend load is unknown and the contradictory-status gate is incomplete. |
 
-Requirement allocation cross-check: REQUIREMENTS.md maps these same eight IDs to Phase 4, and every one appears in one or more plan frontmatter fields. There are no orphaned Phase 4 requirements. TRAC-01/02/03 and API-05 are checked in REQUIREMENTS.md; HOST-02, SND-01/02 and QUAL-03 remain unchecked/pending there, even where candidate evidence is present.
+All eight Phase 04 requirements appear in plan traceability; no orphaned requirement was found. The active ledger keeps HOST-02 and QUAL-03 Pending and limits SND-01/02 to bounded candidate admission.
 
 ### Decision Coverage
 
-The installed GSD decision-coverage gate found 3/3 trackable CONTEXT.md decisions honored by shipped artifacts; `not_honored` is empty. This gate is advisory and does not affect the verdict.
-
-### Security, Review, Validation and State Evidence
-
-- `04-SECURITY.md` records 32/36 threats closed and **four high-severity information-disclosure threats still open**: T-04-11, T-04-15, T-04-18 and T-04-20. Security status is `blocked`; Plan 04-13 regression coverage does not close them.
-- The current `04-REVIEW.md` and disposition identify **CR-02 (critical) open** for raw-literal-quote path disclosure and **WR-04 (warning) open** because the checker rejects valid Info/IN findings. The disposition also carries WR-01, WR-02 and WR-03 open; CR-01 is fixed history.
-- `04-VALIDATION.md` records the prior stale-ID reconciliation failure as resolved by Plan 04-13's 5 mutation tests and direct gate. It also records the remaining privacy threats, current frontend unknown, and WR-04; validation's passing checker case does not cover Info syntax.
-- `STATE.md` reports 13/13 plans complete and Phase 04 incomplete pending independent audits and actual frontend evidence. Its current detail and Plan 04-13 summary agree. ROADMAP.md's overview/progress paragraphs still contain stale contradictory text saying 04-13 was unexecuted and must be rerun; the plan checklist and STATE.md say it executed. This report follows current source evidence and explicitly retains the fresh audit findings.
+The decision-coverage gate found 3/3 trackable CONTEXT.md decisions honored; not_honored is empty. This gate does not affect status.
 
 ### Behavioral Spot-Checks
 
-| Behavior | Evidence | Result | Status |
+| Behavior | Command/evidence | Result | Status |
 |---|---|---|---|
-| Native fixture, guest trace and negative input controls | Latest retained `ctest --preset owned-debug --output-on-failure` in 04-12/04-13 evidence | 47/47 pass, including `public_guest_contract`, `public_guest_trace`, LEFT/no-input controls and inventory gate | ✓ PASS (retained result; not rerun here) |
-| Plan 04-13 qualification privacy regression | 04-13 summary and 04-VALIDATION | 20/20 focused tests pass, but current CR-02 test demonstrates a separate raw-literal-quote case outside that coverage | ⚠️ Partial |
-| Plan 04-13 frontend privacy regression | 04-13 summary and 04-VALIDATION | 26/26 GUI-free tests pass; they do not exercise a raw literal quote inside arbitrary text | ⚠️ Partial |
-| Validation-map reconciliation | 04-13 summary and 04-VALIDATION | 5/5 mutation tests and direct gate pass for stale/fixed IDs; WR-04 Info grammar is not covered | ⚠️ Partial |
-| Actual pinned RetroArch presentation/input/unload | Retained smoke evidence and current audit | Exit -6 before first screenshot; no qualifying observation | ? SKIP — human/frontend evidence required |
+| Native guest and input trace | ctest --test-dir build/owned-debug --output-on-failure -R '^(public_guest_contract|public_guest_trace)$' | 2/2 passed | ✓ PASS |
+| Wrong-input controls | ctest --test-dir build/owned-debug --output-on-failure -R '^(public_guest_negative_left|public_guest_negative_none)$' | 2/2 passed | ✓ PASS |
+| Z80/YM2610 and callback seam | ctest --test-dir build/owned-debug --output-on-failure -R '^(ym2610_admission|z80_admission_contract|libretro_callback)$' | 3/3 passed | ✓ PASS |
+| Fixture generation/provenance | ctest --test-dir build/owned-debug --output-on-failure -R '^(sdk_fixture_write|sdk_provenance)$' | 2/2 passed | ✓ PASS |
+| Qualification tests | python3 tests/tools/test_verify_playable.py -v | 23/23 passed | ✓ PASS |
+| Frontend diagnostic contract | python3 tests/libretro/test_retroarch_smoke.py -v | 27/27 passed | ✓ PASS |
+| Docs gate on current evidence | python3 tools/verify_playable.py --check-docs | Exit 0 | ✓ PASS; does not catch WR-06 |
+| WR-06 mixed-status control | Temporary Pending/unknown plus closure row passed to check_docs | Contradictory row accepted | ✗ FAIL |
+| Review-map mutation suite | python3 tests/tools/test_check_phase04_validation_map.py -v | 10 tests run; 9 fail from WR-06 evidence mismatch | ✗ FAIL |
+| Current validation evidence map | python3 tests/tools/check_phase04_validation_map.py | Exit 1: WR-06 has no provenance source | ✗ FAIL |
+| Exact crosswalk mutation controls on coherent temporary map | Contradictory and normalized-state controls | 2/2 passed | ✓ PASS |
+| Actual pinned RetroArch presentation/input/unload | Not run; app evidence remains null/unknown | No screenshot or app observation | ? SKIP — human/external prerequisite unavailable |
 
-No server, GUI application or external service was started during this verification.
+### Probe Execution
 
-### Anti-Patterns and Quality Findings
-
-| File | Pattern | Severity | Impact |
-|---|---|---|---|
-| `tools/verify_playable.py` | Arbitrary diagnostic text with raw quote after a private root can leave suffix visible | 🛑 BLOCKER (CR-02; T-04-11/T-04-15) | Private path disclosure reaches receipt/printed diagnostics. |
-| `tests/libretro/retroarch_smoke.py` | Same raw-quote boundary assumption | 🛑 BLOCKER (CR-02; T-04-18/T-04-20) | Private path disclosure reaches frontend/crash diagnostics. |
-| `tests/tools/check_phase04_validation_map.py` | Parser omits `IN-` and Info severity support | ⚠️ WARNING / failed plan truth (WR-04) | Valid current review outcome cannot pass evidence-map validation. |
-
-No unreferenced TBD/FIXME/XXX markers or empty user-facing implementation stubs were identified in the covered implementation paths. The validation issue and disclosure issue are backed by the current independent review; no Step 9b deferral applies because later roadmap phases do not explicitly resolve these phase acceptance defects.
+No phase-declared probe-*.sh paths were found in Plans 04-01 through 04-16 or their summaries; no shell probe was required.
 
 ### Test Quality Audit
 
-| Test area | Disabled-only coverage | Circular expected-value generation | Assertion/evidence assessment |
-|---|---|---|---|
-| Public fixture/native API | No skip markers found in the requirement-linked directories | No test generator imports the tested native path to write expected outputs | Behavioral value/control assertions are present; retained 47/47 CTest evidence covers the native contract. |
-| Z80/YM2610 candidate admission | No skip markers found | Admission values are specified by candidate tests/source checks and consumer runs | Candidate evidence covers the declared synthetic workloads and static/shared linkage; it is not game sound or hardware truth. |
-| Qualification/frontend/evidence-map tooling | No skip markers found | Test fixture-writing utilities do not generate their own asserted runtime output | Focused tests pass for covered cases, but current review reproduces the raw-quote leak and Info grammar gap; these are the blockers above. |
+| Test File | Linked Requirement | Disabled-only coverage | Circular expected-value generation | Assertion/evidence assessment |
+|---|---|---|---|---|
+| tests/fixture/test_public_guest.c | TRAC-01/02/03, API-05 | None identified | None identified | Guest state, frame bounds, pixels and positive/negative input traces have behavioral assertions. |
+| tests/chips/test_z80.c | SND-01 | None identified | None identified | Candidate workload checks compare timing/bus/state behavior to documented expectations. |
+| tests/chips/test_ym2610.c | SND-02 | None identified | None identified | Candidate behavior, isolation and consumer boundaries are covered for recorded inputs. |
+| tests/libretro/test_retroarch_smoke.py | HOST-02, QUAL-03 | None identified | None identified | 27 active contract/privacy tests; they cannot prove actual RetroArch UX. |
+| tests/tools/test_verify_playable.py | QUAL-03 | None identified | None identified | 23 active tests; missing mixed Pending/unknown plus closure mutation leaves WR-06. |
+| tests/tools/test_check_phase04_validation_map.py | Evidence-map gate | None identified | None identified | 10 active tests; 9 currently fail before intended assertions due missing WR-06 evidence records. |
 
-No circular-test or disabled-only requirement coverage was found in the scanned Phase 04 test directories. The current review findings take precedence over passing tests that do not exercise those inputs.
+### Anti-Patterns Found
+
+| File | Line | Pattern | Severity | Impact |
+|---|---:|---|---|---|
+| tools/verify_playable.py | 672–676 | Requires Pending/unknown substrings without rejecting conflicting completion language | 🛑 BLOCKER | Reproduced false-closure acceptance under WR-06. |
+| tests/tools/test_check_phase04_validation_map.py | Fixture setup | Mutation fixtures do not reconcile the new WR-06 evidence row | 🛑 BLOCKER | 9/10 tests and the current direct gate fail. |
+| tests/libretro/retroarch_smoke.py | 201 | Empty non-macOS crash-report snapshot | ℹ️ INFO | Intentional platform-specific empty snapshot; collection is macOS-only, not a runtime stub. |
+
+No unreferenced TBD/FIXME/XXX debt markers were found in the modified implementation/test paths. Placeholder strings in the gate and negative tests are intentional controls.
+
+### Advisory (New Scope, Unevidenced)
+
+None. WR-06 and the current evidence-map failure have reproducible evidence; no other new-scope blocker was promoted.
 
 ### Human Verification Required
 
 #### Pinned RetroArch public-fixture flow
 
-**Test:** Run the generated public fixture in the pinned RetroArch 1.22.2 build; inspect a fresh screenshot, stable repeated no-input frames, RIGHT movement, LEFT negative control, content unload and normal application exit.
+**Test:** After a materially changed functioning launch context is independently confirmed, run the generated fixture in pinned RetroArch 1.22.2 and inspect a fresh screenshot, stable no-input frames, RIGHT movement, LEFT negative control, unload and normal exit.
 
-**Expected:** Guest-produced software pixels appear; no-input output remains stable; RIGHT changes the guest marker and visible output while LEFT does not reproduce that trace; unload and normal exit complete.
+**Expected:** Guest-produced pixels appear; no-input output remains stable; RIGHT changes guest state and visible output while LEFT does not reproduce that trace; content unload and normal exit complete. HOST-02 and frontend QUAL-03 remain Pending until these observations and identities exist.
 
-**Why human:** The retained application attempt aborted before its first screenshot. Native tests and the callback harness cannot establish real frontend rendering, controller mapping or application lifecycle. HOST-02 and frontend QUAL-03 therefore remain unobserved and pending.
+**Why human:** The prior attempt exited -6 before a screenshot, LaunchServices returned kLSNoExecutableErr, and unified-log inspection was blocked. The required changed launch context is unavailable. Native/callback evidence cannot establish actual app behavior.
 
 ### Gaps Summary
 
-The native fixture and bounded native API behavior are evidenced, as are the selected Z80 and ymfm candidate admission gates. Phase 04 is not achieved: the current independent review reproduces a private-path suffix disclosure and a validation-map parser gap; all four high-severity disclosure threats remain open. Actual pinned RetroArch behavior and the frontend portion of QUAL-03 are unobserved. Do not claim GUI behavior, close the admission/security gates by inference, or advance Phase 04 to complete.
+The native tracer and bounded sound-candidate gates pass their current focused checks. Phase 04 is not achieved: four high disclosure threats remain open by explicit direction; WR-06 demonstrates that the docs gate can accept false frontend closure; and the latest review is not reconciled into the evidence map, whose mutation suite and direct gate fail. HOST-02 and frontend QUAL-03 remain human/external unknowns. No later Phase 5–7 criterion explicitly resolves these specific Phase 04 gates, so no gap is deferred.
 
 ---
 
-_Verified: 2026-10-08T13:16:16Z_
+_Verified: 2026-10-08T16:29:00Z_
 _Verifier: the agent (gsd-verifier)_
