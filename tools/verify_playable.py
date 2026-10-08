@@ -669,6 +669,8 @@ def check_docs(source_root: Path) -> None:
     frontend_status = frontend_rows[0][9]
     if re.search(r"\b(TBD|planned)\b", frontend_status, re.IGNORECASE):
         raise RuntimeError("unfinished placeholder in current frontend status")
+    if re.search(r"\b(pass(?:es|ed)?|closed|complete(?:d)?|verified|satisfied)\b", frontend_status, re.IGNORECASE):
+        raise RuntimeError("HOST-02 and frontend QUAL-03 must remain Pending/unknown in the current validation map")
     if (
         not {"HOST-02", "QUAL-03"}.issubset(requirement_ids)
         or re.search(r"\bHOST-02\s+pending\b", frontend_status, re.IGNORECASE) is None
