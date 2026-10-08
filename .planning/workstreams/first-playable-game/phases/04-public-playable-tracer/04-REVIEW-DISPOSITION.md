@@ -17,11 +17,12 @@ findings:
     title: "Repository-backed receipt validation accepts forged file-content hashes"
   - id: CR-01
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "[BLOCKER] Qualification receipt can identify the wrong source revision"
-open: 4
+    source: "04-07-SUMMARY.md immutable source snapshot; 04-VERIFICATION.md current source identity finding"
+open: 3
 total: 4
-recorded: 2026-10-08T01:05:02.095Z
+recorded: 2026-10-08T03:23:56.000Z
 ---
 
 # Phase 04: Code Review Disposition
@@ -31,7 +32,7 @@ recorded: 2026-10-08T01:05:02.095Z
 | WR-01 | warning | open | - |
 | WR-02 | warning | open | - |
 | WR-03 | warning | open | - |
-| CR-01 | critical | open | - (not in the current review) |
+| CR-01 | critical | fixed | 04-07-SUMMARY.md immutable source snapshot; 04-VERIFICATION.md current source identity finding |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.

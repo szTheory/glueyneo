@@ -6,6 +6,7 @@ nyquist_compliant: true
 wave_0_complete: true
 created: "2026-10-07"
 completed: "2026-10-07"
+updated: "2026-10-08"
 ---
 
 # Phase 04 — Validation Strategy
@@ -47,14 +48,39 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | 04-08 T1 | 04-08 | 7 | HOST-02 | T-04-16, T-04-17, T-04-18, T-04-SC | Fresh app profiles and screenshots; bounded process/crash diagnostics; private paths redacted; unavailable GUI authority remains unknown | GUI-free smoke regression | `python3 -m unittest discover -s tests/libretro -p 'test_retroarch_smoke.py' -v` | Yes | 16 focused tests pass; actual pinned app exits `-6` before screenshot, so HOST-02 remains unknown |
 | 04-08 T2 | 04-08 | 7 | HOST-02, QUAL-03, TRAC-01, TRAC-03 | T-04-16, T-04-17, T-04-18, T-04-SC | One committed snapshot feeds native builds, installed consumers, candidate gates and actual frontend; unknown frontend observations cannot pass | clean qualification integration | `python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean --check-docs` | Yes | static/shared builds, consumers, candidate gates and 34 CTests pass; receipt fails closed because actual frontend is unknown |
 | 04-09 T1 | 04-09 | 8 | HOST-02 | T-04-19, T-04-SC | Installed coverage schema routes unresolved pinned-app evidence to human review and excludes it from automatic passes | coverage classifier | `node "$HOME/.codex/gsd-core/bin/gsd-tools.cjs" uat classify-coverage --summary .planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-02-SUMMARY.md` | Yes | classifier passes with zero errors; HOST-02 remains human-needed and unknown |
+| 04-10 T1 | 04-10 | 8 | QUAL-03, TRAC-01 | T-04-20, T-04-21, T-04-22 | Qualification path redaction, fixture digest enforcement, and pinned app quit identity have focused regression coverage; gates remain open for independent audit | focused regression | `python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py' -v` | Yes | pass, 17 tests on source `a2ea677` (current tree includes 3 Plan 04-11 tests); historical Plan 04-10 result was 14 tests at `e7aa255` |
+| 04-10 T2-T3 | 04-10 | 8 | HOST-02, QUAL-03 | T-04-20, T-04-21, T-04-22 | Frontend diagnostic redaction, fixture pinning, and fixed-shape quit handling are covered without launching the GUI; actual app behavior remains unknown | GUI-free focused regression | `python3 -m unittest discover -s tests/libretro -p 'test_retroarch_smoke.py' -v` | Yes | pass, 24 tests on source `a2ea677`; the actual pinned app was not launched |
+| 04-11 T1 | 04-11 | 9 | QUAL-03, TRAC-01 | T-04-23, T-04-SC | Every receipt row is compared with the corresponding committed archive bytes, mode, digest, and symlink target | repository-backed receipt regression | `python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py' -v` | Yes | pass, 17 tests on source `a2ea677`; no live checkout input is used |
 
 ## Threat Coverage
 
 | Threat | Evidence and disposition |
 |--------|--------------------------|
-| T-04-11 information disclosure | The runner redacts repository/home/temporary paths from retained command logs and writes evidence under ignored `build/`; fixture and private media are not copied into tracked output. |
+| T-04-11 information disclosure | Plan 04-10 adds whitespace-containing path redaction regressions in the tools and frontend suites. Retained evidence stays under ignored `build/`; private media is not copied into tracked output. Finding remains open pending independent audit. |
 | T-04-12 repudiation | Receipt records source revision and selected source hashes, compiler/CMake/SDK/OS/architecture, fixture/core/frontend hashes, candidate revisions, command status and log hashes. |
 | T-04-SC dependency closure | Z80 and ymfm immutable source checks passed; YM2610 report records the pinned source and license evidence. Candidate outcomes remain separate from runtime integration. |
+| T-04-20 → T-04-11/T-04-15/T-04-18 | Plan 04-10 adds complete path-span redaction and path-with-spaces regression coverage; these older high findings remain open pending independent audit. |
+| T-04-21 → T-04-16 | Plan 04-10 checks the pinned public fixture digest before frontend launch; the security disposition remains open pending independent audit. |
+| T-04-22 → T-04-17 | Plan 04-10 validates the pinned bundle identifier before quit commands; the security disposition remains open pending independent audit. |
+| T-04-23 → T-04-13 | Plan 04-11 derives archive rows from committed member bytes and rejects forged receipt rows; WR-03 remains open pending independent audit. |
+
+## Review Finding Crosswalk
+
+| Review Finding | Existing Threat Scope | Disposition |
+|----------------|-----------------------|-------------|
+| WR-01 | T-04-16 / T-04-21, pinned fixture identity | Same finding scope; code repair is present and disposition remains open pending independent review. |
+| WR-02 | T-04-11 / T-04-15 / T-04-18 / T-04-20, complete path redaction | Corroborates the same disclosure findings; no separate threat scope. Disposition remains open pending independent review. |
+| WR-03 | T-04-13 / T-04-23, receipt row-to-archive binding | Same finding scope; code repair is present and disposition remains open pending independent review. |
+
+## Revision Context
+
+- Plan 04-07's immutable source snapshot implementation is recorded in [04-07-SUMMARY.md](04-07-SUMMARY.md), including commit `36df674`. The fresh [04-VERIFICATION.md](04-VERIFICATION.md) identifies current source identity as protected; together these records support marking historical CR-01 fixed.
+- Plan 04-10's historical focused runs were 14 tools tests and 24 frontend smoke tests, recorded in [04-10-SUMMARY.md](04-10-SUMMARY.md) at commit `e7aa255`. After the Plan 04-11 implementation commit `a2ea677`, the tools suite was rerun with 17 tests and the frontend smoke suite with 24 tests. The three added tools regressions account for the tools denominator change.
+- These focused suites verify repository behavior only. They do not close any security finding; the independent audit must decide all six open high-severity dispositions. HOST-02 and actual frontend QUAL-03 remain unknown until the requested pinned-app observations exist.
+
+## Actual Frontend Evidence Handoff
+
+Human evidence is still required: run the generated public fixture in the pinned RetroArch 1.22.2 build and observe a fresh screenshot, repeated no-input frames, RIGHT movement, the LEFT negative control, content unload, and normal application exit. Expected behavior is guest-produced software pixels, stable no-input output, a RIGHT-driven marker change that LEFT does not reproduce, and successful unload and exit. The app previously aborted before its first screenshot; no GUI retry was made because the environment has not materially changed.
 
 ## Wave 0 and Sign-Off
 
