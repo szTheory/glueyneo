@@ -2,10 +2,15 @@
 #include "glueyneo/glueyneo.h"
 #include "libretro.h"
 
-#include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
 
 #define CONTENT_BYTES 602u
 #define FRAME_WIDTH 320u
@@ -108,7 +113,14 @@ static bool read_content(const char *path) {
 }
 
 static void require_export(const char *name) {
+#if defined(_WIN32)
+    static HMODULE module;
+    if (module == NULL) module = GetModuleHandleA("glueyneo_libretro.dll");
+    CHECK(module != NULL, "libretro shared library is loaded");
+    CHECK(module != NULL && GetProcAddress(module, name) != NULL, name);
+#else
     CHECK(dlsym(RTLD_DEFAULT, name) != NULL, name);
+#endif
 }
 
 static void run_and_compare(bool right_pressed, const char *label) {
