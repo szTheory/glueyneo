@@ -8,6 +8,7 @@ import json
 import subprocess
 import sys
 import tempfile
+import unittest
 from unittest import mock
 
 from pathlib import Path
@@ -146,7 +147,84 @@ def sanitizer_failure_controls() -> None:
     assert supervised["failed_tests"] == ["sdk_isolation"]
 
 
+def mvs_lane_controls() -> None:
+    names = sorted(verify_sdk.CTEST_CASES["mvs"])
+    identity = {"source_revision": "a" * 40,
+                "relevant_source_sha256": "b" * 64}
+
+    def output_for(observed: list[str], denominator: int | None = None,
+                   percent: int = 100) -> str:
+        lines = [f"Start {index}: {name}" for index, name in enumerate(observed, 1)]
+        total = len(observed) if denominator is None else denominator
+        lines.append(f"{percent}% tests passed out of {total}")
+        return "\n".join(lines)
+
+    def collect(output: str, returncode: int = 0) -> dict:
+        with mock.patch.object(verify_sdk, "run", return_value=subprocess.CompletedProcess([], returncode, output, "")), \
+             mock.patch.object(verify_sdk, "preserve_output", return_value="c" * 64):
+            lane, _ = verify_sdk.collect_ctest_lane("mvs", identity)
+            return lane
+
+    lane = collect(output_for(names))
+    assert lane["ctest_cases"] == 7 and lane["named_tests"] == names
+    assert lane["source_revision"] == identity["source_revision"]
+    verify_sdk.validate_mvs_lane(lane, identity)
+
+    for observed, denominator, percent, returncode in (
+            (names[:-1], 6, 100, 0),
+            (names, 0, 100, 0),
+            ([*names[:-1], "mvs_renamed"], 7, 100, 0),
+            (names, 7, 85, 1)):
+        try:
+            collect(output_for(observed, denominator, percent), returncode)
+        except verify_sdk.VerificationError:
+            pass
+        else:
+            raise AssertionError("MVS CTest collector accepted omitted, zero, renamed, or failed evidence")
+
+    stale = dict(lane)
+    stale["relevant_source_sha256"] = "d" * 64
+    try:
+        verify_sdk.validate_mvs_lane(stale, identity)
+    except verify_sdk.VerificationError:
+        pass
+    else:
+        raise AssertionError("MVS lane accepted a stale relevant-source digest")
+
+
+class MvsLaneTests(unittest.TestCase):
+    def test_mvs_lane_registered_exact_inventory(self) -> None:
+        expected = {
+            "mvs_synthetic_trace", "mvs_media_contract", "mvs_import_contract",
+            "mvs_import_mutation", "mvs_callback_contract", "mvs_boot_checkpoint",
+            "mvs_import_fuzz_corpus",
+        }
+        self.assertEqual(verify_sdk.CTEST_CASES.get("mvs"), expected)
+
+
 def main() -> int:
+    mvs_lane_controls()
+    expected_mvs_sources = {
+        "tools/mvs/mvs_import.c", "tools/mvs/qualify_local_boot.py",
+        "tools/mvs/mvs_qualify.c", "src/mvs/mvs_bus.c",
+        "src/libretro/libretro_core.c", "experiments/owned_cpu/cpu.c",
+        "tests/mvs/test_mvs.c", "tests/mvs/test_mvs_qualification.py",
+        "tests/mvs/fuzz_import.c", "tests/libretro/retroarch_smoke.py",
+        "tests/libretro/test_retroarch_smoke.py", "CMakeLists.txt",
+        "docs/mvs-media.md",
+    }
+    assert expected_mvs_sources.issubset(set(evidence.RELEVANT_FILES))
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        source = root / "tools/mvs/mvs_import.c"
+        source.parent.mkdir(parents=True)
+        source.write_bytes(b"first source revision")
+        with mock.patch.object(evidence, "RELEVANT_FILES", ("tools/mvs/mvs_import.c",)):
+            before = evidence.relevant_source_rows(root)
+            source.write_bytes(b"second source revision")
+            after = evidence.relevant_source_rows(root)
+        assert evidence.sha256_bytes(evidence.canonical_bytes(before)) != \
+               evidence.sha256_bytes(evidence.canonical_bytes(after))
     # Exercise the collector's actual Windows artifact lookup without claiming
     # that these synthetic bytes are a native Windows runtime qualification.
     with tempfile.TemporaryDirectory() as directory:
