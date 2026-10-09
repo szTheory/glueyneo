@@ -191,10 +191,19 @@ def main() -> int:
                                        "retroarch_observation": "manual-only-unknown",
                                        "private_identity_recorded": False}
 
-    temporary_report = report_path.with_suffix(".json.tmp")
-    temporary_report.write_text(json.dumps(result, sort_keys=True) + "\n",
-                                encoding="utf-8")
-    os.replace(temporary_report, report_path)
+    temporary_report: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=report_path.parent,
+                prefix=".phase05-", suffix=".tmp", delete=False) as handle:
+            temporary_report = Path(handle.name)
+            handle.write(json.dumps(result, sort_keys=True) + "\n")
+        os.replace(temporary_report, report_path)
+    except OSError:
+        if temporary_report is not None:
+            temporary_report.unlink(missing_ok=True)
+        print("local qualification report could not be written")
+        return 1
     return 0
 
 
