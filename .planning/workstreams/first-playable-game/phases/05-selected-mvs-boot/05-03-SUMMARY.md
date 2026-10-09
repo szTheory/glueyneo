@@ -145,7 +145,7 @@ The active workstream config has `workflow.tdd_mode: false`, so the runtime TDD 
 
 ## Next Phase Readiness
 
-Plan 05-03 is **halted**, and Phase 05 remains **incomplete**. The latest selected run reached the measured 256-chunk bound with no unsupported event and no guest-written attract/start predicate. The ignored local report retains bounded diagnostic data; tracked evidence contains only generic status and coarse counters. G-05-3 still requires direct attract/start, G-05-5 requires an exact-revision hosted receipt, and the actual-app smoke remains gated on attract/start. `$gsd-verify-work 05 --ws first-playable-game` should run only after those gap-closure gates are addressed; its `reconcile_gaps` step alone owns UAT resolution.
+Plan 05-03 is **halted**, and Phase 05 remains **incomplete**. The latest selected run reached the measured 256-chunk bound with no unsupported event and no guest-written attract/start predicate. The ignored local report retains bounded diagnostic data; tracked evidence contains only generic status and coarse counters. G-05-3 still requires direct attract/start, G-05-5 requires an exact-revision hosted receipt, and the actual-app smoke remains gated on attract/start. The next command is `$gsd-verify-work 05 --ws first-playable-game` to reconcile the current evidence and leave both gaps open; its `reconcile_gaps` step alone owns UAT resolution. After that audit, `$gsd-plan-phase 05 --gaps --ws first-playable-game` can plan any remaining bounded work against the recorded blockers.
 
 ---
 *Phase: 05-selected-mvs-boot*
