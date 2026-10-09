@@ -43,6 +43,7 @@ SUITE_LABELS = {
     "package-consumers": "sdk-package-consumers",
     "package-docs": "sdk-package-docs",
     "package-capabilities": "sdk-package-capabilities",
+    "mvs": "mvs",
 }
 
 CTEST_CASES = {
@@ -54,6 +55,9 @@ CTEST_CASES = {
     "hostile": {"sdk_mutation_media", "sdk_mutation_sequence", "sdk_mutation_minimizer"},
     "provenance": {"sdk_fixture_write", "sdk_provenance"},
     "capabilities": {"sdk_host_closure"},
+    "mvs": {"mvs_synthetic_trace", "mvs_media_contract", "mvs_import_contract",
+            "mvs_import_mutation", "mvs_callback_contract", "mvs_boot_checkpoint",
+            "mvs_import_fuzz_corpus"},
 }
 
 PACKAGE_CASES = {
@@ -403,7 +407,12 @@ def collect_ctest_lane(name: str, identity: dict[str, Any]) -> tuple[dict[str, A
         "outcome": "pass", "label": label, "ctest_cases": count,
         "named_tests": sorted(CTEST_CASES[name]),
     }
-    if name in {"contract", "diagnostic", "run"}:
+    if name == "mvs":
+        lane["output_sha256"] = preserve_output("ctest-mvs", output)
+        lane["source_revision"] = identity.get("source_revision")
+        lane["relevant_source_sha256"] = identity.get("relevant_source_sha256")
+        validate_mvs_lane(lane, identity)
+    elif name in {"contract", "diagnostic", "run"}:
         suites = {"contract": {"diagnostic", "lifecycle", "media", "faults", "run"},
                   "diagnostic": {"diagnostic"}, "run": {"run"}}[name]
         records = validate_sdk_result_records(output, suites, identity)
@@ -496,6 +505,16 @@ def collect_ctest_lane(name: str, identity: dict[str, Any]) -> tuple[dict[str, A
         lane["assertions_status"] = "not emitted by CTest producer; positive named CTest case recorded"
     lane["output_sha256"] = preserve_output(name, output)
     return lane, output
+
+
+def validate_mvs_lane(lane: dict[str, Any], identity: dict[str, Any]) -> None:
+    expected = sorted(CTEST_CASES["mvs"])
+    if (lane.get("outcome") != "pass" or lane.get("label") != SUITE_LABELS["mvs"] or
+            lane.get("ctest_cases") != len(expected) or lane.get("named_tests") != expected or
+            lane.get("source_revision") != identity.get("source_revision") or
+            lane.get("relevant_source_sha256") != identity.get("relevant_source_sha256") or
+            re.fullmatch(r"[0-9a-f]{64}", str(lane.get("output_sha256", ""))) is None):
+        raise VerificationError("MVS receipt has missing tests, zero denominator, stale source, or no output digest")
 
 
 def suite_evidence() -> dict[str, Any]:
@@ -1022,7 +1041,7 @@ def suite_matrix() -> dict[str, Any]:
     cold_build_seconds = ensure_debug_build()
     identity = evidence.current_identity(ROOT)
     focused = {}
-    for name in ("contract", "diagnostic", "run", "controls", "isolation", "provenance", "capabilities"):
+    for name in ("contract", "diagnostic", "run", "controls", "isolation", "provenance", "capabilities", "mvs"):
         focused[name], _ = collect_ctest_lane(name, identity)
     consumers, _ = suite_package("consumers")
     final_identity = evidence.current_identity(ROOT)
