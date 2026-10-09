@@ -390,53 +390,65 @@ class ValidationMapReconciliationTest(unittest.TestCase):
 
     def test_checker_rejects_contradictory_records(self) -> None:
         mutations = {
-            "yaml disposition": lambda text: text.replace("disposition: open", "disposition: fixed", 1),
-            "yaml severity": lambda text: text.replace("severity: critical", "severity: warning", 1),
-            "table disposition": lambda text: text.replace("| WR-06 | warning | open |", "| WR-06 | warning | fixed |"),
-            "severity": lambda text: text.replace("| CR-03 | critical | fixed |", "| CR-03 | warning | fixed |"),
-            "duplicate id": lambda text: text.replace("| CR-03 | critical | fixed |", "| CR-03 | critical | fixed |\n| CR-03 | critical | fixed |"),
-            "drop yaml id": lambda text: re.sub(r"(?ms)^  - id: WR-03\n.*?(?=^  - id:|^open:)", "", text),
-            "count": lambda text: re.sub(r"(?m)^open: (\d+)$", lambda match: f"open: {int(match.group(1)) + 1}", text, count=1),
-            "total count": lambda text: re.sub(r"(?m)^total: (\d+)$", lambda match: f"total: {int(match.group(1)) + 1}", text, count=1),
+            "yaml disposition": (lambda text: text.replace("disposition: open", "disposition: fixed", 1),
+                                 "WR-09 severity or disposition differs between YAML and table"),
+            "yaml severity": (lambda text: text.replace("severity: critical", "severity: warning", 1),
+                              "CR-03 severity or disposition differs between YAML and table"),
+            "table disposition": (lambda text: text.replace("| WR-06 | warning | open |", "| WR-06 | warning | fixed |"),
+                                  "WR-06 severity or disposition differs between YAML and table"),
+            "severity": (lambda text: text.replace("| CR-03 | critical | fixed |", "| CR-03 | warning | fixed |"),
+                         "CR-03 severity or disposition differs between YAML and table"),
+            "duplicate id": (lambda text: re.sub(r"(?m)^(\| CR-03 \|[^\n]*)$", r"\1\n\1", text, count=1),
+                             "duplicate disposition table ID CR-03"),
+            "drop yaml id": (lambda text: re.sub(r"(?ms)^  - id: WR-03\n.*?(?=^  - id:|^open:)", "", text),
+                             "disposition YAML and table IDs differ"),
+            "count": (lambda text: re.sub(r"(?m)^open: (\d+)$", lambda match: f"open: {int(match.group(1)) + 1}", text, count=1),
+                      "disposition YAML open count differs from its records"),
+            "total count": (lambda text: re.sub(r"(?m)^total: (\d+)$", lambda match: f"total: {int(match.group(1)) + 1}", text, count=1),
+                            "disposition YAML total count differs from its records"),
         }
-        for label, transform in mutations.items():
+        for label, (transform, expected_error) in mutations.items():
             with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:
                 documents = reconciled_review_documents(Path(temporary))
                 before = documents["DISPOSITION"].read_text(encoding="utf-8")
                 after = transform(before)
                 self.assertNotEqual(after, before, f"{label} mutation did not change its fixture")
                 mutate_document(documents, "DISPOSITION", lambda _text: after)
-                with self.assertRaises(AssertionError):
+                with self.assertRaisesRegex(AssertionError, re.escape(expected_error)):
                     self.run_checker(documents)
 
     def test_checker_rejects_missing_crosswalk_and_closed_current_finding(self) -> None:
-        for label, name, transform in (
-            ("crosswalk", "VALIDATION", lambda text: re.sub(r"(?m)^\| WR-01 \|[^\n]*\n", "", text)),
+        for label, name, transform, expected_error in (
+            ("crosswalk", "VALIDATION", lambda text: re.sub(r"(?m)^\| WR-01 \|[^\n]*\n", "", text),
+             "review crosswalk differs from retained disposition history"),
         ):
             with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:
                 documents = reconciled_review_documents(Path(temporary))
                 mutate_document(documents, name, transform)
-                with self.assertRaises(AssertionError):
+                with self.assertRaisesRegex(AssertionError, re.escape(expected_error)):
                     self.run_checker(documents)
 
     def test_checker_rejects_missing_or_duplicate_wr06_provenance_and_crosswalk(self) -> None:
         mutations = (
             ("missing provenance", "DISPOSITION", lambda text: re.sub(
-                r"(?m)^(\| WR-06 \| warning \| open \| ).*( \|)$", r"\1-\2", text, count=1)),
-            ("missing crosswalk", "VALIDATION", lambda text: re.sub(r"(?m)^\| WR-06 \|[^\n]*\n", "", text, count=1)),
+                r"(?m)^(\| WR-06 \| warning \| open \| ).*( \|)$", r"\1-\2", text, count=1),
+             "WR-06 has no provenance source"),
+            ("missing crosswalk", "VALIDATION", lambda text: re.sub(r"(?m)^\| WR-06 \|[^\n]*\n", "", text, count=1),
+             "review crosswalk differs from retained disposition history"),
             ("duplicate crosswalk", "VALIDATION", lambda text: re.sub(
                 r"(?m)^(\| WR-06 \| warning \|[^\n]+\| open \|)$",
                 lambda match: match.group(1) + chr(10) + "| WR-06 | warning | duplicate frontend documentation-gate claim | open |",
-                text, count=1)),
+                text, count=1),
+             "duplicate validation crosswalk ID WR-06"),
         )
-        for label, name, transform in mutations:
+        for label, name, transform, expected_error in mutations:
             with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:
                 documents = reconciled_review_documents(Path(temporary))
                 before = documents[name].read_text(encoding="utf-8")
                 after = transform(before)
                 self.assertNotEqual(after, before, f"{label} mutation did not change its fixture")
                 mutate_document(documents, name, lambda _text: after)
-                with self.assertRaises(AssertionError):
+                with self.assertRaisesRegex(AssertionError, re.escape(expected_error)):
                     self.run_checker(documents)
 
     def test_checker_rejects_coherent_false_closure_of_current_wr06(self) -> None:
@@ -455,100 +467,115 @@ class ValidationMapReconciliationTest(unittest.TestCase):
 
     def test_checker_rejects_security_or_frontend_claim_contradictions(self) -> None:
         mutations = (
-            ("security count", "SECURITY", lambda text: text.replace("threats_open: 4", "threats_open: 3", 1)),
-            ("security row", "SECURITY", lambda text: re.sub(r"(?m)^(\| T-04-11 \|[^\n]*\| )open(\s*\|)$", r"\1closed\2", text)),
-            ("missing current medium threat", "SECURITY", lambda text: re.sub(r"(?m)^\| T-04-43 \|[^\n]*\n", "", text, count=1)),
+            ("security count", "SECURITY", lambda text: text.replace("threats_open: 4", "threats_open: 3", 1),
+             "security frontmatter blocking count differs from high/open register rows"),
+            ("security row", "SECURITY", lambda text: re.sub(r"(?m)^(\| T-04-11 \|[^\n]*\| )open(\s*\|)$", r"\1closed\2", text),
+             "security frontmatter blocking count differs from high/open register rows"),
+            ("missing current medium threat", "SECURITY", lambda text: re.sub(r"(?m)^\| T-04-43 \|[^\n]*\n", "", text, count=1),
+             "the three expected medium/open findings differ from the active security register"),
             ("current medium threat downgraded", "SECURITY", lambda text: re.sub(
                 r"(?m)^(\| T-04-43 \|[^|]*\|[^|]*\| )medium( \|)", r"\1low\2", text, count=1,
-            )),
-            ("HOST-02 observed", "VERIFICATION", lambda text: re.sub(r"(?m)^(\| HOST-02 \|.*\| )\? NEEDS HUMAN(?: / PENDING)?( \|.*)$", r"\1pass\2", text)),
-            ("QUAL-03 observed", "VERIFICATION", lambda text: with_requirement_status(text, "QUAL-03", "✓ SATISFIED")),
+            ), "the three expected medium/open findings differ from the active security register"),
+            ("HOST-02 observed", "VERIFICATION", lambda text: re.sub(r"(?m)^(\| HOST-02 \|.*\| )\? NEEDS HUMAN(?: / PENDING)?( \|.*)$", r"\1pass\2", text),
+             "HOST-02 is not explicitly marked as awaiting human evidence"),
+            ("QUAL-03 observed", "VERIFICATION", lambda text: with_requirement_status(text, "QUAL-03", "✓ SATISFIED"),
+             "QUAL-03 is not explicitly marked blocked, partial, or pending human evidence"),
             ("HOST-02 positive evidence", "VERIFICATION", lambda text: with_requirement_evidence(
                 text, "HOST-02", "Actual pinned RetroArch app loaded and accepted input; game output was visible."
-            )),
+            ), "HOST-02 evidence no longer matches the current actual-app uncertainty record"),
             ("QUAL-03 positive evidence", "VERIFICATION", lambda text: with_requirement_evidence(
                 text, "QUAL-03", "Procedure documented; successful actual frontend load remains unknown; the app displayed pixels."
-            )),
+            ), "QUAL-03 evidence no longer explicitly marks actual frontend load unobserved or unknown"),
             ("qualification goal positive evidence", "VERIFICATION", lambda text: with_table_cell(
                 text, "| # | Truth | Status | Evidence |", "5", 3, "Actual pinned frontend loaded successfully."
-            )),
+            ), "current qualification goal evidence no longer preserves the actual frontend unknown boundary"),
             ("qualification artifact positive evidence", "VERIFICATION", lambda text: with_table_cell(
                 text, "| Artifact/link | Status | Evidence |",
                 "Qualification input/log → redaction → retained/printed diagnostics", 2,
                 "Pinned RetroArch loaded and displayed pixels."
-            )),
+            ), "qualification artifact/link asserts unobserved frontend success"),
             ("libretro artifact positive evidence", "VERIFICATION", lambda text: with_table_cell(
                 text, "| Artifact/link | Status | Evidence |", "Libretro content → native load/frame → synchronous video callback", 2,
                 "Adapter calls and callback contract exist; RetroArch displayed guest pixels."
-            )),
+            ), "libretro artifact/link evidence overstates actual frontend behavior"),
             ("qualification link positive evidence", "VERIFICATION", lambda text: with_table_cell(
                 text, "| Artifact/link | Status | Evidence |", "Qualification input/log → redaction → retained/printed diagnostics", 2,
                 "Pinned RetroArch launched and displayed guest pixels."
-            )),
+            ), "qualification artifact/link asserts unobserved frontend success"),
             ("libretro link positive evidence", "VERIFICATION", lambda text: with_table_cell(
                 text, "| Artifact/link | Status | Evidence |", "Libretro content → native load/frame → synchronous video callback", 2,
                 "The actual app loaded successfully."
-            )),
+            ), "libretro artifact/link evidence overstates actual frontend behavior"),
             ("actual frontend spot-check passed", "VERIFICATION", lambda text: with_table_cell(
                 text, "| Behavior | Command/result | Status |",
                 "Actual pinned RetroArch", 1,
                 "Pinned RetroArch loaded, displayed pixels, and accepted input."
-            )),
+            ), "actual frontend spot-check is no longer marked manual-only and unrun"),
             ("evidence-map spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
                 text, "| Behavior | Command/result | Status |",
                 "Review/security evidence-map mutation suite", 1,
                 "Passed; actual pinned RetroArch loaded and displayed guest pixels."
-            )),
+            ), "behavioral spot-check claims actual frontend success"),
             ("qualification test spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
                 text, "| Behavior | Command/result | Status |",
                 "Qualification, path/redaction, snapshot and guide claims", 1,
                 "23/23 passed; actual pinned RetroArch loaded successfully."
-            )),
+            ), "behavioral spot-check claims actual frontend success"),
             ("GUI-free runner spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
                 text, "| Behavior | Command/result | Status |",
                 "GUI-free frontend diagnostics and smoke contract", 1,
                 "27/27 passed; actual pinned RetroArch displayed pixels."
-            )),
+            ), "behavioral spot-check claims actual frontend success"),
             ("docs gate spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
                 text, "| Behavior | Command/result | Status |",
                 "Consumer docs gate", 1,
                 "Passed; the pinned app loaded and presented output."
-            )),
-            ("duplicate HOST-02", "VERIFICATION", lambda text: with_duplicate_requirement(text, "HOST-02")),
-            ("duplicate QUAL-03", "VERIFICATION", lambda text: with_duplicate_requirement(text, "QUAL-03")),
-            ("malformed duplicate HOST-02", "VERIFICATION", lambda text: with_malformed_duplicate_requirement(text, "HOST-02")),
-            ("malformed duplicate QUAL-03", "VERIFICATION", lambda text: with_malformed_duplicate_requirement(text, "QUAL-03")),
-            ("actual frontend success claim", "VERIFICATION", add_frontend_success_claim),
-            ("confirmed gameplay presentation", "VERIFICATION", lambda text: add_frontend_claim(text, "Gameplay presentation was confirmed.")),
-            ("successful display output", "VERIFICATION", lambda text: add_frontend_claim(text, "Display output was successful.")),
+            ), "behavioral spot-check claims actual frontend success"),
+            ("duplicate HOST-02", "VERIFICATION", lambda text: with_duplicate_requirement(text, "HOST-02"),
+             "current frontend report row 'HOST-02' is absent or duplicated"),
+            ("duplicate QUAL-03", "VERIFICATION", lambda text: with_duplicate_requirement(text, "QUAL-03"),
+             "current frontend report row 'QUAL-03' is absent or duplicated"),
+            ("malformed duplicate HOST-02", "VERIFICATION", lambda text: with_malformed_duplicate_requirement(text, "HOST-02"),
+             "current frontend report row 'HOST-02' is absent or duplicated"),
+            ("malformed duplicate QUAL-03", "VERIFICATION", lambda text: with_malformed_duplicate_requirement(text, "QUAL-03"),
+             "current frontend report row 'QUAL-03' is absent or duplicated"),
+            ("actual frontend success claim", "VERIFICATION", add_frontend_success_claim,
+             "current verification goal evidence must explicitly mark actual pinned-app load unobserved or unknown and contain no success claim"),
+            ("confirmed gameplay presentation", "VERIFICATION", lambda text: add_frontend_claim(text, "Gameplay presentation was confirmed."),
+             "current verification goal evidence must explicitly mark actual pinned-app load unobserved or unknown and contain no success claim"),
+            ("successful display output", "VERIFICATION", lambda text: add_frontend_claim(text, "Display output was successful."),
+             "current verification goal evidence must explicitly mark actual pinned-app load unobserved or unknown and contain no success claim"),
         )
-        for label, name, transform in mutations:
+        for label, name, transform, expected_error in mutations:
             with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:
                 documents = reconciled_review_documents(Path(temporary))
                 before = documents[name].read_text(encoding="utf-8")
                 after = transform(before)
                 self.assertNotEqual(after, before, f"{label} mutation did not change its fixture")
                 mutate_document(documents, name, lambda _text: after)
-                with self.assertRaises(AssertionError):
+                with self.assertRaisesRegex(AssertionError, re.escape(expected_error)):
                     self.run_checker(documents)
 
     def test_security_register_requires_exact_four_high_and_three_medium_open_rows(self) -> None:
         mutations = (
-            ("remove current medium", lambda text: re.sub(r"(?m)^\| T-04-43 \|[^\n]*\n", "", text, count=1)),
-            ("close current medium", lambda text: re.sub(r"(?m)^(\| T-04-43 \|[^\n]*\| )open( \|)$", r"\1closed\2", text, count=1)),
-            ("unexpected open", lambda text: re.sub(r"(?m)^(\| T-04-39 \|[^\n]*\| )closed( \|)$", r"\1open\2", text, count=1)),
+            ("remove current medium", lambda text: re.sub(r"(?m)^\| T-04-43 \|[^\n]*\n", "", text, count=1),
+             "the three expected medium/open findings differ from the active security register"),
+            ("close current medium", lambda text: re.sub(r"(?m)^(\| T-04-43 \|[^\n]*\| )open( \|)$", r"\1closed\2", text, count=1),
+             "the three expected medium/open findings differ from the active security register"),
+            ("unexpected open", lambda text: re.sub(r"(?m)^(\| T-04-39 \|[^\n]*\| )closed( \|)$", r"\1open\2", text, count=1),
+             "the three expected medium/open findings differ from the active security register"),
             ("duplicate row", lambda text: re.sub(
                 r"(?m)^(\| T-04-38 \|[^\n]*)$", r"\1\n\1", text, count=1,
-            )),
+            ), "duplicate security register ID T-04-38"),
         )
-        for label, transform in mutations:
+        for label, transform, expected_error in mutations:
             with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:
                 documents = reconciled_review_documents(Path(temporary))
                 before = documents["SECURITY"].read_text(encoding="utf-8")
                 after = transform(before)
                 self.assertNotEqual(after, before, f"{label} mutation was a no-op")
                 mutate_document(documents, "SECURITY", lambda _text: after)
-                with self.assertRaises(AssertionError):
+                with self.assertRaisesRegex(AssertionError, re.escape(expected_error)):
                     self.run_checker(documents)
 
     def test_copied_wr01_history_requires_exact_historical_review_source(self) -> None:
@@ -597,25 +624,38 @@ class ValidationMapReconciliationTest(unittest.TestCase):
                 validation_map.require_reviewed_source_identity(review_frontmatter(revision), repository=repository)
 
     def test_review_identity_rejects_duplicate_revision_keys(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="phase04-review-duplicate-revision-") as temporary:
+        for second_value in ("second-valid", "malformed"):
+            with self.subTest(second_value=second_value), tempfile.TemporaryDirectory(
+                prefix="phase04-review-duplicate-revision-"
+            ) as temporary:
+                repository = Path(temporary)
+                first_revision = commit_review_source_tree(repository)
+                if second_value == "second-valid":
+                    subprocess.run(
+                        ["git", "-C", str(repository), "commit", "--allow-empty", "-qm", "second valid revision"],
+                        check=True,
+                    )
+                    duplicate_value = subprocess.run(
+                        ["git", "-C", str(repository), "rev-parse", "HEAD"], check=True, text=True,
+                        stdout=subprocess.PIPE,
+                    ).stdout.strip()
+                    self.assertNotEqual(first_revision, duplicate_value)
+                else:
+                    duplicate_value = "malformed-not-a-commit"
+                review = review_frontmatter(first_revision).replace(
+                    f"reviewed_revision: {first_revision}\n",
+                    f"reviewed_revision: {first_revision}\nreviewed_revision: {duplicate_value}\n",
+                    1,
+                )
+                with self.assertRaisesRegex(AssertionError, "exactly one reviewed_revision field"):
+                    validation_map.require_reviewed_source_identity(review, repository=repository)
+
+        with tempfile.TemporaryDirectory(prefix="phase04-review-malformed-revision-") as temporary:
             repository = Path(temporary)
-            first_revision = commit_review_source_tree(repository)
-            subprocess.run(
-                ["git", "-C", str(repository), "commit", "--allow-empty", "-qm", "second valid revision"],
-                check=True,
-            )
-            second_revision = subprocess.run(
-                ["git", "-C", str(repository), "rev-parse", "HEAD"], check=True, text=True,
-                stdout=subprocess.PIPE,
-            ).stdout.strip()
-            self.assertNotEqual(first_revision, second_revision)
-            review = review_frontmatter(first_revision).replace(
-                f"reviewed_revision: {first_revision}\n",
-                f"reviewed_revision: {first_revision}\nreviewed_revision: {second_revision}\n",
-                1,
-            )
-            with self.assertRaisesRegex(AssertionError, "exactly one full immutable reviewed_revision"):
-                validation_map.require_reviewed_source_identity(review, repository=repository)
+            commit_review_source_tree(repository)
+            malformed = review_frontmatter("malformed-not-a-commit")
+            with self.assertRaisesRegex(AssertionError, "full lowercase immutable commit ID"):
+                validation_map.require_reviewed_source_identity(malformed, repository=repository)
 
     def test_frontend_claim_grammar_rejects_render_screen_and_output_paraphrases(self) -> None:
         uncertain = "Actual pinned RetroArch load remains unknown; launch previously aborted before screenshot."
@@ -654,26 +694,32 @@ class ValidationMapReconciliationTest(unittest.TestCase):
         for claim in claims:
             surfaces = (
                 ("goal", lambda text: with_table_cell(text, "| # | Truth | Status | Evidence |", "3", 3,
-                                                       validation_map.PINNED_FRONTEND_UNCERTAINTY_EVIDENCE + " " + claim)),
+                                                       validation_map.PINNED_FRONTEND_UNCERTAINTY_EVIDENCE + " " + claim),
+                 "current verification goal evidence must explicitly mark actual pinned-app load unobserved or unknown and contain no success claim"),
                 ("HOST-02 evidence", lambda text: with_requirement_evidence(text, "HOST-02",
-                                                                              validation_map.HOST_FRONTEND_UNCERTAINTY_EVIDENCE + " " + claim)),
+                                                                               validation_map.HOST_FRONTEND_UNCERTAINTY_EVIDENCE + " " + claim),
+                 "HOST-02 evidence no longer matches the current actual-app uncertainty record"),
                 ("QUAL-03 evidence", lambda text: with_requirement_evidence(text, "QUAL-03",
-                                                                               validation_map.QUAL_FRONTEND_UNCERTAINTY_EVIDENCE + " " + claim)),
+                                                                               validation_map.QUAL_FRONTEND_UNCERTAINTY_EVIDENCE + " " + claim),
+                 "QUAL-03 evidence no longer explicitly marks actual frontend load unobserved or unknown"),
                 ("artifact/link", lambda text: with_table_cell(text, "| Artifact/link | Status | Evidence |",
-                                                               "Libretro content → native load/frame → synchronous video callback", 2, claim)),
+                                                               "Libretro content → native load/frame → synchronous video callback", 2, claim),
+                 "libretro artifact/link evidence overstates actual frontend behavior"),
                 ("data-flow", lambda text: with_table_cell(text, "| Output | Source | Status |",
-                                                           "Actual frontend state", 2, "? UNKNOWN; " + claim)),
+                                                           "Actual frontend state", 2, "? UNKNOWN; " + claim),
+                 "frontend qualification data-flow no longer preserves actual-app unknown status"),
                 ("spot-check", lambda text: with_table_cell(text, "| Behavior | Command/result | Status |",
-                                                             "Actual pinned RetroArch", 1, claim)),
+                                                             "Actual pinned RetroArch", 1, claim),
+                 "actual frontend spot-check is no longer marked manual-only and unrun"),
             )
-            for surface, transform in surfaces:
+            for surface, transform, expected_error in surfaces:
                 with self.subTest(claim=claim, surface=surface), tempfile.TemporaryDirectory() as temporary:
                     documents = reconciled_review_documents(Path(temporary))
                     before = documents["VERIFICATION"].read_text(encoding="utf-8")
                     after = transform(before)
                     self.assertNotEqual(after, before, f"{surface} {claim!r} mutation was a no-op")
                     mutate_document(documents, "VERIFICATION", lambda _text: after)
-                    with self.assertRaises(AssertionError):
+                    with self.assertRaisesRegex(AssertionError, re.escape(expected_error)):
                         self.run_checker(documents)
 
     def test_pending_status_cells_reject_appended_frontend_observations(self) -> None:
@@ -693,7 +739,12 @@ class ValidationMapReconciliationTest(unittest.TestCase):
                         "VERIFICATION",
                         lambda text, rid=requirement_id, value=status: with_requirement_status(text, rid, value),
                     )
-                    with self.assertRaises(AssertionError):
+                    expected_error = (
+                        "HOST-02 is not explicitly marked as awaiting human evidence"
+                        if requirement_id == "HOST-02"
+                        else "QUAL-03 is not explicitly marked blocked, partial, or pending human evidence"
+                    )
+                    with self.assertRaisesRegex(AssertionError, re.escape(expected_error)):
                         self.run_checker(documents)
 
     def test_actual_frontend_spotcheck_requires_current_manual_unknown_state(self) -> None:

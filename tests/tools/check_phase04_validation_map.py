@@ -52,10 +52,15 @@ def frontmatter(document: str, label: str) -> str:
 def require_reviewed_source_identity(review: str, *, repository: Path = ROOT) -> None:
     """Bind the current review's required file list and bytes to its immutable commit."""
     yaml = frontmatter(review, "review")
-    revision_matches = re.findall(r"(?m)^reviewed_revision:\s*['\"]?([0-9a-f]+)['\"]?\s*$", yaml)
-    require(len(revision_matches) == 1 and len(revision_matches[0]) in {40, 64},
-            "current review must contain exactly one full immutable reviewed_revision")
-    revision = revision_matches[0]
+    revision_values = re.findall(r"(?m)^reviewed_revision:\s*(.*?)\s*$", yaml)
+    require(len(revision_values) == 1,
+            "current review must contain exactly one reviewed_revision field")
+    revision_value = revision_values[0]
+    if len(revision_value) >= 2 and revision_value[0] == revision_value[-1] and revision_value[0] in "'\"":
+        revision_value = revision_value[1:-1]
+    require(re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", revision_value) is not None,
+            "current review reviewed_revision must be a full lowercase immutable commit ID")
+    revision = revision_value
     paths_match = re.search(r"(?ms)^files_reviewed_list:\s*\n((?:^  - .+\n)+)", yaml)
     require(paths_match is not None, "current review lacks files_reviewed_list")
     paths = [re.sub(r"^[\"']|[\"']$", "", value.strip())
