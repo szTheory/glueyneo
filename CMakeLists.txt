@@ -111,6 +111,8 @@ function(glueyneo_apply_sdk_sanitizer target)
   endif()
 endfunction()
 
+glueyneo_apply_sdk_sanitizer(glueyneo_mvs_zlib)
+
 if(GLUEYNEO_CPU_EXPERIMENT AND GLUEYNEO_OWNED_CPU_EXPERIMENT)
   message(FATAL_ERROR "Select one whole CPU backend experiment per build directory")
 endif()
@@ -476,6 +478,7 @@ if(GLUEYNEO_BUILD_TESTS)
   else()
     target_compile_options(mvs_import_lib PRIVATE -Wall -Wextra -Wpedantic -Werror)
   endif()
+  glueyneo_apply_sdk_sanitizer(mvs_import_lib)
 
   add_executable(mvs_importer tools/mvs/mvs_import.c)
   target_compile_features(mvs_importer PRIVATE c_std_17)
@@ -488,6 +491,7 @@ if(GLUEYNEO_BUILD_TESTS)
   else()
     target_compile_options(mvs_importer PRIVATE -Wall -Wextra -Wpedantic -Werror)
   endif()
+  glueyneo_apply_sdk_sanitizer(mvs_importer)
 
   add_executable(mvs_test tests/mvs/test_mvs.c)
   target_include_directories(mvs_test PRIVATE
@@ -508,6 +512,48 @@ if(GLUEYNEO_BUILD_TESTS)
   add_test(NAME mvs_synthetic_trace COMMAND mvs_test)
   set_tests_properties(mvs_synthetic_trace PROPERTIES
     LABELS "mvs;importer;guest;libretro" TIMEOUT 60)
+  add_test(NAME mvs_media_contract COMMAND mvs_test --media-contract)
+  add_test(NAME mvs_import_contract
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/mvs/test_mvs_qualification.py
+            --importer $<TARGET_FILE:mvs_importer> --mode positive)
+  add_test(NAME mvs_import_mutation
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/mvs/test_mvs_qualification.py
+            --importer $<TARGET_FILE:mvs_importer> --mode mutation)
+  add_test(NAME mvs_callback_contract COMMAND mvs_test --callback-contract)
+  add_test(NAME mvs_boot_checkpoint COMMAND mvs_test --boot-checkpoint)
+  set_tests_properties(mvs_media_contract mvs_import_contract mvs_import_mutation
+    mvs_callback_contract mvs_boot_checkpoint PROPERTIES LABELS "mvs" TIMEOUT 180)
+
+  add_executable(mvs_import_fuzz tests/mvs/fuzz_import.c)
+  target_compile_features(mvs_import_fuzz PRIVATE c_std_17)
+  target_link_libraries(mvs_import_fuzz PRIVATE mvs_import_lib)
+  if(MSVC)
+    target_compile_options(mvs_import_fuzz PRIVATE /W4 /WX)
+  else()
+    target_compile_options(mvs_import_fuzz PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(mvs_import_fuzz)
+  add_dependencies(mvs_test mvs_import_fuzz)
+  add_test(NAME mvs_import_fuzz_corpus
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/mvs/test_mvs_qualification.py
+            --importer $<TARGET_FILE:mvs_importer> --fuzzer $<TARGET_FILE:mvs_import_fuzz>
+            --mode fuzz)
+  set_tests_properties(mvs_import_fuzz_corpus PROPERTIES
+    LABELS "mvs;fuzz" TIMEOUT 180)
+
+  add_executable(mvs_qualify tools/mvs/mvs_qualify.c)
+  target_include_directories(mvs_qualify PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  target_compile_features(mvs_qualify PRIVATE c_std_17)
+  set_target_properties(mvs_qualify PROPERTIES C_STANDARD 17
+    C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
+  target_link_libraries(mvs_qualify PRIVATE Glueyneo::glueyneo)
+  if(MSVC)
+    target_compile_options(mvs_qualify PRIVATE /W4 /WX)
+  else()
+    target_compile_options(mvs_qualify PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(mvs_qualify)
 
   add_executable(sdk_diagnostic tests/sdk/test_sdk.c tests/sdk/guest_fixture.c)
   target_include_directories(sdk_diagnostic PRIVATE tests/sdk src)

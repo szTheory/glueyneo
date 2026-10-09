@@ -27,8 +27,14 @@ extern "C" {
 #define GN_MVS_MANIFEST_VERSION UINT32_C(1)
 #define GN_MVS_PROFILE_MSX UINT32_C(0x4d53584d)
 #define GN_MVS_MAX_REGIONS 6u
-#define GN_MVS_MAX_REGION_BYTES ((size_t)32u * 1024u * 1024u)
-#define GN_MVS_MAX_MEDIA_BYTES ((size_t)48u * 1024u * 1024u)
+#define GN_MVS_MAX_REGION_BYTES ((size_t)48u * 1024u * 1024u)
+#define GN_MVS_MAX_MEDIA_BYTES ((size_t)64u * 1024u * 1024u)
+#define GN_MVS_BIOS_BYTES ((size_t)0x80000u)
+#define GN_MVS_PROGRAM_BYTES ((size_t)0x500000u)
+#define GN_MVS_FIXED_BYTES ((size_t)0x20000u)
+#define GN_MVS_AUDIO_PROGRAM_BYTES ((size_t)0x20000u)
+#define GN_MVS_SAMPLES_BYTES ((size_t)0xa00000u)
+#define GN_MVS_SPRITES_BYTES ((size_t)0x3000000u)
 #define GN_MAX_REGIONS 2u
 #define GN_MAX_MEDIA_BYTES ((size_t)1024u * (size_t)1024u)
 #define GN_MAX_CYCLE_BUDGET UINT64_C(1000000)

@@ -56,6 +56,8 @@ gn_status gn_test_trace_read(const gn_instance *instance,
                              size_t *out_count, size_t *out_dropped);
 gn_status gn_test_mvs_read_work_ram(const gn_instance *instance,
                                    uint32_t address, uint16_t *out_value);
+gn_status gn_test_mvs_read_bus(const gn_instance *instance,
+                               uint32_t address, uint16_t *out_value);
 #endif
 
 #endif

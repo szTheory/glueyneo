@@ -605,6 +605,19 @@ gn_status gn_test_mvs_read_work_ram(const gn_instance *instance,
                             instance->image->mvs_work_ram[offset + 1u]);
     return GN_STATUS_OK;
 }
+
+gn_status gn_test_mvs_read_bus(const gn_instance *instance,
+                               uint32_t address, uint16_t *out_value) {
+    if (instance == NULL || out_value == NULL) return GN_STATUS_INVALID_ARGUMENT;
+    if (instance->image == NULL || instance->image->mvs_region_count == 0u)
+        return GN_STATUS_INVALID_STATE;
+    return gn_mvs_bus_read16(instance->image->mvs_regions,
+                             instance->image->mvs_region_count,
+                             instance->image->mvs_work_ram,
+                             instance->image->mvs_work_ram_size,
+                             address, out_value)
+        ? GN_STATUS_OK : GN_STATUS_INVALID_MEDIA;
+}
 #endif
 
 GN_API gn_status gn_load(gn_instance *instance, const gn_manifest *manifest) {
@@ -713,18 +726,23 @@ GN_API gn_status gn_load_mvs(gn_instance *instance,
                              const gn_mvs_manifest *manifest) {
     if (instance == NULL || manifest == NULL) return GN_STATUS_INVALID_ARGUMENT;
     if (manifest->version != GN_MVS_MANIFEST_VERSION ||
-        manifest->profile != GN_MVS_PROFILE_MSX ||
-        manifest->region_count != GN_MVS_MAX_REGIONS) {
+        manifest->profile != GN_MVS_PROFILE_MSX) {
         return GN_STATUS_UNSUPPORTED_PROFILE;
     }
+    if (manifest->region_count != GN_MVS_MAX_REGIONS) return GN_STATUS_INVALID_MEDIA;
     uint32_t roles = 0u;
     size_t total = 0u;
+    static const size_t expected_sizes[GN_MVS_MAX_REGIONS] = {
+        GN_MVS_BIOS_BYTES, GN_MVS_PROGRAM_BYTES, GN_MVS_FIXED_BYTES,
+        GN_MVS_AUDIO_PROGRAM_BYTES, GN_MVS_SAMPLES_BYTES,
+        GN_MVS_SPRITES_BYTES};
     for (size_t index = 0u; index < manifest->region_count; ++index) {
         const gn_mvs_region *region = &manifest->regions[index];
         if (region->role < GN_MVS_REGION_BIOS ||
             region->role > GN_MVS_REGION_SPRITES ||
             region->source == NULL || region->source_size == 0u ||
             region->source_size != region->mapped_size ||
+            region->source_size != expected_sizes[(unsigned)region->role - 1u] ||
             region->source_size > GN_MVS_MAX_REGION_BYTES ||
             region->source_size > GN_MVS_MAX_MEDIA_BYTES - total ||
             (region->layout != GN_MVS_LAYOUT_LINEAR &&
@@ -998,8 +1016,8 @@ GN_API const char *gn_status_string(gn_status status) {
         case GN_STATUS_OK: return "ok";
         case GN_STATUS_INVALID_ARGUMENT: return "invalid argument";
         case GN_STATUS_INVALID_STATE: return "instance has no loaded media";
-        case GN_STATUS_INVALID_MEDIA: return "invalid diagnostic media";
-        case GN_STATUS_UNSUPPORTED_PROFILE: return "unsupported diagnostic profile";
+        case GN_STATUS_INVALID_MEDIA: return "invalid media contract";
+        case GN_STATUS_UNSUPPORTED_PROFILE: return "unsupported media profile";
         case GN_STATUS_OUT_OF_MEMORY: return "out of memory";
         case GN_STATUS_CPU_FAILURE: return "CPU backend failure";
         default: return "unknown status";

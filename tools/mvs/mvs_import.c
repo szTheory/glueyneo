@@ -8,12 +8,12 @@
 #include <string.h>
 
 enum { IMPORT_OK, IMPORT_MALFORMED, IMPORT_UNSUPPORTED, IMPORT_LIMIT,
-       IMPORT_PROFILE, IMPORT_DECOMPRESS, IMPORT_MEMORY };
+       IMPORT_PROFILE, IMPORT_DECOMPRESS, IMPORT_MEMORY, IMPORT_AMBIGUOUS };
 
 #define ZIP_ENTRIES_MAX 6u
 #define ZIP_INPUT_MAX (64u * 1024u * 1024u)
-#define REGION_MAX (32u * 1024u * 1024u)
-#define OUTPUT_MAX (48u * 1024u * 1024u)
+#define REGION_MAX (48u * 1024u * 1024u)
+#define OUTPUT_MAX (64u * 1024u * 1024u)
 #define BUNDLE_HEADER 16u
 #define BUNDLE_ENTRY_HEADER 12u
 
@@ -58,6 +58,12 @@ static uint32_t role_for_name(const uint8_t *name, size_t length) {
     return 0u;
 }
 
+static uint32_t expected_size(uint32_t role) {
+    static const uint32_t sizes[ZIP_ENTRIES_MAX] = {
+        0x80000u, 0x500000u, 0x20000u, 0x20000u, 0xa00000u, 0x3000000u};
+    return role == 0u || role > ZIP_ENTRIES_MAX ? 0u : sizes[role - 1u];
+}
+
 static int safe_name(const uint8_t *name, size_t length) {
     if (length == 0u || length >= 64u) return 0;
     for (size_t i = 0u; i < length; ++i) {
@@ -70,13 +76,42 @@ static int safe_name(const uint8_t *name, size_t length) {
     return name[0] != '.';
 }
 
+static int extra_fields_valid(const uint8_t *extra, size_t length) {
+    size_t cursor = 0u;
+    while (cursor < length) {
+        if (length - cursor < 4u) return IMPORT_MALFORMED;
+        const uint16_t identifier = get16(extra + cursor);
+        const uint16_t field_size = get16(extra + cursor + 2u);
+        cursor += 4u;
+        if (field_size > length - cursor) return IMPORT_MALFORMED;
+        if (identifier == 1u) return IMPORT_UNSUPPORTED; /* ZIP64 */
+        cursor += field_size;
+    }
+    return IMPORT_OK;
+}
+
 static int parse_zip(const uint8_t *zip, size_t size, zip_entry entries[6],
                      size_t *entry_count) {
-    if (zip == NULL || size < 22u || size > ZIP_INPUT_MAX) return IMPORT_LIMIT;
+    if (zip == NULL) return IMPORT_MALFORMED;
+    if (size > ZIP_INPUT_MAX) return IMPORT_LIMIT;
+    if (size < 22u) return IMPORT_MALFORMED;
     size_t eocd = SIZE_MAX;
     const size_t lower = size > 65557u ? size - 65557u : 0u;
     for (size_t pos = size - 22u;; --pos) {
-        if (get32(zip + pos) == UINT32_C(0x06054b50)) { eocd = pos; break; }
+        if (get32(zip + pos) == UINT32_C(0x06054b50)) {
+            const uint16_t candidate_comment = get16(zip + pos + 20u);
+            const uint16_t entries_on_disk = get16(zip + pos + 8u);
+            const uint16_t entries_total = get16(zip + pos + 10u);
+            const uint32_t directory_size = get32(zip + pos + 12u);
+            const uint32_t directory_offset = get32(zip + pos + 16u);
+            if (pos + 22u + candidate_comment == size &&
+                get16(zip + pos + 4u) == 0u && get16(zip + pos + 6u) == 0u &&
+                entries_on_disk == entries_total && entries_total == ZIP_ENTRIES_MAX &&
+                directory_offset <= pos && directory_size == pos - directory_offset) {
+                eocd = pos;
+                break;
+            }
+        }
         if (pos == lower) break;
     }
     if (eocd == SIZE_MAX || !span(size, (uint32_t)eocd, 22u)) return IMPORT_MALFORMED;
@@ -92,6 +127,7 @@ static int parse_zip(const uint8_t *zip, size_t size, zip_entry entries[6],
     if (central_offset > eocd || central_size != eocd - central_offset ||
         !span(size, central_offset, central_size)) return IMPORT_MALFORMED;
     uint32_t seen = 0u;
+    size_t compressed_total = 0u;
     size_t pos = central_offset;
     for (size_t i = 0u; i < count; ++i) {
         if (pos > size || size - pos < 46u || get32(zip + pos) != UINT32_C(0x02014b50))
@@ -113,13 +149,19 @@ static int parse_zip(const uint8_t *zip, size_t size, zip_entry entries[6],
         if (!safe_name(name, name_length)) return IMPORT_UNSUPPORTED;
         const uint32_t role = role_for_name(name, name_length);
         if (role == 0u) return IMPORT_PROFILE;
-        if ((seen & (UINT32_C(1) << role)) != 0u) return IMPORT_PROFILE;
+        if ((seen & (UINT32_C(1) << role)) != 0u) return IMPORT_AMBIGUOUS;
         seen |= UINT32_C(1) << role;
-        if (flags != 0u || disk != 0u || get32(record + 24u) == UINT32_MAX ||
+        if ((flags & (uint16_t)~UINT16_C(0x0800)) != 0u || disk != 0u ||
+            get32(record + 24u) == UINT32_MAX ||
             compressed == UINT32_MAX || method > 8u || (method != 0u && method != 8u))
             return IMPORT_UNSUPPORTED;
-        if (expanded == 0u || expanded > REGION_MAX ||
+        if (expanded != expected_size(role) || expanded > REGION_MAX ||
             compressed > ZIP_INPUT_MAX) return IMPORT_LIMIT;
+        if (compressed > ZIP_INPUT_MAX - compressed_total) return IMPORT_LIMIT;
+        compressed_total += compressed;
+        const int central_extra_status = extra_fields_valid(
+            record + 46u + name_length, extra_length);
+        if (central_extra_status != IMPORT_OK) return central_extra_status;
         if (!span(size, local_offset, 30u) || get32(zip + local_offset) != UINT32_C(0x04034b50))
             return IMPORT_MALFORMED;
         const uint8_t *local = zip + local_offset;
@@ -127,7 +169,14 @@ static int parse_zip(const uint8_t *zip, size_t size, zip_entry entries[6],
         const uint16_t local_method = get16(local + 8u);
         const uint16_t local_name_length = get16(local + 26u);
         const uint16_t local_extra_length = get16(local + 28u);
-        const uint32_t payload = local_offset + 30u + local_name_length + local_extra_length;
+        const size_t local_variable_size = (size_t)local_name_length + local_extra_length;
+        if (!span(size, local_offset + 30u, local_variable_size)) return IMPORT_MALFORMED;
+        const size_t payload_size = (size_t)local_offset + 30u + local_variable_size;
+        if (payload_size > UINT32_MAX) return IMPORT_MALFORMED;
+        const uint32_t payload = (uint32_t)payload_size;
+        const int local_extra_status = extra_fields_valid(
+            local + 30u + local_name_length, local_extra_length);
+        if (local_extra_status != IMPORT_OK) return local_extra_status;
         if (local_flags != flags || local_method != method ||
             local_name_length != name_length ||
             !span(size, local_offset + 30u, (size_t)local_name_length + local_extra_length) ||
@@ -165,7 +214,8 @@ int mvs_import_memory(const uint8_t *zip, size_t zip_size,
     if (status != IMPORT_OK) return status;
     size_t output_size = BUNDLE_HEADER;
     for (size_t i = 0u; i < count; ++i) {
-        if (entries[i].expanded > OUTPUT_MAX - output_size - BUNDLE_ENTRY_HEADER)
+        if (output_size > OUTPUT_MAX - BUNDLE_ENTRY_HEADER ||
+            entries[i].expanded > OUTPUT_MAX - output_size - BUNDLE_ENTRY_HEADER)
             return IMPORT_LIMIT;
         output_size += BUNDLE_ENTRY_HEADER + entries[i].expanded;
     }
@@ -205,6 +255,15 @@ int mvs_import_memory(const uint8_t *zip, size_t zip_size,
         const uint32_t crc = (uint32_t)crc32(0L, bundle + cursor,
                                              (uInt)entry->expanded);
         if (crc != entry->crc) { status = IMPORT_DECOMPRESS; goto fail; }
+        /* Normalize the word-swapped program ROM after validating its archive
+         * CRC. The GNMV contract stores this region in bus order. */
+        if (entry->role == 2u) {
+            for (size_t byte = 0u; byte < entry->expanded; byte += 2u) {
+                const uint8_t first = bundle[cursor + byte];
+                bundle[cursor + byte] = bundle[cursor + byte + 1u];
+                bundle[cursor + byte + 1u] = first;
+            }
+        }
         cursor += entry->expanded;
     }
     *out_bundle = bundle; *out_size = output_size;
@@ -215,11 +274,26 @@ fail:
 }
 
 #if !defined(MVS_IMPORT_NO_MAIN)
+static const char *status_message(int status) {
+    switch (status) {
+        case IMPORT_MALFORMED: return "malformed ZIP32 media archive";
+        case IMPORT_UNSUPPORTED: return "archive uses an unsupported ZIP feature";
+        case IMPORT_LIMIT: return "media exceeds selected profile or resource limits";
+        case IMPORT_PROFILE: return "required MVS profile regions are missing or incompatible";
+        case IMPORT_DECOMPRESS: return "DEFLATE stream, expanded size, or CRC validation failed";
+        case IMPORT_MEMORY: return "insufficient memory for bounded media import";
+        case IMPORT_AMBIGUOUS: return "archive contains ambiguous MVS region entries";
+        default: return "MVS media import failed";
+    }
+}
+
 int main(int argc, char **argv) {
     if (argc != 3) { fputs("usage: mvs_importer input.zip output.gnmv\n", stderr); return 2; }
     FILE *input = fopen(argv[1], "rb");
-    if (input == NULL) { fputs("import input unavailable\n", stderr); return 1; }
-    if (fseek(input, 0, SEEK_END) != 0) { fclose(input); return 1; }
+    if (input == NULL) { fputs("input archive is unavailable\n", stderr); return 1; }
+    if (fseek(input, 0, SEEK_END) != 0) {
+        fclose(input); fputs("input archive could not be inspected\n", stderr); return 1;
+    }
     const long length = ftell(input);
     if (length < 0 || (unsigned long)length > ZIP_INPUT_MAX || fseek(input, 0, SEEK_SET) != 0) {
         fclose(input); fputs("import input exceeds supported limit\n", stderr); return 1;
@@ -232,7 +306,10 @@ int main(int argc, char **argv) {
     uint8_t *bundle = NULL; size_t bundle_size = 0u;
     const int status = mvs_import_memory(bytes, (size_t)length, &bundle, &bundle_size);
     free(bytes);
-    if (status != IMPORT_OK) { fputs("MVS archive rejected\n", stderr); return status; }
+    if (status != IMPORT_OK) {
+        fprintf(stderr, "%s\n", status_message(status));
+        return status;
+    }
     FILE *output = fopen(argv[2], "wb");
     if (output == NULL) {
         free(bundle); fputs("normalized media could not be written\n", stderr); return 1;
