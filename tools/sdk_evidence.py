@@ -90,7 +90,7 @@ RELEVANT_FILES = (
     "tests/fuzz/minimize.py", "tests/consumers/CMakeLists.txt",
     "tests/consumers/check_package.py", "tests/consumers/header.cpp",
     "tools/diagnostic/main.c", "tools/sdk_evidence.py", "tools/verify_sdk.py",
-    "src/mvs/mvs_bus.c", "include/glueyneo/glueyneo.h",
+    "src/mvs/mvs_bus.c",
     "src/libretro/libretro_core.c", "tools/mvs/mvs_import.c",
     "tools/mvs/qualify_local_boot.py", "tools/mvs/mvs_qualify.c",
     "tests/mvs/test_mvs.c", "tests/mvs/test_mvs_qualification.py",
