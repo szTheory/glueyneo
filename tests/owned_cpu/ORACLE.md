@@ -1,5 +1,17 @@
 # Owned CPU timing and exception oracle
 
+## Current MC68000 exception timing correction — 2026-10-09
+
+The selected processor is MC68000. The controlling source is the MC68000
+column of the Motorola/NXP User's Manual Rev. 9.1 Table 7-15 (printed p. 7-11,
+[official PDF](https://www.nxp.com/docs/en/reference-manual/MC68000UM.pdf)):
+reset 64, autovector IRQ 72, address/bus error 94, and illegal instruction,
+privilege violation, and TRAP 62 clocks. Older table entries in this ledger
+are superseded by those corrected expectations. Vector 4 is separately tested
+for its short supervisor frame, pre-instruction PC, old SR, vector fetch, and
+absence of operand writes; only the specifically classified reserved byte and
+long EORI destination encodings are promoted to that exception path.
+
 This ledger covers only the named `owned_cpu_timing` fixture. Expected
 architectural state and frame contents come from the cited primary manuals;
 the callback order below is an explicit functional-bus contract checked by the

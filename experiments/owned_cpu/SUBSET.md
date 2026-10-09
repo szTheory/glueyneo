@@ -1,5 +1,16 @@
 # Owned MC68000 implemented subset
 
+## Current exception timing correction — 2026-10-09
+
+For the MC68000 contract, use the MC68000 column in the Motorola/NXP User's
+Manual Rev. 9.1 Table 7-15 (printed p. 7-11): reset 64 clocks, autovector IRQ
+72, address/bus error 94, and illegal instruction, privilege violation, and
+TRAP 62 clocks. Table 8 timing values refer to a different processor variant
+and do not define this MC68000 contract. The explicit vector-4 subset handles
+only the observed reserved byte and long EORI destination encodings reached by
+the selected fixture; other unsupported instructions remain fail-closed. See
+[`ORACLE.md`](../../tests/owned_cpu/ORACLE.md) for the focused vectors.
+
 Status: **admitted for the bounded Phase 01 diagnostic subset**.
 This is a private authored C17 experiment for a narrow, manual-derived set of
 MC68000 behaviors. It is not a complete CPU implementation or a Neo Geo timing

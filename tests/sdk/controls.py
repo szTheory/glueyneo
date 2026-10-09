@@ -21,14 +21,14 @@ CONTROL_CASES = {
     "initialized": ("sdk.observe.initialized", 0x1237, 0x1238),
     "bss": ("sdk.observe.bss", 1, 2),
     "run-instructions": ("sdk.run.instructions", 12, 13),
-    "run-elapsed": ("sdk.run.elapsed-cycles", 172, 173),
+    "run-elapsed": ("sdk.run.elapsed-cycles", 196, 197),
     "run-stop": ("sdk.run.reason-stopped", 1, 0),
     "byte-order": ("sdk.observe.arithmetic-byte-order", 10, 167772160),
     "access-order": ("sdk.bus.event.00.address", 0, 2),
 }
 ISOLATION_CONTROL_CASES = {
     "swapped-owner": ("sdk.isolation.owner.arithmetic", 10, 16),
-    "altered-split-progress": ("sdk.isolation.split-progress", 40, 41),
+    "altered-split-progress": ("sdk.isolation.split-progress", 64, 65),
 }
 
 ASSERTION = re.compile(
@@ -631,7 +631,7 @@ def diagnostic_records(runner: str, result_dir: Path) -> int:
             if (record.get("outcome") != "pass" or record.get("assertions", 0) <= 0 or
                     observed.get("arithmetic") != expected["arithmetic"] or
                     observed.get("initialized") != expected["initialized"] or
-                    observed.get("bss") != 1 or observed.get("cycles") != 172 or
+                    observed.get("bss") != 1 or observed.get("cycles") != 196 or
                     observed.get("instructions") != 12 or observed.get("pc") != 302 or
                     observed.get("reason") != 1):
                 return fail(f"runner scenario {scenario} did not report named progress/results",

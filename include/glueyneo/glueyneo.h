@@ -96,6 +96,34 @@ typedef struct {
     gn_mvs_layout layout;
 } gn_mvs_region;
 
+#define GN_MVS_BUS_FAULT_OBSERVATION_VERSION UINT32_C(14)
+typedef enum {
+    GN_MVS_BUS_ACCESS_READ = 1,
+    GN_MVS_BUS_ACCESS_WRITE = 2
+} gn_mvs_bus_access;
+
+typedef struct {
+    uint32_t version;
+    uint32_t address;
+    gn_mvs_bus_access access;
+    uint8_t width;
+    uint8_t valid;
+    uint32_t mame_unmapped_write_count;
+    uint32_t mame_watchdog_pet_count;
+    uint32_t mame_watchdog_reset_count;
+    uint16_t video_ram_offset;
+    uint8_t video_auto_animation_speed;
+    uint8_t video_auto_animation_disabled;
+    uint8_t display_position_interrupt_control;
+    uint8_t mvs_output_data;
+    uint8_t mvs_output_latch;
+    uint8_t mvs_cart_audio_selected;
+    uint8_t mvs_coin_lockout_mask;
+    uint8_t mvs_save_ram_unlocked;
+    uint8_t mvs_palette_bank_selected;
+    uint16_t video_ram_modulo;
+} gn_mvs_bus_fault_observation;
+
 typedef struct {
     uint32_t version;
     uint32_t profile;
@@ -184,6 +212,12 @@ GN_API gn_status gn_run(gn_instance *instance, uint64_t cycle_budget,
                         gn_run_result *out_result);
 GN_API gn_status gn_run_mvs(gn_instance *instance, uint64_t cycle_budget,
                             gn_run_result *out_result);
+/* out_observation_size must describe the caller's writable buffer. The function
+ * rejects buffers smaller than the stable prefix ending at `valid`, and writes
+ * no more than the supplied size so older prefix-sized callers remain safe. */
+GN_API gn_status gn_observe_mvs_bus_fault(
+    const gn_instance *instance, gn_mvs_bus_fault_observation *out_observation,
+    size_t out_observation_size);
 GN_API gn_status gn_observe(const gn_instance *instance,
                             gn_observations *out_observations);
 /* A public-fixture frame samples input_mask once at entry. RIGHT advances x;

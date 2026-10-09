@@ -68,6 +68,16 @@ cycles and reports 172 elapsed, zero overshoot, 12 instructions and STOP. A
 STOP result alone is not diagnostic success: the runner checks every named
 result and the terminal run fields.
 
+## MC68000 reset-cost correction — 2026-10-09
+
+The CPU reset event uses the MC68000 value of 64 clocks from the MC68000
+column of Motorola/NXP User's Manual Rev. 9.1 Table 7-15 (printed p. 7-11).
+The original diagnostic instruction recipe remains 132 clocks, so fixed
+12-instruction runner vectors request and report 196 cycles. The per-instruction
+sequence and terminal PC are unchanged; only the processor-correct reset
+denominator changed. The same source correction sets IRQ to 72, address/bus
+error to 94, and illegal instruction, privilege exception, and TRAP to 62.
+
 ## Sources and limits
 
 - Motorola, *M68000 Family Programmer's Reference Manual* (1992), printed
@@ -211,7 +221,7 @@ destroys with no live allocation. The supervisor's two additional controls
 require exact failures: `control-swapped-owner` must fail
 `sdk.isolation.owner.arithmetic` (`10` expected, `16` observed), and
 `control-altered-split-progress` must fail
-`sdk.isolation.split-progress` (`40` expected, `41` observed).
+`sdk.isolation.split-progress` (`64` expected, `65` observed).
 
 The separate `sdk_cold` host supervisor starts eight fresh `sdk_diagnostic
 cold` processes. Each process creates two distinct instances concurrently

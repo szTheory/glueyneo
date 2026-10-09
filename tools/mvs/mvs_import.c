@@ -71,16 +71,6 @@ static const source_member selected_sources[] = {
     {"250-c6.c6", 0x800000u, 6u, 0x2000000u, TRANSFORM_ODD, 0x83e3e69du, "39be66287696829d243fb71b3fb8b7dc2bc3298f"},
 };
 
-static const char *const bios_catalog[] = {
-    "sp-s2.sp1", "sp-s.sp1", "sp-45.sp1", "sp-s3.sp1", "sp-u2.sp1",
-    "sp-e.sp1", "sp1-u2", "sp1-u4.bin", "sp1-u3.bin", "vs-bios.rom",
-    "sp-j2.sp1", "sp1.jipan.1024", "japan-j3.bin", "sp1-j3.bin",
-    "sp-j3.sp1", "sp-1v1_3db8c.bin", "sp-1v2_2db8c.bin",
-    "sp-1v2_2db8c-bios.bin", "sp-1v3_2db8c.bin", "sp-1v4_2db8c.bin",
-    "sp-1v4_2db8c-fix.bin", "sp-1v5_2db8c.bin", "sp-1v5_2db8c-fix.bin",
-    "sp-1v6_2db8c.bin", "sp-1v7_2db8c.bin", "sp-1v8_2db8c.bin",
-    "sm1.sm1", "sp1.jipan.1024", "sp-1v1.bin"
-};
 static const source_member selected_bios = {
     "sp-s2.sp1", 0x20000u, 1u, 0u, TRANSFORM_WORD_SWAP,
     0x9036d879u, "4f5ed7105b7128794654ce82b51723e16e389543"
@@ -156,6 +146,13 @@ static void put64(uint8_t *p, uint64_t v) {
 }
 static int span(size_t total, uint32_t offset, size_t length) {
     return (size_t)offset <= total && length <= total - (size_t)offset;
+}
+
+static int zip_flags_valid(uint16_t flags, uint16_t method) {
+    /* UTF-8 names are unnecessary for this ASCII profile. Permit only the
+     * standard DEFLATE compression-level hints on DEFLATE entries. */
+    if ((flags & (uint16_t)~UINT16_C(0x0806)) != 0u) return 0;
+    return method == 8u || (flags & UINT16_C(0x0006)) == 0u;
 }
 
 static uint32_t role_for_name(const uint8_t *name, size_t length) {
@@ -240,7 +237,7 @@ static int parse_candidate(const uint8_t *zip, size_t size, size_t eocd,
         if (role == 0u) return IMPORT_PROFILE;
         if ((seen & (UINT32_C(1) << role)) != 0u) return IMPORT_AMBIGUOUS;
         seen |= UINT32_C(1) << role;
-        if ((flags & (uint16_t)~UINT16_C(0x0800)) != 0u || disk != 0u ||
+        if (!zip_flags_valid(flags, method) || disk != 0u ||
             get32(record + 24u) == UINT32_MAX ||
             compressed == UINT32_MAX || method > 8u || (method != 0u && method != 8u))
             return IMPORT_UNSUPPORTED;
@@ -392,12 +389,6 @@ fail:
     return status;
 }
 
-static int is_bios_catalog_name(const char *name) {
-    for (size_t i = 0u; i < sizeof(bios_catalog) / sizeof(bios_catalog[0]); ++i)
-        if (strcmp(name, bios_catalog[i]) == 0) return 1;
-    return 0;
-}
-
 static const source_member *find_source(const char *name) {
     for (size_t i = 0u; i < sizeof(selected_sources) / sizeof(selected_sources[0]); ++i)
         if (strcmp(name, selected_sources[i].name) == 0) return &selected_sources[i];
@@ -433,7 +424,7 @@ static int parse_source_zip(const uint8_t *zip, size_t size, int bios_archive,
                     const uint32_t local_offset = get32(record + 42u), compressed = get32(record + 20u), expanded = get32(record + 24u);
                     if (!span(size, (uint32_t)pos, record_size) || pos + record_size > eocd ||
                         !safe_name(record + 46u, name_length) || name_length >= sizeof(parsed[0].name)) { status = IMPORT_MALFORMED; break; }
-                    if ((flags & (uint16_t)~UINT16_C(0x0800)) != 0u || (method != 0u && method != 8u) ||
+                    if (!zip_flags_valid(flags, method) || (method != 0u && method != 8u) ||
                         get16(record + 34u) != 0u || compressed == UINT32_MAX || expanded == UINT32_MAX) { status = IMPORT_UNSUPPORTED; break; }
                     if (expanded > 0x800000u || compressed > SOURCE_ZIP_MAX ||
                         extra_fields_valid(record + 46u + name_length, extra_length) != IMPORT_OK) { status = IMPORT_LIMIT; break; }
@@ -444,7 +435,9 @@ static int parse_source_zip(const uint8_t *zip, size_t size, int bios_archive,
                     entry->method = method; entry->extent_start = local_offset;
                     memcpy(entry->name, record + 46u, name_length); entry->name[name_length] = '\0';
                     if (bios_archive) {
-                        if (!is_bios_catalog_name(entry->name)) { status = IMPORT_PROFILE; break; }
+                        /* BIOS archives may carry unrelated flat members, but they
+                         * remain untrusted input: metadata, extents, limits, and
+                         * decompressed CRC are checked before they are ignored. */
                     } else if (find_source(entry->name) == NULL) { status = IMPORT_PROFILE; break; }
                     for (size_t prior = 0u; prior < found; ++prior)
                         if (strcmp(parsed[prior].name, entry->name) == 0) status = IMPORT_AMBIGUOUS;
@@ -510,6 +503,10 @@ int mvs_import_selected_memory(const uint8_t *game_zip, size_t game_size,
     status = parse_source_zip(bios_zip, bios_size, 1, bios, &bios_count);
     if (status != IMPORT_OK) return status;
     if (game_count != sizeof(selected_sources) / sizeof(selected_sources[0])) return IMPORT_PROFILE;
+    size_t selected_bios_count = 0u;
+    for (size_t i = 0u; i < bios_count; ++i)
+        if (strcmp(bios[i].name, selected_bios.name) == 0) ++selected_bios_count;
+    if (selected_bios_count != 1u) return IMPORT_PROFILE;
     size_t expanded_total = 0u;
     for (size_t i = 0u; i < game_count; ++i) expanded_total += game[i].expanded;
     for (size_t i = 0u; i < bios_count; ++i) {

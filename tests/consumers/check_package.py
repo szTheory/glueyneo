@@ -205,6 +205,7 @@ EXPECTED_SHARED_EXPORTS = {
     "gn_run",
     "gn_run_mvs",
     "gn_observe",
+    "gn_observe_mvs_bus_fault",
     "gn_advance_frame",
     "gn_unload",
     "gn_destroy",
@@ -501,7 +502,7 @@ def parse_diagnostic_record(output: str, local_paths: tuple[Path, ...]) -> dict[
         "arithmetic": 10,
         "initialized": 0x1237,
         "bss": 1,
-        "cycles": 172,
+        "cycles": 196,
         "instructions": 12,
         "pc": 0x12E,
     }

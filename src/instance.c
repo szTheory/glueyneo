@@ -23,6 +23,10 @@
 #define GN_FIXTURE_FRAME_CYCLES UINT64_C(200000)
 #define GN_FIXTURE_WIDTH UINT32_C(320)
 #define GN_FIXTURE_HEIGHT UINT32_C(224)
+#define GN_MVS_WATCHDOG_MAIN_CYCLES UINT64_C(1622015)
+#define GN_MVS_SAVE_RAM_BYTES ((size_t)0x10000u)
+#define GN_MVS_PALETTE_RAM_BYTES ((size_t)0x4000u)
+#define GN_MVS_VIDEO_RAM_WORDS ((size_t)0x8800u)
 
 static const uint8_t gn_fixture_guest_program[] = {
     0x30u, 0x39u, 0x00u, 0x30u, 0x00u, 0x00u,
@@ -50,11 +54,18 @@ typedef struct {
     gn_mvs_region_role role;
 } gn_mvs_owned_region;
 
+int gn_mvs_bus_read8(const gn_mvs_owned_region *regions, size_t count,
+                     uint8_t *work_ram, size_t work_ram_size,
+                     uint8_t *save_ram, size_t save_ram_size,
+                     uint32_t address, uint8_t *value);
 int gn_mvs_bus_read16(const gn_mvs_owned_region *regions, size_t count,
                       uint8_t *work_ram, size_t work_ram_size,
+                      uint8_t *save_ram, size_t save_ram_size,
                       uint32_t address, uint16_t *value);
 int gn_mvs_bus_write16(uint8_t *work_ram, size_t work_ram_size,
                        uint32_t address, uint16_t value);
+int gn_mvs_bus_write8(uint8_t *work_ram, size_t work_ram_size,
+                      uint32_t address, uint8_t value);
 
 typedef struct {
     gn_allocator allocator;
@@ -69,6 +80,35 @@ typedef struct {
     size_t mvs_region_count;
     uint8_t *mvs_work_ram;
     size_t mvs_work_ram_size;
+    uint8_t *mvs_save_ram;
+    size_t mvs_save_ram_size;
+    uint8_t *mvs_palette_ram;
+    size_t mvs_palette_ram_size;
+    uint16_t *mvs_video_ram;
+    size_t mvs_video_ram_words;
+    uint32_t mvs_bus_fault_address;
+    gn_mvs_bus_access mvs_bus_fault_access;
+    uint8_t mvs_bus_fault_width;
+    uint8_t mvs_bus_fault_valid;
+    uint32_t mvs_mame_unmapped_write_count;
+    uint32_t mvs_watchdog_pet_count;
+    uint32_t mvs_watchdog_reset_count;
+    uint16_t mvs_video_ram_offset;
+    uint16_t mvs_video_ram_modulo;
+    uint16_t mvs_video_ram_read_buffer;
+    uint8_t mvs_video_auto_animation_speed;
+    uint8_t mvs_video_auto_animation_disabled;
+    uint8_t mvs_display_position_interrupt_control;
+    uint8_t mvs_irq_pending_mask;
+    uint8_t mvs_output_data;
+    uint8_t mvs_output_latch;
+    uint8_t mvs_use_cart_vectors;
+    uint8_t mvs_cart_audio_selected;
+    uint8_t mvs_coin_lockout_mask;
+    uint8_t mvs_save_ram_unlocked;
+    uint8_t mvs_palette_bank_selected;
+    uint32_t mvs_watchdog_pet_generation;
+    uint64_t mvs_watchdog_remaining_cycles;
     owned_cpu *cpu;
 #if defined(GLUEYNEO_SDK_TEST_HOOKS)
     size_t test_fail_bus_callbacks;
@@ -83,6 +123,16 @@ struct gn_instance {
     gn_allocator allocator;
     gn_image *image;
 };
+
+gn_status gn_private_mvs_fetch_trace(
+    const gn_instance *instance, owned_cpu_fetch_trace_event *events,
+    size_t capacity, size_t *out_count) {
+    if (instance == NULL || instance->image == NULL ||
+        instance->image->mvs_region_count == 0u) return GN_STATUS_INVALID_ARGUMENT;
+    const owned_cpu_status status = owned_cpu_copy_fetch_trace(
+        instance->image->cpu, events, capacity, out_count);
+    return status == OWNED_CPU_OK ? GN_STATUS_OK : GN_STATUS_INVALID_ARGUMENT;
+}
 
 static void *gn_system_allocate(void *userdata, size_t bytes) {
     (void)userdata;
@@ -127,15 +177,61 @@ static void gn_cpu_release(void *userdata, void *allocation) {
     gn_release(&image->allocator, allocation);
 }
 
+static void gn_record_mvs_bus_fault(gn_image *image, uint32_t address,
+                                    gn_mvs_bus_access access, uint8_t width) {
+    if (image->mvs_bus_fault_valid == 0u) {
+        image->mvs_bus_fault_address = address;
+        image->mvs_bus_fault_access = access;
+        image->mvs_bus_fault_width = width;
+        image->mvs_bus_fault_valid = 1u;
+    }
+}
+
 static int gn_read16(void *userdata, uint32_t address, uint16_t *value) {
     gn_image *image = (gn_image *)userdata;
     if (image == NULL || value == NULL || (address & UINT32_C(1)) != 0u) {
         return 0;
     }
     if (image->mvs_region_count != 0u) {
-        return gn_mvs_bus_read16(image->mvs_regions, image->mvs_region_count,
-                                 image->mvs_work_ram,
-                                 image->mvs_work_ram_size, address, value);
+        if (image->mvs_use_cart_vectors != 0u && address <= UINT32_C(0x7e)) {
+            for (size_t index = 0u; index < image->mvs_region_count; ++index) {
+                if (image->mvs_regions[index].role == GN_MVS_REGION_PROGRAM &&
+                    image->mvs_regions[index].size >= UINT32_C(0x80)) {
+                    const uint8_t *vectors = image->mvs_regions[index].bytes + address;
+                    *value = (uint16_t)(((uint16_t)vectors[0] << 8) | vectors[1]);
+                    return 1;
+                }
+            }
+            gn_record_mvs_bus_fault(image, address, GN_MVS_BUS_ACCESS_READ, 2u);
+            return 0;
+        }
+        if ((address & UINT32_C(0x00fe0000)) == UINT32_C(0x003c0000)) {
+            const uint32_t index = (address & UINT32_C(0x0000000e)) >> 1;
+            if (index <= 1u) {
+                *value = image->mvs_video_ram_read_buffer;
+                return 1;
+            }
+            if (index == 2u) {
+                *value = image->mvs_video_ram_modulo;
+                return 1;
+            }
+            gn_record_mvs_bus_fault(image, address, GN_MVS_BUS_ACCESS_READ, 2u);
+            return 0;
+        }
+        if (address >= UINT32_C(0x400000) && address <= UINT32_C(0x7ffffe)) {
+            const size_t bank_offset = image->mvs_palette_bank_selected != 0u
+                ? (size_t)0x2000u : 0u;
+            const size_t offset = bank_offset + (size_t)(address & UINT32_C(0x1ffe));
+            *value = (uint16_t)(((uint16_t)image->mvs_palette_ram[offset] << 8) |
+                                image->mvs_palette_ram[offset + 1u]);
+            return 1;
+        }
+        const int success = gn_mvs_bus_read16(
+            image->mvs_regions, image->mvs_region_count,
+            image->mvs_work_ram, image->mvs_work_ram_size,
+            image->mvs_save_ram, image->mvs_save_ram_size, address, value);
+        if (!success) gn_record_mvs_bus_fault(image, address, GN_MVS_BUS_ACCESS_READ, 2u);
+        return success;
     }
     if (image->profile == GN_PROFILE_PUBLIC_FIXTURE &&
         address == GN_FIXTURE_INPUT_PORT) {
@@ -177,14 +273,131 @@ static int gn_read16(void *userdata, uint32_t address, uint16_t *value) {
     return 1;
 }
 
+static int gn_read8(void *userdata, uint32_t address, uint8_t *value) {
+    gn_image *image = (gn_image *)userdata;
+    if (image == NULL || value == NULL) return 0;
+    if (image->mvs_region_count != 0u) {
+        if (address <= UINT32_C(0x7f)) {
+            const gn_mvs_region_role role = image->mvs_use_cart_vectors != 0u
+                ? GN_MVS_REGION_PROGRAM : GN_MVS_REGION_BIOS;
+            for (size_t index = 0u; index < image->mvs_region_count; ++index) {
+                if (image->mvs_regions[index].role == role &&
+                    image->mvs_regions[index].size >= UINT32_C(0x80)) {
+                    *value = image->mvs_regions[index].bytes[address];
+                    return 1;
+                }
+            }
+            gn_record_mvs_bus_fault(image, address, GN_MVS_BUS_ACCESS_READ, 1u);
+            return 0;
+        }
+        if (address >= UINT32_C(0x400000) && address <= UINT32_C(0x7fffff)) {
+            const size_t bank_offset = image->mvs_palette_bank_selected != 0u
+                ? (size_t)0x2000u : 0u;
+            const size_t offset = bank_offset + (size_t)(address & UINT32_C(0x1fff));
+            *value = image->mvs_palette_ram[offset];
+            return 1;
+        }
+        const int success = gn_mvs_bus_read8(
+            image->mvs_regions, image->mvs_region_count,
+            image->mvs_work_ram, image->mvs_work_ram_size,
+            image->mvs_save_ram, image->mvs_save_ram_size, address, value);
+        if (!success) gn_record_mvs_bus_fault(image, address, GN_MVS_BUS_ACCESS_READ, 1u);
+        return success;
+    }
+    if (address >= image->rom.base && address - image->rom.base < image->rom.size) {
+        *value = image->rom.bytes[(size_t)(address - image->rom.base)];
+        return 1;
+    }
+    if (address >= image->ram.base && address - image->ram.base < image->ram.size) {
+        *value = image->ram.bytes[(size_t)(address - image->ram.base)];
+        return 1;
+    }
+    return 0;
+}
+
 static int gn_write16(void *userdata, uint32_t address, uint16_t value) {
     gn_image *image = (gn_image *)userdata;
     if (image == NULL || (address & UINT32_C(1)) != 0u) {
         return 0;
     }
     if (image->mvs_region_count != 0u) {
-        return gn_mvs_bus_write16(image->mvs_work_ram,
-                                  image->mvs_work_ram_size, address, value);
+        /* Pinned MAME's video_register_w dispatches index 0 to VRAM offset,
+         * index 1 to data write plus modulo increment, and index 2 to modulo.
+         * The sprite generator storage/read-buffer state is local to this image;
+         * rendering and physical-board equivalence are outside this model.
+         * Source: neogeo_v.cpp, pinned revision 31e52312, lines 228-269;
+         * neogeo_spr.cpp lines 78-108. */
+        if ((address & UINT32_C(0x00fe0000)) == UINT32_C(0x003c0000)) {
+            const uint32_t index = (address & UINT32_C(0x0000000e)) >> 1;
+            if (index == 0u) {
+                image->mvs_video_ram_offset =
+                    (value & UINT16_C(0x8000)) != 0u
+                        ? (uint16_t)(value & UINT16_C(0x87ff)) : value;
+                image->mvs_video_ram_read_buffer =
+                    image->mvs_video_ram[image->mvs_video_ram_offset];
+                return 1;
+            }
+            if (index == 1u) {
+                image->mvs_video_ram[image->mvs_video_ram_offset] = value;
+                const uint16_t next_offset = (uint16_t)(
+                    (image->mvs_video_ram_offset & UINT16_C(0x8000)) |
+                    ((image->mvs_video_ram_offset + image->mvs_video_ram_modulo) &
+                     UINT16_C(0x7fff)));
+                image->mvs_video_ram_offset =
+                    (next_offset & UINT16_C(0x8000)) != 0u
+                        ? (uint16_t)(next_offset & UINT16_C(0x87ff)) : next_offset;
+                image->mvs_video_ram_read_buffer =
+                    image->mvs_video_ram[image->mvs_video_ram_offset];
+                return 1;
+            }
+            if (index == 2u) {
+                image->mvs_video_ram_modulo = value;
+                return 1;
+            }
+            if (index == 3u) {
+                /* MAME set_video_control: high byte controls animation speed,
+                 * bit 3 disables auto animation, bits 4-7 set IRQ2 control. */
+                image->mvs_video_auto_animation_speed = (uint8_t)(value >> 8);
+                image->mvs_video_auto_animation_disabled =
+                    (uint8_t)((value >> 3) & 1u);
+                image->mvs_display_position_interrupt_control =
+                    (uint8_t)(value & UINT16_C(0x00f0));
+                return 1;
+            }
+            if (index == 6u) {
+                /* Pinned MAME acknowledge_interrupt clears only these pending
+                 * sources. This profile has no MVS IRQ producers, so the
+                 * per-instance pending mask remains zero and IRQ recomputes low. */
+                image->mvs_irq_pending_mask =
+                    (uint8_t)(image->mvs_irq_pending_mask & (uint8_t)~(value & 7u));
+                /* No IRQ sources are modeled, so the owned CPU is already at
+                 * level zero; do not call its out-of-instruction setter here. */
+                return 1;
+            }
+            gn_record_mvs_bus_fault(image, address, GN_MVS_BUS_ACCESS_WRITE, 2u);
+            return 0;
+        }
+        if (address >= UINT32_C(0x400000) && address <= UINT32_C(0x7ffffe)) {
+            const size_t bank_offset = image->mvs_palette_bank_selected != 0u
+                ? (size_t)0x2000u : 0u;
+            const size_t offset = bank_offset + (size_t)(address & UINT32_C(0x1ffe));
+            image->mvs_palette_ram[offset] = (uint8_t)(value >> 8);
+            image->mvs_palette_ram[offset + 1u] = (uint8_t)value;
+            return 1;
+        }
+        if (address >= UINT32_C(0xd00000) && address <= UINT32_C(0xd0fffe) +
+                UINT32_C(0x0f0000)) {
+            if (image->mvs_save_ram_unlocked != 0u) {
+                const size_t offset = (size_t)(address & UINT32_C(0xffff));
+                image->mvs_save_ram[offset] = (uint8_t)(value >> 8);
+                image->mvs_save_ram[offset + 1u] = (uint8_t)value;
+            }
+            return 1;
+        }
+        const int success = gn_mvs_bus_write16(
+            image->mvs_work_ram, image->mvs_work_ram_size, address, value);
+        if (!success) gn_record_mvs_bus_fault(image, address, GN_MVS_BUS_ACCESS_WRITE, 2u);
+        return success;
     }
     if (address < image->ram.base ||
         address - image->ram.base > image->ram.size - UINT32_C(2)) return 0;
@@ -200,6 +413,130 @@ static int gn_write16(void *userdata, uint32_t address, uint16_t value) {
 #if defined(GLUEYNEO_SDK_TEST_HOOKS)
     gn_test_record_bus_event(image, GN_TEST_BUS_WRITE, address, value);
 #endif
+    return 1;
+}
+
+static int gn_write8(void *userdata, uint32_t address, uint8_t value) {
+    gn_image *image = (gn_image *)userdata;
+    if (image == NULL) return 0;
+    if (image->mvs_region_count != 0u) {
+        if ((address & ~UINT32_C(0x01fffe)) == UINT32_C(0x300001)) {
+            if (image->mvs_watchdog_pet_count != UINT32_MAX)
+                ++image->mvs_watchdog_pet_count;
+            if (image->mvs_watchdog_pet_generation != UINT32_MAX)
+                ++image->mvs_watchdog_pet_generation;
+            image->mvs_watchdog_remaining_cycles = GN_MVS_WATCHDOG_MAIN_CYCLES;
+            return 1;
+        }
+        const uint32_t latch_address = address & ~UINT32_C(0x01ffe0);
+        if ((address & UINT32_C(1)) != 0u &&
+            (latch_address & ~UINT32_C(0x1f)) == UINT32_C(0x3a0000)) {
+            const uint32_t word_offset = (latch_address - UINT32_C(0x3a0000)) >> 1;
+            if ((word_offset & UINT32_C(7)) == 1u) {
+                /* Pinned MAME neogeo.cpp maps this addressable-latch output
+                 * to set_use_cart_vectors. HC259 write_a3 takes output index
+                 * from offset[2:0] and the data bit from offset[3], so the
+                 * address selects state; the byte's data value is ignored. */
+                image->mvs_use_cart_vectors = (uint8_t)((word_offset >> 3) & 1u);
+                return 1;
+            }
+            if ((word_offset & UINT32_C(7)) == 5u) {
+                /* The selected MAME output calls set_use_cart_audio, which
+                 * switches fixed-layer source and the audio program bank.
+                 * Only the per-instance select bit is represented here. */
+                image->mvs_cart_audio_selected =
+                    (uint8_t)((word_offset >> 3) & 1u);
+                return 1;
+            }
+        }
+        if ((address & UINT32_C(0x00fe0000)) == UINT32_C(0x00380000) &&
+            (address & UINT32_C(1)) != 0u) {
+            const uint32_t io_word_offset = (address & UINT32_C(0xff)) >> 1;
+            switch (io_word_offset & UINT32_C(0x78)) {
+            case UINT32_C(0x18):
+                /* MAME mvs_state updates the latch; its base output_strobe and
+                 * set_outputs virtuals are empty, so external outputs stay out. */
+                image->mvs_output_latch = value;
+                return 1;
+            case UINT32_C(0x20):
+                image->mvs_output_data = value;
+                return 1;
+            case UINT32_C(0x30):
+            case UINT32_C(0x70):
+                /* The pinned MVS map delegates these offsets to the arcade
+                 * handler. Model only its two per-instance lockout bits, not
+                 * physical coin hardware or counter output lines. */
+                if ((io_word_offset & UINT32_C(2)) != 0u) {
+                    const uint8_t channel_bit =
+                        (uint8_t)(1u << (io_word_offset & UINT32_C(1)));
+                    if ((io_word_offset & UINT32_C(0x40)) != 0u)
+                        image->mvs_coin_lockout_mask =
+                            (uint8_t)(image->mvs_coin_lockout_mask | channel_bit);
+                    else
+                        image->mvs_coin_lockout_mask =
+                            (uint8_t)(image->mvs_coin_lockout_mask &
+                                      (uint8_t)~channel_bit);
+                    return 1;
+                }
+                break;
+            default:
+                break;
+            }
+        }
+        if ((address & UINT32_C(1)) != 0u &&
+            (latch_address & ~UINT32_C(0x1f)) == UINT32_C(0x3a0000)) {
+            const uint32_t word_offset = (latch_address - UINT32_C(0x3a0000)) >> 1;
+            if ((word_offset & UINT32_C(7)) == 6u) {
+                /* Pinned MAME ngarcade_base_state::set_save_ram_unlock sets
+                 * this gate; save_ram_w accepts writes only while enabled. */
+                image->mvs_save_ram_unlocked = (uint8_t)((word_offset >> 3) & 1u);
+                return 1;
+            }
+            if ((word_offset & UINT32_C(7)) == 7u) {
+                /* Pinned MAME neogeo_base_state::set_palette_bank selects
+                 * the palette bank and refreshes pens; rendering is not modeled. */
+                image->mvs_palette_bank_selected = (uint8_t)((word_offset >> 3) & 1u);
+                return 1;
+            }
+        }
+        if (address >= UINT32_C(0x400000) && address <= UINT32_C(0x7fffff)) {
+            const size_t bank_offset = image->mvs_palette_bank_selected != 0u
+                ? (size_t)0x2000u : 0u;
+            const size_t offset = bank_offset + (size_t)(address & UINT32_C(0x1fff));
+            image->mvs_palette_ram[offset] = value;
+            return 1;
+        }
+        if (address >= UINT32_C(0xd00000) && address <= UINT32_C(0xd0ffff) +
+                UINT32_C(0x0f0000)) {
+            if (image->mvs_save_ram_unlocked != 0u) {
+                image->mvs_save_ram[(size_t)(address & UINT32_C(0xffff))] = value;
+            }
+            return 1;
+        }
+        if (address < UINT32_C(0x100000)) {
+            /* MAME 31e52312 neogeo_main_map leaves this low gap unmapped
+             * (only 0x000000-0x00007f has a vector read handler). Its pinned
+             * default unmapped-write handler logs and drops writes. This is a
+             * differential emulator behavior, not verified board behavior. */
+            if (image->mvs_mame_unmapped_write_count != UINT32_MAX)
+                ++image->mvs_mame_unmapped_write_count;
+            return 1;
+        }
+        if (address >= UINT32_C(0x3e0000) && address <= UINT32_C(0x3fffff)) {
+            /* Pinned MAME neogeo_base_map installs only an unmapped-read
+             * handler over this range; byte writes reach MAME's default
+             * dropped-write path. Keep this width-specific and differential. */
+            if (image->mvs_mame_unmapped_write_count != UINT32_MAX)
+                ++image->mvs_mame_unmapped_write_count;
+            return 1;
+        }
+        const int success = gn_mvs_bus_write8(
+            image->mvs_work_ram, image->mvs_work_ram_size, address, value);
+        if (!success) gn_record_mvs_bus_fault(image, address, GN_MVS_BUS_ACCESS_WRITE, 1u);
+        return success;
+    }
+    if (address < image->ram.base || address - image->ram.base >= image->ram.size) return 0;
+    image->ram.bytes[(size_t)(address - image->ram.base)] = value;
     return 1;
 }
 
@@ -405,6 +742,9 @@ static void gn_free_image(gn_image *image) {
         gn_release(&allocator, image->mvs_regions[index].bytes);
     }
     gn_release(&allocator, image->mvs_work_ram);
+    gn_release(&allocator, image->mvs_save_ram);
+    gn_release(&allocator, image->mvs_palette_ram);
+    gn_release(&allocator, image->mvs_video_ram);
     gn_release(&allocator, image->ram.bytes);
     gn_release(&allocator, image->ram_seed);
     gn_release(&allocator, image->rom.bytes);
@@ -414,6 +754,26 @@ static void gn_free_image(gn_image *image) {
 static gn_status gn_initialize_candidate(gn_image *image) {
     if (image->mvs_region_count != 0u) {
         memset(image->mvs_work_ram, 0, image->mvs_work_ram_size);
+        image->mvs_bus_fault_address = 0u;
+        image->mvs_bus_fault_access = (gn_mvs_bus_access)0;
+        image->mvs_bus_fault_width = 0u;
+        image->mvs_bus_fault_valid = 0u;
+        image->mvs_mame_unmapped_write_count = 0u;
+        image->mvs_watchdog_pet_count = 0u;
+        image->mvs_watchdog_reset_count = 0u;
+        image->mvs_video_auto_animation_speed = 0u;
+        image->mvs_video_auto_animation_disabled = 0u;
+        image->mvs_display_position_interrupt_control = 0u;
+        image->mvs_irq_pending_mask = 0u;
+        image->mvs_output_data = 0u;
+        image->mvs_output_latch = 0u;
+        image->mvs_use_cart_vectors = 0u;
+        image->mvs_cart_audio_selected = 0u;
+        image->mvs_coin_lockout_mask = 0u;
+        image->mvs_save_ram_unlocked = 0u;
+        image->mvs_palette_bank_selected = 0u;
+        image->mvs_watchdog_pet_generation = 0u;
+        image->mvs_watchdog_remaining_cycles = GN_MVS_WATCHDOG_MAIN_CYCLES;
         const owned_cpu_status mvs_status = owned_cpu_reset(image->cpu);
         return mvs_status == OWNED_CPU_OK ? GN_STATUS_OK : GN_STATUS_CPU_FAILURE;
     }
@@ -611,11 +971,7 @@ gn_status gn_test_mvs_read_bus(const gn_instance *instance,
     if (instance == NULL || out_value == NULL) return GN_STATUS_INVALID_ARGUMENT;
     if (instance->image == NULL || instance->image->mvs_region_count == 0u)
         return GN_STATUS_INVALID_STATE;
-    return gn_mvs_bus_read16(instance->image->mvs_regions,
-                             instance->image->mvs_region_count,
-                             instance->image->mvs_work_ram,
-                             instance->image->mvs_work_ram_size,
-                             address, out_value)
+    return gn_read16(instance->image, address, out_value)
         ? GN_STATUS_OK : GN_STATUS_INVALID_MEDIA;
 }
 #endif
@@ -700,7 +1056,7 @@ GN_API gn_status gn_load(gn_instance *instance, const gn_manifest *manifest) {
     memset(candidate->ram.bytes, 0, (size_t)candidate->ram.size);
     memcpy(candidate->ram.bytes, candidate->ram_seed, candidate->ram_seed_size);
 
-    const owned_cpu_bus bus = {candidate, gn_read16, gn_write16};
+    const owned_cpu_bus bus = {candidate, gn_read16, gn_write16, gn_write8, gn_read8};
     const owned_cpu_allocator cpu_allocator = {candidate, gn_cpu_allocate,
                                                 gn_cpu_release};
     const owned_cpu_status cpu_status = owned_cpu_create(
@@ -773,10 +1129,24 @@ GN_API gn_status gn_load_mvs(gn_instance *instance,
     candidate->mvs_work_ram_size = (size_t)0x10000u;
     candidate->mvs_work_ram = (uint8_t *)gn_allocate(
         &allocator, candidate->mvs_work_ram_size);
-    if (candidate->mvs_work_ram == NULL) {
+    candidate->mvs_save_ram_size = GN_MVS_SAVE_RAM_BYTES;
+    candidate->mvs_save_ram = (uint8_t *)gn_allocate(
+        &allocator, candidate->mvs_save_ram_size);
+    candidate->mvs_palette_ram_size = GN_MVS_PALETTE_RAM_BYTES;
+    candidate->mvs_palette_ram = (uint8_t *)gn_allocate(
+        &allocator, candidate->mvs_palette_ram_size);
+    candidate->mvs_video_ram_words = GN_MVS_VIDEO_RAM_WORDS;
+    candidate->mvs_video_ram = (uint16_t *)gn_allocate(
+        &allocator, candidate->mvs_video_ram_words * sizeof(*candidate->mvs_video_ram));
+    if (candidate->mvs_work_ram == NULL || candidate->mvs_save_ram == NULL ||
+        candidate->mvs_palette_ram == NULL || candidate->mvs_video_ram == NULL) {
         gn_free_image(candidate);
         return GN_STATUS_OUT_OF_MEMORY;
     }
+    memset(candidate->mvs_save_ram, 0, candidate->mvs_save_ram_size);
+    memset(candidate->mvs_video_ram, 0,
+           candidate->mvs_video_ram_words * sizeof(*candidate->mvs_video_ram));
+    memset(candidate->mvs_palette_ram, 0, candidate->mvs_palette_ram_size);
     for (size_t index = 0u; index < manifest->region_count; ++index) {
         const gn_mvs_region *source = &manifest->regions[index];
         gn_mvs_owned_region *destination = &candidate->mvs_regions[index];
@@ -797,7 +1167,7 @@ GN_API gn_status gn_load_mvs(gn_instance *instance,
             }
         }
     }
-    const owned_cpu_bus bus = {candidate, gn_read16, gn_write16};
+    const owned_cpu_bus bus = {candidate, gn_read16, gn_write16, gn_write8, gn_read8};
     const owned_cpu_allocator cpu_allocator = {candidate, gn_cpu_allocate,
                                                 gn_cpu_release};
     const owned_cpu_status cpu_status = owned_cpu_create(
@@ -824,8 +1194,8 @@ GN_API gn_status gn_reset(gn_instance *instance) {
     return gn_initialize_candidate(instance->image);
 }
 
-GN_API gn_status gn_run(gn_instance *instance, uint64_t cycle_budget,
-                        gn_run_result *out_result) {
+static gn_status gn_run_cpu(gn_instance *instance, uint64_t cycle_budget,
+                            gn_run_result *out_result) {
     if (out_result == NULL) return GN_STATUS_INVALID_ARGUMENT;
     memset(out_result, 0, sizeof(*out_result));
     if (instance == NULL) return GN_STATUS_INVALID_ARGUMENT;
@@ -879,6 +1249,19 @@ GN_API gn_status gn_run(gn_instance *instance, uint64_t cycle_budget,
     return mapped_status;
 }
 
+static gn_status gn_mvs_watchdog_soft_reset(gn_image *image) {
+    const owned_cpu_status cpu_status = owned_cpu_reset(image->cpu);
+    if (cpu_status != OWNED_CPU_OK) return GN_STATUS_CPU_FAILURE;
+    image->mvs_bus_fault_address = 0u;
+    image->mvs_bus_fault_access = (gn_mvs_bus_access)0;
+    image->mvs_bus_fault_width = 0u;
+    image->mvs_bus_fault_valid = 0u;
+    image->mvs_watchdog_remaining_cycles = GN_MVS_WATCHDOG_MAIN_CYCLES;
+    if (image->mvs_watchdog_reset_count != UINT32_MAX)
+        ++image->mvs_watchdog_reset_count;
+    return GN_STATUS_OK;
+}
+
 GN_API gn_status gn_run_mvs(gn_instance *instance, uint64_t cycle_budget,
                             gn_run_result *out_result) {
     if (instance == NULL || instance->image == NULL ||
@@ -886,7 +1269,145 @@ GN_API gn_status gn_run_mvs(gn_instance *instance, uint64_t cycle_budget,
         if (out_result != NULL) memset(out_result, 0, sizeof(*out_result));
         return GN_STATUS_INVALID_STATE;
     }
-    return gn_run(instance, cycle_budget, out_result);
+    if (out_result == NULL) return GN_STATUS_INVALID_ARGUMENT;
+    memset(out_result, 0, sizeof(*out_result));
+    out_result->requested_cycles = cycle_budget;
+    if (cycle_budget > GN_MAX_CYCLE_BUDGET) return GN_STATUS_INVALID_ARGUMENT;
+    if (cycle_budget == 0u) return gn_run_cpu(instance, 0u, out_result);
+
+    uint64_t elapsed = 0u;
+    uint64_t instructions = 0u;
+    gn_run_reason final_reason = GN_RUN_BUDGET;
+    while (elapsed < cycle_budget) {
+        gn_image *image = instance->image;
+        if (image->mvs_watchdog_remaining_cycles == 0u) {
+            const gn_status reset_status = gn_mvs_watchdog_soft_reset(image);
+            if (reset_status != GN_STATUS_OK) {
+                out_result->reason = GN_RUN_ERROR;
+                return reset_status;
+            }
+        }
+
+        owned_cpu_observation cpu_observation;
+        if (owned_cpu_observe(image->cpu, &cpu_observation) != OWNED_CPU_OK) {
+            out_result->reason = GN_RUN_ERROR;
+            return GN_STATUS_CPU_FAILURE;
+        }
+        uint64_t step_budget = 1u;
+        if (cpu_observation.stopped != 0u && cpu_observation.irq_level == 0u &&
+            cpu_observation.irq7_pending == 0u) {
+            const uint64_t budget_left = cycle_budget - elapsed;
+            step_budget = image->mvs_watchdog_remaining_cycles < budget_left
+                ? image->mvs_watchdog_remaining_cycles : budget_left;
+        }
+
+        const uint32_t pet_generation = image->mvs_watchdog_pet_generation;
+        gn_run_result step;
+        const gn_status run_status = gn_run_cpu(instance, step_budget, &step);
+        elapsed += step.elapsed_cycles;
+        instructions += step.instructions;
+        out_result->boundary_pc = step.boundary_pc;
+        out_result->fault_pc = step.fault_pc;
+        out_result->instruction_register = step.instruction_register;
+        if (run_status != GN_STATUS_OK) {
+            out_result->elapsed_cycles = elapsed;
+            out_result->overshoot_cycles = elapsed > cycle_budget ? elapsed - cycle_budget : 0u;
+            out_result->instructions = instructions;
+            out_result->reason = step.reason;
+            return run_status;
+        }
+
+        const int watchdog_petted =
+            image->mvs_watchdog_pet_generation != pet_generation;
+        int watchdog_reset = 0;
+        if (watchdog_petted != 0) {
+            /* The mapped register write is the final bus transfer for the
+             * supported byte-store instruction, so the new period starts at
+             * this instruction boundary. */
+            image->mvs_watchdog_remaining_cycles = GN_MVS_WATCHDOG_MAIN_CYCLES;
+        } else if (step.elapsed_cycles >= image->mvs_watchdog_remaining_cycles) {
+            image->mvs_watchdog_remaining_cycles = 0u;
+            const gn_status reset_status = gn_mvs_watchdog_soft_reset(image);
+            if (reset_status != GN_STATUS_OK) {
+                out_result->elapsed_cycles = elapsed;
+                out_result->overshoot_cycles = elapsed > cycle_budget ? elapsed - cycle_budget : 0u;
+                out_result->instructions = instructions;
+                out_result->reason = GN_RUN_ERROR;
+                return reset_status;
+            }
+            final_reason = GN_RUN_BUDGET;
+            watchdog_reset = 1;
+        } else {
+            image->mvs_watchdog_remaining_cycles -= step.elapsed_cycles;
+        }
+
+        if (step.reason == GN_RUN_FAULT || step.reason == GN_RUN_ERROR) {
+            final_reason = step.reason;
+            break;
+        }
+        if (watchdog_reset == 0) final_reason = step.reason;
+    }
+    out_result->elapsed_cycles = elapsed;
+    out_result->overshoot_cycles = elapsed > cycle_budget ? elapsed - cycle_budget : 0u;
+    out_result->instructions = instructions;
+    out_result->reason = final_reason;
+    return GN_STATUS_OK;
+}
+
+GN_API gn_status gn_run(gn_instance *instance, uint64_t cycle_budget,
+                        gn_run_result *out_result) {
+    if (instance != NULL && instance->image != NULL &&
+        instance->image->mvs_region_count != 0u) {
+        return gn_run_mvs(instance, cycle_budget, out_result);
+    }
+    return gn_run_cpu(instance, cycle_budget, out_result);
+}
+
+GN_API gn_status gn_observe_mvs_bus_fault(
+    const gn_instance *instance, gn_mvs_bus_fault_observation *out_observation,
+    size_t out_observation_size) {
+    if (out_observation == NULL) return GN_STATUS_INVALID_ARGUMENT;
+    const size_t minimum_size = offsetof(gn_mvs_bus_fault_observation, valid) +
+                                sizeof(out_observation->valid);
+    if (out_observation_size < minimum_size) return GN_STATUS_INVALID_ARGUMENT;
+    gn_mvs_bus_fault_observation current;
+    memset(&current, 0, sizeof(current));
+    current.version = GN_MVS_BUS_FAULT_OBSERVATION_VERSION;
+    const size_t copy_size = out_observation_size < sizeof(current)
+        ? out_observation_size : sizeof(current);
+    if (instance == NULL) {
+        memcpy(out_observation, &current, copy_size);
+        return GN_STATUS_INVALID_ARGUMENT;
+    }
+    if (instance->image == NULL || instance->image->mvs_region_count == 0u) {
+        memcpy(out_observation, &current, copy_size);
+        return GN_STATUS_INVALID_STATE;
+    }
+    const gn_image *image = instance->image;
+    current.valid = image->mvs_bus_fault_valid;
+    current.address = image->mvs_bus_fault_address;
+    current.access = image->mvs_bus_fault_access;
+    current.width = image->mvs_bus_fault_width;
+    current.mame_unmapped_write_count =
+        image->mvs_mame_unmapped_write_count;
+    current.mame_watchdog_pet_count = image->mvs_watchdog_pet_count;
+    current.mame_watchdog_reset_count = image->mvs_watchdog_reset_count;
+    current.video_ram_offset = image->mvs_video_ram_offset;
+    current.video_ram_modulo = image->mvs_video_ram_modulo;
+    current.video_auto_animation_speed =
+        image->mvs_video_auto_animation_speed;
+    current.video_auto_animation_disabled =
+        image->mvs_video_auto_animation_disabled;
+    current.display_position_interrupt_control =
+        image->mvs_display_position_interrupt_control;
+    current.mvs_output_data = image->mvs_output_data;
+    current.mvs_output_latch = image->mvs_output_latch;
+    current.mvs_cart_audio_selected = image->mvs_cart_audio_selected;
+    current.mvs_coin_lockout_mask = image->mvs_coin_lockout_mask;
+    current.mvs_save_ram_unlocked = image->mvs_save_ram_unlocked;
+    current.mvs_palette_bank_selected = image->mvs_palette_bank_selected;
+    memcpy(out_observation, &current, copy_size);
+    return GN_STATUS_OK;
 }
 
 GN_API gn_status gn_observe(const gn_instance *instance,
