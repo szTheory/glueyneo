@@ -108,12 +108,20 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   3. A user gets distinct, actionable missing, incompatible, unsupported, malformed, and limit errors; after a rejected load, valid media can load or the instance can be destroyed safely.
   4. In the selected configuration, the guest reaches the game's attract/start path through the owned 68000 and required MVS banking, protection, timing, interrupts, and sound-CPU handshakes, with source-qualified regression evidence and no canned boot or fabricated handshake.
 
-**Plans**: 5/5 plans executed: 05-01, 05-02, and 05-04 complete; 05-03 halted after selected guest execution without attract/start or hosted evidence. Plan 05-05 remains. Gap plans 05-04 and 05-05 address the remaining native checkpoint and exact-revision hosted route. Phase 05 remains in progress until current-revision verification establishes each requirement; unresolved GAME-02 behavior or actual-app evidence stays explicitly open.
+**Plans**: Six plans are recorded: 05-01, 05-02, and 05-04 complete; 05-03 halted without a selected guest checkpoint; 05-05 halted at local candidate gates; and 05-06 halted at Task 2 because independent selected configuration and sourced guest-predicate evidence are unavailable. Plan 05-06 cleared the diagnostic oracle/rights gates and passed exact-SHA hosted MVS qualification for PR #2, but the selected boot requirement remains open. Phase 05 remains incomplete; selected-media compatibility, attract/start, and actual RetroArch behavior remain unqualified.
+**Wave 1**
 - [x] 05-01-PLAN.md — MVS media path and guest-driven selected boot
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [x] 05-02-PLAN.md — Split selected game/BIOS mapping and exact seven-test current-revision CI evidence
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [x] 05-03-PLAN.md — Source-qualified selected-guest boot to direct attract/start and pinned-app smoke (halted)
 - [x] 05-04-PLAN.md — Source-justified guest-write checkpoint, bounded selected run and conditional pinned-app smoke
+
+**Wave 4** *(05-05 and 05-06 halted; 05-06 hosted candidate gate passed)*
 - [x] 05-05-PLAN.md — Reviewed public-safe revision and exact-SHA hosted seven-test MVS receipt
+- [x] 05-06-PLAN.md — Reconcile oracle/rights gates, establish bounded selected-guest evidence, and bind hosted results to the final SHA
 
 ### Phase 6: Active Title Control
 
@@ -153,6 +161,6 @@ Each phase includes the automated evidence and independent review appropriate to
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 4. Public Playable Tracer | 22/22 | In Progress | - |
-| 5. Selected MVS Boot | 5/5 | In Progress | - |
+| 5. Selected MVS Boot | 6/6 | In Progress | - |
 | 6. Active Title Control | 0/TBD | Not started | - |
 | 7. Sound and Scenario Qualification | 0/TBD | Not started | - |

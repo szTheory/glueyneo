@@ -60,3 +60,29 @@ rights/provenance rows for the listed original test files. Then rerun the
 candidate's local matrix and public-content scan, review the full outgoing
 history and content, and only then publish a final candidate PR for hosted CI.
 Phase 04 findings remain open and unchanged.
+
+## Plan 05-06 exact-SHA hosted qualification — 2026-10-09
+
+- Public-safe candidate PR: #2, exact head
+  `e80672845fc60d94d8a44eab416377534c9a99f1`.
+- Eligible event: `pull_request`; hosted run `38001400110` completed with
+  `success` for the exact PR head. The required CI workflow reports passing
+  classify, all six matrix lanes, public-content, and `ci-policy` jobs.
+- The current candidate's verifier accepted artifacts downloaded from that
+  same run: event metadata, MVS lane receipt, canonical seven-test MVS output,
+  and the sealed aggregate. Source revision and relevant-source digest matched
+  the candidate; positive CTest denominator, all seven expected test names,
+  and output-byte digest matched. The aggregate independently passed its
+  current-SHA, required-job, six-lane, and public-content checks.
+- Independent candidate review passed the exact SHA. The public-content scan
+  found zero findings, and the complete local SDK matrix passed. Local checks
+  are recorded separately from this hosted result.
+- `main` protection requires one approving PR review. PR #2 reports
+  `REVIEW_REQUIRED` and `BLOCKED`; it remains open and unmerged. No hosted
+  receipt from an earlier candidate SHA is reused.
+- The MVS receipt establishes the hosted CTest and source/aggregate gates only.
+  Task 2 could not establish an independently observed selected configuration
+  or sourced guest-written attract/start predicate; no selected-media run was
+  performed. Actual selected-media RetroArch behavior remains
+  unknown/manual-only. G-05-3 and the Phase 05 selected-game requirements
+  remain open.

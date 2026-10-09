@@ -192,3 +192,26 @@ synthetic `attract_start` status as `native_qualification_failed`. The current
 256-chunk profile and validation text agree. The latest selected run remains
 budget-exhausted; the observed device-state transitions provide no guest-written
 attract/start predicate. G-05-3 and G-05-5 remain open.
+
+## Plan 05-06 exact-candidate review — 2026-10-09
+
+**Reviewed:** public-safe PR candidate
+`e80672845fc60d94d8a44eab416377534c9a99f1`.
+**Verdict:** Pass for the changed public candidate and hosted receipt route.
+
+The independent review confirmed the MVS lane receipt is generated from the
+same validated lane as the canonical CTest output, uploaded from the Linux
+Clang matrix job, and checked against the exact event SHA, current checkout's
+relevant-source digest, output bytes, and passing aggregate. It also verified
+all six required matrix lanes, positive matrix/public-content counts, rights
+identity, and the public history scan. The docs-only classifier path correctly
+skips the MVS receipt check while matrix-planned runs still enforce it, even
+when a matrix job fails. Regression tests cover rehashed invalid output,
+missing/duplicate test inventory, zero denominator, stale source/event, and
+incomplete aggregate controls.
+
+The public-source review does not establish a selected game/BIOS predicate or
+attract/start behavior. No selected-media identity or trace was used in this
+record; GAME-02 remains blocked on independent configuration and source-backed
+predicate evidence. The sole remaining PR protection gate is one approving
+review required by `main`; no merge was attempted.

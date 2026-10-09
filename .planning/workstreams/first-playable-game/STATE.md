@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 05
 current_phase_name: Selected MVS Boot
-current_plan: 5
-status: executing
-stopped_at: Halted 05-05-PLAN.md at Task 1 tracer gate
-last_updated: "2026-10-09T21:15:20.563Z"
+current_plan: 6
+status: blocked
+stopped_at: Plan 05-06 halted at Task 2 evidence gate after Task 3 exact-SHA hosted receipt passed
+last_updated: "2026-10-09T22:58:16.086Z"
 last_activity: 2026-10-09
-last_activity_desc: Phase 05 execution started
-state_head: 1323258ee4d2fa10aff7fc981c329fb4a67126ff
+last_activity_desc: 05-06 hosted candidate gate passed; selected-guest evidence remains blocked
+state_head: 183c489750d7974a09b11dadef876756b01b6210
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 27
-  completed_plans: 27
+  total_plans: 28
+  completed_plans: 28
   percent: 0
 ---
 
@@ -30,19 +30,19 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 ## Current Position
 
-Phase: 05 (Selected MVS Boot) — EXECUTING
-Current Plan: 5
-Total Plans in Phase: 5
-Status: executing
-Last activity: 2026-10-09 — Phase 05 execution started
-Last Activity Description: Phase 05 execution started
+Phase: 05 (Selected MVS Boot) — BLOCKED
+Current Plan: 6
+Total Plans in Phase: 6
+Status: Blocked
+Last activity: 2026-10-09 — 05-06 stopped at the selected-guest evidence gate
+Last Activity Description: Hosted MVS receipt passed for the exact candidate; no sourced selected configuration/predicate is available.
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 5
+**Current Plan:** 6
 
 ## Performance Metrics
 
@@ -74,12 +74,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P22 | not recorded | 3 tasks | 10 files |
 | Phase 05 P01 | 20m | 3 tasks | 34 files |
 | Phase 05 P04 | 4min | 3 tasks | 3 files |
+| Phase 05 P06 | 20h 15m 23s | 2 tasks | 16 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-09T21:15:15.123Z
+**Last session:** 2026-10-09T22:58:16.037Z
 
-**Stopped At:** Halted 05-05-PLAN.md at Task 1 tracer gate
+**Stopped At:** Plan 05-06 halted at Task 2 evidence gate after Task 3 exact-SHA hosted receipt passed
 **Resume File:** None
 
 ## Scope Notes
@@ -95,7 +96,7 @@ Progress: [░░░░░░░░░░] 0%
 - The user-provided BIOS archive is also stored under the Git-ignored `local/roms/` directory. The copy matches its source, passes ZIP CRC validation and is untracked; those checks do not establish BIOS compatibility.
 - Public CI: use original fixtures and/or homebrew assets only after confirming redistribution rights for the specific ROM assets; a source-code license alone is not sufficient evidence for bundled game data.
 - The local archive passed ZIP CRC checks and matched all 13 ROM size/SHA-1 entries in MAME's current Neo Geo software list. That confirms the archive identity, not emulator compatibility.
-- Next GSD work: `$gsd-verify-work 05 --ws first-playable-game` checks the completed Phase 05 plan against its current evidence. Phase 05 remains incomplete: MEDIA-03, MEDIA-04, and GAME-02 are Pending. Phase 04 remains `gaps_found`; HOST-02/frontend QUAL-03 remain Pending/unknown/manual-only and all seven user-directed threat dispositions remain open.
+- Next GSD work: `$gsd-verify-work 05 --ws first-playable-game` reviews the 05-06 halted summary and current validation. Phase 05 remains incomplete because selected compatibility and GAME-02 lack independent configuration/predicate evidence; the exact-SHA hosted MVS receipt passed on candidate PR #2. Protected `main` also requires one approving PR review before merge. Phase 04 remains incomplete; HOST-02/frontend QUAL-03 remain Pending/unknown/manual-only and all user-directed threat dispositions remain open.
 
 ## Decisions
 
@@ -136,6 +137,8 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 04]: Current-source mutation fixtures preserve the actual report baseline and compare qualification counts with a live suite run.
 - [Phase 04]: Phase closeout is batched: one pre-plan evidence audit, one consolidated repository-gap plan, and one execute invocation for all waves. — This avoids serial wave-by-wave work and repeated planning while keeping external evidence and user-directed threat blockers open.
 - [Phase 05]: Keep G-05-3 open because no independent source-flow artifact or selected-configuration attract/start observation supports a guest-write predicate.
+- [Phase 05]: Do not claim selected-game compatibility or attract/start without an independently observed selected configuration and source-backed guest predicate.
+- [Phase 05]: The exact-SHA hosted PR receipt establishes MVS CI only; keep PR #2 unmerged until required approval and keep frontend observation separate.
 
 ### Blockers
 
@@ -146,6 +149,7 @@ Progress: [░░░░░░░░░░] 0%
 - Current Plan 04-22 evidence: seven security findings remain open (four high, three medium), with no accepted risks; actual pinned RetroArch load, presentation, input, unload and exit remain unobserved/manual-only (HOST-02 Pending/unknown; frontend QUAL-03 partial/needs-human). Phase 04 remains In Progress, and no further repository gap plan is warranted unless evidence or scope changes.
 - Phase 05 Plan 05-05 halted at Task 1 tracer gate: local matrix rehearsal fails because tests/sdk/ORACLE.md no longer matches the pinned diagnostic manifest (updated timing claims from 05-03), and public-content rights inventory lacks 13 test-path rows. No PR or hosted receipt; G-05-5 remains open. Preserve local candidate branch agent-phase05-safe-candidate at 288a9d3 under ignored local/qualification/phase05-safe-candidate; do not publish until the oracle identity is reviewed and rights provenance is complete.
 - Plan 05-05 halted at Task 1 tracer gate: local matrix fails on stale tests/sdk/ORACLE.md fixture-manifest identity; public-content rights inventory lacks 13 test-path rows; no PR or hosted receipt, G-05-5 remains open.
+- Phase 05 Plan 05-06: independent selected configuration and source-backed guest attract/start predicate are unavailable; do not run or broaden selected-media qualification until this evidence exists.
 
 ## Accumulated Context
 

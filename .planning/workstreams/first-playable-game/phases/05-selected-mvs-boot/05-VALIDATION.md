@@ -275,3 +275,38 @@ vector-4 implementation is restricted to the observed reserved byte- and
 long-EORI destination encodings; unknown valid-but-unimplemented instructions
 remain fail-closed. Its regressions check old SR, pre-instruction PC,
 supervisor stack/vector behavior, 62 cycles, and no operand write.
+
+## Plan 05-06 execution evidence — 2026-10-09
+
+- Task 1 is complete in shared commit `183c489`. The diagnostic oracle wording
+  and fixture source identity now agree with the reviewed reset-cycle contract;
+  all 13 omitted public test paths have affirmative exact-byte rights rows,
+  and the two pinned upstream zlib attribution blobs have narrow history
+  dispositions with original notices preserved. Local public-content, focused
+  docs/evidence/frontend checks, and the complete SDK matrix passed at the
+  reviewed source candidate.
+- Task 2 stopped at the plan's narrow evidence gate. Review of the available
+  public source and prior validation records found no independently observed
+  selected configuration and no sourced guest-written attract/start predicate.
+  The existing 256-chunk run ended at the instruction budget without a
+  checkpoint; no new 256-chunk run, CPU/board change, or predicate was
+  fabricated. Selected compatibility and GAME-02 remain open. The actual
+  RetroArch selected-media flow remains unknown/manual-only because its launch
+  preconditions did not materially change.
+- Task 3's public-safe candidate is
+  `e80672845fc60d94d8a44eab416377534c9a99f1` on PR #2. Local
+  source-identity/evidence, rights, matrix (1,440 assertions, 43 cases, 10
+  lanes), hosted-receipt tests, and public-content/history checks passed.
+  Independent review passed that exact SHA.
+- Hosted PR run `38001400110` passed on the exact candidate SHA: all six matrix
+  lanes, public-content, and `ci-policy`. The downloaded event, MVS receipt,
+  canonical MVS output, and aggregate from that run were accepted by
+  `tools/verify_hosted_mvs.py`; the receipt contains the seven named passing
+  MVS CTests with positive denominator and matching source/output digests.
+  This closes the candidate's G-05-5 hosted-evidence gate only. PR #2 remains
+  unmerged because protected `main` requires one approving PR review and the
+  PR has `REVIEW_REQUIRED`; no protection was bypassed.
+
+Phase 05 remains incomplete: selected guest compatibility/checkpoint evidence
+is still missing. Phase 04 status, its threat dispositions, and `05-UAT.md` were
+not changed.
