@@ -11,6 +11,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
+sys.path.insert(0, str(ROOT / "tests/sdk"))
+from test_matrix_evidence import valid_report  # noqa: E402
 from verify_hosted_mvs import EXPECTED_TESTS, ReceiptError, validate  # noqa: E402
 
 OUTPUT = b"seven hosted MVS CTests passed\n"
@@ -31,12 +33,24 @@ def valid_pair() -> tuple[dict, dict]:
 def valid_aggregate() -> dict:
     aggregate = {
         "outcome": "pass", "source_revision": "a" * 40,
+        "planned_jobs": ["matrix", "public-content"],
+        "lane_count": 7, "assertion_count": 2602,
         "jobs": {
             "matrix": {"result": "success", "lane_count": 6, "assertion_count": 1440},
             "public-content": {"result": "success", "lane_count": 1, "assertion_count": 1162},
         },
-        "matrix": {"outcome": "pass", "source_revision": "a" * 40},
+        "matrix": valid_report(),
+        "public_content": {
+            "outcome": "pass", "detector_negative_only": True,
+            "lane_count": 1, "assertion_count": 1162,
+            "coverage": {"logs_supplied": 6},
+        },
     }
+    return seal_aggregate(aggregate)
+
+
+def seal_aggregate(aggregate: dict) -> dict:
+    aggregate.pop("receipt_sha256", None)
     canonical = (json.dumps(aggregate, ensure_ascii=True, sort_keys=True,
                             separators=(",", ":")) + "\n").encode()
     aggregate["receipt_sha256"] = hashlib.sha256(canonical).hexdigest()
@@ -64,6 +78,21 @@ class HostedMvsReceiptTests(unittest.TestCase):
         event, receipt = valid_pair()
         aggregate = valid_aggregate()
         aggregate["jobs"]["matrix"]["result"] = "failure"
+        self.assert_rejected(event, receipt, aggregate)
+        event, receipt = valid_pair()
+        aggregate = valid_aggregate()
+        aggregate["jobs"]["public-content"].pop("assertion_count")
+        seal_aggregate(aggregate)
+        self.assert_rejected(event, receipt, aggregate)
+        event, receipt = valid_pair()
+        aggregate = valid_aggregate()
+        aggregate["matrix"]["lanes"] = aggregate["matrix"]["lanes"][:-1]
+        seal_aggregate(aggregate)
+        self.assert_rejected(event, receipt, aggregate)
+        event, receipt = valid_pair()
+        aggregate = valid_aggregate()
+        aggregate["public_content"].pop("coverage")
+        seal_aggregate(aggregate)
         self.assert_rejected(event, receipt, aggregate)
 
     def test_rejects_ineligible_event(self) -> None:

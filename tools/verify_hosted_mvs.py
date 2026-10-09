@@ -12,6 +12,8 @@ import stat
 import sys
 from typing import Any
 
+from sdk_evidence import EvidenceError, REQUIRED_MATRIX_LANES, validate_matrix_report
+
 EXPECTED_TESTS = sorted({
     "mvs_synthetic_trace", "mvs_media_contract", "mvs_import_contract",
     "mvs_import_mutation", "mvs_callback_contract", "mvs_boot_checkpoint",
@@ -98,18 +100,41 @@ def validate(event: dict[str, Any], receipt: dict[str, Any], *,
     jobs = aggregate.get("jobs")
     if not isinstance(jobs, dict):
         raise ReceiptError("hosted aggregate job results are missing")
-    for name in ("matrix", "public-content"):
+    expected_jobs = ["matrix", "public-content"]
+    if aggregate.get("planned_jobs") != expected_jobs:
+        raise ReceiptError("hosted aggregate did not plan both required jobs")
+    for name in expected_jobs:
         if not isinstance(jobs.get(name), dict) or jobs[name].get("result") != "success":
             raise ReceiptError("a required hosted aggregate job did not pass")
+        for field in ("lane_count", "assertion_count"):
+            count = jobs[name].get(field)
+            if not isinstance(count, int) or isinstance(count, bool) or count <= 0:
+                raise ReceiptError("hosted aggregate has no positive required-job denominator")
     matrix_job = jobs["matrix"]
-    for field in ("lane_count", "assertion_count"):
-        count = matrix_job.get(field)
-        if not isinstance(count, int) or isinstance(count, bool) or count <= 0:
-            raise ReceiptError("hosted aggregate has no positive matrix denominator")
+    if matrix_job["lane_count"] != len(REQUIRED_MATRIX_LANES):
+        raise ReceiptError("hosted aggregate matrix lane denominator is incomplete")
+    if (aggregate.get("lane_count") != sum(jobs[name]["lane_count"] for name in expected_jobs) or
+            aggregate.get("assertion_count") != sum(jobs[name]["assertion_count"] for name in expected_jobs)):
+        raise ReceiptError("hosted aggregate totals do not match required job denominators")
     matrix = aggregate.get("matrix")
     if (not isinstance(matrix, dict) or matrix.get("outcome") != "pass" or
             matrix.get("source_revision") != source_revision):
         raise ReceiptError("hosted matrix aggregate is missing, failed, or stale")
+    try:
+        validate_matrix_report(matrix)
+    except EvidenceError as error:
+        raise ReceiptError("hosted matrix aggregate does not satisfy the shared matrix schema") from error
+    public_content = aggregate.get("public_content")
+    if (not isinstance(public_content, dict) or public_content.get("outcome") != "pass" or
+            public_content.get("detector_negative_only") is not True or
+            public_content.get("lane_count") != jobs["public-content"]["lane_count"] or
+            public_content.get("assertion_count") != jobs["public-content"]["assertion_count"]):
+        raise ReceiptError("hosted public-content result is missing or inconsistent")
+    coverage = public_content.get("coverage")
+    logs_supplied = coverage.get("logs_supplied") if isinstance(coverage, dict) else None
+    if (not isinstance(logs_supplied, int) or isinstance(logs_supplied, bool) or
+            logs_supplied <= 0):
+        raise ReceiptError("hosted public-content result did not scan matrix artifacts")
 
 
 def main(argv: list[str] | None = None) -> int:
