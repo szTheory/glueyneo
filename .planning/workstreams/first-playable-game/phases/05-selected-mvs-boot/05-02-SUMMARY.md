@@ -133,6 +133,7 @@ plan_head_after: 856a3e355d1996ba867f6cf45d0997e36863aae3
 
 ## Deferred Issues
 
+- The first configured post-wave `owned-debug` run exposed one inherited stale source identity: `owned_cpu_inventory_check` rejected the `CMakeLists.txt` hash recorded before Phase 05-01 added MVS targets. The source-manifest refresh changed only that exact hash; the inventory check and complete 54-test suite then passed. Historical acceptance receipts and budget ledgers remain unchanged.
 - A full `sdk-asan-ubsan` build also attempted unrelated package-consumer targets and stopped at unresolved sanitizer runtime symbols from the Unity static archive. The focused MVS sanitizer targets built and passed 7/7; the unrelated consumer/link path remains outside this plan's source scope.
 - No supported local game/BIOS pair was available, so selected guest execution, attract/start behavior, and direct frontend observation remain unknown for dependent Plan 05-03.
 

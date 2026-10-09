@@ -29,6 +29,7 @@ rows.
 - `python3 tests/sdk/test_matrix_evidence.py` — passed, including omission, zero/renamed inventory, failed outcome, and stale-source controls.
 - `python3 tools/mvs/qualify_local_boot.py` — completed with `no_supported_role_bundle_archive`; no supported private game/BIOS pair was present. Its ignored report records no private identity. This does not establish selected-game compatibility or direct boot behavior.
 - `python3 -m py_compile tools/mvs/qualify_local_boot.py tests/mvs/test_mvs_qualification.py` — passed.
+- The configured post-wave `owned-debug` gate initially passed 53/54 tests: `owned_cpu_inventory_check` rejected the recorded `CMakeLists.txt` digest, which predated Phase 05-01's MVS target wiring. `python3 tools/owned_cpu/inventory.py refresh-manifest` changed only that exact source identity; `python3 tools/owned_cpu/inventory.py check --build-dir build/owned-debug` then passed, and the full `ctest --preset owned-debug` rerun passed 54/54. Historical acceptance receipts and budget ledgers were not rewritten.
 
 Plan 05-02 remains an intermediate foundation: it claims neither G-05-3 nor
 G-05-5 resolved. Plan 05-03 must provide the selected guest's direct attract/start
