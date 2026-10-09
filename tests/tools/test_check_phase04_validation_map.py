@@ -44,12 +44,6 @@ def reconciled_review_documents(directory: Path) -> dict[str, Path]:
     # particular, do not replace the review or append expected evidence here:
     # that would let a stale fixture mask source drift.
 
-    validation = copied["VALIDATION"].read_text(encoding="utf-8")
-    validation += (
-        "\nPlan 04-21 current suite denominators: qualification 27/27; frontend 27/27.\n"
-    )
-    copied["VALIDATION"].write_text(validation, encoding="utf-8")
-
     disposition_path = copied["DISPOSITION"]
     disposition = disposition_path.read_text(encoding="utf-8")
     block = re.search(r"(?ms)^  - id: CR-01\n(.*?)(?=^  - id:|\Z)", disposition.split("---", 2)[1])
