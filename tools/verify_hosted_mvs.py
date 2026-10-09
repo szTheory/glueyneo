@@ -124,6 +124,9 @@ def validate(event: dict[str, Any], receipt: dict[str, Any], *,
         validate_matrix_report(matrix)
     except EvidenceError as error:
         raise ReceiptError("hosted matrix aggregate does not satisfy the shared matrix schema") from error
+    matrix_assertions = sum(row["assertions"] for row in matrix["lanes"])
+    if matrix_job["assertion_count"] != matrix_assertions:
+        raise ReceiptError("hosted matrix job assertion count disagrees with lane evidence")
     public_content = aggregate.get("public_content")
     if (not isinstance(public_content, dict) or public_content.get("outcome") != "pass" or
             public_content.get("detector_negative_only") is not True or

@@ -122,7 +122,9 @@ jobs:
         if: always()
         with:
           name: matrix-lane-${{ matrix.lane }}
-          path: evidence/sdk/matrix-${{ matrix.lane }}.json
+          path: |
+            evidence/sdk/matrix-${{ matrix.lane }}.json
+            build/sdk-debug/verify-sdk/logs/ctest-mvs.log
           if-no-files-found: ignore
           retention-days: 7
 

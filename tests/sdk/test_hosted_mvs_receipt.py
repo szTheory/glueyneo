@@ -31,15 +31,18 @@ def valid_pair() -> tuple[dict, dict]:
 
 
 def valid_aggregate() -> dict:
+    matrix = valid_report()
+    matrix_assertions = sum(row["assertions"] for row in matrix["lanes"])
     aggregate = {
         "outcome": "pass", "source_revision": "a" * 40,
         "planned_jobs": ["matrix", "public-content"],
-        "lane_count": 7, "assertion_count": 2602,
+        "lane_count": 7, "assertion_count": matrix_assertions + 1162,
         "jobs": {
-            "matrix": {"result": "success", "lane_count": 6, "assertion_count": 1440},
+            "matrix": {"result": "success", "lane_count": 6,
+                       "assertion_count": matrix_assertions},
             "public-content": {"result": "success", "lane_count": 1, "assertion_count": 1162},
         },
-        "matrix": valid_report(),
+        "matrix": matrix,
         "public_content": {
             "outcome": "pass", "detector_negative_only": True,
             "lane_count": 1, "assertion_count": 1162,
@@ -74,10 +77,12 @@ class HostedMvsReceiptTests(unittest.TestCase):
             event, receipt = valid_pair()
             aggregate = valid_aggregate()
             aggregate[field] = value
+            seal_aggregate(aggregate)
             self.assert_rejected(event, receipt, aggregate)
         event, receipt = valid_pair()
         aggregate = valid_aggregate()
         aggregate["jobs"]["matrix"]["result"] = "failure"
+        seal_aggregate(aggregate)
         self.assert_rejected(event, receipt, aggregate)
         event, receipt = valid_pair()
         aggregate = valid_aggregate()
@@ -92,6 +97,12 @@ class HostedMvsReceiptTests(unittest.TestCase):
         event, receipt = valid_pair()
         aggregate = valid_aggregate()
         aggregate["public_content"].pop("coverage")
+        seal_aggregate(aggregate)
+        self.assert_rejected(event, receipt, aggregate)
+        event, receipt = valid_pair()
+        aggregate = valid_aggregate()
+        aggregate["jobs"]["matrix"]["assertion_count"] += 1
+        aggregate["assertion_count"] += 1
         seal_aggregate(aggregate)
         self.assert_rejected(event, receipt, aggregate)
 
