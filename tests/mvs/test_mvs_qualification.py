@@ -127,6 +127,8 @@ def test_identity_importer(importer: str) -> tuple[str, tempfile.TemporaryDirect
                               else "mvs_importer_identity")
     if configured.is_file():
         return str(configured), None
+    if os.name == "nt":
+        raise RuntimeError("configured MVS identity test target is missing; build the full SDK preset")
     cache = build_dir / "CMakeCache.txt"
     cache_values: dict[str, str] = {}
     for line in cache.read_text(encoding="utf-8").splitlines():
