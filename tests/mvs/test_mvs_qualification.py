@@ -18,6 +18,37 @@ NAMES = (
 )
 SIZES = (0x80000, 0x500000, 0x20000, 0x20000, 0xA00000, 0x3000000)
 
+# Test-only member names mirror the pinned MAME mslugx declaration.  These
+# fixture identities are intentionally synthetic and never compile into the
+# production importer.
+GAME_MEMBERS = {
+    "250-p1.p1": 0x100000, "250-p2.ep1": 0x400000,
+    "250-s1.s1": 0x20000, "250-m1.m1": 0x20000,
+    "250-v1.v1": 0x400000, "250-v2.v2": 0x400000,
+    "250-v3.v3": 0x200000,
+    "250-c1.c1": 0x800000, "250-c2.c2": 0x800000,
+    "250-c3.c3": 0x800000, "250-c4.c4": 0x800000,
+    "250-c5.c5": 0x800000, "250-c6.c6": 0x800000,
+}
+BIOS_MEMBER = "sp-s2.sp1"
+
+
+def make_split_archives(*, replace_program: bool = False,
+                        duplicate_program: bool = False) -> tuple[bytes, bytes]:
+    game, bios = io.BytesIO(), io.BytesIO()
+    with zipfile.ZipFile(game, "w", compression=zipfile.ZIP_STORED,
+                         allowZip64=False) as archive:
+        for name, size in GAME_MEMBERS.items():
+            if replace_program and name == "250-p1.p1":
+                name = "250-p1-wrong.p1"
+            archive.writestr(name, bytes(size))
+        if duplicate_program:
+            archive.writestr("250-p1.p1", bytes(GAME_MEMBERS["250-p1.p1"]))
+    with zipfile.ZipFile(bios, "w", compression=zipfile.ZIP_STORED,
+                         allowZip64=False) as archive:
+        archive.writestr(BIOS_MEMBER, bytes(0x20000))
+    return game.getvalue(), bios.getvalue()
+
 
 def make_archive(*, method: int = zipfile.ZIP_DEFLATED,
                  wrong_size: bool = False, duplicate: bool = False) -> bytes:
@@ -75,6 +106,51 @@ class ImporterTests(unittest.TestCase):
             self.assertEqual((actual_role, actual_size), (role, expected_size))
             cursor += 12 + actual_size
         self.assertEqual(cursor, len(bundle))
+
+    def test_selected_split_archives_normalize_exact_mslugx_map(self) -> None:
+        game, bios = make_split_archives()
+        with tempfile.TemporaryDirectory(prefix="mvs-split-test-") as directory:
+            game_path = os.path.join(directory, "game.zip")
+            bios_path = os.path.join(directory, "bios.zip")
+            output_path = os.path.join(directory, "selected.gnmv")
+            with open(game_path, "wb") as handle:
+                handle.write(game)
+            with open(bios_path, "wb") as handle:
+                handle.write(bios)
+            checked = subprocess.run(
+                [self.importer, "--selected", game_path, bios_path, output_path],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(checked.returncode, 0, checked.stderr)
+            with open(output_path, "rb") as handle:
+                bundle = handle.read()
+        self.assertEqual(bundle[:4], b"GNMV")
+        self.assertEqual(struct.unpack_from(">III", bundle, 4),
+                         (1, 0x4D53584D, 6))
+        cursor = 16
+        for role, expected_size in enumerate(SIZES, 1):
+            actual_role, actual_size = struct.unpack_from(">IQ", bundle, cursor)
+            self.assertEqual((actual_role, actual_size), (role, expected_size))
+            cursor += 12 + actual_size
+        self.assertEqual(cursor, len(bundle))
+
+    def test_selected_wrong_member_and_duplicate_are_rejected_without_output(self) -> None:
+        for options in ({"replace_program": True}, {"duplicate_program": True}):
+            game, bios = make_split_archives(**options)
+            with tempfile.TemporaryDirectory(prefix="mvs-split-test-") as directory:
+                game_path, bios_path = (os.path.join(directory, name)
+                                        for name in ("game.zip", "bios.zip"))
+                output_path = os.path.join(directory, "selected.gnmv")
+                for path, payload in ((game_path, game), (bios_path, bios)):
+                    with open(path, "wb") as handle:
+                        handle.write(payload)
+                checked = subprocess.run(
+                    [self.importer, "--selected", game_path, bios_path, output_path],
+                    capture_output=True, text=True, check=False,
+                )
+                self.assertNotEqual(checked.returncode, 0)
+                self.assertFalse(os.path.exists(output_path))
+                self.assertNotIn("250-", checked.stderr)
 
     def test_eocd_signature_inside_comment_does_not_hide_directory(self) -> None:
         archive = bytearray(make_archive(method=zipfile.ZIP_STORED))
@@ -170,9 +246,13 @@ def main() -> int:
         suite = unittest.TestSuite([
             ImporterTests("test_deflated_archive_normalizes_selected_profile"),
             ImporterTests("test_eocd_signature_inside_comment_does_not_hide_directory"),
+            ImporterTests("test_selected_split_archives_normalize_exact_mslugx_map"),
         ])
     elif args.mode == "mutation":
-        suite = unittest.TestSuite([ImporterTests("test_malformed_and_unsupported_archives_have_stable_statuses")])
+        suite = unittest.TestSuite([
+            ImporterTests("test_malformed_and_unsupported_archives_have_stable_statuses"),
+            ImporterTests("test_selected_wrong_member_and_duplicate_are_rejected_without_output"),
+        ])
     else:
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(ImporterTests)
     return 0 if unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful() else 1
