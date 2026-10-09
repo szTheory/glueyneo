@@ -206,6 +206,11 @@ jobs:
           MATRIX_PLANNED: ${{ needs.classify.outputs.matrix }}
           CONTENT_PLANNED: ${{ needs.classify.outputs.public_content }}
           SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action || '' }}
+          EVENT_DRAFT: ${{ github.event.pull_request.draft || false }}
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EVENT_REF: ${{ github.ref }}
         run: |
           set -euo pipefail
           mkdir -p build/ci evidence/sdk
@@ -228,12 +233,6 @@ jobs:
           PY
           python3 tools/workflow/ci_policy.py prepare --output-dir build/ci
           python3 tools/workflow/ci_policy.py aggregate --results build/ci/results.json --plan build/ci/plan.json --matrix-dir build/ci/matrix --output evidence/sdk/ci-aggregate.json
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          EVENT_ACTION: ${{ github.event.action || '' }}
-          EVENT_DRAFT: ${{ github.event.pull_request.draft || false }}
-          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          EVENT_REF: ${{ github.ref }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
