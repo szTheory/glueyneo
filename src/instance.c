@@ -45,6 +45,18 @@ typedef struct {
 } gn_memory_region;
 
 typedef struct {
+    uint8_t *bytes;
+    size_t size;
+    gn_mvs_region_role role;
+} gn_mvs_owned_region;
+
+int gn_mvs_bus_read16(const gn_mvs_owned_region *regions, size_t count,
+                      uint8_t *work_ram, size_t work_ram_size,
+                      uint32_t address, uint16_t *value);
+int gn_mvs_bus_write16(uint8_t *work_ram, size_t work_ram_size,
+                       uint32_t address, uint16_t value);
+
+typedef struct {
     gn_allocator allocator;
     gn_memory_region rom;
     gn_memory_region ram;
@@ -53,6 +65,10 @@ typedef struct {
     uint32_t profile;
     uint16_t frame_input;
     uint8_t marker_tile[GN_FIXTURE_TILE_SIZE];
+    gn_mvs_owned_region mvs_regions[GN_MVS_MAX_REGIONS];
+    size_t mvs_region_count;
+    uint8_t *mvs_work_ram;
+    size_t mvs_work_ram_size;
     owned_cpu *cpu;
 #if defined(GLUEYNEO_SDK_TEST_HOOKS)
     size_t test_fail_bus_callbacks;
@@ -116,6 +132,11 @@ static int gn_read16(void *userdata, uint32_t address, uint16_t *value) {
     if (image == NULL || value == NULL || (address & UINT32_C(1)) != 0u) {
         return 0;
     }
+    if (image->mvs_region_count != 0u) {
+        return gn_mvs_bus_read16(image->mvs_regions, image->mvs_region_count,
+                                 image->mvs_work_ram,
+                                 image->mvs_work_ram_size, address, value);
+    }
     if (image->profile == GN_PROFILE_PUBLIC_FIXTURE &&
         address == GN_FIXTURE_INPUT_PORT) {
         *value = image->frame_input;
@@ -158,11 +179,15 @@ static int gn_read16(void *userdata, uint32_t address, uint16_t *value) {
 
 static int gn_write16(void *userdata, uint32_t address, uint16_t value) {
     gn_image *image = (gn_image *)userdata;
-    if (image == NULL || (address & UINT32_C(1)) != 0u ||
-        address < image->ram.base ||
-        address - image->ram.base > image->ram.size - UINT32_C(2)) {
+    if (image == NULL || (address & UINT32_C(1)) != 0u) {
         return 0;
     }
+    if (image->mvs_region_count != 0u) {
+        return gn_mvs_bus_write16(image->mvs_work_ram,
+                                  image->mvs_work_ram_size, address, value);
+    }
+    if (address < image->ram.base ||
+        address - image->ram.base > image->ram.size - UINT32_C(2)) return 0;
 #if defined(GLUEYNEO_SDK_TEST_HOOKS)
     if (image->test_fail_bus_callbacks != 0u) {
         --image->test_fail_bus_callbacks;
@@ -376,6 +401,10 @@ static void gn_free_image(gn_image *image) {
     if (image == NULL) return;
     const gn_allocator allocator = image->allocator;
     owned_cpu_destroy(image->cpu);
+    for (size_t index = 0u; index < image->mvs_region_count; ++index) {
+        gn_release(&allocator, image->mvs_regions[index].bytes);
+    }
+    gn_release(&allocator, image->mvs_work_ram);
     gn_release(&allocator, image->ram.bytes);
     gn_release(&allocator, image->ram_seed);
     gn_release(&allocator, image->rom.bytes);
@@ -383,6 +412,11 @@ static void gn_free_image(gn_image *image) {
 }
 
 static gn_status gn_initialize_candidate(gn_image *image) {
+    if (image->mvs_region_count != 0u) {
+        memset(image->mvs_work_ram, 0, image->mvs_work_ram_size);
+        const owned_cpu_status mvs_status = owned_cpu_reset(image->cpu);
+        return mvs_status == OWNED_CPU_OK ? GN_STATUS_OK : GN_STATUS_CPU_FAILURE;
+    }
     memset(image->ram.bytes, 0, (size_t)image->ram.size);
     memcpy(image->ram.bytes, image->ram_seed, image->ram_seed_size);
     const owned_cpu_status status = owned_cpu_reset(image->cpu);
@@ -557,6 +591,20 @@ gn_status gn_test_trace_read(const gn_instance *instance,
     }
     return GN_STATUS_OK;
 }
+
+gn_status gn_test_mvs_read_work_ram(const gn_instance *instance,
+                                    uint32_t address, uint16_t *out_value) {
+    if (instance == NULL || out_value == NULL) return GN_STATUS_INVALID_ARGUMENT;
+    if (instance->image == NULL || instance->image->mvs_region_count == 0u)
+        return GN_STATUS_INVALID_STATE;
+    if ((address & 1u) != 0u || address < UINT32_C(0x100000) ||
+        (uint64_t)address - UINT32_C(0x100000) >
+            instance->image->mvs_work_ram_size - 2u) return GN_STATUS_INVALID_ARGUMENT;
+    const size_t offset = (size_t)(address - UINT32_C(0x100000));
+    *out_value = (uint16_t)(((uint16_t)instance->image->mvs_work_ram[offset] << 8) |
+                            instance->image->mvs_work_ram[offset + 1u]);
+    return GN_STATUS_OK;
+}
 #endif
 
 GN_API gn_status gn_load(gn_instance *instance, const gn_manifest *manifest) {
@@ -661,6 +709,97 @@ GN_API gn_status gn_load(gn_instance *instance, const gn_manifest *manifest) {
     return GN_STATUS_OK;
 }
 
+GN_API gn_status gn_load_mvs(gn_instance *instance,
+                             const gn_mvs_manifest *manifest) {
+    if (instance == NULL || manifest == NULL) return GN_STATUS_INVALID_ARGUMENT;
+    if (manifest->version != GN_MVS_MANIFEST_VERSION ||
+        manifest->profile != GN_MVS_PROFILE_MSX ||
+        manifest->region_count != GN_MVS_MAX_REGIONS) {
+        return GN_STATUS_UNSUPPORTED_PROFILE;
+    }
+    uint32_t roles = 0u;
+    size_t total = 0u;
+    for (size_t index = 0u; index < manifest->region_count; ++index) {
+        const gn_mvs_region *region = &manifest->regions[index];
+        if (region->role < GN_MVS_REGION_BIOS ||
+            region->role > GN_MVS_REGION_SPRITES ||
+            region->source == NULL || region->source_size == 0u ||
+            region->source_size != region->mapped_size ||
+            region->source_size > GN_MVS_MAX_REGION_BYTES ||
+            region->source_size > GN_MVS_MAX_MEDIA_BYTES - total ||
+            (region->layout != GN_MVS_LAYOUT_LINEAR &&
+             region->layout != GN_MVS_LAYOUT_WORD_SWAP) ||
+            (region->layout == GN_MVS_LAYOUT_WORD_SWAP &&
+             (region->source_size & 1u) != 0u)) {
+            return GN_STATUS_INVALID_MEDIA;
+        }
+        const uint32_t bit = UINT32_C(1) << (unsigned)region->role;
+        if ((roles & bit) != 0u) return GN_STATUS_INVALID_MEDIA;
+        roles |= bit;
+        total += region->source_size;
+    }
+    uint32_t expected_roles = 0u;
+    for (unsigned role = GN_MVS_REGION_BIOS;
+         role <= GN_MVS_REGION_SPRITES; ++role) {
+        expected_roles |= UINT32_C(1) << role;
+    }
+    if (roles != expected_roles) return GN_STATUS_INVALID_MEDIA;
+
+    const gn_allocator allocator = instance->allocator;
+    gn_image *candidate = (gn_image *)gn_allocate(&allocator, sizeof(*candidate));
+    if (candidate == NULL) return GN_STATUS_OUT_OF_MEMORY;
+    memset(candidate, 0, sizeof(*candidate));
+    candidate->allocator = allocator;
+    candidate->profile = GN_MVS_PROFILE_MSX;
+    candidate->mvs_region_count = manifest->region_count;
+    candidate->mvs_work_ram_size = (size_t)0x10000u;
+    candidate->mvs_work_ram = (uint8_t *)gn_allocate(
+        &allocator, candidate->mvs_work_ram_size);
+    if (candidate->mvs_work_ram == NULL) {
+        gn_free_image(candidate);
+        return GN_STATUS_OUT_OF_MEMORY;
+    }
+    for (size_t index = 0u; index < manifest->region_count; ++index) {
+        const gn_mvs_region *source = &manifest->regions[index];
+        gn_mvs_owned_region *destination = &candidate->mvs_regions[index];
+        destination->bytes = (uint8_t *)gn_allocate(&allocator,
+                                                    source->source_size);
+        if (destination->bytes == NULL) {
+            gn_free_image(candidate);
+            return GN_STATUS_OUT_OF_MEMORY;
+        }
+        destination->size = source->source_size;
+        destination->role = source->role;
+        if (source->layout == GN_MVS_LAYOUT_LINEAR) {
+            memcpy(destination->bytes, source->source, source->source_size);
+        } else {
+            for (size_t byte = 0u; byte < source->source_size; byte += 2u) {
+                destination->bytes[byte] = source->source[byte + 1u];
+                destination->bytes[byte + 1u] = source->source[byte];
+            }
+        }
+    }
+    const owned_cpu_bus bus = {candidate, gn_read16, gn_write16};
+    const owned_cpu_allocator cpu_allocator = {candidate, gn_cpu_allocate,
+                                                gn_cpu_release};
+    const owned_cpu_status cpu_status = owned_cpu_create(
+        OWNED_CPU_MODEL_MC68000, bus, cpu_allocator, &candidate->cpu);
+    if (cpu_status != OWNED_CPU_OK) {
+        gn_free_image(candidate);
+        return cpu_status == OWNED_CPU_ALLOCATION_FAILURE ? GN_STATUS_OUT_OF_MEMORY
+                                                          : GN_STATUS_CPU_FAILURE;
+    }
+    const gn_status status = gn_initialize_candidate(candidate);
+    if (status != GN_STATUS_OK) {
+        gn_free_image(candidate);
+        return status;
+    }
+    gn_image *previous = instance->image;
+    instance->image = candidate;
+    gn_free_image(previous);
+    return GN_STATUS_OK;
+}
+
 GN_API gn_status gn_reset(gn_instance *instance) {
     if (instance == NULL) return GN_STATUS_INVALID_ARGUMENT;
     if (instance->image == NULL) return GN_STATUS_INVALID_STATE;
@@ -720,6 +859,16 @@ GN_API gn_status gn_run(gn_instance *instance, uint64_t cycle_budget,
     }
 #endif
     return mapped_status;
+}
+
+GN_API gn_status gn_run_mvs(gn_instance *instance, uint64_t cycle_budget,
+                            gn_run_result *out_result) {
+    if (instance == NULL || instance->image == NULL ||
+        instance->image->mvs_region_count == 0u) {
+        if (out_result != NULL) memset(out_result, 0, sizeof(*out_result));
+        return GN_STATUS_INVALID_STATE;
+    }
+    return gn_run(instance, cycle_budget, out_result);
 }
 
 GN_API gn_status gn_observe(const gn_instance *instance,

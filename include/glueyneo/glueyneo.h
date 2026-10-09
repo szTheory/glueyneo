@@ -24,6 +24,11 @@ extern "C" {
 #define GN_MANIFEST_VERSION UINT32_C(1)
 #define GN_PROFILE_DIAGNOSTIC UINT32_C(1)
 #define GN_PROFILE_PUBLIC_FIXTURE UINT32_C(0x50554246)
+#define GN_MVS_MANIFEST_VERSION UINT32_C(1)
+#define GN_MVS_PROFILE_MSX UINT32_C(0x4d53584d)
+#define GN_MVS_MAX_REGIONS 6u
+#define GN_MVS_MAX_REGION_BYTES ((size_t)32u * 1024u * 1024u)
+#define GN_MVS_MAX_MEDIA_BYTES ((size_t)48u * 1024u * 1024u)
 #define GN_MAX_REGIONS 2u
 #define GN_MAX_MEDIA_BYTES ((size_t)1024u * (size_t)1024u)
 #define GN_MAX_CYCLE_BUDGET UINT64_C(1000000)
@@ -59,6 +64,38 @@ typedef struct {
     size_t region_count;
     gn_region regions[GN_MAX_REGIONS];
 } gn_manifest;
+
+/* Versioned MVS media contract. Region bytes are immutable ROM data in
+ * byte-addressed, post-transform order. gn_load_mvs copies all data before
+ * returning and leaves the current image intact when validation fails. */
+typedef enum {
+    GN_MVS_REGION_BIOS = 1,
+    GN_MVS_REGION_PROGRAM,
+    GN_MVS_REGION_FIXED,
+    GN_MVS_REGION_AUDIO_PROGRAM,
+    GN_MVS_REGION_SAMPLES,
+    GN_MVS_REGION_SPRITES
+} gn_mvs_region_role;
+
+typedef enum {
+    GN_MVS_LAYOUT_LINEAR = 0,
+    GN_MVS_LAYOUT_WORD_SWAP = 1
+} gn_mvs_layout;
+
+typedef struct {
+    gn_mvs_region_role role;
+    const uint8_t *source;
+    size_t source_size;
+    size_t mapped_size;
+    gn_mvs_layout layout;
+} gn_mvs_region;
+
+typedef struct {
+    uint32_t version;
+    uint32_t profile;
+    size_t region_count;
+    gn_mvs_region regions[GN_MVS_MAX_REGIONS];
+} gn_mvs_manifest;
 
 typedef enum {
     GN_RUN_BUDGET = 0,
@@ -134,9 +171,13 @@ typedef struct {
  * RAM source bytes are an initialization prefix; the remainder is zero-filled. */
 GN_API gn_status gn_create(gn_instance **out_instance);
 GN_API gn_status gn_load(gn_instance *instance, const gn_manifest *manifest);
+GN_API gn_status gn_load_mvs(gn_instance *instance,
+                             const gn_mvs_manifest *manifest);
 GN_API gn_status gn_reset(gn_instance *instance);
 GN_API gn_status gn_run(gn_instance *instance, uint64_t cycle_budget,
                         gn_run_result *out_result);
+GN_API gn_status gn_run_mvs(gn_instance *instance, uint64_t cycle_budget,
+                            gn_run_result *out_result);
 GN_API gn_status gn_observe(const gn_instance *instance,
                             gn_observations *out_observations);
 /* A public-fixture frame samples input_mask once at entry. RIGHT advances x;

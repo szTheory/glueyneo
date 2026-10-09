@@ -29,6 +29,22 @@ include(CTest)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
+# ZIP handling is isolated to the standalone importer. These exact upstream
+# zlib 1.3.2 inflater/CRC sources are pinned at da607da739fa6047df13e66a2af6b8bec7c2a498.
+add_library(glueyneo_mvs_zlib STATIC
+  third_party/zlib/adler32.c
+  third_party/zlib/crc32.c
+  third_party/zlib/inflate.c
+  third_party/zlib/inffast.c
+  third_party/zlib/inftrees.c
+  third_party/zlib/zutil.c
+)
+target_include_directories(glueyneo_mvs_zlib PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/third_party/zlib)
+target_compile_features(glueyneo_mvs_zlib PRIVATE c_std_17)
+set_target_properties(glueyneo_mvs_zlib PROPERTIES C_STANDARD 17
+  C_STANDARD_REQUIRED YES C_EXTENSIONS NO POSITION_INDEPENDENT_CODE ON)
+
 option(GLUEYNEO_BUILD_TESTS "Build SDK tests and the headless diagnostic" ${BUILD_TESTING})
 option(GLUEYNEO_YM2610_ADMISSION "Build the private ymfm YM2610 admission candidate" ${GLUEYNEO_BUILD_TESTS})
 option(GLUEYNEO_CPU_EXPERIMENT "Build the private CPU acceptance experiment" OFF)
@@ -101,6 +117,7 @@ endif()
 
 set(GLUEYNEO_RUNTIME_SOURCES
   src/instance.c
+  src/mvs/mvs_bus.c
   experiments/owned_cpu/cpu.c
 )
 add_library(glueyneo ${GLUEYNEO_RUNTIME_SOURCES})
@@ -446,6 +463,51 @@ if(GLUEYNEO_BUILD_TESTS)
   add_test(NAME libretro_callback
     COMMAND libretro_callback_test "${GLUEYNEO_PUBLIC_FIXTURE}")
   set_tests_properties(libretro_callback PROPERTIES LABELS "libretro;callback-contract")
+
+  add_library(mvs_import_lib STATIC tools/mvs/mvs_import.c)
+  target_compile_definitions(mvs_import_lib PRIVATE MVS_IMPORT_NO_MAIN)
+  target_compile_features(mvs_import_lib PRIVATE c_std_17)
+  set_target_properties(mvs_import_lib PROPERTIES C_STANDARD 17
+    C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
+  target_include_directories(mvs_import_lib PRIVATE third_party/zlib)
+  target_link_libraries(mvs_import_lib PRIVATE glueyneo_mvs_zlib)
+  if(MSVC)
+    target_compile_options(mvs_import_lib PRIVATE /W4 /WX)
+  else()
+    target_compile_options(mvs_import_lib PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+
+  add_executable(mvs_importer tools/mvs/mvs_import.c)
+  target_compile_features(mvs_importer PRIVATE c_std_17)
+  set_target_properties(mvs_importer PROPERTIES C_STANDARD 17
+    C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
+  target_include_directories(mvs_importer PRIVATE third_party/zlib)
+  target_link_libraries(mvs_importer PRIVATE glueyneo_mvs_zlib)
+  if(MSVC)
+    target_compile_options(mvs_importer PRIVATE /W4 /WX)
+  else()
+    target_compile_options(mvs_importer PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+
+  add_executable(mvs_test tests/mvs/test_mvs.c)
+  target_include_directories(mvs_test PRIVATE
+    src third_party/libretro third_party/zlib)
+  target_compile_features(mvs_test PRIVATE c_std_17)
+  target_compile_definitions(mvs_test PRIVATE GLUEYNEO_SDK_TEST_HOOKS)
+  set_target_properties(mvs_test PROPERTIES C_STANDARD 17
+    C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
+  target_link_libraries(mvs_test PRIVATE
+    glueyneo_test glueyneo_unity mvs_import_lib glueyneo_libretro
+    ${CMAKE_DL_LIBS})
+  if(MSVC)
+    target_compile_options(mvs_test PRIVATE /W4 /WX)
+  else()
+    target_compile_options(mvs_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(mvs_test)
+  add_test(NAME mvs_synthetic_trace COMMAND mvs_test)
+  set_tests_properties(mvs_synthetic_trace PROPERTIES
+    LABELS "mvs;importer;guest;libretro" TIMEOUT 60)
 
   add_executable(sdk_diagnostic tests/sdk/test_sdk.c tests/sdk/guest_fixture.c)
   target_include_directories(sdk_diagnostic PRIVATE tests/sdk src)

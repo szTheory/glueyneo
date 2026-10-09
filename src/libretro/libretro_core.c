@@ -79,9 +79,9 @@ void retro_deinit(void) {
 
 void retro_get_system_info(struct retro_system_info *info) {
     if (info == NULL) return;
-    info->library_name = "Glueyneo Public Tracer";
+    info->library_name = "Glueyneo";
     info->library_version = "0.1";
-    info->valid_extensions = "bin";
+    info->valid_extensions = "bin|gnmv";
     info->need_fullpath = false;
     info->block_extract = false;
 }
@@ -108,11 +108,51 @@ void retro_reset(void) {
 
 bool retro_load_game(const struct retro_game_info *game) {
     if (instance != NULL || game == NULL || game->data == NULL ||
-        game->size != (size_t)GNFX_CONTENT_SIZE || environment_cb == NULL) {
+        environment_cb == NULL) {
         return false;
     }
 
     const uint8_t *content = (const uint8_t *)game->data;
+    if (game->size >= 16u && memcmp(content, "GNMV", 4u) == 0) {
+        const uint32_t version = read_u32_be(content + 4u);
+        const uint32_t profile = read_u32_be(content + 8u);
+        const uint32_t count = read_u32_be(content + 12u);
+        if (version != 1u || profile != GN_MVS_PROFILE_MSX ||
+            count != GN_MVS_MAX_REGIONS ||
+            game->size > GN_MVS_MAX_MEDIA_BYTES + 16u +
+                         GN_MVS_MAX_REGIONS * 12u) return false;
+        gn_mvs_manifest manifest;
+        memset(&manifest, 0, sizeof(manifest));
+        manifest.version = GN_MVS_MANIFEST_VERSION;
+        manifest.profile = profile;
+        manifest.region_count = count;
+        size_t cursor = 16u;
+        for (size_t index = 0u; index < count; ++index) {
+            if (cursor > game->size || game->size - cursor < 12u) return false;
+            const uint32_t role = read_u32_be(content + cursor);
+            const uint32_t high = read_u32_be(content + cursor + 4u);
+            const uint32_t low = read_u32_be(content + cursor + 8u);
+            if (high != 0u) return false;
+            const size_t region_size = (size_t)low;
+            cursor += 12u;
+            if (region_size == 0u || region_size > game->size - cursor) return false;
+            manifest.regions[index] = (gn_mvs_region){
+                (gn_mvs_region_role)role, content + cursor, region_size,
+                region_size, GN_MVS_LAYOUT_LINEAR};
+            cursor += region_size;
+        }
+        if (cursor != game->size) return false;
+        enum retro_pixel_format pixel_format = RETRO_PIXEL_FORMAT_XRGB8888;
+        if (!environment_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &pixel_format))
+            return false;
+        if (gn_create(&instance) != GN_STATUS_OK) { instance = NULL; return false; }
+        if (gn_load_mvs(instance, &manifest) != GN_STATUS_OK) {
+            unload_instance();
+            return false;
+        }
+        return true;
+    }
+    if (game->size != (size_t)GNFX_CONTENT_SIZE) return false;
     if (memcmp(content, "GNFX", 4u) != 0 || read_u32_be(content + 4u) != 1u ||
         read_u32_be(content + 8u) != GNFX_PAYLOAD_SIZE ||
         read_u32_be(content + 12u) != GNFX_HEADER_SIZE) {
