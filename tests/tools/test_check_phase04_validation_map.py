@@ -596,6 +596,27 @@ class ValidationMapReconciliationTest(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, "differs from reviewed revision"):
                 validation_map.require_reviewed_source_identity(review_frontmatter(revision), repository=repository)
 
+    def test_review_identity_rejects_duplicate_revision_keys(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="phase04-review-duplicate-revision-") as temporary:
+            repository = Path(temporary)
+            first_revision = commit_review_source_tree(repository)
+            subprocess.run(
+                ["git", "-C", str(repository), "commit", "--allow-empty", "-qm", "second valid revision"],
+                check=True,
+            )
+            second_revision = subprocess.run(
+                ["git", "-C", str(repository), "rev-parse", "HEAD"], check=True, text=True,
+                stdout=subprocess.PIPE,
+            ).stdout.strip()
+            self.assertNotEqual(first_revision, second_revision)
+            review = review_frontmatter(first_revision).replace(
+                f"reviewed_revision: {first_revision}\n",
+                f"reviewed_revision: {first_revision}\nreviewed_revision: {second_revision}\n",
+                1,
+            )
+            with self.assertRaisesRegex(AssertionError, "exactly one full immutable reviewed_revision"):
+                validation_map.require_reviewed_source_identity(review, repository=repository)
+
     def test_frontend_claim_grammar_rejects_render_screen_and_output_paraphrases(self) -> None:
         uncertain = "Actual pinned RetroArch load remains unknown; launch previously aborted before screenshot."
         positives = (
@@ -674,6 +695,24 @@ class ValidationMapReconciliationTest(unittest.TestCase):
                     )
                     with self.assertRaises(AssertionError):
                         self.run_checker(documents)
+
+    def test_actual_frontend_spotcheck_requires_current_manual_unknown_state(self) -> None:
+        mutations = (
+            (1, "RetroArch launched successfully"),
+            (2, "✓ VERIFIED"),
+        )
+        for column, value in mutations:
+            with self.subTest(column=column, value=value), tempfile.TemporaryDirectory() as temporary:
+                documents = reconciled_review_documents(Path(temporary))
+                mutate_document(
+                    documents,
+                    "VERIFICATION",
+                    lambda text, col=column, replacement=value: with_table_cell(
+                        text, "| Behavior | Command/result | Status |", "Actual pinned RetroArch", col, replacement
+                    ),
+                )
+                with self.assertRaisesRegex(AssertionError, "actual frontend spot-check"):
+                    self.run_checker(documents)
 
     def test_frontend_uncertainty_is_bound_to_pinned_app_and_rejects_success_paraphrases(self) -> None:
         accepted = validation_map.PINNED_FRONTEND_UNCERTAINTY_EVIDENCE

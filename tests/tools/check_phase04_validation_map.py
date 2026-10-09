@@ -52,10 +52,10 @@ def frontmatter(document: str, label: str) -> str:
 def require_reviewed_source_identity(review: str, *, repository: Path = ROOT) -> None:
     """Bind the current review's required file list and bytes to its immutable commit."""
     yaml = frontmatter(review, "review")
-    revision_match = re.search(r"(?m)^reviewed_revision:\s*['\"]?([0-9a-f]+)['\"]?\s*$", yaml)
-    require(revision_match is not None and len(revision_match.group(1)) in {40, 64},
-            "current review lacks a full immutable reviewed_revision")
-    revision = revision_match.group(1)
+    revision_matches = re.findall(r"(?m)^reviewed_revision:\s*['\"]?([0-9a-f]+)['\"]?\s*$", yaml)
+    require(len(revision_matches) == 1 and len(revision_matches[0]) in {40, 64},
+            "current review must contain exactly one full immutable reviewed_revision")
+    revision = revision_matches[0]
     paths_match = re.search(r"(?ms)^files_reviewed_list:\s*\n((?:^  - .+\n)+)", yaml)
     require(paths_match is not None, "current review lacks files_reviewed_list")
     paths = [re.sub(r"^[\"']|[\"']$", "", value.strip())
@@ -451,17 +451,17 @@ def main() -> None:
 
     spotcheck_rows = table_rows(verification, "| Behavior | Command/result | Status |")
     spotcheck_section = verification.split("### Behavioral Spot-Checks", 1)[1].split("\n### ", 1)[0]
-    require(not any(contains_frontend_success_claim(line) for line in spotcheck_section.splitlines()
-                    if line.startswith("|") and not line.startswith("|---")),
-            "behavioral spot-check claims actual frontend success")
     actual_frontend_spotcheck = [
         row for row in spotcheck_rows
         if len(row) == 3 and row[0] == "Actual pinned RetroArch"
     ]
-    require(len(actual_frontend_spotcheck) == 1 and "no launch" in actual_frontend_spotcheck[0][1].lower() and
-            "human" in actual_frontend_spotcheck[0][2].lower() and
+    require(len(actual_frontend_spotcheck) == 1 and "not invoked" in actual_frontend_spotcheck[0][1].lower() and
+            actual_frontend_spotcheck[0][2].strip().upper() == "? MANUAL / UNKNOWN" and
             not contains_frontend_success_claim(" ".join(actual_frontend_spotcheck[0])),
             "actual frontend spot-check is no longer marked manual-only and unrun")
+    require(not any(contains_frontend_success_claim(line) for line in spotcheck_section.splitlines()
+                    if line.startswith("|") and not line.startswith("|---")),
+            "behavioral spot-check claims actual frontend success")
 
     requirement_header = next((line for line in verification.splitlines()
                                if line.startswith("| Requirement | Plans | Status | Evidence |")), None)
@@ -482,7 +482,9 @@ def main() -> None:
     require(has_frontend_load_uncertainty(host_row[evidence_index], scope="host"),
             "HOST-02 evidence no longer matches the current actual-app uncertainty record")
     qual_status = requirement_status.get("QUAL-03") or ""
-    require(qual_status in {"✗ BLOCKED / PARTIAL", "? NEEDS HUMAN / PENDING", "? NEEDS HUMAN / PARTIAL"},
+    require(qual_status in {
+        "✗ BLOCKED / PARTIAL", "? NEEDS HUMAN / PENDING", "? NEEDS HUMAN / PARTIAL", "? PARTIAL / NEEDS HUMAN",
+    },
             "QUAL-03 is not explicitly marked blocked, partial, or pending human evidence")
     qual_row = next(row for row in requirement_rows if row[0] == "QUAL-03")
     require(has_frontend_load_uncertainty(qual_row[evidence_index], scope="qual"),
