@@ -415,11 +415,14 @@ def collect_ctest_lane(name: str, identity: dict[str, Any]) -> tuple[dict[str, A
             "ctest_cases": count,
             "named_tests": sorted(CTEST_CASES[name]),
         })
-        (BUILD / "verify-sdk/mvs-ctest-output.json").write_bytes(safe_output)
+        mvs_output_dir = BUILD / "verify-sdk"
+        mvs_output_dir.mkdir(parents=True, exist_ok=True)
+        (mvs_output_dir / "mvs-ctest-output.json").write_bytes(safe_output)
         lane["output_sha256"] = evidence.sha256_bytes(safe_output)
         lane["source_revision"] = identity.get("source_revision")
         lane["relevant_source_sha256"] = identity.get("relevant_source_sha256")
         validate_mvs_lane(lane, identity)
+        (mvs_output_dir / "mvs-receipt.json").write_bytes(evidence.canonical_bytes(lane))
     elif name in {"contract", "diagnostic", "run"}:
         suites = {"contract": {"diagnostic", "lifecycle", "media", "faults", "run"},
                   "diagnostic": {"diagnostic"}, "run": {"run"}}[name]
@@ -511,7 +514,8 @@ def collect_ctest_lane(name: str, identity: dict[str, Any]) -> tuple[dict[str, A
         lane["cases"] = 1
         lane["assertions"] = 0
         lane["assertions_status"] = "not emitted by CTest producer; positive named CTest case recorded"
-    lane["output_sha256"] = preserve_output(name, output)
+    if name != "mvs":
+        lane["output_sha256"] = preserve_output(name, output)
     return lane, output
 
 

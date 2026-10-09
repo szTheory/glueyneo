@@ -68,6 +68,8 @@ class HostedMvsReceiptTests(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
         self.assertIn("hosted-mvs-ctest-output", workflow)
         self.assertIn("build/sdk-debug/verify-sdk/mvs-ctest-output.json", workflow)
+        self.assertIn("hosted-mvs-receipt", workflow)
+        self.assertIn("build/sdk-debug/verify-sdk/mvs-receipt.json", workflow)
         self.assertIn("evidence/sdk/ci-event.json", workflow)
         self.assertIn("EVENT_HEAD_SHA", workflow)
 

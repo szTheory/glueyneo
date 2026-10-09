@@ -160,9 +160,13 @@ def mvs_lane_controls() -> None:
         return "\n".join(lines)
 
     def collect(output: str, returncode: int = 0) -> dict:
-        with mock.patch.object(verify_sdk, "run", return_value=subprocess.CompletedProcess([], returncode, output, "")), \
+        with tempfile.TemporaryDirectory(prefix="mvs-receipt-") as temp, \
+             mock.patch.object(verify_sdk, "BUILD", Path(temp)), \
+             mock.patch.object(verify_sdk, "run", return_value=subprocess.CompletedProcess([], returncode, output, "")), \
              mock.patch.object(verify_sdk, "preserve_output", return_value="c" * 64):
             lane, _ = verify_sdk.collect_ctest_lane("mvs", identity)
+            persisted = Path(temp) / "verify-sdk/mvs-receipt.json"
+            assert persisted.read_bytes() == evidence.canonical_bytes(lane)
             return lane
 
     lane = collect(output_for(names))

@@ -132,6 +132,13 @@ jobs:
           path: build/sdk-debug/verify-sdk/mvs-ctest-output.json
           if-no-files-found: ignore
           retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always() && matrix.lane == 'linux-clang'
+        with:
+          name: hosted-mvs-receipt
+          path: build/sdk-debug/verify-sdk/mvs-receipt.json
+          if-no-files-found: ignore
+          retention-days: 7
 
   public-content:
     needs: classify
@@ -175,6 +182,11 @@ jobs:
         with:
           name: hosted-mvs-ctest-output
           path: build/ci/mvs-output
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: needs.matrix.result == 'success'
+        with:
+          name: hosted-mvs-receipt
+          path: build/ci/mvs-receipt
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         if: needs['public-content'].result == 'success'
         with:
@@ -233,6 +245,31 @@ jobs:
           PY
           python3 tools/workflow/ci_policy.py prepare --output-dir build/ci
           python3 tools/workflow/ci_policy.py aggregate --results build/ci/results.json --plan build/ci/plan.json --matrix-dir build/ci/matrix --output evidence/sdk/ci-aggregate.json
+      - name: Validate hosted MVS receipt against exact event, source, and artifacts
+        if: always()
+        env:
+          SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, "tools")
+          import sdk_evidence
+          import verify_hosted_mvs
+          rows = sdk_evidence.relevant_source_rows(Path.cwd())
+          digest = sdk_evidence.sha256_bytes(sdk_evidence.canonical_bytes(rows))
+          sys.argv = [
+              "verify_hosted_mvs.py",
+              "--event", "evidence/sdk/ci-event.json",
+              "--receipt", "build/ci/mvs-receipt/mvs-receipt.json",
+              "--output", "build/ci/mvs-output/mvs-ctest-output.json",
+              "--aggregate", "evidence/sdk/ci-aggregate.json",
+              "--source-revision", os.environ["SOURCE_REVISION"],
+              "--relevant-source-sha256", digest,
+          ]
+          raise SystemExit(verify_hosted_mvs.main())
+          PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
