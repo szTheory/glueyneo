@@ -85,6 +85,23 @@ def validate(event: dict[str, Any], receipt: dict[str, Any], *,
     if (not isinstance(output_digest, str) or HEX64.fullmatch(output_digest) is None or
             output_digest != hashlib.sha256(output_bytes).hexdigest()):
         raise ReceiptError("hosted output digest is missing or does not match the artifact")
+    try:
+        output_report = json.loads(output_bytes.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as error:
+        raise ReceiptError("hosted output artifact is not valid UTF-8 JSON") from error
+    canonical_output = (json.dumps(output_report, ensure_ascii=True, sort_keys=True,
+                                   separators=(",", ":")) + "\n").encode()
+    if output_bytes != canonical_output:
+        raise ReceiptError("hosted output artifact is not canonical JSON")
+    if (not isinstance(output_report, dict) or
+            output_report.get("schema_version") != 1 or
+            isinstance(output_report.get("schema_version"), bool) or
+            output_report.get("suite") != "mvs" or
+            output_report.get("outcome") != "pass" or
+            output_report.get("ctest_cases") != denominator or
+            isinstance(output_report.get("ctest_cases"), bool) or
+            output_report.get("named_tests") != tests):
+        raise ReceiptError("hosted output artifact does not match the MVS receipt")
 
     aggregate_digest = aggregate.get("receipt_sha256")
     unsigned_aggregate = dict(aggregate)

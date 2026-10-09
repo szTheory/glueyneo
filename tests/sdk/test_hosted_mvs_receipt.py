@@ -15,7 +15,10 @@ sys.path.insert(0, str(ROOT / "tests/sdk"))
 from test_matrix_evidence import valid_report  # noqa: E402
 from verify_hosted_mvs import EXPECTED_TESTS, ReceiptError, validate  # noqa: E402
 
-OUTPUT = b"seven hosted MVS CTests passed\n"
+OUTPUT = (json.dumps({"schema_version": 1, "suite": "mvs", "outcome": "pass",
+                      "ctest_cases": len(EXPECTED_TESTS),
+                      "named_tests": EXPECTED_TESTS}, sort_keys=True,
+                     separators=(",", ":")) + "\n").encode()
 
 
 def valid_pair() -> tuple[dict, dict]:
@@ -78,6 +81,15 @@ class HostedMvsReceiptTests(unittest.TestCase):
         event, receipt = valid_pair()
         receipt["output_sha256"] = "c" * 64
         self.assert_rejected(event, receipt)
+
+    def test_rejects_rehashed_wrong_output_content(self) -> None:
+        event, receipt = valid_pair()
+        wrong_output = OUTPUT.replace(b'"ctest_cases":7', b'"ctest_cases":6')
+        receipt["output_sha256"] = hashlib.sha256(wrong_output).hexdigest()
+        with self.assertRaises(ReceiptError):
+            validate(event, receipt, source_revision="a" * 40,
+                     relevant_source_sha256="b" * 64, output_bytes=wrong_output,
+                     aggregate=valid_aggregate())
 
     def test_rejects_stale_or_failed_aggregate(self) -> None:
         for field, value in (("source_revision", "d" * 40), ("outcome", "fail")):
