@@ -264,6 +264,7 @@ def contains_frontend_success_claim(text: str) -> bool:
         r"\b(?:app|frontend|retroarch)\b.{0,100}\b(?:loaded|booted|displayed|showed|produced|launched|accepted input|controls worked|input worked|unloaded|exited normally)\b",
         r"\b(?:a frame was rendered to the window|frame rendered to the window|game screen was visible|screen was visible|screen became visible|saw the game screen|can see the game screen|gameplay presentation was confirmed|display output was successful|video output (?:passed|was confirmed|confirmed)|logs confirm video output|right input moved the marker|content unloaded|screenshot contained game pixels|guest pixels were displayed|control input worked)\b",
         r"\b(?:displayed|presented|rendered|showed)\s+(?:guest\s+)?pixels?\b",
+        r"\bcontrols?\s+worked\s+(?:as\s+expected\s+)?(?:in\s+(?:retroarch|the\s+frontend))?\b",
         r"\b(?:game|content)\s+unloaded\s+(?:cleanly|successfully)\b",
         r"\b(?:game|content)\s+(?:loaded|booted|ran|played|appeared|was visible)\b.{0,80}\b(?:screen|retroarch|successfully|pixels?|output)?\b",
     )
@@ -315,23 +316,20 @@ def main() -> None:
     review = REVIEW.read_text(encoding="utf-8")
     require_reviewed_source_identity(review)
 
-    # Historical validation rows keep their dated denominators. Reconcile the
-    # current verifier spot-check with a fresh live qualification-suite count.
+    # The verifier report is a retained point-in-time artifact. Reconcile the
+    # current execution row in VALIDATION against fresh live suite counts.
     qualification_command = "python3 tests/tools/test_verify_playable.py -v"
     frontend_command = "python3 tests/libretro/test_retroarch_smoke.py -v"
     status, count, _output = run_suite(qualification_command)
     frontend_status, frontend_count, _frontend_output = run_suite(frontend_command)
-    spotcheck_lines = [line for line in verification.splitlines()
-                       if re.match(r"^\|\s*Qualification/privacy and GUI-free frontend contracts\s*\|", line)]
-    require(len(spotcheck_lines) == 1, "verification report must contain one current qualification spot-check")
-    cells = [cell.strip() for cell in spotcheck_lines[0].strip().strip("|").split("|")]
-    require(len(cells) == 3 and "not app evidence" in cells[2].lower(),
-            "current qualification spot-check must retain its repository-only limit")
-    qualification_claim = re.search(r"(\d+)/(\d+)\s+and\s+(\d+)/(\d+)", cells[1])
-    require(qualification_claim is not None, "current qualification/frontend spot-check counts are malformed")
-    reported = tuple(map(int, qualification_claim.groups()))
+    denominator_rows = re.findall(
+        r"(?m)^Plan 04-21 current suite denominators: qualification (\d+)/(\d+); frontend (\d+)/(\d+)\.$",
+        validation,
+    )
+    require(len(denominator_rows) == 1, "validation must contain one current Plan 04-21 suite-denominator row")
+    reported = tuple(map(int, denominator_rows[0]))
     require(status == 0 and frontend_status == 0 and reported == (count, count, frontend_count, frontend_count),
-            f"current report counts {reported!r} differ from live qualification/frontend suites "
+            f"validation denominators {reported!r} differ from live qualification/frontend suites "
             f"{count}/{count} and {frontend_count}/{frontend_count}")
 
     threat_rows = table_rows(validation, "| Threat | Evidence and disposition |")

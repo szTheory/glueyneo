@@ -18,7 +18,7 @@ import check_phase04_validation_map as validation_map  # noqa: E402
 
 PHASE = ROOT / ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer"
 COMMANDS = {
-    "python3 tests/tools/test_verify_playable.py -v": 25,
+    "python3 tests/tools/test_verify_playable.py -v": 27,
     "python3 tests/libretro/test_retroarch_smoke.py -v": 27,
 }
 
@@ -45,6 +45,9 @@ def reconciled_review_documents(directory: Path) -> dict[str, Path]:
     # that would let a stale fixture mask source drift.
 
     validation = copied["VALIDATION"].read_text(encoding="utf-8")
+    validation += (
+        "\nPlan 04-21 current suite denominators: qualification 27/27; frontend 27/27.\n"
+    )
     copied["VALIDATION"].write_text(validation, encoding="utf-8")
 
     disposition_path = copied["DISPOSITION"]
@@ -614,6 +617,13 @@ class ValidationMapReconciliationTest(unittest.TestCase):
             uncertain + " No frame was rendered to the window; no input or unload was observed.", scope="goal"
         ))
 
+    def test_frontend_claim_grammar_rejects_control_success_without_subject_prefix(self) -> None:
+        claim = "Controls worked as expected in RetroArch."
+        self.assertTrue(validation_map.contains_frontend_success_claim(claim))
+        self.assertFalse(validation_map.has_frontend_load_uncertainty(
+            "Actual pinned RetroArch load remains unknown; " + claim, scope="goal"
+        ))
+
     def test_report_claim_mutations_fail_across_every_current_frontend_surface(self) -> None:
         claims = (
             "A frame was rendered to the window.",
@@ -716,12 +726,16 @@ class ValidationMapReconciliationTest(unittest.TestCase):
     def test_checker_rejects_stale_current_qualification_denominator(self) -> None:
         with tempfile.TemporaryDirectory(prefix="phase04-stale-denominator-") as temporary:
             documents = reconciled_review_documents(Path(temporary))
-            report = documents["VERIFICATION"]
+            report = documents["VALIDATION"]
             original = report.read_text(encoding="utf-8")
-            mutated = original.replace("25/25 and 27/27", "23/23 and 27/27", 1)
+            mutated = original.replace(
+                "Plan 04-21 current suite denominators: qualification 27/27; frontend 27/27.",
+                "Plan 04-21 current suite denominators: qualification 25/25; frontend 27/27.",
+                1,
+            )
             self.assertNotEqual(mutated, original, "stale-denominator mutation was a no-op")
             report.write_text(mutated, encoding="utf-8")
-            with self.assertRaisesRegex(AssertionError, "current report counts"):
+            with self.assertRaisesRegex(AssertionError, "validation denominators"):
                 self.run_checker(documents)
 
 if __name__ == "__main__":

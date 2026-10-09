@@ -563,6 +563,18 @@ class ConsumerInputTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "affirmative frontend claim"):
                 playable.check_docs(source_root)
 
+    def test_check_docs_rejects_reverse_order_guest_pixel_claim(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-docs-reversed-pixels-") as temporary:
+            source_root = Path(temporary)
+            self.copy_documentation(source_root)
+            guide = source_root / "docs/first-playable-build.md"
+            guide.write_text(
+                guide.read_text(encoding="utf-8") + "\nGuest pixels were displayed.\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "affirmative frontend claim"):
+                playable.check_docs(source_root)
+
     def test_check_docs_rejects_placeholders_and_missing_or_closed_frontend_evidence(self) -> None:
         def update_row(text: str, task_id: str, status: str | None) -> str:
             lines = text.splitlines()

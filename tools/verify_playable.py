@@ -633,6 +633,7 @@ def check_docs(source_root: Path) -> None:
         r"\b(?:frontend\s+)?(?:app|retroarch)\s+(?:has\s+)?(?:loaded|started)\s+successfully\b",
         r"\b(?:loaded|started)\s+(?:the\s+)?(?:frontend\s+)?(?:app|retroarch)\s+successfully\b",
         r"\b(?:displayed|presented|rendered)\s+(?:guest\s+)?pixels?\b",
+        r"\b(?:guest\s+)?pixels?\s+(?:were|are|was)\s+(?:displayed|presented|rendered|shown)\b",
         r"\b(?:frontend|retroarch|app)\s+booted\s+(?:the\s+)?game\s+and\s+showed\s+(?:its\s+)?output\b",
         r"\b(?:a\s+)?frame\s+(?:was\s+)?rendered\s+to\s+(?:the\s+)?window\b",
         r"\b(?:the\s+)?screen\s+(?:was|became)\s+visible\b",
