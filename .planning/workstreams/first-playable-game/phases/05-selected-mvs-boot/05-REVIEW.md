@@ -13,11 +13,13 @@ hardware observation.
 | Importer/API transform did not prove a coherent normalized program byte order. | Blocker | Fixed: validate CRC over archive bytes, then normalize the program's adjacent byte lanes in the importer; the synthetic imported bundle is consumed as LINEAR and the native bus asserts the expected word. |
 | CTest names for media, callback, and boot had all run the same combined path. | Warning | Fixed: distinct `mvs_test` modes now isolate media ownership/recovery, callback reload, and synthetic boot; CTest targets invoke the corresponding mode. |
 | An EOCD-shaped sequence inside the ZIP comment could mask the real EOCD. | Warning | Fixed: parse every end-of-file candidate fully, accept exactly one structurally valid candidate, and reject multiple valid candidates as ambiguous. A regression uses a six-entry, zero-size decoy with an offset at its own location. Independent re-review confirmed the fix. |
-| Importer acceptance identifies a structural region bundle by names, roles, and lengths but does not authenticate selected cartridge/BIOS revision contents. | Blocker to selected-media qualification | Remains open and explicit. No private/public selected identity allowlist was added. The documentation makes no selected-content compatibility claim; MEDIA-04 remains Pending, and MEDIA-03/GAME-02 remain Pending. The local run stopped before native load at `archive_to_region_mapping`. |
+| Selected-media qualification has not been demonstrated with an exact local pair or a selected guest run. | Blocker to selected-media qualification | The 05-02 importer now validates the public MAME `mslugx` member identities and the selected `sp-s2.sp1` BIOS identity before mapping. The local run found no supported game/BIOS pair, so no selected content reached the native runner. The documentation makes no boot-compatibility claim; MEDIA-03, MEDIA-04, and GAME-02 remain Pending. |
 
 The structural `GNMV` contract remains useful for synthetic and C-consumer
-testing; it is not evidence that a selected private media set is compatible.
-No phase acceptance claim is based on the callback test alone.
+testing. The selected-source profile now checks exact public source identities,
+but its synthetic proof and local absence of a supported private pair do not
+establish selected guest compatibility. No phase acceptance claim is based on
+the callback test alone.
 
 ## Threat-model evidence
 
@@ -33,3 +35,24 @@ No phase acceptance claim is based on the callback test alone.
 | T-05-SC, dependency provenance/isolation | Vendored zlib 1.3.2 source/license is pinned and limited to importer targets; static/shared package and consumer checks pass. |
 
 Phase 04 artifacts and verdict were not changed by the review or this plan.
+
+## Plan 05-02 Independent Review
+
+**Reviewed:** 2026-10-09
+**Scope:** `tools/mvs/mvs_import.c`, `tools/mvs/qualify_local_boot.py`, `tests/mvs/test_mvs_qualification.py`, `docs/mvs-media.md`, `tools/verify_sdk.py`, `tools/sdk_evidence.py`, and `tests/sdk/test_matrix_evidence.py`.
+**Verdict:** WR-01 is fixed on re-review; no remaining actionable findings in the reviewed implementation.
+**Revision status:** The reviewed checkout is uncommitted. Findings apply to the live working-tree contents and cannot be attributed to a stable commit. `tests/sdk/test_matrix_evidence.py` was in the requested scope but was not modified in the current worktree.
+
+### WR-01: Wrapper report temporary file is predictable — Fixed
+
+**Original severity:** WARNING
+**File:** `tools/mvs/qualify_local_boot.py:194-205`
+**Resolution:** The wrapper now uses `NamedTemporaryFile(delete=False)` in the report directory, writes and closes the unique file before `os.replace`, and removes it if publication fails. This avoids the fixed-name collision and pre-existing symlink issue. Re-review was source inspection only; no tests were run in this pass.
+
+### Review notes
+
+- The selected C importer bounds and validates ZIP32 metadata, rejects unsupported or duplicate entries, validates expanded CRC and pinned member identities before mapping, and publishes the completed bundle through an exclusive sibling temporary file followed by rename.
+- The local wrapper selects game and BIOS archives from content identities, constrains the report to the ignored local path, emits only sanitized status/checkpoint data, and now uses unique exclusive temporary report output with cleanup on failure. No private media was opened or reported during this review.
+- The SDK matrix lane selects the exact seven named MVS CTests, requires a matching positive denominator, binds the lane to the current source revision and relevant-source digest, and records an output digest. The seven names match the CMake MVS test registrations.
+- The source digest inventory includes the new importer, wrapper, docs, MVS qualification tests, SDK evidence collector, and matrix validation code. The seven-file review scope was read from the current working tree; uncommitted status prevents independent attribution to a phase commit.
+- Phase 04 dispositions remain unchanged: its directed open threats and manual-only frontend observations remain open/unknown; this review does not close or accept any of them.

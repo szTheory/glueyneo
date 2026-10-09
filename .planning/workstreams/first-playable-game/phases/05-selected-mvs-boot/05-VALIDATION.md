@@ -1,7 +1,7 @@
 # Phase 05 Validation Map
 
-Phase 05 advanced through one three-task execution plan. The results below are
-current-revision evidence; they do not change Phase 04's `gaps_found` verdict,
+Phase 05 validation accumulates evidence across its execution plans. The results
+below do not change Phase 04's `gaps_found` verdict,
 HOST-02/frontend QUAL-03 unknown/manual-only status, or its seven open threat
 rows.
 
@@ -20,6 +20,19 @@ rows.
 - `python3 tools/mvs/qualify_local_boot.py --input-root local/roms --report local/qualification/phase05.json` — completed with a generic unsupported-bundle status. Both paths are ignored; no private identity or derived data entered tracked files.
 - `git diff --check` — passed.
 - Static/shared installed-consumer and documentation checks ran within full CTest. The first pass exposed missing zlib staging and an outdated public export allowlist; both test harness issues were fixed, then the full 41-test suite passed.
+
+### Plan 05-02 foundation evidence
+
+- `cmake --preset sdk-debug && cmake --build --preset sdk-debug && ctest --preset sdk-debug --output-on-failure --no-tests=error` — passed, 41/41. The exact MVS label contains seven named tests.
+- `cmake --preset sdk-asan-ubsan && cmake --build build/sdk-asan-ubsan --target mvs_qualify mvs_test mvs_importer mvs_import_fuzz && ctest --test-dir build/sdk-asan-ubsan -L mvs --output-on-failure --no-tests=error` — passed, 7/7 with AddressSanitizer and UndefinedBehaviorSanitizer. The full sanitizer preset build also attempted unrelated package-consumer targets and stopped because the Unity static archive's sanitizer runtime symbols were not linked into a consumer executable; those unrelated targets were excluded from the focused MVS build.
+- `python3 tools/verify_sdk.py --suite matrix` — passed locally. The focused MVS matrix lane recorded seven exact tests (`mvs_boot_checkpoint`, `mvs_callback_contract`, `mvs_import_contract`, `mvs_import_fuzz_corpus`, `mvs_import_mutation`, `mvs_media_contract`, `mvs_synthetic_trace`) on source revision `492f51f30ae43f33af431c978af91991b1240e0e`; relevant-source SHA-256 `105deb95d946a075ef1586553271579f3983b4e3533062a72a108fb1bf9c8b82`; CTest output SHA-256 `b0f6b89a753b2e11731255bed11cd7db3a31c0a32ad824b3622ef1820ca34218`. The local hosted-platform lane is `unknown` because this machine is not a GitHub-hosted runner; this is not hosted CI evidence.
+- `python3 tests/sdk/test_matrix_evidence.py` — passed, including omission, zero/renamed inventory, failed outcome, and stale-source controls.
+- `python3 tools/mvs/qualify_local_boot.py` — completed with `no_supported_role_bundle_archive`; no supported private game/BIOS pair was present. Its ignored report records no private identity. This does not establish selected-game compatibility or direct boot behavior.
+- `python3 -m py_compile tools/mvs/qualify_local_boot.py tests/mvs/test_mvs_qualification.py` — passed.
+
+Plan 05-02 remains an intermediate foundation: it claims neither G-05-3 nor
+G-05-5 resolved. Plan 05-03 must provide the selected guest's direct attract/start
+evidence and hosted seven-test receipt before either gap can close.
 
 ## Frontend and security boundaries
 
