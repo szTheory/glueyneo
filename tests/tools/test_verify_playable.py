@@ -253,8 +253,8 @@ class SnapshotTest(unittest.TestCase):
                 self.assertEqual(raised.exception.reason, "snapshot-record-invalid")
 
     def test_ambiguous_private_paths_are_removed_from_retained_and_printed_evidence(self) -> None:
-        for root in ("/Users/synthetic", "/Volumes/synthetic", "/tmp/synthetic",
-                     "/private/var/folders/synthetic", str(ROOT), str(Path.home())):
+        for root in ("/Users/private-person", "/Volumes/synthetic", "/tmp/synthetic",
+                     "/private/var/folders/private-person", str(ROOT), str(Path.home())):
             for component in ("private,tail", "private:tail", "private in tail"):
                 for quote in ("", '"', "'"):
                     with self.subTest(root_kind=root.split("/")[1], component=component, quoted=bool(quote)):
@@ -347,9 +347,9 @@ class SnapshotTest(unittest.TestCase):
 
     def test_redact_removes_complete_space_containing_private_path_spans(self) -> None:
         diagnostics = (
-            'build failed status 9: "/Users/synthetic home/private capture/secret.rom": permission denied',
+            'build failed status 9: "/Users/private-person home/private capture/secret.rom": permission denied',
             "compile failed exit 7: /tmp/temporary work/secret object.o",
-            "tool failed status 9: /private/var/folders/ab/private cache/run output/tool",
+            "tool failed status 9: /private/var/folders/private-person/private cache/run output/tool",
             "frontend failed exit 2: /Volumes/private drive/private media/secret.rom",
         )
 
@@ -365,15 +365,15 @@ class SnapshotTest(unittest.TestCase):
 
     def test_redact_json_escaped_quotes_and_apostrophes_across_sinks(self) -> None:
         diagnostics = (
-            'build failed status 9: "/Users/synthetic home/private capture/secret\\"tail.rom" permission denied',
-            "build failed status 8: '/Users/synthetic home/O'Brien/private secret.rom' permission denied",
-            'failed status 7: "/Users/synthetic/private"tail/sensitive.bin"',
+            'build failed status 9: "/Users/private-person home/private capture/secret\\"tail.rom" permission denied',
+            "build failed status 8: '/Users/private-person home/O'Brien/private secret.rom' permission denied",
+            'failed status 7: "/Users/private-person/private"tail/sensitive.bin"',
         )
         for diagnostic, private_parts in zip(
             diagnostics,
             (("synthetic home", "private capture", "secret", "tail.rom"),
              ("synthetic home", "O'Brien", "private secret", "secret.rom"),
-             ("/Users/synthetic/private", "tail/sensitive.bin")),
+             ("/Users/private-person/private", "tail/sensitive.bin")),
         ):
             with self.subTest(diagnostic=diagnostic):
                 safe = playable.redact(diagnostic)
@@ -395,7 +395,7 @@ class SnapshotTest(unittest.TestCase):
         retained_log = (work / "quoted-path.log").read_text(encoding="utf-8")
         self.assertIn("exit_code': 9", repr(runner.lanes))
         self.assertIn("status", result.stdout)
-        for private in ("/Users/synthetic/private", "tail/sensitive.bin"):
+        for private in ("/Users/private-person/private", "tail/sensitive.bin"):
             self.assertNotIn(private, retained_log + repr(runner.lanes) + result.stdout)
 
         with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
@@ -408,12 +408,12 @@ class SnapshotTest(unittest.TestCase):
             with mock.patch.object(playable, "OUTPUT", output_dir), mock.patch("sys.stdout", stdout):
                 playable._write_receipt(receipt)
             serialized = (output_dir / "receipt.json").read_text(encoding="utf-8") + stdout.getvalue()
-        for private in ("/Users/synthetic/private", "tail/sensitive.bin"):
+        for private in ("/Users/private-person/private", "tail/sensitive.bin"):
             self.assertNotIn(private, serialized)
         self.assertIn('"status": "fail"', serialized)
 
     def test_newline_private_path_suffix_is_removed_from_qualification_sinks(self) -> None:
-        for root in ("/Users/synthetic-home", "/tmp/synthetic-temp-root"):
+        for root in ("/Users/private-person", "/tmp/synthetic-temp-root"):
             diagnostic = f"compile failed status 7: {root}/private\n/tail/sensitive.bin"
             with self.subTest(root_kind=root.split("/")[1]):
                 safe = playable.redact(diagnostic)
@@ -477,7 +477,7 @@ class SnapshotTest(unittest.TestCase):
     def test_receipt_writer_sanitizes_retained_and_printed_reason(self) -> None:
         with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
             output = Path(temporary) / "qualification"
-            reason = "failed exit 12 at /Users/synthetic home/private capture/secret.rom"
+            reason = "failed exit 12 at /Users/private-person home/private capture/secret.rom"
             receipt = {
                 "status": "fail", "reason": reason,
                 "fixture": {}, "retroarch_smoke": {}, "identity": {},

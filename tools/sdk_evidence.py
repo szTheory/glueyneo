@@ -30,13 +30,13 @@ FIXTURES = {
     "a": {
         "file": "build/sdk-debug/diagnostic-original-a.bin",
         "sha256": "495eb195089d0ee7e73f4090514980b47a5fd4a55869d9e7f46376bce1646948",
-        "output_sha256": "e0cb8ba07f599ed85a8217d196f577e539cddbba86f2c930da0ed5f468a806bf",
+        "output_sha256": "d1a59d8a8b552cf512173fd67bba2524948d23ece994173b80d31a72fb54ac5c",
         "values": (10, 0x1237, 1),
     },
     "b": {
         "file": "build/sdk-debug/diagnostic-original-b.bin",
         "sha256": "be1d769bc7c89530a5e09ac60f8cd89858454b0ae604dd0fe506dcd52b154855",
-        "output_sha256": "b551afb0fd32171001a3155599f3ee51521a95b7994b4f94fdbb1861790c0cfb",
+        "output_sha256": "324e8897e88fc6a1b746431b43585d4c6ba6ff929afaac0fd55a8ea5808ea094",
         "values": (16, 0x2348, 1),
     },
 }
@@ -63,7 +63,7 @@ IDENTITY_FIELDS = {
 }
 
 BASELINE_SCHEMA_VERSION = 1
-BASELINE_WORKLOAD_ID = "diagnostic-original-a-172-cycles"
+BASELINE_WORKLOAD_ID = "diagnostic-original-a-196-cycles"
 BASELINE_EXECUTION_RUNS_PER_SAMPLE = 32
 BASELINE_INPUT_SHA256 = FIXTURES["a"]["sha256"]
 BASELINE_OUTPUT_SHA256 = FIXTURES["a"]["output_sha256"]
@@ -72,8 +72,8 @@ BASELINE_EXPECTED_OUTPUT = {
     "initialized_result": 0x1237,
     "bss_result": 1,
     "ready": 1,
-    "requested_cycles": 172,
-    "elapsed_cycles": 172,
+    "requested_cycles": 196,
+    "elapsed_cycles": 196,
     "overshoot_cycles": 0,
     "instructions": 12,
     "terminal_pc": 0x12E,
@@ -623,8 +623,8 @@ def validate_baseline_record(record: Any,
     require(observed_output_digest == BASELINE_OUTPUT_SHA256 and
             workload.get("observed_output_sha256") == observed_output_digest,
             "workload-mismatch", "observed output digest differs from the explicit big-endian result tuple")
-    require(workload.get("guest_cycles") == 172,
-            "workload-mismatch", "baseline guest-cycle request differs from 172")
+    require(workload.get("guest_cycles") == 196,
+            "workload-mismatch", "baseline guest-cycle request differs from 196")
 
     protocol = record.get("protocol")
     require(isinstance(protocol, dict), "missing-raw-samples", "sampling protocol is missing")
@@ -788,7 +788,7 @@ def validate_manifest_document(manifest: Any) -> None:
                 item.get("layout") == "ROM[512] || RAM_INITIALIZATION[10]" and
                 item.get("firmware_required") is False,
                 "manifest-fixture", f"fixture {key} digest/length/layout differs from the original oracle")
-        expected_values = [*spec["values"], 172, 172, 0, 12, 0x12e, 1]
+        expected_values = [*spec["values"], 196, 196, 0, 12, 0x12e, 1]
         record = struct.pack(">IIIQQQQII", *expected_values)
         expected_output = item.get("expected_output")
         require(len(record) == 52 and sha256_bytes(record) == spec["output_sha256"] and
@@ -843,14 +843,14 @@ def build_manifest(root: Path = ROOT, source_revision: str | None = None) -> dic
         require(path.is_file() and path.stat().st_size == 522, "fixture-artifact-mismatch", f"generated fixture {key} is absent or has wrong length")
         digest = sha256_file(path)
         require(digest == spec["sha256"], "fixture-artifact-mismatch", f"generated fixture {key} differs from the independently recorded identity")
-        output = struct.pack(">IIIQQQQII", *spec["values"], 172, 172, 0, 12, 0x12e, 1)
+        output = struct.pack(">IIIQQQQII", *spec["values"], 196, 196, 0, 12, 0x12e, 1)
         fixtures.append({
             "scenario": key,
             "bytes": 522,
             "sha256": digest,
             "layout": "ROM[512] || RAM_INITIALIZATION[10]",
             "firmware_required": False,
-            "expected_output": {"encoding": ">IIIQQQQII", "fields": ["arithmetic:u32", "initialized:u32", "bss:u32", "requested_cycles:u64", "elapsed_cycles:u64", "overshoot_cycles:u64", "instructions:u64", "terminal_pc:u32", "stop_reason:u32"], "bytes": len(output), "sha256": sha256_bytes(output), "values": [*spec["values"], 172, 172, 0, 12, 0x12e, 1]},
+            "expected_output": {"encoding": ">IIIQQQQII", "fields": ["arithmetic:u32", "initialized:u32", "bss:u32", "requested_cycles:u64", "elapsed_cycles:u64", "overshoot_cycles:u64", "instructions:u64", "terminal_pc:u32", "stop_reason:u32"], "bytes": len(output), "sha256": sha256_bytes(output), "values": [*spec["values"], 196, 196, 0, 12, 0x12e, 1]},
         })
     unity = [{"path": p, "sha256": h, "notice": p.endswith("LICENSE.txt")} for p, h in sorted(UNITY_FILES.items())]
     return {

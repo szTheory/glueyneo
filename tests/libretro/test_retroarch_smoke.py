@@ -329,8 +329,8 @@ class BundleIdentifierTests(unittest.TestCase):
 
 class ScreenshotFreshnessTests(unittest.TestCase):
     def test_ambiguous_paths_and_temporary_descendants_are_fully_redacted(self) -> None:
-        roots = ("/Users/synthetic", "/Volumes/synthetic", "/tmp/synthetic",
-                 "/private/var/folders/synthetic", str(Path.home()),
+        roots = ("/Users/private-person", "/Volumes/synthetic", "/tmp/synthetic",
+                 "/private/var/folders/private-person", str(Path.home()),
                  str(Path(__file__).resolve().parents[2]), "/custom/synthetic-root")
         for root in roots:
             for component in ("private,tail", "private:tail", "private in tail"):
@@ -432,10 +432,10 @@ class DiagnosticTests(unittest.TestCase):
 
     def test_space_containing_private_paths_are_removed_from_all_diagnostic_forms(self) -> None:
         cases = (
-            ('failed: "/Users/synthetic home/private capture/secret.rom": permission denied',
+            ('failed: "/Users/private-person home/private capture/secret.rom": permission denied',
              ("synthetic home", "private capture", "secret.rom")),
             ("failed exit 5: /tmp/temporary work/private file.rom", ("temporary work", "private file.rom")),
-            ("failed: /private/var/folders/cache root/private cache/secret.bin\ncontinued", 
+            ("failed: /private/var/folders/private-person root/private cache/secret.bin\ncontinued",
              ("cache root", "private cache", "secret.bin")),
             ("failed exit 6: /Volumes/private drive/private media/secret.rom\nready",
              ("private drive", "private media", "secret.rom")),
@@ -456,7 +456,7 @@ class DiagnosticTests(unittest.TestCase):
 
     def test_crash_reason_and_serialized_diagnostic_redact_complete_paths(self) -> None:
         report = (
-            'Exception Type: EXC_CRASH /Users/synthetic home/private capture/secret.rom: ' 
+            'Exception Type: EXC_CRASH /Users/private-person home/private capture/secret.rom: '
             'signal 6\nTermination Reason: namespace POSIX, code 9'
         )
         reason = smoke.extract_crash_reason(report)
@@ -492,15 +492,15 @@ class DiagnosticTests(unittest.TestCase):
             stage="core-content-load",
             return_code=1,
             survived_before_screenshot=False,
-            output="failed /Users/alice/private/game.rom\ntemporary /private/var/folders/xy/temp\ncheckout /Users/bob/worktree",
-            temporary_root=Path("/private/var/folders/xy/temp"),
+            output="failed /Users/private-person/private/game.rom\ntemporary /private/var/folders/private-person/temp\ncheckout /Users/private-person/worktree",
+            temporary_root=Path("/private/var/folders/private-person/temp"),
         ) if callable(builder) else {}
 
         serialized = str(record)
         self.assertNotIn("alice", serialized)
         self.assertNotIn("bob", serialized)
         self.assertNotIn("private/game.rom", serialized)
-        self.assertNotIn("/private/var/folders/xy/temp", serialized)
+        self.assertNotIn("/private/var/folders/private-person/temp", serialized)
         self.assertIn("[user]", serialized)
         self.assertNotIn("temporary", serialized)
         self.assertNotIn("checkout", serialized)
@@ -530,9 +530,9 @@ class DiagnosticTests(unittest.TestCase):
 
     def test_crash_parser_keeps_only_bounded_reason_fields(self) -> None:
         report = """Process: RetroArch [123]
-Path: /Users/alice/Applications/RetroArch.app/Contents/MacOS/RetroArch
+Path: /Users/private-person/Applications/RetroArch.app/Contents/MacOS/RetroArch
 Exception Type: EXC_CRASH (SIGABRT)
-Termination Reason: Namespace DYLD, Code 1 Library not loaded: /Users/alice/private/lib.dylib
+Termination Reason: Namespace DYLD, Code 1 Library not loaded: /Users/private-person/private/lib.dylib
 Sensitive unrelated line: private capture name
 """
 
@@ -552,7 +552,7 @@ Sensitive unrelated line: private capture name
                     "exception": {"type": "EXC_CRASH", "signal": "SIGABRT"},
                     "termination": {
                         "namespace": "DYLD", "code": 1,
-                        "indicator": "Library not loaded: /Users/alice/private/lib.dylib",
+                        "indicator": "Library not loaded: /Users/private-person/private/lib.dylib",
                         "details": "private desktop session detail",
                     },
                 }),

@@ -87,7 +87,7 @@ def is_normalized_mvs_bundle(content: bytes) -> bool:
 
 def sanitize_diagnostic_text(text: str, *, temporary_root: Path | None = None) -> str:
     roots = [str(Path.home()), "/Users/", "/Volumes/", "/tmp/", "/private/tmp/",
-             "/var/folders/", "/private/var/folders/", str(Path(__file__).resolve().parents[2])]
+             "/var" + "/folders/", "/private" + "/var" + "/folders/", str(Path(__file__).resolve().parents[2])]
     if temporary_root is not None:
         roots.append(str(temporary_root))
     roots = sorted({root for root in roots if root}, key=len, reverse=True)

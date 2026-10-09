@@ -81,8 +81,9 @@ SYNTHETIC_PATH_MARKERS = {"private-person"}
 SYNTHETIC_EMAIL_SUFFIXES = (".invalid", ".example", ".example.com", ".example.org", ".example.net")
 # Exact immutable history objects audited as bounded false positives. These
 # dispositions are tied to object IDs, not paths or rule classes globally:
-# upstream Musashi contains a public copyright contact; historical redaction
-# tests contain synthetic identity/path canaries. A changed blob is scanned.
+# upstream Musashi and zlib contain public copyright contacts; historical
+# redaction tests contain synthetic identity/path canaries. A changed blob is
+# scanned.
 HISTORY_FINDING_DISPOSITIONS = {
     "007bd7fabaee7b0c171cb38a2581abeacf0f0c15": {
         "path": "third_party/musashi/m68kmake.c", "rules": {"private-identity"},
@@ -91,6 +92,14 @@ HISTORY_FINDING_DISPOSITIONS = {
     "1c94ae35fe4334c8a1ecbb273a12e1e12a60fa79": {
         "path": "tests/workflow/test_public_content.py", "rules": {"personal-path"},
         "reason": "synthetic path canary used by the historical redaction regression",
+    },
+    "a57d336134217efeddab550ed53df4b89adeca5d": {
+        "path": "third_party/zlib/zlib.h", "rules": {"private-identity"},
+        "reason": "immutable upstream zlib 1.3.2 author attribution at da607da739fa6047df13e66a2af6b8bec7c2a498; preserve source notice",
+    },
+    "b7a69d058e616651eae27b3f90c0b7fd36c099b2": {
+        "path": "third_party/zlib/LICENSE", "rules": {"private-identity"},
+        "reason": "immutable upstream zlib 1.3.2 license attribution at da607da739fa6047df13e66a2af6b8bec7c2a498; preserve license notice",
     },
 }
 
@@ -133,8 +142,10 @@ def scan_bytes(data: bytes, location: str) -> dict[str, Any]:
                         or domain in {"invalid", "test", "example", "example.com", "example.org", "example.net"}
                         or domain.endswith(SYNTHETIC_EMAIL_SUFFIXES)):
                     continue
-            if rule == "personal-path" and any(f"/{marker}/" in match.group(0) for marker in SYNTHETIC_PATH_MARKERS):
-                continue
+            if rule == "personal-path":
+                path_parts = {part.casefold() for part in match.group(0).replace("\\", "/").split("/")}
+                if any(marker.casefold() in path_parts for marker in SYNTHETIC_PATH_MARKERS):
+                    continue
             rules.add(rule)
     return {"bytes": len(data), "sha256": sha256_bytes(data),
             "findings": ([{"location": _safe_location(location), "rules": sorted(rules)}] if rules else [])}

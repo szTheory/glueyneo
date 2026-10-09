@@ -84,8 +84,13 @@ class PublicContentTests(unittest.TestCase):
     def test_exact_history_dispositions_remain_visible_and_provenance_bound(self) -> None:
         _, dispositions, _, _ = content._git_history(ROOT)
         expected = set(content.HISTORY_FINDING_DISPOSITIONS)
+        reachable = subprocess.run(
+            ["git", "rev-list", "--objects", "--all"], cwd=ROOT, check=True,
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        ).stdout
+        reachable_objects = {row.split(" ", 1)[0] for row in reachable.splitlines()}
         observed = {row["object"] for row in dispositions if "reason" in row}
-        self.assertEqual(observed, expected)
+        self.assertEqual(observed, expected & reachable_objects)
         for row in dispositions:
             if "reason" in row:
                 self.assertTrue(row["location"].startswith("history/"))
@@ -232,7 +237,7 @@ class PublicContentTests(unittest.TestCase):
     def test_repository_inventory_matches_recorded_fixture_and_dependency_bytes(self) -> None:
         result = content.validate_repository_inventory(ROOT)
         self.assertTrue(result["passed"])
-        self.assertEqual(result["items"], 21)
+        self.assertEqual(result["items"], 41)
 
     def test_rights_inventory_binds_bytes_and_rejects_unknown_or_changed_item(self) -> None:
         inventory = {"schema": 1, "items": [{

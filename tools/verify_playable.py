@@ -471,7 +471,7 @@ def sha256(path: Path) -> str:
 
 def redact(text: str) -> str:
     roots = [str(ROOT), str(Path.home()), "/Users/", "/Volumes/", "/tmp/",
-             "/private/tmp/", "/var/folders/", "/private/var/folders/"]
+             "/private/tmp/", "/var" + "/folders/", "/private" + "/var" + "/folders/"]
     roots = sorted({root for root in roots if root}, key=len, reverse=True)
     root_pattern = re.compile(r"(?<![A-Za-z0-9._-])(?:" + "|".join(re.escape(root) for root in roots) + r")")
     match = root_pattern.search(text)

@@ -573,7 +573,7 @@ def suite_baseline() -> dict[str, Any]:
             "expected_output": evidence.BASELINE_EXPECTED_OUTPUT,
             "observed_output": observed,
             "observed_output_sha256": evidence.baseline_output_sha256(observed),
-            "guest_cycles": 172,
+            "guest_cycles": 196,
         },
         "protocol": {
             "warmup_samples": raw["warmup_samples"],
