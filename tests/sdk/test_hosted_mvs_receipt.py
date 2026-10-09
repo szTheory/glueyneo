@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -27,16 +28,43 @@ def valid_pair() -> tuple[dict, dict]:
     return event, receipt
 
 
+def valid_aggregate() -> dict:
+    aggregate = {
+        "outcome": "pass", "source_revision": "a" * 40,
+        "jobs": {
+            "matrix": {"result": "success", "lane_count": 6, "assertion_count": 1440},
+            "public-content": {"result": "success", "lane_count": 1, "assertion_count": 1162},
+        },
+        "matrix": {"outcome": "pass", "source_revision": "a" * 40},
+    }
+    canonical = (json.dumps(aggregate, ensure_ascii=True, sort_keys=True,
+                            separators=(",", ":")) + "\n").encode()
+    aggregate["receipt_sha256"] = hashlib.sha256(canonical).hexdigest()
+    return aggregate
+
+
 class HostedMvsReceiptTests(unittest.TestCase):
     def test_accepts_exact_eligible_receipt(self) -> None:
         event, receipt = valid_pair()
         validate(event, receipt, source_revision="a" * 40,
-                 relevant_source_sha256="b" * 64, output_bytes=OUTPUT)
+                 relevant_source_sha256="b" * 64, output_bytes=OUTPUT,
+                 aggregate=valid_aggregate())
 
     def test_rejects_unbound_output_digest(self) -> None:
         event, receipt = valid_pair()
         receipt["output_sha256"] = "c" * 64
         self.assert_rejected(event, receipt)
+
+    def test_rejects_stale_or_failed_aggregate(self) -> None:
+        for field, value in (("source_revision", "d" * 40), ("outcome", "fail")):
+            event, receipt = valid_pair()
+            aggregate = valid_aggregate()
+            aggregate[field] = value
+            self.assert_rejected(event, receipt, aggregate)
+        event, receipt = valid_pair()
+        aggregate = valid_aggregate()
+        aggregate["jobs"]["matrix"]["result"] = "failure"
+        self.assert_rejected(event, receipt, aggregate)
 
     def test_rejects_ineligible_event(self) -> None:
         event, receipt = valid_pair()
@@ -75,10 +103,12 @@ class HostedMvsReceiptTests(unittest.TestCase):
         receipt["outcome"] = "fail"
         self.assert_rejected(event, receipt)
 
-    def assert_rejected(self, event: dict, receipt: dict) -> None:
+    def assert_rejected(self, event: dict, receipt: dict,
+                        aggregate: dict | None = None) -> None:
         with self.assertRaises(ReceiptError):
             validate(event, receipt, source_revision="a" * 40,
-                     relevant_source_sha256="b" * 64, output_bytes=OUTPUT)
+                     relevant_source_sha256="b" * 64, output_bytes=OUTPUT,
+                     aggregate=aggregate if aggregate is not None else valid_aggregate())
 
 
 if __name__ == "__main__":

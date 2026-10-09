@@ -47,7 +47,7 @@ def _read_output(path: Path) -> bytes:
 
 def validate(event: dict[str, Any], receipt: dict[str, Any], *,
              source_revision: str, relevant_source_sha256: str,
-             output_bytes: bytes) -> None:
+             output_bytes: bytes, aggregate: dict[str, Any]) -> None:
     if HEX40.fullmatch(source_revision) is None or HEX64.fullmatch(relevant_source_sha256) is None:
         raise ReceiptError("expected source identity is malformed")
 
@@ -84,6 +84,33 @@ def validate(event: dict[str, Any], receipt: dict[str, Any], *,
             output_digest != hashlib.sha256(output_bytes).hexdigest()):
         raise ReceiptError("hosted output digest is missing or does not match the artifact")
 
+    aggregate_digest = aggregate.get("receipt_sha256")
+    unsigned_aggregate = dict(aggregate)
+    unsigned_aggregate.pop("receipt_sha256", None)
+    aggregate_bytes = (json.dumps(unsigned_aggregate, ensure_ascii=True,
+                                  sort_keys=True, separators=(",", ":")) + "\n").encode()
+    if (aggregate.get("outcome") != "pass" or
+            aggregate.get("source_revision") != source_revision or
+            not isinstance(aggregate_digest, str) or
+            HEX64.fullmatch(aggregate_digest) is None or
+            hashlib.sha256(aggregate_bytes).hexdigest() != aggregate_digest):
+        raise ReceiptError("hosted aggregate is failed, stale, or has an invalid digest")
+    jobs = aggregate.get("jobs")
+    if not isinstance(jobs, dict):
+        raise ReceiptError("hosted aggregate job results are missing")
+    for name in ("matrix", "public-content"):
+        if not isinstance(jobs.get(name), dict) or jobs[name].get("result") != "success":
+            raise ReceiptError("a required hosted aggregate job did not pass")
+    matrix_job = jobs["matrix"]
+    for field in ("lane_count", "assertion_count"):
+        count = matrix_job.get(field)
+        if not isinstance(count, int) or isinstance(count, bool) or count <= 0:
+            raise ReceiptError("hosted aggregate has no positive matrix denominator")
+    matrix = aggregate.get("matrix")
+    if (not isinstance(matrix, dict) or matrix.get("outcome") != "pass" or
+            matrix.get("source_revision") != source_revision):
+        raise ReceiptError("hosted matrix aggregate is missing, failed, or stale")
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -91,6 +118,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--receipt", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True,
                         help="exact hosted CTest output artifact whose digest is in the receipt")
+    parser.add_argument("--aggregate", type=Path, required=True,
+                        help="exact hosted CI aggregate artifact for the same event SHA")
     parser.add_argument("--source-revision", required=True)
     parser.add_argument("--relevant-source-sha256", required=True)
     args = parser.parse_args(argv)
@@ -98,7 +127,8 @@ def main(argv: list[str] | None = None) -> int:
         validate(_read(args.event), _read(args.receipt),
                  source_revision=args.source_revision,
                  relevant_source_sha256=args.relevant_source_sha256,
-                 output_bytes=_read_output(args.output))
+                 output_bytes=_read_output(args.output),
+                 aggregate=_read(args.aggregate))
     except ReceiptError as error:
         print(f"hosted MVS receipt rejected: {error}", file=sys.stderr)
         return 1
