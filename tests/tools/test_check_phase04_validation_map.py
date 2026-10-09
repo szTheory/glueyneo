@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -58,7 +59,12 @@ def reconciled_review_documents(directory: Path) -> dict[str, Path]:
     frontmatter = sections[1].replace(block.group(0), updated_block)
     body = re.sub(r"(?m)^\| CR-01 \|[^\n]*$", "| CR-01 | critical | fixed | 04-12 exact integer receipt validation |", sections[2])
     body = body.replace("| CR-02 | critical | open | - |", "| CR-02 | critical | open | 04-REVIEW.md current |")
-    body = body.replace("| WR-01 | warning | open | - |", "| WR-01 | warning | open | 04-REVIEW.md current |")
+    body = re.sub(
+        r"(?m)^\| WR-01 \| warning \| open \|[^\n]*$",
+        "| WR-01 | warning | open | Historical review `04-REVIEW.md` at `87f8d4c`; reviewed revision `870848e553aca6e43f6fec8ae0acefac87270f5b`, 2026-10-08T23:46:34Z; carried open |",
+        body,
+        count=1,
+    )
     body = body.replace("| WR-02 | warning | open | - (not in the current review) |", "| WR-02 | warning | open | Carried from prior review; no new independent evidence |")
     body = body.replace("| WR-03 | warning | open | - (not in the current review) |", "| WR-03 | warning | open | Carried from prior review; no new independent evidence |")
     disposition_path.write_text(f"---{frontmatter}---{body}", encoding="utf-8")
@@ -104,13 +110,16 @@ def add_frontend_claim(text: str, claim: str) -> str:
 
 def with_requirement_status(text: str, requirement_id: str, status: str) -> str:
     lines = text.splitlines()
-    for index, line in enumerate(lines):
+    header_index = next(i for i, line in enumerate(lines) if line.startswith("| Requirement | Source plans"))
+    for index, line in enumerate(lines[header_index + 2:], start=header_index + 2):
+        if not line.startswith("|"):
+            break
         if not line.startswith(f"| {requirement_id} |"):
             continue
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) != 5:
+        if len(cells) not in {4, 5}:
             raise AssertionError(f"requirement row {requirement_id} is malformed")
-        cells[3] = status
+        cells[3 if len(cells) == 5 else 2] = status
         lines[index] = "| " + " | ".join(cells) + " |"
         return "\n".join(lines) + "\n"
     raise AssertionError(f"requirement row {requirement_id} is missing")
@@ -118,13 +127,16 @@ def with_requirement_status(text: str, requirement_id: str, status: str) -> str:
 
 def with_requirement_evidence(text: str, requirement_id: str, evidence: str) -> str:
     lines = text.splitlines()
-    for index, line in enumerate(lines):
+    header_index = next(i for i, line in enumerate(lines) if line.startswith("| Requirement | Source plans"))
+    for index, line in enumerate(lines[header_index + 2:], start=header_index + 2):
+        if not line.startswith("|"):
+            break
         if not line.startswith(f"| {requirement_id} |"):
             continue
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) != 5:
+        if len(cells) not in {4, 5}:
             raise AssertionError(f"requirement row {requirement_id} is malformed")
-        cells[4] = evidence
+        cells[4 if len(cells) == 5 else 3] = evidence
         lines[index] = "| " + " | ".join(cells) + " |"
         return "\n".join(lines) + "\n"
     raise AssertionError(f"requirement row {requirement_id} is missing")
@@ -203,6 +215,28 @@ def set_crosswalk_disposition(documents: dict[str, Path], finding_id: str, state
             lines[index] = "| " + " | ".join(cells) + " |"
             path.write_text("\n".join(lines) + "\n", encoding="utf-8")
             return
+
+
+def commit_review_source_tree(root: Path) -> str:
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    subprocess.run(["git", "-C", str(root), "config", "user.name", "Validation Test"], check=True)
+    subprocess.run(["git", "-C", str(root), "config", "user.email", "validation@example.invalid"], check=True)
+    for index, relative in enumerate(validation_map.REQUIRED_REVIEWED_PATHS):
+        target = root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"reviewed source {index}\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(root), "add", *validation_map.REQUIRED_REVIEWED_PATHS], check=True)
+    subprocess.run(["git", "-C", str(root), "commit", "-qm", "reviewed source"], check=True)
+    return subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "HEAD"], check=True, text=True,
+        stdout=subprocess.PIPE,
+    ).stdout.strip()
+
+
+def review_frontmatter(revision: str, paths: tuple[str, ...] | None = None) -> str:
+    reviewed = paths or validation_map.REQUIRED_REVIEWED_PATHS
+    entries = "".join(f"  - {path}\n" for path in reviewed)
+    return f"---\nreviewed_revision: {revision}\nfiles_reviewed: {len(reviewed)}\nfiles_reviewed_list:\n{entries}---\n"
     raise AssertionError(f"crosswalk row for {finding_id} is missing")
 
 
@@ -273,7 +307,8 @@ class ValidationMapReconciliationTest(unittest.TestCase):
 
         with mock.patch.multiple(validation_map, **documents):
             with mock.patch.object(validation_map, "run_suite", side_effect=observed_suite):
-                validation_map.main()
+                with mock.patch.object(validation_map, "require_reviewed_source_identity"):
+                    validation_map.main()
 
     def test_checker_accepts_a_reconciled_review_after_repaired_finding_disappears(self) -> None:
         with tempfile.TemporaryDirectory(prefix="phase04-review-reconciliation-") as temporary:
@@ -426,7 +461,9 @@ class ValidationMapReconciliationTest(unittest.TestCase):
             ("security count", "SECURITY", lambda text: text.replace("threats_open: 4", "threats_open: 3", 1)),
             ("security row", "SECURITY", lambda text: re.sub(r"(?m)^(\| T-04-11 \|[^\n]*\| )open(\s*\|)$", r"\1closed\2", text)),
             ("missing required medium threat", "SECURITY", lambda text: re.sub(r"(?m)^\| T-04-34 \|[^\n]*\n", "", text, count=1)),
-            ("medium threat downgraded", "SECURITY", lambda text: text.replace("| T-04-34 | Tampering | `check_docs()` frontend qualification status | medium | mitigate |", "| T-04-34 | Tampering | `check_docs()` frontend qualification status | low | mitigate |", 1)),
+            ("medium threat downgraded", "SECURITY", lambda text: re.sub(
+                r"(?m)^(\| T-04-34 \|[^|]*\|[^|]*\| )medium( \|)", r"\1low\2", text, count=1,
+            )),
             ("HOST-02 observed", "VERIFICATION", lambda text: re.sub(r"(?m)^(\| HOST-02 \|.*\| )\? NEEDS HUMAN(?: / PENDING)?( \|.*)$", r"\1pass\2", text)),
             ("QUAL-03 observed", "VERIFICATION", lambda text: with_requirement_status(text, "QUAL-03", "✓ SATISFIED")),
             ("HOST-02 positive evidence", "VERIFICATION", lambda text: with_requirement_evidence(
@@ -439,45 +476,45 @@ class ValidationMapReconciliationTest(unittest.TestCase):
                 text, "| # | Truth | Status | Evidence |", "5", 3, "Actual pinned frontend loaded successfully."
             )),
             ("qualification artifact positive evidence", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Artifact | Expected | Status | Details |",
-                "`tools/verify_playable.py`, `docs/first-playable-build.md`", 3,
+                text, "| Artifact/link | Status | Evidence |",
+                "Qualification logs/receipts → sanitizers", 2,
                 "Pinned RetroArch loaded and displayed pixels."
             )),
             ("libretro artifact positive evidence", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Artifact | Expected | Status | Details |", "`src/libretro/libretro_core.c`, `tests/libretro`", 3,
-                validation_map.LIBRETRO_ARTIFACT_FRONTEND_BOUNDARY + " RetroArch displayed guest pixels."
+                text, "| Artifact/link | Status | Evidence |", "Libretro content → `gn_load`/frame → synchronous video callback", 2,
+                "Adapter calls and callback contract exist; RetroArch displayed guest pixels."
             )),
             ("qualification link positive evidence", "VERIFICATION", lambda text: with_table_cell(
-                text, "| From | To | Via | Status | Details |", "Current qualification run", 4,
+                text, "| Artifact/link | Status | Evidence |", "Qualification logs/receipts → sanitizers", 2,
                 "Pinned RetroArch launched and displayed guest pixels."
             )),
             ("libretro link positive evidence", "VERIFICATION", lambda text: with_table_cell(
-                text, "| From | To | Via | Status | Details |", "Libretro content", 4,
-                validation_map.LIBRETRO_LINK_FRONTEND_BOUNDARY + " The actual app loaded successfully."
+                text, "| Artifact/link | Status | Evidence |", "Libretro content → `gn_load`/frame → synchronous video callback", 2,
+                "The actual app loaded successfully."
             )),
             ("actual frontend spot-check passed", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Behavior | Command | Result | Status |",
-                "Actual pinned RetroArch behavior", 2,
+                text, "| Behavior | Retained command/result | Status |",
+                "Actual pinned RetroArch", 1,
                 "Pinned RetroArch loaded, displayed pixels, and accepted input."
             )),
             ("evidence-map spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Behavior | Command | Result | Status |",
-                "Direct evidence-map checker", 2,
+                text, "| Behavior | Retained command/result | Status |",
+                "Evidence-map suite and direct gate after latest audit", 1,
                 "Passed; actual pinned RetroArch loaded and displayed guest pixels."
             )),
             ("qualification test spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Behavior | Command | Result | Status |",
-                "Qualification/privacy tests", 2,
+                text, "| Behavior | Retained command/result | Status |",
+                "Qualification/privacy and GUI-free frontend contracts", 1,
                 "23/23 passed; actual pinned RetroArch loaded successfully."
             )),
             ("GUI-free runner spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Behavior | Command | Result | Status |",
-                "GUI-free frontend contract", 2,
+                text, "| Behavior | Retained command/result | Status |",
+                "Qualification/privacy and GUI-free frontend contracts", 1,
                 "27/27 passed; actual pinned RetroArch displayed pixels."
             )),
             ("docs gate spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Behavior | Command | Result | Status |",
-                "Documentation gate", 2,
+                text, "| Behavior | Retained command/result | Status |",
+                "Actual pinned RetroArch", 1,
                 "Passed; the pinned app loaded and presented output."
             )),
             ("duplicate HOST-02", "VERIFICATION", lambda text: with_duplicate_requirement(text, "HOST-02")),
@@ -497,6 +534,119 @@ class ValidationMapReconciliationTest(unittest.TestCase):
                 mutate_document(documents, name, lambda _text: after)
                 with self.assertRaises(AssertionError):
                     self.run_checker(documents)
+
+    def test_security_register_requires_exact_four_high_and_two_medium_open_rows(self) -> None:
+        mutations = (
+            ("remove medium", lambda text: re.sub(r"(?m)^\| T-04-38 \|[^\n]*\n", "", text, count=1)),
+            ("close medium", lambda text: re.sub(r"(?m)^(\| T-04-38 \|[^\n]*\| )open( \|)$", r"\1closed\2", text, count=1)),
+            ("unexpected open", lambda text: re.sub(r"(?m)^(\| T-04-39 \|[^\n]*\| )closed( \|)$", r"\1open\2", text, count=1)),
+            ("duplicate row", lambda text: re.sub(
+                r"(?m)^(\| T-04-38 \|[^\n]*)$", r"\1\n\1", text, count=1,
+            )),
+        )
+        for label, transform in mutations:
+            with self.subTest(mutation=label), tempfile.TemporaryDirectory() as temporary:
+                documents = reconciled_review_documents(Path(temporary))
+                before = documents["SECURITY"].read_text(encoding="utf-8")
+                after = transform(before)
+                self.assertNotEqual(after, before, f"{label} mutation was a no-op")
+                mutate_document(documents, "SECURITY", lambda _text: after)
+                with self.assertRaises(AssertionError):
+                    self.run_checker(documents)
+
+    def test_copied_wr01_history_requires_exact_historical_review_source(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            documents = reconciled_review_documents(Path(temporary))
+            disposition = documents["DISPOSITION"]
+            source = "Historical review `04-REVIEW.md` at `87f8d4c`; reviewed revision `870848e553aca6e43f6fec8ae0acefac87270f5b`, 2026-10-08T23:46:34Z; carried open"
+            self.assertIn(source, disposition.read_text(encoding="utf-8"))
+            self.run_checker(documents)
+            text = disposition.read_text(encoding="utf-8").replace(source, "-", 1)
+            disposition.write_text(text, encoding="utf-8")
+            with self.assertRaisesRegex(AssertionError, "WR-01.*historical review source"):
+                self.run_checker(documents)
+
+    def test_review_identity_accepts_exact_paths_and_source_bytes(self) -> None:
+        self.assertTrue(callable(getattr(validation_map, "require_reviewed_source_identity", None)),
+                        "the checker must validate reviewed paths and revision content identity")
+        with tempfile.TemporaryDirectory(prefix="phase04-review-identity-") as temporary:
+            repository = Path(temporary)
+            revision = commit_review_source_tree(repository)
+            validation_map.require_reviewed_source_identity(review_frontmatter(revision), repository=repository)
+
+    def test_review_identity_rejects_missing_path_stale_revision_and_changed_bytes(self) -> None:
+        self.assertTrue(callable(getattr(validation_map, "require_reviewed_source_identity", None)),
+                        "the checker must validate reviewed paths and revision content identity")
+        with tempfile.TemporaryDirectory(prefix="phase04-review-identity-") as temporary:
+            repository = Path(temporary)
+            revision = commit_review_source_tree(repository)
+            omitted = tuple(path for path in validation_map.REQUIRED_REVIEWED_PATHS if path != "tests/libretro/retroarch_smoke.py")
+            with self.assertRaisesRegex(AssertionError, "reviewed path list"):
+                validation_map.require_reviewed_source_identity(review_frontmatter(revision, omitted), repository=repository)
+            false_path = tuple(
+                "tests/libretro/test_retroarch_smoke.py" if path == "tests/libretro/retroarch_smoke.py" else path
+                for path in validation_map.REQUIRED_REVIEWED_PATHS
+            )
+            with self.assertRaisesRegex(AssertionError, "reviewed path list"):
+                validation_map.require_reviewed_source_identity(review_frontmatter(revision, false_path), repository=repository)
+            with self.assertRaisesRegex(AssertionError, "does not exist"):
+                validation_map.require_reviewed_source_identity(review_frontmatter("f" * 40), repository=repository)
+            target = repository / validation_map.REQUIRED_REVIEWED_PATHS[0]
+            target.write_text("changed after review\n", encoding="utf-8")
+            with self.assertRaisesRegex(AssertionError, "differs from reviewed revision"):
+                validation_map.require_reviewed_source_identity(review_frontmatter(revision), repository=repository)
+
+    def test_frontend_claim_grammar_rejects_render_screen_and_output_paraphrases(self) -> None:
+        uncertain = "Actual pinned RetroArch load remains unknown; launch previously aborted before screenshot."
+        positives = (
+            "a frame was rendered to the window",
+            "the screen was visible",
+            "video output was confirmed",
+            "control input worked",
+            "content unloaded and RetroArch exited normally",
+        )
+        for claim in positives:
+            with self.subTest(claim=claim):
+                evidence = f"{uncertain} {claim}."
+                self.assertFalse(validation_map.has_frontend_load_uncertainty(evidence, scope="goal"))
+                self.assertTrue(validation_map.contains_frontend_success_claim(claim))
+        self.assertTrue(validation_map.has_frontend_load_uncertainty(
+            uncertain + " No frame was rendered to the window; no input or unload was observed.", scope="goal"
+        ))
+
+    def test_report_claim_mutations_fail_across_every_current_frontend_surface(self) -> None:
+        claims = (
+            "A frame was rendered to the window.",
+            "The screen was visible.",
+            "Video output was confirmed.",
+            "Guest pixels were displayed.",
+            "Control input worked as expected.",
+            "Content unloaded and RetroArch exited normally.",
+        )
+        for claim in claims:
+            surfaces = (
+                ("goal", lambda text: with_table_cell(text, "| # | Truth | Status | Evidence |", "3", 3,
+                                                       validation_map.PINNED_FRONTEND_UNCERTAINTY_EVIDENCE + " " + claim)),
+                ("HOST-02 evidence", lambda text: with_requirement_evidence(text, "HOST-02",
+                                                                              validation_map.HOST_FRONTEND_UNCERTAINTY_EVIDENCE + " " + claim)),
+                ("QUAL-03 evidence", lambda text: with_requirement_evidence(text, "QUAL-03",
+                                                                               validation_map.QUAL_FRONTEND_UNCERTAINTY_EVIDENCE + " " + claim)),
+                ("artifact/link", lambda text: with_table_cell(text, "| Artifact/link | Status | Evidence |",
+                                                               "Libretro content → `gn_load`/frame → synchronous video callback", 2, claim)),
+                ("data-flow", lambda text: with_table_cell(text, "| Output | Source | Status |",
+                                                           "Actual frontend status", 2, "⚠️ UNKNOWN; " + claim)),
+                ("spot-check", lambda text: with_table_cell(text, "| Behavior | Retained command/result | Status |",
+                                                             "Actual pinned RetroArch", 1, claim)),
+            )
+            for surface, transform in surfaces:
+                with self.subTest(claim=claim, surface=surface), tempfile.TemporaryDirectory() as temporary:
+                    documents = reconciled_review_documents(Path(temporary))
+                    before = documents["VERIFICATION"].read_text(encoding="utf-8")
+                    after = transform(before)
+                    self.assertNotEqual(after, before, f"{surface} {claim!r} mutation was a no-op")
+                    mutate_document(documents, "VERIFICATION", lambda _text: after)
+                    with self.assertRaises(AssertionError):
+                        self.run_checker(documents)
 
     def test_pending_status_cells_reject_appended_frontend_observations(self) -> None:
         observations = (
@@ -568,14 +718,10 @@ class ValidationMapReconciliationTest(unittest.TestCase):
             documents = reconciled_review_documents(Path(temporary))
             report = documents["VERIFICATION"]
             original = report.read_text(encoding="utf-8")
-            mutated = original.replace(
-                "| Qualification/privacy tests | `python3 tests/tools/test_verify_playable.py -v` | 25/25 passed |",
-                "| Qualification/privacy tests | `python3 tests/tools/test_verify_playable.py -v` | 23/23 passed |",
-                1,
-            )
+            mutated = original.replace("25/25 and 27/27", "23/23 and 27/27", 1)
             self.assertNotEqual(mutated, original, "stale-denominator mutation was a no-op")
             report.write_text(mutated, encoding="utf-8")
-            with self.assertRaisesRegex(AssertionError, "denominator"):
+            with self.assertRaisesRegex(AssertionError, "current report counts"):
                 self.run_checker(documents)
 
 if __name__ == "__main__":

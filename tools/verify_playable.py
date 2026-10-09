@@ -633,8 +633,14 @@ def check_docs(source_root: Path) -> None:
         r"\b(?:frontend\s+)?(?:app|retroarch)\s+(?:has\s+)?(?:loaded|started)\s+successfully\b",
         r"\b(?:loaded|started)\s+(?:the\s+)?(?:frontend\s+)?(?:app|retroarch)\s+successfully\b",
         r"\b(?:displayed|presented|rendered)\s+(?:guest\s+)?pixels?\b",
+        r"\b(?:frontend|retroarch|app)\s+booted\s+(?:the\s+)?game\s+and\s+showed\s+(?:its\s+)?output\b",
+        r"\b(?:a\s+)?frame\s+(?:was\s+)?rendered\s+to\s+(?:the\s+)?window\b",
+        r"\b(?:the\s+)?screen\s+(?:was|became)\s+visible\b",
+        r"\b(?:video|display|visual)\s+output\s+(?:was\s+)?(?:confirmed|successful|passed)\b",
         r"\b(?:frontend\s+)?(?:accepted|registered)\s+(?:right|left|mapped)\s+input\b",
         r"\b(?:content|game)\s+unloaded\s+(?:cleanly|successfully)\b",
+        r"\b(?:retroarch|frontend|app)\s+(?:exited|quit)\s+normally\b",
+        r"\b(?:controls?|input)\s+(?:worked|succeeded)\s+(?:as\s+expected\s+)?(?:in\s+(?:retroarch|the\s+frontend))?\b",
         r"\bgame\s+(?:appeared|was\s+visible|ran|played)\b.{0,80}\b(?:screen|retroarch|successfully|pixels?)\b",
         r"\b(?:frontend|retroarch)\s+(?:accepted|registered)\s+(?:the\s+)?(?:(?:mapped|right|left)\s+)?(?:controller\s+)?input\b",
         r"\b(?:frontend|retroarch)\s+(?:loaded|started|presented|displayed|rendered)\b.{0,80}\b(?:successfully|pixels?|fixture|content)\b",
@@ -644,10 +650,12 @@ def check_docs(source_root: Path) -> None:
         r"\b(?:does|did|do)\s+not\s+(?:claim|assert|report|show|establish|prove|mean)\s+(?:that\s+)?(?:the\s+)?$",
         re.IGNORECASE,
     )
-    for pattern in affirmative_frontend_claims:
-        for match in re.finditer(pattern, guide, re.IGNORECASE):
-            if not negated_claim.search(guide[:match.start()]):
-                raise RuntimeError("integrator documentation contains an affirmative frontend claim while actual behavior is unknown")
+    clauses = re.split(r"(?<=[.!?;])\s+|\s+(?:but|however|although)\s+", guide)
+    for clause in clauses:
+        for pattern in affirmative_frontend_claims:
+            for match in re.finditer(pattern, clause, re.IGNORECASE):
+                if not negated_claim.search(clause[:match.start()]):
+                    raise RuntimeError("integrator documentation contains an affirmative frontend claim while actual behavior is unknown")
     required = (
         "python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean",
         "public-playable.bin", "RetroArch", "macOS", "unsupported", "unknown",

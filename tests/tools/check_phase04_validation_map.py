@@ -15,6 +15,13 @@ SECURITY = PHASE / "04-SECURITY.md"
 VERIFICATION = PHASE / "04-VERIFICATION.md"
 DISPOSITION = PHASE / "04-REVIEW-DISPOSITION.md"
 REVIEW = PHASE / "04-REVIEW.md"
+REQUIRED_REVIEWED_PATHS = (
+    "tests/tools/check_phase04_validation_map.py",
+    "tests/tools/test_check_phase04_validation_map.py",
+    "tools/verify_playable.py",
+    "tests/tools/test_verify_playable.py",
+    "tests/libretro/retroarch_smoke.py",
+)
 
 
 def require(condition: bool, message: str) -> None:
@@ -40,6 +47,37 @@ def frontmatter(document: str, label: str) -> str:
     sections = document.split("---", 2)
     require(len(sections) == 3 and sections[0].strip() == "", f"{label} lacks YAML frontmatter")
     return sections[1]
+
+
+def require_reviewed_source_identity(review: str, *, repository: Path = ROOT) -> None:
+    """Bind the current review's required file list and bytes to its immutable commit."""
+    yaml = frontmatter(review, "review")
+    revision_match = re.search(r"(?m)^reviewed_revision:\s*['\"]?([0-9a-f]+)['\"]?\s*$", yaml)
+    require(revision_match is not None and len(revision_match.group(1)) in {40, 64},
+            "current review lacks a full immutable reviewed_revision")
+    revision = revision_match.group(1)
+    paths_match = re.search(r"(?ms)^files_reviewed_list:\s*\n((?:^  - .+\n)+)", yaml)
+    require(paths_match is not None, "current review lacks files_reviewed_list")
+    paths = [re.sub(r"^[\"']|[\"']$", "", value.strip())
+             for value in re.findall(r"(?m)^  - (.+?)\s*$", paths_match.group(1))]
+    require(len(paths) == len(set(paths)), "current review contains duplicate reviewed paths")
+    require(set(REQUIRED_REVIEWED_PATHS) <= set(paths),
+            "current review reviewed path list omits a required gate or sanitizer source")
+    revision_check = subprocess.run(
+        ["git", "cat-file", "-e", f"{revision}^{{commit}}"], cwd=repository,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+    )
+    require(revision_check.returncode == 0, "current review reviewed_revision does not exist as a commit")
+    for relative in REQUIRED_REVIEWED_PATHS:
+        source = repository / relative
+        require(source.is_file(), f"current reviewed source is missing: {relative}")
+        archived = subprocess.run(
+            ["git", "show", f"{revision}:{relative}"], cwd=repository,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+        )
+        require(archived.returncode == 0, f"reviewed revision lacks required path {relative}")
+        require(archived.stdout == source.read_bytes(),
+                f"current reviewed source differs from reviewed revision: {relative}")
 
 
 def run_suite(command: str) -> tuple[int, int, str]:
@@ -108,6 +146,10 @@ QUALIFICATION_RUNNER_UNCERTAINTY_EVIDENCE = (
 )
 QUALIFICATION_FLOW_UNCERTAINTY_STATUS = "⚠️ UNKNOWN, correctly fail-closed"
 ACTUAL_FRONTEND_SPOTCHECK_RESULT = "User direction keeps this manual-only; no GUI launch was made."
+WR01_HISTORICAL_SOURCE = (
+    "Historical review `04-REVIEW.md` at `87f8d4c`; reviewed revision "
+    "`870848e553aca6e43f6fec8ae0acefac87270f5b`, 2026-10-08T23:46:34Z; carried open"
+)
 CURRENT_FRONTEND_ROWS = {
     "goal": [
         "3",
@@ -211,22 +253,33 @@ CURRENT_FRONTEND_ROWS = {
 def has_frontend_load_uncertainty(evidence: str, *, scope: str) -> bool:
     """Require an explicit unknown boundary and reject appended app success claims."""
     normalized = " ".join(evidence.split()).casefold()
-    uncertainty = re.search(r"\b(unknown|uncertain|unobserved|not observed|no successful [\w-]*app observation|no [\w-]*app observation|no fresh screenshot|launch previously aborted|does not prove actual (?:retroarch )?behavior)\b", normalized)
-    success = re.search(
-        r"\b(app|frontend|retroarch)\b.{0,100}\b(loaded|booted|displayed|showed|produced|launched|controls worked|accepted input|input worked|unloaded|exited normally)\b"
-        r"|\b(game screen was visible|saw the game screen|can see the game screen|gameplay presentation was confirmed|display output was successful|video output (?:passed|was confirmed)|logs confirm video output|right input moved the marker|content unloaded|screenshot contained game pixels)\b",
-        normalized,
-    )
+    uncertainty = re.search(r"\b(unknown|uncertain|unobserved|not observed|no successful (?:[\w-]*app )?observation|no [\w-]*app observation|no actual (?:pinned )?(?:app|frontend|retroarch) [\w ,/-]*observation|no actual app [\w ,/-]*observed|no fresh screenshot|launch previously aborted|does not prove actual (?:retroarch )?behavior)\b", normalized)
+    success = contains_frontend_success_claim(normalized)
     return scope in {"goal", "host", "qual", "qual_goal", "qual_artifact", "libretro_artifact", "libretro_link", "qual_runner"} and bool(uncertainty) and not success
 
 
 def contains_frontend_success_claim(text: str) -> bool:
     normalized = " ".join(text.split()).casefold()
-    return re.search(
-        r"\b(app|frontend|retroarch)\b.{0,100}\b(loaded|booted|displayed|showed|produced|launched|accepted input|controls worked|unloaded|exited normally)\b"
-        r"|\b(game screen was visible|saw the game screen|can see the game screen|gameplay presentation was confirmed|display output was successful|video output (?:passed|was confirmed)|logs confirm video output|right input moved the marker|content unloaded|screenshot contained game pixels)\b",
-        normalized,
-    ) is not None
+    patterns = (
+        r"\b(?:app|frontend|retroarch)\b.{0,100}\b(?:loaded|booted|displayed|showed|produced|launched|accepted input|controls worked|input worked|unloaded|exited normally)\b",
+        r"\b(?:a frame was rendered to the window|frame rendered to the window|game screen was visible|screen was visible|screen became visible|saw the game screen|can see the game screen|gameplay presentation was confirmed|display output was successful|video output (?:passed|was confirmed|confirmed)|logs confirm video output|right input moved the marker|content unloaded|screenshot contained game pixels|guest pixels were displayed|control input worked)\b",
+        r"\b(?:displayed|presented|rendered|showed)\s+(?:guest\s+)?pixels?\b",
+        r"\b(?:game|content)\s+unloaded\s+(?:cleanly|successfully)\b",
+        r"\b(?:game|content)\s+(?:loaded|booted|ran|played|appeared|was visible)\b.{0,80}\b(?:screen|retroarch|successfully|pixels?|output)?\b",
+    )
+    clauses = re.split(r"(?<=[.!?;])\s+|\s+(?:but|however|although)\s+", normalized)
+    for clause in clauses:
+        for pattern in patterns:
+            for match in re.finditer(pattern, clause):
+                prefix = clause[:match.start()]
+                negated = re.search(
+                    r"(?:\b(?:does|did|do)\s+not\s+(?:claim|assert|report|show|establish|prove|mean)(?:\s+that)?|"
+                    r"\b(?:not|never|no)\s+(?:observed|confirmed|seen|shown|rendered|displayed|presented|loaded|unloaded)?\s*)$",
+                    prefix,
+                )
+                if not negated:
+                    return True
+    return False
 
 
 def require_current_frontend_row(rows: list[list[str]], key: str, scope: str) -> None:
@@ -260,21 +313,26 @@ def main() -> None:
     verification = VERIFICATION.read_text(encoding="utf-8")
     disposition = DISPOSITION.read_text(encoding="utf-8")
     review = REVIEW.read_text(encoding="utf-8")
+    require_reviewed_source_identity(review)
 
     # Historical validation rows keep their dated denominators. Reconcile the
     # current verifier spot-check with a fresh live qualification-suite count.
     qualification_command = "python3 tests/tools/test_verify_playable.py -v"
+    frontend_command = "python3 tests/libretro/test_retroarch_smoke.py -v"
     status, count, _output = run_suite(qualification_command)
+    frontend_status, frontend_count, _frontend_output = run_suite(frontend_command)
     spotcheck_lines = [line for line in verification.splitlines()
-                       if re.match(r"^\|\s*Qualification/privacy tests\s*\|", line)]
+                       if re.match(r"^\|\s*Qualification/privacy and GUI-free frontend contracts\s*\|", line)]
     require(len(spotcheck_lines) == 1, "verification report must contain one current qualification spot-check")
     cells = [cell.strip() for cell in spotcheck_lines[0].strip().strip("|").split("|")]
-    require(len(cells) == 4 and cells[1] == f"`{qualification_command}`",
-            "current qualification spot-check command is malformed or unexpected")
-    claimed = re.fullmatch(r"(\d+)/(\d+) passed", cells[2])
-    require(claimed is not None, "current qualification spot-check result is malformed")
-    require(status == 0 and tuple(map(int, claimed.groups())) == (count, count),
-            f"current report denominator {cells[2]!r} differs from live {count}-test qualification suite")
+    require(len(cells) == 3 and "not app evidence" in cells[2].lower(),
+            "current qualification spot-check must retain its repository-only limit")
+    qualification_claim = re.search(r"(\d+)/(\d+)\s+and\s+(\d+)/(\d+)", cells[1])
+    require(qualification_claim is not None, "current qualification/frontend spot-check counts are malformed")
+    reported = tuple(map(int, qualification_claim.groups()))
+    require(status == 0 and frontend_status == 0 and reported == (count, count, frontend_count, frontend_count),
+            f"current report counts {reported!r} differ from live qualification/frontend suites "
+            f"{count}/{count} and {frontend_count}/{frontend_count}")
 
     threat_rows = table_rows(validation, "| Threat | Evidence and disposition |")
     threat_map = {row[0]: row[1] for row in threat_rows if len(row) == 2}
@@ -301,8 +359,14 @@ def main() -> None:
     for row in disposition_rows:
         finding_id, severity, state, source = row
         require(finding_id not in table_records, f"duplicate disposition table ID {finding_id}")
-        require(source and source != "-", f"{finding_id} has no provenance source")
+        if finding_id != "WR-01":
+            require(source and source != "-", f"{finding_id} has no provenance source")
         table_records[finding_id] = (severity, state, source)
+    historical_wr01_source = table_records.get("WR-01", ("", "", ""))[2]
+    require(all(token in historical_wr01_source for token in (
+        "87f8d4c", "870848e553aca6e43f6fec8ae0acefac87270f5b", "2026-10-08T23:46:34Z",
+    )) and "carried open" in historical_wr01_source.lower(),
+        "WR-01 lacks its exact historical review source or carried-open status")
     require(set(table_records) == set(records), "disposition YAML and table IDs differ")
     require(set(review_findings) <= set(records), "a current review finding is missing from disposition history")
     for finding_id, record in records.items():
@@ -345,7 +409,7 @@ def main() -> None:
     high_open = {key for key, value in threats.items() if value[0] == "high" and value[2] == "open"}
     count = re.search(r"(?m)^threats_open: (\d+)$", security_yaml)
     required_high_open = {"T-04-11", "T-04-15", "T-04-18", "T-04-20"}
-    required_medium_open = {"T-04-34"}
+    required_medium_open = {"T-04-34", "T-04-38"}
     require(count is not None and int(count.group(1)) == len(high_open),
             "security frontmatter blocking count differs from high/open register rows")
     require(high_open == required_high_open,
@@ -353,7 +417,7 @@ def main() -> None:
     require({key for key in open_threats if threats[key][0] == "medium"} == required_medium_open,
             "required medium/open T-04-34 differs from the active security register")
     require(open_threats == required_high_open | required_medium_open,
-            "unexpected open security threat outside the four disclosure findings and T-04-34")
+            "unexpected open security threat outside the four disclosure findings and two audited medium findings")
 
     goal_rows = table_rows(verification, "| # | Truth | Status | Evidence |")
     require(all(len(row) == 4 for row in goal_rows), "malformed phase-goal verification row")
@@ -370,77 +434,60 @@ def main() -> None:
     require(has_frontend_load_uncertainty(qualification_goal[0][3], scope="qual_goal"),
             "current qualification goal evidence no longer preserves the actual frontend unknown boundary")
 
-    artifact_rows = table_rows(verification, "| Artifact | Expected | Status | Details |")
-    require(all(len(row) == 4 for row in artifact_rows), "malformed required-artifact verification row")
-    require_current_frontend_row(
-        artifact_rows, "`tools/verify_playable.py`, `docs/first-playable-build.md`", "qualification_artifact"
-    )
-    require_current_frontend_row(artifact_rows, "`src/libretro/libretro_core.c`, `tests/libretro`", "libretro_artifact")
-    qualification_artifact = [row for row in artifact_rows if row[0] == "`tools/verify_playable.py`, `docs/first-playable-build.md`"]
-    require(len(qualification_artifact) == 1 and qualification_artifact[0][2] == "⚠️ PARTIAL",
-            "qualification artifact status differs from the current report")
-    require(qualification_artifact[0][2] == "⚠️ PARTIAL",
-            "qualification artifact no longer remains partial")
-    require(not contains_frontend_success_claim(qualification_artifact[0][3]),
-            "qualification artifact asserts unobserved frontend success")
-    libretro_artifact = [row for row in artifact_rows if row[0] == "`src/libretro/libretro_core.c`, `tests/libretro`"]
-    require(len(libretro_artifact) == 1 and "unobserved" in libretro_artifact[0][3].lower(),
-            "libretro artifact evidence overstates actual frontend behavior")
-    require(not contains_frontend_success_claim(libretro_artifact[0][3]),
-            "libretro artifact asserts unobserved frontend success")
+    artifact_link_rows = table_rows(verification, "| Artifact/link | Status | Evidence |")
+    require(all(len(row) == 3 for row in artifact_link_rows), "malformed artifact/link verification row")
+    libretro_evidence = [row for row in artifact_link_rows if row[0].startswith("Libretro content")]
+    qualification_evidence = [row for row in artifact_link_rows if row[0].startswith("Qualification logs/receipts")]
+    require(len(libretro_evidence) == 1 and has_frontend_load_uncertainty(libretro_evidence[0][2], scope="libretro_artifact") and
+            not contains_frontend_success_claim(libretro_evidence[0][2]),
+            "libretro artifact/link evidence overstates actual frontend behavior")
+    require(len(qualification_evidence) == 1 and not contains_frontend_success_claim(qualification_evidence[0][2]),
+            "qualification artifact/link asserts unobserved frontend success")
 
-    link_rows = table_rows(verification, "| From | To | Via | Status | Details |")
-    require(all(len(row) == 5 for row in link_rows), "malformed key-link verification row")
-    libretro_link = [row for row in link_rows if row[0] == "Libretro content"]
-    require(len(libretro_link) == 1 and "manual-only" in libretro_link[0][4].lower(),
-            "libretro link overstates actual frontend behavior")
-    require(not contains_frontend_success_claim(libretro_link[0][4]),
-            "libretro link asserts unobserved frontend success")
-    qualification_link = [row for row in link_rows if row[0] == "Current qualification run"]
-    require(len(qualification_link) == 1 and qualification_link[0][3] == "✗ PARTIAL" and
-            not contains_frontend_success_claim(qualification_link[0][4]),
-            "qualification evidence link has contradictory state")
-
-    flow_rows = table_rows(verification, "| Artifact | Data | Source | Produces real data | Status |")
-    require(all(len(row) == 5 for row in flow_rows), "malformed data-flow verification row")
-    frontend_flow = [row for row in flow_rows if row[0] == "Frontend qualification status"]
-    require(len(frontend_flow) == 1 and "unknown" in frontend_flow[0][4].lower() and
+    flow_rows = table_rows(verification, "| Output | Source | Status |")
+    require(all(len(row) == 3 for row in flow_rows), "malformed data-flow verification row")
+    frontend_flow = [row for row in flow_rows if row[0] == "Actual frontend status"]
+    require(len(frontend_flow) == 1 and "unknown" in frontend_flow[0][2].lower() and
             not contains_frontend_success_claim(" ".join(frontend_flow[0])),
             "frontend qualification data-flow no longer preserves actual-app unknown status")
 
-    spotcheck_rows = table_rows(verification, "| Behavior | Command | Result | Status |")
+    spotcheck_rows = table_rows(verification, "| Behavior | Retained command/result | Status |")
     spotcheck_section = verification.split("### Behavioral Spot-Checks", 1)[1].split("\n### ", 1)[0]
     require(not any(contains_frontend_success_claim(line) for line in spotcheck_section.splitlines()
                     if line.startswith("|") and not line.startswith("|---")),
             "behavioral spot-check claims actual frontend success")
     actual_frontend_spotcheck = [
         row for row in spotcheck_rows
-        if len(row) == 4 and row[0] == "Actual pinned RetroArch behavior"
+        if len(row) == 3 and row[0] == "Actual pinned RetroArch"
     ]
-    require(len(actual_frontend_spotcheck) == 1 and "not run" in actual_frontend_spotcheck[0][1].lower() and
-            "no app observation" in actual_frontend_spotcheck[0][2].lower() and
-            "human" in actual_frontend_spotcheck[0][3].lower() and
+    require(len(actual_frontend_spotcheck) == 1 and "no launch" in actual_frontend_spotcheck[0][1].lower() and
+            "human" in actual_frontend_spotcheck[0][2].lower() and
             not contains_frontend_success_claim(" ".join(actual_frontend_spotcheck[0])),
             "actual frontend spot-check is no longer marked manual-only and unrun")
 
-    requirement_rows = table_rows(verification, "| Requirement | Source plans")
-    require(all(len(row) == 5 for row in requirement_rows), "malformed requirement coverage row")
+    requirement_header = next((line for line in verification.splitlines()
+                               if line.startswith("| Requirement | Source plans")), None)
+    require(requirement_header is not None, "verification report lacks requirement coverage table")
+    requirement_rows = table_rows(verification, requirement_header)
+    require(all(len(row) in {4, 5} for row in requirement_rows), "malformed requirement coverage row")
     require_current_frontend_row(requirement_rows, "HOST-02", "host_requirement")
     require_current_frontend_row(requirement_rows, "QUAL-03", "qual_requirement")
     requirement_ids = [row[0] for row in requirement_rows]
     require(len(requirement_ids) == len(set(requirement_ids)),
             "requirements coverage contains duplicate requirement rows")
-    requirement_status = {row[0]: row[3] for row in requirement_rows}
+    status_index = 3 if len(requirement_rows[0]) == 5 else 2
+    evidence_index = status_index + 1
+    requirement_status = {row[0]: row[status_index] for row in requirement_rows}
     require(requirement_status.get("HOST-02") == "? NEEDS HUMAN / PENDING",
             "HOST-02 is not explicitly marked as awaiting human evidence")
     host_row = next(row for row in requirement_rows if row[0] == "HOST-02")
-    require(has_frontend_load_uncertainty(host_row[4], scope="host"),
+    require(has_frontend_load_uncertainty(host_row[evidence_index], scope="host"),
             "HOST-02 evidence no longer matches the current actual-app uncertainty record")
     qual_status = requirement_status.get("QUAL-03") or ""
     require(qual_status in {"✗ BLOCKED / PARTIAL", "? NEEDS HUMAN / PENDING", "? NEEDS HUMAN / PARTIAL"},
             "QUAL-03 is not explicitly marked blocked, partial, or pending human evidence")
     qual_row = next(row for row in requirement_rows if row[0] == "QUAL-03")
-    require(has_frontend_load_uncertainty(qual_row[4], scope="qual"),
+    require(has_frontend_load_uncertainty(qual_row[evidence_index], scope="qual"),
             "QUAL-03 evidence no longer explicitly marks actual frontend load unobserved or unknown")
     print("Phase 04 validation map matches current focused test results and preserves open security and frontend gates.")
 
