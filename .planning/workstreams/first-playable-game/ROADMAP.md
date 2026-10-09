@@ -100,7 +100,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 ### Phase 5: Selected MVS Boot
 
 **Goal**: A user can load the selected private MVS media and see the guest-executed game reach its attract/start path with a documented, bounded configuration.
-**Depends on**: Phase 4; the sound-CPU interaction needed by BIOS/game boot is delivered here even though audible output is qualified in Phase 7.
+**Depends on**: Phase 4's verified native API and fixture foundation; the unresolved Phase 4 RetroArch observation and user-directed threat dispositions do not block Phase 5 engineering, but remain blockers to Phase 4 acceptance and any corresponding frontend/security claim. The sound-CPU interaction needed by BIOS/game boot is delivered here even though audible output is qualified in Phase 7.
 **Requirements**: MEDIA-02, MEDIA-03, MEDIA-04, GAME-02
 **Success Criteria** (what must be TRUE):
   1. A C integrator can supply immutable normalized cartridge and BIOS regions for the selected MVS profile under explicit lifetimes, layout, byte order, and resource limits.
@@ -108,7 +108,8 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   3. A user gets distinct, actionable missing, incompatible, unsupported, malformed, and limit errors; after a rejected load, valid media can load or the instance can be destroyed safely.
   4. In the selected configuration, the guest reaches the game's attract/start path through the owned 68000 and required MVS banking, protection, timing, interrupts, and sound-CPU handshakes, with source-qualified regression evidence and no canned boot or fabricated handshake.
 
-**Plans**: TBD
+**Plans**: 1 consolidated plan; three sequential tasks run together in one execute-phase invocation. Phase 05 remains planned until current-revision verification establishes each requirement; unresolved GAME-02 behavior or manual-only frontend evidence stays explicitly open.
+- [x] 05-01-PLAN.md — MVS media path and guest-driven selected boot
 
 ### Phase 6: Active Title Control
 
@@ -143,11 +144,11 @@ Each phase includes the automated evidence and independent review appropriate to
 
 ## Progress
 
-**Execution Order:** Phase 4 → Phase 5 → Phase 6 → Phase 7. Plans 04-01 through 04-19 are executed and summarized. T-04-11/T-04-15/T-04-18/T-04-20 remain high/open and T-04-34 remains medium/open; independent review still reproduces affirmative paraphrases outside the bounded guide filter. The execute-phase post hooks must now run fresh security/code-review audits and whole-phase verification on the final revision. Actual RetroArch behavior remains unknown and manual-only; do not advance to Phase 5.
+**Execution Order:** Phase 4's verified native API/fixture foundation → Phase 5 MVS boot engineering → Phase 6 → Phase 7. Phase 5 engineering may proceed while Phase 4 acceptance remains blocked: actual RetroArch behavior is unknown/manual-only and the user-directed threat dispositions remain open. Those findings block Phase 4 acceptance and related claims; they do not establish a technical dependency for the separate media, board, and guest-execution work. Phase 5 must not close or reinterpret Phase 4 findings.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 4. Public Playable Tracer | 22/22 | In Progress | - |
-| 5. Selected MVS Boot | 0/TBD | Not started | - |
+| 5. Selected MVS Boot | 1/1 | In Progress | - |
 | 6. Active Title Control | 0/TBD | Not started | - |
 | 7. Sound and Scenario Qualification | 0/TBD | Not started | - |

@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: first-playable-game
 milestone_name: First Playable Game
-current_phase: 04
-current_phase_name: Public Playable Tracer
-current_plan: 22
+current_phase: 5
+current_phase_name: Selected MVS Boot
+current_plan: 1
 status: verifying
-stopped_at: Completed Plan 04-22; Phase 04 remains blocked after gaps_found verification
-last_updated: "2026-10-09T01:48:59.724Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-10-09T03:06:45.328Z"
 last_activity: 2026-10-09
-last_activity_desc: Plan 04-22 completed; whole-phase verification still reports gaps. Phase 04 remains blocked by four directed high/open and three medium/open threats plus manual-only pinned RetroArch evidence.
-state_head: efd32a91f4433a93c84dc0e34e4dee3d8aabcdc4
+last_activity_desc: Phase 05 Plan 05-01 executed; requirements remain open and verification is next
+state_head: 80e349fdc29fad305bb720322aa7ad9a393c4f43
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 22
-  completed_plans: 22
+  total_plans: 23
+  completed_plans: 23
   percent: 0
 ---
 
@@ -26,23 +26,23 @@ progress:
 See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 **Core value:** Trustworthy Neo Geo emulation that other software can embed easily.
-**Current focus:** Phase 04 — Public Playable Tracer
+**Current focus:** Phase 5 — Selected MVS Boot
 
 ## Current Position
 
-Phase: 04 (Public Playable Tracer) — EXECUTING
-Current Plan: 22
-Total Plans in Phase: 22
-Status: verifying
-Last activity: 2026-10-08
-Last Activity Description: Plan 04-22 completed; whole-phase verification still reports gaps. Phase 04 remains blocked by four directed high/open and three medium/open threats plus manual-only pinned RetroArch evidence.
+Phase: 5 (Selected MVS Boot) — EXECUTING
+Current Plan: 1
+Total Plans in Phase: 1
+Status: Phase complete — ready for verification
+Last activity: 2026-10-08 — Phase 5 execution started
+Last Activity Description: Phase 05 Plan 05-01 executed; requirements remain open and verification is next
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 22
+**Current Plan:** 1
 
 ## Performance Metrics
 
@@ -72,12 +72,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P19 | 15 min | 3 tasks | 8 files |
 | Phase 04 P20 | 11min | 3 tasks | 5 files |
 | Phase 04 P22 | not recorded | 3 tasks | 10 files |
+| Phase 05 P01 | 20m | 3 tasks | 34 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-09T01:48:59.701Z
+**Last session:** 2026-10-09T03:01:52.413Z
 
-**Stopped At:** Completed Plan 04-22; Phase 04 remains blocked after gaps_found verification
+**Stopped At:** Completed 05-01-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
@@ -93,7 +94,7 @@ Progress: [░░░░░░░░░░] 0%
 - The user-provided BIOS archive is also stored under the Git-ignored `local/roms/` directory. The copy matches its source, passes ZIP CRC validation and is untracked; those checks do not establish BIOS compatibility.
 - Public CI: use original fixtures and/or homebrew assets only after confirming redistribution rights for the specific ROM assets; a source-code license alone is not sufficient evidence for bundled game data.
 - The local archive passed ZIP CRC checks and matched all 13 ROM size/SHA-1 entries in MAME's current Neo Geo software list. That confirms the archive identity, not emulator compatibility.
-- Next GSD work: `$gsd-execute-phase 04 --ws first-playable-game` executes the one bounded 04-19 independent-audit/disposition plan, followed by fresh whole-phase verification. Actual pinned RetroArch evidence remains manual-only; HOST-02/frontend QUAL-03 remain Pending/unknown. Do not start Phase 05.
+- Next GSD work: `$gsd-verify-work 05 --ws first-playable-game` checks the completed Phase 05 plan against its current evidence. Phase 05 remains incomplete: MEDIA-03, MEDIA-04, and GAME-02 are Pending. Phase 04 remains `gaps_found`; HOST-02/frontend QUAL-03 remain Pending/unknown/manual-only and all seven user-directed threat dispositions remain open.
 
 ## Decisions
 
@@ -141,3 +142,10 @@ Progress: [░░░░░░░░░░] 0%
 - WR-06 remains open after independent review because affirmative paraphrases still pass the bounded docs gate; fresh post-execution audits must confirm current dispositions.
 - T-04-11, T-04-15, T-04-18, and T-04-20 remain high/open by user direction; Plan 04-16 sanitizer tests pass, but no threat closure was granted.
 - Current Plan 04-22 evidence: seven security findings remain open (four high, three medium), with no accepted risks; actual pinned RetroArch load, presentation, input, unload and exit remain unobserved/manual-only (HOST-02 Pending/unknown; frontend QUAL-03 partial/needs-human). Phase 04 remains In Progress, and no further repository gap plan is warranted unless evidence or scope changes.
+
+## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 5 edited: Clarified Phase 05 technical dependency: verified Phase 04 native API/fixture artifacts permit media and boot engineering while Phase 04 RetroArch and user-directed threat acceptance gates remain blocked; added forward-progress policy.
+- Phase 5 edited: Supersedes the stale scope note that Phase 05 must not start: Phase 05 planning and engineering now proceed from verified Phase 04 native API/fixture artifacts while Phase 04 frontend and user-directed threat acceptance blockers remain open.
