@@ -70,6 +70,7 @@ class HostedMvsReceiptTests(unittest.TestCase):
         self.assertIn("build/sdk-debug/verify-sdk/mvs-ctest-output.json", workflow)
         self.assertIn("hosted-mvs-receipt", workflow)
         self.assertIn("build/sdk-debug/verify-sdk/mvs-receipt.json", workflow)
+        self.assertIn("if: always() && needs.classify.outputs.matrix == 'true'", workflow)
         self.assertIn("evidence/sdk/ci-event.json", workflow)
         self.assertIn("EVENT_HEAD_SHA", workflow)
 

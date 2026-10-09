@@ -246,7 +246,7 @@ jobs:
           python3 tools/workflow/ci_policy.py prepare --output-dir build/ci
           python3 tools/workflow/ci_policy.py aggregate --results build/ci/results.json --plan build/ci/plan.json --matrix-dir build/ci/matrix --output evidence/sdk/ci-aggregate.json
       - name: Validate hosted MVS receipt against exact event, source, and artifacts
-        if: always()
+        if: always() && needs.classify.outputs.matrix == 'true'
         env:
           SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
