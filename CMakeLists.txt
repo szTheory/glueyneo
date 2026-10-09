@@ -494,6 +494,20 @@ if(GLUEYNEO_BUILD_TESTS)
   endif()
   glueyneo_apply_sdk_sanitizer(mvs_importer)
 
+  add_executable(mvs_importer_identity tools/mvs/mvs_import.c)
+  target_compile_definitions(mvs_importer_identity PRIVATE MVS_IMPORT_TEST_IDENTITIES)
+  target_compile_features(mvs_importer_identity PRIVATE c_std_17)
+  set_target_properties(mvs_importer_identity PROPERTIES C_STANDARD 17
+    C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
+  target_include_directories(mvs_importer_identity PRIVATE third_party/zlib)
+  target_link_libraries(mvs_importer_identity PRIVATE glueyneo_mvs_zlib)
+  if(MSVC)
+    target_compile_options(mvs_importer_identity PRIVATE /W4 /WX)
+  else()
+    target_compile_options(mvs_importer_identity PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(mvs_importer_identity)
+
   add_executable(mvs_test tests/mvs/test_mvs.c)
   target_include_directories(mvs_test PRIVATE
     src third_party/libretro third_party/zlib)

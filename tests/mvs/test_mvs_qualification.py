@@ -120,9 +120,13 @@ def mutate_zip_record(source: bytes, *, flags: int | None = None,
     return bytes(archive)
 
 
-def test_identity_importer(importer: str) -> tuple[str, tempfile.TemporaryDirectory[str]]:
+def test_identity_importer(importer: str) -> tuple[str, tempfile.TemporaryDirectory[str] | None]:
     build_dir = Path(importer).resolve().parent
     root = Path(__file__).resolve().parents[2]
+    configured = build_dir / ("mvs_importer_identity.exe" if os.name == "nt"
+                              else "mvs_importer_identity")
+    if configured.is_file():
+        return str(configured), None
     cache = build_dir / "CMakeCache.txt"
     cache_values: dict[str, str] = {}
     for line in cache.read_text(encoding="utf-8").splitlines():

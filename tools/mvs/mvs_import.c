@@ -76,6 +76,7 @@ static const source_member selected_bios = {
     0x9036d879u, "4f5ed7105b7128794654ce82b51723e16e389543"
 };
 
+#if !defined(MVS_IMPORT_TEST_IDENTITIES)
 typedef struct {
     uint32_t state[5];
     uint64_t bytes;
@@ -129,6 +130,7 @@ static void sha1_hex(const uint8_t *data, size_t length, char output[41]) {
         for (size_t j = 0u; j < 4u; ++j) { const uint8_t byte = (uint8_t)(context.state[i] >> (24u - j * 8u)); *output++ = digits[byte >> 4]; *output++ = digits[byte & 15u]; }
     *output = '\0';
 }
+#endif
 
 static uint16_t get16(const uint8_t *p) {
     return (uint16_t)((uint16_t)p[0] | ((uint16_t)p[1] << 8));
