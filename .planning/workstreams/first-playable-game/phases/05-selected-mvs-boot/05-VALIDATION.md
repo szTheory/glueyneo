@@ -1,5 +1,42 @@
 # Phase 05 Validation Map
 
+## Plan 05-04 checkpoint investigation — 2026-10-09
+
+- The existing evidence does not provide an independently observed selected
+  attract/start state or a source-qualified guest-write predicate. The only
+  selected native result is `guest_instruction_budget_exhausted` after guest
+  execution; the current sanitized local report continues to classify the
+  frontend observation as `manual-only-unknown`. The observed device-state
+  counters in the prior bounded run are not a guest-write transition.
+- The required independent observation is unavailable in this checkout. The
+  earlier pinned RetroArch launch aborted before a frame in an unchanged app
+  launch context. Per the plan gate and project state, that app is not launched
+  again until a native checkpoint passes and the launch context materially
+  changes. No alternate direct observation of the selected configuration is
+  recorded. Without that observation, any candidate derived from private
+  program bytes would lack the required independent corroboration; no watched
+  address, value, sequence, or acceptance predicate was chosen.
+- `cmake --build --preset sdk-debug --target mvs_qualify mvs_test` — passed
+  (no rebuild required). `ctest --preset sdk-debug -R
+  '^(mvs_boot_checkpoint|mvs_synthetic_trace)$' --output-on-failure
+  --no-tests=error` — passed, 2/2. These existing synthetic tests do not
+  qualify the selected program.
+
+## Plan 05-04 bounded selected-run result — 2026-10-09
+
+- `cmake --preset sdk-debug && cmake --build --preset sdk-debug --target
+  mvs_qualify mvs_test && ctest --preset sdk-debug -R '^mvs_' --output-on-failure
+  --no-tests=error` — passed, 7/7.
+- `python3 tools/mvs/qualify_local_boot.py --input-root local/roms --report
+  local/qualification/phase05.json` — exited 1; generic status
+  `guest_instruction_budget_exhausted`, `guest_executed=true`, with no
+  checkpoint. Private input, addresses, hashes, traces, and profile details
+  remain ignored. No selected RetroArch app launch was attempted.
+- G-05-3 remains open. MEDIA-03, MEDIA-04, and GAME-02 remain Pending. No
+  independent predicate or behavior review was possible because no predicate
+  or behavior change was accepted. Phase 04 status and artifacts were not
+  changed.
+
 Phase 05 validation accumulates evidence across its execution plans. The results
 below do not change Phase 04's `gaps_found` verdict,
 HOST-02/frontend QUAL-03 unknown/manual-only status, or its seven open threat
