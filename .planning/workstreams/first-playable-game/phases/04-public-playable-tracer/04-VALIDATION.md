@@ -78,6 +78,8 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | 04-20 T1 | 04-20 | 18 | HOST-02, QUAL-03 | T-04-38, T-04-39, T-04-40 | Current WR-01/WR-02 provenance is specific; copied current-report mutations preserve frontend unknown and reject stale qualification denominator | evidence-map mutation and direct gate | `python3 tests/tools/test_check_phase04_validation_map.py -v`; `python3 tests/tools/check_phase04_validation_map.py` | Yes | pass, 15 mutation tests including stale 23/23 rejection; direct checker observes current 25-test qualification count; no app behavior inferred |
 | 04-20 T2 | 04-20 | 18 | HOST-02, QUAL-03 | T-04-11, T-04-15, T-04-18, T-04-20, T-04-34, T-04-38 | Independent review includes frontend sanitizer source and test at exact current revision; GUI-free evidence remains distinct from app behavior | frontend diagnostic and sanitizer counterexample review | `python3 tests/libretro/test_retroarch_smoke.py -v`; focused newline/quote/apostrophe/space/private-root suffix cases | Yes | 27/27 tests; five focused cases show no tested suffix leak; WR-01/T-04-34 and four high threats remain open; frontend unknown |
 | 04-20 T3 | 04-20 | 18 | HOST-02, QUAL-03 | T-04-34, T-04-38, T-04-39 | Reconcile current review finding states with evidence and exact crosswalk; retain four high/open threats and frontend Pending/unknown | mutation suite, direct checker, docs gate | `python3 tests/tools/test_check_phase04_validation_map.py -v`; `python3 tests/tools/check_phase04_validation_map.py`; `python3 tools/verify_playable.py --check-docs` | Yes | 15/15 mutation tests, direct checker and docs gate pass; WR-02 fixed by independent review; WR-01/T-04-34 remain open; no app claim |
+| Post-execution review | 04-20 | 18 | HOST-02, QUAL-03 | T-04-34 | Evidence-map uncertainty filter must reject affirmative output claims while actual frontend status is unknown | review mutation gap | `tests/tools/check_phase04_validation_map.py:214-220` counterexample in 04-REVIEW.md WR-08 | Yes | open: “a frame was rendered to the window” passes beside unknown status; no app observation is inferred |
+| Post-audit checker reconciliation | 04-20 | 18 | QUAL-03 | T-04-38 | Reconcile all audited medium/open threat rows without relaxing the security register | evidence-map regression | `python3 tests/tools/test_check_phase04_validation_map.py -v`; `python3 tests/tools/check_phase04_validation_map.py` | Yes | blocked: 5/15 mutation tests fail and direct checker rejects the additional T-04-38 medium/open row; retain finding for follow-up plan |
 
 ## Threat Coverage
 
@@ -91,7 +93,7 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | T-04-22 → T-04-17 | Plan 04-10 validates the pinned bundle identifier before quit commands; T-04-17 is closed by the current independent audit. |
 | T-04-23 → T-04-13 | Plan 04-11 derives archive rows from committed member bytes and rejects forged receipt rows; T-04-13 is closed by the current independent audit, while carried WR-03 remains open pending independent review. |
 | T-04-24 receipt numeric types | Plan 04-12 rejects booleans in bytes, entry_count, file_count and symlink_count before aggregate/archive comparison. Fresh repository-backed regressions pass; independent post-fix audit is still required. |
-| T-04-34 | Plan 04-18 constrains the current Pending/unknown status cell; Plan 04-19 adds regression-tested guide claim checks. The post-fix independent code review still reproduced alternate affirmative claim wording, so this medium threat remains open under WR-06. |
+| T-04-34 | Plan 04-18 constrains the current Pending/unknown status cell; Plan 04-19 adds regression-tested guide claim checks. WR-06 and post-execution WR-08 show unlisted affirmative wording remains possible, so this medium threat remains open. |
 | T-04-37 | Plan 04-19 records revision-scoped independent review, exact counterexamples, dispositions, commands, denominators, and limitations; unresolved WR-06 remains open. |
 
 ## Review Finding Crosswalk
@@ -103,6 +105,7 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | CR-03 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, newline-containing path disclosure | fixed |
 | WR-05 | warning | Review disposition and validation crosswalk consistency | fixed |
 | WR-01 | warning | `check_docs()` accepts the two affirmative frontend paraphrases reproduced at 2026-10-08T23:12:03Z; actual frontend remains unknown | open |
+| WR-08 | warning | Evidence-map uncertainty matcher accepts ordinary output success wording while frontend status remains unknown; review counterexample at `tests/tools/check_phase04_validation_map.py:214-220` | open |
 | CR-02 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, raw-literal-quote disclosure | fixed |
 | WR-04 | warning | Validation-map review grammar for informational findings | fixed |
 | CR-01 | critical | T-04-24, exact numeric receipt types | fixed |
@@ -116,6 +119,14 @@ The copied mutation baseline retains the actual current `04-VERIFICATION.md`, `0
 ### Plan 04-20 Task 2 Independent Review — 2026-10-08
 
 The independent reviewer inspected `tests/libretro/retroarch_smoke.py`, `tests/libretro/test_retroarch_smoke.py`, and both validation-map files at revision `870848e553aca6e43f6fec8ae0acefac87270f5b`. The frontend contract suite passed 27/27. Five focused sanitizer cases covered newline, escaped quote, apostrophe, spaces, and a temporary-root suffix crossing a newline; no tested suffix leaked through sanitized text or serialized diagnostics. The reviewer also confirmed the live qualification suite passed 25/25, the 15/15 mutation suite rejected stale 23/23, and the direct checker passed. WR-02 is fixed with this independent evidence. WR-01 and T-04-34 remain open, all four directed high/open threats remain, and HOST-02/frontend QUAL-03 remain Pending/unknown. No GUI was launched and no actual-app claim is made.
+
+### Post-Execution Code Review — 2026-10-08
+
+The standard-depth review of `tests/tools/check_phase04_validation_map.py` and its mutation tests found WR-08: `has_frontend_load_uncertainty()` can accept “a frame was rendered to the window” alongside an explicit unknown frontend status. Keep WR-08 open under T-04-34 pending a targeted mutation and gate correction. This review covers only the two listed files; the earlier Plan 04-20 sanitizer review remains recorded above and in `04-20-SUMMARY.md`. No actual frontend behavior was observed.
+
+### Post-Audit Security Reconciliation — 2026-10-08
+
+The fresh ASVS L1 audit added T-04-38 as a medium/open finding because the evidence-map checker does not enforce the sanitizer source path or reviewed revision. The current checker requires exactly T-04-34 as its medium/open set. With the truthful 59-row register, the mutation suite fails 5/15 and the direct checker exits at `required medium/open T-04-34 differs from the active security register`. No assertion or threat status was relaxed. This is a new bounded checker/security reconciliation gap; keep the four high blockers and both medium findings open for the next plan.
 
 ## Plan 04-19 Current-Revision Reconciliation — 2026-10-08
 
@@ -315,3 +326,19 @@ The whole-phase verifier regenerated the actual-app uncertainty with different c
 | Gaps found | 1 |
 | Resolved | 0 |
 | Escalated | 1 |
+
+## Validation Audit 2026-10-09
+
+| Metric | Count |
+|---|---|
+| Gaps found | 2 |
+| Resolved | 0 |
+| Escalated | 2 |
+
+## Validation Audit 2026-10-09
+
+| Metric | Count |
+|---|---|
+| Gaps found | 3 |
+| Resolved | 0 |
+| Escalated | 3 |

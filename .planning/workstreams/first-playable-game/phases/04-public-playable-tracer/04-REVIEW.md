@@ -27,7 +27,7 @@ Reviewed the phase evidence-map checker and its mutation tests. The checker can 
 
 ## Warnings
 
-### WR-01: Frontend output claim filter misses common success wording
+### WR-08: Frontend output claim filter misses common success wording
 
 **File:** `tests/tools/check_phase04_validation_map.py:214-220`
 **Issue:** The checker accepts an uncertainty statement if its text does not match a narrow list of success phrases. For example, `Actual pinned RetroArch load remains unknown; a frame was rendered to the window.` returns true from `has_frontend_load_uncertainty()` and false from `contains_frontend_success_claim()`. Similar claims such as “the screen was visible” and “video output is confirmed” pass too. A misleading verification edit can therefore preserve `? UNCERTAIN` and still assert successful frontend behavior without this gate rejecting it.
