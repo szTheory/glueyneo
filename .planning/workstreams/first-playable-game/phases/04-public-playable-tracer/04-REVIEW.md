@@ -1,7 +1,7 @@
 ---
 phase: 04-public-playable-tracer
-reviewed: 2026-10-09T01:00:23Z
-reviewed_revision: 48befe7a92d7c545e7c900c57e027b9e15952a7f
+reviewed: 2026-10-09T02:42:00Z
+reviewed_revision: 007f331b1507331382826e779218d39a5f31fab4
 depth: standard
 files_reviewed: 5
 files_reviewed_list:
@@ -12,34 +12,35 @@ files_reviewed_list:
   - tests/libretro/retroarch_smoke.py
 findings:
   critical: 0
-  warning: 1
+  warning: 0
   info: 0
-  total: 1
-status: issues_found
+  total: 0
+status: clean
 ---
 
 # Phase 04: Code Review Report
 
-**Reviewed:** 2026-10-09T01:00:23Z
-**Reviewed revision:** `48befe7a92d7c545e7c900c57e027b9e15952a7f`
+**Reviewed:** 2026-10-09T02:42:00Z
+**Reviewed revision:** `007f331b1507331382826e779218d39a5f31fab4`
 **Depth:** standard
 **Files reviewed:** 5
-**Status:** issues_found
+**Status:** clean
 
 ## Summary
 
-Reviewed the Plan 04-21 evidence-map checker, its mutation tests, the qualification runner, its tests, and the GUI-free RetroArch smoke harness. The final Plan 04-21 code revision is unchanged from the prior frozen review; focused tests and docs checks are recorded as passing, and no frontend behavior is inferred. One warning remains in the review-provenance gate: it accepts a report that claims review of paths outside the required scope.
+Reviewed exactly the five required paths at the frozen revision. The review-identity parser now requires exactly one revision field and validates its complete value as a lowercase 40- or 64-character commit ID. Tests reject duplicate keys with valid and malformed second values, as well as a malformed sole value. I inspected every negative mutation assertion in `test_check_phase04_validation_map.py`; each now checks the expected rejection message, with no generic `assertRaises(AssertionError)` remaining. The current Plan 04-22 denominators match the live suite counts. No source correctness, security, or quality findings remain in this scope.
 
-## Warnings
+## Validation performed
 
-### WR-09: Review provenance gate accepts unsupported extra file claims
+- `python3 tests/tools/test_check_phase04_validation_map.py -v` — **24/24 passed**.
+- `python3 tests/tools/test_verify_playable.py -v` — **27/27 passed**.
+- `python3 tests/libretro/test_retroarch_smoke.py -v` — **27/27 passed**; GUI-free contract tests only.
+- `python3 tools/verify_playable.py --check-docs` — passed.
+- `python3 tests/tools/check_phase04_validation_map.py` — first failed at source identity while this report named the prior revision; passed after this report recorded revision `007f331b1507331382826e779218d39a5f31fab4`, confirming the live denominators and preserving open threat and manual-only frontend gates.
 
-**File:** `tests/tools/check_phase04_validation_map.py:64`
-**Issue:** The gate checks only that the five required paths are a subset of `files_reviewed_list`. It therefore accepts any additional paths, including paths that do not exist or were never reviewed, while validating source identity only for the five required paths. A mutation adding `unreviewed/extra-source.c` to the current report still passes `require_reviewed_source_identity`. This contradicts the Plan 04-21 summary's exact five-path review contract and allows the checked report to overstate review coverage.
-**Fix:** Require the normalized set and count to match the required list exactly, for example `require(paths == list(REQUIRED_REVIEWED_PATHS), ...)` if order is contractual, or `require(len(paths) == len(REQUIRED_REVIEWED_PATHS) and set(paths) == set(REQUIRED_REVIEWED_PATHS), ...)` if only membership is contractual. Add a mutation test that appends an unsupported path and expects rejection.
+The four directed high/open and three medium/open threats remain open. HOST-02 and frontend QUAL-03 remain manual-only/Pending/unknown. No RetroArch app or GUI was launched, and this review does not establish actual frontend behavior.
 
 ---
 
-_Reviewed: 2026-10-09T01:00:23Z_
-_Reviewer: the agent (gsd-code-reviewer)_
+_Reviewer: gsd-code-reviewer_
 _Depth: standard_

@@ -100,6 +100,12 @@ revision during execution or verification. A green command is evidence only
 when its assertions directly cover the claim and its input, configuration,
 oracle, denominator and revision are recorded.
 
+When an acceptance check matches exact wording in a planning document, treat
+that wording as an interface. Before changing it, locate and reconcile every
+validator, regression test, README instruction and workflow route that consumes
+it. Run those affected checks against the changed document revision; a test
+that passed before a prose edit does not validate the new revision.
+
 Describe automated acceptance in plans before implementation and in SUMMARY
 `coverage` entries after execution. Keep coverage YAML in the installed
 classifier's supported form and run `gsd_run query uat.classify-coverage` before
@@ -138,6 +144,38 @@ flag.
 
 ## Phase-verification freshness and bounded gap closure
 
+### Phase closeout batch and default execution pace
+
+Treat a phase as one delivery unit. Dependency waves are scheduling details
+inside one `$gsd-execute-phase` run; do not invoke the executor once per wave
+unless the user requests a checkpoint. Before creating a gap plan, freeze the
+current revision and finish the applicable phase evidence batch: whole-phase
+verification, independent code review, security audit, validation/Nyquist
+coverage, and integration checks that the phase requires. Reconcile those
+outputs into one gap ledger before planning. An audit already required by the
+phase must not be deferred until after its repair plan, where it can create a
+serial chain of newly discovered gaps.
+
+Create one bounded gap plan containing every actionable repository finding in
+that ledger, with the implementation, regression, evidence-map, documentation,
+and review work that can be completed together. Run preflight commands before
+planning so stale fixtures, test wrappers, command paths, and denominators are
+known inputs rather than surprises during closeout. Reserve a task in the same
+plan for reviewing the changed code and rerunning only checks affected by that
+review. Execute all planned waves in one `$gsd-execute-phase --gaps-only` run.
+Do not split one source-of-truth reconciliation across successive plans or
+rerun planning against an unchanged report.
+
+After execution, run one current-revision closeout batch and compare it with
+the frozen gap ledger. If a new in-scope defect was introduced by the repair,
+fix it within the active plan/run when feasible and rerun the affected checks.
+If a fresh audit instead leaves only external, physical, or user-directed
+blockers, keep them open, keep the phase blocked, and stop gap planning; do not
+manufacture another plan to restate the same blocker. Continue unrelated work
+only when the roadmap and verified technical dependencies allow it. This
+changes execution pacing, not evidence thresholds, risk disposition, or phase
+acceptance.
+
 `$gsd-verify-work` closes UAT; it does not perform the whole-phase goal
 verification. A `gaps_found` phase report is a verdict about the inputs it
 covered, not a standing instruction to create another `--gaps` plan. After a
@@ -169,6 +207,20 @@ automation moving, and hand off only that irreducible item. Recheck this
 workaround after a GSD runtime upgrade and remove it only when the installed
 router demonstrably refreshes stale `gaps_found` reports and never skips a
 required verifier pass.
+
+After a bounded repair, compare the new verifier report with the old one and
+close only findings supported by changed current evidence. Audit exact-text
+consumers when canonical docs change: update the affected validator contract,
+its regression test, and user-facing command route together, then rerun only
+those affected checks. Keep administrative state and handoff notes aligned with
+the verifier's actual next action so a context reset cannot replay a completed
+step.
+
+If aligning STATE or a handoff changes its verifier-time fingerprint after the
+report is written, retain the report as the point-in-time verdict and proceed
+to its bounded finding. Do not repeat the whole-phase verifier just to hash
+administrative continuity edits; rerun it after the planned repair changes
+acceptance-relevant evidence.
 
 ## Decision namespaces
 

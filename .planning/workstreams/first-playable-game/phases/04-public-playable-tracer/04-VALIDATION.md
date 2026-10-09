@@ -116,6 +116,8 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | WR-03 | warning | T-04-13 / T-04-23, repository receipt validation rejects forged file-content hashes | fixed |
 | WR-02 | warning | Independent review `870848e553aca6e43f6fec8ae0acefac87270f5b` confirms live 25/25 comparison and stale 23/23 mutation rejection | fixed |
 | WR-09 | warning | T-04-43: the review provenance gate accepts a nonexistent extra path in the claimed scope; reproduced by the current standard-depth review at revision `48befe7a92d7c545e7c900c57e027b9e15952a7f` | open |
+| WR-10 | warning | T-04-SC: evidence-map mutation tests now reach and assert their intended checks on the current report baseline | fixed |
+| WR-11 | warning | T-04-43: duplicate reviewed_revision keys now fail closed, including malformed duplicate values | fixed |
 
 ### Plan 04-20 Task 1 Current Evidence — 2026-10-08
 
@@ -377,3 +379,11 @@ The configured standard-depth review of revision `48befe7a92d7c545e7c900c57e027b
 | Gaps found | 3 |
 | Resolved | 3 |
 | Escalated | 0 |
+
+## Plan 04-22 Current Suite Denominators — 2026-10-09
+
+The independent standard-depth review at `04-REVIEW.md` inspected exact source revision `007f331b1507331382826e779218d39a5f31fab4` and found no remaining issues in the reviewed five-file scope. The evidence-map mutation suite passed 24/24, qualification/privacy passed 27/27, GUI-free frontend contracts passed 27/27, the consumer docs gate passed, and the direct evidence-map gate passed after the review receipt named that revision. The direct gate confirmed the live denominators and preserved the four directed high/open and three medium/open threats. WR-10 and WR-11 are fixed on this evidence; WR-09/T-04-43 stays open.
+
+Plan 04-22 current suite denominators: qualification 27/27; frontend 27/27.
+
+HOST-02 remains Pending/unknown and frontend QUAL-03 remains partial/needs-human with actual frontend load unobserved. No RetroArch GUI was launched; callback, smoke-contract, docs, and review checks do not establish actual frontend behavior. Phase 04 remains blocked and `nyquist_compliant` remains false.

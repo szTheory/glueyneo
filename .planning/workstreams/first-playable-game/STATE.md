@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
-current_plan: 21
-status: executing
-stopped_at: "Phase 04 verification completed with gaps; next: $gsd-plan-phase 04 --gaps --ws first-playable-game"
-last_updated: "2026-10-09T01:07:43.321Z"
+current_plan: 22
+status: verifying
+stopped_at: Completed Plan 04-22; Phase 04 remains blocked after gaps_found verification
+last_updated: "2026-10-09T01:48:59.724Z"
 last_activity: 2026-10-09
-last_activity_desc: Plan 04-21 completed; verification found gaps. Phase 04 remains blocked with open threats and manual-only frontend evidence.
-state_head: 1422a9730a4c28966aedf7c623ff9e5d23774e12
+last_activity_desc: Plan 04-22 completed; whole-phase verification still reports gaps. Phase 04 remains blocked by four directed high/open and three medium/open threats plus manual-only pinned RetroArch evidence.
+state_head: efd32a91f4433a93c84dc0e34e4dee3d8aabcdc4
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 21
-  completed_plans: 21
+  total_plans: 22
+  completed_plans: 22
   percent: 0
 ---
 
@@ -31,22 +31,22 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 ## Current Position
 
 Phase: 04 (Public Playable Tracer) — EXECUTING
-Current Plan: 19 (completed; awaiting fresh post-execution audits and verification)
-Total Plans in Phase: 21
-Status: Executing Phase 04
-Last activity: 2026-10-09
-Last Activity Description: Plan 04-21 completed; verification found gaps. Phase 04 remains blocked with open threats and manual-only frontend evidence.
+Current Plan: 22
+Total Plans in Phase: 22
+Status: verifying
+Last activity: 2026-10-08
+Last Activity Description: Plan 04-22 completed; whole-phase verification still reports gaps. Phase 04 remains blocked by four directed high/open and three medium/open threats plus manual-only pinned RetroArch evidence.
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 21
+**Current Plan:** 22
 
 ## Performance Metrics
 
-**Plans completed:** 21 of 21; Phase 04 acceptance remains incomplete
+**Plans completed:** 22 of 22; Phase 04 acceptance remains incomplete
 **Per-Plan Metrics:**
 
 | Plan | Duration | Tasks | Files |
@@ -71,12 +71,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P18 | 5 min | 3 tasks | 4 files |
 | Phase 04 P19 | 15 min | 3 tasks | 8 files |
 | Phase 04 P20 | 11min | 3 tasks | 5 files |
+| Phase 04 P22 | not recorded | 3 tasks | 10 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-08T23:50:16.546Z
+**Last session:** 2026-10-09T01:48:59.701Z
 
-**Stopped At:** Phase 04 verification completed with gaps; next: $gsd-plan-phase 04 --gaps --ws first-playable-game
+**Stopped At:** Completed Plan 04-22; Phase 04 remains blocked after gaps_found verification
 **Resume File:** None
 
 ## Scope Notes
@@ -131,6 +132,7 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 04]: WR-02 is fixed after independent current-revision review confirms the live qualification denominator and rejects stale 23/23.
 - [Phase 04]: WR-01 and WR-06/T-04-34 remain open; the four directed high-severity threats and actual pinned frontend unknown remain unresolved.
 - [Phase 04]: Current-source mutation fixtures preserve the actual report baseline and compare qualification counts with a live suite run.
+- [Phase 04]: Phase closeout is batched: one pre-plan evidence audit, one consolidated repository-gap plan, and one execute invocation for all waves. — This avoids serial wave-by-wave work and repeated planning while keeping external evidence and user-directed threat blockers open.
 
 ### Blockers
 
@@ -138,3 +140,4 @@ Progress: [░░░░░░░░░░] 0%
 - HOST-02 remains unknown: pinned RetroArch 1.22.2 aborts before the first screenshot in fresh no-content and core/content launches (EXC_CRASH SIGABRT, return -6). LaunchServices reported kLSNoExecutableErr despite bundle/executable/signature checks; unified-log inspection was sandbox-blocked. A functioning interactive macOS app launch context is still required; cause is not established. Preserve the screenshot, stable no-input frames, RIGHT/LEFT controls, unload and normal-exit observation; do not repeat the launch while its environment is unchanged.
 - WR-06 remains open after independent review because affirmative paraphrases still pass the bounded docs gate; fresh post-execution audits must confirm current dispositions.
 - T-04-11, T-04-15, T-04-18, and T-04-20 remain high/open by user direction; Plan 04-16 sanitizer tests pass, but no threat closure was granted.
+- Current Plan 04-22 evidence: seven security findings remain open (four high, three medium), with no accepted risks; actual pinned RetroArch load, presentation, input, unload and exit remain unobserved/manual-only (HOST-02 Pending/unknown; frontend QUAL-03 partial/needs-human). Phase 04 remains In Progress, and no further repository gap plan is warranted unless evidence or scope changes.

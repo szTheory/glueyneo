@@ -7,6 +7,14 @@ findings:
     severity: warning
     disposition: open
     title: "Review provenance gate accepts unsupported extra file claims"
+  - id: WR-10
+    severity: warning
+    disposition: fixed
+    title: "Evidence-map mutation tests fail before exercising their target"
+  - id: WR-11
+    severity: warning
+    disposition: fixed
+    title: "Review identity parser accepts duplicate revision keys"
   - id: WR-08
     severity: warning
     disposition: open
@@ -52,7 +60,7 @@ findings:
     disposition: fixed
     title: "Repository-backed receipt validation accepts forged file-content hashes"
 open: 4
-total: 12
+total: 14
 recorded: 2026-10-09T01:01:14.211Z
 ---
 
@@ -72,6 +80,8 @@ recorded: 2026-10-09T01:01:14.211Z
 | WR-04 | warning | fixed | Plan 04-14 adds Info/IN parsing and severity reconciliation; fresh review confirms this finding is addressed. (not in the current review) |
 | CR-01 | critical | fixed | Plan 04-12 exact-integer receipt validation; absent from the fresh current review. (not in the current review) |
 | WR-03 | warning | fixed | Repository receipt validates committed archive rows and rejects forged file rows after aggregate recomputation; current qualification regression passes. (not in the current review) |
+| WR-10 | warning | fixed | Independent clean review at `04-REVIEW.md`, revision `007f331b1507331382826e779218d39a5f31fab4`, confirms the current validation row, 24/24 source-derived mutation suite, and target-specific rejection assertions; the original frozen finding at `1781f47c1331b4d5acb7ea52873c3e4125fbca96` is resolved. |
+| WR-11 | warning | fixed | Independent clean review at `04-REVIEW.md`, revision `007f331b1507331382826e779218d39a5f31fab4`, confirms exact-one-key parsing and regressions for valid/malformed duplicates and malformed sole values; the original frozen finding at `1781f47c1331b4d5acb7ea52873c3e4125fbca96` is resolved. The separate WR-09/T-04-43 scope threat remains open. |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
