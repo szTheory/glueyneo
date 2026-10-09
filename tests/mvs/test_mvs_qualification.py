@@ -7,6 +7,7 @@ import io
 import os
 import struct
 import subprocess
+from pathlib import Path
 import tempfile
 import unittest
 import warnings
@@ -34,20 +35,71 @@ BIOS_MEMBER = "sp-s2.sp1"
 
 
 def make_split_archives(*, replace_program: bool = False,
-                        duplicate_program: bool = False) -> tuple[bytes, bytes]:
+                        duplicate_program: bool = False,
+                        wrong_bios_member: bool = False) -> tuple[bytes, bytes]:
     game, bios = io.BytesIO(), io.BytesIO()
     with zipfile.ZipFile(game, "w", compression=zipfile.ZIP_STORED,
                          allowZip64=False) as archive:
-        for name, size in GAME_MEMBERS.items():
+        for index, (name, size) in enumerate(GAME_MEMBERS.items()):
             if replace_program and name == "250-p1.p1":
                 name = "250-p1-wrong.p1"
-            archive.writestr(name, bytes(size))
+            payload = bytearray([0x11 + index]) * size
+            if name == "250-p1.p1":
+                payload[:12] = bytes.fromhex("5a72c13310000000724e0027")
+            archive.writestr(name, payload)
         if duplicate_program:
             archive.writestr("250-p1.p1", bytes(GAME_MEMBERS["250-p1.p1"]))
     with zipfile.ZipFile(bios, "w", compression=zipfile.ZIP_STORED,
                          allowZip64=False) as archive:
-        archive.writestr(BIOS_MEMBER, bytes(0x20000))
+        data = bytearray(0x20000)
+        if not wrong_bios_member:
+            # Reset vectors and a tiny guest that writes the sentinel and stops.
+            data[0:8] = bytes.fromhex("1000feff00000001")
+            data[0x100:0x10C] = bytes.fromhex("5a72c13310000000724e0027")
+        archive.writestr(BIOS_MEMBER, data)
     return game.getvalue(), bios.getvalue()
+
+
+def mutate_zip_record(source: bytes, *, flags: int | None = None,
+                      corrupt_crc: bool = False) -> bytes:
+    archive = bytearray(source)
+    central = archive.find(b"PK\x01\x02")
+    local = struct.unpack_from("<I", archive, central + 42)[0]
+    if flags is not None:
+        struct.pack_into("<H", archive, central + 8, flags)
+        struct.pack_into("<H", archive, local + 6, flags)
+    if corrupt_crc:
+        crc = struct.unpack_from("<I", archive, central + 16)[0] ^ 1
+        struct.pack_into("<I", archive, central + 16, crc)
+        struct.pack_into("<I", archive, local + 14, crc)
+    return bytes(archive)
+
+
+def test_identity_importer(importer: str) -> tuple[str, tempfile.TemporaryDirectory[str]]:
+    build_dir = Path(importer).resolve().parent
+    root = Path(__file__).resolve().parents[2]
+    cache = build_dir / "CMakeCache.txt"
+    compiler = None
+    for line in cache.read_text(encoding="utf-8").splitlines():
+        if line.startswith("CMAKE_C_COMPILER:FILEPATH="):
+            compiler = line.split("=", 1)[1]
+            break
+    if not compiler:
+        raise RuntimeError("configured C compiler is missing from CMakeCache")
+    temporary = tempfile.TemporaryDirectory(prefix="mvs-test-importer-")
+    binary = Path(temporary.name) / ("mvs_importer_test.exe" if os.name == "nt" else "mvs_importer_test")
+    if os.name == "nt":
+        library = next(build_dir.rglob("glueyneo_mvs_zlib.lib"))
+        command = [compiler, "/nologo", "/std:c17", "/DMVS_IMPORT_TEST_IDENTITIES",
+                   f"/I{root / 'third_party/zlib'}", str(root / "tools/mvs/mvs_import.c"), str(library),
+                   f"/Fe:{binary}"]
+    else:
+        library = build_dir / "libglueyneo_mvs_zlib.a"
+        command = [compiler, "-std=c17", "-DMVS_IMPORT_TEST_IDENTITIES",
+                   "-I", str(root / "third_party/zlib"), str(root / "tools/mvs/mvs_import.c"), str(library),
+                   "-o", str(binary)]
+    subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return str(binary), temporary
 
 
 def make_archive(*, method: int = zipfile.ZIP_DEFLATED,
@@ -73,6 +125,7 @@ def make_archive(*, method: int = zipfile.ZIP_DEFLATED,
 
 class ImporterTests(unittest.TestCase):
     importer = os.environ.get("MVS_IMPORTER", "build/sdk-debug/mvs_importer")
+    production_importer = importer
 
     def run_import(self, source: bytes) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory(prefix="mvs-test-") as directory:
@@ -124,6 +177,12 @@ class ImporterTests(unittest.TestCase):
             self.assertEqual(checked.returncode, 0, checked.stderr)
             with open(output_path, "rb") as handle:
                 bundle = handle.read()
+            runner = str(Path(self.production_importer).resolve().parent / "mvs_qualify")
+            execution = subprocess.run([runner, output_path], capture_output=True,
+                                       text=True, check=False)
+            self.assertEqual(execution.returncode, 0, execution.stdout)
+            self.assertIn('"guest_executed":true', execution.stdout)
+            self.assertIn('"status":"guest_stopped"', execution.stdout)
         self.assertEqual(bundle[:4], b"GNMV")
         self.assertEqual(struct.unpack_from(">III", bundle, 4),
                          (1, 0x4D53584D, 6))
@@ -133,9 +192,29 @@ class ImporterTests(unittest.TestCase):
             self.assertEqual((actual_role, actual_size), (role, expected_size))
             cursor += 12 + actual_size
         self.assertEqual(cursor, len(bundle))
+        regions: dict[int, bytes] = {}
+        cursor = 16
+        for role in range(1, 7):
+            _, length = struct.unpack_from(">IQ", bundle, cursor)
+            cursor += 12
+            regions[role] = bundle[cursor:cursor + length]
+            cursor += length
+        self.assertEqual(regions[1][:8], bytes.fromhex("0010fffe00000100"))
+        self.assertEqual(regions[1][0x100:0x10C], bytes.fromhex("725a33c1001000004e722700"))
+        self.assertEqual(regions[2][0x100000:0x100004], bytes.fromhex("12121212"))
+        self.assertEqual(regions[3][:4], bytes.fromhex("13131313"))
+        self.assertEqual(regions[4][:4], bytes.fromhex("14141414"))
+        self.assertEqual(regions[5][:4], bytes.fromhex("15151515"))
+        self.assertEqual(regions[5][0x400000:0x400004], bytes.fromhex("16161616"))
+        self.assertEqual(regions[5][0x800000:0x800004], bytes.fromhex("17171717"))
+        self.assertEqual(regions[6][:4], bytes.fromhex("18191819"))
+        self.assertEqual(regions[6][1:5], bytes.fromhex("19181918"))
 
     def test_selected_wrong_member_and_duplicate_are_rejected_without_output(self) -> None:
-        for options in ({"replace_program": True}, {"duplicate_program": True}):
+        cases = (({"replace_program": True}, self.importer),
+                 ({"duplicate_program": True}, self.importer),
+                 ({"wrong_bios_member": True}, self.production_importer))
+        for options, selected_importer in cases:
             game, bios = make_split_archives(**options)
             with tempfile.TemporaryDirectory(prefix="mvs-split-test-") as directory:
                 game_path, bios_path = (os.path.join(directory, name)
@@ -145,12 +224,48 @@ class ImporterTests(unittest.TestCase):
                     with open(path, "wb") as handle:
                         handle.write(payload)
                 checked = subprocess.run(
-                    [self.importer, "--selected", game_path, bios_path, output_path],
+                    [selected_importer, "--selected", game_path, bios_path, output_path],
                     capture_output=True, text=True, check=False,
                 )
                 self.assertNotEqual(checked.returncode, 0)
                 self.assertFalse(os.path.exists(output_path))
                 self.assertNotIn("250-", checked.stderr)
+
+    def test_selected_crc_unsupported_zip_and_output_failures_are_atomic(self) -> None:
+        game, bios = make_split_archives()
+        invalid_archives = (
+            (mutate_zip_record(game, corrupt_crc=True), bios),
+            (mutate_zip_record(game, flags=0x0008), bios),
+        )
+        for invalid_game, selected_bios in invalid_archives:
+            with tempfile.TemporaryDirectory(prefix="mvs-split-test-") as directory:
+                game_path, bios_path = (os.path.join(directory, name)
+                                        for name in ("game.zip", "bios.zip"))
+                output_path = os.path.join(directory, "selected.gnmv")
+                for path, payload in ((game_path, invalid_game), (bios_path, selected_bios)):
+                    with open(path, "wb") as handle:
+                        handle.write(payload)
+                result = subprocess.run(
+                    [self.importer, "--selected", game_path, bios_path, output_path],
+                    capture_output=True, text=True, check=False,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(os.path.exists(output_path))
+                self.assertEqual(list(Path(directory).glob("selected.gnmv.tmp-*")), [])
+
+        with tempfile.TemporaryDirectory(prefix="mvs-split-test-") as directory:
+            game_path, bios_path = (os.path.join(directory, name)
+                                    for name in ("game.zip", "bios.zip"))
+            for path, payload in ((game_path, game), (bios_path, bios)):
+                with open(path, "wb") as handle:
+                    handle.write(payload)
+            output_path = os.path.join(directory, "missing-parent", "selected.gnmv")
+            result = subprocess.run(
+                [self.importer, "--selected", game_path, bios_path, output_path],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertFalse(os.path.exists(output_path))
 
     def test_eocd_signature_inside_comment_does_not_hide_directory(self) -> None:
         archive = bytearray(make_archive(method=zipfile.ZIP_STORED))
@@ -242,6 +357,11 @@ def main() -> int:
         return 0
     if args.importer:
         ImporterTests.importer = args.importer
+    test_importer_dir = None
+    if args.mode in ("positive", "mutation") and args.importer:
+        ImporterTests.production_importer = args.importer
+        test_importer, test_importer_dir = test_identity_importer(args.importer)
+        ImporterTests.importer = test_importer
     if args.mode == "positive":
         suite = unittest.TestSuite([
             ImporterTests("test_deflated_archive_normalizes_selected_profile"),
@@ -252,10 +372,14 @@ def main() -> int:
         suite = unittest.TestSuite([
             ImporterTests("test_malformed_and_unsupported_archives_have_stable_statuses"),
             ImporterTests("test_selected_wrong_member_and_duplicate_are_rejected_without_output"),
+            ImporterTests("test_selected_crc_unsupported_zip_and_output_failures_are_atomic"),
         ])
     else:
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(ImporterTests)
-    return 0 if unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful() else 1
+    succeeded = unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful()
+    if test_importer_dir is not None:
+        test_importer_dir.cleanup()
+    return 0 if succeeded else 1
 
 
 if __name__ == "__main__":
