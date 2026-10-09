@@ -79,11 +79,12 @@ def test_identity_importer(importer: str) -> tuple[str, tempfile.TemporaryDirect
     build_dir = Path(importer).resolve().parent
     root = Path(__file__).resolve().parents[2]
     cache = build_dir / "CMakeCache.txt"
-    compiler = None
+    cache_values: dict[str, str] = {}
     for line in cache.read_text(encoding="utf-8").splitlines():
-        if line.startswith("CMAKE_C_COMPILER:FILEPATH="):
-            compiler = line.split("=", 1)[1]
-            break
+        if "=" in line and not line.startswith("//"):
+            key, value = line.split("=", 1)
+            cache_values[key.split(":", 1)[0]] = value
+    compiler = cache_values.get("CMAKE_C_COMPILER")
     if not compiler:
         raise RuntimeError("configured C compiler is missing from CMakeCache")
     temporary = tempfile.TemporaryDirectory(prefix="mvs-test-importer-")
@@ -95,9 +96,13 @@ def test_identity_importer(importer: str) -> tuple[str, tempfile.TemporaryDirect
                    f"/Fe:{binary}"]
     else:
         library = build_dir / "libglueyneo_mvs_zlib.a"
-        command = [compiler, "-std=c17", "-DMVS_IMPORT_TEST_IDENTITIES",
+        sanitizer_flags = (["-fsanitize=address,undefined", "-fno-omit-frame-pointer"]
+                           if cache_values.get("GLUEYNEO_SDK_SANITIZER") == "ADDRESS_UNDEFINED"
+                           else [])
+        command = [compiler, "-std=c17", *sanitizer_flags,
+                   "-DMVS_IMPORT_TEST_IDENTITIES",
                    "-I", str(root / "third_party/zlib"), str(root / "tools/mvs/mvs_import.c"), str(library),
-                   "-o", str(binary)]
+                   *sanitizer_flags, "-o", str(binary)]
     subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return str(binary), temporary
 
