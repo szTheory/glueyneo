@@ -1,5 +1,5 @@
 ---
-status: partial
+status: diagnosed
 phase: 05-selected-mvs-boot
 source: [05-01-SUMMARY.md]
 started: 2026-10-09T11:41:00Z
@@ -70,17 +70,33 @@ blocked: 1
   reason: "Automated local qualification returned no_supported_role_bundle_archive at archive_to_region_mapping; no selected guest ran."
   severity: major
   test: 3
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "The local qualification wrapper passes each ZIP separately to an importer that accepts only one archive with six already-normalized canonical region members; it cannot combine the selected game's source ZIP and separate BIOS ZIP into GNMV."
+  artifacts:
+    - path: tools/mvs/qualify_local_boot.py
+      issue: "Each ZIP is independently sent to the canonical-bundle importer; source archives are not mapped or combined."
+    - path: tools/mvs/mvs_import.c
+      issue: "Importer accepts canonical region member names and sizes, not the selected profile's source member/transform map across split archives."
+    - path: docs/mvs-media.md
+      issue: "Documents that unmodified game and separate BIOS archives are not yet directly supported."
+  missing:
+    - "A bounded selected-profile mapper for the supported game and BIOS source archives, with source identity checks and documented region transforms."
+    - "Public synthetic split-archive integration and wrong-member/identity controls; keep real private archive data and derived identity local."
+  debug_session: .planning/debug/phase05-selected-media-mapping.md
 - gap_id: G-05-5
   truth: "The existing pull-request/main CI evidence matrix runs the public MVS regression suite with a positive named-test denominator."
   status: failed
   reason: "The shared verify_sdk CI evidence inventory does not select CTest tests under the mvs label."
   severity: major
   test: 5
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Phase 05 CTests are labeled mvs, but the current-SHA CI matrix collector has no mvs label/case inventory or collection step; the evidence source-digest inventory also omits MVS source paths."
+  artifacts:
+    - path: tools/verify_sdk.py
+      issue: "The matrix CTest lane and required receipt inventory enumerate SDK labels only."
+    - path: tools/sdk_evidence.py
+      issue: "Relevant-source identity excludes the MVS importer, API and adapter code."
+    - path: CMakeLists.txt
+      issue: "Seven mvs-labeled tests exist but are not selected by the evidence collector."
+  missing:
+    - "An MVS lane in the existing matrix with exact named tests, a positive denominator, and current-revision receipt evidence."
+    - "Relevant-source identity coverage for MVS code and regression tests that reject missing or stale lane evidence."
+  debug_session: .planning/debug/phase05-mvs-ci-evidence.md
