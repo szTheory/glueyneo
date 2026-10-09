@@ -204,7 +204,7 @@ def main() -> int:
             temporary_report.unlink(missing_ok=True)
         print("local qualification report could not be written")
         return 1
-    return 0
+    return 0 if result.get("status") == "attract_start" and result.get("guest_executed") is True else 1
 
 
 if __name__ == "__main__":
