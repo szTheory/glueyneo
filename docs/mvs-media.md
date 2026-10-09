@@ -104,6 +104,13 @@ They do not establish real RetroArch content selection or title boot.
 | Actual pinned RetroArch GUI behavior | Direct app observation | Manual-only/unknown; callback tests do not close it |
 | Physical MVS/AES behavior | Hardware observation | Not established |
 
+The 2026-10-08 local qualification run found no archive matching the importer’s
+canonical six-region bundle contract. It stopped at `archive_to_region_mapping`
+before native media load or guest execution. The next technical dependency is
+to map the supported game and BIOS archives to the normalized MVS region
+contract. The generic ignored report records no private identity. This is not a
+title boot attempt and does not close MEDIA-03 or GAME-02.
+
 The local qualification command must keep inputs under ignored `local/roms/`,
 write only ignored `local/qualification/phase05.json`, and emit only bounded
 generic statuses plus the first unsupported guest event. Never put private

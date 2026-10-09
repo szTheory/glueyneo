@@ -30,7 +30,7 @@ Here, `v1` means this workstream's scoped deliverable, not a software release ve
 
 ### Private Game and BIOS Loading
 
-- [ ] **MEDIA-02**: A C integrator can supply normalized immutable cartridge and BIOS regions for one documented MVS configuration under explicit media lifetimes, region layout, byte order, and resource limits.
+- [x] **MEDIA-02**: A C integrator can supply normalized immutable cartridge and BIOS regions for one documented MVS configuration under explicit media lifetimes, region layout, byte order, and resource limits.
 - [ ] **MEDIA-03**: A user can load the selected local game and BIOS archives through one documented, tested RetroArch/import path, with archive/file handling outside the native core and without modifying the original archives. Required ZIP handling uses bounded parsing and an established decompressor.
 - [ ] **MEDIA-04**: A user receives distinct, actionable errors for missing or incompatible BIOS/media, unsupported sets, malformed archives, and exceeded limits; after a rejected load, the consumer can load valid media or destroy the instance safely.
 
@@ -111,7 +111,7 @@ Plan 04-15 reconfirmed HOST-02 and frontend QUAL-03 as Pending from separate obs
 | HOST-02 | Phase 4 | Pending |
 | API-05 | Phase 4 | Complete |
 | API-06 | Phase 7 | Pending |
-| MEDIA-02 | Phase 5 | Pending |
+| MEDIA-02 | Phase 5 | Complete |
 | MEDIA-03 | Phase 5 | Pending |
 | MEDIA-04 | Phase 5 | Pending |
 | GAME-02 | Phase 5 | Pending |

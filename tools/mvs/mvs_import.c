@@ -90,31 +90,9 @@ static int extra_fields_valid(const uint8_t *extra, size_t length) {
     return IMPORT_OK;
 }
 
-static int parse_zip(const uint8_t *zip, size_t size, zip_entry entries[6],
-                     size_t *entry_count) {
-    if (zip == NULL) return IMPORT_MALFORMED;
-    if (size > ZIP_INPUT_MAX) return IMPORT_LIMIT;
-    if (size < 22u) return IMPORT_MALFORMED;
-    size_t eocd = SIZE_MAX;
-    const size_t lower = size > 65557u ? size - 65557u : 0u;
-    for (size_t pos = size - 22u;; --pos) {
-        if (get32(zip + pos) == UINT32_C(0x06054b50)) {
-            const uint16_t candidate_comment = get16(zip + pos + 20u);
-            const uint16_t entries_on_disk = get16(zip + pos + 8u);
-            const uint16_t entries_total = get16(zip + pos + 10u);
-            const uint32_t directory_size = get32(zip + pos + 12u);
-            const uint32_t directory_offset = get32(zip + pos + 16u);
-            if (pos + 22u + candidate_comment == size &&
-                get16(zip + pos + 4u) == 0u && get16(zip + pos + 6u) == 0u &&
-                entries_on_disk == entries_total && entries_total == ZIP_ENTRIES_MAX &&
-                directory_offset <= pos && directory_size == pos - directory_offset) {
-                eocd = pos;
-                break;
-            }
-        }
-        if (pos == lower) break;
-    }
-    if (eocd == SIZE_MAX || !span(size, (uint32_t)eocd, 22u)) return IMPORT_MALFORMED;
+static int parse_candidate(const uint8_t *zip, size_t size, size_t eocd,
+                           zip_entry entries[6], size_t *entry_count) {
+    if (!span(size, (uint32_t)eocd, 22u)) return IMPORT_MALFORMED;
     const uint8_t *end = zip + eocd;
     const uint16_t comment = get16(end + 20u);
     if ((size_t)eocd + 22u + comment != size) return IMPORT_MALFORMED;
@@ -202,6 +180,36 @@ static int parse_zip(const uint8_t *zip, size_t size, zip_entry entries[6],
     }
     *entry_count = count;
     return IMPORT_OK;
+}
+
+static int parse_zip(const uint8_t *zip, size_t size, zip_entry entries[6],
+                     size_t *entry_count) {
+    if (zip == NULL) return IMPORT_MALFORMED;
+    if (size > ZIP_INPUT_MAX) return IMPORT_LIMIT;
+    if (size < 22u) return IMPORT_MALFORMED;
+    const size_t lower = size > 65557u ? size - 65557u : 0u;
+    size_t valid_candidates = 0u;
+    int last_status = IMPORT_MALFORMED;
+    zip_entry candidate_entries[ZIP_ENTRIES_MAX];
+    size_t candidate_count = 0u;
+    for (size_t pos = size - 22u;; --pos) {
+        if (get32(zip + pos) == UINT32_C(0x06054b50) &&
+            (size_t)pos + 22u + get16(zip + pos + 20u) == size) {
+            last_status = parse_candidate(zip, size, pos, candidate_entries,
+                                          &candidate_count);
+            if (last_status == IMPORT_OK) {
+                ++valid_candidates;
+                if (valid_candidates == 1u) {
+                    memcpy(entries, candidate_entries,
+                           candidate_count * sizeof(entries[0]));
+                    *entry_count = candidate_count;
+                }
+            }
+        }
+        if (pos == lower) break;
+    }
+    if (valid_candidates > 1u) return IMPORT_AMBIGUOUS;
+    return valid_candidates == 1u ? IMPORT_OK : last_status;
 }
 
 int mvs_import_memory(const uint8_t *zip, size_t zip_size,

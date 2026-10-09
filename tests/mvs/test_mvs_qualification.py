@@ -79,7 +79,10 @@ class ImporterTests(unittest.TestCase):
     def test_eocd_signature_inside_comment_does_not_hide_directory(self) -> None:
         archive = bytearray(make_archive(method=zipfile.ZIP_STORED))
         eocd = archive.rfind(b"PK\x05\x06")
-        comment = b"PK\x05\x06" + bytes(26)
+        comment = bytearray(b"PK\x05\x06" + bytes(18))
+        struct.pack_into("<H", comment, 8, 6)
+        struct.pack_into("<H", comment, 10, 6)
+        struct.pack_into("<I", comment, 16, len(archive))
         struct.pack_into("<H", archive, eocd + 20, len(comment))
         archive.extend(comment)
         with tempfile.TemporaryDirectory(prefix="mvs-test-") as directory:
@@ -94,6 +97,11 @@ class ImporterTests(unittest.TestCase):
     def test_malformed_and_unsupported_archives_have_stable_statuses(self) -> None:
         valid = make_archive(method=zipfile.ZIP_STORED)
         cases: list[tuple[str, bytes, int]] = [("truncated", valid[:-8], 1)]
+
+        local_extra_oob = bytearray(valid)
+        local = local_extra_oob.find(b"PK\x03\x04")
+        struct.pack_into("<H", local_extra_oob, local + 28, 0xFFFF)
+        cases.append(("local_extra_oob", bytes(local_extra_oob), 1))
 
         encrypted = bytearray(valid)
         local = encrypted.find(b"PK\x03\x04")

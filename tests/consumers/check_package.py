@@ -200,8 +200,10 @@ def inspect_exports(
 EXPECTED_SHARED_EXPORTS = {
     "gn_create",
     "gn_load",
+    "gn_load_mvs",
     "gn_reset",
     "gn_run",
+    "gn_run_mvs",
     "gn_observe",
     "gn_advance_frame",
     "gn_unload",
@@ -802,7 +804,7 @@ def stage_documentation_project(destination: Path) -> None:
         shutil.copy2(ROOT / file, destination / file)
     for directory in (
         "cmake", "include", "src", "experiments/owned_cpu",
-        "third_party/libretro",
+        "third_party/libretro", "third_party/zlib",
     ):
         shutil.copytree(ROOT / directory, destination / directory)
     for relative in (
