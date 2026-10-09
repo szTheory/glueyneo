@@ -1,14 +1,14 @@
 ---
-status: diagnosed
+status: partial
 phase: 05-selected-mvs-boot
 source: [05-01-SUMMARY.md, 05-02-SUMMARY.md, 05-03-SUMMARY.md]
 started: 2026-10-09T11:41:00Z
-updated: 2026-10-09T19:33:16Z
+updated: 2026-10-09T23:14:22.913Z
 ---
 
 ## Current Test
 
-[testing complete]
+[testing paused — 2 items outstanding]
 
 ## Tests
 
@@ -20,6 +20,7 @@ coverage_id: D1
 requirement: MEDIA-02
 evidence: |
   Current checkout d65dc2c: `ctest --preset sdk-debug -R '^(mvs_synthetic_trace|mvs_media_contract)$' --output-on-failure --no-tests=error` passed 2/2.
+  Rechecked at current checkout 2b22c25: the seven-test `^mvs_` CTest lane passed 7/7; `mvs_media_contract` passed. This still establishes only the normalized contract, not selected private media.
 scope: Automated contract and synthetic integration coverage; no selected commercial media claim.
 
 ### 2. Normalize ZIP32 role archives and run the synthetic guest sentinel
@@ -29,6 +30,7 @@ source: automated
 coverage_id: D2
 evidence: |
   Current checkout d65dc2c: `ctest --preset sdk-debug -R '^(mvs_import_contract|mvs_import_mutation|mvs_boot_checkpoint|mvs_import_fuzz_corpus)$' --output-on-failure --no-tests=error` passed 4/4.
+  Rechecked at current checkout 2b22c25: the seven-test `^mvs_` CTest lane passed 7/7, including importer, mutation, checkpoint, and fuzz-corpus cases; `python3 tools/verify_sdk.py --suite matrix` passed 1,440 assertions across 43 cases and 10 lanes.
 scope: Synthetic importer, mutation, guest checkpoint, and bounded fuzz-corpus tests; not selected title compatibility.
 
 ### 3. Import selected game and BIOS and reach guest execution
@@ -38,28 +40,32 @@ reported: "Automated local qualification returned no_supported_role_bundle_archi
 severity: major
 evidence: |
   Historical qualification recorded in 05-VALIDATION.md stopped before native loading. This did not establish a frontend failure or selected-game compatibility result.
-  Latest assessment: 05-03-SUMMARY.md records that the selected pair now imports and the guest executes through the 256-chunk hard bound, but no direct guest-written attract/start predicate is established. The old archive-mapping symptom changed; the expected guest checkpoint remains unmet.
+  Latest assessment: 05-06-SUMMARY.md records that there is no independently observed selected configuration or sourced guest-written attract/start predicate. The bounded attempt did not produce an accepted checkpoint; GAME-02 remains open.
 
 ### 4. Run the selected content through the pinned RetroArch smoke path
 expected: An automated smoke launches the pinned RetroArch build with selected normalized media, observes a game frame and expected scripted input response, unloads content, exits normally, and records only generic private-safe outcomes.
 result: blocked
 blocked_by: other
-reason: "The selected content did not reach native loading, so a frontend run cannot be exercised. Actual RetroArch behavior remains unknown."
+reason: "Plan 05-06 could not establish a sourced selected-guest checkpoint, and the pinned-app launch preconditions did not materially change. No selected-media app launch was attempted; actual RetroArch behavior remains unknown/manual-only."
+automated_subcheck: |
+  Current checkout 2b22c25: `python3 tests/libretro/test_retroarch_smoke.py -v` passed 31/31 structural and privacy tests. These do not exercise the pinned RetroArch app with selected media.
 
 ### 5. Run the public MVS regression suite in current-revision CI
 expected: The existing pull-request/main CI evidence matrix runs the public MVS region, importer, callback, guest-checkpoint, and bounded fuzz-corpus tests with a positive named-test denominator.
-result: issue
-reported: "The shared verify_sdk CI evidence inventory selects sdk-labeled CTest cases and omits the MVS-labeled tests, so Phase 05 regressions are not part of current CI receipts."
-severity: major
+historical_reported: "The shared verify_sdk CI evidence inventory selects sdk-labeled CTest cases and omits the MVS-labeled tests, so Phase 05 regressions are not part of current CI receipts."
 evidence: |
   Historical evidence at checkout d65dc2c showed the collector omitted MVS-labeled CTests; Plan 05-02 repaired that local evidence-lane defect.
-  Latest assessment: Plan 05-02 added the seven-test MVS local matrix lane, but 05-03-SUMMARY.md records no exact-current-SHA hosted receipt and no safe PR/upstream route from this checkout. Hosted CI acceptance remains open.
+  Plan 05-06's public-safe PR #2 candidate `e80672845fc60d94d8a44eab416377534c9a99f1` passed hosted run `38001400110`: all seven named MVS tests, positive denominator, matching source/output digests, and the aggregate passed. Local current checkout 2b22c25 also passed the SDK matrix (1,440 assertions, 43 cases, 10 lanes). PR #2 remains unmerged pending its required approving review; this receipt does not qualify selected boot or frontend behavior.
+result: pass
+source: automated
+resolution: |
+  G-05-5 resolved by Plan 05-06's exact-SHA hosted receipt. The earlier failure remains in the gap record for history; no user confirmation was needed for this machine-observable CI claim.
 
 ## Summary
 
 total: 5
-passed: 2
-issues: 2
+passed: 3
+issues: 1
 pending: 0
 skipped: 0
 blocked: 1
@@ -85,11 +91,11 @@ blocked: 1
   missing:
     - "Define a source-justified guest-written state transition and expose only the per-instance observation needed to qualify it."
     - "Add rights-clear positive and wrong-behavior controls, then rerun bounded qualification before attributing the budget stop to specific CPU/MVS behavior."
-  reconciliation_note: "Kept open: the matching 05-03 plan has a halted summary and explicitly leaves G-05-3 open; the required acceptance predicate was not reached."
+  reconciliation_note: "Kept open after 05-06: although its plan lists this gap, the matching summary is halted and explicitly says no independently observed selected configuration or sourced guest-written predicate was found. Executing a plan is not evidence that this criterion passed."
   debug_session: .planning/debug/phase05-selected-guest-attract-start.md
 - gap_id: G-05-5
   truth: "The existing pull-request/main CI evidence matrix runs the public MVS regression suite with a positive named-test denominator."
-  status: failed
+  status: resolved
   reason: "The local MVS lane now exists and passes, but no hosted exact-current-SHA receipt is available from this checkout."
   severity: major
   test: 5
@@ -106,5 +112,7 @@ blocked: 1
   missing:
     - "Prepare a reviewed, public-safe final revision and run existing PR/main CI at that exact committed SHA."
     - "Verify the hosted receipt has all seven named passing MVS tests, a positive denominator, output and source digests, matching revision, and passing aggregate."
-  reconciliation_note: "Kept open: local matrix success is not hosted evidence; the matching 05-03 plan and summary both state that G-05-5 remains open."
+  reconciliation_note: "Resolved by Plan 05-06: the eligible hosted PR #2 event and downloaded artifacts were verified against its exact candidate SHA; all seven named MVS tests, positive denominator, source/output identities, and aggregate passed. The PR is still unmerged pending required review, which is separate from this hosted-test criterion."
+  resolved_by: 05-06-PLAN.md
+  resolved_at: 2026-10-09
   debug_session: .planning/debug/phase05-hosted-mvs-ci-evidence.md

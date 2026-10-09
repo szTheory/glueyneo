@@ -1,7 +1,10 @@
 # Phase 05 hosted MVS qualification
 
-Status: **blocked before publication; G-05-5 remains open.** No hosted run or
-receipt exists for the candidate.
+Status: **the exact public-safe PR #2 candidate passed hosted MVS qualification; G-05-5 is resolved for that candidate.** PR #2 remains unmerged pending its required approving review. Selected-game attract/start and actual selected-media RetroArch behavior remain open/unknown.
+
+The initial local-candidate record below is historical Plan 05-05 evidence and
+is superseded for G-05-5 by the Plan 05-06 exact-SHA qualification at the end of
+this file. It describes an earlier candidate, not PR #2.
 
 ## Candidate history and scope
 
