@@ -10,6 +10,15 @@
 
 typedef struct owned_cpu owned_cpu;
 
+#define OWNED_CPU_FETCH_TRACE_CAPACITY 16u
+typedef struct {
+    uint32_t prefetch_pc;
+    uint32_t resulting_cursor;
+    uint16_t fetched_word;
+    uint64_t run_sequence;
+    uint64_t total_cycles;
+} owned_cpu_fetch_trace_event;
+
 typedef enum {
     OWNED_CPU_OK = 0,
     OWNED_CPU_INVALID_ARGUMENT,
@@ -28,6 +37,8 @@ typedef struct {
     void *userdata;
     int (*read16)(void *userdata, uint32_t address, uint16_t *value);
     int (*write16)(void *userdata, uint32_t address, uint16_t value);
+    int (*write8)(void *userdata, uint32_t address, uint8_t value);
+    int (*read8)(void *userdata, uint32_t address, uint8_t *value);
 } owned_cpu_bus;
 
 typedef struct {
@@ -79,13 +90,24 @@ owned_cpu_status owned_cpu_reset(owned_cpu *cpu);
 owned_cpu_run_result owned_cpu_run(owned_cpu *cpu, uint64_t cycle_budget);
 owned_cpu_status owned_cpu_set_irq(owned_cpu *cpu, unsigned level);
 owned_cpu_status owned_cpu_observe(const owned_cpu *cpu, owned_cpu_observation *out);
+owned_cpu_status owned_cpu_copy_fetch_trace(
+    const owned_cpu *cpu, owned_cpu_fetch_trace_event *events,
+    size_t capacity, size_t *out_count);
 
 #ifdef OWNED_CPU_TEST_HOOKS
+/* Concrete allocation-member alignment for the private SDK fault allocator.
+ * cpu.c checks this against the complete owned_cpu type on each test build. */
+typedef union {
+    owned_cpu_bus bus;
+    owned_cpu_allocator allocator;
+    uint64_t counter;
+} owned_cpu_test_allocation_alignment;
+
 /* Private same-build continuation record. This is an in-memory test contract,
  * not a public ABI, wire format, emulator snapshot, replay, or durable save. */
 #define OWNED_CPU_STATE_VERSION UINT32_C(1)
 #define OWNED_CPU_STATE_CORE_IDENTITY_SHA256 \
-    "f11a282d5f571a67fff687c08cc90a44f5b6ff54bb5334b9c21bf17a4abcbee7"
+    "21e81df57f6adb091014b1e824ce908cce4b675c2cf9c6cff9c6b4e269727d53"
 #define OWNED_CPU_STATE_FIELD_DATA_REGISTERS (UINT64_C(1) << 0)
 #define OWNED_CPU_STATE_FIELD_ADDRESS_REGISTERS (UINT64_C(1) << 1)
 #define OWNED_CPU_STATE_FIELD_PC_AND_PREVIOUS_PC (UINT64_C(1) << 2)

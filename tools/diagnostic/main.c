@@ -110,10 +110,10 @@ static int run_scenario(guest_fixture_scenario scenario, const char *fixture_pat
     gn_run_result run;
     memset(&run, 0, sizeof(run));
     gn_status run_status = GN_STATUS_INVALID_STATE;
-    if (status == GN_STATUS_OK) run_status = gn_run(instance, 172u, &run);
+    if (status == GN_STATUS_OK) run_status = gn_run(instance, 196u, &run);
     passes &= check_u64("sdk.run.status", GN_STATUS_OK, run_status);
-    passes &= check_u64("sdk.run.requested-cycles", 172u, run.requested_cycles);
-    passes &= check_u64("sdk.run.elapsed-cycles", 172u, run.elapsed_cycles);
+    passes &= check_u64("sdk.run.requested-cycles", 196u, run.requested_cycles);
+    passes &= check_u64("sdk.run.elapsed-cycles", 196u, run.elapsed_cycles);
     passes &= check_u64("sdk.run.overshoot-cycles", 0u, run.overshoot_cycles);
     passes &= check_u64("sdk.run.instructions", 12u, run.instructions);
     passes &= check_u64("sdk.run.reason-stopped", GN_RUN_STOPPED, run.reason);
@@ -140,7 +140,7 @@ static int run_scenario(guest_fixture_scenario scenario, const char *fixture_pat
         "\"sdk.diagnostic.original-%c\",\"outcome\":\"%s\","
         "\"assertions\":%" PRIu64 ",\"expected\":{"
         "\"arithmetic\":%" PRIu32 ",\"initialized\":%" PRIu32
-        ",\"bss\":1,\"cycles\":172,\"instructions\":12,\"pc\":302},"
+        ",\"bss\":1,\"cycles\":196,\"instructions\":12,\"pc\":302},"
         "\"observed\":{\"arithmetic\":%" PRIu32 ",\"initialized\":%" PRIu32
         ",\"bss\":%" PRIu32 ",\"cycles\":%" PRIu64 ",\"instructions\":%" PRIu64
         ",\"pc\":%" PRIu32 ",\"reason\":%d},\"identity\":{"

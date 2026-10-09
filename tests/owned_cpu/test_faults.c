@@ -11,7 +11,7 @@ void tearDown(void) {}
 static void invalid_arguments_and_allocation_failure_are_contained(void) {
     iso_machine machine;
     memset(&machine, 0, sizeof(machine));
-    owned_cpu_bus bus = {&machine, iso_read16, iso_write16};
+    owned_cpu_bus bus = {&machine, iso_read16, iso_write16, NULL, NULL};
     owned_cpu_allocator allocator = {&machine, iso_allocate, iso_release};
     owned_cpu *cpu = (owned_cpu *)(uintptr_t)1u;
     TEST_ASSERT_EQUAL(OWNED_CPU_INVALID_ARGUMENT,
@@ -202,7 +202,7 @@ static void stopped_cpu_wakes_on_a_level_seven_edge(void) {
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_set_irq(machine.cpu, 7u));
     owned_cpu_run_result result = owned_cpu_run(machine.cpu, 1u);
     TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, result.reason);
-    TEST_ASSERT_EQUAL_UINT64(44u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(72u, result.elapsed_cycles);
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_observe(machine.cpu, &observation));
     TEST_ASSERT_EQUAL_UINT8(0u, observation.stopped);
     TEST_ASSERT_EQUAL_UINT8(31u, observation.last_exception_vector);

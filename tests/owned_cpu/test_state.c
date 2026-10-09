@@ -228,7 +228,7 @@ static void configure_case(state_machine *machine, state_case which) {
 }
 
 static int machine_create_fresh(state_machine *machine) {
-    owned_cpu_bus bus = {machine, state_read16, state_write16};
+    owned_cpu_bus bus = {machine, state_read16, state_write16, NULL, NULL};
     owned_cpu_allocator allocator = {machine, state_allocate, state_release};
     return owned_cpu_create(OWNED_CPU_MODEL_MC68000, bus, allocator,
                             &machine->cpu) == OWNED_CPU_OK;
@@ -255,7 +255,7 @@ static int prepare_checkpoint(state_machine *machine, state_case which) {
     owned_cpu_run_result result;
     if (which == CASE_RESET_DEBT) return 1;
     result = run_one(machine); /* Consume the 40-cycle reset event. */
-    if (result.reason != OWNED_CPU_BUDGET || result.elapsed_cycles != 40u) return 0;
+    if (result.reason != OWNED_CPU_BUDGET || result.elapsed_cycles != 64u) return 0;
     switch (which) {
         case CASE_DIAGNOSTIC_MOVEQ:
             result = run_one(machine);
@@ -282,7 +282,7 @@ static int prepare_checkpoint(state_machine *machine, state_case which) {
         case CASE_IRQ_ENTRY:
             if (owned_cpu_set_irq(machine->cpu, 7u) != OWNED_CPU_OK) return 0;
             result = run_one(machine);
-            return result.reason == OWNED_CPU_BUDGET && result.elapsed_cycles == 44u;
+            return result.reason == OWNED_CPU_BUDGET && result.elapsed_cycles == 72u;
         case CASE_TRAP_ENTRY:
         case CASE_ADDRESS_ERROR_ENTRY:
             result = run_one(machine);
@@ -465,7 +465,7 @@ static void continue_scenario(state_case which, omission_kind omission) {
             TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, actual.reason);
             TEST_ASSERT_EQUAL_HEX32(0x180u, expected.pc);
             TEST_ASSERT_EQUAL_HEX32(0x180u, actual.pc);
-            TEST_ASSERT_EQUAL_UINT64(which == CASE_RTE_ODD_PC ? 50u : 34u,
+            TEST_ASSERT_EQUAL_UINT64(which == CASE_RTE_ODD_PC ? 94u : 62u,
                                      expected.elapsed_cycles);
             TEST_ASSERT_EQUAL_UINT64(expected.elapsed_cycles, actual.elapsed_cycles);
             owned_cpu_observation observation;
@@ -701,7 +701,7 @@ static void reentrant_capture_and_restore_reject_while_active(void) {
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_capture_state(source.cpu, &state));
     owned_cpu_run_result reset_event = run_one(&machine);
     TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, reset_event.reason);
-    TEST_ASSERT_EQUAL_UINT64(40u, reset_event.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(64u, reset_event.elapsed_cycles);
     machine.active_probe_state = &state;
     (void)run_one(&machine);
     TEST_ASSERT_EQUAL_UINT(1u, machine.active_probe_count);

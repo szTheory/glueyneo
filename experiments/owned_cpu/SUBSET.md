@@ -1,9 +1,29 @@
 # Owned MC68000 implemented subset
 
-Status: **implemented diagnostic slice; backend admission remains pending**.
+## Current exception timing correction — 2026-10-09
+
+For the MC68000 contract, use the MC68000 column in the Motorola/NXP User's
+Manual Rev. 9.1 Table 7-15 (printed p. 7-11): reset 64 clocks, autovector IRQ
+72, address/bus error 94, and illegal instruction, privilege violation, and
+TRAP 62 clocks. Table 8 timing values refer to a different processor variant
+and do not define this MC68000 contract. The explicit vector-4 subset handles
+only the observed reserved byte and long EORI destination encodings reached by
+the selected fixture; other unsupported instructions remain fail-closed. See
+[`ORACLE.md`](../../tests/owned_cpu/ORACLE.md) for the focused vectors.
+
+Status: **admitted for the bounded Phase 01 diagnostic subset**.
 This is a private authored C17 experiment for a narrow, manual-derived set of
 MC68000 behaviors. It is not a complete CPU implementation or a Neo Geo timing
 model.
+
+Phase 01 admission is recorded in the CPU/bus workstream's
+`01-VERIFICATION.md`. The Phase 04 public fixture adds only the two exact
+opcode/addressing pairs listed below; it does not broaden that admission to
+full ISA, BIOS, game or physical-hardware compatibility. The current private
+state source identity and distribution hashes are checked against exact
+tracked bytes by `tools/owned_cpu/inventory.py`; prior dated receipts remain
+historical evidence. Compile checks apply to the owned experiment's CMake
+targets, including owned Unity and tests, rather than unrelated SDK/C++ rows.
 
 ## Instance and reset behavior
 
@@ -83,6 +103,8 @@ compatibility, emulator snapshot, replay, durable save or guest-memory format.
 | `MOVEQ #imm8,Dn` | All D0–D7; sign-extend to 32 bits; N/Z from result, V/C clear, X preserved | 4 |
 | `ADDQ.L #1..8,Dn` | All D0–D7 direct; encoded zero means 8; modulo-2^32 result and N/Z/V/C/X | 8 |
 | `MOVE.L Dn,(abs.L)` | All D0–D7 sources; high word then low word; N/Z from long value, V/C clear, X preserved | 20 |
+| `ADD.W D0,D1` | Exact opcode `0xd240`; low-word binary sum, preserves D1 high word, sets N/Z/V/C/X from the word result | 4 |
+| `MOVE.W D1,(abs.L)` | Exact opcode `0x33c1`; one aligned word write from D1 low word; N/Z from the word, V/C clear, X preserved | 16 |
 | `NOP` | Exact opcode `0x4e71`; no register or SR change | 4 |
 | `RESET` | Exact opcode `0x4e70`; supervisor only; records one external-reset-signal event, with no device callback | 132 |
 | `RTE` | Exact opcode `0x4e73`; supervisor only; restores SR/PC from a six-byte short frame and switches USP/SSP when S changes | 20 |
@@ -109,7 +131,7 @@ This candidate boundary supersedes the former local fault-PC/vector-4 row,
 preserved in Git. Original MC68000 ILLEGAL encoding and vector semantics remain
 hardware facts; its saved-PC selection remains unknown under P01-C-13. No
 silicon PC value is selected. The frozen CONTRACT plus the P01-C-14 amendment
-in `illegal-reconciliation.json` defines active scope; admission remains pending.
+in `illegal-reconciliation.json` defines the admitted bounded diagnostic scope.
 
 ## Interrupts, frames, and bus effects
 
@@ -189,6 +211,7 @@ input, prefetch fidelity, wait states, arbitrary mid-instruction suspension,
 physical interrupt acknowledge, external RESET device behavior, full ISA or
 later CPU models, public or durable snapshots, BIOS/games, and Neo Geo board
 timing. No prefetch or buffered guest state exists in this implementation.
-An emulator's output is a comparison lead, not hardware truth. The experiment
-still has not passed independent review or phase admission; CPU-01–05 remain
-pending until the current roadmap's full gates are completed.
+An emulator's output is a comparison lead, not hardware truth. Phase 01's
+independent review and admission cover the documented diagnostic subset only;
+later public fixture instruction additions and changed source identities do
+not establish any of the excluded capabilities above.

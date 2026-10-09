@@ -143,7 +143,7 @@ wall-clock service.
 
 ## Evidence and limits
 
-The fresh [Phase 01 whole-phase verification](.planning/phases/01-cpu-acceptance-experiment/01-VERIFICATION.md)
+The fresh [Phase 01 whole-phase verification](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/phases/01-cpu-acceptance-experiment/01-VERIFICATION.md)
 passed 10/10 must-haves at source revision
 `09476ed57ee29c0798f8be8f082e05ad73776e3b` and admitted the bounded candidate
 for Phase 02 integration. The frozen candidate receipt remains
@@ -165,8 +165,9 @@ The declared CMake floor is 3.20, but the package and consumers have only been
 executed on Darwin arm64 with AppleClang 21.0.0.21000101 and CMake 4.4.3. The
 floor and other platforms remain unqualified. Build, consumer, documentation,
 and capability checks are local evidence, not hosted CI or release authority.
-See [current project state](.planning/STATE.md) for the contributor workflow,
-and [requirements](.planning/REQUIREMENTS.md) and [roadmap](.planning/ROADMAP.md)
+See the [CPU/bus SDK workstream state](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/STATE.md)
+for that deliverable's contributor workflow, and its [requirements](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/REQUIREMENTS.md)
+and [roadmap](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/ROADMAP.md)
 for scope and next steps.
 
 The original project is MIT licensed. Imported code retains its own notices;

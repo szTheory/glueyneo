@@ -1,13 +1,479 @@
 {
-  "schema_version": 1,
-  "scope": "Private MC68000 owned-core acceptance experiment; current compile closure only.",
-  "status": "Current bounded inventory. It does not claim ABI/state compatibility or independent completeness review.",
-  "sources": {
-    "runtime": "experiments/owned_cpu/cpu.c",
-    "public_private_header": "experiments/owned_cpu/cpu.h",
-    "field_parser": "owned_cpu struct body; exact name and declaration checks",
-    "compiled_closure": "build-dir compile_commands.json; paths normalized to repository-relative names",
-    "host_calls": "source-level search plus manual classification; not a whole-program call-graph proof"
+  "automatic_scratch": {
+    "disposition": "The grouped names and types below are automatic call-stack objects; none survive a function return. Their values are intermediate guest, host, or derived values and do not have durable snapshot disposition.",
+    "functions": [
+      {
+        "function": "add_quick_long",
+        "storage": "automatic invocation-local; not retained between API calls",
+        "values": [
+          {
+            "declarations": 1,
+            "name": "after",
+            "type": "uint32_t"
+          },
+          {
+            "declarations": 1,
+            "name": "before",
+            "type": "uint32_t"
+          },
+          {
+            "declarations": 1,
+            "name": "flags",
+            "type": "uint16_t"
+          },
+          {
+            "declarations": 1,
+            "name": "full_sum",
+            "type": "uint64_t"
+          }
+        ]
+      },
+      {
+        "function": "enter_address_exception",
+        "storage": "automatic invocation-local; not retained between API calls",
+        "values": [
+          {
+            "declarations": 1,
+            "name": "function_code",
+            "type": "const unsigned int"
+          },
+          {
+            "declarations": 1,
+            "name": "handler_pc",
+            "type": "uint32_t"
+          },
+          {
+            "declarations": 1,
+            "name": "new_sr",
+            "type": "const uint16_t"
+          },
+          {
+            "declarations": 1,
+            "name": "old_sr",
+            "type": "const uint16_t"
+          },
+          {
+            "declarations": 1,
+            "name": "status",
+            "type": "owned_cpu_status"
+          },
+          {
+            "declarations": 1,
+            "name": "status_word",
+            "type": "const uint16_t"
+          }
+        ]
+      },
+      {
+        "function": "enter_short_exception",
+        "storage": "automatic invocation-local; not retained between API calls",
+        "values": [
+          {
+            "declarations": 1,
+            "name": "handler_pc",
+            "type": "uint32_t"
+          },
+          {
+            "declarations": 1,
+            "name": "new_sr",
+            "type": "uint16_t"
+          },
+          {
+            "declarations": 1,
+            "name": "status",
+            "type": "owned_cpu_status"
+          }
+        ]
+      },
+      {
+        "function": "execute_one",
+        "storage": "automatic invocation-local; not retained between API calls",
+        "values": [
+          {
+            "declarations": 1,
+            "name": "address_status",
+            "type": "owned_cpu_status"
+          },
+          {
+            "declarations": 1,
+            "name": "cursor",
+            "type": "uint32_t"
+          },
+          {
+            "declarations": 1,
+            "name": "destination",
+            "type": "uint32_t"
+          },
+          {
+            "declarations": 2,
+            "name": "high",
+            "type": "uint16_t"
+          },
+          {
+            "declarations": 1,
+            "name": "immediate",
+            "type": "uint32_t"
+          },
+          {
+            "declarations": 2,
+            "name": "immediate_sr",
+            "type": "uint16_t"
+          },
+          {
+            "declarations": 1,
+            "name": "instruction_pc",
+            "type": "const uint32_t"
+          },
+          {
+            "declarations": 2,
+            "name": "low",
+            "type": "uint16_t"
+          },
+          {
+            "declarations": 1,
+            "name": "overflow",
+            "type": "owned_cpu_status"
+          },
+          {
+            "declarations": 1,
+            "name": "pc_high",
+            "type": "uint16_t"
+          },
+          {
+            "declarations": 1,
+            "name": "pc_low",
+            "type": "uint16_t"
+          },
+          {
+            "declarations": 1,
+            "name": "quick",
+            "type": "unsigned int"
+          },
+          {
+            "declarations": 4,
+            "name": "reg",
+            "type": "unsigned int"
+          },
+          {
+            "declarations": 1,
+            "name": "restored_pc",
+            "type": "uint32_t"
+          },
+          {
+            "declarations": 1,
+            "name": "restored_sp",
+            "type": "uint32_t"
+          },
+          {
+            "declarations": 1,
+            "name": "restored_sr",
+            "type": "uint16_t"
+          },
+          {
+            "declarations": 1,
+            "name": "source",
+            "type": "uint32_t"
+          },
+          {
+            "declarations": 1,
+            "name": "status",
+            "type": "owned_cpu_status"
+          },
+          {
+            "declarations": 1,
+            "name": "value",
+            "type": "uint16_t"
+          },
+          {
+            "declarations": 1,
+            "name": "value",
+            "type": "uint32_t"
+          }
+        ]
+      },
+      {
+        "function": "fetch_exception_vector",
+        "storage": "automatic invocation-local; not retained between API calls",
+        "values": [
+          {
+            "declarations": 1,
+            "name": "high",
+            "type": "uint16_t"
+          },
+          {
+            "declarations": 1,
+            "name": "low",
+            "type": "uint16_t"
+          },
+          {
+            "declarations": 1,
+            "name": "status",
+            "type": "owned_cpu_status"
+          },
+          {
+            "declarations": 1,
+            "name": "vector_address",
+            "type": "uint32_t"
+          }
+        ]
+      },
+      {
+        "function": "fetch_word",
+        "storage": "automatic invocation-local; not retained between API calls",
+        "values": [
+          {
+            "declarations": 1,
+            "name": "status",
+            "type": "owned_cpu_status"
+          }
+        ]
+      },
+      {
+        "function": "owned_cpu_create",
+        "storage": "automatic invocation-local; not retained between API calls",
+        "values": [
+          {
+            "declarations": 1,
+            "name": "cpu",
+            "type": "owned_cpu *"
+          }
+        ]
+      },
+      {
+        "function": "owned_cpu_destroy",
+        "storage": "automatic invocation-local; not retained between API calls",
+        "values": [
+          {
+            "declarations": 1,
+            "name": "allocator",
+            "type": "owned_cpu_allocator"
+          }
+        ]
+      },
+      {
+        "function": "owned_cpu_reset",
+        "storage": "automatic invocation-local; not retained between API calls",
+        "values": [
+          {
+            "declarations": 1,
+            "name": "index",
+            "type": "unsigned int"
+          },
+          {
+            "declarations": 1,
+            "name": "status",
+            "type": "owned_cpu_status"
+          },
+          {
+            "declarations": 1,
+            "name": "vectors",
+            "type": "uint16_t[4]"
+          }
+        ]
+      },
+      {
+        "function": "owned_cpu_run",
+        "storage": "automatic invocation-local; not retained between API calls",
+        "values": [
+          {
+            "declarations": 1,
+            "name": "accepted_level",
+            "type": "unsigned int"
+          },
+          {
+            "declarations": 1,
+            "name": "idle",
+            "type": "uint64_t"
+          },
+          {
+            "declarations": 1,
+            "name": "irq7",
+            "type": "int"
+          },
+          {
+            "declarations": 1,
+            "name": "irq_cycles",
+            "type": "uint64_t"
+          },
+          {
+            "declarations": 1,
+            "name": "irq_status",
+            "type": "owned_cpu_status"
+          },
+          {
+            "declarations": 1,
+            "name": "kind",
+            "type": "step_kind"
+          },
+          {
+            "declarations": 1,
+            "name": "level",
+            "type": "unsigned int"
+          },
+          {
+            "declarations": 1,
+            "name": "mask",
+            "type": "unsigned int"
+          },
+          {
+            "declarations": 1,
+            "name": "next_pc",
+            "type": "uint32_t"
+          },
+          {
+            "declarations": 1,
+            "name": "old_pc",
+            "type": "uint32_t"
+          },
+          {
+            "declarations": 1,
+            "name": "old_sr",
+            "type": "uint16_t"
+          },
+          {
+            "declarations": 1,
+            "name": "opcode",
+            "type": "uint16_t"
+          },
+          {
+            "declarations": 1,
+            "name": "result",
+            "type": "owned_cpu_run_result"
+          },
+          {
+            "declarations": 1,
+            "name": "saved_pc",
+            "type": "uint32_t"
+          },
+          {
+            "declarations": 1,
+            "name": "status",
+            "type": "owned_cpu_status"
+          },
+          {
+            "declarations": 1,
+            "name": "step_cycles",
+            "type": "uint64_t"
+          }
+        ]
+      },
+      {
+        "function": "preflight_event",
+        "storage": "automatic invocation-local; not retained between API calls",
+        "values": [
+          {
+            "declarations": 1,
+            "name": "exception_cycles",
+            "type": "uint64_t"
+          },
+          {
+            "declarations": 1,
+            "name": "instruction_cycles",
+            "type": "uint64_t"
+          }
+        ]
+      },
+      {
+        "function": "push_long",
+        "storage": "automatic invocation-local; not retained between API calls",
+        "values": [
+          {
+            "declarations": 1,
+            "name": "stack_pointer",
+            "type": "uint32_t"
+          },
+          {
+            "declarations": 1,
+            "name": "status",
+            "type": "owned_cpu_status"
+          }
+        ]
+      },
+      {
+        "function": "push_word",
+        "storage": "automatic invocation-local; not retained between API calls",
+        "values": [
+          {
+            "declarations": 1,
+            "name": "stack_pointer",
+            "type": "uint32_t"
+          },
+          {
+            "declarations": 1,
+            "name": "status",
+            "type": "owned_cpu_status"
+          }
+        ]
+      },
+      {
+        "function": "set_supervisor_status",
+        "storage": "automatic invocation-local; not retained between API calls",
+        "values": [
+          {
+            "declarations": 1,
+            "name": "new_supervisor",
+            "type": "int"
+          },
+          {
+            "declarations": 1,
+            "name": "old_supervisor",
+            "type": "int"
+          }
+        ]
+      }
+    ],
+    "source": "experiments/owned_cpu/cpu.c"
+  },
+  "build_contract": {
+    "compile_database": "CMake compile_commands.json generated at build root; local absolute build paths are not copied into this inventory",
+    "instrumented_objects": [
+      "owned_cpu",
+      "owned_cpu_unity",
+      "all seven owned CPU test executables"
+    ],
+    "language": "C17, required, C extensions disabled",
+    "optimization_options": [
+      "NONE",
+      "RELEASE"
+    ],
+    "sanitizer_options": [
+      "NONE",
+      "ADDRESS_UNDEFINED",
+      "THREAD"
+    ]
+  },
+  "callbacks": [
+    {
+      "binding": "owned_cpu.bus.userdata/read16/write16",
+      "failure": "sets terminal host-fault state; reset or destroy is allowed",
+      "invocation_sites": [
+        "read_word",
+        "write_word"
+      ],
+      "lifetime": "must remain valid until instance destruction",
+      "owner": "host caller"
+    },
+    {
+      "binding": "owned_cpu.allocator.userdata/allocate/release",
+      "failure": "allocation failure leaves output pointer NULL",
+      "invocation_sites": [
+        "owned_cpu_create",
+        "owned_cpu_destroy"
+      ],
+      "lifetime": "must remain valid until instance destruction",
+      "owner": "host caller"
+    },
+    {
+      "binding": "owned_cpu.active",
+      "owner": "owned_cpu instance",
+      "purpose": "reject same-instance run/reset/observe/IRQ reentry while a guarded callback path is active",
+      "same_instance_concurrency": "overlapping calls are unsupported; active byte is a reentry guard, not a synchronization primitive"
+    }
+  ],
+  "candidate_reconciliation": {
+    "decision": "P01-C-14",
+    "hardware_saved_pc": "unknown per P01-C-13",
+    "prior_audit_context": "Historical dispositions remain dated evidence; runtime/header/state-source hashes above bind the amended candidate. No private runtime or record fields were added; rejected opcode keeps fault_pc and instruction_register, with no dispatch/exception cycles. Host bindings remain destination owned."
   },
   "compiled_sources": [
     "experiments/owned_cpu/cpu.c",
@@ -21,91 +487,50 @@
     "tests/owned_cpu/test_timing.c",
     "third_party/unity/src/unity.c"
   ],
-  "source_hashes": {
-    "experiments/owned_cpu/CMakeLists.txt": "990848e89ffbff684df06ba60414db7722078aed92e4c3431a96039f31b585a3",
-    "experiments/owned_cpu/cpu.c": "b03d3458c99012e7d20a21b408ea1b5e72ae4fa6ac2f36ac5078d349b0d953b8",
-    "experiments/owned_cpu/cpu.h": "df547f6291c6085eda4c8a195c16f46296c0ae91beae2e6daa9422733c20eedc",
-    "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
-    "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c",
-    "tests/owned_cpu/cold.py": "4f0687b793cb04a4c61b31dc917ec7d08233e9a272bf2c0e41b274d06d604f84",
-    "tests/owned_cpu/isolation_fixture.h": "95ca205b077d7459edd2af0194dc9af79954be011fe9c39e8f1efa7da5eb474d",
-    "tests/owned_cpu/negative.py": "2f2cf4a75ba8078e09d5a7eae98181f574c5add8a030b58ab8aa741a9a3f863e",
-    "tests/owned_cpu/test_cold.c": "e2bcb33eea1a24cdc8c0a5340928e4b5d3705b4f0649b6299c370d5560e26d63",
-    "tests/owned_cpu/test_diagnostic.c": "a3d7b2e60f2f0e4fd49042b069dc8729a268816c8bbfd42bfa3a34ed3121937a",
-    "tests/owned_cpu/test_faults.c": "71e09309af7c556b907563229ae6e176958ee91dbe7ddad5ceff124fabe071fa",
-    "tests/owned_cpu/test_inventory.py": "247cf3edf0bb528b9fc6a3198846f7e759f1b147c5b1807761ad9a4c29af383f",
-    "tests/owned_cpu/test_isolation.c": "35a5a515e1df3798bcae4a190387e32c4ea6ce6a0aa2ac628789111d85d7e155",
-    "tests/owned_cpu/test_semantics.c": "871a7ff936d0a38cccba0a0e601a90bac37377f4fc62d2e687b8e5b76316e25f",
-    "tests/owned_cpu/test_state.c": "b8ceb6be17b209f661f5a55699460776f879f78dad8e395c9f973e6502edaae1",
-    "tests/owned_cpu/test_timing.c": "606f7c2d2b08c368a65def9b25b0f36eb9122f0e751bd37c9ae5666d5493bbce",
-    "third_party/unity/src/unity.c": "a6cc4b143075a03317d72c760b5ed67a4a12eeda1242f575464ad23f34042275",
-    "third_party/unity/src/unity.h": "b30ba4db1e0be1a1f6c862d359d73c91025a114977e41d3dad17103363804334",
-    "third_party/unity/src/unity_internals.h": "35bffad23ebc533977291e7a848c646027513572268fbfa9bd03d5ec21ee818a",
-    "tools/owned_cpu/inventory.py": "763785aef1b7497bcabaf304bcaeee2bbeadba1e573ab1e9b2b6e228ff34a0bf"
-  },
-  "build_contract": {
-    "language": "C17, required, C extensions disabled",
-    "sanitizer_options": [
-      "NONE",
-      "ADDRESS_UNDEFINED",
-      "THREAD"
-    ],
-    "optimization_options": [
-      "NONE",
-      "RELEASE"
-    ],
-    "instrumented_objects": [
-      "owned_cpu",
-      "owned_cpu_unity",
-      "all seven owned CPU test executables"
-    ],
-    "compile_database": "CMake compile_commands.json generated at build root; local absolute build paths are not copied into this inventory"
-  },
   "fields": [
     {
-      "name": "bus",
-      "declaration": "owned_cpu_bus bus",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "excluded from guest state; destination bus userdata/read16/write16 bindings remain attached",
       "classification": "host-binding",
+      "declaration": "owned_cpu_bus bus",
       "mutation_sites": [
         "owned_cpu_create",
         "read_word",
         "write_word"
       ],
-      "reset_disposition": "retain across reset; fixed at construction",
-      "capture_disposition": "excluded from guest state; destination bus userdata/read16/write16 bindings remain attached"
+      "name": "bus",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "retain across reset; fixed at construction"
     },
     {
-      "name": "allocator",
-      "declaration": "owned_cpu_allocator allocator",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "excluded from guest state; destination allocator userdata/allocate/release bindings remain attached",
       "classification": "host-binding",
+      "declaration": "owned_cpu_allocator allocator",
       "mutation_sites": [
         "owned_cpu_create",
         "owned_cpu_destroy"
       ],
-      "reset_disposition": "retain across reset; fixed at construction",
-      "capture_disposition": "excluded from guest state; destination allocator userdata/allocate/release bindings remain attached"
+      "name": "allocator",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "retain across reset; fixed at construction"
     },
     {
-      "name": "data_registers",
-      "declaration": "uint32_t data_registers[8]",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "owned_cpu_state.data_registers; all eight values are captured by name",
       "classification": "guest-architectural",
+      "declaration": "uint32_t data_registers[8]",
       "mutation_sites": [
         "owned_cpu_reset",
         "execute_one",
         "add_quick_long",
         "owned_cpu_test_seed_data_register"
       ],
-      "reset_disposition": "zero on reset",
-      "capture_disposition": "owned_cpu_state.data_registers; all eight values are captured by name"
+      "name": "data_registers",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "zero on reset"
     },
     {
-      "name": "address_registers",
-      "declaration": "uint32_t address_registers[8]",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "owned_cpu_state.address_registers; all eight values are captured by name",
       "classification": "guest-architectural",
+      "declaration": "uint32_t address_registers[8]",
       "mutation_sites": [
         "owned_cpu_reset",
         "set_supervisor_status",
@@ -113,80 +538,80 @@
         "execute_one",
         "owned_cpu_test_seed_execution_state"
       ],
-      "reset_disposition": "zero on reset then SSP loaded into A7",
-      "capture_disposition": "owned_cpu_state.address_registers; all eight values are captured by name"
+      "name": "address_registers",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "zero on reset then SSP loaded into A7"
     },
     {
-      "name": "pc",
-      "declaration": "uint32_t pc",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "owned_cpu_state.pc",
       "classification": "guest-architectural",
+      "declaration": "uint32_t pc",
       "mutation_sites": [
         "owned_cpu_reset",
         "execute_one",
         "owned_cpu_run",
         "owned_cpu_test_seed_execution_state"
       ],
-      "reset_disposition": "loaded from reset vector",
-      "capture_disposition": "owned_cpu_state.pc"
+      "name": "pc",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "loaded from reset vector"
     },
     {
-      "name": "previous_pc",
-      "declaration": "uint32_t previous_pc",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "owned_cpu_state.previous_pc",
       "classification": "guest-architectural",
+      "declaration": "uint32_t previous_pc",
       "mutation_sites": [
         "owned_cpu_reset",
         "enter_short_exception",
         "enter_address_exception",
         "owned_cpu_run"
       ],
-      "reset_disposition": "loaded from reset PC",
-      "capture_disposition": "owned_cpu_state.previous_pc"
+      "name": "previous_pc",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "loaded from reset PC"
     },
     {
-      "name": "usp",
-      "declaration": "uint32_t usp",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "owned_cpu_state.usp",
       "classification": "guest-architectural",
+      "declaration": "uint32_t usp",
       "mutation_sites": [
         "owned_cpu_reset",
         "set_supervisor_status",
         "owned_cpu_test_seed_execution_state"
       ],
-      "reset_disposition": "zero on reset",
-      "capture_disposition": "owned_cpu_state.usp"
+      "name": "usp",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "zero on reset"
     },
     {
-      "name": "ssp",
-      "declaration": "uint32_t ssp",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "owned_cpu_state.ssp",
       "classification": "guest-architectural",
+      "declaration": "uint32_t ssp",
       "mutation_sites": [
         "owned_cpu_reset",
         "set_supervisor_stack_pointer",
         "set_supervisor_status",
         "owned_cpu_test_seed_execution_state"
       ],
-      "reset_disposition": "loaded from reset vector",
-      "capture_disposition": "owned_cpu_state.ssp"
+      "name": "ssp",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "loaded from reset vector"
     },
     {
-      "name": "fault_pc",
-      "declaration": "uint32_t fault_pc",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "owned_cpu_state.fault_pc; retained for same-build run-result continuation",
       "classification": "diagnostic-transient",
+      "declaration": "uint32_t fault_pc",
       "mutation_sites": [
         "execute_one"
       ],
-      "reset_disposition": "clear on reset and after successful instruction",
-      "capture_disposition": "owned_cpu_state.fault_pc; retained for same-build run-result continuation"
+      "name": "fault_pc",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "clear on reset and after successful instruction"
     },
     {
-      "name": "sr",
-      "declaration": "uint16_t sr",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "owned_cpu_state.sr; retained without padding or struct-byte serialization",
       "classification": "guest-architectural",
+      "declaration": "uint16_t sr",
       "mutation_sites": [
         "owned_cpu_reset",
         "set_supervisor_status",
@@ -195,76 +620,76 @@
         "execute_one",
         "exception entry"
       ],
-      "reset_disposition": "set to 0x2700 on successful reset",
-      "capture_disposition": "owned_cpu_state.sr; retained without padding or struct-byte serialization"
+      "name": "sr",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "set to 0x2700 on successful reset"
     },
     {
-      "name": "instruction_register",
-      "declaration": "uint16_t instruction_register",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "owned_cpu_state.instruction_register; retained for same-build diagnostic continuation",
       "classification": "diagnostic-transient",
+      "declaration": "uint16_t instruction_register",
       "mutation_sites": [
         "execute_one"
       ],
-      "reset_disposition": "zero on reset; set during dispatch/fault",
-      "capture_disposition": "owned_cpu_state.instruction_register; retained for same-build diagnostic continuation"
+      "name": "instruction_register",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "zero on reset; set during dispatch/fault"
     },
     {
-      "name": "stopped",
-      "declaration": "uint8_t stopped",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "owned_cpu_state.stopped",
       "classification": "guest-architectural",
+      "declaration": "uint8_t stopped",
       "mutation_sites": [
         "owned_cpu_reset",
         "execute_one",
         "enter_short_exception",
         "enter_address_exception"
       ],
-      "reset_disposition": "zero on reset",
-      "capture_disposition": "owned_cpu_state.stopped"
+      "name": "stopped",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "zero on reset"
     },
     {
-      "name": "irq_level",
-      "declaration": "uint8_t irq_level",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "owned_cpu_state.irq_level; current caller level is part of continuation input",
       "classification": "host-input",
+      "declaration": "uint8_t irq_level",
       "mutation_sites": [
         "owned_cpu_reset",
         "owned_cpu_set_irq",
         "owned_cpu_run"
       ],
-      "reset_disposition": "zero on reset; set by caller",
-      "capture_disposition": "owned_cpu_state.irq_level; current caller level is part of continuation input"
+      "name": "irq_level",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "zero on reset; set by caller"
     },
     {
-      "name": "irq7_pending",
-      "declaration": "uint8_t irq7_pending",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "owned_cpu_state.irq7_pending; pending edge survives pin deassertion",
       "classification": "guest-input-latch",
+      "declaration": "uint8_t irq7_pending",
       "mutation_sites": [
         "owned_cpu_reset",
         "owned_cpu_set_irq",
         "owned_cpu_run"
       ],
-      "reset_disposition": "clear on reset and accepted edge",
-      "capture_disposition": "owned_cpu_state.irq7_pending; pending edge survives pin deassertion"
+      "name": "irq7_pending",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "clear on reset and accepted edge"
     },
     {
-      "name": "ready",
-      "declaration": "uint8_t ready",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "reconstructed as ready=1 after successful restore; capture requires a ready source",
       "classification": "host-lifecycle",
+      "declaration": "uint8_t ready",
       "mutation_sites": [
         "owned_cpu_reset"
       ],
-      "reset_disposition": "clear before reset vector reads; set after valid vectors",
-      "capture_disposition": "reconstructed as ready=1 after successful restore; capture requires a ready source"
+      "name": "ready",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "clear before reset vector reads; set after valid vectors"
     },
     {
-      "name": "faulted",
-      "declaration": "uint8_t faulted",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "excluded; capture and restore reject terminal host-fault state",
       "classification": "host-fault-state",
+      "declaration": "uint8_t faulted",
       "mutation_sites": [
         "read_word",
         "write_word",
@@ -274,289 +699,319 @@
         "exception entry",
         "owned_cpu_reset"
       ],
-      "reset_disposition": "clear at reset start; set on bus/exception callback failure",
-      "capture_disposition": "excluded; capture and restore reject terminal host-fault state"
+      "name": "faulted",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "clear at reset start; set on bus/exception callback failure"
     },
     {
-      "name": "active",
-      "declaration": "uint8_t active",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "excluded transient reentry guard; capture and restore reject while active",
       "classification": "reentry-guard",
+      "declaration": "uint8_t active",
       "mutation_sites": [
         "owned_cpu_reset",
         "owned_cpu_run"
       ],
-      "reset_disposition": "cleared after guarded operation",
-      "capture_disposition": "excluded transient reentry guard; capture and restore reject while active"
+      "name": "active",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "cleared after guarded operation"
     },
     {
-      "name": "reset_pending",
-      "declaration": "uint8_t reset_pending",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "owned_cpu_state.reset_pending; reset debt is preserved",
       "classification": "derived-timing-state",
+      "declaration": "uint8_t reset_pending",
       "mutation_sites": [
         "owned_cpu_reset",
         "owned_cpu_run"
       ],
-      "reset_disposition": "set after valid reset and consumed once by run",
-      "capture_disposition": "owned_cpu_state.reset_pending; reset debt is preserved"
+      "name": "reset_pending",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "set after valid reset and consumed once by run"
     },
     {
-      "name": "last_exception_vector",
-      "declaration": "uint8_t last_exception_vector",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "owned_cpu_state.last_exception_vector",
       "classification": "guest-architectural",
+      "declaration": "uint8_t last_exception_vector",
       "mutation_sites": [
         "owned_cpu_reset",
         "enter_short_exception",
         "enter_address_exception"
       ],
-      "reset_disposition": "zero on reset",
-      "capture_disposition": "owned_cpu_state.last_exception_vector"
+      "name": "last_exception_vector",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "zero on reset"
     },
     {
-      "name": "instructions",
+      "capture_disposition": "owned_cpu_state.instructions; validated against ordinary and exception clocks using the four-cycle minimum for this subset",
+      "classification": "guest-accounting",
       "declaration": "uint64_t instructions",
-      "owner": "one opaque owned_cpu instance",
-      "classification": "guest-accounting",
       "mutation_sites": [
         "owned_cpu_reset",
         "owned_cpu_run"
       ],
-      "reset_disposition": "zero on reset; overflow checked before event commit",
-      "capture_disposition": "owned_cpu_state.instructions; validated against ordinary and exception clocks using the four-cycle minimum for this subset"
+      "name": "instructions",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "zero on reset; overflow checked before event commit"
     },
     {
-      "name": "instruction_cycles",
+      "capture_disposition": "owned_cpu_state.instruction_cycles",
+      "classification": "guest-accounting",
       "declaration": "uint64_t instruction_cycles",
-      "owner": "one opaque owned_cpu instance",
-      "classification": "guest-accounting",
       "mutation_sites": [
         "owned_cpu_reset",
         "owned_cpu_run"
       ],
-      "reset_disposition": "zero on reset; overflow checked before event commit",
-      "capture_disposition": "owned_cpu_state.instruction_cycles"
+      "name": "instruction_cycles",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "zero on reset; overflow checked before event commit"
     },
     {
-      "name": "reset_cycles",
-      "declaration": "uint64_t reset_cycles",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "owned_cpu_state.reset_cycles",
       "classification": "guest-accounting",
+      "declaration": "uint64_t reset_cycles",
       "mutation_sites": [
         "owned_cpu_reset"
       ],
-      "reset_disposition": "set to 40 after valid reset; not incremented by run",
-      "capture_disposition": "owned_cpu_state.reset_cycles"
+      "name": "reset_cycles",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "set to 40 after valid reset; not incremented by run"
     },
     {
-      "name": "exception_cycles",
+      "capture_disposition": "owned_cpu_state.exception_cycles",
+      "classification": "guest-accounting",
       "declaration": "uint64_t exception_cycles",
-      "owner": "one opaque owned_cpu instance",
-      "classification": "guest-accounting",
       "mutation_sites": [
         "owned_cpu_reset",
         "owned_cpu_run"
       ],
-      "reset_disposition": "zero on reset; exceptions accounted independently",
-      "capture_disposition": "owned_cpu_state.exception_cycles"
+      "name": "exception_cycles",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "zero on reset; exceptions accounted independently"
     },
     {
-      "name": "idle_cycles",
+      "capture_disposition": "owned_cpu_state.idle_cycles",
+      "classification": "guest-accounting",
       "declaration": "uint64_t idle_cycles",
-      "owner": "one opaque owned_cpu instance",
-      "classification": "guest-accounting",
       "mutation_sites": [
         "owned_cpu_reset",
         "owned_cpu_run"
       ],
-      "reset_disposition": "zero on reset; stopped idle accounted independently",
-      "capture_disposition": "owned_cpu_state.idle_cycles"
+      "name": "idle_cycles",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "zero on reset; stopped idle accounted independently"
     },
     {
-      "name": "total_cycles",
+      "capture_disposition": "owned_cpu_state.total_cycles; validated against reset debt and event counters",
+      "classification": "guest-accounting",
       "declaration": "uint64_t total_cycles",
-      "owner": "one opaque owned_cpu instance",
-      "classification": "guest-accounting",
       "mutation_sites": [
         "owned_cpu_reset",
         "owned_cpu_run"
       ],
-      "reset_disposition": "zero on reset; checked event additions only",
-      "capture_disposition": "owned_cpu_state.total_cycles; validated against reset debt and event counters"
+      "name": "total_cycles",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "zero on reset; checked event additions only"
     },
     {
-      "name": "reset_signal_events",
-      "declaration": "uint64_t reset_signal_events",
-      "owner": "one opaque owned_cpu instance",
+      "capture_disposition": "owned_cpu_state.reset_signal_events",
       "classification": "guest-accounting",
+      "declaration": "uint64_t reset_signal_events",
       "mutation_sites": [
         "owned_cpu_reset",
         "execute_one"
       ],
-      "reset_disposition": "zero on reset; RESET instruction counts one event",
-      "capture_disposition": "owned_cpu_state.reset_signal_events"
-    }
-  ],
-  "callbacks": [
-    {
-      "binding": "owned_cpu.bus.userdata/read16/write16",
-      "owner": "host caller",
-      "invocation_sites": [
-        "read_word",
-        "write_word"
-      ],
-      "lifetime": "must remain valid until instance destruction",
-      "failure": "sets terminal host-fault state; reset or destroy is allowed"
+      "name": "reset_signal_events",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "zero on reset; RESET instruction counts one event"
     },
     {
-      "binding": "owned_cpu.allocator.userdata/allocate/release",
-      "owner": "host caller",
-      "invocation_sites": [
-        "owned_cpu_create",
-        "owned_cpu_destroy"
+      "capture_disposition": "not included in owned_cpu_state; bounded local-only instruction-fetch diagnostic ring",
+      "classification": "local-diagnostic",
+      "declaration": "owned_cpu_fetch_trace_event fetch_trace[OWNED_CPU_FETCH_TRACE_CAPACITY]",
+      "mutation_sites": [
+        "fetch_word",
+        "owned_cpu_run"
       ],
-      "lifetime": "must remain valid until instance destruction",
-      "failure": "allocation failure leaves output pointer NULL"
+      "name": "fetch_trace",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "diagnostic ring is transient per-instance state and is not part of guest continuation"
     },
     {
-      "binding": "owned_cpu.active",
-      "owner": "owned_cpu instance",
-      "purpose": "reject same-instance run/reset/observe/IRQ reentry while a guarded callback path is active",
-      "same_instance_concurrency": "overlapping calls are unsupported; active byte is a reentry guard, not a synchronization primitive"
-    }
-  ],
-  "initialization_sites": [
-    {
-      "site": "owned_cpu_create",
-      "objects": [
-        "entire allocated owned_cpu object",
-        "bus binding",
-        "allocator binding"
+      "capture_disposition": "not included in owned_cpu_state; bounded local-only instruction-fetch diagnostic ring",
+      "classification": "local-diagnostic",
+      "declaration": "size_t fetch_trace_count",
+      "mutation_sites": [
+        "fetch_word",
+        "owned_cpu_run"
       ],
-      "behavior": "zeroes storage, then copies the caller callback and allocator bindings; one allocator call"
+      "name": "fetch_trace_count",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "diagnostic ring is transient per-instance state and is not part of guest continuation"
     },
     {
-      "site": "owned_cpu_reset",
-      "objects": [
-        "guest registers",
-        "PC/SR/stack banks",
-        "fault and lifecycle state",
-        "event counters",
-        "IRQ input state"
+      "capture_disposition": "not included in owned_cpu_state; bounded local-only instruction-fetch diagnostic ring",
+      "classification": "local-diagnostic",
+      "declaration": "size_t fetch_trace_next",
+      "mutation_sites": [
+        "fetch_word",
+        "owned_cpu_run"
       ],
-      "behavior": "clears mutable execution state before four reset-vector reads; successful vectors set SR, PC, SSP, reset debt and ready flag; a callback fault leaves the instance terminal until reset"
+      "name": "fetch_trace_next",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "diagnostic ring is transient per-instance state and is not part of guest continuation"
     },
     {
-      "site": "owned_cpu_run",
-      "objects": [
-        "active guard",
-        "reset debt",
-        "interrupt latch",
-        "architectural registers",
-        "event counters"
+      "capture_disposition": "not included in owned_cpu_state; bounded local-only instruction-fetch diagnostic ring",
+      "classification": "local-diagnostic",
+      "declaration": "uint64_t fetch_trace_run_sequence",
+      "mutation_sites": [
+        "fetch_word",
+        "owned_cpu_run"
       ],
-      "behavior": "sets and clears active around execution; bounded event additions preflight overflow"
-    },
-    {
-      "site": "owned_cpu_set_irq",
-      "objects": [
-        "irq_level",
-        "irq7_pending"
-      ],
-      "behavior": "updates host input and latches a rising level-7 edge"
+      "name": "fetch_trace_run_sequence",
+      "owner": "one opaque owned_cpu instance",
+      "reset_disposition": "diagnostic ring is transient per-instance state and is not part of guest continuation"
     }
   ],
   "file_scope_objects": [
     {
-      "source": "tests/owned_cpu/test_diagnostic.c",
+      "disposition": "created and destroyed by test helpers",
       "name": "cpu",
       "owner": "diagnostic test process",
-      "disposition": "created and destroyed by test helpers"
+      "source": "tests/owned_cpu/test_diagnostic.c"
     },
     {
-      "source": "tests/owned_cpu/test_diagnostic.c",
+      "disposition": "reset by setUp; callback userdata for the sole test instance",
       "name": "memory",
       "owner": "diagnostic test process",
-      "disposition": "reset by setUp; callback userdata for the sole test instance"
+      "source": "tests/owned_cpu/test_diagnostic.c"
     },
     {
-      "source": "tests/owned_cpu/test_diagnostic.c",
+      "disposition": "runner control for the named guest mutation",
       "name": "mutate_original_guest",
       "owner": "diagnostic test process",
-      "disposition": "runner control for the named guest mutation"
+      "source": "tests/owned_cpu/test_diagnostic.c"
     },
     {
-      "source": "tests/owned_cpu/test_isolation.c",
+      "disposition": "immutable after isolated baselines are built; shared only among test functions in this process",
       "name": "baselines",
       "owner": "isolation test process",
-      "disposition": "immutable after isolated baselines are built; shared only among test functions in this process"
+      "source": "tests/owned_cpu/test_isolation.c"
     },
     {
-      "source": "tests/owned_cpu/test_isolation.c",
+      "disposition": "command-line-selected mutation control; test runner state",
       "name": "swapped_owner_control",
       "owner": "isolation test process",
-      "disposition": "command-line-selected mutation control; test runner state"
+      "source": "tests/owned_cpu/test_isolation.c"
     },
     {
-      "source": "tests/owned_cpu/test_semantics.c",
+      "disposition": "created and destroyed by test helpers",
       "name": "cpu",
       "owner": "semantics test process",
-      "disposition": "created and destroyed by test helpers"
+      "source": "tests/owned_cpu/test_semantics.c"
     },
     {
-      "source": "tests/owned_cpu/test_semantics.c",
+      "disposition": "reset by setUp; callback userdata for the sole test instance",
       "name": "memory",
       "owner": "semantics test process",
-      "disposition": "reset by setUp; callback userdata for the sole test instance"
+      "source": "tests/owned_cpu/test_semantics.c"
     },
     {
-      "source": "tests/owned_cpu/test_timing.c",
+      "disposition": "created and destroyed by test helpers",
       "name": "cpu",
       "owner": "timing test process",
-      "disposition": "created and destroyed by test helpers"
+      "source": "tests/owned_cpu/test_timing.c"
     },
     {
-      "source": "tests/owned_cpu/test_timing.c",
+      "disposition": "reset by setUp; callback userdata for the sole test instance",
       "name": "memory",
       "owner": "timing test process",
-      "disposition": "reset by setUp; callback userdata for the sole test instance"
+      "source": "tests/owned_cpu/test_timing.c"
     },
     {
-      "source": "third_party/unity/src/unity.c",
+      "disposition": "shared runner counters/current case/abort frame; not owned CPU state",
       "name": "Unity",
       "owner": "Unity test runner process",
-      "disposition": "shared runner counters/current case/abort frame; not owned CPU state"
+      "source": "third_party/unity/src/unity.c"
     },
     {
-      "source": "third_party/unity/src/unity.c",
+      "disposition": "compiled only with UNITY_USE_COMMAND_LINE_ARGS; absent from current compile command",
       "name": "UnityOptionExcludeNamed",
       "owner": "conditional Unity CLI runner state",
-      "disposition": "compiled only with UNITY_USE_COMMAND_LINE_ARGS; absent from current compile command"
+      "source": "third_party/unity/src/unity.c"
     },
     {
-      "source": "third_party/unity/src/unity.c",
+      "disposition": "compiled only with UNITY_USE_COMMAND_LINE_ARGS; absent from current compile command",
       "name": "UnityOptionIncludeNamed",
       "owner": "conditional Unity CLI runner state",
-      "disposition": "compiled only with UNITY_USE_COMMAND_LINE_ARGS; absent from current compile command"
+      "source": "third_party/unity/src/unity.c"
     },
     {
-      "source": "third_party/unity/src/unity.c",
+      "disposition": "compiled only with UNITY_USE_COMMAND_LINE_ARGS; absent from current compile command",
       "name": "UnityStrictMatch",
       "owner": "conditional Unity CLI runner state",
-      "disposition": "compiled only with UNITY_USE_COMMAND_LINE_ARGS; absent from current compile command"
+      "source": "third_party/unity/src/unity.c"
     },
     {
-      "source": "third_party/unity/src/unity.c",
+      "disposition": "compiled only with UNITY_USE_COMMAND_LINE_ARGS; absent from current compile command",
       "name": "UnityVerbosity",
       "owner": "conditional Unity CLI runner state",
-      "disposition": "compiled only with UNITY_USE_COMMAND_LINE_ARGS; absent from current compile command"
+      "source": "third_party/unity/src/unity.c"
+    }
+  ],
+  "host_calls": [
+    {
+      "call": "allocator.allocate",
+      "purpose": "opaque instance storage",
+      "site": "owned_cpu_create"
+    },
+    {
+      "call": "allocator.release",
+      "purpose": "release opaque instance storage",
+      "site": "owned_cpu_destroy"
+    },
+    {
+      "call": "bus.read16",
+      "purpose": "guest word read",
+      "site": "read_word"
+    },
+    {
+      "call": "bus.write16",
+      "purpose": "guest word write",
+      "site": "write_word"
+    },
+    {
+      "calls": [
+        "memset",
+        "memcpy"
+      ],
+      "purpose": "bounded memory initialization and public observation copy",
+      "site": "owned_cpu_reset/owned_cpu_observe/create"
+    },
+    {
+      "call": "none",
+      "purpose": "no direct filesystem, network, clock, thread, audio, graphics, environment, or process API",
+      "site": "cpu.c"
     }
   ],
   "immutable_storage": {
-    "runtime": "No file-scope mutable or immutable runtime data object; compile-time macros and enum constants only.",
     "guest_fixture": "One function-local const original instruction byte array; copied into each fixture ROM.",
+    "runtime": "No file-scope mutable or immutable runtime data object; compile-time macros and enum constants only.",
     "unity": {
+      "conditional_objects": [
+        "UnityStrDetailLabels",
+        "UnityStrDetailLabelsCount",
+        "UnityStrErrDetailStackEmpty",
+        "UnityStrErrDetailStackFull",
+        "UnityStrErrDetailStackLabel",
+        "UnityStrErrDetailStackPop"
+      ],
+      "disposition": "Read-only test-output and float-format strings/constants; not backend state.",
+      "function_local_static_constants": [
+        "sig_digits",
+        "min_scaled",
+        "max_scaled",
+        "epsilon"
+      ],
       "objects": [
         "UnityStrOk",
         "UnityStrPass",
@@ -596,506 +1051,113 @@
         "UnityStrDetail1Name",
         "UnityStrDetail2Name"
       ],
-      "conditional_objects": [
-        "UnityStrDetailLabels",
-        "UnityStrDetailLabelsCount",
-        "UnityStrErrDetailStackEmpty",
-        "UnityStrErrDetailStackFull",
-        "UnityStrErrDetailStackLabel",
-        "UnityStrErrDetailStackPop"
-      ],
-      "function_local_static_constants": [
-        "sig_digits",
-        "min_scaled",
-        "max_scaled",
-        "epsilon"
-      ],
-      "tables": [],
-      "disposition": "Read-only test-output and float-format strings/constants; not backend state."
+      "tables": []
     }
   },
-  "automatic_scratch": {
-    "source": "experiments/owned_cpu/cpu.c",
-    "disposition": "The grouped names and types below are automatic call-stack objects; none survive a function return. Their values are intermediate guest, host, or derived values and do not have durable snapshot disposition.",
-    "functions": [
-      {
-        "function": "add_quick_long",
-        "storage": "automatic invocation-local; not retained between API calls",
-        "values": [
-          {
-            "name": "after",
-            "type": "uint32_t",
-            "declarations": 1
-          },
-          {
-            "name": "before",
-            "type": "uint32_t",
-            "declarations": 1
-          },
-          {
-            "name": "flags",
-            "type": "uint16_t",
-            "declarations": 1
-          },
-          {
-            "name": "full_sum",
-            "type": "uint64_t",
-            "declarations": 1
-          }
-        ]
-      },
-      {
-        "function": "enter_address_exception",
-        "storage": "automatic invocation-local; not retained between API calls",
-        "values": [
-          {
-            "name": "function_code",
-            "type": "const unsigned int",
-            "declarations": 1
-          },
-          {
-            "name": "handler_pc",
-            "type": "uint32_t",
-            "declarations": 1
-          },
-          {
-            "name": "new_sr",
-            "type": "const uint16_t",
-            "declarations": 1
-          },
-          {
-            "name": "old_sr",
-            "type": "const uint16_t",
-            "declarations": 1
-          },
-          {
-            "name": "status",
-            "type": "owned_cpu_status",
-            "declarations": 1
-          },
-          {
-            "name": "status_word",
-            "type": "const uint16_t",
-            "declarations": 1
-          }
-        ]
-      },
-      {
-        "function": "enter_short_exception",
-        "storage": "automatic invocation-local; not retained between API calls",
-        "values": [
-          {
-            "name": "handler_pc",
-            "type": "uint32_t",
-            "declarations": 1
-          },
-          {
-            "name": "new_sr",
-            "type": "uint16_t",
-            "declarations": 1
-          },
-          {
-            "name": "status",
-            "type": "owned_cpu_status",
-            "declarations": 1
-          }
-        ]
-      },
-      {
-        "function": "execute_one",
-        "storage": "automatic invocation-local; not retained between API calls",
-        "values": [
-          {
-            "name": "address_status",
-            "type": "owned_cpu_status",
-            "declarations": 1
-          },
-          {
-            "name": "cursor",
-            "type": "uint32_t",
-            "declarations": 1
-          },
-          {
-            "name": "destination",
-            "type": "uint32_t",
-            "declarations": 1
-          },
-          {
-            "name": "high",
-            "type": "uint16_t",
-            "declarations": 2
-          },
-          {
-            "name": "immediate",
-            "type": "uint32_t",
-            "declarations": 1
-          },
-          {
-            "name": "immediate_sr",
-            "type": "uint16_t",
-            "declarations": 2
-          },
-          {
-            "name": "instruction_pc",
-            "type": "const uint32_t",
-            "declarations": 1
-          },
-          {
-            "name": "low",
-            "type": "uint16_t",
-            "declarations": 2
-          },
-          {
-            "name": "overflow",
-            "type": "owned_cpu_status",
-            "declarations": 1
-          },
-          {
-            "name": "pc_high",
-            "type": "uint16_t",
-            "declarations": 1
-          },
-          {
-            "name": "pc_low",
-            "type": "uint16_t",
-            "declarations": 1
-          },
-          {
-            "name": "quick",
-            "type": "unsigned int",
-            "declarations": 1
-          },
-          {
-            "name": "reg",
-            "type": "unsigned int",
-            "declarations": 4
-          },
-          {
-            "name": "restored_pc",
-            "type": "uint32_t",
-            "declarations": 1
-          },
-          {
-            "name": "restored_sp",
-            "type": "uint32_t",
-            "declarations": 1
-          },
-          {
-            "name": "restored_sr",
-            "type": "uint16_t",
-            "declarations": 1
-          },
-          {
-            "name": "source",
-            "type": "uint32_t",
-            "declarations": 1
-          },
-          {
-            "name": "status",
-            "type": "owned_cpu_status",
-            "declarations": 1
-          },
-          {
-            "name": "value",
-            "type": "uint16_t",
-            "declarations": 1
-          },
-          {
-            "name": "value",
-            "type": "uint32_t",
-            "declarations": 1
-          }
-        ]
-      },
-      {
-        "function": "fetch_exception_vector",
-        "storage": "automatic invocation-local; not retained between API calls",
-        "values": [
-          {
-            "name": "high",
-            "type": "uint16_t",
-            "declarations": 1
-          },
-          {
-            "name": "low",
-            "type": "uint16_t",
-            "declarations": 1
-          },
-          {
-            "name": "status",
-            "type": "owned_cpu_status",
-            "declarations": 1
-          },
-          {
-            "name": "vector_address",
-            "type": "uint32_t",
-            "declarations": 1
-          }
-        ]
-      },
-      {
-        "function": "fetch_word",
-        "storage": "automatic invocation-local; not retained between API calls",
-        "values": [
-          {
-            "name": "status",
-            "type": "owned_cpu_status",
-            "declarations": 1
-          }
-        ]
-      },
-      {
-        "function": "owned_cpu_create",
-        "storage": "automatic invocation-local; not retained between API calls",
-        "values": [
-          {
-            "name": "cpu",
-            "type": "owned_cpu *",
-            "declarations": 1
-          }
-        ]
-      },
-      {
-        "function": "owned_cpu_destroy",
-        "storage": "automatic invocation-local; not retained between API calls",
-        "values": [
-          {
-            "name": "allocator",
-            "type": "owned_cpu_allocator",
-            "declarations": 1
-          }
-        ]
-      },
-      {
-        "function": "owned_cpu_reset",
-        "storage": "automatic invocation-local; not retained between API calls",
-        "values": [
-          {
-            "name": "index",
-            "type": "unsigned int",
-            "declarations": 1
-          },
-          {
-            "name": "status",
-            "type": "owned_cpu_status",
-            "declarations": 1
-          },
-          {
-            "name": "vectors",
-            "type": "uint16_t[4]",
-            "declarations": 1
-          }
-        ]
-      },
-      {
-        "function": "owned_cpu_run",
-        "storage": "automatic invocation-local; not retained between API calls",
-        "values": [
-          {
-            "name": "accepted_level",
-            "type": "unsigned int",
-            "declarations": 1
-          },
-          {
-            "name": "idle",
-            "type": "uint64_t",
-            "declarations": 1
-          },
-          {
-            "name": "irq7",
-            "type": "int",
-            "declarations": 1
-          },
-          {
-            "name": "irq_cycles",
-            "type": "uint64_t",
-            "declarations": 1
-          },
-          {
-            "name": "irq_status",
-            "type": "owned_cpu_status",
-            "declarations": 1
-          },
-          {
-            "name": "kind",
-            "type": "step_kind",
-            "declarations": 1
-          },
-          {
-            "name": "level",
-            "type": "unsigned int",
-            "declarations": 1
-          },
-          {
-            "name": "mask",
-            "type": "unsigned int",
-            "declarations": 1
-          },
-          {
-            "name": "next_pc",
-            "type": "uint32_t",
-            "declarations": 1
-          },
-          {
-            "name": "old_pc",
-            "type": "uint32_t",
-            "declarations": 1
-          },
-          {
-            "name": "old_sr",
-            "type": "uint16_t",
-            "declarations": 1
-          },
-          {
-            "name": "opcode",
-            "type": "uint16_t",
-            "declarations": 1
-          },
-          {
-            "name": "result",
-            "type": "owned_cpu_run_result",
-            "declarations": 1
-          },
-          {
-            "name": "saved_pc",
-            "type": "uint32_t",
-            "declarations": 1
-          },
-          {
-            "name": "status",
-            "type": "owned_cpu_status",
-            "declarations": 1
-          },
-          {
-            "name": "step_cycles",
-            "type": "uint64_t",
-            "declarations": 1
-          }
-        ]
-      },
-      {
-        "function": "preflight_event",
-        "storage": "automatic invocation-local; not retained between API calls",
-        "values": [
-          {
-            "name": "exception_cycles",
-            "type": "uint64_t",
-            "declarations": 1
-          },
-          {
-            "name": "instruction_cycles",
-            "type": "uint64_t",
-            "declarations": 1
-          }
-        ]
-      },
-      {
-        "function": "push_long",
-        "storage": "automatic invocation-local; not retained between API calls",
-        "values": [
-          {
-            "name": "stack_pointer",
-            "type": "uint32_t",
-            "declarations": 1
-          },
-          {
-            "name": "status",
-            "type": "owned_cpu_status",
-            "declarations": 1
-          }
-        ]
-      },
-      {
-        "function": "push_word",
-        "storage": "automatic invocation-local; not retained between API calls",
-        "values": [
-          {
-            "name": "stack_pointer",
-            "type": "uint32_t",
-            "declarations": 1
-          },
-          {
-            "name": "status",
-            "type": "owned_cpu_status",
-            "declarations": 1
-          }
-        ]
-      },
-      {
-        "function": "set_supervisor_status",
-        "storage": "automatic invocation-local; not retained between API calls",
-        "values": [
-          {
-            "name": "new_supervisor",
-            "type": "int",
-            "declarations": 1
-          },
-          {
-            "name": "old_supervisor",
-            "type": "int",
-            "declarations": 1
-          }
-        ]
-      }
-    ]
-  },
-  "test_only_state": {
-    "test_hooks": [
-      "owned_cpu_test_seed_data_register",
-      "owned_cpu_test_seed_execution_state",
-      "owned_cpu_test_seed_counters"
-    ],
-    "build_visibility": "Declarations are behind OWNED_CPU_TEST_HOOKS; the library and only the corresponding semantics/timing/fault test targets define it in this experiment.",
-    "isolation_fixture": "tests/owned_cpu/isolation_fixture.h; per-instance ROM, RAM, callbacks, allocator counters, failpoints, callback trace and reentry outcomes are owned by iso_machine; thread barrier state is per cold-pair invocation.",
-    "scope": "Test fixture state is not part of the candidate public ABI or runtime dependency set."
-  },
-  "host_calls": [
+  "initialization_sites": [
     {
-      "site": "owned_cpu_create",
-      "call": "allocator.allocate",
-      "purpose": "opaque instance storage"
-    },
-    {
-      "site": "owned_cpu_destroy",
-      "call": "allocator.release",
-      "purpose": "release opaque instance storage"
-    },
-    {
-      "site": "read_word",
-      "call": "bus.read16",
-      "purpose": "guest word read"
-    },
-    {
-      "site": "write_word",
-      "call": "bus.write16",
-      "purpose": "guest word write"
-    },
-    {
-      "site": "owned_cpu_reset/owned_cpu_observe/create",
-      "calls": [
-        "memset",
-        "memcpy"
+      "behavior": "zeroes storage, then copies the caller callback and allocator bindings; one allocator call",
+      "objects": [
+        "entire allocated owned_cpu object",
+        "bus binding",
+        "allocator binding"
       ],
-      "purpose": "bounded memory initialization and public observation copy"
+      "site": "owned_cpu_create"
     },
     {
-      "site": "cpu.c",
-      "call": "none",
-      "purpose": "no direct filesystem, network, clock, thread, audio, graphics, environment, or process API"
+      "behavior": "clears mutable execution state before four reset-vector reads; successful vectors set SR, PC, SSP, reset debt and ready flag; a callback fault leaves the instance terminal until reset",
+      "objects": [
+        "guest registers",
+        "PC/SR/stack banks",
+        "fault and lifecycle state",
+        "event counters",
+        "IRQ input state"
+      ],
+      "site": "owned_cpu_reset"
+    },
+    {
+      "behavior": "sets and clears active around execution; bounded event additions preflight overflow",
+      "objects": [
+        "active guard",
+        "reset debt",
+        "interrupt latch",
+        "architectural registers",
+        "event counters"
+      ],
+      "site": "owned_cpu_run"
+    },
+    {
+      "behavior": "updates host input and latches a rising level-7 edge",
+      "objects": [
+        "irq_level",
+        "irq7_pending"
+      ],
+      "site": "owned_cpu_set_irq"
     }
-  ],
-  "review_limitations": [
-    "The checker recognizes the current conventional C source shape and explicit callback fixture names; it is a regression aid, not a C parser or proof of global completeness.",
-    "ThreadSanitizer evidence applies only when that instrumented configuration runs successfully on the current host. Separate-instance tests do not permit same-instance concurrent calls.",
-    "Plan 11 qualifies a private same-build in-memory continuation record only; it is not a public snapshot, cross-build compatibility, replay, durable save format, or memory snapshot."
   ],
   "private_state_record": {
-    "visibility": "owned_cpu_state and capture/restore declarations exist only under OWNED_CPU_TEST_HOOKS; they are absent from consumer builds",
-    "record_kind": "fixed-size, named-field, in-memory continuation record; fields are read and written individually, never serialized as raw struct bytes",
-    "version": 1,
+    "capture_rules": [
+      "Capture requires a ready, idle, nonterminal instance and writes every record member by name.",
+      "Restore accepts an idle, nonterminal destination and validates a complete temporary named representation before the first CPU field assignment.",
+      "Restore performs no bus callbacks and retains destination-owned bus and allocator bindings.",
+      "The caller clones guest memory separately; the CPU record owns no memory buffer.",
+      "Fixed size/version checks require a valid accessible owned_cpu_state object; this is not an arbitrary-byte parser."
+    ],
+    "compatibility_limit": "same compiled source build only; no public ABI, cross-build compatibility, durable snapshot, replay or save format is provided",
+    "continuation_evidence_profiles": [
+      {
+        "boundary_names": [
+          "reset_debt",
+          "diagnostic_MOVEQ",
+          "diagnostic_ADDQ",
+          "diagnostic_MOVE_store",
+          "STOP",
+          "masked_IRQ",
+          "IRQ7_edge_pending_after_deassertion",
+          "IRQ_entry",
+          "TRAP_entry",
+          "canonical_unsupported",
+          "privilege_entry",
+          "address_error_entry",
+          "RTE"
+        ],
+        "continuation_run_calls": 78,
+        "profile": "owned-p01-c14-1",
+        "state_checkpoints": 13,
+        "status": "historical"
+      },
+      {
+        "boundary_names": [
+          "reset_debt",
+          "diagnostic_MOVEQ",
+          "diagnostic_ADDQ",
+          "diagnostic_MOVE_store",
+          "STOP",
+          "masked_IRQ",
+          "IRQ7_edge_pending_after_deassertion",
+          "IRQ_entry",
+          "TRAP_entry",
+          "canonical_unsupported",
+          "privilege_entry",
+          "address_error_entry",
+          "RTE",
+          "RTE_odd_PC",
+          "SR_switch_odd_USP"
+        ],
+        "continuation_run_calls": 90,
+        "profile": "owned-p01-c14-continuation-2",
+        "state_checkpoints": 15,
+        "status": "current"
+      }
+    ],
     "core_identity": "full SHA-256 of experiments/owned_cpu/cpu.c; format version is checked separately",
-    "core_identity_sha256": "f11a282d5f571a67fff687c08cc90a44f5b6ff54bb5334b9c21bf17a4abcbee7",
-    "presence_mask": "all sixteen field-group bits are required; missing groups reject before restore commit",
+    "core_identity_sha256": "21e81df57f6adb091014b1e824ce908cce4b675c2cf9c6cff9c6b4e269727d53",
+    "excluded_or_reconstructed": [
+      "bus and allocator are destination-rebound",
+      "ready is reconstructed to one only on successful restore",
+      "faulted and active are never stored and reject the operation when present on the relevant instance",
+      "no instruction prefetch/buffer state exists in this implementation"
+    ],
     "presence_groups": [
       "data_registers",
       "address_registers",
@@ -1114,127 +1176,110 @@
       "exception_and_idle_cycles",
       "total_cycles_and_reset_signal_events"
     ],
+    "presence_mask": "all sixteen field-group bits are required; missing groups reject before restore commit",
     "record_fields": [
       {
-        "name": "size",
-        "declaration": "uint32_t size"
+        "declaration": "uint32_t size",
+        "name": "size"
       },
       {
-        "name": "version",
-        "declaration": "uint32_t version"
+        "declaration": "uint32_t version",
+        "name": "version"
       },
       {
-        "name": "core_identity",
-        "declaration": "char core_identity[65]"
+        "declaration": "char core_identity[65]",
+        "name": "core_identity"
       },
       {
-        "name": "present_fields",
-        "declaration": "uint64_t present_fields"
+        "declaration": "uint64_t present_fields",
+        "name": "present_fields"
       },
       {
-        "name": "data_registers",
-        "declaration": "uint32_t data_registers[8]"
+        "declaration": "uint32_t data_registers[8]",
+        "name": "data_registers"
       },
       {
-        "name": "address_registers",
-        "declaration": "uint32_t address_registers[8]"
+        "declaration": "uint32_t address_registers[8]",
+        "name": "address_registers"
       },
       {
-        "name": "pc",
-        "declaration": "uint32_t pc"
+        "declaration": "uint32_t pc",
+        "name": "pc"
       },
       {
-        "name": "previous_pc",
-        "declaration": "uint32_t previous_pc"
+        "declaration": "uint32_t previous_pc",
+        "name": "previous_pc"
       },
       {
-        "name": "usp",
-        "declaration": "uint32_t usp"
+        "declaration": "uint32_t usp",
+        "name": "usp"
       },
       {
-        "name": "ssp",
-        "declaration": "uint32_t ssp"
+        "declaration": "uint32_t ssp",
+        "name": "ssp"
       },
       {
-        "name": "fault_pc",
-        "declaration": "uint32_t fault_pc"
+        "declaration": "uint32_t fault_pc",
+        "name": "fault_pc"
       },
       {
-        "name": "sr",
-        "declaration": "uint16_t sr"
+        "declaration": "uint16_t sr",
+        "name": "sr"
       },
       {
-        "name": "instruction_register",
-        "declaration": "uint16_t instruction_register"
+        "declaration": "uint16_t instruction_register",
+        "name": "instruction_register"
       },
       {
-        "name": "stopped",
-        "declaration": "uint8_t stopped"
+        "declaration": "uint8_t stopped",
+        "name": "stopped"
       },
       {
-        "name": "irq_level",
-        "declaration": "uint8_t irq_level"
+        "declaration": "uint8_t irq_level",
+        "name": "irq_level"
       },
       {
-        "name": "irq7_pending",
-        "declaration": "uint8_t irq7_pending"
+        "declaration": "uint8_t irq7_pending",
+        "name": "irq7_pending"
       },
       {
-        "name": "reset_pending",
-        "declaration": "uint8_t reset_pending"
+        "declaration": "uint8_t reset_pending",
+        "name": "reset_pending"
       },
       {
-        "name": "last_exception_vector",
-        "declaration": "uint8_t last_exception_vector"
+        "declaration": "uint8_t last_exception_vector",
+        "name": "last_exception_vector"
       },
       {
-        "name": "instructions",
-        "declaration": "uint64_t instructions"
+        "declaration": "uint64_t instructions",
+        "name": "instructions"
       },
       {
-        "name": "instruction_cycles",
-        "declaration": "uint64_t instruction_cycles"
+        "declaration": "uint64_t instruction_cycles",
+        "name": "instruction_cycles"
       },
       {
-        "name": "reset_cycles",
-        "declaration": "uint64_t reset_cycles"
+        "declaration": "uint64_t reset_cycles",
+        "name": "reset_cycles"
       },
       {
-        "name": "exception_cycles",
-        "declaration": "uint64_t exception_cycles"
+        "declaration": "uint64_t exception_cycles",
+        "name": "exception_cycles"
       },
       {
-        "name": "idle_cycles",
-        "declaration": "uint64_t idle_cycles"
+        "declaration": "uint64_t idle_cycles",
+        "name": "idle_cycles"
       },
       {
-        "name": "total_cycles",
-        "declaration": "uint64_t total_cycles"
+        "declaration": "uint64_t total_cycles",
+        "name": "total_cycles"
       },
       {
-        "name": "reset_signal_events",
-        "declaration": "uint64_t reset_signal_events"
+        "declaration": "uint64_t reset_signal_events",
+        "name": "reset_signal_events"
       }
     ],
-    "capture_rules": [
-      "Capture requires a ready, idle, nonterminal instance and writes every record member by name.",
-      "Restore accepts an idle, nonterminal destination and validates a complete temporary named representation before the first CPU field assignment.",
-      "Restore performs no bus callbacks and retains destination-owned bus and allocator bindings.",
-      "The caller clones guest memory separately; the CPU record owns no memory buffer.",
-      "Fixed size/version checks require a valid accessible owned_cpu_state object; this is not an arbitrary-byte parser."
-    ],
-    "validation": [
-      "exact sizeof, version, full cpu.c SHA-256 identity, and required presence mask",
-      "boolean bytes and IRQ level range; odd PC or selected stack values are preserved for deferred execution faults",
-      "active A7 agrees with the S-selected USP or SSP",
-      "reset debt and event-cycle counters satisfy the implementation accounting invariant without overflow"
-    ],
-    "excluded_or_reconstructed": [
-      "bus and allocator are destination-rebound",
-      "ready is reconstructed to one only on successful restore",
-      "faulted and active are never stored and reject the operation when present on the relevant instance",
-      "no instruction prefetch/buffer state exists in this implementation"
-    ],
+    "record_kind": "fixed-size, named-field, in-memory continuation record; fields are read and written individually, never serialized as raw struct bytes",
     "supported_checkpoints": [
       "reset debt before its first run consumption",
       "after each of the four original diagnostic instructions including STOP",
@@ -1249,57 +1294,60 @@
       "RTE_odd_PC: ordinary RTE returns to an odd PC; capture/restore preserves it before deferred address error",
       "SR_switch_odd_USP: supported SR transition selects an odd inactive USP; capture/restore preserves it before deferred fault behavior"
     ],
-    "continuation_evidence_profiles": [
-      {
-        "profile": "owned-p01-c14-1",
-        "status": "historical",
-        "state_checkpoints": 13,
-        "continuation_run_calls": 78,
-        "boundary_names": [
-          "reset_debt",
-          "diagnostic_MOVEQ",
-          "diagnostic_ADDQ",
-          "diagnostic_MOVE_store",
-          "STOP",
-          "masked_IRQ",
-          "IRQ7_edge_pending_after_deassertion",
-          "IRQ_entry",
-          "TRAP_entry",
-          "canonical_unsupported",
-          "privilege_entry",
-          "address_error_entry",
-          "RTE"
-        ]
-      },
-      {
-        "profile": "owned-p01-c14-continuation-2",
-        "status": "current",
-        "state_checkpoints": 15,
-        "continuation_run_calls": 90,
-        "boundary_names": [
-          "reset_debt",
-          "diagnostic_MOVEQ",
-          "diagnostic_ADDQ",
-          "diagnostic_MOVE_store",
-          "STOP",
-          "masked_IRQ",
-          "IRQ7_edge_pending_after_deassertion",
-          "IRQ_entry",
-          "TRAP_entry",
-          "canonical_unsupported",
-          "privilege_entry",
-          "address_error_entry",
-          "RTE",
-          "RTE_odd_PC",
-          "SR_switch_odd_USP"
-        ]
-      }
+    "validation": [
+      "exact sizeof, version, full cpu.c SHA-256 identity, and required presence mask",
+      "boolean bytes and IRQ level range; odd PC or selected stack values are preserved for deferred execution faults",
+      "active A7 agrees with the S-selected USP or SSP",
+      "reset debt and event-cycle counters satisfy the implementation accounting invariant without overflow"
     ],
-    "compatibility_limit": "same compiled source build only; no public ABI, cross-build compatibility, durable snapshot, replay or save format is provided"
+    "version": 1,
+    "visibility": "owned_cpu_state and capture/restore declarations exist only under OWNED_CPU_TEST_HOOKS; they are absent from consumer builds"
   },
-  "candidate_reconciliation": {
-    "decision": "P01-C-14",
-    "hardware_saved_pc": "unknown per P01-C-13",
-    "prior_audit_context": "Historical dispositions remain dated evidence; runtime/header/state-source hashes above bind the amended candidate. No private runtime or record fields were added; rejected opcode keeps fault_pc and instruction_register, with no dispatch/exception cycles. Host bindings remain destination owned."
+  "review_limitations": [
+    "The checker recognizes the current conventional C source shape and explicit callback fixture names; it is a regression aid, not a C parser or proof of global completeness.",
+    "ThreadSanitizer evidence applies only when that instrumented configuration runs successfully on the current host. Separate-instance tests do not permit same-instance concurrent calls.",
+    "Plan 11 qualifies a private same-build in-memory continuation record only; it is not a public snapshot, cross-build compatibility, replay, durable save format, or memory snapshot."
+  ],
+  "schema_version": 1,
+  "scope": "Private MC68000 owned-core acceptance experiment; current compile closure only.",
+  "source_hashes": {
+    "experiments/owned_cpu/CMakeLists.txt": "57f96d4a16b708f0db9eddba953654551b7f089a70694eea1faa6e791e1db9fb",
+    "experiments/owned_cpu/cpu.c": "21e81df57f6adb091014b1e824ce908cce4b675c2cf9c6cff9c6b4e269727d53",
+    "experiments/owned_cpu/cpu.h": "f155aeaf88b915ceb02bc40838bc77623507c46baab05b13c49455428799e7c8",
+    "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
+    "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c",
+    "tests/owned_cpu/cold.py": "4f0687b793cb04a4c61b31dc917ec7d08233e9a272bf2c0e41b274d06d604f84",
+    "tests/owned_cpu/isolation_fixture.h": "d937309249e972d274fe865fb7666e87207423db4f6d51b9326d65ef51a159ba",
+    "tests/owned_cpu/negative.py": "2f2cf4a75ba8078e09d5a7eae98181f574c5add8a030b58ab8aa741a9a3f863e",
+    "tests/owned_cpu/test_cold.c": "f3e537728fb67cb89ab19bbca1b81016bb120098b2c0edf8d534cbfce7d8cbc0",
+    "tests/owned_cpu/test_diagnostic.c": "e3ca73225e33f528a327ca867f0cc85a0c9d85b76c7e46094242d4b5bdc70435",
+    "tests/owned_cpu/test_faults.c": "d17a0eba632649573074b82855baf172930a2633f0c6d70c4adc74d27bf96784",
+    "tests/owned_cpu/test_inventory.py": "1e7de1d4866eea31ce22d168bf714b1b4f5e7a74c4aa030335c36f950d487c74",
+    "tests/owned_cpu/test_isolation.c": "35a5a515e1df3798bcae4a190387e32c4ea6ce6a0aa2ac628789111d85d7e155",
+    "tests/owned_cpu/test_semantics.c": "adb935a0b18226ac73a8608a80143d114516a49d3d7bd91bcf8e7a94fb5042d4",
+    "tests/owned_cpu/test_state.c": "e78f6deb3ccc6ba902d8b9708ec9b590e22a5abe09de06f257f3815421f15ba0",
+    "tests/owned_cpu/test_timing.c": "189136e4c587804cff967c6a19c225bbd2f84977300b2c242242cb0a90b8ba9d",
+    "third_party/unity/src/unity.c": "a6cc4b143075a03317d72c760b5ed67a4a12eeda1242f575464ad23f34042275",
+    "third_party/unity/src/unity.h": "b30ba4db1e0be1a1f6c862d359d73c91025a114977e41d3dad17103363804334",
+    "third_party/unity/src/unity_internals.h": "35bffad23ebc533977291e7a848c646027513572268fbfa9bd03d5ec21ee818a",
+    "tools/owned_cpu/inventory.py": "8d5be1ea3abc0dc51f1e1c7ef756798feae545d9a06fd2d8ead42d71961dff5b"
+  },
+  "sources": {
+    "compiled_closure": "build-dir compile_commands.json; paths normalized to repository-relative names",
+    "field_parser": "owned_cpu struct body; exact name and declaration checks",
+    "host_calls": "source-level search plus manual classification; not a whole-program call-graph proof",
+    "public_private_header": "experiments/owned_cpu/cpu.h",
+    "runtime": "experiments/owned_cpu/cpu.c"
+  },
+  "status": "Current bounded inventory. It does not claim ABI/state compatibility or independent completeness review.",
+  "test_only_state": {
+    "build_visibility": "Declarations are behind OWNED_CPU_TEST_HOOKS; the library and only the corresponding semantics/timing/fault test targets define it in this experiment.",
+    "isolation_fixture": "tests/owned_cpu/isolation_fixture.h; per-instance ROM, RAM, callbacks, allocator counters, failpoints, callback trace and reentry outcomes are owned by iso_machine; thread barrier state is per cold-pair invocation.",
+    "scope": "Test fixture state is not part of the candidate public ABI or runtime dependency set.",
+    "test_hooks": [
+      "owned_cpu_test_seed_data_register",
+      "owned_cpu_test_seed_execution_state",
+      "owned_cpu_test_seed_counters"
+    ]
   }
 }
