@@ -110,7 +110,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 
 **Plans**: 3 sequential plans: executed 05-01, intermediate 05-02, and final gap-closure 05-03. Run 05-02 and 05-03 together in one execute-phase invocation. Phase 05 remains in progress until current-revision verification establishes each requirement; unresolved GAME-02 behavior or actual-app evidence stays explicitly open.
 - [x] 05-01-PLAN.md — MVS media path and guest-driven selected boot
-- [ ] 05-02-PLAN.md — Split selected game/BIOS mapping and exact seven-test current-revision CI evidence
+- [x] 05-02-PLAN.md — Split selected game/BIOS mapping and exact seven-test current-revision CI evidence
 - [ ] 05-03-PLAN.md — Source-qualified selected-guest boot to direct attract/start and pinned-app smoke
 
 ### Phase 6: Active Title Control
@@ -151,6 +151,6 @@ Each phase includes the automated evidence and independent review appropriate to
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 4. Public Playable Tracer | 22/22 | In Progress | - |
-| 5. Selected MVS Boot | 1/3 | In Progress | - |
+| 5. Selected MVS Boot | 2/3 | In Progress | - |
 | 6. Active Title Control | 0/TBD | Not started | - |
 | 7. Sound and Scenario Qualification | 0/TBD | Not started | - |
