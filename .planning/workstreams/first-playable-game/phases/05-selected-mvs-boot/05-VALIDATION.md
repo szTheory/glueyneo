@@ -41,3 +41,33 @@ The direct pinned RetroArch launch remains manual-only/unknown; no unchanged
 launch context was retried. Phase 04 acceptance and its threat dispositions
 remain exactly as recorded there. Phase 05's private media identity remains
 unqualified and the local report is ignored.
+
+## Plan 05-03 current-revision evidence
+
+- The local qualifier was rerun on 2026-10-09 and reported
+  `no_supported_role_bundle_archive` at `archive_to_region_mapping`. The
+  selected guest therefore did not execute; no CPU, bank, protection, IRQ, or
+  sound behavior was inferred or changed from a private trace.
+- The pinned RetroArch smoke now has a synthetic GNMV structure-validation
+  branch alongside the unchanged exact GNFX fixture identity gate. Its GUI-free
+  tests cover a generated valid six-region bundle, malformed and missing
+  bundle rejection before launch, and omission of content digest/path from the
+  selected-content identity record.
+- `python3 tests/libretro/test_retroarch_smoke.py -v` — passed, 31/31,
+  including generated selected-bundle, missing, malformed, and sparse oversized
+  inputs. `git diff --check` passed.
+- `cmake --preset sdk-debug && cmake --build --preset sdk-debug && ctest
+  --preset sdk-debug -R '^(mvs_|owned_)' --output-on-failure --no-tests=error`
+  — passed, seven registered MVS tests.
+- `cmake --build --preset sdk-asan-ubsan --target mvs_qualify mvs_test
+  mvs_importer mvs_import_fuzz && ctest --test-dir build/sdk-asan-ubsan -R
+  '^mvs_' --output-on-failure --no-tests=error` — passed, 7/7. The full
+  sanitizer preset build remains blocked by the inherited Unity static-library
+  sanitizer-runtime link failure in the unrelated YM2610 admission target.
+- The ignored local qualifier wrote the generic report and exited 1 for
+  `no_supported_role_bundle_archive`, as required for a nonaccepted run.
+- The actual RetroArch app was not launched. The required selected guest
+  attract/start precondition was not met, so the app row remains unknown; the
+  earlier Phase 04 abort is not reused as a Phase 05 observation.
+- G-05-3 and G-05-5 remain open. No final-SHA hosted seven-test matrix receipt
+  was obtained, and no Phase 04 status or UAT resolution field was changed.

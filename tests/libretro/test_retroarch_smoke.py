@@ -100,6 +100,130 @@ class FixtureIdentityTests(unittest.TestCase):
         popen.assert_not_called()
 
 
+class SelectedMVSContentTests(unittest.TestCase):
+    REGION_LENGTHS = (0x80000, 0x500000, 0x20000, 0x20000, 0xA00000, 0x3000000)
+    PROFILE_MSX = 0x4D53584D
+
+    def make_bundle(self, directory: Path, *, malformed: bool = False) -> Path:
+        roles = (1, 2, 3, 4, 5, 6)
+        bundle = bytearray(b"GNMV" + (1).to_bytes(4, "big") +
+                           self.PROFILE_MSX.to_bytes(4, "big") +
+                           (6).to_bytes(4, "big"))
+        for role, length in zip(roles, self.REGION_LENGTHS):
+            if malformed and role == 1:
+                length -= 1
+            bundle.extend(role.to_bytes(4, "big"))
+            bundle.extend(length.to_bytes(8, "big"))
+            bundle.extend(bytes(length))
+        path = directory / "selected.gnmv"
+        path.write_bytes(bundle)
+        return path
+
+    def make_inputs(self, directory: Path, content: Path) -> tuple[object, Path]:
+        app = directory / "RetroArch.app"
+        executable = app / "Contents" / "MacOS" / "RetroArch"
+        executable.parent.mkdir(parents=True)
+        executable.write_bytes(b"mock pinned app bytes")
+        (app / "Contents" / "Info.plist").write_bytes(plistlib.dumps({
+            "CFBundleShortVersionString": smoke.EXPECTED_VERSION,
+            "CFBundleExecutable": "RetroArch",
+            "CFBundleIdentifier": smoke.EXPECTED_BUNDLE_IDENTIFIER,
+        }))
+        core = directory / "glueyneo_libretro.dylib"
+        core.write_bytes(b"synthetic core")
+        args = type("Args", (), {
+            "retroarch": app, "core": core, "content": content, "timeout": 20.0,
+        })()
+        return args, executable
+
+    def test_synthetic_selected_bundle_is_accepted_without_publishing_content_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            content = self.make_bundle(directory)
+            args, executable = self.make_inputs(directory, content)
+            actual_sha = smoke.sha256
+            with (
+                mock.patch.object(smoke.sys, "platform", "darwin"),
+                mock.patch.object(smoke, "sha256", side_effect=lambda path: (
+                    smoke.EXPECTED_EXECUTABLE_SHA256 if Path(path).resolve() == executable.resolve()
+                    else actual_sha(Path(path))
+                )),
+            ):
+                identity = smoke.validate_inputs(args)[3]
+            serialized = json.dumps(identity, sort_keys=True)
+            content_digest = smoke.sha256(content)
+
+        self.assertEqual(identity["content_kind"], "selected-mvs")
+        self.assertNotIn("fixture_sha256", identity)
+        self.assertNotIn("content_sha256", identity)
+        self.assertNotIn(str(content), serialized)
+        self.assertNotIn(content_digest, serialized)
+
+    def test_malformed_selected_bundle_is_rejected_before_frontend_launch(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            content = self.make_bundle(directory, malformed=True)
+            args, executable = self.make_inputs(directory, content)
+            actual_sha = smoke.sha256
+            with (
+                mock.patch.object(smoke.sys, "platform", "darwin"),
+                mock.patch.object(smoke, "sha256", side_effect=lambda path: (
+                    smoke.EXPECTED_EXECUTABLE_SHA256 if Path(path).resolve() == executable.resolve()
+                    else actual_sha(Path(path))
+                )),
+                mock.patch.object(smoke.subprocess, "Popen", side_effect=OSError("launch attempted")) as popen,
+            ):
+                with self.assertRaises(smoke.SmokeBlocked) as raised:
+                    smoke.run_smoke(args)
+
+        self.assertEqual(raised.exception.stage, "input")
+        popen.assert_not_called()
+
+    def test_missing_selected_bundle_is_rejected_before_frontend_launch(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            content = directory / "missing.gnmv"
+            args, executable = self.make_inputs(directory, content)
+            actual_sha = smoke.sha256
+            with (
+                mock.patch.object(smoke.sys, "platform", "darwin"),
+                mock.patch.object(smoke, "sha256", side_effect=lambda path: (
+                    smoke.EXPECTED_EXECUTABLE_SHA256 if Path(path).resolve() == executable.resolve()
+                    else actual_sha(Path(path))
+                )),
+                mock.patch.object(smoke.subprocess, "Popen", side_effect=OSError("launch attempted")) as popen,
+            ):
+                with self.assertRaises(smoke.SmokeBlocked) as raised:
+                    smoke.run_smoke(args)
+
+        self.assertEqual(raised.exception.stage, "input")
+        popen.assert_not_called()
+
+    def test_oversized_selected_bundle_is_rejected_before_frontend_launch(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            content = directory / "oversized.gnmv"
+            with content.open("wb") as stream:
+                stream.write(b"GNMV")
+                stream.truncate(smoke.GNMV_MAX_BYTES + 1)
+            args, executable = self.make_inputs(directory, content)
+            actual_sha = smoke.sha256
+            with (
+                mock.patch.object(smoke.sys, "platform", "darwin"),
+                mock.patch.object(smoke, "sha256", side_effect=lambda path: (
+                    smoke.EXPECTED_EXECUTABLE_SHA256 if Path(path).resolve() == executable.resolve()
+                    else actual_sha(Path(path))
+                )),
+                mock.patch.object(smoke.subprocess, "Popen", side_effect=OSError("launch attempted")) as popen,
+            ):
+                with self.assertRaises(smoke.SmokeBlocked) as raised:
+                    smoke.run_smoke(args)
+
+        self.assertEqual(raised.exception.stage, "input")
+        self.assertIn("bounded input size", str(raised.exception))
+        popen.assert_not_called()
+
+
 class BundleIdentifierTests(unittest.TestCase):
     VALID_BUNDLE_ID = "com.libretro.dist.RetroArch"
     INVALID_BUNDLE_IDS = (

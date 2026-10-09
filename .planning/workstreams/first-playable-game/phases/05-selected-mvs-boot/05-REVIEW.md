@@ -56,3 +56,28 @@ Phase 04 artifacts and verdict were not changed by the review or this plan.
 - The SDK matrix lane selects the exact seven named MVS CTests, requires a matching positive denominator, binds the lane to the current source revision and relevant-source digest, and records an output digest. The seven names match the CMake MVS test registrations.
 - The source digest inventory includes the new importer, wrapper, docs, MVS qualification tests, SDK evidence collector, and matrix validation code. The seven-file review scope was read from the current working tree; uncommitted status prevents independent attribution to a phase commit.
 - Phase 04 dispositions remain unchanged: its directed open threats and manual-only frontend observations remain open/unknown; this review does not close or accept any of them.
+
+## Plan 05-03 Review Note
+
+The smoke-runner change accepts only the bounded version-1 MSX GNMV envelope
+with each known role exactly once and at its profile-specific size. Selected
+content identity records only `content_kind`; it omits hashes and paths. The
+public GNFX branch retains its pinned size, version, and digest checks. The
+selected branch does not claim a responsive input result: it reports that
+result as unknown and exits nonzero, so screenshots or key injection cannot
+be mistaken for selected-title acceptance.
+
+GUI-free tests use generated zero-filled region bytes and reject missing or
+wrong-sized bundles before process launch. They do not run RetroArch or prove
+selected media mapping, game behavior, actual frontend launch, or hardware
+fidelity. The local selected guest remains blocked at archive-to-region
+mapping; no CPU or board behavior was inferred. G-05-3, G-05-5, and the actual
+app row remain unaccepted pending their stated evidence.
+
+An independent review of this smoke-runner diff first found an oversized-read
+race: a GNMV could grow after `stat()` and cause an unbounded read. The runner
+now reads at most `GNMV_MAX_BYTES + 1` bytes, and the synthetic sparse oversized
+input test confirms rejection before process launch. The reviewer rechecked
+the fix and found no new actionable issues. This review covers only the
+smoke-runner change; no new CPU or board semantics were added. Hosted
+current-SHA evidence and the required CPU/board review remain open.

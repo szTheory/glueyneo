@@ -25,6 +25,16 @@ EXPECTED_EXECUTABLE_SHA256 = (
 )
 EXPECTED_FIXTURE_SHA256 = "59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0"
 EXPECTED_BUNDLE_IDENTIFIER = "com.libretro.dist.RetroArch"
+GNMV_PROFILE_MSX = 0x4D53584D
+GNMV_REGION_LENGTHS = {
+    1: 0x80000,
+    2: 0x500000,
+    3: 0x20000,
+    4: 0x20000,
+    5: 0xA00000,
+    6: 0x3000000,
+}
+GNMV_MAX_BYTES = 64 * 1024 * 1024
 WIDTH = 320
 HEIGHT = 224
 RIGHT_KEY_CODE = 124
@@ -49,6 +59,30 @@ def sha256(path: Path) -> str:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def is_normalized_mvs_bundle(content: bytes) -> bool:
+    if (len(content) < 16 or content[:4] != b"GNMV" or
+            int.from_bytes(content[4:8], "big") != 1 or
+            int.from_bytes(content[8:12], "big") != GNMV_PROFILE_MSX or
+            int.from_bytes(content[12:16], "big") != len(GNMV_REGION_LENGTHS) or
+            len(content) > GNMV_MAX_BYTES):
+        return False
+    cursor = 16
+    found: set[int] = set()
+    for _ in range(len(GNMV_REGION_LENGTHS)):
+        if cursor > len(content) or len(content) - cursor < 12:
+            return False
+        role = int.from_bytes(content[cursor:cursor + 4], "big")
+        size = int.from_bytes(content[cursor + 4:cursor + 12], "big")
+        cursor += 12
+        if role not in GNMV_REGION_LENGTHS or role in found:
+            return False
+        if size != GNMV_REGION_LENGTHS[role] or size > len(content) - cursor:
+            return False
+        cursor += size
+        found.add(role)
+    return cursor == len(content) and found == set(GNMV_REGION_LENGTHS)
 
 
 def sanitize_diagnostic_text(text: str, *, temporary_root: Path | None = None) -> str:
@@ -561,23 +595,40 @@ def validate_inputs(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[st
     if executable_hash != EXPECTED_EXECUTABLE_SHA256:
         raise SmokeBlocked("identity", "RetroArch executable digest does not match the pinned artifact")
     if not core.is_file() or not content.is_file():
-        raise SmokeBlocked("input", "built Libretro core or generated fixture is missing")
-    fixture = content.read_bytes()
-    if len(fixture) != 602 or fixture[:4] != b"GNFX" or fixture[4:8] != b"\0\0\0\1":
-        raise SmokeBlocked("input", "content is not the generated bounded GNFX v1 fixture")
-    fixture_digest = hashlib.sha256(fixture).hexdigest()
-    if fixture_digest != EXPECTED_FIXTURE_SHA256:
-        raise SmokeBlocked("input", "content digest does not match the pinned public GNFX fixture")
+        raise SmokeBlocked("input", "built Libretro core or requested content is missing")
+    with content.open("rb") as stream:
+        magic = stream.read(4)
+    fixture_digest: str | None = None
+    if magic == b"GNMV":
+        if content.stat().st_size > GNMV_MAX_BYTES:
+            raise SmokeBlocked("input", "selected MVS bundle exceeds the bounded input size")
+        with content.open("rb") as stream:
+            selected_bundle = stream.read(GNMV_MAX_BYTES + 1)
+        if len(selected_bundle) > GNMV_MAX_BYTES:
+            raise SmokeBlocked("input", "selected MVS bundle exceeds the bounded input size")
+        if not is_normalized_mvs_bundle(selected_bundle):
+            raise SmokeBlocked("input", "selected MVS bundle is malformed or outside the supported profile")
+        content_kind = "selected-mvs"
+    else:
+        fixture = content.read_bytes()
+        if len(fixture) != 602 or fixture[:4] != b"GNFX" or fixture[4:8] != b"\0\0\0\1":
+            raise SmokeBlocked("input", "content is neither the public GNFX fixture nor a normalized MVS bundle")
+        fixture_digest = hashlib.sha256(fixture).hexdigest()
+        if fixture_digest != EXPECTED_FIXTURE_SHA256:
+            raise SmokeBlocked("input", "content digest does not match the pinned public GNFX fixture")
+        content_kind = "public-fixture"
     identity = {
         "retroarch_version": version,
         "retroarch_executable_sha256": executable_hash,
         "core_sha256": sha256(core),
-        "fixture_sha256": fixture_digest,
+        "content_kind": content_kind,
         "os": f"macOS {platform.mac_ver()[0]} {platform.machine()}",
         "input_mapping": "RetroPad RIGHT <- Right Arrow; LEFT control <- Left Arrow",
         "control": "local keyboard and frontend screenshots; no network command interface",
         "bundle_id": bundle_id,
     }
+    if fixture_digest is not None:
+        identity["fixture_sha256"] = fixture_digest
     return executable, core, content, identity
 
 
@@ -615,44 +666,60 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                 time.sleep(0.5)
                 survived_before_screenshot = process.poll() is None
                 first = request_screenshot(process, screenshots, {}, args.timeout)
-                first_marker = find_marker(decode_png(first))
+                first_frame = decode_png(first)
                 time.sleep(0.25)
                 second = request_screenshot(process, screenshots,
                                             screenshot_snapshot(screenshots), args.timeout)
-                second_marker = find_marker(decode_png(second))
-                if second_marker != first_marker:
-                    raise SmokeBlocked("input", "no-input control changed the guest marker")
-
-                inject_key(123)
-                time.sleep(0.25)
-                wrong_input = request_screenshot(
-                    process, screenshots, screenshot_snapshot(screenshots), args.timeout
-                )
-                wrong_marker = find_marker(decode_png(wrong_input))
-                if wrong_marker != first_marker:
-                    raise SmokeBlocked("input", "Left Arrow wrong-input control moved the guest marker")
-
-                inject_key(RIGHT_KEY_CODE)
-                time.sleep(0.25)
-                third = request_screenshot(
-                    process, screenshots, screenshot_snapshot(screenshots), args.timeout
-                )
-                right_marker = find_marker(decode_png(third))
-                if right_marker[1] != first_marker[1] or right_marker[2] != first_marker[2] or right_marker[0] <= first_marker[0]:
-                    raise SmokeBlocked("input", "mapped Right Arrow did not move the guest marker right")
+                second_frame = decode_png(second)
+                first_marker = right_marker = None
+                if identity["content_kind"] == "public-fixture":
+                    first_marker = find_marker(first_frame)
+                    second_marker = find_marker(second_frame)
+                    if second_marker != first_marker:
+                        raise SmokeBlocked("input", "no-input control changed the guest marker")
+                    inject_key(123)
+                    time.sleep(0.25)
+                    wrong_input = request_screenshot(
+                        process, screenshots, screenshot_snapshot(screenshots), args.timeout
+                    )
+                    wrong_marker = find_marker(decode_png(wrong_input))
+                    if wrong_marker != first_marker:
+                        raise SmokeBlocked("input", "Left Arrow wrong-input control moved the guest marker")
+                    inject_key(RIGHT_KEY_CODE)
+                    time.sleep(0.25)
+                    third = request_screenshot(
+                        process, screenshots, screenshot_snapshot(screenshots), args.timeout
+                    )
+                    right_marker = find_marker(decode_png(third))
+                    if (right_marker[1] != first_marker[1] or right_marker[2] != first_marker[2]
+                            or right_marker[0] <= first_marker[0]):
+                        raise SmokeBlocked("input", "mapped Right Arrow did not move the guest marker right")
+                    outcome["input_response"] = "observed"
+                else:
+                    inject_key(RIGHT_KEY_CODE)
+                    request_screenshot(process, screenshots,
+                                       screenshot_snapshot(screenshots), args.timeout)
+                    outcome["input_response"] = "unknown"
 
                 if not request_frontend_quit(identity["bundle_id"], process, args.timeout):
                     raise SmokeBlocked("unload", "RetroArch did not quit cleanly after loaded content")
                 outcome["observations"] = [
-                    "RetroArch launched the requested core and generated content path",
-                    "frontend screenshot contained the guest marker and black backdrop",
-                    "repeated no-input screenshots retained the same marker position",
-                    "configured Left Arrow wrong-input control did not move the marker",
-                    "configured Right Arrow input moved the marker right",
-                    "RetroArch exited cleanly through its application quit path after loaded content",
+                    "RetroArch launched the requested core and content path",
+                    "frontend produced bounded screenshots",
+                    "configured Right Arrow input was injected",
+                    "RetroArch exited through its application quit path",
                 ]
-                outcome["marker_before"] = list(first_marker)
-                outcome["marker_after_right"] = list(right_marker)
+                if first_marker is not None and right_marker is not None:
+                    outcome["observations"].extend([
+                        "frontend screenshot contained the guest marker and black backdrop",
+                        "repeated no-input screenshots retained the same marker position",
+                        "configured Left Arrow wrong-input control did not move the marker",
+                        "configured Right Arrow input moved the marker right",
+                    ])
+                    outcome["marker_before"] = list(first_marker)
+                    outcome["marker_after_right"] = list(right_marker)
+                else:
+                    outcome["observations"].append("selected-game input response remains unclassified")
                 outcome["frontend_unloaded"] = True
             except SmokeBlocked as error:
                 return_code = process.poll()
@@ -672,14 +739,16 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                 raise
             finally:
                 request_frontend_quit(identity["bundle_id"], process, args.timeout)
-            return {"status": "pass", "identity": identity, **outcome}
+            result_status = "pass" if identity["content_kind"] == "public-fixture" else "unknown"
+            return {"status": result_status, "identity": identity, **outcome}
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--retroarch", type=Path, required=True, help="RetroArch .app bundle")
     parser.add_argument("--core", type=Path, required=True, help="built glueyneo_libretro.dylib")
-    parser.add_argument("--content", type=Path, required=True, help="CMake-generated public-playable.bin")
+    parser.add_argument("--content", type=Path, required=True,
+                        help="generated GNFX fixture or normalized GNMV bundle")
     parser.add_argument(
         "--diagnose", action="store_true",
         help="compare fresh no-content and core/content launches; this is not acceptance",
@@ -691,7 +760,7 @@ def main() -> int:
     try:
         result = run_diagnostics(args) if args.diagnose else run_smoke(args)
         print(json.dumps(result, sort_keys=True))
-        return 0
+        return 0 if result.get("status") == "pass" else 1
     except SmokeBlocked as error:
         identity: dict[str, str] = {}
         try:
