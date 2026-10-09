@@ -61,8 +61,8 @@ def require_reviewed_source_identity(review: str, *, repository: Path = ROOT) ->
     paths = [re.sub(r"^[\"']|[\"']$", "", value.strip())
              for value in re.findall(r"(?m)^  - (.+?)\s*$", paths_match.group(1))]
     require(len(paths) == len(set(paths)), "current review contains duplicate reviewed paths")
-    require(set(REQUIRED_REVIEWED_PATHS) <= set(paths),
-            "current review reviewed path list omits a required gate or sanitizer source")
+    require(set(paths) == set(REQUIRED_REVIEWED_PATHS),
+            "current review reviewed path list differs from the exact required gate and sanitizer scope")
     revision_check = subprocess.run(
         ["git", "cat-file", "-e", f"{revision}^{{commit}}"], cwd=repository,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
@@ -323,10 +323,10 @@ def main() -> None:
     status, count, _output = run_suite(qualification_command)
     frontend_status, frontend_count, _frontend_output = run_suite(frontend_command)
     denominator_rows = re.findall(
-        r"(?m)^Plan 04-21 current suite denominators: qualification (\d+)/(\d+); frontend (\d+)/(\d+)\.$",
+        r"(?m)^Plan 04-22 current suite denominators: qualification (\d+)/(\d+); frontend (\d+)/(\d+)\.$",
         validation,
     )
-    require(len(denominator_rows) == 1, "validation must contain one current Plan 04-21 suite-denominator row")
+    require(len(denominator_rows) == 1, "validation must contain one current Plan 04-22 suite-denominator row")
     reported = tuple(map(int, denominator_rows[0]))
     require(status == 0 and frontend_status == 0 and reported == (count, count, frontend_count, frontend_count),
             f"validation denominators {reported!r} differ from live qualification/frontend suites "
@@ -407,15 +407,15 @@ def main() -> None:
     high_open = {key for key, value in threats.items() if value[0] == "high" and value[2] == "open"}
     count = re.search(r"(?m)^threats_open: (\d+)$", security_yaml)
     required_high_open = {"T-04-11", "T-04-15", "T-04-18", "T-04-20"}
-    required_medium_open = {"T-04-34", "T-04-38"}
+    required_medium_open = {"T-04-34", "T-04-38", "T-04-43"}
     require(count is not None and int(count.group(1)) == len(high_open),
             "security frontmatter blocking count differs from high/open register rows")
     require(high_open == required_high_open,
             "four high/open disclosure threats differ from the active security register")
     require({key for key in open_threats if threats[key][0] == "medium"} == required_medium_open,
-            "required medium/open T-04-34 differs from the active security register")
+            "the three expected medium/open findings differ from the active security register")
     require(open_threats == required_high_open | required_medium_open,
-            "unexpected open security threat outside the four disclosure findings and two audited medium findings")
+            "unexpected open security threat outside the four directed high and three current medium findings")
 
     goal_rows = table_rows(verification, "| # | Truth | Status | Evidence |")
     require(all(len(row) == 4 for row in goal_rows), "malformed phase-goal verification row")
@@ -435,7 +435,7 @@ def main() -> None:
     artifact_link_rows = table_rows(verification, "| Artifact/link | Status | Evidence |")
     require(all(len(row) == 3 for row in artifact_link_rows), "malformed artifact/link verification row")
     libretro_evidence = [row for row in artifact_link_rows if row[0].startswith("Libretro content")]
-    qualification_evidence = [row for row in artifact_link_rows if row[0].startswith("Qualification logs/receipts")]
+    qualification_evidence = [row for row in artifact_link_rows if row[0].startswith("Qualification input/log")]
     require(len(libretro_evidence) == 1 and has_frontend_load_uncertainty(libretro_evidence[0][2], scope="libretro_artifact") and
             not contains_frontend_success_claim(libretro_evidence[0][2]),
             "libretro artifact/link evidence overstates actual frontend behavior")
@@ -444,12 +444,12 @@ def main() -> None:
 
     flow_rows = table_rows(verification, "| Output | Source | Status |")
     require(all(len(row) == 3 for row in flow_rows), "malformed data-flow verification row")
-    frontend_flow = [row for row in flow_rows if row[0] == "Actual frontend status"]
+    frontend_flow = [row for row in flow_rows if row[0] == "Actual frontend state"]
     require(len(frontend_flow) == 1 and "unknown" in frontend_flow[0][2].lower() and
             not contains_frontend_success_claim(" ".join(frontend_flow[0])),
             "frontend qualification data-flow no longer preserves actual-app unknown status")
 
-    spotcheck_rows = table_rows(verification, "| Behavior | Retained command/result | Status |")
+    spotcheck_rows = table_rows(verification, "| Behavior | Command/result | Status |")
     spotcheck_section = verification.split("### Behavioral Spot-Checks", 1)[1].split("\n### ", 1)[0]
     require(not any(contains_frontend_success_claim(line) for line in spotcheck_section.splitlines()
                     if line.startswith("|") and not line.startswith("|---")),
@@ -464,7 +464,7 @@ def main() -> None:
             "actual frontend spot-check is no longer marked manual-only and unrun")
 
     requirement_header = next((line for line in verification.splitlines()
-                               if line.startswith("| Requirement | Source plans")), None)
+                               if line.startswith("| Requirement | Plans | Status | Evidence |")), None)
     require(requirement_header is not None, "verification report lacks requirement coverage table")
     requirement_rows = table_rows(verification, requirement_header)
     require(all(len(row) in {4, 5} for row in requirement_rows), "malformed requirement coverage row")

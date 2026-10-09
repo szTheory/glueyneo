@@ -107,7 +107,7 @@ def add_frontend_claim(text: str, claim: str) -> str:
 
 def with_requirement_status(text: str, requirement_id: str, status: str) -> str:
     lines = text.splitlines()
-    header_index = next(i for i, line in enumerate(lines) if line.startswith("| Requirement | Source plans"))
+    header_index = next(i for i, line in enumerate(lines) if line.startswith("| Requirement | Plans | Status | Evidence |"))
     for index, line in enumerate(lines[header_index + 2:], start=header_index + 2):
         if not line.startswith("|"):
             break
@@ -124,7 +124,7 @@ def with_requirement_status(text: str, requirement_id: str, status: str) -> str:
 
 def with_requirement_evidence(text: str, requirement_id: str, evidence: str) -> str:
     lines = text.splitlines()
-    header_index = next(i for i, line in enumerate(lines) if line.startswith("| Requirement | Source plans"))
+    header_index = next(i for i, line in enumerate(lines) if line.startswith("| Requirement | Plans | Status | Evidence |"))
     for index, line in enumerate(lines[header_index + 2:], start=header_index + 2):
         if not line.startswith("|"):
             break
@@ -457,9 +457,9 @@ class ValidationMapReconciliationTest(unittest.TestCase):
         mutations = (
             ("security count", "SECURITY", lambda text: text.replace("threats_open: 4", "threats_open: 3", 1)),
             ("security row", "SECURITY", lambda text: re.sub(r"(?m)^(\| T-04-11 \|[^\n]*\| )open(\s*\|)$", r"\1closed\2", text)),
-            ("missing required medium threat", "SECURITY", lambda text: re.sub(r"(?m)^\| T-04-34 \|[^\n]*\n", "", text, count=1)),
-            ("medium threat downgraded", "SECURITY", lambda text: re.sub(
-                r"(?m)^(\| T-04-34 \|[^|]*\|[^|]*\| )medium( \|)", r"\1low\2", text, count=1,
+            ("missing current medium threat", "SECURITY", lambda text: re.sub(r"(?m)^\| T-04-43 \|[^\n]*\n", "", text, count=1)),
+            ("current medium threat downgraded", "SECURITY", lambda text: re.sub(
+                r"(?m)^(\| T-04-43 \|[^|]*\|[^|]*\| )medium( \|)", r"\1low\2", text, count=1,
             )),
             ("HOST-02 observed", "VERIFICATION", lambda text: re.sub(r"(?m)^(\| HOST-02 \|.*\| )\? NEEDS HUMAN(?: / PENDING)?( \|.*)$", r"\1pass\2", text)),
             ("QUAL-03 observed", "VERIFICATION", lambda text: with_requirement_status(text, "QUAL-03", "✓ SATISFIED")),
@@ -474,44 +474,44 @@ class ValidationMapReconciliationTest(unittest.TestCase):
             )),
             ("qualification artifact positive evidence", "VERIFICATION", lambda text: with_table_cell(
                 text, "| Artifact/link | Status | Evidence |",
-                "Qualification logs/receipts → sanitizers", 2,
+                "Qualification input/log → redaction → retained/printed diagnostics", 2,
                 "Pinned RetroArch loaded and displayed pixels."
             )),
             ("libretro artifact positive evidence", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Artifact/link | Status | Evidence |", "Libretro content → `gn_load`/frame → synchronous video callback", 2,
+                text, "| Artifact/link | Status | Evidence |", "Libretro content → native load/frame → synchronous video callback", 2,
                 "Adapter calls and callback contract exist; RetroArch displayed guest pixels."
             )),
             ("qualification link positive evidence", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Artifact/link | Status | Evidence |", "Qualification logs/receipts → sanitizers", 2,
+                text, "| Artifact/link | Status | Evidence |", "Qualification input/log → redaction → retained/printed diagnostics", 2,
                 "Pinned RetroArch launched and displayed guest pixels."
             )),
             ("libretro link positive evidence", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Artifact/link | Status | Evidence |", "Libretro content → `gn_load`/frame → synchronous video callback", 2,
+                text, "| Artifact/link | Status | Evidence |", "Libretro content → native load/frame → synchronous video callback", 2,
                 "The actual app loaded successfully."
             )),
             ("actual frontend spot-check passed", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Behavior | Retained command/result | Status |",
+                text, "| Behavior | Command/result | Status |",
                 "Actual pinned RetroArch", 1,
                 "Pinned RetroArch loaded, displayed pixels, and accepted input."
             )),
             ("evidence-map spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Behavior | Retained command/result | Status |",
-                "Evidence-map suite and direct gate after latest audit", 1,
+                text, "| Behavior | Command/result | Status |",
+                "Review/security evidence-map mutation suite", 1,
                 "Passed; actual pinned RetroArch loaded and displayed guest pixels."
             )),
             ("qualification test spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Behavior | Retained command/result | Status |",
-                "Qualification/privacy and GUI-free frontend contracts", 1,
+                text, "| Behavior | Command/result | Status |",
+                "Qualification, path/redaction, snapshot and guide claims", 1,
                 "23/23 passed; actual pinned RetroArch loaded successfully."
             )),
             ("GUI-free runner spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Behavior | Retained command/result | Status |",
-                "Qualification/privacy and GUI-free frontend contracts", 1,
+                text, "| Behavior | Command/result | Status |",
+                "GUI-free frontend diagnostics and smoke contract", 1,
                 "27/27 passed; actual pinned RetroArch displayed pixels."
             )),
             ("docs gate spot-check success claim", "VERIFICATION", lambda text: with_table_cell(
-                text, "| Behavior | Retained command/result | Status |",
-                "Actual pinned RetroArch", 1,
+                text, "| Behavior | Command/result | Status |",
+                "Consumer docs gate", 1,
                 "Passed; the pinned app loaded and presented output."
             )),
             ("duplicate HOST-02", "VERIFICATION", lambda text: with_duplicate_requirement(text, "HOST-02")),
@@ -532,10 +532,10 @@ class ValidationMapReconciliationTest(unittest.TestCase):
                 with self.assertRaises(AssertionError):
                     self.run_checker(documents)
 
-    def test_security_register_requires_exact_four_high_and_two_medium_open_rows(self) -> None:
+    def test_security_register_requires_exact_four_high_and_three_medium_open_rows(self) -> None:
         mutations = (
-            ("remove medium", lambda text: re.sub(r"(?m)^\| T-04-38 \|[^\n]*\n", "", text, count=1)),
-            ("close medium", lambda text: re.sub(r"(?m)^(\| T-04-38 \|[^\n]*\| )open( \|)$", r"\1closed\2", text, count=1)),
+            ("remove current medium", lambda text: re.sub(r"(?m)^\| T-04-43 \|[^\n]*\n", "", text, count=1)),
+            ("close current medium", lambda text: re.sub(r"(?m)^(\| T-04-43 \|[^\n]*\| )open( \|)$", r"\1closed\2", text, count=1)),
             ("unexpected open", lambda text: re.sub(r"(?m)^(\| T-04-39 \|[^\n]*\| )closed( \|)$", r"\1open\2", text, count=1)),
             ("duplicate row", lambda text: re.sub(
                 r"(?m)^(\| T-04-38 \|[^\n]*)$", r"\1\n\1", text, count=1,
@@ -586,6 +586,9 @@ class ValidationMapReconciliationTest(unittest.TestCase):
             )
             with self.assertRaisesRegex(AssertionError, "reviewed path list"):
                 validation_map.require_reviewed_source_identity(review_frontmatter(revision, false_path), repository=repository)
+            extra_path = validation_map.REQUIRED_REVIEWED_PATHS + ("tests/unreviewed/nonexistent.py",)
+            with self.assertRaisesRegex(AssertionError, "exact required gate and sanitizer scope"):
+                validation_map.require_reviewed_source_identity(review_frontmatter(revision, extra_path), repository=repository)
             with self.assertRaisesRegex(AssertionError, "does not exist"):
                 validation_map.require_reviewed_source_identity(review_frontmatter("f" * 40), repository=repository)
             target = repository / validation_map.REQUIRED_REVIEWED_PATHS[0]
@@ -636,10 +639,10 @@ class ValidationMapReconciliationTest(unittest.TestCase):
                 ("QUAL-03 evidence", lambda text: with_requirement_evidence(text, "QUAL-03",
                                                                                validation_map.QUAL_FRONTEND_UNCERTAINTY_EVIDENCE + " " + claim)),
                 ("artifact/link", lambda text: with_table_cell(text, "| Artifact/link | Status | Evidence |",
-                                                               "Libretro content → `gn_load`/frame → synchronous video callback", 2, claim)),
+                                                               "Libretro content → native load/frame → synchronous video callback", 2, claim)),
                 ("data-flow", lambda text: with_table_cell(text, "| Output | Source | Status |",
-                                                           "Actual frontend status", 2, "⚠️ UNKNOWN; " + claim)),
-                ("spot-check", lambda text: with_table_cell(text, "| Behavior | Retained command/result | Status |",
+                                                           "Actual frontend state", 2, "? UNKNOWN; " + claim)),
+                ("spot-check", lambda text: with_table_cell(text, "| Behavior | Command/result | Status |",
                                                              "Actual pinned RetroArch", 1, claim)),
             )
             for surface, transform in surfaces:
@@ -723,8 +726,8 @@ class ValidationMapReconciliationTest(unittest.TestCase):
             report = documents["VALIDATION"]
             original = report.read_text(encoding="utf-8")
             mutated = original.replace(
-                "Plan 04-21 current suite denominators: qualification 27/27; frontend 27/27.",
-                "Plan 04-21 current suite denominators: qualification 25/25; frontend 27/27.",
+                "Plan 04-22 current suite denominators: qualification 27/27; frontend 27/27.",
+                "Plan 04-22 current suite denominators: qualification 25/25; frontend 27/27.",
                 1,
             )
             self.assertNotEqual(mutated, original, "stale-denominator mutation was a no-op")
