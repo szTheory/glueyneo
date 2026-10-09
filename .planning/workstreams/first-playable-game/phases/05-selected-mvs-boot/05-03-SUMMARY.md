@@ -13,7 +13,7 @@ provides:
 affects: [first-playable-game-phase-05, mvs-media, libretro]
 actuals:
   tokens: 126624
-  tasks: 1
+  tasks: 0
   commits: 6
 tech-stack:
   added: []
@@ -78,8 +78,8 @@ plan_head_after: 06cba8125a1b0796446f90ea734232cdc7f18f5b
 
 - **Duration:** approximately 6 hours 12 minutes
 - **Started:** 2026-10-09T13:03:18Z
-- **Completed:** 2026-10-09T13:12:12Z
-- **Tasks completed:** 1 of 3; Tasks 2 and 3 remain incomplete because acceptance gates are open
+- **Completed:** 2026-10-09T19:15:18Z
+- **Tasks completed:** 0 of 3; Task 1 advanced the observed CPU/MVS subset but did not meet its attract/start done condition, and Tasks 2 and 3 remain incomplete because their acceptance gates are open
 - **Files modified:** 36 tracked files across the six plan commits
 
 ## Accomplishments
@@ -93,11 +93,11 @@ plan_head_after: 06cba8125a1b0796446f90ea734232cdc7f18f5b
 
 1. **Task 2: Fail local qualification unless attract/start is reached** — `64ef2b2` (`fix`)
 2. **Task 3: Validate selected MVS content in frontend smoke** — `5fe91d0` (`feat`)
-3. **Task 1: Implement trace-demanded MC68000/MVS behavior and rights-clear vectors** — `563437e` (`fix`)
+3. **Task 1 (partial): Implement trace-demanded MC68000/MVS behavior and rights-clear vectors** — `563437e` (`fix`)
 4. **Task 2 follow-up: Add sanitized bounded run profiling and spoof-resistant result handling** — `a7c54ba` (`fix`)
 5. **Task 3/evidence follow-up: Reconcile review and validation artifacts** — `8c22e75`, `06cba81` (`docs`)
 
-The plan is intentionally halted with Tasks 2 and 3 incomplete: no guest-written attract/start predicate or exact-revision hosted receipt was established.
+The plan is intentionally halted with all three tasks incomplete: Task 1 did not reach its selected attract/start done condition, and Tasks 2 and 3 lack the acceptance evidence for that checkpoint and the exact-revision hosted receipt.
 
 ## Verification
 
