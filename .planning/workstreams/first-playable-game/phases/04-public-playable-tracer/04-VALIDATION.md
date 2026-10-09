@@ -80,6 +80,9 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | 04-20 T3 | 04-20 | 18 | HOST-02, QUAL-03 | T-04-34, T-04-38, T-04-39 | Reconcile current review finding states with evidence and exact crosswalk; retain four high/open threats and frontend Pending/unknown | mutation suite, direct checker, docs gate | `python3 tests/tools/test_check_phase04_validation_map.py -v`; `python3 tests/tools/check_phase04_validation_map.py`; `python3 tools/verify_playable.py --check-docs` | Yes | 15/15 mutation tests, direct checker and docs gate pass; WR-02 fixed by independent review; WR-01/T-04-34 remain open; no app claim |
 | Post-execution review | 04-20 | 18 | HOST-02, QUAL-03 | T-04-34 | Evidence-map uncertainty filter must reject affirmative output claims while actual frontend status is unknown | review mutation gap | `tests/tools/check_phase04_validation_map.py:214-220` counterexample in 04-REVIEW.md WR-08 | Yes | open: “a frame was rendered to the window” passes beside unknown status; no app observation is inferred |
 | Post-audit checker reconciliation | 04-20 | 18 | QUAL-03 | T-04-38 | Reconcile all audited medium/open threat rows without relaxing the security register | evidence-map regression | `python3 tests/tools/test_check_phase04_validation_map.py -v`; `python3 tests/tools/check_phase04_validation_map.py` | Yes | blocked: 5/15 mutation tests fail and direct checker rejects the additional T-04-38 medium/open row; retain finding for follow-up plan |
+| 04-21 T1 | 04-21 | 19 | HOST-02, QUAL-03 | T-04-41, T-04-43, T-04-SC | Source-derived evidence-map mutations enforce exact security rows and WR-01 review provenance; preserve all open threats and frontend unknown | checker mutation controls | `python3 tests/tools/test_check_phase04_validation_map.py -v` | Yes | pass, 22/22; direct evidence-map gate also passes and reconciles current focused suite counts |
+| 04-21 T2 | 04-21 | 19 | HOST-02, QUAL-03 | T-04-42, T-04-SC | Copied report/guide mutations reject tested affirmative output, control and guest-pixel claims; GUI-free contract and qualification behavior remain distinct from actual app evidence | qualification/privacy and GUI-free contract regressions; docs gate | `python3 tests/tools/test_verify_playable.py -v`; `python3 tests/libretro/test_retroarch_smoke.py -v`; `python3 tools/verify_playable.py --check-docs` | Yes | pass, qualification 27/27 and frontend contract 27/27; docs gate passes; no actual RetroArch behavior inferred |
+| 04-21 T3 | 04-21 | 19 | HOST-02, QUAL-03 | T-04-41, T-04-42, T-04-43, T-04-SC | Frozen independent review and current direct gates reconcile exact review provenance, dispositions, current denominators and remaining manual-only limits | independent review evidence and integration gates | `python3 tests/tools/check_phase04_validation_map.py`; `python3 tools/verify_playable.py --check-docs`; `ctest --preset owned-debug --output-on-failure` | Yes | independent review of `f1c8a1de5f25224b83da6ec9e4bc40bf51a249ae` found no new actionable issue; direct checker and docs gate pass; CTest 47/47; HOST-02/frontend QUAL-03 remain Pending/unknown |
 
 ## Threat Coverage
 
@@ -95,6 +98,7 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | T-04-24 receipt numeric types | Plan 04-12 rejects booleans in bytes, entry_count, file_count and symlink_count before aggregate/archive comparison. Fresh repository-backed regressions pass; independent post-fix audit is still required. |
 | T-04-34 | Plan 04-18 constrains the current Pending/unknown status cell; Plan 04-19 adds regression-tested guide claim checks. WR-06 and post-execution WR-08 show unlisted affirmative wording remains possible, so this medium threat remains open. |
 | T-04-37 | Plan 04-19 records revision-scoped independent review, exact counterexamples, dispositions, commands, denominators, and limitations; unresolved WR-06 remains open. |
+| T-04-43 | Phase-wide review WR-09 reproduced acceptance of a nonexistent extra path in the claimed review scope; retain medium/open pending exact-scope enforcement. |
 
 ## Review Finding Crosswalk
 
@@ -111,6 +115,7 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | CR-01 | critical | T-04-24, exact numeric receipt types | fixed |
 | WR-03 | warning | T-04-13 / T-04-23, repository receipt validation rejects forged file-content hashes | fixed |
 | WR-02 | warning | Independent review `870848e553aca6e43f6fec8ae0acefac87270f5b` confirms live 25/25 comparison and stale 23/23 mutation rejection | fixed |
+| WR-09 | warning | T-04-43: the review provenance gate accepts a nonexistent extra path in the claimed scope; reproduced by the current standard-depth review at revision `48befe7a92d7c545e7c900c57e027b9e15952a7f` | open |
 
 ### Plan 04-20 Task 1 Current Evidence — 2026-10-08
 
@@ -360,3 +365,15 @@ Plan 04-21 current suite denominators: qualification 27/27; frontend 27/27.
 WR-01 remains open with its exact historical independent-review source: review `04-REVIEW.md` at `87f8d4c`, reviewed revision `870848e553aca6e43f6fec8ae0acefac87270f5b`, timestamp `2026-10-08T23:46:34Z`, carried open. The tested WR-06 and WR-08 counterexamples are now rejected, while both historical review findings remain open for separate disposition under T-04-34. T-04-11, T-04-15, T-04-18 and T-04-20 remain high/open by direction. T-04-34 and T-04-38 remain medium/open; the blocking count remains four high/open rows. No security register or phase verification claim was changed.
 
 HOST-02 and frontend QUAL-03 remain manual-only and Pending/unknown. No RetroArch process or GUI was launched, and no repository test or guide statement is evidence of actual pinned frontend load, presentation, input, unload, or exit. `nyquist_compliant` remains false.
+
+## Post-execution code review — 2026-10-09
+
+The configured standard-depth review of revision `48befe7a92d7c545e7c900c57e027b9e15952a7f` found WR-09: `require_reviewed_source_identity()` accepts a nonexistent extra path in the claimed review scope. WR-09 remains open and is crosswalked to medium/open T-04-43. The security register now has seven open threats (four high, three medium); `threats_open` remains four at the configured high threshold. The current exact-open-set checker predates this newly discovered medium finding and requires a follow-up gap plan before the direct evidence-map gate can pass again. HOST-02/frontend QUAL-03 remain Pending/unknown and manual-only.
+
+## Validation Audit 2026-10-09
+
+| Metric | Count |
+|---|---|
+| Gaps found | 3 |
+| Resolved | 3 |
+| Escalated | 0 |

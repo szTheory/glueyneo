@@ -5,7 +5,7 @@ status: blocked
 threats_open: 4
 asvs_level: 1
 created: "2026-10-07"
-updated: "2026-10-08"
+updated: "2026-10-09"
 ---
 
 # Phase 04 — Security
@@ -84,6 +84,10 @@ updated: "2026-10-08"
 | T-04-38 | Repudiation | current review provenance and sanitizer coverage | medium | mitigate | The Plan 04-20 summary preserves the prior sanitizer path and revision, but current `04-REVIEW.md` and the evidence-map checker do not require `files_reviewed_list`, `reviewed_revision`, or that path; retain open. | open |
 | T-04-39 | Tampering | qualification result crosswalk | medium | mitigate | `tests/tools/check_phase04_validation_map.py` compares the report denominator with the live `run_suite()` count and rejects stale, absent, duplicate, or malformed rows. | closed |
 | T-04-40 | Tampering | source/dependency closure (04-20) | high | mitigate | Plan 04-20 checker and test imports use tracked repository code and Python standard library only; no external dependency or source was added. | closed |
+| T-04-41 | Tampering | security/evidence-map reconciliation | medium | mitigate | `tests/tools/check_phase04_validation_map.py` enforces the exact open-threat rows and rejects duplicate or unexpected open rows; mutation tests cover those changes. | closed |
+| T-04-42 | Tampering | frontend claim predicates and docs gate | medium | mitigate | The validation checker and `tools/verify_playable.py` reject affirmative frontend output, control, and lifecycle claims while actual frontend evidence is unknown. | closed |
+| T-04-43 | Repudiation | review provenance | medium | mitigate | `require_reviewed_source_identity()` verifies the immutable revision and required reviewed paths, but Phase 04 review WR-09 reproduced acceptance of an unsupported extra path claim; retain open pending exact-scope enforcement. | open |
+| T-04-SC (04-21) | Tampering | source/dependency closure | high | mitigate | Plan 04-21 uses tracked repository code and Python standard library only; no dependency or external source was added. | closed |
 
 ## Threat Flags
 
@@ -263,3 +267,32 @@ The phase register contains 59 plan-authored threats: 53 closed and 6 open. The 
 | Threats found | 59 |
 | Closed | 53 |
 | Open | 6 |
+
+## Security Audit 2026-10-09
+
+| Metric | Count |
+|---|---|
+| Threats found | 63 |
+| Closed | 57 |
+| Open | 6 |
+| Blocking open (block_on=high) | 4 |
+
+## Security Audit 2026-10-09 — post-review WR-09
+
+| Metric | Count |
+|---|---|
+| Threats found | 63 |
+| Closed | 56 |
+| Open | 7 |
+| Blocking open (block_on=high) | 4 |
+
+The configured ASVS L1 audit verified the Plan 04-21 additions before the phase-wide code review. That review then reproduced WR-09: the review provenance check accepts an unsupported extra path claim. T-04-43 is therefore reopened at medium severity; T-04-34 and T-04-38 plus the four directed high-severity threats remain open. No risk was accepted. The high-severity blocking count remains four, and Phase 04 remains blocked.
+
+## Security Audit — post-review WR-09 2026-10-09
+
+| Metric | Count |
+|---|---|
+| Threats found | 63 |
+| Closed | 56 |
+| Open | 7 |
+| Blocking open (block_on=high) | 4 |
