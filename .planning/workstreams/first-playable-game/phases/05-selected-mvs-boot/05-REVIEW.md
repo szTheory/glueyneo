@@ -85,6 +85,19 @@ smoke-runner change. Subsequent changes add only source-backed, guest-observed
 CPU/MVS semantics with synthetic controls. Hosted
 current-SHA evidence and the required CPU/board review remain open.
 
+## Plan 05-04 checkpoint evidence review — 2026-10-09
+
+No classifier or emulator behavior was added in Plan 05-04. The current
+selected native report remains `guest_instruction_budget_exhausted` after
+guest execution, and no independent attract/start observation is available.
+The prior pinned-app abort is not repeated because its launch context has not
+materially changed. Therefore there is no source-defined predicate to review,
+and no independent code review of a new implementation was performed. The
+generic blocker is retained; no Phase 04 acceptance or disposition is changed.
+The structural RetroArch runner suite passed 31/31 and the MVS CTest suite
+passed 7/7 on the current checkout. These tests do not launch RetroArch with
+selected media and do not close the selected guest checkpoint.
+
 ## Plan 05-03 BIOS-extra contract review
 
 The continuation review below supersedes earlier Plan 05-03 statements that
