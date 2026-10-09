@@ -1,6 +1,14 @@
 /* SPDX-License-Identifier: MIT */
+#if defined(_MSC_VER)
+#pragma warning(push)
+/* Pinned chips/Z80 narrows its 32-bit flag intermediates by design. */
+#pragma warning(disable: 4244)
+#endif
 #define CHIPS_IMPL
 #include "z80_candidate.h"
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 #include <stdlib.h>
 

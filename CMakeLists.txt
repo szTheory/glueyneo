@@ -394,6 +394,7 @@ if(GLUEYNEO_BUILD_TESTS)
     else()
       target_compile_options(ym2610_admission_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
     endif()
+    glueyneo_apply_sdk_sanitizer(ym2610_admission_test)
     add_test(NAME ym2610_admission
       COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/chips/check_ym2610.py"
               test --binary $<TARGET_FILE:ym2610_admission_test>
