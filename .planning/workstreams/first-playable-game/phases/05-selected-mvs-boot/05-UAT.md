@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: partial
 phase: 05-selected-mvs-boot
 source: [05-01-SUMMARY.md]
 started: 2026-10-09T11:41:00Z
-updated: 2026-10-09T12:05:48.223Z
+updated: 2026-10-09T19:28:47.189Z
 ---
 
 ## Current Test
@@ -38,6 +38,7 @@ reported: "Automated local qualification returned no_supported_role_bundle_archi
 severity: major
 evidence: |
   The current-revision local qualification recorded in 05-VALIDATION.md stopped before native loading. This is a concrete archive-to-region mapping gap; it does not establish a frontend failure or selected-game compatibility result.
+  Latest assessment: 05-03-SUMMARY.md records that the selected pair now imports and the guest executes through the 256-chunk hard bound, but no direct guest-written attract/start predicate is established. The old archive-mapping symptom changed; the expected guest checkpoint remains unmet.
 
 ### 4. Run the selected content through the pinned RetroArch smoke path
 expected: An automated smoke launches the pinned RetroArch build with selected normalized media, observes a game frame and expected scripted input response, unloads content, exits normally, and records only generic private-safe outcomes.
@@ -52,6 +53,7 @@ reported: "The shared verify_sdk CI evidence inventory selects sdk-labeled CTest
 severity: major
 evidence: |
   At current checkout d65dc2c, tools/verify_sdk.py defines no MVS CTest lane and its matrix suite enumerates only SDK labels. CMake registers the Phase 05 CTests under the mvs label, but the PR/main evidence collector does not select that label.
+  Latest assessment: Plan 05-02 added the seven-test MVS local matrix lane, but 05-03-SUMMARY.md records no exact-current-SHA hosted receipt and no safe PR/upstream route from this checkout. Hosted CI acceptance remains open.
 
 ## Summary
 
@@ -67,10 +69,10 @@ blocked: 1
 - gap_id: G-05-3
   truth: "The supported selected game and BIOS archives map into GNMV, the native loader accepts them, and the selected guest reaches its attract/start checkpoint."
   status: failed
-  reason: "Automated local qualification returned no_supported_role_bundle_archive at archive_to_region_mapping; no selected guest ran."
+  reason: "The former archive-mapping failure is fixed, but the selected guest reaches the 256-chunk hard bound without a direct attract/start checkpoint."
   severity: major
   test: 3
-  root_cause: "The local qualification wrapper passes each ZIP separately to an importer that accepts only one archive with six already-normalized canonical region members; it cannot combine the selected game's source ZIP and separate BIOS ZIP into GNMV."
+  root_cause: "The selected pair now imports and executes, but the bounded guest run has no source-justified attract/start predicate and stops at its hard budget without an unsupported event or acceptance checkpoint. The phase-05-03 plan is halted with 0/3 tasks complete; its acceptance criterion requires direct guest evidence before resolution."
   artifacts:
     - path: tools/mvs/qualify_local_boot.py
       issue: "Each ZIP is independently sent to the canonical-bundle importer; source archives are not mapped or combined."
@@ -79,16 +81,17 @@ blocked: 1
     - path: docs/mvs-media.md
       issue: "Documents that unmodified game and separate BIOS archives are not yet directly supported."
   missing:
-    - "A bounded selected-profile mapper for the supported game and BIOS source archives, with source identity checks and documented region transforms."
-    - "Public synthetic split-archive integration and wrong-member/identity controls; keep real private archive data and derived identity local."
+    - "A source-defined guest-written attract/start predicate reached by the selected guest within the bounded qualification run."
+    - "Any further CPU/MVS behavior demanded by the observed path, with primary-source timing, rights-clear regression vectors, and wrong-behavior controls."
+  reconciliation_note: "Kept open: the matching 05-03 plan has a halted summary and explicitly leaves G-05-3 open; the required acceptance predicate was not reached."
   debug_session: .planning/debug/phase05-selected-media-mapping.md
 - gap_id: G-05-5
   truth: "The existing pull-request/main CI evidence matrix runs the public MVS regression suite with a positive named-test denominator."
   status: failed
-  reason: "The shared verify_sdk CI evidence inventory does not select CTest tests under the mvs label."
+  reason: "The local MVS lane now exists and passes, but no hosted exact-current-SHA receipt is available from this checkout."
   severity: major
   test: 5
-  root_cause: "Phase 05 CTests are labeled mvs, but the current-SHA CI matrix collector has no mvs label/case inventory or collection step; the evidence source-digest inventory also omits MVS source paths."
+  root_cause: "Plan 05-02 added source-bound local MVS matrix coverage; Plan 05-03 records that the current checkout has no safe PR/upstream route for a hosted receipt and the branch contains unrelated history that must not be published as-is."
   artifacts:
     - path: tools/verify_sdk.py
       issue: "The matrix CTest lane and required receipt inventory enumerate SDK labels only."
@@ -97,6 +100,7 @@ blocked: 1
     - path: CMakeLists.txt
       issue: "Seven mvs-labeled tests exist but are not selected by the evidence collector."
   missing:
-    - "An MVS lane in the existing matrix with exact named tests, a positive denominator, and current-revision receipt evidence."
-    - "Relevant-source identity coverage for MVS code and regression tests that reject missing or stale lane evidence."
+    - "An exact-current-SHA hosted receipt with the seven named MVS tests and a positive denominator."
+    - "A safe, authorized path to run that hosted workflow without publishing unrelated branch history."
+  reconciliation_note: "Kept open: local matrix success is not hosted evidence; the matching 05-03 plan and summary both state that G-05-5 remains open."
   debug_session: .planning/debug/phase05-mvs-ci-evidence.md
