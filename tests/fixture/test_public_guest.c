@@ -5,6 +5,9 @@
 #include <string.h>
 #include "unity.h"
 
+int public_guest_write(const char *path);
+size_t public_guest_content_size(void);
+
 #define PUBLIC_WIDTH 320u
 #define PUBLIC_HEIGHT 224u
 #define PUBLIC_PITCH (PUBLIC_WIDTH * sizeof(uint32_t))
@@ -250,14 +253,12 @@ static void public_fixture_rejects_bad_envelopes_and_keeps_live_image(void) {
 
 int main(int argc, char **argv) {
     if (argc == 3 && strcmp(argv[1], "--write-fixture") == 0) {
-        extern int public_guest_write(const char *path);
         return public_guest_write(argv[2]) ? 0 : 1;
     }
     if (argc != 2 && argc != 3) {
         (void)fprintf(stderr, "usage: %s <public-playable.bin> [trace|negative-left|negative-none] | --write-fixture <path>\n", argv[0]);
         return 2;
     }
-    extern size_t public_guest_content_size(void);
     fixture_path = argv[1];
     UNITY_BEGIN();
     if (argc == 2 || strcmp(argv[2], "trace") == 0) {
