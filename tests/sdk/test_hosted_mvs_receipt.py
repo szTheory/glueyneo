@@ -61,6 +61,13 @@ def seal_aggregate(aggregate: dict) -> dict:
 
 
 class HostedMvsReceiptTests(unittest.TestCase):
+    def test_existing_ci_route_uploads_exact_event_and_mvs_output(self) -> None:
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        self.assertIn("hosted-mvs-ctest-output", workflow)
+        self.assertIn("build/sdk-debug/verify-sdk/mvs-ctest-output.json", workflow)
+        self.assertIn("evidence/sdk/ci-event.json", workflow)
+        self.assertIn("EVENT_HEAD_SHA", workflow)
+
     def test_accepts_exact_eligible_receipt(self) -> None:
         event, receipt = valid_pair()
         validate(event, receipt, source_revision="a" * 40,

@@ -122,9 +122,14 @@ jobs:
         if: always()
         with:
           name: matrix-lane-${{ matrix.lane }}
-          path: |
-            evidence/sdk/matrix-${{ matrix.lane }}.json
-            build/sdk-debug/verify-sdk/logs/ctest-mvs.log
+          path: evidence/sdk/matrix-${{ matrix.lane }}.json
+          if-no-files-found: ignore
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always() && matrix.lane == 'linux-clang'
+        with:
+          name: hosted-mvs-ctest-output
+          path: build/sdk-debug/verify-sdk/mvs-ctest-output.json
           if-no-files-found: ignore
           retention-days: 7
 
@@ -166,6 +171,11 @@ jobs:
           path: build/ci/matrix
           merge-multiple: true
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: needs.matrix.result == 'success'
+        with:
+          name: hosted-mvs-ctest-output
+          path: build/ci/mvs-output
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         if: needs['public-content'].result == 'success'
         with:
           name: public-content-receipt
@@ -182,6 +192,9 @@ jobs:
           for receipt in build/ci/matrix/*.json; do
             [[ -f "$receipt" ]] && LOG_ARGS+=(--log "$receipt")
           done
+          for receipt in build/ci/mvs-output/*.json; do
+            [[ -f "$receipt" ]] && LOG_ARGS+=(--log "$receipt")
+          done
           python3 tools/public_content.py --root . --history-revision "$SOURCE_REVISION" "${LOG_ARGS[@]}" --json build/ci/public-content/matrix-logs.json
       - name: Validate required jobs and current-SHA evidence
         if: always()
@@ -195,13 +208,38 @@ jobs:
           SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
-          mkdir -p build/ci
+          mkdir -p build/ci evidence/sdk
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          name = os.environ["EVENT_NAME"]
+          head = os.environ["EVENT_HEAD_SHA"]
+          event = {"name": name}
+          if name == "pull_request":
+              event.update({"action": os.environ["EVENT_ACTION"],
+                            "draft": os.environ["EVENT_DRAFT"] == "true",
+                            "head_sha": head})
+          else:
+              event.update({"ref": os.environ["EVENT_REF"], "sha": head})
+          Path("evidence/sdk/ci-event.json").write_text(
+              json.dumps(event, sort_keys=True, separators=(",", ":")) + "\n",
+              encoding="utf-8")
+          PY
           python3 tools/workflow/ci_policy.py prepare --output-dir build/ci
           python3 tools/workflow/ci_policy.py aggregate --results build/ci/results.json --plan build/ci/plan.json --matrix-dir build/ci/matrix --output evidence/sdk/ci-aggregate.json
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action || '' }}
+          EVENT_DRAFT: ${{ github.event.pull_request.draft || false }}
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EVENT_REF: ${{ github.ref }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: ci-aggregate-receipt
-          path: evidence/sdk/ci-aggregate.json
+          path: |
+            evidence/sdk/ci-aggregate.json
+            evidence/sdk/ci-event.json
           if-no-files-found: ignore
           retention-days: 30
