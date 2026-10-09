@@ -7,11 +7,17 @@ import io
 import os
 import struct
 import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
 import warnings
 import zipfile
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from tools.mvs.qualify_local_boot import (
+    _archive_structure_valid, _central_directory_matches, pair_fits_import_limits,
+    safe_result,
+)
 
 NAMES = (
     "bios.bin", "program.bin", "fixed.bin", "audio.bin", "samples.bin",
@@ -36,7 +42,8 @@ BIOS_MEMBER = "sp-s2.sp1"
 
 def make_split_archives(*, replace_program: bool = False,
                         duplicate_program: bool = False,
-                        wrong_bios_member: bool = False) -> tuple[bytes, bytes]:
+                        wrong_bios_member: bool = False,
+                        bios_extras: tuple[tuple[str, bytes], ...] = ()) -> tuple[bytes, bytes]:
     game, bios = io.BytesIO(), io.BytesIO()
     with zipfile.ZipFile(game, "w", compression=zipfile.ZIP_STORED,
                          allowZip64=False) as archive:
@@ -57,7 +64,45 @@ def make_split_archives(*, replace_program: bool = False,
             data[0:8] = bytes.fromhex("1000feff00000001")
             data[0x100:0x10C] = bytes.fromhex("5a72c13310000000724e0027")
         archive.writestr(BIOS_MEMBER, data)
+        for name, payload in bios_extras:
+            method = zipfile.ZIP_DEFLATED if name.endswith(".deflated") else zipfile.ZIP_STORED
+            archive.writestr(name, payload, compress_type=method)
     return game.getvalue(), bios.getvalue()
+
+
+def corrupt_member_payload(source: bytes, member_name: str) -> bytes:
+    """Flip an expanded member byte without changing its ZIP CRC metadata."""
+    archive = bytearray(source)
+    cursor = 0
+    while True:
+        local = archive.find(b"PK\x03\x04", cursor)
+        if local < 0:
+            raise AssertionError("synthetic ZIP local member not found")
+        name_len, extra_len = struct.unpack_from("<HH", archive, local + 26)
+        name = bytes(archive[local + 30:local + 30 + name_len]).decode("ascii")
+        compressed = struct.unpack_from("<I", archive, local + 18)[0]
+        if name == member_name:
+            payload = local + 30 + name_len + extra_len
+            if compressed == 0:
+                raise AssertionError("synthetic member has no payload")
+            archive[payload] ^= 1
+            return bytes(archive)
+        cursor = local + 30 + name_len + extra_len + compressed
+
+
+def mutate_member_flags(source: bytes, member_name: str, flags: int) -> bytes:
+    archive = bytearray(source)
+    central = archive.find(b"PK\x01\x02")
+    while central >= 0:
+        name_len, extra_len, comment_len = struct.unpack_from("<HHH", archive, central + 28)
+        name = bytes(archive[central + 46:central + 46 + name_len]).decode("ascii")
+        if name == member_name:
+            local = struct.unpack_from("<I", archive, central + 42)[0]
+            struct.pack_into("<H", archive, central + 8, flags)
+            struct.pack_into("<H", archive, local + 6, flags)
+            return bytes(archive)
+        central = archive.find(b"PK\x01\x02", central + 46 + name_len + extra_len + comment_len)
+    raise AssertionError("synthetic ZIP central member not found")
 
 
 def mutate_zip_record(source: bytes, *, flags: int | None = None,
@@ -185,9 +230,11 @@ class ImporterTests(unittest.TestCase):
             runner = str(Path(self.production_importer).resolve().parent / "mvs_qualify")
             execution = subprocess.run([runner, output_path], capture_output=True,
                                        text=True, check=False)
+            # This legacy synthetic vector starts execution outside the MAME
+            # read-only low vector window, so qualification must stop safely.
             self.assertEqual(execution.returncode, 0, execution.stdout)
             self.assertIn('"guest_executed":true', execution.stdout)
-            self.assertIn('"status":"guest_stopped"', execution.stdout)
+            self.assertIn('"status":"mvs_bus_access_fault"', execution.stdout)
         self.assertEqual(bundle[:4], b"GNMV")
         self.assertEqual(struct.unpack_from(">III", bundle, 4),
                          (1, 0x4D53584D, 6))
@@ -214,6 +261,169 @@ class ImporterTests(unittest.TestCase):
         self.assertEqual(regions[5][0x800000:0x800004], bytes.fromhex("17171717"))
         self.assertEqual(regions[6][:4], bytes.fromhex("18191819"))
         self.assertEqual(regions[6][1:5], bytes.fromhex("19181918"))
+
+    def test_selected_bios_ignores_flat_bounded_extras_after_crc_validation(self) -> None:
+        extras = (("synthetic-extra-a.bin", b"extra-a" * 64),
+                  ("synthetic-extra-b.dat", b"extra-b" * 32))
+        game, bios = make_split_archives(bios_extras=extras)
+        with tempfile.TemporaryDirectory(prefix="mvs-split-test-") as directory:
+            game_path, bios_path = (os.path.join(directory, name)
+                                    for name in ("game.zip", "bios.zip"))
+            output_path = os.path.join(directory, "selected.gnmv")
+            for path, payload in ((game_path, game), (bios_path, bios)):
+                with open(path, "wb") as handle:
+                    handle.write(payload)
+            checked = subprocess.run(
+                [self.importer, "--selected", game_path, bios_path, output_path],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(checked.returncode, 0, checked.stderr)
+            self.assertTrue(Path(output_path).is_file())
+
+    def test_selected_bios_allows_deflate_hints_only_on_deflated_members(self) -> None:
+        game, bios = make_split_archives(
+            bios_extras=(("synthetic-compressed.deflated", b"extra" * 128),))
+        accepted = mutate_member_flags(bios, "synthetic-compressed.deflated", 0x0006)
+        rejected = mutate_member_flags(bios, BIOS_MEMBER, 0x0002)
+        for candidate, should_pass in ((accepted, True), (rejected, False)):
+            with tempfile.TemporaryDirectory(prefix="mvs-split-test-") as directory:
+                game_path, bios_path = (os.path.join(directory, name)
+                                        for name in ("game.zip", "bios.zip"))
+                output_path = os.path.join(directory, "selected.gnmv")
+                for path, payload in ((game_path, game), (bios_path, candidate)):
+                    with open(path, "wb") as handle:
+                        handle.write(payload)
+                checked = subprocess.run(
+                    [self.importer, "--selected", game_path, bios_path, output_path],
+                    capture_output=True, text=True, check=False,
+                )
+                self.assertEqual(checked.returncode == 0, should_pass, checked.stderr)
+                self.assertEqual(Path(output_path).exists(), should_pass)
+
+    def test_classifier_structure_rejects_zip64_extra_fields(self) -> None:
+        target = io.BytesIO()
+        info = zipfile.ZipInfo("synthetic-flat.bin")
+        info.extra = struct.pack("<HHQ", 1, 8, 0)
+        with zipfile.ZipFile(target, "w", allowZip64=False) as archive:
+            archive.writestr(info, b"synthetic")
+        with zipfile.ZipFile(io.BytesIO(target.getvalue())) as archive:
+            self.assertFalse(_archive_structure_valid(archive, archive.infolist()))
+
+    def test_classifier_candidate_requires_exact_central_extent(self) -> None:
+        with zipfile.ZipFile(io.BytesIO(make_archive()), "r") as archive:
+            entries = archive.infolist()
+            archive.fp.seek(0, 2)
+            total_size = archive.fp.tell()
+            tail_len = min(total_size, 65557)
+            archive.fp.seek(total_size - tail_len)
+            tail = archive.fp.read(tail_len)
+            pos = tail.rfind(b"PK\x05\x06")
+            _, _, _, _, central_size, central_offset, _ = struct.unpack_from(
+                "<HHHHIIH", tail, pos + 4)
+            actual_end = total_size - tail_len + pos
+            self.assertTrue(_central_directory_matches(archive, entries, actual_end))
+            self.assertFalse(_central_directory_matches(
+                archive, entries, central_offset + central_size + 1))
+
+    def test_classifier_pair_respects_combined_import_limit(self) -> None:
+        cap = 128 * 1024 * 1024
+        self.assertTrue(pair_fits_import_limits(96 * 1024 * 1024,
+                                                32 * 1024 * 1024, cap, 0))
+        self.assertFalse(pair_fits_import_limits(96 * 1024 * 1024,
+                                                 32 * 1024 * 1024 + 1, cap, 0))
+        self.assertFalse(pair_fits_import_limits(96 * 1024 * 1024 + 1, 1, 0, 0))
+        self.assertFalse(pair_fits_import_limits(1, 1, cap, 1))
+
+    def test_budget_result_keeps_only_bounded_private_diagnostic_fields(self) -> None:
+        safe = safe_result({
+            "status": "guest_instruction_budget_exhausted",
+            "guest_executed": True,
+            "last_execution": {"pc": 0x1234, "opcode": 0x4E71, "instructions": 17,
+                               "elapsed_cycles": 128000000,
+                               "mame_watchdog_reset_count": 2},
+            "recent_fetches": [{"pc": 0x1234, "word": 0x4E71,
+                                "cursor": 0x1236, "run": 11, "cycles": 64}],
+            "profile": {"chunks": 256, "stable_chunks": 249,
+                        "output_transition_chunks": 3,
+                        "video_transition_chunks": 4,
+                        "bank_transition_chunks": 0,
+                        "watchdog_pet_count": 129,
+                        "watchdog_reset_count": 0,
+                        "repeated_boundary_suffix": True,
+                        "private_registers": [1, 2, 3]},
+            "private_identity_recorded": True,
+            "archive_path": "synthetic-private-path",
+        })
+        self.assertEqual(safe["status"], "guest_instruction_budget_exhausted")
+        self.assertIs(safe["guest_executed"], True)
+        self.assertIs(safe["private_identity_recorded"], False)
+        self.assertEqual(safe["last_execution"], {
+            "pc": 0x1234, "opcode": 0x4E71, "instructions": 17,
+            "elapsed_cycles": 128000000,
+            "mame_watchdog_reset_count": 2,
+        })
+        self.assertEqual(safe["recent_fetches"], [{
+            "pc": 0x1234, "word": 0x4E71, "cursor": 0x1236,
+            "run": 11, "cycles": 64,
+        }])
+        self.assertEqual(safe["profile"], {
+            "chunks": 256, "stable_chunks": 249,
+            "output_transition_chunks": 3,
+            "video_transition_chunks": 4,
+            "bank_transition_chunks": 0,
+            "watchdog_pet_count": 129,
+            "watchdog_reset_count": 0,
+            "repeated_boundary_suffix": True,
+        })
+        self.assertNotIn("archive_path", safe)
+        self.assertNotIn("private_registers", safe["profile"])
+        spoofed = safe_result({
+            "status": "attract_start", "guest_executed": True,
+            "checkpoint": "private guest signal",
+        })
+        self.assertEqual(spoofed["status"], "native_qualification_failed")
+        self.assertIsNot(spoofed.get("guest_executed"), True)
+        self.assertNotIn("checkpoint", spoofed)
+
+    def test_selected_bios_rejects_corrupt_flat_extra_without_output(self) -> None:
+        game, bios = make_split_archives(
+            bios_extras=(("synthetic-corrupt-extra.bin", bytes(range(64))),))
+        corrupt = corrupt_member_payload(bios, "synthetic-corrupt-extra.bin")
+        with tempfile.TemporaryDirectory(prefix="mvs-split-test-") as directory:
+            game_path, bios_path = (os.path.join(directory, name)
+                                    for name in ("game.zip", "bios.zip"))
+            output_path = os.path.join(directory, "selected.gnmv")
+            for path, payload in ((game_path, game), (bios_path, corrupt)):
+                with open(path, "wb") as handle:
+                    handle.write(payload)
+            checked = subprocess.run(
+                [self.importer, "--selected", game_path, bios_path, output_path],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertNotEqual(checked.returncode, 0)
+            self.assertFalse(Path(output_path).exists())
+
+    def test_selected_bios_rejects_unsafe_or_duplicate_extra_names(self) -> None:
+        cases = (
+            (("../unsafe.bin", b"unsafe"),),
+            (("synthetic-duplicate.bin", b"one"),
+             ("synthetic-duplicate.bin", b"two")),
+        )
+        for extras in cases:
+            game, bios = make_split_archives(bios_extras=extras)
+            with tempfile.TemporaryDirectory(prefix="mvs-split-test-") as directory:
+                game_path, bios_path = (os.path.join(directory, name)
+                                        for name in ("game.zip", "bios.zip"))
+                output_path = os.path.join(directory, "selected.gnmv")
+                for path, payload in ((game_path, game), (bios_path, bios)):
+                    with open(path, "wb") as handle:
+                        handle.write(payload)
+                checked = subprocess.run(
+                    [self.importer, "--selected", game_path, bios_path, output_path],
+                    capture_output=True, text=True, check=False,
+                )
+                self.assertNotEqual(checked.returncode, 0)
+                self.assertFalse(Path(output_path).exists())
 
     def test_selected_wrong_member_and_duplicate_are_rejected_without_output(self) -> None:
         cases = (({"replace_program": True}, self.importer),
@@ -371,13 +581,23 @@ def main() -> int:
         suite = unittest.TestSuite([
             ImporterTests("test_deflated_archive_normalizes_selected_profile"),
             ImporterTests("test_eocd_signature_inside_comment_does_not_hide_directory"),
+            ImporterTests("test_classifier_candidate_requires_exact_central_extent"),
+            ImporterTests("test_classifier_pair_respects_combined_import_limit"),
+            ImporterTests("test_budget_result_keeps_only_bounded_private_diagnostic_fields"),
             ImporterTests("test_selected_split_archives_normalize_exact_mslugx_map"),
+            ImporterTests("test_selected_bios_ignores_flat_bounded_extras_after_crc_validation"),
+            ImporterTests("test_selected_bios_allows_deflate_hints_only_on_deflated_members"),
+            ImporterTests("test_classifier_structure_rejects_zip64_extra_fields"),
         ])
     elif args.mode == "mutation":
         suite = unittest.TestSuite([
             ImporterTests("test_malformed_and_unsupported_archives_have_stable_statuses"),
             ImporterTests("test_selected_wrong_member_and_duplicate_are_rejected_without_output"),
             ImporterTests("test_selected_crc_unsupported_zip_and_output_failures_are_atomic"),
+            ImporterTests("test_selected_bios_rejects_corrupt_flat_extra_without_output"),
+            ImporterTests("test_selected_bios_rejects_unsafe_or_duplicate_extra_names"),
+            ImporterTests("test_selected_bios_allows_deflate_hints_only_on_deflated_members"),
+            ImporterTests("test_classifier_structure_rejects_zip64_extra_fields"),
         ])
     else:
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(ImporterTests)

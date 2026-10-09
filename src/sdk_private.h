@@ -3,6 +3,11 @@
 #define GLUEYNEO_SDK_PRIVATE_H
 
 #include "glueyneo/glueyneo.h"
+#include "../experiments/owned_cpu/cpu.h"
+
+gn_status gn_private_mvs_fetch_trace(
+    const gn_instance *instance, owned_cpu_fetch_trace_event *events,
+    size_t capacity, size_t *out_count);
 
 #if defined(GLUEYNEO_SDK_TEST_HOOKS)
 typedef struct {
