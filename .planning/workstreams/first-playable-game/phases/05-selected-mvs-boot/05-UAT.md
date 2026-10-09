@@ -1,9 +1,9 @@
 ---
-status: partial
+status: diagnosed
 phase: 05-selected-mvs-boot
-source: [05-01-SUMMARY.md]
+source: [05-01-SUMMARY.md, 05-02-SUMMARY.md, 05-03-SUMMARY.md]
 started: 2026-10-09T11:41:00Z
-updated: 2026-10-09T19:28:47.189Z
+updated: 2026-10-09T19:33:16Z
 ---
 
 ## Current Test
@@ -37,7 +37,7 @@ result: issue
 reported: "Automated local qualification returned no_supported_role_bundle_archive at archive_to_region_mapping; no selected guest ran."
 severity: major
 evidence: |
-  The current-revision local qualification recorded in 05-VALIDATION.md stopped before native loading. This is a concrete archive-to-region mapping gap; it does not establish a frontend failure or selected-game compatibility result.
+  Historical qualification recorded in 05-VALIDATION.md stopped before native loading. This did not establish a frontend failure or selected-game compatibility result.
   Latest assessment: 05-03-SUMMARY.md records that the selected pair now imports and the guest executes through the 256-chunk hard bound, but no direct guest-written attract/start predicate is established. The old archive-mapping symptom changed; the expected guest checkpoint remains unmet.
 
 ### 4. Run the selected content through the pinned RetroArch smoke path
@@ -52,7 +52,7 @@ result: issue
 reported: "The shared verify_sdk CI evidence inventory selects sdk-labeled CTest cases and omits the MVS-labeled tests, so Phase 05 regressions are not part of current CI receipts."
 severity: major
 evidence: |
-  At current checkout d65dc2c, tools/verify_sdk.py defines no MVS CTest lane and its matrix suite enumerates only SDK labels. CMake registers the Phase 05 CTests under the mvs label, but the PR/main evidence collector does not select that label.
+  Historical evidence at checkout d65dc2c showed the collector omitted MVS-labeled CTests; Plan 05-02 repaired that local evidence-lane defect.
   Latest assessment: Plan 05-02 added the seven-test MVS local matrix lane, but 05-03-SUMMARY.md records no exact-current-SHA hosted receipt and no safe PR/upstream route from this checkout. Hosted CI acceptance remains open.
 
 ## Summary
@@ -72,35 +72,39 @@ blocked: 1
   reason: "The former archive-mapping failure is fixed, but the selected guest reaches the 256-chunk hard bound without a direct attract/start checkpoint."
   severity: major
   test: 3
-  root_cause: "The selected pair now imports and executes, but the bounded guest run has no source-justified attract/start predicate and stops at its hard budget without an unsupported event or acceptance checkpoint. The phase-05-03 plan is halted with 0/3 tasks complete; its acceptance criterion requires direct guest evidence before resolution."
+  root_cause: "The native qualifier has no guest-written attract/start predicate or success branch, so even a guest that reaches the state cannot be recognized. The 256-chunk run ends as budget exhaustion; whether additional MVS behavior limits actual progress remains unknown."
   artifacts:
     - path: tools/mvs/qualify_local_boot.py
-      issue: "Each ZIP is independently sent to the canonical-bundle importer; source archives are not mapped or combined."
-    - path: tools/mvs/mvs_import.c
-      issue: "Importer accepts canonical region member names and sizes, not the selected profile's source member/transform map across split archives."
-    - path: docs/mvs-media.md
-      issue: "Documents that unmodified game and separate BIOS archives are not yet directly supported."
+      issue: "The wrapper only returns success for a guest-executed attract_start result, which the current native qualifier cannot produce."
+    - path: tools/mvs/mvs_qualify.c
+      issue: "Result paths end at fault, STOP, error, or budget exhaustion; no guest-written attract/start predicate or success path exists."
+    - path: include/glueyneo/glueyneo.h
+      issue: "The exported MVS observation has no selected-guest mode/checkpoint signal for qualification."
+    - path: tests/mvs/test_mvs.c
+      issue: "The public boot checkpoint is a synthetic RAM sentinel, not selected-title attract/start."
   missing:
-    - "A source-defined guest-written attract/start predicate reached by the selected guest within the bounded qualification run."
-    - "Any further CPU/MVS behavior demanded by the observed path, with primary-source timing, rights-clear regression vectors, and wrong-behavior controls."
+    - "Define a source-justified guest-written state transition and expose only the per-instance observation needed to qualify it."
+    - "Add rights-clear positive and wrong-behavior controls, then rerun bounded qualification before attributing the budget stop to specific CPU/MVS behavior."
   reconciliation_note: "Kept open: the matching 05-03 plan has a halted summary and explicitly leaves G-05-3 open; the required acceptance predicate was not reached."
-  debug_session: .planning/debug/phase05-selected-media-mapping.md
+  debug_session: .planning/debug/phase05-selected-guest-attract-start.md
 - gap_id: G-05-5
   truth: "The existing pull-request/main CI evidence matrix runs the public MVS regression suite with a positive named-test denominator."
   status: failed
   reason: "The local MVS lane now exists and passes, but no hosted exact-current-SHA receipt is available from this checkout."
   severity: major
   test: 5
-  root_cause: "Plan 05-02 added source-bound local MVS matrix coverage; Plan 05-03 records that the current checkout has no safe PR/upstream route for a hosted receipt and the branch contains unrelated history that must not be published as-is."
+  root_cause: "The original MVS collector omission is fixed; the final revision has no eligible hosted PR/main run. The CI workflow has no manual trigger, and this local branch has no configured upstream and includes unrelated history that is not safe to publish as-is."
   artifacts:
     - path: tools/verify_sdk.py
-      issue: "The matrix CTest lane and required receipt inventory enumerate SDK labels only."
+      issue: "The source-bound matrix now enumerates all seven MVS tests and validates their passing denominator and evidence identities."
     - path: tools/sdk_evidence.py
-      issue: "Relevant-source identity excludes the MVS importer, API and adapter code."
+      issue: "The current evidence digest covers relevant MVS source and test files, but local success is not a hosted receipt."
     - path: CMakeLists.txt
-      issue: "Seven mvs-labeled tests exist but are not selected by the evidence collector."
+      issue: "Seven MVS tests are registered and selected by the repaired local matrix lane."
+    - path: .github/workflows/ci.yml
+      issue: "Hosted matrix runs on pull requests and main pushes; there is no manual dispatch for an unpublished local revision."
   missing:
-    - "An exact-current-SHA hosted receipt with the seven named MVS tests and a positive denominator."
-    - "A safe, authorized path to run that hosted workflow without publishing unrelated branch history."
+    - "Prepare a reviewed, public-safe final revision and run existing PR/main CI at that exact committed SHA."
+    - "Verify the hosted receipt has all seven named passing MVS tests, a positive denominator, output and source digests, matching revision, and passing aggregate."
   reconciliation_note: "Kept open: local matrix success is not hosted evidence; the matching 05-03 plan and summary both state that G-05-5 remains open."
-  debug_session: .planning/debug/phase05-mvs-ci-evidence.md
+  debug_session: .planning/debug/phase05-hosted-mvs-ci-evidence.md
