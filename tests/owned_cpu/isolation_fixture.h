@@ -178,7 +178,7 @@ static inline int iso_machine_create_with_failure(iso_machine *machine, unsigned
     machine->owner = owner;
     machine->fail_allocate_at = fail_allocate_at;
     guest_fixture(machine->rom, owner, 0);
-    owned_cpu_bus bus = {machine, iso_read16, iso_write16};
+    owned_cpu_bus bus = {machine, iso_read16, iso_write16, NULL, NULL};
     owned_cpu_allocator allocator = {machine, iso_allocate, iso_release};
     return owned_cpu_create(OWNED_CPU_MODEL_MC68000, bus, allocator,
                             &machine->cpu) == OWNED_CPU_OK;

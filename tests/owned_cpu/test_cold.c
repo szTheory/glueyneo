@@ -16,7 +16,7 @@ static void concurrently_create_run_and_destroy_two_fresh_instances(void) {
         TEST_ASSERT_EQUAL_UINT32(owner == 0u ? 10u : 16u,
                                  final->cpu.data_registers[0]);
         TEST_ASSERT_EQUAL_HEX32(0x10eu, final->cpu.pc);
-        TEST_ASSERT_EQUAL_UINT64(76u, final->cpu.total_cycles);
+        TEST_ASSERT_EQUAL_UINT64(100u, final->cpu.total_cycles);
         TEST_ASSERT_EQUAL_UINT64(4u, final->cpu.instructions);
         TEST_ASSERT_EQUAL_UINT8(owner + 1u, final->cpu.irq_level);
         size_t offset = owner == 0u ? 0u : 4u;

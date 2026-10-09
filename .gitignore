@@ -27,3 +27,4 @@ __pycache__/
 /.gsd/dispatch-isolation-sentinel.json
 /.planning/milestone.lock
 /.planning/state.json
+/.planning/workstreams/*/state.json

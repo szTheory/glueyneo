@@ -8,6 +8,64 @@
 #include <stdint.h>
 #include <stdio.h>
 
+/* Host-only threads for the SDK isolation tests and sanitizer startup probe.
+ * The emulation library has no thread or Windows API dependency. */
+#if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <process.h>
+
+typedef HANDLE sdk_test_thread;
+typedef unsigned (__stdcall *sdk_test_thread_entry)(void *);
+#define SDK_TEST_THREAD_RESULT unsigned
+#define SDK_TEST_THREAD_CALL __stdcall
+#define SDK_TEST_THREAD_DONE 0u
+
+static inline int sdk_test_thread_start(sdk_test_thread *thread,
+                                         sdk_test_thread_entry entry,
+                                         void *argument) {
+    const uintptr_t handle = _beginthreadex(NULL, 0u, entry, argument, 0u, NULL);
+    if (handle == 0u) return 0;
+    *thread = (HANDLE)handle;
+    return 1;
+}
+
+static inline int sdk_test_thread_join(sdk_test_thread thread) {
+    const DWORD waited = WaitForSingleObject(thread, INFINITE);
+    const BOOL closed = CloseHandle(thread);
+    return waited == WAIT_OBJECT_0 && closed != 0;
+}
+
+static inline void sdk_test_thread_yield(void) {
+    if (SwitchToThread() == 0) Sleep(0u);
+}
+#else
+#include <pthread.h>
+#include <sched.h>
+
+typedef pthread_t sdk_test_thread;
+typedef void *(*sdk_test_thread_entry)(void *);
+#define SDK_TEST_THREAD_RESULT void *
+#define SDK_TEST_THREAD_CALL
+#define SDK_TEST_THREAD_DONE NULL
+
+static inline int sdk_test_thread_start(sdk_test_thread *thread,
+                                         sdk_test_thread_entry entry,
+                                         void *argument) {
+    return pthread_create(thread, NULL, entry, argument) == 0;
+}
+
+static inline int sdk_test_thread_join(sdk_test_thread thread) {
+    return pthread_join(thread, NULL) == 0;
+}
+
+static inline void sdk_test_thread_yield(void) {
+    (void)sched_yield();
+}
+#endif
+
 #ifndef GLUEYNEO_SANITIZER
 #define GLUEYNEO_SANITIZER "NONE"
 #endif

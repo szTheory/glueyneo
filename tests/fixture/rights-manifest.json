@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "fixture": "GNFX v1 public playable tracer",
+  "source": {
+    "path": "tests/fixture/public_guest.c",
+    "sha256": "597b3e01b9fc0d58328e37573d945a3b067e55604017683a084ffc1028788555",
+    "bytes": 2653
+  },
+  "assertions": {
+    "path": "tests/fixture/test_public_guest.c",
+    "sha256": "f392b2794b7dbf00a7bae24cb4184c2aabff4a6336c88934ab4c34ca0995d4b7"
+  },
+  "generator": {
+    "target": "glueyneo-public-fixture",
+    "output_rule": "the sole CMake OUTPUT for public-playable.bin",
+    "command": "public_guest_test --write-fixture <build-dir>/public-playable.bin",
+    "dependencies": ["public_guest_test", "tests/fixture/public_guest.c"],
+    "tool_language": "C17",
+    "external_generator_dependencies": []
+  },
+  "assets": {
+    "embedded_external_assets": [],
+    "bitmap": "original 8x8 all-white tile generated in public_guest.c",
+    "seed": "original ten-byte RAM prefix generated in public_guest.c"
+  },
+  "oracle_document": {
+    "path": "tests/fixture/ORACLE.md",
+    "sha256": "7e8a9e3321b6850ec1906f8a62f33578e3271e8c91ae9f4ea9b1d0cde3f508e2"
+  },
+  "artifact": {
+    "path": "build/sdk-debug/public-playable.bin",
+    "bytes": 602,
+    "sha256": "59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0",
+    "consumers": [
+      "native CTest public_guest_*",
+      "RetroArch smoke --content build/sdk-debug/public-playable.bin"
+    ]
+  },
+  "rights": {
+    "status": "affirmative",
+    "basis": "original fixture, generator, assertions, seed, and bitmap authored for Glueyneo",
+    "license": "MIT",
+    "notice": "LICENSE",
+    "third_party_guest_bytes": false,
+    "game_rom_or_bios_bytes": false,
+    "private_media_or_derived_output": false
+  },
+  "oracle": {
+    "contract": "tests/fixture/ORACLE.md",
+    "cpu_primary_manuals": [
+      "Motorola M68000 Family Programmer's Reference Manual (1992), section 4-4 and MOVE entry",
+      "Motorola M68000 8-/16-/32-Bit Microprocessors User's Manual, Rev. 9.1 (1993), tables 8-2 and 8-4"
+    ],
+    "board_references": "community Neo Geo Development Wiki pages; implementation context only",
+    "mame_role": "differential reference only; not an independent physical-hardware oracle",
+    "accepted_cpu_scope": "bounded diagnostic subset and the two named guest instruction forms only",
+    "hardware_truth_established": false
+  }
+}

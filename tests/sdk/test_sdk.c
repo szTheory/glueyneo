@@ -4,9 +4,9 @@
 #include "sdk_private.h"
 #include "test_support.h"
 
-#include <pthread.h>
-#include <sched.h>
+#if !defined(_WIN32)
 #include <stdatomic.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 
@@ -116,9 +116,9 @@ static void original_guest_computes_named_results(void) {
     SDK_CASE("sdk.diagnostic.original-a");
     gn_run_result run;
     memset(&run, 0xa5, sizeof(run));
-    SDK_CHECK_STATUS("sdk.run.status", GN_STATUS_OK, gn_run(instance, 172u, &run));
-    SDK_CHECK_U64("sdk.run.requested-cycles", 172u, run.requested_cycles);
-    SDK_CHECK_U64("sdk.run.elapsed-cycles", 172u, run.elapsed_cycles);
+    SDK_CHECK_STATUS("sdk.run.status", GN_STATUS_OK, gn_run(instance, 196u, &run));
+    SDK_CHECK_U64("sdk.run.requested-cycles", 196u, run.requested_cycles);
+    SDK_CHECK_U64("sdk.run.elapsed-cycles", 196u, run.elapsed_cycles);
     SDK_CHECK_U64("sdk.run.overshoot-cycles", 0u, run.overshoot_cycles);
     SDK_CHECK_U64("sdk.run.instructions", 12u, run.instructions);
     SDK_CHECK_STATUS("sdk.run.reason-stopped", GN_RUN_STOPPED, run.reason);
@@ -153,7 +153,7 @@ static void failed_replacement_and_reset_preserve_owned_media(void) {
     SDK_CHECK_U64("sdk.reset.bss-zero", 0u, before_run.bss_result);
 
     gn_run_result run;
-    SDK_CHECK_STATUS("sdk.run.after-reset", GN_STATUS_OK, gn_run(instance, 172u, &run));
+    SDK_CHECK_STATUS("sdk.run.after-reset", GN_STATUS_OK, gn_run(instance, 196u, &run));
     gn_observations after_run;
     SDK_CHECK_STATUS("sdk.observe.after-reset-run", GN_STATUS_OK,
                      gn_observe(instance, &after_run));
@@ -169,7 +169,7 @@ static void scenario_b_has_distinguishable_named_results(void) {
     SDK_CHECK_STATUS("sdk.media.load.original-b", GN_STATUS_OK,
                      load_scenario(instance, GUEST_FIXTURE_SCENARIO_B));
     gn_run_result run;
-    SDK_CHECK_STATUS("sdk.run.scenario-b", GN_STATUS_OK, gn_run(instance, 172u, &run));
+    SDK_CHECK_STATUS("sdk.run.scenario-b", GN_STATUS_OK, gn_run(instance, 196u, &run));
     gn_observations observations;
     SDK_CHECK_STATUS("sdk.observe.scenario-b", GN_STATUS_OK,
                      gn_observe(instance, &observations));
@@ -178,17 +178,17 @@ static void scenario_b_has_distinguishable_named_results(void) {
     SDK_CHECK_U64("sdk.scenario-b.initialized", 0x2348u,
                   observations.initialized_result);
     SDK_CHECK_U64("sdk.scenario-b.bss", 1u, observations.bss_result);
-    SDK_CHECK_U64("sdk.scenario-b.cycles", 172u, run.elapsed_cycles);
+    SDK_CHECK_U64("sdk.scenario-b.cycles", 196u, run.elapsed_cycles);
     SDK_CHECK_U64("sdk.scenario-b.instructions", 12u, run.instructions);
     SDK_CHECK_STATUS("sdk.scenario-b.stopped", GN_RUN_STOPPED, run.reason);
 }
 
 static void original_instruction_boundaries_match_manual_recipe(void) {
     static const uint64_t requests[] = {
-        40u, 4u, 8u, 20u, 4u, 16u, 8u, 20u, 4u, 16u, 8u, 20u, 4u
+        64u, 4u, 8u, 20u, 4u, 16u, 8u, 20u, 4u, 16u, 8u, 20u, 4u
     };
     static const uint64_t cumulative_cycles[] = {
-        40u, 44u, 52u, 72u, 76u, 92u, 100u, 120u, 124u, 140u, 148u, 168u, 172u
+        64u, 68u, 76u, 96u, 100u, 116u, 124u, 144u, 148u, 164u, 172u, 192u, 196u
     };
     static const uint32_t boundary_pcs[] = {
         0x100u, 0x102u, 0x104u, 0x10au, 0x10cu, 0x112u, 0x114u,
@@ -247,22 +247,22 @@ static void bounded_run_reports_actual_progress_and_preserves_invalid_requests(v
                      gn_test_image_digest(instance, &after));
     SDK_CHECK_U64("sdk.run.zero-does-not-change-state", before, after);
 
-    assert_run_result("sdk.run.one-status", 1u, 40u, 39u, 0u, 0x100u,
+    assert_run_result("sdk.run.one-status", 1u, 64u, 63u, 0u, 0x100u,
                       GN_RUN_BUDGET);
-    SDK_CHECK_STATUS("sdk.run.reset-before-39", GN_STATUS_OK, gn_reset(instance));
-    assert_run_result("sdk.run.39-status", 39u, 40u, 1u, 0u, 0x100u,
+    SDK_CHECK_STATUS("sdk.run.reset-before-63", GN_STATUS_OK, gn_reset(instance));
+    assert_run_result("sdk.run.63-status", 63u, 64u, 1u, 0u, 0x100u,
                       GN_RUN_BUDGET);
-    SDK_CHECK_STATUS("sdk.run.reset-before-40", GN_STATUS_OK, gn_reset(instance));
-    assert_run_result("sdk.run.40-status", 40u, 40u, 0u, 0u, 0x100u,
+    SDK_CHECK_STATUS("sdk.run.reset-before-64", GN_STATUS_OK, gn_reset(instance));
+    assert_run_result("sdk.run.64-status", 64u, 64u, 0u, 0u, 0x100u,
                       GN_RUN_BUDGET);
-    SDK_CHECK_STATUS("sdk.run.reset-before-41", GN_STATUS_OK, gn_reset(instance));
-    assert_run_result("sdk.run.41-status", 41u, 44u, 3u, 1u, 0x102u,
+    SDK_CHECK_STATUS("sdk.run.reset-before-65", GN_STATUS_OK, gn_reset(instance));
+    assert_run_result("sdk.run.65-status", 65u, 68u, 3u, 1u, 0x102u,
                       GN_RUN_BUDGET);
 
-    SDK_CHECK_STATUS("sdk.run.reset-before-172", GN_STATUS_OK, gn_reset(instance));
-    assert_run_result("sdk.run.172-status", 172u, 172u, 0u, 12u, 0x12eu,
+    SDK_CHECK_STATUS("sdk.run.reset-before-196", GN_STATUS_OK, gn_reset(instance));
+    assert_run_result("sdk.run.196-status", 196u, 196u, 0u, 12u, 0x12eu,
                       GN_RUN_STOPPED);
-    assert_run_result("sdk.run.173-status", 173u, 173u, 0u, 0u, 0x12eu,
+    assert_run_result("sdk.run.197-status", 197u, 197u, 0u, 0u, 0x12eu,
                       GN_RUN_STOPPED);
     SDK_CHECK_STATUS("sdk.run.reset-before-maximum", GN_STATUS_OK,
                      gn_reset(instance));
@@ -287,7 +287,7 @@ static void bounded_run_reports_actual_progress_and_preserves_invalid_requests(v
 
 static void stopped_guest_consumes_idle_budget_without_dispatches(void) {
     SDK_CASE("sdk.run.stop-idle-progress");
-    assert_run_result("sdk.run.stop-before-idle", 172u, 172u, 0u, 12u,
+    assert_run_result("sdk.run.stop-before-idle", 196u, 196u, 0u, 12u,
                       0x12eu, GN_RUN_STOPPED);
     assert_run_result("sdk.run.stop-idle", 21u, 21u, 0u, 0u, 0x12eu,
                       GN_RUN_STOPPED);
@@ -299,12 +299,12 @@ static void reset_debt_overflow_is_rejected_before_any_event_mutation(void) {
     uint64_t after = 0u;
     gn_run_result completed;
     SDK_CHECK_STATUS("sdk.run.overflow-establish-stop", GN_STATUS_OK,
-                     gn_run(instance, 172u, &completed));
+                     gn_run(instance, 196u, &completed));
     SDK_CHECK_STATUS("sdk.run.overflow-establish-stop-reason", GN_RUN_STOPPED,
                      completed.reason);
     SDK_CHECK_STATUS("sdk.run.overflow-seed-counters", GN_STATUS_OK,
                      gn_test_seed_counters(instance, 12u, 132u, 0u,
-                                           UINT64_MAX - UINT64_C(172),
+                                           UINT64_MAX - UINT64_C(196),
                                            UINT64_MAX));
     SDK_CHECK_STATUS("sdk.run.overflow-digest-before", GN_STATUS_OK,
                      gn_test_image_digest(instance, &before));
@@ -332,19 +332,19 @@ static void unsupported_instruction_exposes_only_bounded_fault_details(void) {
                      gn_load(instance, &manifest));
     gn_run_result result;
     SDK_CHECK_STATUS("sdk.run.unsupported-status", GN_STATUS_OK,
-                     gn_run(instance, 172u, &result));
+                     gn_run(instance, 196u, &result));
     SDK_CHECK_STATUS("sdk.run.unsupported-reason", GN_RUN_FAULT, result.reason);
     SDK_CHECK_U64("sdk.run.unsupported-fault-pc", 0x100u, result.fault_pc);
     SDK_CHECK_U64("sdk.run.unsupported-opcode", 0x4afcu,
                   result.instruction_register);
-    SDK_CHECK_U64("sdk.run.unsupported-elapsed-reset-only", 40u,
+    SDK_CHECK_U64("sdk.run.unsupported-elapsed-reset-only", 64u,
                   result.elapsed_cycles);
     SDK_CHECK_U64("sdk.run.unsupported-no-dispatch", 0u, result.instructions);
 }
 
 static void host_fault_is_sticky_until_reset_and_can_recover(void) {
     SDK_CASE("sdk.run.host-fault-reset-recovery");
-    assert_run_result("sdk.run.host-fault-reset-debt", 40u, 40u, 0u, 0u,
+    assert_run_result("sdk.run.host-fault-reset-debt", 64u, 64u, 0u, 0u,
                       0x100u, GN_RUN_BUDGET);
     SDK_CHECK_STATUS("sdk.run.arm-host-fault", GN_STATUS_OK,
                      gn_test_fail_next_bus_callback(instance));
@@ -359,7 +359,7 @@ static void host_fault_is_sticky_until_reset_and_can_recover(void) {
     SDK_CHECK_STATUS("sdk.run.reset-clears-host-fault", GN_STATUS_OK,
                      gn_reset(instance));
     SDK_CHECK_STATUS("sdk.run.host-fault-recovery", GN_STATUS_OK,
-                     gn_run(instance, 172u, &result));
+                     gn_run(instance, 196u, &result));
     SDK_CHECK_STATUS("sdk.run.host-fault-recovery-stopped", GN_RUN_STOPPED,
                      result.reason);
 }
@@ -385,7 +385,7 @@ static void expected_result_integer_boundaries_match_original_encodings(void) {
                          gn_load(instance, &manifest));
         gn_run_result run;
         SDK_CHECK_STATUS("sdk.run.integer-run-moveq", GN_STATUS_OK,
-                         gn_run(instance, 172u, &run));
+                         gn_run(instance, 196u, &run));
         gn_observations observations;
         SDK_CHECK_STATUS("sdk.run.integer-observe-moveq", GN_STATUS_OK,
                          gn_observe(instance, &observations));
@@ -411,7 +411,7 @@ static void expected_result_integer_boundaries_match_original_encodings(void) {
                      gn_load(instance, &manifest));
     gn_run_result wrap_run;
     SDK_CHECK_STATUS("sdk.run.integer-run-addq-wrap", GN_STATUS_OK,
-                     gn_run(instance, 172u, &wrap_run));
+                     gn_run(instance, 196u, &wrap_run));
     gn_observations wrap_observations;
     SDK_CHECK_STATUS("sdk.run.integer-observe-addq-wrap", GN_STATUS_OK,
                      gn_observe(instance, &wrap_observations));
@@ -495,8 +495,8 @@ static void named_observations_and_bounded_functional_trace_match_fixture(void) 
     SDK_CASE("sdk.controls.original-functional-trace");
     gn_run_result run;
     SDK_CHECK_STATUS("sdk.controls.run", GN_STATUS_OK,
-                     gn_run(instance, 172u, &run));
-    SDK_CHECK_U64("sdk.run.elapsed-cycles", 172u, run.elapsed_cycles);
+                     gn_run(instance, 196u, &run));
+    SDK_CHECK_U64("sdk.run.elapsed-cycles", 196u, run.elapsed_cycles);
     SDK_CHECK_U64("sdk.run.instructions", 12u, run.instructions);
     SDK_CHECK_STATUS("sdk.run.reason-stopped", GN_RUN_STOPPED, run.reason);
     gn_observations observations;
@@ -516,7 +516,7 @@ static void controlled_wrong_behavior_fails_its_exact_assertion(void) {
     SDK_CASE("sdk.controls.exact-negative-control");
     gn_run_result run;
     SDK_CHECK_STATUS("sdk.control.run-status", GN_STATUS_OK,
-                     gn_run(instance, 172u, &run));
+                     gn_run(instance, 196u, &run));
     gn_observations observations;
     SDK_CHECK_STATUS("sdk.control.observe-status", GN_STATUS_OK,
                      gn_observe(instance, &observations));
@@ -532,7 +532,7 @@ static void controlled_wrong_behavior_fails_its_exact_assertion(void) {
     } else if (strcmp(selected_suite, "control-run-instructions") == 0) {
         SDK_CHECK_U64("sdk.run.instructions", 12u, run.instructions);
     } else if (strcmp(selected_suite, "control-run-elapsed") == 0) {
-        SDK_CHECK_U64("sdk.run.elapsed-cycles", 172u, run.elapsed_cycles);
+        SDK_CHECK_U64("sdk.run.elapsed-cycles", 196u, run.elapsed_cycles);
     } else if (strcmp(selected_suite, "control-run-stop") == 0) {
         SDK_CHECK_STATUS("sdk.run.reason-stopped", GN_RUN_STOPPED, run.reason);
     } else if (strcmp(selected_suite, "control-byte-order") == 0) {
@@ -557,11 +557,11 @@ static void controlled_wrong_behavior_fails_its_exact_assertion(void) {
 enum { SDK_BOUNDARY_COUNT = 13, SDK_ISOLATION_PAIRS = 16 };
 
 static const uint64_t sdk_boundary_requests[SDK_BOUNDARY_COUNT] = {
-    40u, 4u, 8u, 20u, 4u, 16u, 8u, 20u, 4u, 16u, 8u, 20u, 4u
+    64u, 4u, 8u, 20u, 4u, 16u, 8u, 20u, 4u, 16u, 8u, 20u, 4u
 };
 
 static const uint64_t sdk_boundary_cycles[SDK_BOUNDARY_COUNT] = {
-    40u, 44u, 52u, 72u, 76u, 92u, 100u, 120u, 124u, 140u, 148u, 168u, 172u
+    64u, 68u, 76u, 96u, 100u, 116u, 124u, 144u, 148u, 164u, 172u, 192u, 196u
 };
 
 static const uint32_t sdk_boundary_pcs[SDK_BOUNDARY_COUNT] = {
@@ -590,9 +590,61 @@ typedef struct {
 } sdk_boundary_snapshot;
 
 typedef struct {
+    sdk_boundary_snapshot owners[2][SDK_BOUNDARY_COUNT];
+} sdk_isolation_baselines;
+
+typedef struct {
+#if defined(_WIN32)
+    volatile LONG ready;
+    volatile LONG release;
+#else
     atomic_uint ready;
     atomic_int release;
+#endif
 } sdk_start_gate;
+
+static void sdk_start_gate_init(sdk_start_gate *gate) {
+#if defined(_WIN32)
+    gate->ready = 0;
+    gate->release = 0;
+#else
+    atomic_init(&gate->ready, 0u);
+    atomic_init(&gate->release, 0);
+#endif
+}
+
+static void sdk_start_gate_arrive(sdk_start_gate *gate) {
+#if defined(_WIN32)
+    /* Interlocked operations provide a full fence for the shared start gate. */
+    (void)InterlockedIncrement(&gate->ready);
+#else
+    atomic_fetch_add_explicit(&gate->ready, 1u, memory_order_release);
+#endif
+}
+
+static int sdk_start_gate_ready(sdk_start_gate *gate) {
+#if defined(_WIN32)
+    return InterlockedCompareExchange(&gate->ready, 0, 0) == 2;
+#else
+    return atomic_load_explicit(&gate->ready, memory_order_acquire) == 2u;
+#endif
+}
+
+static int sdk_start_gate_released(sdk_start_gate *gate) {
+#if defined(_WIN32)
+    return InterlockedCompareExchange(&gate->release, 0, 0) != 0;
+#else
+    return atomic_load_explicit(&gate->release, memory_order_acquire) != 0;
+#endif
+}
+
+static void sdk_start_gate_release(sdk_start_gate *gate) {
+#if defined(_WIN32)
+    (void)InterlockedExchange(&gate->release, 1);
+#else
+    atomic_store_explicit(&gate->release, 1, memory_order_release);
+#endif
+}
 
 typedef struct {
     sdk_boundary_snapshot snapshots[SDK_BOUNDARY_COUNT];
@@ -754,12 +806,12 @@ static int sdk_load_owner(unsigned owner, gn_instance **out_instance) {
     return 1;
 }
 
-static int sdk_build_isolated_baselines(
-    sdk_boundary_snapshot baselines[2][SDK_BOUNDARY_COUNT]) {
+static int sdk_build_isolated_baselines(sdk_isolation_baselines *baselines) {
     for (unsigned owner = 0u; owner < 2u; ++owner) {
         gn_instance *isolated = NULL;
         if (!sdk_load_owner(owner, &isolated)) return 0;
-        const int passed = sdk_run_split_sequence(isolated, baselines[owner]);
+        const int passed = sdk_run_split_sequence(isolated,
+                                                   baselines->owners[owner]);
         gn_destroy(isolated);
         if (passed == 0) return 0;
     }
@@ -767,7 +819,7 @@ static int sdk_build_isolated_baselines(
 }
 
 static int sdk_repeated_and_single_calls_match(
-    const sdk_boundary_snapshot baselines[2][SDK_BOUNDARY_COUNT]) {
+    const sdk_isolation_baselines *baselines) {
     for (unsigned owner = 0u; owner < 2u; ++owner) {
         gn_instance *repeated = NULL;
         if (!sdk_load_owner(owner, &repeated)) return 0;
@@ -777,7 +829,7 @@ static int sdk_repeated_and_single_calls_match(
             return 0;
         }
         for (size_t boundary = 0u; boundary < SDK_BOUNDARY_COUNT; ++boundary) {
-            if (!sdk_boundary_equal(&baselines[owner][boundary],
+            if (!sdk_boundary_equal(&baselines->owners[owner][boundary],
                                     &actual[boundary], 1)) {
                 gn_destroy(repeated);
                 return 0;
@@ -790,7 +842,7 @@ static int sdk_repeated_and_single_calls_match(
             return 0;
         }
         for (size_t boundary = 0u; boundary < SDK_BOUNDARY_COUNT; ++boundary) {
-            if (!sdk_boundary_equal(&baselines[owner][boundary],
+            if (!sdk_boundary_equal(&baselines->owners[owner][boundary],
                                     &actual[boundary], 1)) {
                 gn_destroy(repeated);
                 return 0;
@@ -801,8 +853,8 @@ static int sdk_repeated_and_single_calls_match(
         gn_instance *single = NULL;
         if (!sdk_load_owner(owner, &single)) return 0;
         gn_run_result run;
-        if (gn_run(single, 172u, &run) != GN_STATUS_OK ||
-            run.requested_cycles != 172u || run.elapsed_cycles != 172u ||
+        if (gn_run(single, 196u, &run) != GN_STATUS_OK ||
+            run.requested_cycles != 196u || run.elapsed_cycles != 196u ||
             run.overshoot_cycles != 0u || run.instructions != 12u ||
             run.reason != GN_RUN_STOPPED || run.boundary_pc != 0x12eu) {
             gn_destroy(single);
@@ -813,7 +865,7 @@ static int sdk_repeated_and_single_calls_match(
                                                    run.instructions,
                                                    run.overshoot_cycles, &final);
         const int matches = captured != 0 && sdk_boundary_equal(
-            &baselines[owner][SDK_BOUNDARY_COUNT - 1u], &final, 0);
+            &baselines->owners[owner][SDK_BOUNDARY_COUNT - 1u], &final, 0);
         gn_destroy(single);
         if (matches == 0) return 0;
     }
@@ -821,7 +873,7 @@ static int sdk_repeated_and_single_calls_match(
 }
 
 static int sdk_interleaved_pairs_match(
-    const sdk_boundary_snapshot baselines[2][SDK_BOUNDARY_COUNT]) {
+    const sdk_isolation_baselines *baselines) {
     for (unsigned pair = 0u; pair < SDK_ISOLATION_PAIRS; ++pair) {
         gn_instance *owners[2] = {NULL, NULL};
         if (!sdk_load_owner(0u, &owners[0]) ||
@@ -840,7 +892,7 @@ static int sdk_interleaved_pairs_match(
                 if (!sdk_run_boundary(owners[owner], boundary,
                                       &elapsed[owner], &instructions[owner],
                                       &overshoot[owner], &actual) ||
-                    !sdk_boundary_equal(&baselines[owner][boundary],
+                    !sdk_boundary_equal(&baselines->owners[owner][boundary],
                                         &actual, 1)) {
                     gn_destroy(owners[0]);
                     gn_destroy(owners[1]);
@@ -854,13 +906,13 @@ static int sdk_interleaved_pairs_match(
     return 1;
 }
 
-static void *sdk_concurrent_owner_thread(void *userdata) {
+static SDK_TEST_THREAD_RESULT SDK_TEST_THREAD_CALL
+sdk_concurrent_owner_thread(void *userdata) {
     sdk_thread_argument *argument = (sdk_thread_argument *)userdata;
     sdk_thread_result *result = argument->result;
-    atomic_fetch_add_explicit(&argument->gate->ready, 1u, memory_order_release);
-    while (atomic_load_explicit(&argument->gate->release,
-                                memory_order_acquire) == 0) {
-        (void)sched_yield();
+    sdk_start_gate_arrive(argument->gate);
+    while (!sdk_start_gate_released(argument->gate)) {
+        sdk_test_thread_yield();
     }
 
     gn_test_allocator allocator;
@@ -871,14 +923,14 @@ static void *sdk_concurrent_owner_thread(void *userdata) {
         result->sequence_ok = 0;
         result->cleanup_ok = allocator.live_allocations == 0u &&
                              allocator.live_bytes == 0u;
-        return NULL;
+        return SDK_TEST_THREAD_DONE;
     }
     if (load_scenario(target, argument->owner) != GN_STATUS_OK) {
         gn_destroy(target);
         result->sequence_ok = 0;
         result->cleanup_ok = allocator.live_allocations == 0u &&
                              allocator.live_bytes == 0u;
-        return NULL;
+        return SDK_TEST_THREAD_DONE;
     }
 
     uint64_t digest_before = 0u;
@@ -912,7 +964,7 @@ static void *sdk_concurrent_owner_thread(void *userdata) {
         gn_run_result reset_run;
         gn_run_result first_instruction;
         result->recovery_ok =
-            gn_run(target, 40u, &reset_run) == GN_STATUS_OK &&
+            gn_run(target, 64u, &reset_run) == GN_STATUS_OK &&
             reset_run.reason == GN_RUN_BUDGET &&
             reset_run.boundary_pc == 0x100u &&
             gn_run(target, 4u, &first_instruction) == GN_STATUS_OK &&
@@ -925,43 +977,41 @@ static void *sdk_concurrent_owner_thread(void *userdata) {
     result->cleanup_ok = result->cleanup_ok != 0 &&
                          allocator.live_allocations == 0u &&
                          allocator.live_bytes == 0u;
-    return NULL;
+    return SDK_TEST_THREAD_DONE;
 }
 
 static int sdk_run_barrier_concurrent_pair(sdk_thread_result results[2]) {
     sdk_start_gate gate;
-    atomic_init(&gate.ready, 0u);
-    atomic_init(&gate.release, 0);
+    sdk_start_gate_init(&gate);
     sdk_thread_argument arguments[2];
-    pthread_t threads[2];
+    sdk_test_thread threads[2];
     unsigned started = 0u;
     memset(results, 0, 2u * sizeof(results[0]));
     for (unsigned owner = 0u; owner < 2u; ++owner) {
         arguments[owner] = (sdk_thread_argument){&gate, owner, &results[owner]};
-        if (pthread_create(&threads[owner], NULL, sdk_concurrent_owner_thread,
-                           &arguments[owner]) != 0) {
-            atomic_store_explicit(&gate.release, 1, memory_order_release);
+        if (!sdk_test_thread_start(&threads[owner], sdk_concurrent_owner_thread,
+                                    &arguments[owner])) {
+            sdk_start_gate_release(&gate);
             for (unsigned index = 0u; index < started; ++index) {
-                (void)pthread_join(threads[index], NULL);
+                (void)sdk_test_thread_join(threads[index]);
             }
             return 0;
         }
         ++started;
     }
-    while (atomic_load_explicit(&gate.ready, memory_order_acquire) != 2u) {
-        (void)sched_yield();
+    while (!sdk_start_gate_ready(&gate)) {
+        sdk_test_thread_yield();
     }
-    atomic_store_explicit(&gate.release, 1, memory_order_release);
+    sdk_start_gate_release(&gate);
+    int joined = 1;
     for (unsigned owner = 0u; owner < 2u; ++owner) {
-        if (pthread_join(threads[owner], NULL) != 0) {
-            return 0;
-        }
+        if (!sdk_test_thread_join(threads[owner])) joined = 0;
     }
-    return 1;
+    return joined;
 }
 
 static int sdk_concurrent_pairs_match(
-    const sdk_boundary_snapshot baselines[2][SDK_BOUNDARY_COUNT]) {
+    const sdk_isolation_baselines *baselines) {
     for (unsigned pair = 0u; pair < SDK_ISOLATION_PAIRS; ++pair) {
         sdk_thread_result results[2];
         if (!sdk_run_barrier_concurrent_pair(results)) return 0;
@@ -973,7 +1023,7 @@ static int sdk_concurrent_pairs_match(
                 return 0;
             }
             for (size_t boundary = 0u; boundary < SDK_BOUNDARY_COUNT; ++boundary) {
-                if (!sdk_boundary_equal(&baselines[owner][boundary],
+                if (!sdk_boundary_equal(&baselines->owners[owner][boundary],
                                         &results[owner].snapshots[boundary], 1)) {
                     return 0;
                 }
@@ -985,31 +1035,31 @@ static int sdk_concurrent_pairs_match(
 
 static void repeat_split_and_interleaved_instances_match_isolated_boundaries(void) {
     SDK_CASE("sdk.isolation.equal-boundary-determinism");
-    sdk_boundary_snapshot baselines[2][SDK_BOUNDARY_COUNT];
-    memset(baselines, 0, sizeof(baselines));
+    sdk_isolation_baselines baselines;
+    memset(&baselines, 0, sizeof(baselines));
     SDK_CHECK_TRUE("sdk.isolation.isolated-baselines",
-                   sdk_build_isolated_baselines(baselines));
+                   sdk_build_isolated_baselines(&baselines));
     SDK_CHECK_U64("sdk.isolation.a-arithmetic", 10u,
-                  baselines[0][SDK_BOUNDARY_COUNT - 1u].arithmetic);
+                  baselines.owners[0][SDK_BOUNDARY_COUNT - 1u].arithmetic);
     SDK_CHECK_U64("sdk.isolation.a-initialized", 0x1237u,
-                  baselines[0][SDK_BOUNDARY_COUNT - 1u].initialized);
+                  baselines.owners[0][SDK_BOUNDARY_COUNT - 1u].initialized);
     SDK_CHECK_U64("sdk.isolation.a-bss", 1u,
-                  baselines[0][SDK_BOUNDARY_COUNT - 1u].bss);
+                  baselines.owners[0][SDK_BOUNDARY_COUNT - 1u].bss);
     SDK_CHECK_U64("sdk.isolation.b-arithmetic", 16u,
-                  baselines[1][SDK_BOUNDARY_COUNT - 1u].arithmetic);
+                  baselines.owners[1][SDK_BOUNDARY_COUNT - 1u].arithmetic);
     SDK_CHECK_U64("sdk.isolation.b-initialized", 0x2348u,
-                  baselines[1][SDK_BOUNDARY_COUNT - 1u].initialized);
+                  baselines.owners[1][SDK_BOUNDARY_COUNT - 1u].initialized);
     SDK_CHECK_U64("sdk.isolation.b-bss", 1u,
-                  baselines[1][SDK_BOUNDARY_COUNT - 1u].bss);
+                  baselines.owners[1][SDK_BOUNDARY_COUNT - 1u].bss);
     SDK_CHECK_TRUE("sdk.isolation.owner-baselines-distinguishable",
-                   baselines[0][SDK_BOUNDARY_COUNT - 1u].image_digest !=
-                       baselines[1][SDK_BOUNDARY_COUNT - 1u].image_digest);
+                   baselines.owners[0][SDK_BOUNDARY_COUNT - 1u].image_digest !=
+                       baselines.owners[1][SDK_BOUNDARY_COUNT - 1u].image_digest);
     SDK_CHECK_TRUE("sdk.isolation.repeat-and-single-call",
-                   sdk_repeated_and_single_calls_match(baselines));
+                   sdk_repeated_and_single_calls_match(&baselines));
     SDK_CHECK_TRUE("sdk.isolation.interleaved-16-pairs",
-                   sdk_interleaved_pairs_match(baselines));
+                   sdk_interleaved_pairs_match(&baselines));
     SDK_CHECK_TRUE("sdk.isolation.barrier-concurrent-16-pairs",
-                   sdk_concurrent_pairs_match(baselines));
+                   sdk_concurrent_pairs_match(&baselines));
     (void)printf("SDK_ISOLATION boundaries=%u interleaved_pairs=%u "
                  "barrier_concurrent_pairs=%u "
                  "concurrent_candidate_failure_paths=%u\n",
@@ -1031,7 +1081,7 @@ static void cold_concurrent_instances_create_fail_recover_and_teardown(void) {
                        results[owner].recovery_ok != 0);
         SDK_CHECK_TRUE("sdk.cold.teardown-no-leaks",
                        results[owner].cleanup_ok != 0);
-        SDK_CHECK_U64("sdk.cold.final-cycles", 172u, final->elapsed_total);
+        SDK_CHECK_U64("sdk.cold.final-cycles", 196u, final->elapsed_total);
         SDK_CHECK_U64("sdk.cold.final-instructions", 12u,
                       final->instructions_total);
         SDK_CHECK_U64("sdk.cold.final-pc", 0x12eu, final->boundary_pc);
@@ -1052,7 +1102,7 @@ static void swapped_owner_control_fails_exact_owner_assertion(void) {
         return;
     }
     gn_run_result run;
-    (void)gn_run(wrong_owner, 172u, &run);
+    (void)gn_run(wrong_owner, 196u, &run);
     gn_observations observations;
     (void)gn_observe(wrong_owner, &observations);
     SDK_CHECK_U64("sdk.isolation.owner.arithmetic", 10u,
@@ -1067,8 +1117,8 @@ static void altered_split_progress_control_fails_equal_boundary_assertion(void) 
                                           GN_TEST_MUTATION_RUN_ELAPSED));
     gn_run_result run;
     SDK_CHECK_STATUS("sdk.isolation.control-run-status", GN_STATUS_OK,
-                     gn_run(instance, 40u, &run));
-    SDK_CHECK_U64("sdk.isolation.split-progress", 40u, run.elapsed_cycles);
+                     gn_run(instance, 64u, &run));
+    SDK_CHECK_U64("sdk.isolation.split-progress", 64u, run.elapsed_cycles);
 }
 
 static void unloaded_lifecycle_and_null_arguments_are_reported(void) {
@@ -1129,7 +1179,7 @@ static void unload_reload_and_repeated_reset_reproduce_results(void) {
         SDK_CHECK_STATUS("sdk.lifecycle.reset-loaded", GN_STATUS_OK,
                          gn_reset(created));
         SDK_CHECK_STATUS("sdk.lifecycle.run-after-reset", GN_STATUS_OK,
-                         gn_run(created, 172u, &run));
+                         gn_run(created, 196u, &run));
         SDK_CHECK_STATUS("sdk.lifecycle.observe-after-run", GN_STATUS_OK,
                          gn_observe(created, &observations));
         SDK_CHECK_STATUS("sdk.lifecycle.repeat-stop", GN_RUN_STOPPED, run.reason);
@@ -1146,7 +1196,7 @@ static void unload_reload_and_repeated_reset_reproduce_results(void) {
     gn_run_result run;
     gn_observations observations;
     SDK_CHECK_STATUS("sdk.lifecycle.run-after-reload", GN_STATUS_OK,
-                     gn_run(created, 172u, &run));
+                     gn_run(created, 196u, &run));
     SDK_CHECK_STATUS("sdk.lifecycle.observe-after-reload", GN_STATUS_OK,
                      gn_observe(created, &observations));
     SDK_CHECK_U64("sdk.lifecycle.reloaded-scenario", 16u,
@@ -1312,9 +1362,9 @@ static void malformed_manifests_are_rejected_before_touching_live_media(void) {
     gn_run_result final_run;
     gn_run_result baseline_final_run;
     SDK_CHECK_STATUS("sdk.media.continued-run", GN_STATUS_OK,
-                     gn_run(instance, 52u, &final_run));
+                     gn_run(instance, 76u, &final_run));
     SDK_CHECK_STATUS("sdk.media.baseline-continued-run", GN_STATUS_OK,
-                     gn_run(baseline, 52u, &baseline_final_run));
+                     gn_run(baseline, 76u, &baseline_final_run));
     SDK_CHECK_STATUS("sdk.media.continued-stop", GN_RUN_STOPPED,
                      final_run.reason);
     SDK_CHECK_U64("sdk.media.continued-cycles-match",
@@ -1416,7 +1466,7 @@ static void successful_replacement_owns_source_and_reset_seed(void) {
     SDK_CHECK_STATUS("sdk.media.reset-after-source-release", GN_STATUS_OK,
                      gn_reset(instance));
     SDK_CHECK_STATUS("sdk.media.run-after-source-release", GN_STATUS_OK,
-                     gn_run(instance, 172u, &run));
+                     gn_run(instance, 196u, &run));
     SDK_CHECK_STATUS("sdk.media.observe-after-source-release", GN_STATUS_OK,
                      gn_observe(instance, &observations));
     SDK_CHECK_STATUS("sdk.media.replacement-stopped", GN_RUN_STOPPED, run.reason);
@@ -1433,7 +1483,7 @@ static void peer_start_at_first_instruction(gn_instance *peer,
     gn_run_result run;
     SDK_CHECK_STATUS(label, GN_STATUS_OK, gn_reset(peer));
     SDK_CHECK_STATUS("sdk.faults.peer-reset-budget", GN_STATUS_OK,
-                     gn_run(peer, 40u, &run));
+                     gn_run(peer, 64u, &run));
     SDK_CHECK_STATUS("sdk.faults.peer-reset-boundary", GN_RUN_BUDGET,
                      run.reason);
     SDK_CHECK_U64("sdk.faults.peer-reset-pc", 0x100u, run.boundary_pc);
@@ -1474,7 +1524,7 @@ static void assert_named_result(gn_instance *target, uint32_t arithmetic,
     gn_run_result run;
     gn_observations observations;
     SDK_CHECK_STATUS("sdk.faults.recovery-run", GN_STATUS_OK,
-                     gn_run(target, 172u, &run));
+                     gn_run(target, 196u, &run));
     SDK_CHECK_STATUS("sdk.faults.recovery-observe", GN_STATUS_OK,
                      gn_observe(target, &observations));
     SDK_CHECK_STATUS(label, GN_RUN_STOPPED, run.reason);
@@ -1723,14 +1773,14 @@ static void guest_fault_reset_and_invalid_requests_allow_recovery(void) {
                      gn_load(instance, &manifest));
     gn_run_result result;
     SDK_CHECK_STATUS("sdk.faults.guest-fault-run-status", GN_STATUS_OK,
-                     gn_run(instance, 172u, &result));
+                     gn_run(instance, 196u, &result));
     SDK_CHECK_STATUS("sdk.faults.guest-fault-reason", GN_RUN_FAULT,
                      result.reason);
     SDK_CHECK_U64("sdk.faults.guest-fault-pc", 0x100u, result.fault_pc);
     SDK_CHECK_STATUS("sdk.faults.reset-after-guest-fault", GN_STATUS_OK,
                      gn_reset(instance));
     SDK_CHECK_STATUS("sdk.faults.repeat-guest-fault-status", GN_STATUS_OK,
-                     gn_run(instance, 172u, &result));
+                     gn_run(instance, 196u, &result));
     SDK_CHECK_STATUS("sdk.faults.repeat-guest-fault-reason", GN_RUN_FAULT,
                      result.reason);
     SDK_CHECK_STATUS("sdk.faults.unload-after-guest-fault", GN_STATUS_OK,

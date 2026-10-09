@@ -46,7 +46,7 @@ def main(arguments: list[str]) -> int:
         print("FAIL: usage: negative_timing.py [--unsupported] PATH_TO_OWNED_TIMING", file=sys.stderr)
         return 1
     mode = "--mutate-unsupported" if unsupported else "--mutate-cycle"
-    exact = "address_error_wrong_cycle_expectation:FAIL: Expected 49 Was 50"
+    exact = "address_error_wrong_cycle_expectation:FAIL: Expected 49 Was 94"
     if unsupported:
         # The deliberate harness expects BUDGET; cpu.h owns numeric enum values.
         header = (Path(__file__).resolve().parents[2] / "experiments/owned_cpu/cpu.h").read_text()
