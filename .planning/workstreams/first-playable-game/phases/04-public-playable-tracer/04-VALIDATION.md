@@ -342,3 +342,21 @@ The whole-phase verifier regenerated the actual-app uncertainty with different c
 | Gaps found | 3 |
 | Resolved | 0 |
 | Escalated | 3 |
+
+## Plan 04-21 Current-Revision Reconciliation — 2026-10-09
+
+The final independent code review inspected frozen revision `f1c8a1de5f25224b83da6ec9e4bc40bf51a249ae` and all five required paths, including `tests/libretro/retroarch_smoke.py`. It reported no new actionable findings. The reviewer verified that the control-success counterexample is treated as affirmative despite neighboring unknown wording, and that a copied guide containing “Guest pixels were displayed” fails the docs gate. Existing guide mutations also reject the prior WR-06 app-load and control-success phrases. A prior pass found that the denominator fixture synthesized a validation row; the mutation baseline now uses the live source row and the correction was independently reviewed.
+
+| Check | Command | Result |
+|---|---|---|
+| Evidence-map source mutations | `python3 tests/tools/test_check_phase04_validation_map.py -v` | PASS, 22/22 |
+| Qualification/privacy suite | `python3 tests/tools/test_verify_playable.py -v` | PASS, 27/27 |
+| GUI-free frontend contract suite | `python3 tests/libretro/test_retroarch_smoke.py -v` | PASS, 27/27 |
+| Consumer documentation gate | `python3 tools/verify_playable.py --check-docs` | PASS |
+| Current evidence-map direct gate | `python3 tests/tools/check_phase04_validation_map.py` | PASS after final source-identity reconciliation for revision `f1c8a1d`; it re-runs both current suites and compares the denominators below |
+
+Plan 04-21 current suite denominators: qualification 27/27; frontend 27/27.
+
+WR-01 remains open with its exact historical independent-review source: review `04-REVIEW.md` at `87f8d4c`, reviewed revision `870848e553aca6e43f6fec8ae0acefac87270f5b`, timestamp `2026-10-08T23:46:34Z`, carried open. The tested WR-06 and WR-08 counterexamples are now rejected, while both historical review findings remain open for separate disposition under T-04-34. T-04-11, T-04-15, T-04-18 and T-04-20 remain high/open by direction. T-04-34 and T-04-38 remain medium/open; the blocking count remains four high/open rows. No security register or phase verification claim was changed.
+
+HOST-02 and frontend QUAL-03 remain manual-only and Pending/unknown. No RetroArch process or GUI was launched, and no repository test or guide statement is evidence of actual pinned frontend load, presentation, input, unload, or exit. `nyquist_compliant` remains false.

@@ -10,7 +10,7 @@ findings:
   - id: WR-01
     severity: warning
     disposition: open
-    title: "Frontend output claim filter misses common success wording"
+    title: "Guide claim filter accepts affirmative frontend paraphrases"
   - id: WR-02
     severity: warning
     disposition: fixed
@@ -49,17 +49,17 @@ findings:
     title: "Repository-backed receipt validation accepts forged file-content hashes"
 open: 3
 total: 11
-recorded: 2026-10-09T00:01:20.624Z
+recorded: 2026-10-09T00:44:13Z
 ---
 
 # Phase 04: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-08 | warning | open | Post-execution standard review at `04-REVIEW.md` (2026-10-08T23:55:00Z), `tests/tools/check_phase04_validation_map.py:214-220`; uncertainty text remains accepted with “a frame was rendered to the window” despite unknown frontend status. |
-| WR-01 | warning | open | - (not in the current review) |
+| WR-08 | warning | open | Independent review at `04-REVIEW.md`, revision `f1c8a1de5f25224b83da6ec9e4bc40bf51a249ae`, exercised the control-success counterexample; the current claim parser and 22 mutation tests reject it while preserving explicit unknown evidence. Retain open pending broader review/disposition. |
+| WR-01 | warning | open | Historical review `04-REVIEW.md` at `87f8d4c`; reviewed revision `870848e553aca6e43f6fec8ae0acefac87270f5b`, 2026-10-08T23:46:34Z; carried open; the warning remains open pending the separately directed actual frontend evidence. |
 | WR-02 | warning | fixed | Independent current-revision review `04-REVIEW.md` at `870848e553aca6e43f6fec8ae0acefac87270f5b` inspected checker and mutation test; live qualification 25/25, 15/15 mutation tests reject stale 23/23, and direct checker passes. (not in the current review) |
-| WR-06 | warning | open | Post-fix independent review at `2a82c455f85671ba144a42923318c4ff7d53b9a2` still reproduces affirmative claims (“frontend booted the game and showed its output”; “controls worked as expected in RetroArch”) accepted by `check_docs()`; T-04-34 remains open. (not in the current review) |
+| WR-06 | warning | open | The independent review at revision `f1c8a1de5f25224b83da6ec9e4bc40bf51a249ae` verified current tests reject “frontend booted the game and showed its output,” control-success wording, and a copied guide's “Guest pixels were displayed” claim. Retain open under medium/open T-04-34 pending separate security disposition. |
 | WR-07 | warning | fixed | Current mutation fixture reads the actual verification source row before mutation; source-derived checker rows reject removal and false closure (14-test suite). (not in the current review) |
 | CR-03 | critical | fixed | Current qualification and frontend regressions remove the complete newline-containing private-path suffix at retained and printed sinks; reviewed at `9804351907e456b3ab85ebe4a49959c05b0714bb`. (not in the current review) |
 | WR-05 | warning | fixed | Current checker reconciles normalized exact crosswalk state against disposition records and mutation tests reject contradiction/duplicates. (not in the current review) |
