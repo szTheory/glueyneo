@@ -132,6 +132,21 @@ acceptance scope: do not restart it on a later verify-work call unless relevant
 source files or acceptance criteria changed after its recorded revision. When
 they do change, rerun only affected checks and preserve prior results. Hand off
 only residual human-only checks or true blockers.
+
+Before presenting a UAT checkpoint, classify the claim against current local
+and CI evidence. If a deterministic test already covers it, record that result
+as automated without asking for confirmation. If a machine-observable claim
+has no adequate test, make the smallest useful unit, seam, integration, or
+headless smoke check part of the plan and run it before handing the claim to a
+person. Prefer adding recurring checks to the existing CI/local entrypoint;
+add a CI lane only when it catches a distinct recurring fault at reasonable
+runner cost. Keep commercial inputs and derived data local, test public paths
+with synthetic fixtures, and make local private qualification report generic
+machine outcomes. A missing input or unavailable app remains blocked/unknown;
+do not repeat an unchanged attempt or relabel its result as passed. Reopen the
+same checkpoint only after its relevant implementation, input, environment,
+or acceptance contract changes.
+
 This preference does not remove the separate pause after each named GSD step
 for review and model selection. In the installed OpenGSD configuration,
 `workflow.human_verify_mode` controls checkpoint timing (`mid-flight` or
@@ -215,6 +230,21 @@ its regression test, and user-facing command route together, then rerun only
 those affected checks. Keep administrative state and handoff notes aligned with
 the verifier's actual next action so a context reset cannot replay a completed
 step.
+
+### Forward progress while a phase is blocked
+
+An external, physical, or user-directed acceptance blocker does not clear with
+time and does not justify another gap plan when no repository defect remains.
+Keep that phase's status and claims blocked, then inspect the next useful
+roadmap work for concrete technical dependencies on the blocked evidence. If
+the next implementation consumes already-verified artifacts and the blocker is
+only an acceptance/signoff gate, record that distinction explicitly in the
+roadmap before proceeding. Preserve the unresolved evidence and risk rows, plan
+the independent vertical slice with its own current-revision tests and review,
+and never let downstream work retroactively pass the earlier phase. Stop only
+when the missing evidence is a real implementation prerequisite, the remaining
+work would violate a user-directed risk boundary, or the user has explicitly
+reserved the next decision.
 
 If aligning STATE or a handoff changes its verifier-time fingerprint after the
 report is written, retain the report as the point-in-time verdict and proceed
