@@ -201,7 +201,16 @@ row (see Closure gates).
   the build yields stderr `receipt: receipt-error: <ExceptionType>` and a minimal
   fail receipt; if that write also fails the output is
   `receipt: receipt-write-failed`. Build-failure reasons pass through the
-  scan-backed reason helper.
+  scan-backed reason helper. Setup and entry (T-04-11): if the output directory
+  or run directory cannot be created, stderr is
+  `qualification: setup-error: <ExceptionType>`, with a minimal fail receipt
+  (`reason: setup-error: <ExceptionType>`) when the output directory exists, or
+  `receipt: receipt-write-failed` if that write fails. The script entry maps any
+  uncaught error to `verify_playable: internal-error: <ExceptionType>` (exit 1)
+  and an interrupt to `verify_playable: interrupted` (exit 130); argparse usage
+  errors keep exit 2. No path prints a traceback. Limit: an import-time failure
+  (a missing standard-library or `tools/private_paths.py` module) happens before
+  the entry guard runs.
 - **Frontend receipt currency.** The tracked receipt is current only while no
   receipt-bound path has changed since its `source_revision`: anything under
   `src/`, `include/`, `third_party/`, `tests/fixture/` or `tests/libretro/`, or
