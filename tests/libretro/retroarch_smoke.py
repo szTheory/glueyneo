@@ -677,18 +677,27 @@ def launch_window():  # type: ignore[no-untyped-def]
     """Defer termination signals around Popen, process assignment and the child PID record.
 
     On exit, a signal that arrived inside the window raises SmokeBlocked("interrupted"),
-    after the caller has assigned `process`, so its cleanup always sees the child.
+    after the caller has assigned `process`, so its cleanup always sees the child. The
+    signal is raised from `finally`, chained from any body exception, so it is never dropped
+    when the window body raises (G2WR-06).
     """
     _LAUNCH_WINDOW["open"] = True
     _LAUNCH_WINDOW["pending"] = None
+    body_error: BaseException | None = None
     try:
         yield
+    except BaseException as error:
+        body_error = error
+        raise
     finally:
         _LAUNCH_WINDOW["open"] = False
-    if _LAUNCH_WINDOW["pending"] is not None:
-        _LAUNCH_WINDOW["pending"] = None
-        _ignore_further_signals()
-        raise SmokeBlocked("interrupted", "smoke was signalled before completion")
+        # G2WR-06: the pending check runs here so a raising body cannot drop the signal; the
+        # SmokeBlocked below replaces the body exception and is chained from it.
+        if _LAUNCH_WINDOW["pending"] is not None:
+            _LAUNCH_WINDOW["pending"] = None
+            _ignore_further_signals()
+            raise SmokeBlocked(
+                "interrupted", "smoke was signalled before completion") from body_error
 
 
 def install_signal_cleanup() -> None:
@@ -913,8 +922,8 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
             outcome: dict[str, object] = {"observations": []}
             survived_before_screenshot = False
             try:
-                try:
-                    with launch_window():
+                with launch_window():
+                    try:
                         process = subprocess.Popen(
                             [str(executable), "--verbose", "--config", str(config),
                              "-L", str(core), str(content)],
@@ -922,15 +931,27 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                             stderr=subprocess.STDOUT,
                             start_new_session=True,
                         )
+                    except OSError as error:
+                        diagnostic = build_diagnostic(
+                            stage="launch", return_code=None, survived_before_screenshot=False,
+                            output=str(error), temporary_root=work,
+                        )
+                        raise SmokeBlocked(
+                            "launch", "pinned RetroArch could not be started", diagnostic=diagnostic
+                        ) from error
+                    # Signals stay deferred around the PID record (T-04-66). A record failure is
+                    # not a launch failure (G2WR-06): `process` is already assigned, so the outer
+                    # cleanup still quits and reaps the started frontend.
+                    try:
                         record_child_pid(getattr(args, "child_pid_file", None), process)
-                except OSError as error:
-                    diagnostic = build_diagnostic(
-                        stage="launch", return_code=None, survived_before_screenshot=False,
-                        output=str(error), temporary_root=work,
-                    )
-                    raise SmokeBlocked(
-                        "launch", "pinned RetroArch could not be started", diagnostic=diagnostic
-                    ) from error
+                    except OSError as error:
+                        diagnostic = build_diagnostic(
+                            stage="launch", return_code=None, survived_before_screenshot=False,
+                            output=str(error), temporary_root=work,
+                        )
+                        raise SmokeBlocked(
+                            "pid-record", "child PID could not be recorded", diagnostic=diagnostic
+                        ) from error
                 time.sleep(0.5)
                 survived_before_screenshot = not frontend_exited(process)
                 first = request_screenshot(process, screenshots, {}, args.timeout)
