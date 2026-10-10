@@ -27,7 +27,11 @@ literal prefix up to the last `/` before the first wildcard is contained, so
 `<scratch>/*.c` passes and `<scratch>*/x`, which could match a sibling such as
 `<scratch>-evil`, does not; a relative path or pattern without `..` resolves
 under the verified cwd or the contained Glob/Grep base; and `preflight` refuses a
-scratch tree holding a symlink that resolves outside it. The reviewer prompt
+scratch tree holding a symlink that resolves outside it. A brace or extglob
+group alternative that starts with `/`, `~` or `$` is not contained whatever the
+pattern prefix (G2CR-01, 04-REVIEW-GAPS-R2.md), and `check` accepts only a
+40-lowercase-hex `--revision` matched as the whole first review line (G2WR-03);
+both strengthen the gate under the D-GAP-01 clarification. The reviewer prompt
 forbids `..` and asks for scratch-relative paths, so a compliant all-in-scratch
 review never trips the `..` rule.
 
@@ -49,10 +53,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import private_paths  # noqa: E402
 
 ALLOWED_TOOLS = frozenset({"Read", "Grep", "Glob"})
-WILDCARDS = "*?[{"
+WILDCARDS = "*?[{("
+# G2CR-01: an alternative inside a brace group or an extglob group (`@( )`, `!( )`, `+( )`, `*( )`,
+# `?( )`) that begins with `/` or `~` is absolute or home-relative whatever the pattern prefix. An
+# alternative beginning with `$` is refused too: Glob/Grep patterns are not shell-expanded today, but a
+# variable reference cannot be proven scratch-relative, so the gate fails closed instead of relying on
+# that tool behavior.
+ABS_IN_GROUP = re.compile(r"[{,(|]\s*[/~$]")
 PROMPT_PREFIX = "Review IDs: "
 HALT_PREFIX = "REVIEW HALTED:"
-ID_PATTERN = r"T-\d{2}-\d{2}|T-\d{2}-SC \(\d{2}-\d{2}\)|(?:CR|WR|IN|GWR|GIN)-\d{2}"
+ID_PATTERN = r"T-\d{2}-\d{2}|T-\d{2}-SC \(\d{2}-\d{2}\)|(?:CR|WR|IN|GWR|GIN|G2CR|G2WR|G2IN)-\d{2}"
 ATTEMPT = re.compile(rf"^VERDICT ({ID_PATTERN})(?= |$)")
 VERDICT_LINE = re.compile(rf"^VERDICT ({ID_PATTERN}) (CLOSED|OPEN|FIXED) (\S.*)$")
 CELL_SPLIT = re.compile(r"(?<!\\)\|")
@@ -93,7 +103,7 @@ def path_contained(path: str, scratch: str, cwd: str) -> bool:
 
 def glob_contained(pattern: str, scratch: str, base: str) -> bool:
     """Whether every match of `pattern` stays inside the scratch directory."""
-    if has_dotdot(pattern) or has_tilde_expansion(pattern):
+    if has_dotdot(pattern) or has_tilde_expansion(pattern) or ABS_IN_GROUP.search(pattern):
         return False
     if os.path.isabs(pattern):
         wild = [pattern.find(char) for char in WILDCARDS if char in pattern]
@@ -407,6 +417,8 @@ def _cmd_verdicts(args) -> int:
 
 
 def _cmd_check(args) -> int:
+    if re.fullmatch(r"[0-9a-f]{40}", args.revision) is None:
+        raise InputError("invalid revision")  # G2WR-03: never echo the value
     scratch = _load_scratch(args.scratch_file)
     contained, reason, ran = _stream_state(args.stream, scratch)
     text = _read(args.review, "review")
@@ -417,7 +429,7 @@ def _cmd_check(args) -> int:
         halts = _halt_lines(text)
         failures: list[str] = []
         lines = text.splitlines()
-        if not lines or not lines[0].startswith(f"Reviewed revision: {args.revision}"):
+        if not lines or lines[0].rstrip() != f"Reviewed revision: {args.revision}":
             failures.append("review is not pinned to the revision")
         if len(halts) > 1 or (halts and (len(lines) != 2 or lines[1] != halts[0])):
             failures.append("halted review is not exactly the revision line plus one REVIEW HALTED line")
