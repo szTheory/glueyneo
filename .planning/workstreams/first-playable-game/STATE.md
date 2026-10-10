@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
-current_plan: 1
+current_plan: 2
 status: executing
-stopped_at: Completed 04-42-PLAN.md
-last_updated: "2026-10-10T22:31:46.939Z"
+stopped_at: Completed 04-43-PLAN.md
+last_updated: "2026-10-10T22:35:19.317Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 04 execution started
-state_head: 1c0370f515f810b1cb04e99691d3c20fb49484cd
+state_head: e581c07d472c2ac57beaeb1357f9b817226faa49
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 57
-  completed_plans: 48
+  completed_plans: 49
   percent: 0
 ---
 
@@ -31,9 +31,9 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 ## Current Position
 
 Phase: 04 (Public Playable Tracer) — EXECUTING
-Current Plan: 7
+Current Plan: 2
 Total Plans in Phase: 51
-Status: Executing Phase 04
+Status: Ready to execute
 Last activity: 2026-10-10 — Phase 04 execution started
 Last Activity Description: Phase 04 execution started
 
@@ -42,7 +42,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 1
+**Current Plan:** 2
 
 ## Performance Metrics
 
@@ -94,12 +94,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P40 | 25 min | 2 tasks | 3 files |
 | Phase 04 P41 | 20 min | 2 tasks | 4 files |
 | Phase 04 P42 | 15min | 2 tasks | 3 files |
+| Phase 04 P43 | 15 min | 3 tasks | 3 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-10T20:43:50.895Z
+**Last session:** 2026-10-10T22:35:19.268Z
 
-**Stopped At:** Completed 04-42-PLAN.md
+**Stopped At:** Completed 04-43-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
@@ -185,6 +186,7 @@ unchanged external-blocker plan. Plan/summary counts are not phase acceptance.
 - [Phase 04]: 04-38: review provenance binds dispositions to the reviewed_revision..head window, which proves ordering only (docs and T-04-38 narrowed; freshness by focused re-review), not equality — dispositions cite later verdict reviews
 - [Phase 04]: 04-40: round-3 fix evidence is recorded with every row open and T-04-48 reopened (G2WR-03 defect in its own mitigation); per T-04-48 only the headless security audit (/gsd-secure-phase) closes rows
 - [Phase 04]: 04-41: a gap round that changes a RECEIPT_BOUND path re-qualifies pinned RetroArch at its final code revision before the receipt is cited or routed to audit; a freshness probe (no RECEIPT_BOUND change after the receipt revision) gates the citation
+- [Phase 04]: 04-43: register checker reports frontmatter errors with file line numbers and treats a threats_open key, parsed Threat ID table or unparsed Threat ID header as register-shaped for misnamed-file detection
 
 ### Blockers
 
