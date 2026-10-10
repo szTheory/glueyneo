@@ -1001,7 +1001,11 @@ class CrosswalkProvenanceTest(DocumentationCopies, unittest.TestCase):
 
     def test_rows_must_equal_the_disposition_record(self) -> None:
         cases = (
-            ("state differs", lambda text: re.sub(r"(?m)^(\| CR-01 \|[^|]*\|[^|]*\|)[^|]*(\|)$", r"\1 fixed \2", text, count=1),
+            # Toggle away from the live state so the mutation is never a no-op (the live CR-01 row is already `fixed`).
+            ("state differs", lambda text: re.sub(
+                r"(?m)^(\| CR-01 \|[^|]*\|[^|]*\|)([^|]*)(\|)$",
+                lambda match: f"{match.group(1)} {'open' if match.group(2).strip() == 'fixed' else 'fixed'} {match.group(3)}",
+                text, count=1),
              "differs from the disposition record"),
             ("severity differs", lambda text: re.sub(r"(?m)^(\| CR-01 \|)[^|]*(\|)", r"\1 warning \2", text, count=1),
              "differs from the disposition record"),
