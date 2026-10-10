@@ -550,6 +550,12 @@ class ConsumerInputTest(unittest.TestCase):
              "marker moving right"),
             ("no unload", lambda summary: summary.update(frontend_unloaded=False), "content unload"),
             ("private path", lambda summary: summary.update(os="macOS /" + "Users/someone/build"), "private absolute path"),
+            ("non-dict retroarch", lambda summary: summary.update(retroarch="x"), "pinned RetroArch"),
+            ("empty os", lambda summary: summary.update(os=""), "single-line operating system"),
+            ("multi-line os", lambda summary: summary.update(os="macOS\nextra"), "single-line operating system"),
+            ("malformed core digest", lambda summary: summary.update(core_sha256="xyz"), "core digest"),
+            ("other input mapping", lambda summary: summary.update(input_mapping="Up Arrow"), "documented input mapping"),
+            ("boolean marker", lambda summary: summary.update(marker_before=[True, 16, 1]), "marker moving right"),
         )
         for label, mutate, expected_error in mutations:
             with self.subTest(mutation=label), tempfile.TemporaryDirectory(prefix="playable-docs-evidence-") as temporary:
@@ -664,6 +670,61 @@ class ConsumerInputTest(unittest.TestCase):
         check_command = runner.commands[-1][1]
         fixture = Path(check_command[check_command.index("--fixture") + 1])
         self.assertEqual(fixture, build / "diagnostic-original-a.bin")
+
+
+class EvidenceBindingTest(unittest.TestCase):
+    """Tracked frontend evidence is bound to committed bytes in every check_docs path (CR-03, WR-09, E2)."""
+
+    def copy_documentation_with_evidence(self, source_root: Path) -> dict[str, object]:
+        for path in (playable.GUIDE, playable.VALIDATION, playable.FRONTEND_EVIDENCE):
+            (source_root / path).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / path, source_root / path)
+        return json.loads((source_root / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+
+    def test_evidence_without_a_repository_is_never_accepted(self) -> None:
+        for forged in (False, True):
+            with self.subTest(forged_digest=forged), tempfile.TemporaryDirectory(prefix="playable-unbound-") as temporary:
+                source_root = Path(temporary)
+                summary = self.copy_documentation_with_evidence(source_root)
+                if forged:
+                    summary["inventory_sha256"] = "0" * 64
+                    (source_root / playable.FRONTEND_EVIDENCE).write_text(json.dumps(summary), encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, "cannot be bound to committed bytes"):
+                    playable.check_docs(source_root)
+
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    def test_explicit_repository_binds_the_copied_evidence(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-bound-") as temporary:
+            source_root = Path(temporary)
+            summary = self.copy_documentation_with_evidence(source_root)
+            playable.check_docs(source_root, repository=ROOT)
+            parent = subprocess.run(["git", "-C", str(ROOT), "rev-parse", summary["source_revision"] + "^"],
+                                    check=True, text=True, stdout=subprocess.PIPE).stdout.strip()
+            with self.assertRaisesRegex(RuntimeError, "not a committed ancestor"):
+                playable.check_docs(source_root, repository=ROOT, head=parent)
+            summary["inventory_sha256"] = "0" * 64
+            (source_root / playable.FRONTEND_EVIDENCE).write_text(json.dumps(summary), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "inventory digest does not match"):
+                playable.check_docs(source_root, repository=ROOT)
+
+    def test_clean_check_docs_binds_to_the_originating_repository_and_snapshot_commit(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-main-docs-") as temporary:
+            output = Path(temporary) / "out"
+            snapshot = mock.Mock(commit="a" * 40, root=Path(temporary) / "source")
+            with mock.patch.object(playable, "OUTPUT", output), \
+                    mock.patch.object(playable, "create_snapshot", return_value=snapshot), \
+                    mock.patch.object(playable, "verify_snapshot"), \
+                    mock.patch.object(playable, "snapshot_record", return_value={"status": "pass"}), \
+                    mock.patch.object(playable, "validate_snapshot_record"), \
+                    mock.patch.object(playable, "check_docs") as check, \
+                    mock.patch.object(sys, "argv", ["verify_playable.py", "--retroarch", str(Path(temporary) / "R.app"),
+                                                    "--clean", "--check-docs"]), \
+                    mock.patch("sys.stdout", new_callable=io.StringIO), mock.patch("sys.stderr", new_callable=io.StringIO):
+                # The archived runner is absent from the stub snapshot, so main fails early but still
+                # reaches the documentation gate with the snapshot in hand.
+                playable.main()
+        check.assert_called_once()
+        self.assertEqual(check.call_args.kwargs, {"repository": ROOT, "head": "a" * 40})
 
 
 class MainErrorPathTest(unittest.TestCase):
