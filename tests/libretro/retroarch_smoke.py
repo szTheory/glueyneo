@@ -830,6 +830,10 @@ def main() -> int:
             result["availability"] = error.availability
         print(public_json(result))
         return 1
+    except Exception as error:  # A decode or parser failure must not print an unscanned traceback.
+        print(public_json({"status": "blocked_or_unknown", "stage": "internal",
+                           "reason": type(error).__name__}))
+        return 1
 
 
 if __name__ == "__main__":

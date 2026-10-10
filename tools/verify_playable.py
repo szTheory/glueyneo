@@ -479,6 +479,16 @@ def redact(text: str) -> str:
     return private_paths.redact(text, extra_roots=(ROOT, OUTPUT))
 
 
+def emit_error(prefix: str, error: BaseException | str) -> None:
+    """Print a CLI error to stderr after redaction and the public-sink scan."""
+    text = prefix + redact(str(error))
+    try:
+        private_paths.scan_public(text, (ROOT, OUTPUT))
+    except private_paths.PrivatePathError:
+        text = prefix + "private-path-survived"
+    print(text, file=sys.stderr)
+
+
 class Runner:
     def __init__(self, work: Path, source_root: Path, snapshot: SourceSnapshot) -> None:
         self.work = work
@@ -895,24 +905,27 @@ def main() -> int:
                         help="write the public-safe summary of a passing receipt to the tracked Phase 04 evidence file")
     args = parser.parse_args()
     if args.record_frontend_evidence:
+        prefix = "frontend evidence not recorded: "
         try:
             receipt = json.loads((OUTPUT / "receipt.json").read_text(encoding="utf-8"))
             summary = frontend_evidence_summary(receipt)
-        except (OSError, ValueError, RuntimeError) as error:
-            print(f"frontend evidence not recorded: {error}", file=sys.stderr)
-            return 1
-        try:
             write_frontend_records(ROOT, summary)
-        except RuntimeError as error:
-            print(f"frontend evidence not recorded: {error}", file=sys.stderr)
+        except (RuntimeError, OSError, UnicodeError, ValueError) as error:
+            emit_error(prefix, error)
+            return 1
+        except Exception as error:  # Never let a traceback carry an unscanned path.
+            emit_error(prefix, type(error).__name__)
             return 1
         print(f"Recorded frontend evidence for {summary['source_revision']}.")
         return 0
     if args.check_docs and not args.clean:
         try:
             check_docs(ROOT)
-        except RuntimeError as error:
-            print(str(error), file=sys.stderr)
+        except (RuntimeError, OSError, UnicodeError, ValueError) as error:
+            emit_error("", error)
+            return 1
+        except Exception as error:  # Never let a traceback carry an unscanned path.
+            emit_error("", type(error).__name__)
             return 1
         print("Phase 04 documentation gate passed.")
         return 0
@@ -1056,7 +1069,7 @@ def main() -> int:
         "schema": "glueyneo.playable-qualification/v1",
         "status": status,
         "identity": identity,
-        "lanes": runner.lanes,
+        "lanes": runner.lanes if runner is not None else {},
         "fixture": {"status": "pass" if fixture_shared.is_file() and sha256(fixture_shared) == FIXTURE_SHA256 else "unknown",
                     "sha256": sha256(fixture_shared) if fixture_shared.is_file() else "unknown"},
         "retroarch_smoke": {"status": "unknown", "reason": "not run"},
