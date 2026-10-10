@@ -136,6 +136,26 @@ class GlobContainedTest(ScratchCase):
         self.assertTrue(review.glob_contained(self.scratch + "/src/a.c", self.scratch, self.scratch))
         self.assertFalse(review.glob_contained(self.scratch + "-evil/a.c", self.scratch, self.scratch))
 
+    def test_t_04_61_absolute_group_alternatives_are_not_contained(self) -> None:
+        # G2CR-01: an alternative inside a brace or extglob group that starts with `/`, `~` or `$`
+        # is absolute whatever the pattern prefix, so the whole pattern fails closed.
+        patterns = ("{/etc/*,x}", "x/{/etc/passwd,y}", self.scratch + "/{a,/etc/passwd}", "@(/etc)/x",
+                    self.scratch + "/!(/etc)", "+(/etc|a)/x", "{ /etc,x}", "{$HOME,x}")
+        for pattern in patterns:
+            with self.subTest(pattern=pattern):
+                self.assertFalse(review.glob_contained(pattern, self.scratch, self.scratch))
+
+    def test_t_04_61_tilde_in_extglob_group_is_not_contained(self) -> None:
+        for pattern in ("@(~)/x", "a/@(b|~)/c"):
+            with self.subTest(pattern=pattern):
+                self.assertFalse(review.glob_contained(pattern, self.scratch, self.scratch))
+
+    def test_t_04_61_scratch_relative_groups_stay_contained(self) -> None:
+        for pattern in ("src/{a,b}.c", "*.py", "@(a|b)/x.c", self.scratch + "/*.c", self.scratch + "/@(a|b)/x"):
+            with self.subTest(pattern=pattern):
+                self.assertTrue(review.glob_contained(pattern, self.scratch, self.scratch))
+        self.assertFalse(review.glob_contained(self.scratch + "@(-evil)/x", self.scratch, self.scratch))
+
 
 class ExternalSymlinkTest(ScratchCase):
     def test_external_symlink_listed(self) -> None:
@@ -217,6 +237,21 @@ class ContainmentTest(ScratchCase):
             with self.subTest(access=json.dumps(access["message"]["content"][0]["input"])):
                 self.assertEqual(review.containment(self.stream(access), self.scratch), (False, "path-outside"))
 
+    def test_t_04_61_stream_with_absolute_group_glob_is_not_contained(self) -> None:
+        for access in (use("Glob", pattern="{/etc/*,x}"), use("Grep", pattern="x", glob="x/{/etc/passwd,y}")):
+            with self.subTest(access=json.dumps(access["message"]["content"][0]["input"])):
+                contained, reason = review.containment(self.stream(access), self.scratch)
+                self.assertFalse(contained)
+                self.assertTrue(reason)
+                files = Path(self.base)
+                (files / "scratch-path.txt").write_text(self.scratch + "\n", encoding="utf-8")
+                (files / "stream.jsonl").write_text(
+                    "".join(json.dumps(e) + "\n" for e in self.stream(access)), encoding="utf-8")
+                code, out, _ = run_cli("gate", "--stream", str(files / "stream.jsonl"),
+                                       "--scratch-file", str(files / "scratch-path.txt"))
+                self.assertEqual(code, 1)
+                self.assertTrue(out.startswith("not-contained"), out)
+
     def test_permission_denials(self) -> None:
         events = [init_event(self.scratch), result_event(({"tool_name": "Bash"},))]
         self.assertEqual(review.containment(events, self.scratch), (False, "permission-denials"))
@@ -267,6 +302,14 @@ class VerdictTest(unittest.TestCase):
         self.assertEqual(set(self.parse(self.lines(*good), contained=False).values()), {"OPEN"})
         halted = self.lines(*good, "REVIEW HALTED: containment-violation")
         self.assertEqual(set(self.parse(halted).values()), {"OPEN"})
+
+    def test_g2_finding_ids_are_recognized(self) -> None:
+        self.assertEqual(review.review_ids("Review IDs: G2CR-01, G2WR-06, G2IN-03"),
+                         ["G2CR-01", "G2WR-06", "G2IN-03"])
+        ids = ["G2WR-06", "G2CR-01"]
+        text = self.lines("VERDICT G2WR-06 FIXED a.py:1 ok", "VERDICT G2CR-01 OPEN still present")
+        self.assertEqual(review.parse_verdicts(text, ids, True), {"G2WR-06": "FIXED", "G2CR-01": "OPEN"})
+        self.assertFalse(review._is_threat("G2WR-06"))
 
 
 class ReviewIdsTest(unittest.TestCase):
@@ -482,6 +525,25 @@ class CliTest(PhaseFixture):
                 code, out, err = run_cli(*self.check_args(files, phase))
                 self.assertEqual(code, 1, (out, err))
                 self.assertIn("FAIL:", out)
+
+    def test_g2wr_03_revision_must_be_40_hex(self) -> None:
+        files = self.files(self.stream(use("Read", file_path="src/a.c")), ["Reviewed revision: " + REVISION])
+        phase = self.write_phase()
+        for value in ("bd74482", "", REVISION.upper(), REVISION + "0"):
+            with self.subTest(revision=value):
+                code, out, err = run_cli(*self.argv("check", files, "--revision", value, "--phase-dir", phase))
+                self.assertEqual(code, 2)
+                if value:
+                    self.assertNotIn(value, out + err)
+
+    def test_g2wr_03_revision_line_must_match_whole_token(self) -> None:
+        phase = self.write_phase()
+        for first in ("Reviewed revision: " + REVISION + "ff", "Reviewed revision: " + REVISION[:12]):
+            with self.subTest(first=first):
+                files = self.files(self.stream(use("Read", file_path="src/a.c")), [first])
+                code, out, _ = run_cli(*self.check_args(files, phase))
+                self.assertEqual(code, 1)
+                self.assertIn("FAIL: review is not pinned to the revision", out)
 
     def test_check_transcription_mismatch_fails(self) -> None:
         files = self.files(self.stream(use("Read", file_path="src/a.c")),
