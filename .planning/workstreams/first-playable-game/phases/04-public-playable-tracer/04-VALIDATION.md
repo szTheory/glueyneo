@@ -19,6 +19,8 @@ updated: "2026-10-10"
 >
 > 2026-10-10 (04-36): the receipt was re-qualified at `bd74482e0050` (all 17 lanes pass, single instance) and the focused contained re-review left Phase 04 on the residual branch: `--require-closed --phase 04` exits 1 (04-SECURITY.md threats_open 2, WR-11 open), so `nyquist_compliant` stays false. Next: `/gsd-plan-phase 04 --gaps --ws first-playable-game`.
 >
+> 2026-10-10 (04-40): round-3 fix evidence (04-37..04-39 red/green pairs, re-proven in detached worktrees) is recorded in 04-SECURITY.md, 04-REVIEW-DISPOSITION.md and the crosswalk below; every threat row and finding stays open, T-04-48 is reopened for the G2WR-03 defect in its own mitigation, and `--require-closed --phase 04` exits 1 as expected before the audit. Next: 04-41 (rights inventory and pinned RetroArch re-qualification), 04-42, then `/gsd-secure-phase 04 --ws first-playable-game`, the focused re-review and re-verification.
+>
 > Execution record for feedback sampling and acceptance evidence.
 
 ## Test Infrastructure
@@ -29,7 +31,7 @@ updated: "2026-10-10"
 | **Config file** | `CMakePresets.json`; `sdk-debug` remains the developer regression preset |
 | **Clean qualification** | `python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean --check-docs` |
 | **Full clean CTest** | 34/34 passed on 2026-10-07 (historical; measured 6.37 seconds). Current `ctest --preset owned-debug`: 63/63 passed on 2026-10-10 (04-36, 35.40 seconds real) |
-| **Current focused suites (2026-10-10, 04-36)** | `python3 tests/tools/test_verify_playable.py` 73/73; `test_private_paths.py` 32/32; `test_independent_review.py` 59/59; `test_check_security_register.py` 21/21; `test_check_runtime_storage.py` 15/15; `python3 tests/consumers/test_check_package.py` 5/5; `python3 -m unittest test_retroarch_smoke` (in `tests/libretro`) 68/68; `tests.workflow.test_public_content` 17/17; `validate_repository_inventory()` passed (46 items); `python3 tests/tools/check_security_register.py first-playable-game` PASS; `python3 tools/verify_playable.py --check-docs` PASS |
+| **Current focused suites (2026-10-10, 04-40)** | `python3 tests/tools/test_independent_review.py` 66/66; `test_verify_playable.py` 84/84; `test_check_security_register.py` 24/24; `python3 -m unittest discover -s tests/libretro -p test_retroarch_smoke.py` 71/71; `ctest --preset owned-debug` 63/63; `python3 tests/tools/check_security_register.py first-playable-game` PASS; `python3 tools/verify_playable.py --check-docs` PASS. Counts from the ignored 04-40 suite-counts file. |
 | **Environment** | macOS 26.6.2 arm64, AppleClang 21.0.0.21000101, SDK 26.5, CMake 4.4.3, Ninja 1.13.2, Python 3.14.4 |
 
 The receipt and sanitized command logs are retained under ignored `build/playable-qualification/`. A fresh run produced the same 602-byte public fixture in static and shared configurations (SHA-256 `59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0`). The runner builds and installs both native variants, runs an out-of-tree C consumer against each install, runs the full CTest suite, and invokes the actual frontend and chip gates. Its overall result remains nonzero when HOST-02 is unknown.
@@ -151,6 +153,17 @@ Rebased on the 2026-10-10 review (34 current disposition records). The earlier r
 | GIN-02 | info | T-04-45 | fixed |
 | GIN-03 | info | T-04-43 / T-04-62 | fixed |
 | GIN-04 | info | T-04-34 | deferred |
+| G2CR-01 | critical | T-04-61 | open |
+| G2CR-02 | critical | T-04-11 / `tools/verify_playable.py` | open |
+| G2WR-01 | warning | T-04-38 | open |
+| G2WR-02 | warning | T-04-67 / T-04-38 | open |
+| G2WR-03 | warning | T-04-48 | open |
+| G2WR-04 | warning | T-04-62 / T-04-64 / `tests/tools/check_security_register.py` | open |
+| G2WR-05 | warning | `tools/verify_playable.py` | open |
+| G2WR-06 | warning | T-04-66 / `tests/libretro/retroarch_smoke.py` | open |
+| G2IN-01 | info | T-04-62 | open |
+| G2IN-02 | info | T-04-54 | open |
+| G2IN-03 | info | T-04-11 | open |
 
 ### Plan 04-20 Task 1 Current Evidence — 2026-10-08
 
@@ -229,7 +242,7 @@ Escalated: six implementation defect groups reproduced by the independent post-c
 
 | ID | Implementation area | Reproduced defect (control in parentheses) | Suggested regression test (path and case) | Threat / finding | Status |
 |----|--------------------|--------------------------------------------|-------------------------------------------|------------------|--------|
-| E1 | `tools/private_paths.py` `redact()` and `scan_public()` | Separator and encoding variants survive: U+2215 and U+2044 separators between user-home root components, a double-percent-encoded user-home root, and a dash-mangled checkout root when the checkout is passed as `extra_roots` (control: a plain user-home root and a fullwidth solidus are rejected) | `tests/tools/test_private_paths.py`: "separator and encoding variants of a private root are redacted and rejected by scan_public" | T-04-11, T-04-15, T-04-18, T-04-20 (high/open) | open implementation defect: repaired by Plan 04-24 and widened by 04-35 (NFC/NFD); the 04-34 and 04-36 contained reviews closed T-04-15, T-04-18 and T-04-20 and fixed CR-01, but T-04-11 stays OPEN (04-36: `tools/verify_playable.py` builds the receipt outside any try block), so the related row stays open |
+| E1 | `tools/private_paths.py` `redact()` and `scan_public()` | Separator and encoding variants survive: U+2215 and U+2044 separators between user-home root components, a double-percent-encoded user-home root, and a dash-mangled checkout root when the checkout is passed as `extra_roots` (control: a plain user-home root and a fullwidth solidus are rejected) | `tests/tools/test_private_paths.py`: "separator and encoding variants of a private root are redacted and rejected by scan_public" | T-04-11, T-04-15, T-04-18, T-04-20 (high/open) | fix evidence recorded (04-38, 756c2422c0b6); open pending the headless security audit and focused re-review |
 | E2 | `tools/verify_playable.py` `load_frontend_evidence()` (inventory binding runs only `if (source_root / ".git").exists()`) | A `.git`-less source tree with `inventory_sha256` forged to all zeros passes `check_docs`; the same forgery is rejected when `.git` is present (control) | `tests/tools/test_verify_playable.py`: "check_docs fails closed when frontend evidence cannot be bound to committed bytes without .git" | QUAL-03 docs-gate provenance; T-04-12 | repaired by Plan 04-26; confirmed by the 04-34 and 04-36 contained reviews (CR-03 FIXED) |
 | E3 | `tools/verify_playable.py` `check_docs()` (prose outside the generated status block is not inspected) | Affirmative frontend success prose appended after the generated block passes the gate | `tests/tools/test_verify_playable.py`: "check_docs rejects affirmative frontend success prose outside the generated status block" | T-04-34 (medium/open); WR-01, WR-06, WR-08 | repaired by Plan 04-27; confirmed by the 04-34 and 04-36 contained reviews (T-04-34 CLOSED; WR-01 and WR-06 FIXED; WR-08 deferred with its documented residual) |
 | E4 | `tools/verify_playable.py` `check_docs()` review crosswalk | An "Existing Threat Scope" cell naming a nonexistent repository path passes (the gate only requires a non-empty scope) | `tests/tools/test_verify_playable.py`: "review crosswalk scope naming a nonexistent repository path is rejected" | T-04-43 (medium/open); WR-09 | repaired by Plan 04-26; confirmed by the 04-34 and 04-36 contained reviews (T-04-43 CLOSED; WR-09 FIXED) |
