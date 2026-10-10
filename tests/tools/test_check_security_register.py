@@ -355,5 +355,65 @@ class NoWeakeningTest(unittest.TestCase):
             self.assertIn("block_on high from .planning/config.json", out.getvalue())
 
 
+class FrontmatterKeyTest(SecurityRegisterTest):
+    """T-04-48: frontmatter is a set of normalized top-level keys; anything unreadable fails closed."""
+
+    @staticmethod
+    def doc(*front: str) -> str:
+        body = register(1).split("---\n", 2)[2]
+        return "\n".join(("---", *front, "---")) + "\n" + body
+
+    def assert_fails(self, text: str, expected: str) -> None:
+        code, _, err = self.run_checker_output(text)
+        self.assertEqual(code, 1, err)
+        self.assertIn("FAIL:", err)
+        self.assertIn(expected, err)
+
+    def test_t_04_48_quoted_and_cased_duplicates_fail(self) -> None:
+        for label, duplicate in (("double-quoted", '"threats_open": 0'), ("single-quoted", "'threats_open': 0"),
+                                 ("re-cased", "Threats_Open: 0")):
+            with self.subTest(duplicate=label):
+                self.assert_fails(self.doc("threats_open: 1", duplicate), "duplicate frontmatter key threats_open")
+
+    def test_t_04_48_quoted_key_alone_is_the_same_key(self) -> None:
+        for key in ('"threats_open"', "'threats_open'"):
+            with self.subTest(key=key):
+                self.assertEqual(self.run_checker(self.doc(f"{key}: 1")), 0)
+
+    def test_t_04_48_status_duplicates_and_quoted_status(self) -> None:
+        self.assert_fails(self.doc("status: open", "'status': verified", "threats_open: 1"),
+                          "duplicate frontmatter key status")
+        self.assert_fails(self.doc('"status": verified', "threats_open: 1"), "status verified with threats_open 1")
+
+    def test_t_04_48_any_duplicate_top_level_key_fails(self) -> None:
+        self.assert_fails(self.doc("phase: 04", '"phase": 05', "threats_open: 1"), "duplicate frontmatter key phase")
+
+    def test_t_04_48_unsupported_lines_fail_with_line_number(self) -> None:
+        for bad in ("{threats_open: 0}", "<<: *base", "? threats_open", r'"threats\x5fopen": 0',
+                    "&a threats_open: 0", "- item", "*alias", "\tthreats_open: 0"):
+            with self.subTest(line=bad):
+                self.assert_fails(self.doc("threats_open: 1", bad), "unsupported frontmatter line 3")
+
+    def test_t_04_48_commented_or_indented_keys_fail(self) -> None:
+        for bad in ('# "threats_open": 0', "  'threats_open': 0", "# status: verified", "  status: verified"):
+            with self.subTest(line=bad):
+                code, _, err = self.run_checker_output(self.doc("threats_open: 1", bad))
+                self.assertEqual(code, 1)
+                self.assertRegex(err, r"(commented|indented) (threats_open|status) key at line 3")
+
+    def test_t_04_48_threats_open_must_be_a_bare_integer(self) -> None:
+        for value in ('"1"', "1.0", "one", "''"):
+            with self.subTest(value=value):
+                self.assert_fails(self.doc(f"threats_open: {value}"), "threats_open must be a bare non-negative integer")
+        self.assertEqual(self.run_checker(self.doc("threats_open: 1  # note")), 0)
+
+    def test_t_04_48_accepted_forms_stay_accepted(self) -> None:
+        template = "# threats_open = count of OPEN threats at or above workflow.security_block_on severity"
+        self.assertEqual(self.run_checker(self.doc(template, "threats_open: 1")), 0)
+        self.assertEqual(self.run_checker(self.doc("findings:", "  high: 0", "phase: \"04\"", "threats_open: 1")), 0)
+        verified = register(0, ROWS[:1] + ROWS[3:], frontmatter_lines=("status: verified  # reviewed",))
+        self.assertEqual(self.run_checker(verified), 0)
+
+
 if __name__ == "__main__":
     unittest.main()
