@@ -866,6 +866,8 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/test_private_paths.py")
   add_test(NAME qualification_runner
     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/test_verify_playable.py")
+  add_test(NAME qualification_check_package
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/consumers/test_check_package.py")
   add_test(NAME qualification_frontend_smoke
     COMMAND ${Python3_EXECUTABLE} -m unittest discover
             -s "${CMAKE_CURRENT_SOURCE_DIR}/tests/libretro" -p test_retroarch_smoke.py)
@@ -894,7 +896,8 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
   add_test(NAME runtime_writable_storage_audit
     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/test_check_runtime_storage.py")
   set_tests_properties(runtime_writable_storage PROPERTIES SKIP_RETURN_CODE 77)
-  set_tests_properties(qualification_private_paths qualification_runner qualification_frontend_smoke
+  set_tests_properties(qualification_private_paths qualification_runner qualification_check_package
+    qualification_frontend_smoke
     planning_security_register_mutations runtime_writable_storage runtime_writable_storage_audit
     PROPERTIES LABELS "qualification-tools" TIMEOUT 300)
 

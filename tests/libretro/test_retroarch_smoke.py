@@ -336,6 +336,46 @@ class BundleIdentifierTests(unittest.TestCase):
         self.assertTrue(process.terminated)
 
 
+class IdentityCheckTest(unittest.TestCase):
+    """IN-02: the pinned equality alone refuses every other bundle id; the bounds test is subsumed."""
+
+    def refuse(self, bundle_id: str) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            contents = directory / "RetroArch.app" / "Contents"
+            (contents / "MacOS").mkdir(parents=True)
+            (contents / "Info.plist").write_bytes(plistlib.dumps({
+                "CFBundleShortVersionString": smoke.EXPECTED_VERSION,
+                "CFBundleExecutable": "RetroArch",
+                "CFBundleIdentifier": bundle_id,
+            }, fmt=plistlib.FMT_BINARY))
+            args = type("Args", (), {"retroarch": directory / "RetroArch.app",
+                                     "core": directory / "core", "content": directory / "fixture"})()
+            with mock.patch.object(smoke.sys, "platform", "darwin"), \
+                    mock.patch.object(smoke.subprocess, "run") as run:
+                with self.assertRaises(smoke.SmokeBlocked) as raised:
+                    smoke.validate_inputs(args)
+            run.assert_not_called()
+            self.assertEqual(raised.exception.stage, "identity")
+
+    def test_non_pinned_and_spaced_bundle_ids_are_refused(self) -> None:
+        for bundle_id in ("com.example.Other", "com.libretro.dist.Retro Arch"):
+            with self.subTest(bundle_id=bundle_id):
+                self.refuse(bundle_id)
+
+    def test_validate_inputs_has_no_redundant_pattern_check(self) -> None:
+        source = Path(smoke.__file__).read_text(encoding="utf-8")
+        self.assertNotIn("re.fullmatch", source)
+        self.assertNotIn("cursor > len(content)", source)
+
+    def test_truncated_bundles_are_still_rejected(self) -> None:
+        header = b"GNMV" + (1).to_bytes(4, "big") + smoke.GNMV_PROFILE_MSX.to_bytes(4, "big") \
+            + len(smoke.GNMV_REGION_LENGTHS).to_bytes(4, "big")
+        for label, content in (("header only", header), ("partial region header", header + b"\x00" * 5)):
+            with self.subTest(label=label):
+                self.assertFalse(smoke.is_normalized_mvs_bundle(content))
+
+
 class SingleInstanceTest(unittest.TestCase):
     """E6/CR-07: never stack a second RetroArch and never quit an instance we did not start."""
 
