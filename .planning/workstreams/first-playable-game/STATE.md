@@ -3,19 +3,19 @@ gsd_state_version: "1.0"
 milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
-current_phase_name: public-playable-tracer
-current_plan: 5
+current_phase_name: Public Playable Tracer
+current_plan: 2
 status: executing
-stopped_at: Completed 04-36-PLAN.md
-last_updated: "2026-10-10T20:02:45.400Z"
+stopped_at: Completed 04-37-PLAN.md
+last_updated: "2026-10-10T20:24:23.155Z"
 last_activity: 2026-10-10
-last_activity_desc: Phase 04 planning complete — 42 plans ready
-state_head: 2192eb9c92cc8a913bd70e543dbbea769525be8d
+last_activity_desc: Phase 04 execution started
+state_head: c8b2b06b3d5be0b3e7a9ec7cc70d91b423d88b8e
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 48
-  completed_plans: 42
+  completed_plans: 43
   percent: 0
 ---
 
@@ -30,19 +30,19 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 ## Current Position
 
-Phase: 04 (public-playable-tracer) — READY TO EXECUTE
-Current Plan: 5
+Phase: 04 (Public Playable Tracer) — EXECUTING
+Current Plan: 2
 Total Plans in Phase: 42
 Status: Ready to execute
 Last activity: 2026-10-10 — Phase 04 execution started
-Last Activity Description: Phase 04 planning complete — 42 plans ready
+Last Activity Description: Phase 04 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 5
+**Current Plan:** 2
 
 ## Performance Metrics
 
@@ -88,12 +88,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P34 | 35 min | 2 tasks | 5 files |
 | Phase 04 P35 | 40 min | 3 tasks | 12 files |
 | Phase 04 P36 | 35 min | 2 tasks | 8 files |
+| Phase 04 P37 | 25 min | 3 tasks | 6 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-10T18:37:23.339Z
+**Last session:** 2026-10-10T20:24:23.126Z
 
-**Stopped At:** Completed 04-36-PLAN.md
+**Stopped At:** Completed 04-37-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
@@ -171,6 +172,7 @@ unchanged external-blocker plan. Plan/summary counts are not phase acceptance.
 - [Phase 04]: 04-35: residual verdicts citing CMakeLists.txt only as context (T-04-56, WR-08) classified gates; fix confined to check_runtime_storage.py
 - [Phase 04]: D-GAP-02 (2026-10-10): the maintainer accepted T-04-44/52/55/60; they gate Phase 04 closure only through register status accepted, contained verdicts are evidence only
 - [Phase 04]: 04-36: receipt re-qualified at bd74482e0050; focused 73-ID re-review left T-04-11, T-04-38, T-04-61, T-04-67 and WR-11 open (residual branch, CLOSURE exit 1); routed to /gsd-plan-phase 04 --gaps
+- [Phase 04]: 04-37: glob_contained fails closed on /, ~ or $ alternatives in brace/extglob groups; review --revision pinned to 40-hex whole-line match
 
 ### Blockers
 
