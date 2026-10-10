@@ -173,12 +173,18 @@ revision window (T-04-38, T-04-67, WR-11, G2WR-01, G2WR-02). 04-REVIEW.md must
 carry exactly one `reviewed_revision` of 40 lowercase hex characters that
 resolves to an ancestor of the checked head. Each disposition that is not `open`
 must cite a revision, in the form `review (04-NN, <12 to 40 hex>)` or
-`` revision `<40 hex>` ``, that resolves, descends from or equals
-`reviewed_revision`, and is an ancestor of the head. Other hexadecimal text, such
-as digests, is not a revision. A missing, unresolvable or out-of-window revision
+`` revision `<40 hex>` ``, that resolves, strictly descends from the anchor of the
+review round that raised the finding (never equal to it), and is an ancestor of
+the head. The anchor is per round (G3WR-05): `CR/WR/IN` findings use 04-REVIEW.md
+`reviewed_revision`; `GCR/GWR/GIN` findings use the commit that added
+04-REVIEW-GAPS.md; `G<n>CR/G<n>WR/G<n>IN` findings use the commit that added
+04-REVIEW-GAPS-R<n>.md. An ID that matches no review round, or a round file that
+is not committed at the checked head, fails. Other hexadecimal text, such as
+digests, is not a revision. A missing, unresolvable or out-of-window revision
 fails the gate, and review crosswalk scope paths may not contain `..`.
 
-The gate proves ordering only. It does not prove that a review ran at the cited
+The gate proves ordering only, relative to the review round that raised the
+finding (T-04-38, G3WR-05). It does not prove that a review ran at the cited
 commit, that the verdict covered the cited files, or that they are unchanged
 since; that freshness comes from the focused re-review's changed-path rule. A
 `--clean --check-docs` failure that is not a reported documentation error is
