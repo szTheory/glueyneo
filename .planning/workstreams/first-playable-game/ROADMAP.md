@@ -35,11 +35,11 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   4. A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including license/source/state audits, cycle or clock and interrupt/bus behavior, deterministic timing, continuation and independent-instance evidence, contained C++ failures, and static/shared C-consumer linkage; a failed gate blocks admission and requires bounded replanning rather than phase completion.
   5. An integrator can follow the clean-tree build/install/load procedure for the native library and libretro adapter on the selected macOS configuration and identify exact dependency, compiler, SDK, OS, architecture, and frontend identities plus untested configurations.
 
-**Plans**: 27/31 plans executed; gap-closure plans 04-24 through 04-31 (waves 22–29, sequential because each code plan refreshes docs/rights-inventory.md in its final commit) repair the six 2026-10-10 verification gaps and the remaining open review findings, then re-run the qualification plus a tool-scoped independent review. The 2026-10-10 delegated threat dispositions were not confirmed by the independent post-c75f577 review (04-23): 04-SECURITY.md threats_open is 6 and T-04-44 stays accepted at medium. HOST-02 and frontend QUAL-03 are Complete from the tracked 04-FRONTEND-RECEIPT.json at aaf3f093ab0f. Phase 04 acceptance awaits repairs of the reproduced gaps and fresh whole-phase verification.
+**Plans**: 28/31 plans executed; gap-closure plans 04-24 through 04-31 (waves 22–29, sequential because each code plan refreshes docs/rights-inventory.md in its final commit) repair the six 2026-10-10 verification gaps and the remaining open review findings, then re-run the qualification plus a tool-scoped independent review. The 2026-10-10 delegated threat dispositions were not confirmed by the independent post-c75f577 review (04-23): 04-SECURITY.md threats_open is 6 and T-04-44 stays accepted at medium. HOST-02 and frontend QUAL-03 are Complete from the tracked 04-FRONTEND-RECEIPT.json at aaf3f093ab0f. Phase 04 acceptance awaits repairs of the reproduced gaps and fresh whole-phase verification.
 - [ ] 04-31-PLAN.md — Re-qualify pinned RetroArch with --clean --check-docs at the repaired HEAD (fully automated), bind the fresh summary after commit, tool-scoped verdict-only independent review of all open threats and 22 findings, reconcile register/dispositions/ROADMAP/STATE with the computed next command (gap closure, Wave 29)
 - [ ] 04-30-PLAN.md — Remaining review findings, part 2: username token narrowed to GitHub Actions service accounts with documented residual (WR-06, T-04-60), dead smoke code (IN-02), core dependency parsing (IN-03), rights inventory rows (gap closure, Wave 28)
 - [ ] 04-29-PLAN.md — Remaining review findings, part 1: runtime writable-storage audit and documented guard (WR-08), workstream-gated register test and workstream block_on (WR-07), rights inventory rows (gap closure, Wave 27)
-- [ ] 04-28-PLAN.md — Launch safety: pre-launch single-instance refusal, PID-scoped quit, no orphan on outer timeout, process-group lane timeouts, survivor signalling limited to the lane's recorded child (CR-07, WR-03/04/05; gap closure, Wave 26)
+- [x] 04-28-PLAN.md — Launch safety: pre-launch single-instance refusal, PID-scoped quit, no orphan on outer timeout, process-group lane timeouts, survivor signalling limited to the lane's recorded child (CR-07, WR-03/04/05; gap closure, Wave 26)
 - [x] 04-27-PLAN.md — Outside-block claim gate, guide private-path scan, atomic scanned records, guide prose rewrite (CR-04, WR-01, IN-01, IN-04 prose-claim gap; gap closure, Wave 25)
 - [x] 04-26-PLAN.md — Mandatory evidence binding incl. .git-less snapshot, field validation, crosswalk provenance (CR-03/05, WR-02/09, IN-04 binding/scope gaps; gap closure, Wave 24)
 - [x] 04-25-PLAN.md — Strict security register gate: frontmatter-only key, all register tables, closure mode, documented in docs/testing.md (CR-06, IN-04 register gap; gap closure, Wave 23)
@@ -169,7 +169,7 @@ Each phase includes the automated evidence and independent review appropriate to
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. Public Playable Tracer | 27/31 | In Progress | - |
+| 4. Public Playable Tracer | 28/31 | In Progress | - |
 | 5. Selected MVS Boot | 6/6 | In Progress | - |
 | 6. Active Title Control | 0/TBD | Not started | - |
 | 7. Sound and Scenario Qualification | 0/TBD | Not started | - |
