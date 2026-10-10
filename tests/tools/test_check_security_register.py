@@ -56,6 +56,19 @@ class SecurityRegisterTest(unittest.TestCase):
     def test_counts_only_open_rows_at_block_on(self) -> None:
         self.assertEqual(self.run_checker(register(1)), 0)
 
+    def test_t_04_62_second_table_with_a_loose_header_is_still_counted(self) -> None:
+        columns = "Threat ID | Category | Component | Severity | Disposition | Mitigation | Status"
+        row = "| T-09-05 | Tampering | docs | high | mitigate | gate | open |"
+        variants = {
+            "no trailing pipe": f"| {columns}\n|---|---|---|---|---|---|---\n{row}",
+            "re-cased Threat Id": f"| {columns.replace('Threat ID', 'Threat Id')} |\n|---|---|---|---|---|---|---|\n{row}",
+        }
+        for label, extra in variants.items():
+            with self.subTest(table=label):
+                # The declared count of 1 matches the first table only; the second adds a blocking row.
+                self.assertEqual(self.run_checker(register(1, extra=extra)), 1)
+                self.assertEqual(self.run_checker(register(2, extra=extra)), 0)
+
     def test_rejects_mismatched_count_duplicates_and_uncontrolled_status(self) -> None:
         mutations = {
             "count too low": register(0),

@@ -85,6 +85,24 @@ class PathContainedTest(ScratchCase):
         self.assertTrue(review.path_contained(self.scratch + "/src", alias, self.scratch))
 
 
+class TildeContainmentTest(ScratchCase):
+    """T-04-61: Read, Glob and Grep expand `~` to the home directory, so it is never scratch-relative."""
+
+    def test_t_04_61_tilde_paths_are_not_contained(self) -> None:
+        for path in ("~", "~/x", "~/.ssh/config", "~root/x", "~nosuchuser/x"):
+            with self.subTest(path=path):
+                self.assertFalse(review.path_contained(path, self.scratch, self.scratch))
+
+    def test_t_04_61_tilde_glob_patterns_are_not_contained(self) -> None:
+        for pattern in ("~/*.py", "~/**", "{~/a,b}/*", "src/{x,~/y}"):
+            with self.subTest(pattern=pattern):
+                self.assertFalse(review.glob_contained(pattern, self.scratch, self.scratch))
+
+    def test_t_04_61_tilde_inside_a_name_is_still_an_ordinary_relative_path(self) -> None:
+        self.assertTrue(review.path_contained("src/backup~", self.scratch, self.scratch))
+        self.assertTrue(review.path_contained("src/~notes", self.scratch, self.scratch))
+
+
 class GlobContainedTest(ScratchCase):
     def test_glob_relative_patterns_resolve_under_base(self) -> None:
         for pattern in ("**/*.c", "*.c", "src/*.py", "."):
@@ -494,6 +512,39 @@ class CliTest(PhaseFixture):
             code, out, err = run_cli(*command)
             self.assertNotIn(self.base, out + err)
             self.assertNotIn(os.path.basename(self.base), out + err)
+
+    def test_t_04_65_malformed_stream_shapes_fail_closed_without_a_traceback(self) -> None:
+        shapes = {
+            "string message": {"type": "assistant", "message": "text"},
+            "list message": {"type": "assistant", "message": []},
+            "string content": {"type": "assistant", "message": {"content": "x"}},
+            "unhashable tool name": {"type": "assistant", "message": {"content": [
+                {"type": "tool_use", "name": ["Read"], "input": {}}]}},
+        }
+        for label, event in shapes.items():
+            with self.subTest(shape=label):
+                files = self.files([init_event(self.scratch), event, result_event()],
+                                   ["Reviewed revision: " + REVISION])
+                code, out, err = run_cli(*self.argv("gate", files))
+                self.assertEqual((code, out.strip()), (1, "not-contained: malformed-event"), err)
+                code, out, err = run_cli(*self.argv("verdicts", files))
+                self.assertEqual(code, 0, err)
+                self.assertFalse(json.loads(out)["contained"])
+                self.assertNotIn("Traceback", out + err)
+                self.assertNotIn(self.base, out + err)
+        files = self.files([init_event(self.scratch, tools=[["Read"]]), result_event()],
+                           ["Reviewed revision: " + REVISION])
+        code, out, err = run_cli(*self.argv("gate", files))
+        self.assertEqual((code, out.strip()), (1, "not-contained: init-tools"), err)
+
+    def test_t_04_65_argument_errors_exit_2_without_usage_text_or_paths(self) -> None:
+        for arguments in (("gate", "--stream", self.base + "/x", "--bogus", self.base + "/y"),
+                          ("nonesuch", self.base + "/z"), ("gate",), ()):
+            with self.subTest(arguments=arguments):
+                code, out, err = run_cli(*arguments)
+                self.assertEqual(code, 2)
+                self.assertNotIn(self.base, out + err)
+                self.assertNotIn("usage: independent_review", out + err)
 
     def test_private_path_in_message_becomes_private_path_survived(self) -> None:
         line = review.safe_line("FAIL: " + str(Path.home()) + "/secret/file")
