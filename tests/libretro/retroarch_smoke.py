@@ -200,6 +200,11 @@ def build_diagnostic(
 
 
 def compare_launch_probes(no_content: dict[str, object], core_content: dict[str, object]) -> str:
+    for probe in (no_content, core_content):
+        diagnostic = probe.get("diagnostic")
+        if isinstance(diagnostic, dict) and diagnostic.get("stage") == "pid-record":
+            # A PID record failure says nothing about whether the frontend started (G3WR-03).
+            return "diagnostic-pid-record-failed"
     if not bool(no_content.get("survived_window")):
         return "frontend-startup-failed"
     if not bool(core_content.get("survived_window")):
@@ -772,6 +777,7 @@ def run_launch_probe(
         refuse_stacked_launch()
         try:
             process = None
+            pid_record_error: OSError | None = None
             with process_log.open("wb") as log_stream:
                 try:
                     with launch_window():
@@ -779,28 +785,46 @@ def run_launch_probe(
                             arguments, stdout=log_stream, stderr=subprocess.STDOUT,
                             start_new_session=True,
                         )
-                        record_child_pid(child_pid_file, process)
-                    reaped = reap_frontend(process, min(DIAGNOSTIC_PROBE_SECONDS, timeout))
-                    survived_window = reaped is None
-                    return_code = reaped
-                    crash_reason = (
-                        wait_for_recent_crash_reason(started_at, prior_crash_reports)
-                        if return_code is not None and return_code < 0
-                        else find_recent_crash_reason(started_at, prior_crash_reports)
-                    )
-                    diagnostic = build_diagnostic(
-                        stage="no-content-startup" if probe == "no_content" else "core-content-load",
-                        return_code=return_code,
-                        survived_before_screenshot=None,
-                        output=collect_frontend_output(process_log, log, work),
-                        temporary_root=work,
-                        crash_report=crash_reason,
-                    )
-                    request_frontend_quit(bundle_id, process, timeout)
-                    cleanup_return_code = frontend_returncode(process)
+                        # A PID record failure is not a launch failure (G3WR-03): the frontend
+                        # is running and the finally below still kills its group.
+                        try:
+                            record_child_pid(child_pid_file, process)
+                        except OSError as error:
+                            pid_record_error = error
+                    if pid_record_error is not None:
+                        survived_window = None
+                        return_code = None
+                        diagnostic = build_diagnostic(
+                            stage="pid-record",
+                            return_code=None,
+                            survived_before_screenshot=None,
+                            output=f"{type(pid_record_error).__name__}: {pid_record_error}",
+                            temporary_root=work,
+                        )
+                    else:
+                        reaped = reap_frontend(process, min(DIAGNOSTIC_PROBE_SECONDS, timeout))
+                        survived_window = reaped is None
+                        return_code = reaped
+                        crash_reason = (
+                            wait_for_recent_crash_reason(started_at, prior_crash_reports)
+                            if return_code is not None and return_code < 0
+                            else find_recent_crash_reason(started_at, prior_crash_reports)
+                        )
+                        diagnostic = build_diagnostic(
+                            stage="no-content-startup" if probe == "no_content" else "core-content-load",
+                            return_code=return_code,
+                            survived_before_screenshot=None,
+                            output=collect_frontend_output(process_log, log, work),
+                            temporary_root=work,
+                            crash_report=crash_reason,
+                        )
+                        request_frontend_quit(bundle_id, process, timeout)
+                    cleanup_return_code = None
                 finally:
                     if process is not None:
                         kill_launched_group(process)
+                if process is not None:
+                    cleanup_return_code = frontend_returncode(process)
         except OSError as error:
             survived_window = False
             return_code = None
