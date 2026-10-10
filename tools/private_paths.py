@@ -30,12 +30,13 @@ decodes.
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 import re
 import tempfile
 import unicodedata
-from typing import Iterable
+from typing import Any, Iterable
 
 GENERIC_ROOTS = ("/Users/", "/home/", "/Volumes/", "/tmp/", "/var/tmp/", "/var/folders/")
 # macOS reports the same directories under /private; they are generic roots too.
@@ -234,3 +235,25 @@ def scan_public(text: str, extra_roots: Iterable[Path | str] = ()) -> None:
     canon, _, starts = _canonical(text)
     if _first_match(canon, starts, extra_roots) is not None or _username_token_present(text):
         raise PrivatePathError("private-path-survived")
+
+
+def scan_public_value(value: Any, extra_roots: Iterable[Path | str] = ()) -> None:
+    """Fail closed if a private root survives in any key or string of a structure.
+
+    Strings and dict keys are scanned as decoded values, then the whole
+    structure is scanned again as JSON text, so a sink that writes the
+    serialization is covered as well as one that writes the values.
+    """
+    stack: list[Any] = [value]
+    while stack:
+        item = stack.pop()
+        if isinstance(item, str):
+            scan_public(item, extra_roots)
+        elif isinstance(item, dict):
+            for key, child in item.items():
+                if isinstance(key, str):
+                    scan_public(key, extra_roots)
+                stack.append(child)
+        elif isinstance(item, (list, tuple)):
+            stack.extend(item)
+    scan_public(json.dumps(value, ensure_ascii=False, sort_keys=True, default=str), extra_roots)

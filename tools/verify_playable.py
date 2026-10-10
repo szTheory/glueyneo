@@ -666,7 +666,7 @@ def validate_frontend_evidence(summary: dict[str, Any]) -> str:
     if summary.get("frontend_unloaded") is not True:
         raise RuntimeError("frontend evidence must record content unload")
     try:
-        private_paths.scan_public(json.dumps(summary))
+        private_paths.scan_public_value(summary, (ROOT,))
     except private_paths.PrivatePathError as error:
         raise RuntimeError("frontend evidence contains a private absolute path") from error
     return revision
@@ -871,8 +871,8 @@ def _write_receipt(receipt: dict[str, Any]) -> str:
         "reason": safe_receipt.get("reason", ""),
     }, sort_keys=True)
     try:
-        private_paths.scan_public(text, (ROOT, OUTPUT))
-        private_paths.scan_public(summary, (ROOT, OUTPUT))
+        private_paths.scan_public_value(safe_receipt, (ROOT, OUTPUT))
+        private_paths.scan_public_value(json.loads(summary), (ROOT, OUTPUT))
     except private_paths.PrivatePathError:
         # Fail closed: record only the reason, never the surviving value.
         safe_receipt = {"status": "fail", "reason": "private-path-survived"}

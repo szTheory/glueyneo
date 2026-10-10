@@ -114,7 +114,7 @@ def public_json(result: dict[str, object]) -> str:
     """Serialize a result for stdout, failing closed if a private root survives."""
     text = json.dumps(result, sort_keys=True)
     try:
-        private_paths.scan_public(text, (Path(__file__).resolve().parents[2],))
+        private_paths.scan_public_value(result, (Path(__file__).resolve().parents[2],))
     except private_paths.PrivatePathError:
         result["status"] = "fail"
         text = json.dumps({"status": "fail", "reason": "private-path-survived"}, sort_keys=True)
