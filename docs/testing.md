@@ -92,6 +92,12 @@ names are `planning_security_register` and
 `planning_security_register_mutations` (the latter runs the mutation suite in
 `tests/tools/test_check_security_register.py`).
 
+The blocking threshold is `workflow.security_block_on` from
+`.planning/workstreams/<workstream>/config.json` when that file sets it, and
+otherwise from `.planning/config.json` (default `high`); the workstream setting
+overrides the root default. A missing or unreadable root config, an unreadable
+workstream config and an unknown severity at either level fail with `FAIL:`.
+
 Default mode checks consistency only. `threats_open` is read from the YAML
 frontmatter (the first `---` block), where exactly one `threats_open: <n>` line
 must exist, and must equal the open rows at or above

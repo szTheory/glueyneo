@@ -16,6 +16,12 @@ must equal the number of open threat-register rows at or above the configured
   so a PASS is not closure. `--require-closed` additionally exits 1 while any
   register has blocking open threats.
 
+The blocking threshold is `workflow.security_block_on` from
+`.planning/workstreams/<workstream>/config.json` when that file sets it, else
+from `.planning/config.json` (default `high`). A missing or unreadable root
+config, an unreadable workstream config and an unknown severity at either level
+fail closed.
+
 Prose, review provenance and other phase-specific wording are deliberately not
 checked here.
 """
@@ -36,16 +42,39 @@ CELL_SPLIT = re.compile(r"(?<!\\)\|")
 HEADER = re.compile(r"^\|\s*Threat ID\s*\|(.+)\|\s*$")
 
 
-def block_on(root: Path) -> int | str:
-    """Return the severity threshold, or an error string."""
+def configured_level(path: Path, label: str) -> str | None | tuple[str]:
+    """Return `workflow.security_block_on` from one config, None when unset, or (error,)."""
     try:
-        config = json.loads((root / ".planning/config.json").read_text(encoding="utf-8"))
-        value = str(config.get("workflow", {}).get("security_block_on", "high")).lower()
+        config = json.loads(path.read_text(encoding="utf-8"))
+        value = config.get("workflow", {}).get("security_block_on")
+        if value is not None:
+            value = str(value).lower()
     except (OSError, ValueError, AttributeError) as error:
-        return f"cannot read .planning/config.json: {type(error).__name__}"
-    if value not in SEVERITY:
-        return f"unknown workflow.security_block_on {value!r}"
-    return SEVERITY[value]
+        return (f"cannot read {label}: {type(error).__name__}",)
+    if value is not None and value not in SEVERITY:
+        return (f"unknown workflow.security_block_on {value!r} in {label}",)
+    return value
+
+
+def block_on(root: Path, workstream: str) -> int | str:
+    """Return the severity threshold, or an error string.
+
+    The workstream's own `.planning/workstreams/<name>/config.json` wins when
+    it sets `workflow.security_block_on`; otherwise `.planning/config.json`
+    applies (default `high`). Unreadable files and unknown severities at either
+    level are errors.
+    """
+    workstream_path = root / ".planning/workstreams" / workstream / "config.json"
+    value = None
+    if workstream_path.exists():
+        value = configured_level(workstream_path, f".planning/workstreams/{workstream}/config.json")
+        if isinstance(value, tuple):
+            return value[0]
+    if value is None:
+        value = configured_level(root / ".planning/config.json", ".planning/config.json")
+        if isinstance(value, tuple):
+            return value[0]
+    return SEVERITY["high" if value is None else value]
 
 
 def frontmatter(text: str) -> list[str] | None:
@@ -126,7 +155,7 @@ def main(arguments: list[str] | None = None, root: Path = ROOT) -> int:
     if len(names) > 1 or not WORKSTREAM.match(workstream):
         print(f"FAIL: invalid workstream argument {workstream!r}", file=sys.stderr)
         return 1
-    threshold = block_on(root)
+    threshold = block_on(root, workstream)
     if isinstance(threshold, str):
         print(f"FAIL: {threshold}", file=sys.stderr)
         return 1
