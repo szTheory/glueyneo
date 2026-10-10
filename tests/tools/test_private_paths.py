@@ -320,5 +320,57 @@ class SinkTest(unittest.TestCase):
         self.assertEqual((result["status"], result["stage"]), ("blocked_or_unknown", "internal"))
 
 
+class UnicodeCompositionTest(unittest.TestCase):
+    """A decomposed (NFD) and a composed (NFC) spelling of one root are the same root.
+
+    The previous normalization applied NFKC one code point at a time, so a base letter
+    followed by a combining mark never composed (T-04-11, T-04-15, T-04-18, T-04-20).
+    """
+
+    COMPOSED = "/opt/café-build/glueyneo"
+    DECOMPOSED = "/opt/café-build/glueyneo"
+
+    def _both_directions(self):
+        yield "NFC root, NFD text", self.COMPOSED, self.DECOMPOSED + "/src/a.c"
+        yield "NFD root, NFC text", self.DECOMPOSED, self.COMPOSED + "/src/a.c"
+
+    def test_t_04_11_decomposed_root_and_username_token_match_their_composed_form(self) -> None:
+        for label, root, text in self._both_directions():
+            with self.subTest(label):
+                with self.assertRaises(private_paths.PrivatePathError):
+                    private_paths.scan_public("error in " + text, (root,))
+                self.assertTrue(private_paths.redact("error in " + text, extra_roots=(root,))
+                                .endswith("[redacted-path]"))
+        for label, home, token in (("NFC home, NFD token", "/zz/José", "by José today"),
+                                   ("NFD home, NFC token", "/zz/José", "by José today")):
+            with self.subTest(label), mock.patch.object(private_paths.Path, "home",
+                                                        return_value=Path(home)):
+                with self.assertRaises(private_paths.PrivatePathError):
+                    private_paths.scan_public(token, ())
+
+    def test_t_04_15_receipt_scan_rejects_a_decomposed_runtime_root(self) -> None:
+        for label, root, text in self._both_directions():
+            with self.subTest(label):
+                receipt = {"status": "pass", "reason": "compiler said " + text}
+                with self.assertRaises(private_paths.PrivatePathError):
+                    private_paths.scan_public_value(receipt, (root,))
+
+    def test_t_04_18_smoke_public_json_fails_closed_on_a_decomposed_root(self) -> None:
+        for label, home, text in (("NFC home, NFD text", "/zz/Jos\u00e9", "/zz/Jose\u0301/build/x.o"),
+                                  ("NFD home, NFC text", "/zz/Jose\u0301", "/zz/Jos\u00e9/build/x.o")):
+            with self.subTest(label), mock.patch.object(private_paths.Path, "home",
+                                                        return_value=Path(home)):
+                output = retroarch_smoke.public_json({"status": "pass", "detail": text})
+                self.assertEqual(json.loads(output),
+                                 {"status": "fail", "reason": "private-path-survived"})
+
+    def test_t_04_20_decomposed_form_of_a_root_is_not_missed(self) -> None:
+        for label, root, text in self._both_directions():
+            with self.subTest(label):
+                safe = private_paths.redact(text, extra_roots=(root,))
+                self.assertNotIn("glueyneo", safe)
+                self.assertNotIn("build", safe)
+
+
 if __name__ == "__main__":
     unittest.main()
