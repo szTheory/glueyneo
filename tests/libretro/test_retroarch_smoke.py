@@ -320,6 +320,7 @@ class BundleIdentifierTests(unittest.TestCase):
             mock.patch.object(smoke, "crash_report_snapshot", return_value={}),
             mock.patch.object(smoke, "request_screenshot", side_effect=smoke.SmokeBlocked("video", "expected test failure")),
             mock.patch.object(smoke, "collect_frontend_output", return_value=""),
+            mock.patch.object(smoke, "running_retroarch_pids", return_value=set()),
             mock.patch.object(smoke.subprocess, "Popen", return_value=process),
             mock.patch.object(smoke.subprocess, "run") as run,
             mock.patch.object(smoke.time, "sleep"),
@@ -747,6 +748,7 @@ Sensitive unrelated line: private capture name
             mock.patch.object(smoke, "find_recent_crash_reason", return_value=None),
             mock.patch.object(smoke, "wait_for_recent_crash_reason", return_value=None),
             mock.patch.object(smoke, "CRASH_REPORT_WAIT_SECONDS", 0),
+            mock.patch.object(smoke, "running_retroarch_pids", return_value=set()),
             mock.patch.object(smoke.subprocess, "Popen", return_value=ExitedProcess()),
             mock.patch.object(smoke, "request_frontend_quit"),
             mock.patch.object(smoke.time, "sleep"),
@@ -920,6 +922,7 @@ Sensitive unrelated line: private capture name
                 return self.returncode
 
         with (
+            mock.patch.object(smoke, "running_retroarch_pids", return_value=set()),
             mock.patch.object(smoke.subprocess, "Popen", side_effect=[FakeProcess(None), FakeProcess(-6)]) as popen,
             mock.patch.object(smoke, "request_frontend_quit"),
             mock.patch.object(smoke, "find_recent_crash_reason", return_value=None),

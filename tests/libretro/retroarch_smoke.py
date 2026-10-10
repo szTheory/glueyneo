@@ -509,10 +509,46 @@ def write_frontend_config(work: Path, screenshots: Path) -> Path:
     return config
 
 
+def running_retroarch_pids() -> set[int]:
+    """Return the PIDs of every running RetroArch process; fail closed on any doubt.
+
+    The project allows at most one RetroArch instance, and key injection and the
+    bundle-id quit act on any instance, so every launch and quit consults this.
+    """
+    try:
+        result = subprocess.run(
+            ["/usr/bin/pgrep", "-x", "RetroArch"], stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL, text=True, check=False, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise SmokeBlocked("pre-launch", "cannot enumerate running RetroArch instances") from error
+    if result.returncode == 1:
+        return set()
+    if result.returncode != 0:
+        raise SmokeBlocked("pre-launch", "cannot enumerate running RetroArch instances")
+    try:
+        return {int(token) for token in result.stdout.split()}
+    except ValueError as error:
+        raise SmokeBlocked("pre-launch", "cannot enumerate running RetroArch instances") from error
+
+
+def refuse_stacked_launch() -> None:
+    if running_retroarch_pids():
+        raise SmokeBlocked(
+            "pre-launch", "another RetroArch instance is running; refusing to start a second instance")
+
+
 def request_frontend_quit(bundle_id: str, process: subprocess.Popen[bytes], timeout: float) -> bool:
     if process.poll() is not None:
         return process.returncode == 0
+    sole_instance = False
     if bundle_id == EXPECTED_BUNDLE_IDENTIFIER:
+        try:
+            sole_instance = running_retroarch_pids() == {process.pid}
+        except SmokeBlocked:
+            sole_instance = False
+    # The bundle-id quit addresses any instance; use it only when ours is the only one.
+    if sole_instance:
         try:
             subprocess.run(
                 ["/usr/bin/osascript", "-e", f'tell application id "{bundle_id}" to quit'],
@@ -553,6 +589,7 @@ def run_launch_probe(
         if probe == "core_content":
             arguments.extend(["-L", str(core), str(content)])
         started_at = time.time()
+        refuse_stacked_launch()
         try:
             with process_log.open("wb") as log_stream:
                 process = subprocess.Popen(
@@ -695,6 +732,7 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
         prior_crash_reports = crash_report_snapshot()
         started_at = time.time()
         with process_log.open("wb") as log_stream:
+            refuse_stacked_launch()
             try:
                 process = subprocess.Popen(
                     [str(executable), "--verbose", "--config", str(config),
