@@ -61,6 +61,22 @@ class SecurityRegisterTest(unittest.TestCase):
             with self.subTest(mutation=label):
                 self.assertEqual(self.run_checker(text), 1)
 
+    def test_counts_rows_from_every_register_table(self) -> None:
+        header = "| Threat ID | Category | Component | Severity | Disposition | Mitigation | Status |"
+        second = "\n".join(("", "Later table.", "", header, "|---|---|---|---|---|---|---|",
+                            "| T-09-05 | Disclosure | logs | high | mitigate | scan | open |", ""))
+        duplicate = second.replace("T-09-05", "T-09-01")
+        asvs = "\n".join(("", "| Threat ID | ASVS L1 result | Current evidence |", "|---|---|---|",
+                           "| T-09-02 | OPEN - high | x |", ""))
+        for label, text, expected in (
+            ("second table hides open high row", register(1) + second, 1),
+            ("duplicate ID across tables", register(2) + duplicate, 1),
+            ("second table counted when declared", register(2) + second, 0),
+            ("table without Severity/Status ignored", register(1) + asvs, 0),
+        ):
+            with self.subTest(case=label):
+                self.assertEqual(self.run_checker(text), expected)
+
 
 if __name__ == "__main__":
     unittest.main()
