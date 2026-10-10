@@ -562,15 +562,23 @@ def _retroarch_pids() -> set[int] | None:
         return None
 
 
-def _recorded_listed(recorded: int, grace: float) -> bool:
-    """Poll `pgrep` until `recorded` is no longer listed or `grace` seconds pass."""
+def _recorded_listed(recorded: int, grace: float) -> bool | None:
+    """Poll `pgrep` until `recorded` is no longer listed or `grace` seconds pass.
+
+    True means a successful listing still showed `recorded` at the deadline; False means a
+    successful listing no longer showed it. None means no listing ever succeeded, so
+    liveness is unknown and must never justify escalation (T-04-67).
+    """
     deadline = time.monotonic() + grace
+    confirmed = False
     while True:
         listed = _retroarch_pids()
-        if listed is not None and recorded not in listed:
-            return False
+        if listed is not None:
+            if recorded not in listed:
+                return False
+            confirmed = True
         if time.monotonic() >= deadline:
-            return True
+            return True if confirmed else None
         time.sleep(0.25)
 
 
@@ -586,8 +594,11 @@ def _end_recorded_group(recorded: int) -> str:
         os.killpg(recorded, signal.SIGTERM)
     except (ProcessLookupError, PermissionError):
         return "not-signalled"
-    if not _recorded_listed(recorded, SURVIVOR_GRACE_SECONDS):
+    listed = _recorded_listed(recorded, SURVIVOR_GRACE_SECONDS)
+    if listed is False:
         return "terminated"
+    if listed is None:
+        return "still-running"  # liveness never confirmed: report it, do not SIGKILL
     try:
         if os.getpgid(recorded) != recorded:
             return "terminated"
@@ -596,7 +607,7 @@ def _end_recorded_group(recorded: int) -> str:
         return "terminated"
     except PermissionError:
         return "still-running"
-    return "still-running" if _recorded_listed(recorded, 2) else "killed"
+    return "killed" if _recorded_listed(recorded, 2) is False else "still-running"
 
 
 def run_frontend_smoke_lane(runner: "Runner", source_root: Path, retroarch: Path, core: Path,
@@ -1046,6 +1057,11 @@ def _frontmatter(text: str) -> list[str]:
 
 
 def _reviewed_paths(review_text: str) -> set[str]:
+    keys = [line.split(":", 1)[0] for line in _frontmatter(review_text)
+            if re.match(r"[A-Za-z_][A-Za-z0-9_-]*:", line)]
+    duplicates = sorted({key for key in keys if keys.count(key) > 1})
+    if duplicates:
+        raise RuntimeError(f"review frontmatter has duplicate key {duplicates[0]} (WR-11)")
     paths: set[str] = set()
     inside = False
     for line in _frontmatter(review_text):
