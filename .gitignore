@@ -28,3 +28,14 @@ __pycache__/
 /.planning/milestone.lock
 /.planning/state.json
 /.planning/workstreams/*/state.json
+/.planning/workstreams/*/milestone.lock
+/.planning/workstreams/*/.verification-ledger.json
+/.planning/workstreams/*/phases/*/.plan-start-epoch
+/.planning/workstreams/*/phases/*/.plan-start-time
+
+# Local workstream config (untracked by design; check_security_register.py
+# rejects a value weaker than the root .planning/config.json)
+/.planning/workstreams/*/config.json
+
+# Executor scratch (RED-test evidence and similar transient captures)
+/.planning/tmp/
