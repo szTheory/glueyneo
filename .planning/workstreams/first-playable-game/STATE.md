@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
-current_plan: 3
+current_plan: 4
 status: executing
-stopped_at: Completed 04-44-PLAN.md
-last_updated: "2026-10-10T22:38:00.096Z"
+stopped_at: Completed 04-45-PLAN.md
+last_updated: "2026-10-10T22:40:54.832Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 04 execution started
-state_head: 884538ec470d99bd9b0be8dc87681db68efa5c38
+state_head: 227868783b06a64e41bf6e9eca2339f0356a7e63
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 57
-  completed_plans: 50
+  completed_plans: 51
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 ## Current Position
 
 Phase: 04 (Public Playable Tracer) — EXECUTING
-Current Plan: 3
+Current Plan: 4
 Total Plans in Phase: 51
 Status: Ready to execute
 Last activity: 2026-10-10 — Phase 04 execution started
@@ -42,7 +42,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 3
+**Current Plan:** 4
 
 ## Performance Metrics
 
@@ -96,12 +96,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P42 | 15min | 2 tasks | 3 files |
 | Phase 04 P43 | 15 min | 3 tasks | 3 files |
 | Phase 04 P44 | 12 min | 2 tasks | 3 files |
+| Phase 04 P45 | 20 min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-10T22:38:00.042Z
+**Last session:** 2026-10-10T22:40:54.779Z
 
-**Stopped At:** Completed 04-44-PLAN.md
+**Stopped At:** Completed 04-45-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
@@ -189,6 +190,7 @@ unchanged external-blocker plan. Plan/summary counts are not phase acceptance.
 - [Phase 04]: 04-41: a gap round that changes a RECEIPT_BOUND path re-qualifies pinned RetroArch at its final code revision before the receipt is cited or routed to audit; a freshness probe (no RECEIPT_BOUND change after the receipt revision) gates the citation
 - [Phase 04]: 04-43: register checker reports frontmatter errors with file line numbers and treats a threats_open key, parsed Threat ID table or unparsed Threat ID header as register-shaped for misnamed-file detection
 - [Phase 04]: 04-44: qualification setup failures emit setup-error tokens; script entry() maps uncaught errors to internal-error (exit 1) and interrupts to exit 130
+- [Phase 04]: 04-45: rollback .restore unlink failures are named in the aggregated error; lane output recorded once in order (earlier, drained, tail)
 
 ### Blockers
 
