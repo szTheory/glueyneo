@@ -3,12 +3,15 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import os
 import plistlib
+import signal
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest import mock
 
@@ -459,6 +462,94 @@ class SingleInstanceTest(unittest.TestCase):
             smoke.request_frontend_quit(smoke.EXPECTED_BUNDLE_IDENTIFIER, process, 20.0)
         run.assert_not_called()
         self.assertTrue(process.terminated)
+
+
+class OuterTimeoutTest(unittest.TestCase):
+    """E6: an outer runner timeout must not orphan the launched frontend (uses a fake executable)."""
+
+    ROOT = Path(__file__).resolve().parents[2]
+
+    def test_child_pid_file_is_written_before_frontend_interaction(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            pid_file = Path(temporary) / "child.pid"
+            process = SingleInstanceTest.Running(pid=4321)
+            args = mock.Mock(timeout=1.0, child_pid_file=pid_file)
+            observed: list[str] = []
+
+            def screenshot(*_a: object, **_k: object) -> Path:
+                observed.append(pid_file.read_text(encoding="utf-8"))
+                raise smoke.SmokeBlocked("video", "expected test failure")
+
+            with (
+                mock.patch.object(smoke, "validate_inputs", return_value=(
+                    Path("/app"), Path("/core"), Path("/fixture"),
+                    {"bundle_id": smoke.EXPECTED_BUNDLE_IDENTIFIER})),
+                mock.patch.object(smoke, "crash_report_snapshot", return_value={}),
+                mock.patch.object(smoke, "running_retroarch_pids", return_value=set()),
+                mock.patch.object(smoke, "request_screenshot", side_effect=screenshot),
+                mock.patch.object(smoke, "collect_frontend_output", return_value=""),
+                mock.patch.object(smoke, "request_frontend_quit"),
+                mock.patch.object(smoke.subprocess, "Popen", return_value=process),
+                mock.patch.object(smoke.os, "killpg"),
+                mock.patch.object(smoke.time, "sleep"),
+            ):
+                with self.assertRaises(smoke.SmokeBlocked):
+                    smoke.run_smoke(args)
+        self.assertEqual(observed, ["4321"])
+
+    def test_outer_timeout_leaves_no_fake_frontend_behind(self) -> None:
+        sys.path.insert(0, str(self.ROOT / "tools"))
+        import verify_playable as playable
+
+        with tempfile.TemporaryDirectory(prefix="outer-timeout-") as temporary:
+            base = Path(temporary)
+            pid_file = base / "frontend.pid"
+            fake = base / "fake-frontend"
+            fake.write_text(
+                f"#!/bin/sh\necho $$ > '{pid_file}'\nexec sleep 60\n", encoding="utf-8")
+            fake.chmod(0o755)
+            driver = base / "driver.py"
+            driver.write_text(
+                "import sys, time\n"
+                f"sys.path.insert(0, {str(self.ROOT / 'tests/libretro')!r})\n"
+                "import retroarch_smoke as smoke\n"
+                "from pathlib import Path\n"
+                "identity = {'bundle_id': smoke.EXPECTED_BUNDLE_IDENTIFIER}\n"
+                f"smoke.validate_inputs = lambda a: (Path({str(fake)!r}), Path('/core'), Path('/fixture'), identity)\n"
+                "smoke.running_retroarch_pids = lambda: set()\n"
+                "smoke.crash_report_snapshot = lambda: {}\n"
+                "smoke.request_screenshot = lambda *a, **k: time.sleep(60)\n"
+                "sys.argv = ['retroarch_smoke.py', '--retroarch', '/a', '--core', '/c', '--content', '/f']\n"
+                "raise SystemExit(smoke.main())\n",
+                encoding="utf-8")
+
+            def reap() -> None:
+                try:
+                    os.kill(int(pid_file.read_text(encoding="utf-8")), signal.SIGKILL)
+                except (OSError, ValueError):
+                    pass
+
+            self.addCleanup(reap)
+            work = base / "work"
+            work.mkdir()
+            runner = playable.Runner(work, base, None)  # type: ignore[arg-type]
+            started = time.monotonic()
+            with mock.patch.object(playable, "verify_snapshot"):
+                result = runner.command("actual-retroarch-smoke", [sys.executable, str(driver)],
+                                        timeout=3, allow_failure=True)
+            self.assertLess(time.monotonic() - started, 60)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertTrue(pid_file.is_file(), "the fake frontend never started")
+            pid = int(pid_file.read_text(encoding="utf-8"))
+            deadline = time.monotonic() + 10
+            alive = True
+            while alive and time.monotonic() < deadline:
+                try:
+                    os.kill(pid, 0)
+                    time.sleep(0.1)
+                except ProcessLookupError:
+                    alive = False
+            self.assertFalse(alive, f"fake frontend survived the outer timeout: pid {pid}")
 
 
 class ScreenshotFreshnessTests(unittest.TestCase):

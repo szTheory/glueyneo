@@ -11,9 +11,11 @@ import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest import mock
 
@@ -492,6 +494,124 @@ class SnapshotTest(unittest.TestCase):
         self.assertNotIn("private capture", serialized)
         self.assertNotIn("secret.rom", serialized)
         self.assertIn("exit 12", serialized)
+
+
+class ProcessGroupTest(unittest.TestCase):
+    """WR-03 and the RetroArch lane instance assertions (CR-07, T-04-54)."""
+
+    def make_runner(self, work: Path) -> "playable.Runner":
+        return playable.Runner(work, work, None)  # type: ignore[arg-type]
+
+    def test_timeout_kills_the_whole_lane_group_and_keeps_partial_output(self) -> None:
+        program = (
+            "import subprocess, sys, time\n"
+            "g = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'])\n"
+            "print('grandchild', g.pid, flush=True)\n"
+            "time.sleep(60)\n"
+        )
+        with tempfile.TemporaryDirectory(prefix="lane-group-") as temporary:
+            work = Path(temporary)
+            runner = self.make_runner(work)
+            with mock.patch.object(playable, "verify_snapshot"):
+                result = runner.command("group-lane", [sys.executable, "-c", program],
+                                        timeout=2, allow_failure=True)
+            log = (work / "group-lane.log").read_text(encoding="utf-8")
+            match = re.search(r"grandchild (\d+)", log)
+            self.assertIsNotNone(match, log)
+            pid = int(match.group(1))  # type: ignore[union-attr]
+            self.addCleanup(lambda: self.kill_quietly(pid))
+            self.assertEqual(result.returncode, -1)
+            self.assertIn("TimeoutExpired", log)
+            deadline = time.monotonic() + 10
+            alive = True
+            while alive and time.monotonic() < deadline:
+                try:
+                    os.kill(pid, 0)
+                    time.sleep(0.1)
+                except ProcessLookupError:
+                    alive = False
+            self.assertFalse(alive, f"grandchild survived: pid {pid}")
+
+    @staticmethod
+    def kill_quietly(pid: int) -> None:
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except OSError:
+            pass
+
+    def run_lane(self, work: Path, before: set[int] | None, after: set[int] | None,
+                 *, child: str | None, group: int | None) -> tuple[dict[str, object], mock.Mock, mock.Mock, mock.Mock]:
+        runner = mock.Mock()
+        runner.work = work
+        runner.lanes = {}
+
+        def command(name: str, argv: list[str], **_k: object) -> subprocess.CompletedProcess[str]:
+            pid_file = Path(argv[argv.index("--child-pid-file") + 1])
+            if child is not None:
+                pid_file.write_text(child, encoding="utf-8")
+            return subprocess.CompletedProcess(argv, 0, json.dumps({"status": "pass"}) + "\n")
+
+        runner.command.side_effect = command
+        listings = iter([before, after])
+        killpg = mock.Mock()
+        kill = mock.Mock()
+        getpgid = mock.Mock(return_value=group) if group is not None else mock.Mock(side_effect=ProcessLookupError)
+        with (
+            mock.patch.object(playable, "_retroarch_pids", side_effect=lambda: next(listings)),
+            mock.patch.object(playable.os, "killpg", killpg),
+            mock.patch.object(playable.os, "kill", kill),
+            mock.patch.object(playable.os, "getpgid", getpgid),
+        ):
+            receipt, reason = playable.run_frontend_smoke_lane(
+                runner, work, Path("/RetroArch.app"), Path("/core"), Path("/fixture"))
+        return {"receipt": receipt, "reason": reason}, runner, killpg, kill
+
+    def test_lane_is_refused_when_an_instance_already_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            outcome, runner, killpg, kill = self.run_lane(
+                Path(temporary), {7}, None, child=None, group=None)
+        self.assertEqual(outcome["reason"], "retroarch-instance-already-running")
+        runner.command.assert_not_called()
+        killpg.assert_not_called()
+        kill.assert_not_called()
+
+    def test_lane_is_refused_when_enumeration_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            outcome, runner, _, _ = self.run_lane(Path(temporary), None, None, child=None, group=None)
+        self.assertEqual(outcome["reason"], "retroarch-instance-unknown")
+        runner.command.assert_not_called()
+
+    def test_survivor_recorded_as_our_own_child_gets_one_group_sigterm(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            outcome, _, killpg, kill = self.run_lane(
+                Path(temporary), set(), {8}, child="8", group=8)
+        self.assertEqual(outcome["reason"], "retroarch-instance-survived")
+        killpg.assert_called_once_with(8, signal.SIGTERM)
+        kill.assert_not_called()
+
+    def test_foreign_survivor_is_reported_and_never_signalled(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            outcome, _, killpg, kill = self.run_lane(
+                Path(temporary), set(), {9}, child="8", group=9)
+        self.assertEqual(outcome["reason"], "retroarch-instance-survived")
+        killpg.assert_not_called()
+        kill.assert_not_called()
+
+    def test_survivor_without_child_record_or_group_leadership_is_not_signalled(self) -> None:
+        for child, group in ((None, 8), ("8", 5)):
+            with self.subTest(child=child, group=group), tempfile.TemporaryDirectory() as temporary:
+                outcome, _, killpg, kill = self.run_lane(
+                    Path(temporary), set(), {8}, child=child, group=group)
+            self.assertEqual(outcome["reason"], "retroarch-instance-survived")
+            killpg.assert_not_called()
+            kill.assert_not_called()
+
+    def test_clean_lane_passes_through_the_smoke_result(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            outcome, _, killpg, _ = self.run_lane(Path(temporary), set(), set(), child="8", group=None)
+        self.assertIsNone(outcome["reason"])
+        self.assertEqual(outcome["receipt"]["status"], "pass")  # type: ignore[index]
+        killpg.assert_not_called()
 
 
 class DocumentationCopies:
