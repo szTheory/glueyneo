@@ -156,6 +156,12 @@ class GlobContainedTest(ScratchCase):
                 self.assertTrue(review.glob_contained(pattern, self.scratch, self.scratch))
         self.assertFalse(review.glob_contained(self.scratch + "@(-evil)/x", self.scratch, self.scratch))
 
+    def test_g3in_01_leading_dollar_is_not_contained(self) -> None:
+        for pattern in ("$HOME/x", "${HOME}/x"):
+            self.assertFalse(review.glob_contained(pattern, self.scratch, self.scratch))
+            self.assertFalse(review.path_contained(pattern, self.scratch, self.scratch))
+        self.assertTrue(review.glob_contained("a$b/*.py", self.scratch, self.scratch))
+
 
 class ExternalSymlinkTest(ScratchCase):
     def test_external_symlink_listed(self) -> None:
@@ -310,6 +316,36 @@ class VerdictTest(unittest.TestCase):
         text = self.lines("VERDICT G2WR-06 FIXED a.py:1 ok", "VERDICT G2CR-01 OPEN still present")
         self.assertEqual(review.parse_verdicts(text, ids, True), {"G2WR-06": "FIXED", "G2CR-01": "OPEN"})
         self.assertFalse(review._is_threat("G2WR-06"))
+
+    def test_g3wr_02_round_three_and_later_ids_are_reviewable(self) -> None:
+        listed = ["G3CR-01", "G3WR-05", "G3IN-03", "G10WR-01", "GCR-01", "T-04-100"]
+        try:
+            ids = review.review_ids("Review IDs: " + ", ".join(listed))
+            verdicts = review.parse_verdicts(
+                self.lines("VERDICT G3WR-05 FIXED a.py:1 ok", "VERDICT G3CR-01 OPEN x"), ids, True)
+        except Exception as error:  # noqa: BLE001 - the red run must fail on assertions
+            self.fail(f"uncaught {type(error).__name__}")
+        self.assertEqual(ids, listed)
+        self.assertEqual(verdicts["G3WR-05"], "FIXED")
+        self.assertEqual(verdicts["G3CR-01"], "OPEN")
+        self.assertFalse(review._is_threat("G3WR-01"))
+        self.assertTrue(review._is_threat("T-04-100"))
+
+    def test_g3wr_02_review_ids_rejects_malformed_ids(self) -> None:
+        for text in ("Review IDs: G3XX-01", "Review IDs: GG3WR-01, G3WR-01"):
+            try:
+                review.review_ids(text)
+            except ValueError as error:
+                self.assertNotIn("G3XX", str(error))
+                self.assertNotIn("GG3WR", str(error))
+            except Exception as error:  # noqa: BLE001
+                self.fail(f"uncaught {type(error).__name__}")
+            else:
+                self.fail("malformed ID accepted")
+
+    def test_g3wr_02_malformed_verdict_lines_leave_the_id_open(self) -> None:
+        text = self.lines("VERDICT G3XX-01 FIXED y", "VERDICT GG3WR-01 FIXED y")
+        self.assertEqual(review.parse_verdicts(text, ["G3WR-01"], True), {"G3WR-01": "OPEN"})
 
 
 class ReviewIdsTest(unittest.TestCase):
