@@ -84,6 +84,34 @@ real failing input was minimized or promoted. The minimizer self-test validates
 exact failure-ID preservation on its synthetic trigger. `findings` remains
 empty in the corpus manifest.
 
+## Planning security register gate
+
+`python3 tests/tools/check_security_register.py <workstream> [--require-closed]`
+checks every `phases/*/NN-SECURITY.md` register in one workstream. The CTest
+names are `planning_security_register` and
+`planning_security_register_mutations` (the latter runs the mutation suite in
+`tests/tools/test_check_security_register.py`).
+
+Default mode checks consistency only. `threats_open` is read from the YAML
+frontmatter (the first `---` block), where exactly one `threats_open: <n>` line
+must exist, and must equal the open rows at or above
+`workflow.security_block_on` across every `| Threat ID |` table that has
+Severity and Status columns. Its `PASS:` line lists each register's blocking
+count (`blocking open: 04-SECURITY.md=6, ...`). A `PASS:` therefore means the
+declared count matches the rows; it does not mean the threats are closed.
+
+`--require-closed` additionally exits 1 and prints
+`FAIL: <file>: <n> blocking open threats` for each register that still has
+blocking open threats. Use it, not the default mode, as the closure check.
+
+`FAIL:` reasons: missing frontmatter; a missing, duplicated, commented or
+indented `threats_open` key; a count that differs from the rows; a malformed
+row, duplicate threat ID, uncontrolled status or unknown severity;
+`status: verified` with a non-zero count; a missing or unreadable
+`.planning/config.json` or an unknown `security_block_on`; and a workstream
+name that does not match `^[A-Za-z0-9][A-Za-z0-9._-]*$`. Table cells split on
+unescaped pipes only, so `\|` inside a cell is literal.
+
 ## Unsupported coverage
 
 The matching AppleClang libFuzzer archive is absent on this host, so no
