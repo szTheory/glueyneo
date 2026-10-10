@@ -1844,11 +1844,20 @@ class MainErrorPathTest(unittest.TestCase):
             self.assertNotIn(temporary, sink)
 
     def run_script_entry(self, patch_lines: str, tools: Path = ROOT / "tools") -> subprocess.CompletedProcess[str]:
-        """Run the real script entry in a child interpreter; the child patches one failure and uses a test-owned cwd."""
-        script = tools / "verify_playable.py"
+        """Run the real script entry in a child interpreter; the child patches one failure and uses a test-owned cwd.
+
+        The child runs a test-owned copy of the entry modules: main() resolves ROOT from the script path
+        and creates ROOT/build/playable-qualification, which must not land in the checked source tree.
+        """
         with tempfile.TemporaryDirectory(prefix="playable-entry-") as temporary:
             work = Path(temporary) / "work"
             work.mkdir()
+            source_tools = tools
+            tools = Path(temporary) / "root" / "tools"
+            tools.mkdir(parents=True)
+            for name in ("verify_playable.py", "private_paths.py"):
+                shutil.copy2(source_tools / name, tools / name)
+            script = tools / "verify_playable.py"
             code = (
                 "import platform, runpy, sys, tempfile\n"
                 f"sys.argv = ['verify_playable.py', '--retroarch', {str(Path(temporary) / 'R.app')!r}, '--clean']\n"
@@ -1882,12 +1891,16 @@ class MainErrorPathTest(unittest.TestCase):
             self.assertNotIn("Traceback", sink)
             self.assertNotIn(str(ROOT), sink)
 
-    def test_entry_child_writes_no_bytecode_into_the_source_tools(self) -> None:
+    def test_entry_child_writes_nothing_into_the_source_tree(self) -> None:
         # The qualification runner executes this suite inside the materialized source snapshot and
-        # verifies its inventory after the lane; -I ignores PYTHONDONTWRITEBYTECODE, so a child that
+        # verifies its inventory after the lane. -I ignores PYTHONDONTWRITEBYTECODE, so a child that
         # imported private_paths wrote tools/__pycache__ into the snapshot (snapshot-inventory-mismatch).
+        # main() also creates ROOT/build/playable-qualification before the patched mkdtemp; those empty
+        # directories are invisible to the file inventory but made the later ym2610-installed-linkages
+        # overlay fail with generated-output-path-conflict, so the child must not run under the source root.
         with tempfile.TemporaryDirectory(prefix="playable-entry-tools-") as temporary:
-            tools = Path(temporary) / "tools"
+            source = Path(temporary)
+            tools = source / "tools"
             tools.mkdir()
             for name in ("verify_playable.py", "private_paths.py"):
                 shutil.copy2(ROOT / "tools" / name, tools / name)
@@ -1895,8 +1908,8 @@ class MainErrorPathTest(unittest.TestCase):
                 "def _interrupt(*a, **k):\n    raise KeyboardInterrupt()\n"
                 "tempfile.mkdtemp = _interrupt\n", tools=tools)
             self.assertEqual(result.returncode, 130, result.stderr)
-            self.assertEqual(sorted(path.name for path in tools.iterdir()),
-                             ["private_paths.py", "verify_playable.py"])
+            self.assertEqual(sorted(path.relative_to(source).as_posix() for path in source.rglob("*")),
+                             ["tools", "tools/private_paths.py", "tools/verify_playable.py"])
 
     def test_t_04_11_argparse_exit_passes_through(self) -> None:
         with self.assertRaises(SystemExit) as caught, contextlib.redirect_stderr(io.StringIO()):
