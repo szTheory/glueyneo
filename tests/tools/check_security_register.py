@@ -33,39 +33,40 @@ def register_errors(path: Path, threshold: int) -> list[str]:
     if declared is None:
         return [f"{path.name}: missing threats_open frontmatter"]
     lines = text.splitlines()
-    rows: list[list[str]] = []
-    columns: list[str] = []
+    tables: list[tuple[list[str], list[list[str]]]] = []
     for index, line in enumerate(lines):
         header = HEADER.match(line)
         if header is None:
             continue
         columns = ["Threat ID", *[cell.strip() for cell in header.group(1).split("|")]]
+        if "Severity" not in columns or "Status" not in columns:
+            continue
+        table_rows: list[list[str]] = []
         for row in lines[index + 2:]:
             if not row.startswith("|"):
                 break
-            rows.append([cell.strip() for cell in row.strip().strip("|").split("|")])
-        break
-    if not columns:
+            table_rows.append([cell.strip() for cell in row.strip().strip("|").split("|")])
+        tables.append((columns, table_rows))
+    if not tables:
         return [f"{path.name}: no threat register table"]
-    if "Severity" not in columns or "Status" not in columns:
-        return [f"{path.name}: threat register lacks Severity or Status columns"]
-    severity_at, status_at = columns.index("Severity"), columns.index("Status")
     seen: set[str] = set()
     blocking = 0
-    for row in rows:
-        if len(row) != len(columns):
-            errors.append(f"{path.name}: malformed threat row {row[:1]}")
-            continue
-        threat_id, severity, status = row[0], row[severity_at].lower(), row[status_at].lower()
-        if threat_id in seen:
-            errors.append(f"{path.name}: duplicate threat ID {threat_id}")
-        seen.add(threat_id)
-        if status not in {"open", "closed", "accepted"}:
-            errors.append(f"{path.name}: {threat_id} has uncontrolled status {row[status_at]!r}")
-        if severity not in SEVERITY:
-            errors.append(f"{path.name}: {threat_id} has unknown severity {row[severity_at]!r}")
-        elif status == "open" and SEVERITY[severity] >= threshold:
-            blocking += 1
+    for columns, rows in tables:
+        severity_at, status_at = columns.index("Severity"), columns.index("Status")
+        for row in rows:
+            if len(row) != len(columns):
+                errors.append(f"{path.name}: malformed threat row {row[:1]}")
+                continue
+            threat_id, severity, status = row[0], row[severity_at].lower(), row[status_at].lower()
+            if threat_id in seen:
+                errors.append(f"{path.name}: duplicate threat ID {threat_id}")
+            seen.add(threat_id)
+            if status not in {"open", "closed", "accepted"}:
+                errors.append(f"{path.name}: {threat_id} has uncontrolled status {row[status_at]!r}")
+            if severity not in SEVERITY:
+                errors.append(f"{path.name}: {threat_id} has unknown severity {row[severity_at]!r}")
+            elif status == "open" and SEVERITY[severity] >= threshold:
+                blocking += 1
     if int(declared.group(1)) != blocking:
         errors.append(f"{path.name}: threats_open is {declared.group(1)} but {blocking} open rows meet block_on")
     return errors
