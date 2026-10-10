@@ -1290,6 +1290,73 @@ class AtomicRecordTest(DocumentationCopies, unittest.TestCase):
                 self.assertEqual(self.digests(source_root), before)
                 self.assertEqual(list(source_root.rglob("*.tmp")), [])
 
+    def test_g2wr_05_first_time_generation_with_absent_evidence_file(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-first-") as temporary:
+            source_root = Path(temporary)
+            summary = self.copy_documentation_with_evidence(source_root)
+            evidence = source_root / playable.FRONTEND_EVIDENCE
+            evidence.unlink()
+            changed = self.changed_summary(summary)
+            playable.write_frontend_records(source_root, changed)
+            self.assertEqual(json.loads(evidence.read_text(encoding="utf-8"))["os"], "macOS 99.0 arm64")
+            self.assertIn("macOS 99.0 arm64", (source_root / playable.GUIDE).read_text(encoding="utf-8"))
+            self.assertEqual(list(source_root.rglob("*.tmp")), [])
+
+    def test_g2wr_05_rollback_unlinks_files_that_did_not_exist(self) -> None:
+        real_replace = os.replace
+        with tempfile.TemporaryDirectory(prefix="playable-first-") as temporary:
+            source_root = Path(temporary)
+            summary = self.copy_documentation_with_evidence(source_root)
+            evidence = source_root / playable.FRONTEND_EVIDENCE
+            evidence.unlink()
+            validation_before = (source_root / playable.VALIDATION).read_bytes()
+            calls: list[str] = []
+
+            def replace(source: object, destination: object) -> None:
+                calls.append(Path(destination).name)  # type: ignore[arg-type]
+                if len(calls) == 2:
+                    raise OSError("injected replace failure")
+                real_replace(source, destination)  # type: ignore[arg-type]
+
+            with mock.patch.object(playable.os, "replace", side_effect=replace):
+                with self.assertRaisesRegex(OSError, "injected replace failure"):
+                    playable.write_frontend_records(source_root, self.changed_summary(summary))
+            self.assertFalse(evidence.exists())
+            self.assertEqual((source_root / playable.VALIDATION).read_bytes(), validation_before)
+            self.assertEqual(list(source_root.rglob("*.tmp")), [])
+            self.assertEqual(list(source_root.rglob("*.restore")), [])
+
+    def test_g2wr_05_failed_restore_continues_and_names_files(self) -> None:
+        real_replace = os.replace
+        for failing_restore, failed_file, restored_file in (
+                (4, playable.VALIDATION, playable.FRONTEND_EVIDENCE),
+                (5, playable.FRONTEND_EVIDENCE, playable.VALIDATION)):
+            with self.subTest(failing_restore=failing_restore), \
+                    tempfile.TemporaryDirectory(prefix="playable-restore-") as temporary:
+                source_root = Path(temporary)
+                summary = self.copy_documentation_with_evidence(source_root)
+                originals = {path: path.read_bytes() for path in self.targets(source_root)}
+                calls: list[str] = []
+
+                def replace(source: object, destination: object) -> None:
+                    calls.append(Path(destination).name)  # type: ignore[arg-type]
+                    if len(calls) == 3:
+                        raise OSError("injected replace failure")
+                    if len(calls) == failing_restore:
+                        raise OSError("injected restore failure")
+                    real_replace(source, destination)  # type: ignore[arg-type]
+
+                with mock.patch.object(playable.os, "replace", side_effect=replace):
+                    with self.assertRaises(RuntimeError) as caught:
+                        playable.write_frontend_records(source_root, self.changed_summary(summary))
+                self.assertEqual(str(caught.exception), f"evidence rollback incomplete: {failed_file.name}")
+                self.assertNotIn(temporary, str(caught.exception))
+                self.assertRegex(str(caught.exception.__cause__), "injected replace failure")
+                self.assertEqual((source_root / restored_file).read_bytes(), originals[source_root / restored_file])
+                self.assertNotEqual((source_root / failed_file).read_bytes(), originals[source_root / failed_file])
+                self.assertEqual(list(source_root.rglob("*.restore")), [])
+                self.assertEqual(list(source_root.rglob("*.tmp")), [])
+
     def test_guide_status_block_is_written_last(self) -> None:
         real_replace = os.replace
         with tempfile.TemporaryDirectory(prefix="playable-order-") as temporary:
