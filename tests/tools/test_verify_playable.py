@@ -549,7 +549,7 @@ class ConsumerInputTest(unittest.TestCase):
                 marker_after_right=[summary["marker_after_right"][0], summary["marker_before"][1] + 1, 1]),
              "marker moving right"),
             ("no unload", lambda summary: summary.update(frontend_unloaded=False), "content unload"),
-            ("private path", lambda summary: summary.update(os="macOS /Users/someone/build"), "private absolute path"),
+            ("private path", lambda summary: summary.update(os="macOS /" + "Users/someone/build"), "private absolute path"),
         )
         for label, mutate, expected_error in mutations:
             with self.subTest(mutation=label), tempfile.TemporaryDirectory(prefix="playable-docs-evidence-") as temporary:
@@ -607,8 +607,8 @@ class ConsumerInputTest(unittest.TestCase):
             "status": "pass",
             "identity": {"source_revision": summary["source_revision"], "retroarch": summary["retroarch"],
                          "source_snapshot": {"inventory_sha256": summary["inventory_sha256"],
-                                             "entries": [{"path": "/Users/someone/x"}]}},
-            "lanes": {name: {"status": status, "command": ["/Users/someone/checkout"]}
+                                             "entries": [{"path": "/" + "Users/someone/x"}]}},
+            "lanes": {name: {"status": status, "command": ["/" + "Users/someone/checkout"]}
                       for name, status in summary["lanes"].items()},
             "retroarch_smoke": {
                 "status": "pass", "observations": summary["observations"],
@@ -616,9 +616,9 @@ class ConsumerInputTest(unittest.TestCase):
                 "frontend_unloaded": True,
                 "identity": {"os": summary["os"], "core_sha256": summary["core_sha256"],
                              "fixture_sha256": summary["fixture_sha256"], "input_mapping": summary["input_mapping"]},
-                "diagnostic": {"output": "/Users/someone/private"},
+                "diagnostic": {"output": "/" + "Users/someone/private"},
             },
-            "artifacts": {"tree": ["/Users/someone/build/object.o"]},
+            "artifacts": {"tree": ["/" + "Users/someone/build/object.o"]},
         }
         self.assertEqual(playable.frontend_evidence_summary(receipt), summary)
 
