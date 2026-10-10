@@ -525,7 +525,7 @@ class CliTest(PhaseFixture):
             with self.subTest(shape=label):
                 files = self.files([init_event(self.scratch), event, result_event()],
                                    ["Reviewed revision: " + REVISION])
-                code, out, err = run_cli(*self.argv("gate", files))
+                code, out, err = run_cli("gate", "--stream", files["--stream"], "--scratch-file", files["--scratch-file"])
                 self.assertEqual((code, out.strip()), (1, "not-contained: malformed-event"), err)
                 code, out, err = run_cli(*self.argv("verdicts", files))
                 self.assertEqual(code, 0, err)
@@ -534,7 +534,7 @@ class CliTest(PhaseFixture):
                 self.assertNotIn(self.base, out + err)
         files = self.files([init_event(self.scratch, tools=[["Read"]]), result_event()],
                            ["Reviewed revision: " + REVISION])
-        code, out, err = run_cli(*self.argv("gate", files))
+        code, out, err = run_cli("gate", "--stream", files["--stream"], "--scratch-file", files["--scratch-file"])
         self.assertEqual((code, out.strip()), (1, "not-contained: init-tools"), err)
 
     def test_t_04_65_argument_errors_exit_2_without_usage_text_or_paths(self) -> None:

@@ -75,9 +75,14 @@ def _inside(real_path: str, real_scratch: str) -> bool:
     return real_path == real_scratch or real_path.startswith(real_scratch + os.sep)
 
 
+def has_tilde_expansion(text: str) -> bool:
+    """True iff the read-only tools would expand a leading `~` (or a brace alternative's) to a home directory."""
+    return text.startswith("~") or re.search(r"[{,]~", text) is not None
+
+
 def path_contained(path: str, scratch: str, cwd: str) -> bool:
     """D-GAP-01: equal to the scratch realpath, or under it, after symlinks resolve."""
-    if has_dotdot(path):
+    if has_dotdot(path) or has_tilde_expansion(path):
         return False
     try:
         joined = path if os.path.isabs(path) else os.path.join(cwd, path)
@@ -88,7 +93,7 @@ def path_contained(path: str, scratch: str, cwd: str) -> bool:
 
 def glob_contained(pattern: str, scratch: str, base: str) -> bool:
     """Whether every match of `pattern` stays inside the scratch directory."""
-    if has_dotdot(pattern):
+    if has_dotdot(pattern) or has_tilde_expansion(pattern):
         return False
     if os.path.isabs(pattern):
         wild = [pattern.find(char) for char in WILDCARDS if char in pattern]
@@ -113,12 +118,20 @@ def external_symlinks(scratch: str) -> list[str]:
 
 
 def _tool_uses(events: list[dict]):
+    """Yield every tool_use block; raise ValueError for an event shape the stream never carries."""
     for event in events:
         if event.get("type") != "assistant":
             continue
-        content = (event.get("message") or {}).get("content") or []
+        message = event.get("message")
+        if message is not None and not isinstance(message, dict):
+            raise ValueError("message")
+        content = (message or {}).get("content") or []
+        if not isinstance(content, list):
+            raise ValueError("content")
         for block in content:
             if isinstance(block, dict) and block.get("type") == "tool_use":
+                if not isinstance(block.get("name"), str):
+                    raise ValueError("name")
                 yield block
 
 
@@ -153,15 +166,20 @@ def containment(events: list[dict], scratch: str) -> tuple[bool, str]:
     if len(init) != 1:
         return False, "init-count"
     tools = init[0].get("tools")
-    if not isinstance(tools, list) or not set(tools).issubset(ALLOWED_TOOLS):
+    if not isinstance(tools, list) or not all(isinstance(tool, str) for tool in tools) \
+            or not set(tools).issubset(ALLOWED_TOOLS):
         return False, "init-tools"
     cwd = init[0].get("cwd")
     if not isinstance(cwd, str) or not cwd or os.path.realpath(cwd) != os.path.realpath(scratch):
         return False, "init-cwd"
-    for block in _tool_uses(events):
+    try:
+        blocks = list(_tool_uses(events))
+    except ValueError:
+        return False, "malformed-event"
+    for block in blocks:
         if block.get("name") not in ALLOWED_TOOLS:
             return False, "tool-name"
-    for block in _tool_uses(events):
+    for block in blocks:
         if not _access_contained(block, scratch, cwd):
             return False, "path-outside"
     results = [e for e in events if e.get("type") == "result"]
@@ -422,8 +440,15 @@ def _cmd_check(args) -> int:
     return 0
 
 
+class _QuietParser(argparse.ArgumentParser):
+    """Argument errors become InputError (exit 2), so no usage text or argument value is echoed."""
+
+    def error(self, message: str):
+        raise InputError("invalid command-line arguments")
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = _QuietParser(description=__doc__.splitlines()[0])
     commands = parser.add_subparsers(dest="command", required=True)
     preflight = commands.add_parser("preflight", help="refuse a scratch tree with an external symlink")
     preflight.add_argument("--scratch-file", required=True)
