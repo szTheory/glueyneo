@@ -130,5 +130,51 @@ class SecurityRegisterTest(unittest.TestCase):
         self.assertEqual(self.run_checker(register(1), ("--require-closed", "ws")), 1)
 
 
+class WorkstreamConfigTest(unittest.TestCase):
+    MEDIUM_ROWS = ("| T-09-03 | Tampering | docs | medium | mitigate | gate | open |",)
+
+    def run_with(self, text: str, root_config: str, workstream_config: str | None,
+                 arguments: tuple[str, ...] = ("ws",)) -> tuple[int, str]:
+        with tempfile.TemporaryDirectory(prefix="security-register-ws-") as temporary:
+            root = Path(temporary)
+            (root / ".planning").mkdir()
+            (root / ".planning/config.json").write_text(root_config, encoding="utf-8")
+            workstream = root / ".planning/workstreams/ws"
+            phase = workstream / "phases/09-x"
+            phase.mkdir(parents=True)
+            (phase / "09-SECURITY.md").write_text(text, encoding="utf-8")
+            if workstream_config is not None:
+                (workstream / "config.json").write_text(workstream_config, encoding="utf-8")
+            with mock.patch("sys.stdout", new_callable=io.StringIO), \
+                    mock.patch("sys.stderr", new_callable=io.StringIO) as err:
+                code = checker.main(list(arguments), root)
+            return code, err.getvalue()
+
+    ROOT_HIGH = json.dumps({"workflow": {"security_block_on": "high"}})
+    WS_MEDIUM = json.dumps({"workflow": {"security_block_on": "medium"}})
+
+    def test_workstream_threshold_overrides_root(self) -> None:
+        self.assertEqual(self.run_with(register(1, self.MEDIUM_ROWS), self.ROOT_HIGH, self.WS_MEDIUM)[0], 0)
+        code, err = self.run_with(register(0, self.MEDIUM_ROWS), self.ROOT_HIGH, self.WS_MEDIUM)
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL:", err)
+
+    def test_root_threshold_applies_without_workstream_setting(self) -> None:
+        for label, ws in (("absent", None), ("without key", json.dumps({"workflow": {}})),
+                          ("empty object", "{}")):
+            with self.subTest(workstream_config=label):
+                self.assertEqual(self.run_with(register(0, self.MEDIUM_ROWS), self.ROOT_HIGH, ws)[0], 0)
+                self.assertEqual(self.run_with(register(1, self.MEDIUM_ROWS), self.ROOT_HIGH, ws)[0], 1)
+
+    def test_bad_workstream_config_fails_closed(self) -> None:
+        for label, ws in (("unknown severity", json.dumps({"workflow": {"security_block_on": "severe"}})),
+                          ("not json", "{not json"), ("not an object", "[]")):
+            with self.subTest(workstream_config=label):
+                code, err = self.run_with(register(0, self.MEDIUM_ROWS), self.ROOT_HIGH, ws)
+                self.assertEqual(code, 1)
+                self.assertIn("FAIL:", err)
+                self.assertNotIn("Traceback", err)
+
+
 if __name__ == "__main__":
     unittest.main()
