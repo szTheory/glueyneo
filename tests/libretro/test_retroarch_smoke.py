@@ -1245,6 +1245,50 @@ class LaunchWindowTest(unittest.TestCase):
         quit_frontend.assert_called_once()
         kill_group.assert_called_once_with(process)
 
+    def test_g2wr_06_deferred_signal_survives_a_raising_body(self) -> None:
+        handlers = self.install()
+        body_error = OSError("x")
+        with self.assertRaises(smoke.SmokeBlocked) as raised:
+            with smoke.launch_window():
+                handlers[signal.SIGTERM](signal.SIGTERM, None)  # type: ignore[operator]
+                raise body_error
+        self.assertEqual(raised.exception.stage, "interrupted")
+        self.assertIs(raised.exception.__cause__, body_error)
+        self.assertIsNone(smoke._LAUNCH_WINDOW["pending"])
+        self.assertFalse(smoke._LAUNCH_WINDOW["open"])
+
+    def test_g2wr_06_body_error_without_signal_propagates_unchanged(self) -> None:
+        self.install()
+        body_error = OSError("x")
+        with self.assertRaises(OSError) as raised:
+            with smoke.launch_window():
+                raise body_error
+        self.assertIs(raised.exception, body_error)
+
+    def test_g2wr_06_pid_record_failure_is_not_a_launch_failure(self) -> None:
+        self.install()
+        process = SingleInstanceTest.Running(pid=4321)
+        args = mock.Mock(timeout=1.0, child_pid_file=Path("child.pid"))
+        with (
+            mock.patch.object(smoke, "validate_inputs", return_value=(
+                Path("/app"), Path("/core"), Path("/fixture"),
+                {"bundle_id": smoke.EXPECTED_BUNDLE_IDENTIFIER})),
+            mock.patch.object(smoke, "crash_report_snapshot", return_value={}),
+            mock.patch.object(smoke, "running_retroarch_pids", return_value=set()),
+            mock.patch.object(smoke, "collect_frontend_output", return_value=""),
+            mock.patch.object(smoke, "record_child_pid", side_effect=OSError("disk full")),
+            mock.patch.object(smoke, "request_frontend_quit") as quit_frontend,
+            mock.patch.object(smoke, "kill_launched_group") as kill_group,
+            mock.patch.object(smoke.subprocess, "Popen", return_value=process),
+            mock.patch.object(smoke.time, "sleep"),
+        ):
+            with self.assertRaises(smoke.SmokeBlocked) as raised:
+                smoke.run_smoke(args)
+        self.assertEqual(raised.exception.stage, "pid-record")
+        self.assertNotIn("could not be started", str(raised.exception))
+        quit_frontend.assert_called_once()
+        kill_group.assert_called_once_with(process)
+
     def test_launch_window_does_not_use_a_signal_mask(self) -> None:
         source = Path(smoke.__file__).read_text(encoding="utf-8")
         calls = [line for line in source.splitlines()
