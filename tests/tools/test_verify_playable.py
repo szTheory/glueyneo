@@ -496,51 +496,58 @@ class SnapshotTest(unittest.TestCase):
 
 class ConsumerInputTest(unittest.TestCase):
     def copy_documentation(self, source_root: Path) -> Path:
-        guide = source_root / "docs/first-playable-build.md"
-        guide.parent.mkdir(parents=True)
-        shutil.copyfile(ROOT / "docs/first-playable-build.md", guide)
-        validation = source_root / ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md"
-        validation.parent.mkdir(parents=True)
-        shutil.copyfile(ROOT / ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md", validation)
-        # Without the tracked receipt summary, the frontend row must read Pending.
-        text = validation.read_text(encoding="utf-8")
-        pending = "HOST-02 Pending; frontend QUAL-03 Pending; actual-app identities and observations unavailable; frontend claim unknown"
-        text = re.sub(r"(?m)^(\| 04-15 T2 \|(?:[^|]*\|){8})[^|]*\|$", rf"\1 {pending} |", text, count=1)
-        validation.write_text(text, encoding="utf-8")
+        """Copy the docs as they read without tracked frontend evidence."""
+        for path in (playable.GUIDE, playable.VALIDATION):
+            (source_root / path).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / path, source_root / path)
+        summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        guide = source_root / playable.GUIDE
+        guide.write_text(guide.read_text(encoding="utf-8").replace(
+            playable.frontend_status_block(summary), playable.frontend_status_block(None)), encoding="utf-8")
+        validation = source_root / playable.VALIDATION
+        validation.write_text(validation.read_text(encoding="utf-8").replace(
+            playable.frontend_row_status(summary), playable.frontend_row_status(None)), encoding="utf-8")
         return validation
 
     def copy_documentation_with_evidence(self, source_root: Path) -> dict[str, object]:
-        guide = source_root / "docs/first-playable-build.md"
-        guide.parent.mkdir(parents=True)
-        shutil.copyfile(ROOT / "docs/first-playable-build.md", guide)
-        for path in (playable.FRONTEND_EVIDENCE,
-                     Path(".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md")):
+        for path in (playable.GUIDE, playable.VALIDATION, playable.FRONTEND_EVIDENCE):
             (source_root / path).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / path, source_root / path)
         return json.loads((source_root / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
 
-    def test_check_docs_accepts_complete_frontend_status_backed_by_tracked_receipt(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="playable-docs-evidence-") as temporary:
-            source_root = Path(temporary)
-            self.copy_documentation_with_evidence(source_root)
-            guide = source_root / "docs/first-playable-build.md"
-            guide.write_text(guide.read_text(encoding="utf-8") + "\nRetroArch loaded the fixture successfully.\n",
-                             encoding="utf-8")
-            playable.check_docs(source_root)
+    def test_check_docs_accepts_pending_status_without_evidence(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-docs-pending-") as temporary:
+            self.copy_documentation(Path(temporary))
+            playable.check_docs(Path(temporary))
 
-    def test_check_docs_rejects_invalid_tracked_frontend_receipts(self) -> None:
-        def drop_observation(summary: dict[str, object]) -> None:
-            summary["observations"] = [item for item in summary["observations"]
-                                       if item != "configured Left Arrow wrong-input control did not move the marker"]
+    def test_check_docs_accepts_complete_status_generated_from_tracked_receipt(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-docs-evidence-") as temporary:
+            self.copy_documentation_with_evidence(Path(temporary))
+            playable.check_docs(Path(temporary))
+
+    def test_check_docs_rejects_forged_or_incomplete_receipt_summaries(self) -> None:
+        def drop(field: str, value: str):
+            return lambda summary: summary.update({field: [item for item in summary[field] if item != value]})
 
         mutations = (
             ("failed receipt", lambda summary: summary.update(status="fail"), "passing committed-snapshot receipt"),
             ("unknown frontend", lambda summary: summary.update(retroarch_status="unknown"),
              "passing committed-snapshot receipt"),
-            ("short revision", lambda summary: summary.update(source_revision="706516b"), "full committed source revision"),
+            ("short revision", lambda summary: summary.update(source_revision="6f91a7e"), "full committed source revision"),
+            ("missing inventory digest", lambda summary: summary.pop("inventory_sha256"), "inventory digest"),
             ("unpinned app", lambda summary: summary["retroarch"].update(executable_sha256="0" * 64), "pinned RetroArch"),
+            ("other fixture", lambda summary: summary.update(fixture_sha256="0" * 64), "generated public fixture"),
             ("failed lane", lambda summary: summary["lanes"].update({"shared-build": "fail"}), "every qualification lane"),
-            ("missing LEFT control", drop_observation, "required load, video, input or exit observation"),
+            ("missing lane", lambda summary: summary["lanes"].pop("actual-retroarch-smoke"), "every qualification lane"),
+            ("arbitrary lane only", lambda summary: summary.update(lanes={"x": "pass"}), "every qualification lane"),
+            ("missing LEFT control",
+             drop("observations", "configured Left Arrow wrong-input control did not move the marker"),
+             "required load, video, input or exit observation"),
+            ("marker did not move", lambda summary: summary.update(marker_after_right=list(summary["marker_before"])),
+             "marker moving right"),
+            ("marker changed row", lambda summary: summary.update(
+                marker_after_right=[summary["marker_after_right"][0], summary["marker_before"][1] + 1, 1]),
+             "marker moving right"),
             ("no unload", lambda summary: summary.update(frontend_unloaded=False), "content unload"),
             ("private path", lambda summary: summary.update(os="macOS /Users/someone/build"), "private absolute path"),
         )
@@ -553,157 +560,77 @@ class ConsumerInputTest(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, expected_error):
                     playable.check_docs(source_root)
 
-    def test_check_docs_requires_frontend_row_to_match_tracked_receipt(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="playable-docs-evidence-") as temporary:
+    def test_tracked_receipt_must_match_its_committed_inventory(self) -> None:
+        summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        self.assertIsNotNone(playable.load_frontend_evidence(ROOT))
+        forged = dict(summary, inventory_sha256="0" * 64)
+        with tempfile.TemporaryDirectory(prefix="playable-docs-inventory-") as temporary:
+            clone = Path(temporary) / "clone"
+            subprocess.run(["git", "clone", "--quiet", "--no-checkout", str(ROOT), str(clone)], check=True)
+            subprocess.run(["git", "-C", str(clone), "checkout", "--quiet", summary["source_revision"]], check=True)
+            (clone / playable.FRONTEND_EVIDENCE).parent.mkdir(parents=True, exist_ok=True)
+            (clone / playable.FRONTEND_EVIDENCE).write_text(json.dumps(forged), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "inventory digest does not match"):
+                playable.load_frontend_evidence(clone)
+
+    def test_check_docs_requires_generated_status_to_match_evidence(self) -> None:
+        cases = (
+            ("evidence with pending block", self.copy_documentation, True, "status block does not match"),
+            ("pending docs edited to complete", self.copy_documentation, False, "status block does not match"),
+        )
+        for label, copy, add_evidence, expected_error in cases:
+            with self.subTest(case=label), tempfile.TemporaryDirectory(prefix="playable-docs-block-") as temporary:
+                source_root = Path(temporary)
+                copy(source_root)
+                summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+                guide = source_root / playable.GUIDE
+                if add_evidence:
+                    shutil.copyfile(ROOT / playable.FRONTEND_EVIDENCE, source_root / playable.FRONTEND_EVIDENCE)
+                else:
+                    guide.write_text(guide.read_text(encoding="utf-8").replace(
+                        playable.frontend_status_block(None), playable.frontend_status_block(summary)), encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, expected_error):
+                    playable.check_docs(source_root)
+        with tempfile.TemporaryDirectory(prefix="playable-docs-row-") as temporary:
             source_root = Path(temporary)
-            summary = self.copy_documentation_with_evidence(source_root)
-            validation = source_root / ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md"
-            text = validation.read_text(encoding="utf-8")
-            validation.write_text(text.replace(str(summary["source_revision"])[:12], "0123456789ab"), encoding="utf-8")
-            with self.assertRaisesRegex(RuntimeError, "Complete with the tracked receipt revision"):
-                playable.check_docs(source_root)
-        with tempfile.TemporaryDirectory(prefix="playable-docs-pending-") as temporary:
-            source_root = Path(temporary)
-            self.copy_documentation(source_root)
-            shutil.copyfile(ROOT / playable.FRONTEND_EVIDENCE, source_root / playable.FRONTEND_EVIDENCE)
-            with self.assertRaisesRegex(RuntimeError, "Complete with the tracked receipt revision"):
+            self.copy_documentation_with_evidence(source_root)
+            validation = source_root / playable.VALIDATION
+            validation.write_text(validation.read_text(encoding="utf-8").replace(
+                playable.frontend_row_status(summary), playable.frontend_row_status(None)), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "does not match the tracked evidence"):
                 playable.check_docs(source_root)
 
     def test_record_frontend_evidence_summary_drops_receipt_paths(self) -> None:
-        receipt = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
-        full = {
+        summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        receipt = {
             "status": "pass",
-            "identity": {"source_revision": receipt["source_revision"], "retroarch": receipt["retroarch"]},
+            "identity": {"source_revision": summary["source_revision"], "retroarch": summary["retroarch"],
+                         "source_snapshot": {"inventory_sha256": summary["inventory_sha256"],
+                                             "entries": [{"path": "/Users/someone/x"}]}},
             "lanes": {name: {"status": status, "command": ["/Users/someone/checkout"]}
-                      for name, status in receipt["lanes"].items()},
+                      for name, status in summary["lanes"].items()},
             "retroarch_smoke": {
-                "status": "pass", "observations": receipt["observations"],
-                "marker_before": receipt["marker_before"], "marker_after_right": receipt["marker_after_right"],
+                "status": "pass", "observations": summary["observations"],
+                "marker_before": summary["marker_before"], "marker_after_right": summary["marker_after_right"],
                 "frontend_unloaded": True,
-                "identity": {"os": receipt["os"], "core_sha256": receipt["core_sha256"],
-                             "fixture_sha256": receipt["fixture_sha256"], "input_mapping": receipt["input_mapping"]},
+                "identity": {"os": summary["os"], "core_sha256": summary["core_sha256"],
+                             "fixture_sha256": summary["fixture_sha256"], "input_mapping": summary["input_mapping"]},
                 "diagnostic": {"output": "/Users/someone/private"},
             },
             "artifacts": {"tree": ["/Users/someone/build/object.o"]},
         }
-        self.assertEqual(playable.frontend_evidence_summary(full), receipt)
+        self.assertEqual(playable.frontend_evidence_summary(receipt), summary)
 
-    def test_check_docs_accepts_controlled_review_states_and_pending_frontend_evidence(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="playable-docs-positive-") as temporary:
-            self.copy_documentation(Path(temporary))
-            try:
-                playable.check_docs(Path(temporary))
-            except RuntimeError as error:
-                self.fail(f"valid controlled states and Pending/unknown evidence were rejected: {error}")
-
-    def test_check_docs_rejects_affirmative_frontend_claims_in_build_guide(self) -> None:
-        claims = (
-            "The actual frontend app loaded successfully and displayed pixels.",
-            "The frontend accepted RIGHT input and unloaded cleanly.",
-            "The game appeared on screen in RetroArch.",
-            "The game ran successfully in RetroArch.",
-            "The frontend accepted the mapped controller input.",
-            "The frontend successfully presented the game to the user.",
-            "Gameplay was confirmed in RetroArch.",
-            "The frontend booted the game and showed its output.",
-            "The controls worked as expected in RetroArch.",
-            "A frame was rendered to the window.",
-            "The screen was visible and video output was confirmed.",
-            "The controls worked as expected in RetroArch.",
-            "RetroArch exited normally after content unloaded.",
-            "No screenshot was obtained, but the game appeared on screen in RetroArch.",
-            "The app did not fail; the game appeared on screen in RetroArch.",
-        )
-        for claim in claims:
-            with self.subTest(claim=claim), tempfile.TemporaryDirectory(prefix="playable-docs-guide-claim-") as temporary:
-                source_root = Path(temporary)
-                self.copy_documentation(source_root)
-                guide = source_root / "docs/first-playable-build.md"
-                guide.write_text(guide.read_text(encoding="utf-8") + "\n" + claim + "\n", encoding="utf-8")
-                with self.assertRaisesRegex(RuntimeError, "affirmative frontend claim"):
-                    playable.check_docs(source_root)
-
-    def test_check_docs_allows_explicit_negation_of_frontend_claim(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="playable-docs-negated-claim-") as temporary:
-            source_root = Path(temporary)
-            self.copy_documentation(source_root)
-            guide = source_root / "docs/first-playable-build.md"
-            guide.write_text(
-                guide.read_text(encoding="utf-8")
-                + "\nThe guide does not claim that the app loaded successfully. The guide does not claim that the game appeared on screen in RetroArch.\n",
-                encoding="utf-8",
-            )
-            playable.check_docs(source_root)
-
-    def test_check_docs_does_not_let_an_earlier_denial_mask_a_later_claim(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="playable-docs-separated-claims-") as temporary:
-            source_root = Path(temporary)
-            self.copy_documentation(source_root)
-            guide = source_root / "docs/first-playable-build.md"
-            guide.write_text(
-                guide.read_text(encoding="utf-8")
-                + "\nThe guide does not claim that the app loaded successfully. A frame was rendered to the window.\n",
-                encoding="utf-8",
-            )
-            with self.assertRaisesRegex(RuntimeError, "affirmative frontend claim"):
-                playable.check_docs(source_root)
-
-    def test_check_docs_rejects_reverse_order_guest_pixel_claim(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="playable-docs-reversed-pixels-") as temporary:
-            source_root = Path(temporary)
-            self.copy_documentation(source_root)
-            guide = source_root / "docs/first-playable-build.md"
-            guide.write_text(
-                guide.read_text(encoding="utf-8") + "\nGuest pixels were displayed.\n",
-                encoding="utf-8",
-            )
-            with self.assertRaisesRegex(RuntimeError, "affirmative frontend claim"):
-                playable.check_docs(source_root)
-
-    def test_check_docs_rejects_placeholders_and_missing_or_closed_frontend_evidence(self) -> None:
-        def update_row(text: str, task_id: str, status: str | None) -> str:
-            lines = text.splitlines()
-            for index, line in enumerate(lines):
-                if line.startswith(f"| {task_id} |"):
-                    if status is None:
-                        del lines[index]
-                    else:
-                        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-                        cells[-1] = status
-                        lines[index] = "| " + " | ".join(cells) + " |"
-                    return "\n".join(lines) + "\n"
-            raise AssertionError(f"validation row {task_id} is missing")
-
+    def test_check_docs_rejects_placeholders_and_uncontrolled_review_states(self) -> None:
         mutations = (
-            ("TBD", lambda text: re.sub(
+            ("TBD review state", lambda text: re.sub(
                 r"(?m)^(\| CR-03 \|[^|]*\|[^|]*\|)[^|]*(\|)$", r"\1 TBD \2", text, count=1,
             ), "controlled review disposition"),
-            ("planned", lambda text: update_row(
-                text, "04-15 T2", "HOST-02 planned; frontend QUAL-03 Pending; actual-app identities unavailable; frontend claim unknown",
-            ), "unfinished placeholder"),
-            ("missing frontend row", lambda text: update_row(text, "04-15 T2", None), "Pending/unknown"),
-            ("false frontend closure", lambda text: update_row(
-                text, "04-15 T2", "HOST-02 pass; frontend QUAL-03 pass; actual-app evidence unavailable; frontend claim unknown",
-            ), "Pending/unknown"),
-            ("mixed pending and collective closure", lambda text: update_row(
-                text, "04-15 T2", "HOST-02 Pending; frontend QUAL-03 Pending; frontend claim unknown; both requirements pass",
-            ), "Pending/unknown"),
-            *[
-                (f"mixed pending and affirmative frontend claim: {claim}", lambda text, claim=claim: update_row(
-                    text, "04-15 T2",
-                    f"HOST-02 Pending; frontend QUAL-03 Pending; actual-app identities and observations unavailable; frontend app {claim}; frontend claim unknown",
-                ), "Pending/unknown")
-                for claim in ("loaded successfully", "pixels were presented", "accepted RIGHT input", "unloaded cleanly")
-            ],
-            *[
-                (f"mixed pending and {claim} closure", lambda text, claim=claim: update_row(
-                    text, "04-15 T2", f"HOST-02 Pending; frontend QUAL-03 Pending; frontend claim unknown; HOST-02 {claim}",
-                ), "Pending/unknown")
-                for claim in ("pass", "passed", "closed", "complete", "completed", "verified", "satisfied")
-            ],
-            ("missing unknown claim", lambda text: update_row(
-                text, "04-15 T2", "HOST-02 Pending; frontend QUAL-03 Pending; actual-app identities unavailable",
-            ), "Pending/unknown"),
+            ("planned frontend row", lambda text: text.replace(
+                playable.frontend_row_status(None), "HOST-02 planned; frontend QUAL-03 Pending"), "unfinished placeholder"),
+            ("frontend row closed without evidence", lambda text: text.replace(
+                playable.frontend_row_status(None), "HOST-02 Complete; frontend QUAL-03 Complete"),
+             "does not match the tracked evidence"),
         )
         for label, transform, expected_error in mutations:
             with self.subTest(mutation=label), tempfile.TemporaryDirectory(prefix="playable-docs-negative-") as temporary:
