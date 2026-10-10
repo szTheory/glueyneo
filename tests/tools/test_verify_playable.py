@@ -994,6 +994,11 @@ class CrosswalkProvenanceTest(DocumentationCopies, unittest.TestCase):
             with self.subTest(case=label):
                 self.mutate_row(transform, expected)
 
+    def test_scope_path_parent_segments_are_rejected(self) -> None:
+        for scope in ("`../x.md`", "`docs/../x.md`", "`tools/../tools/verify_playable.py`"):
+            with self.subTest(scope=scope):
+                self.mutate_row(self.with_scope("CR-05", scope), "has a parent segment")
+
     def test_rows_must_equal_the_disposition_record(self) -> None:
         cases = (
             ("state differs", lambda text: re.sub(r"(?m)^(\| CR-01 \|[^|]*\|[^|]*\|)[^|]*(\|)$", r"\1 fixed \2", text, count=1),
@@ -1011,6 +1016,68 @@ class CrosswalkProvenanceTest(DocumentationCopies, unittest.TestCase):
         for label, transform, expected in cases:
             with self.subTest(case=label):
                 self.mutate_row(transform, expected)
+
+
+class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
+    """Non-open review dispositions cite a review revision that is a committed ancestor of head (T-04-38)."""
+
+    HEADER = "| Finding | Severity | Disposition | Source |\n|---|---|---|---|\n"
+
+    def errors(self, rows: str, head: str = "HEAD") -> list[str]:
+        with tempfile.TemporaryDirectory(prefix="playable-provenance-") as temporary:
+            root = Path(temporary)
+            (root / playable.DISPOSITION).parent.mkdir(parents=True, exist_ok=True)
+            (root / playable.DISPOSITION).write_text(self.HEADER + rows, encoding="utf-8")
+            return playable.review_provenance_errors(root, ROOT, head)
+
+    @staticmethod
+    def first_commit() -> str:
+        return subprocess.run(["git", "-C", str(ROOT), "rev-list", "--max-parents=0", "HEAD"],
+                              check=True, text=True, stdout=subprocess.PIPE).stdout.split()[0]
+
+    def test_open_rows_need_no_revision(self) -> None:
+        self.assertEqual(self.errors("| CR-01 | critical | open | recorded, not triaged |\n"), [])
+
+    def test_closure_rows_without_a_revision_are_rejected(self) -> None:
+        for state in ("fixed", "deferred", "skipped"):
+            with self.subTest(state=state):
+                errors = self.errors(f"| CR-01 | critical | {state} | looked fine |\n")
+                self.assertEqual(errors, ["review finding CR-01 disposition cites no review revision"])
+
+    def test_digests_and_unrelated_hex_are_not_revisions(self) -> None:
+        errors = self.errors(f"| WR-01 | warning | fixed | digest `{'a1' * 32}` and 0123abcd |\n")
+        self.assertEqual(errors, ["review finding WR-01 disposition cites no review revision"])
+
+    def test_ancestor_revision_in_either_recognized_form_is_accepted(self) -> None:
+        first = self.first_commit()
+        rows = (f"| CR-01 | critical | fixed | independent review (04-31, {first[:12]}) confirmed |\n"
+                f"| WR-01 | warning | deferred | at revision `{first}` |\n")
+        self.assertEqual(self.errors(rows), [])
+
+    def test_unresolvable_revision_is_rejected(self) -> None:
+        errors = self.errors("| CR-01 | critical | fixed | revision `" + "f" * 40 + "` |\n")
+        self.assertEqual(errors, [f"review finding CR-01 cites revision {'f' * 12} that is not a committed ancestor"])
+
+    def test_revision_that_is_not_an_ancestor_of_head_is_rejected(self) -> None:
+        first = self.first_commit()
+        head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True, text=True,
+                              stdout=subprocess.PIPE).stdout.strip()
+        # Cite the current head while checking against the first commit: a descendant is not an ancestor.
+        errors = self.errors(f"| CR-01 | critical | fixed | revision `{head}` |\n", head=first)
+        self.assertEqual(errors, [f"review finding CR-01 cites revision {head[:12]} that is not a committed ancestor"])
+
+    def test_check_docs_binds_the_live_record_and_rejects_a_stripped_revision(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-provenance-docs-") as temporary:
+            root = Path(temporary)
+            self.copy_documentation(root)
+            playable.check_docs(root, repository=ROOT)
+            record = root / playable.DISPOSITION
+            text = record.read_text(encoding="utf-8")
+            stripped = re.sub(r"(?m)^(\| WR-10 \|[^|]*\|[^|]*\|)[^|]*(\|)$", r"\1 resolved by hand \2", text, count=1)
+            self.assertNotEqual(stripped, text)
+            record.write_text(stripped, encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "review finding WR-10 disposition cites no review revision"):
+                playable.check_docs(root, repository=ROOT)
 
 
 class GuideClaimTest(DocumentationCopies, unittest.TestCase):
@@ -1059,6 +1126,14 @@ class GuideClaimTest(DocumentationCopies, unittest.TestCase):
             self.guide_with(source_root, f"Build in {private}/build.")
             with self.assertRaisesRegex(RuntimeError, "private absolute path"):
                 playable.check_docs(source_root, repository=ROOT)
+
+    def test_claim_gate_limits_are_documented_and_pinned(self) -> None:
+        """GIN-04 (accepted): the gate matches 7 to 40 hex characters; longer tokens are not machine-checked."""
+        guide = (ROOT / playable.GUIDE).read_text(encoding="utf-8")
+        self.assertIn("7 to 40 characters", guide)
+        self.assertIn("Other prose is not a qualification claim and is not machine-checked", guide)
+        outside = guide + "\n\nunreviewed digest " + "a1b2c3d4" * 8 + "\n"
+        self.assertEqual(playable.guide_claims_outside_block(outside), playable.guide_claims_outside_block(guide))
 
 
 class AtomicRecordTest(DocumentationCopies, unittest.TestCase):
@@ -1165,6 +1240,48 @@ class MainErrorPathTest(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertIn("private-path-survived", stderr)
         self.assertNotIn(str(Path.home()), stderr)
+
+    def clean_docs_run(self, failure: BaseException) -> tuple[int, str, str, dict[str, object]]:
+        with tempfile.TemporaryDirectory(prefix="playable-clean-docs-") as temporary:
+            output = Path(temporary) / "out"
+            snapshot = mock.Mock(commit="a" * 40, root=Path(temporary) / "source")
+            with mock.patch.object(playable, "OUTPUT", output), \
+                    mock.patch.object(playable, "create_snapshot", return_value=snapshot), \
+                    mock.patch.object(playable, "verify_snapshot"), \
+                    mock.patch.object(playable, "snapshot_record", return_value={"status": "pass"}), \
+                    mock.patch.object(playable, "validate_snapshot_record"), \
+                    mock.patch.object(playable, "check_docs", side_effect=failure):
+                status, stdout, stderr = self.run_main(
+                    "--retroarch", str(Path(temporary) / "R.app"), "--clean", "--check-docs")
+            receipt_text = (output / "receipt.json").read_text(encoding="utf-8")
+        return status, stdout, stderr, {"text": receipt_text, "json": json.loads(receipt_text)}
+
+    def test_clean_documentation_check_error_is_a_redacted_receipt_failure(self) -> None:
+        home = str(Path.home())
+        failures = (OSError(2, "No such file or directory", home + "/private/guide.md"),
+                    UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte"),
+                    KeyError(home + "/private/guide.md"))
+        for failure in failures:
+            with self.subTest(error=type(failure).__name__):
+                status, stdout, stderr, receipt = self.clean_docs_run(failure)
+                self.assertEqual(status, 1)
+                self.assertEqual(receipt["json"]["documentation"],  # type: ignore[index]
+                                 {"status": "fail", "reason": f"documentation-check-error: {type(failure).__name__}"})
+                for sink in (stdout, stderr, receipt["text"]):
+                    self.assertNotIn(home, sink)
+                    self.assertNotIn("guide.md", sink)
+                    self.assertNotIn("Traceback", sink)
+
+    def test_clean_documentation_runtime_error_keeps_its_scanned_message(self) -> None:
+        home = str(Path.home())
+        status, stdout, stderr, receipt = self.clean_docs_run(
+            RuntimeError("integrator documentation omits: x " + home + "/private"))
+        self.assertEqual(status, 1)
+        documentation = receipt["json"]["documentation"]  # type: ignore[index]
+        self.assertEqual(documentation["status"], "fail")
+        self.assertIn("integrator documentation omits", documentation["reason"])
+        for sink in (stdout, stderr, receipt["text"]):
+            self.assertNotIn(home, sink)
 
 
 if __name__ == "__main__":
