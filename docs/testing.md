@@ -201,8 +201,11 @@ row (see Closure gates).
   with `/` or `~`, in relative and absolute patterns; `(` ends an absolute
   pattern's literal prefix. `check --revision` accepts exactly 40 lowercase hex
   characters (exit 2 otherwise, value not echoed) and matches the
-  `Reviewed revision:` line as a whole line (G2WR-03). R2 finding IDs of the
-  form `G2CR-NN`, `G2WR-NN` and `G2IN-NN` are reviewable IDs.
+  `Reviewed revision:` line as a whole line (G2WR-03). Any `CR/WR/IN`,
+  `GCR/GWR/GIN` or `G<n>CR/G<n>WR/G<n>IN` finding ID and `T-NN-NNN` threat
+  numbers are reviewable without editing the tool, and a malformed ID in the
+  review ID list is rejected (G3WR-02). A pattern or path beginning with `$` is
+  not contained, as for a `$` alternative inside a group (G3IN-01).
 - **Qualification receipt errors** (T-04-11, G2CR-02, G2IN-03). Any error after
   the build yields stderr `receipt: receipt-error: <ExceptionType>` and a minimal
   fail receipt; if that write also fails the output is
