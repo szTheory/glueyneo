@@ -13,6 +13,8 @@ updated: "2026-10-10"
 
 > 2026-10-10 supersession: `tests/tools/check_phase04_validation_map.py` and its mutation suite were retired in c75f577. Rows below that cite them are historical evidence for their recorded revisions. The current gates are `python3 tools/verify_playable.py --check-docs` (frontend status generated from the bound receipt summary), `tests/tools/check_security_register.py` and the `qualification-tools` CTest label.
 
+> 2026-10-10 reclassification (Nyquist audit after plan 04-23): HOST-02 and the frontend portion of QUAL-03 are COVERED-by-automated-command. The tracked receipt `04-FRONTEND-RECEIPT.json` (schema 1, `status` and `retroarch_status` pass, source revision `aaf3f093ab0fe4dcff453885af3352b9a400196a`, pinned RetroArch 1.22.2, all 17 lanes pass, 8 frontend observations) was produced by the 04-23 Task 1 qualification and is checked by `python3 tools/verify_playable.py --check-docs`, which passed on 2026-10-10. That gate validates the tracked receipt, its generated guide block and the 04-15 T2 row; the committed-revision inventory binding runs only when `.git` is present (escalation E2 below). It does not re-observe the application: this audit did not launch RetroArch, so the observations are those recorded by the 04-23 run. The 2026-10-07 `-6` exit and the "Manual-Only / Unverified" handoff below are historical and superseded for these two requirements. Phase acceptance remains blocked by open security threats (04-SECURITY.md) and the escalated implementation defects listed under Manual-Only / Escalated; `nyquist_compliant` stays false.
+>
 > Execution record for feedback sampling and acceptance evidence.
 
 ## Test Infrastructure
@@ -22,7 +24,8 @@ updated: "2026-10-10"
 | **Framework** | CTest with pinned Unity; Python qualification and provenance checks |
 | **Config file** | `CMakePresets.json`; `sdk-debug` remains the developer regression preset |
 | **Clean qualification** | `python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean --check-docs` |
-| **Full clean CTest** | 34/34 passed on 2026-10-07; measured 6.37 seconds |
+| **Full clean CTest** | 34/34 passed on 2026-10-07 (historical; measured 6.37 seconds). Current `ctest --preset owned-debug`: 59/59 passed on 2026-10-10 (15.49 seconds real) |
+| **Current focused suites (2026-10-10)** | `python3 -m unittest discover -s tests/tools -p 'test_verify_playable.py'` 28/28; `-p 'test_private_paths.py'` 8/8; `-p 'test_check_security_register.py'` 2/2; `python3 -m unittest discover -s tests/libretro -p 'test_retroarch_smoke.py'` 35/35; `python3 tests/tools/check_security_register.py` PASS; `python3 tools/verify_playable.py --check-docs` PASS |
 | **Environment** | macOS 26.6.2 arm64, AppleClang 21.0.0.21000101, SDK 26.5, CMake 4.4.3, Ninja 1.13.2, Python 3.14.4 |
 
 The receipt and sanitized command logs are retained under ignored `build/playable-qualification/`. A fresh run produced the same 602-byte public fixture in static and shared configurations (SHA-256 `59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0`). The runner builds and installs both native variants, runs an out-of-tree C consumer against each install, runs the full CTest suite, and invokes the actual frontend and chip gates. Its overall result remains nonzero when HOST-02 is unknown.
@@ -32,7 +35,7 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 - **After each task commit:** run the task's focused path and `git diff --check`; Task 1 clean install consumers each completed in under 0.2 seconds after build.
 - **Full phase feedback:** fresh configure/build/install for static and shared targets, installed consumer runs, and full CTest completed successfully; full CTest took 6.37 seconds.
 - **Candidate source checks:** Z80 source check 0.068 seconds; YM2610 source check 0.130 seconds; YM2610 installed static/shared C linkage check 1.938 seconds.
-- **Actual frontend smoke:** 0.672 seconds before RetroArch exited with status `-6` and no screenshot. This result is unknown, not a pass.
+- **Actual frontend smoke:** 0.672 seconds before RetroArch exited with status `-6` and no screenshot. This result is unknown, not a pass. Historical 2026-10-07 run; superseded for HOST-02 by the 04-23 receipt at `aaf3f093ab0f` (2026-10-10).
 
 ## Per-Task Verification Map
 
@@ -41,7 +44,7 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | 04-01 T1, 04-03 T2 | 04-01 / 04-03 | 1 / 2 | TRAC-01 | T-04-01, T-04-05 | Original fixture regeneration, hash, rights and oracle ancestry | integration/provenance | `cmake --build <clean-build> --target glueyneo-public-fixture`; full CTest `public_guest_*` | Yes | pass; both clean fixture hashes match |
 | 04-01 T1-T2 | 04-01 | 1 | TRAC-02 | T-04-02 | Validate input/output buffers and render guest-produced pixels | integration/boundary | full clean CTest; `public_guest_contract` | Yes | pass |
 | 04-01 T3 | 04-01 | 1 | TRAC-03 | T-04-02 | Input changes guest state/pixels; no-input and wrong-direction controls hold | integration/negative control | full clean CTest; `public_guest_trace`, `public_guest_negative_left`, `public_guest_negative_none` | Yes | pass |
-| 04-02 T1-T2 | 04-02 | 2 | HOST-02 | T-04-03, T-04-04 | Actual pinned RetroArch loads content, polls input, presents video and unloads | actual frontend smoke | `python3 tests/libretro/retroarch_smoke.py --retroarch /Applications/RetroArch.app --core <installed-prefix>/lib/libretro/glueyneo_libretro.dylib --content <build-directory>/public-playable.bin` | Yes | unknown; RetroArch 1.22.2 exited `-6` before screenshot |
+| 04-02 T1-T2 | 04-02 | 2 | HOST-02 | T-04-03, T-04-04 | Actual pinned RetroArch loads content, polls input, presents video and unloads | actual frontend smoke | `python3 tests/libretro/retroarch_smoke.py --retroarch /Applications/RetroArch.app --core <installed-prefix>/lib/libretro/glueyneo_libretro.dylib --content <build-directory>/public-playable.bin` | Yes | COVERED-by-automated-command (2026-10-10): `python3 tools/verify_playable.py --check-docs` against receipt `aaf3f093ab0f`; the 2026-10-07 run exited `-6` before screenshot and is historical |
 | 04-01 T2 | 04-01 | 1 | API-05 | T-04-02 | Bounded machine time, capacities, progress/errors and audio metadata | contract/boundary | full clean CTest; `public_guest_*` and SDK contract lanes | Yes | pass |
 | 04-04 T1-T3 | 04-04 | 3 | SND-01 | T-04-06, T-04-07 | Pinned Z80 source and exact synthetic cycle/bus/IRQ/reset/continuation/instance workload | candidate conformance | `python3 tests/chips/check_z80_source.py`; full clean CTest `z80_admission*` | Yes | pass for the documented synthetic workload only |
 | 04-05 T1-T3 | 04-05 | 4 | SND-02 | T-04-08, T-04-09, T-04-10 | Pinned ymfm source/state/clock/isolation/callback behavior and real C linkage | candidate conformance/consumer | `python3 tests/chips/check_ym2610.py source`; full clean CTest `ym2610_admission`; `python3 tests/chips/check_ym2610.py link --both-linkages` | Yes | pass; candidate-only, report SHA-256 `a6faf3de0dc68dec67e80743413d4e53de6ade6620123db5ccb6d3fec2e02` |
@@ -84,7 +87,9 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | Post-audit checker reconciliation | 04-20 | 18 | QUAL-03 | T-04-38 | Reconcile all audited medium/open threat rows without relaxing the security register | evidence-map regression | `python3 tests/tools/test_check_phase04_validation_map.py -v`; `python3 tests/tools/check_phase04_validation_map.py` | Yes | blocked: 5/15 mutation tests fail and direct checker rejects the additional T-04-38 medium/open row; retain finding for follow-up plan |
 | 04-21 T1 | 04-21 | 19 | HOST-02, QUAL-03 | T-04-41, T-04-43, T-04-SC | Source-derived evidence-map mutations enforce exact security rows and WR-01 review provenance; preserve all open threats and frontend unknown | checker mutation controls | `python3 tests/tools/test_check_phase04_validation_map.py -v` | Yes | pass, 22/22; direct evidence-map gate also passes and reconciles current focused suite counts |
 | 04-21 T2 | 04-21 | 19 | HOST-02, QUAL-03 | T-04-42, T-04-SC | Copied report/guide mutations reject tested affirmative output, control and guest-pixel claims; GUI-free contract and qualification behavior remain distinct from actual app evidence | qualification/privacy and GUI-free contract regressions; docs gate | `python3 tests/tools/test_verify_playable.py -v`; `python3 tests/libretro/test_retroarch_smoke.py -v`; `python3 tools/verify_playable.py --check-docs` | Yes | pass, qualification 27/27 and frontend contract 27/27; docs gate passes; no actual RetroArch behavior inferred |
-| 04-21 T3 | 04-21 | 19 | HOST-02, QUAL-03 | T-04-41, T-04-42, T-04-43, T-04-SC | Frozen independent review and current direct gates reconcile exact review provenance, dispositions, current denominators and remaining manual-only limits | independent review evidence and integration gates | `python3 tests/tools/check_phase04_validation_map.py`; `python3 tools/verify_playable.py --check-docs`; `ctest --preset owned-debug --output-on-failure` | Yes | independent review of `f1c8a1de5f25224b83da6ec9e4bc40bf51a249ae` found no new actionable issue; direct checker and docs gate pass; CTest 47/47; HOST-02/frontend QUAL-03 remain Pending/unknown |
+| 04-21 T3 | 04-21 | 19 | HOST-02, QUAL-03 | T-04-41, T-04-42, T-04-43, T-04-SC | Frozen independent review and current direct gates reconcile exact review provenance, dispositions, current denominators and remaining manual-only limits | independent review evidence and integration gates | `python3 tests/tools/check_phase04_validation_map.py`; `python3 tools/verify_playable.py --check-docs`; `ctest --preset owned-debug --output-on-failure` | Yes | independent review of `f1c8a1de5f25224b83da6ec9e4bc40bf51a249ae` found no new actionable issue; direct checker and docs gate pass; CTest 47/47; HOST-02/frontend QUAL-03 remain Pending/unknown (historical; superseded by the 04-23 rows) |
+| 04-23 T1 | 04-23 | — | HOST-02, QUAL-03 | T-04-11, T-04-15, T-04-18, T-04-20 | Pinned RetroArch 1.22.2 qualification at committed snapshot `aaf3f093ab0f` writes a tracked passing receipt bound to the committed inventory | tool-generated qualification receipt and docs gate | `python3 tools/verify_playable.py --check-docs`; receipt from `python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean`, then `--record-frontend-evidence` (04-23 Task 1) | Yes | pass: receipt status and retroarch_status pass, 17/17 lanes pass; docs gate passes 2026-10-10; observations are from the 04-23 run and were not re-observed (no GUI launched by audit); COVERED-by-automated-command with WARNING: receipt-based, not a fresh observation |
+| 04-23 T2 | 04-23 | — | Review audit, HOST-02, QUAL-03, T-04-11, T-04-15, T-04-18, T-04-20, T-04-34, T-04-43, T-04-45, T-04-46, T-04-47, T-04-48 | Independent post-c75f577 review reproduced implementation defects in the docs gate, privacy redaction, security register checker and smoke-process lifecycle | reproduction probes outside Git (no failing tests committed); see Manual-Only / Escalated | Yes | escalated: E1-E6 open implementation defects, route to `/gsd-plan-phase 04 --gaps`; no implementation file modified |
 
 ## Threat Coverage
 
@@ -166,9 +171,11 @@ The required precondition remains unavailable: the prior pinned RetroArch contex
 - Plan 04-14's final verification ran on source commit `8af6725`: qualification 20/20, frontend 26/26, review-map mutation suite 8/8, and `ctest --preset owned-debug --output-on-failure` 47/47. The direct evidence-map command passed. These are repository checks only and do not close the high disclosure threats or establish actual frontend behavior.
 - At the time of Plan 04-14, these focused suites verified repository behavior only; the later fresh review confirms CR-02 and WR-04 are fixed and identifies CR-03/WR-05. Security remains blocked with T-04-11/T-04-15/T-04-18/T-04-20 high/open. HOST-02 and actual frontend QUAL-03 remain Pending until the requested pinned-app observations exist.
 
-## Actual Frontend Evidence Handoff — Manual-Only / Unverified
+## Actual Frontend Evidence Handoff — Historical (superseded 2026-10-10; was Manual-Only / Unverified)
 
-Human evidence is still required: run the generated public fixture in the pinned RetroArch 1.22.2 build and observe a fresh screenshot, repeated no-input frames, RIGHT movement, the LEFT negative control, content unload, and normal application exit. Expected behavior is guest-produced software pixels, stable no-input output, a RIGHT-driven marker change that LEFT does not reproduce, and successful unload and exit. The app previously aborted before its first screenshot; no GUI retry was made because the environment has not materially changed.
+> Superseded 2026-10-10: the frontend observations named here were obtained by the 04-23 Task 1 pinned RetroArch 1.22.2 qualification at `aaf3f093ab0f` and are recorded in the tracked receipt `04-FRONTEND-RECEIPT.json`. The text below is the original 2026-10-07/2026-10-08 handoff, kept as history. It no longer describes an open requirement for HOST-02 or frontend QUAL-03.
+
+Original handoff text (historical): Human evidence was required: run the generated public fixture in the pinned RetroArch 1.22.2 build and observe a fresh screenshot, repeated no-input frames, RIGHT movement, the LEFT negative control, content unload, and normal application exit. Expected behavior is guest-produced software pixels, stable no-input output, a RIGHT-driven marker change that LEFT does not reproduce, and successful unload and exit. The app previously aborted before its first screenshot; no GUI retry was made because the environment has not materially changed.
 
 ## Wave 0 and Sign-Off
 
@@ -180,11 +187,28 @@ Human evidence is still required: run the generated public fixture in the pinned
 - [x] Every task maps to an executable command; full clean CTest provides a 34-test denominator.
 - [x] No watch-mode acceptance commands are used.
 
-Every plan task has an automated command or an explicit human-evidence route. Nyquist validation remains partial because HOST-02 and the frontend portion of QUAL-03 require direct observation in a functioning pinned frontend; WR-01 was resolved by the Plan 04-16 reconciliation. Phase 04 is not accepted while actual frontend behavior remains unknown and the four high-severity disclosure threats remain open. Native fixture, Z80 synthetic-workload, and YM2610 candidate results do not establish BIOS/game compatibility.
+Superseded 2026-10-10: HOST-02 and the frontend portion of QUAL-03 are COVERED-by-automated-command through the tracked 04-23 receipt and `--check-docs`. Nyquist validation is not complete because the escalated implementation defects under Manual-Only / Escalated are open and four high-severity disclosure threats plus open medium threats remain in 04-SECURITY.md; `nyquist_compliant` stays false.
+
+Historical 2026-10-08 sign-off text: Every plan task has an automated command or an explicit human-evidence route. Nyquist validation remained partial because HOST-02 and the frontend portion of QUAL-03 require direct observation in a functioning pinned frontend; WR-01 was resolved by the Plan 04-16 reconciliation. Phase 04 is not accepted while actual frontend behavior remains unknown and the four high-severity disclosure threats remain open. Native fixture, Z80 synthetic-workload, and YM2610 candidate results do not establish BIOS/game compatibility.
 
 ---
 *Phase: 04-public-playable-tracer*
-*Updated: 2026-10-08*
+*Updated: 2026-10-10*
+
+## Manual-Only / Escalated
+
+Manual-only: none for HOST-02 or frontend QUAL-03 after the 2026-10-10 reclassification. Their remaining limit is that the tracked receipt, not a fresh observation, is the evidence (WARNING).
+
+Escalated: six implementation defect groups reproduced by the independent post-c75f577 review (plan 04-23). Each was reproduced at revision `0f50e7e` with probes kept outside Git. No implementation file was modified and no failing test was committed; the suggested tests below are for the follow-up plan. Status for every row: open implementation defect — route to /gsd-plan-phase 04 --gaps.
+
+| ID | Implementation area | Reproduced defect (control in parentheses) | Suggested regression test (path and case) | Threat / finding | Status |
+|----|--------------------|--------------------------------------------|-------------------------------------------|------------------|--------|
+| E1 | `tools/private_paths.py` `redact()` and `scan_public()` | Separator and encoding variants survive: U+2215 and U+2044 separators between user-home root components, a double-percent-encoded user-home root, and a dash-mangled checkout root when the checkout is passed as `extra_roots` (control: a plain user-home root and a fullwidth solidus are rejected) | `tests/tools/test_private_paths.py`: "separator and encoding variants of a private root are redacted and rejected by scan_public" | T-04-11, T-04-15, T-04-18, T-04-20 (high/open) | open implementation defect — route to /gsd-plan-phase 04 --gaps |
+| E2 | `tools/verify_playable.py` `load_frontend_evidence()` (inventory binding runs only `if (source_root / ".git").exists()`) | A `.git`-less source tree with `inventory_sha256` forged to all zeros passes `check_docs`; the same forgery is rejected when `.git` is present (control) | `tests/tools/test_verify_playable.py`: "check_docs fails closed when frontend evidence cannot be bound to committed bytes without .git" | QUAL-03 docs-gate provenance; T-04-12 | open implementation defect — route to /gsd-plan-phase 04 --gaps |
+| E3 | `tools/verify_playable.py` `check_docs()` (prose outside the generated status block is not inspected) | Affirmative frontend success prose appended after the generated block passes the gate | `tests/tools/test_verify_playable.py`: "check_docs rejects affirmative frontend success prose outside the generated status block" | T-04-34 (medium/open); WR-01, WR-06, WR-08 | open implementation defect — route to /gsd-plan-phase 04 --gaps |
+| E4 | `tools/verify_playable.py` `check_docs()` review crosswalk | An "Existing Threat Scope" cell naming a nonexistent repository path passes (the gate only requires a non-empty scope) | `tests/tools/test_verify_playable.py`: "review crosswalk scope naming a nonexistent repository path is rejected" | T-04-43 (medium/open); WR-09 | open implementation defect — route to /gsd-plan-phase 04 --gaps |
+| E5 | `tests/tools/check_security_register.py` `register_errors()` | A duplicate `threats_open:` frontmatter line with a wrong value passes (only the first match is read), and an open high row in a later threat table passes because the loop stops after the first table; reproduced on a copy of 04-SECURITY.md with `threats_open: 6` unchanged | `tests/tools/test_check_security_register.py`: "duplicate threats_open keys are rejected" and "open high row in a later threat table is counted" | Security register gate that secure-phase trusts (`threats_open`) | open implementation defect — route to /gsd-plan-phase 04 --gaps |
+| E6 | `tests/libretro/retroarch_smoke.py` `run_smoke()` (launch with `start_new_session=True`; caller timeout `timeout=180` at `tools/verify_playable.py`) and the absence of any pre-launch instance check | A child started in its own session survives when the outer timeout kills the parent (reproduced with a `sleep` stand-in; RetroArch was not run). Neither the smoke runner nor `verify_playable.py` checks for a running RetroArch instance before launch (no `pgrep`/`ps` check exists) | `tests/libretro/test_retroarch_smoke.py`: "outer timeout leaves no descendant of the launched frontend" (fake sleeping executable) and "launch is refused while another RetroArch instance is running" (stubbed process lister) | T-04-16, T-04-17; single-instance rule | open implementation defect — route to /gsd-plan-phase 04 --gaps |
 
 ## Validation Audit 2026-10-07
 
@@ -389,3 +413,11 @@ The independent standard-depth review at `04-REVIEW.md` inspected exact source r
 Plan 04-22 current suite denominators: qualification 27/27; frontend 27/27.
 
 HOST-02 remains Pending/unknown and frontend QUAL-03 remains partial/needs-human with actual frontend load unobserved. No RetroArch GUI was launched; callback, smoke-contract, docs, and review checks do not establish actual frontend behavior. Phase 04 remains blocked and `nyquist_compliant` remains false.
+
+## Validation Audit 2026-10-10
+
+| Metric | Count |
+|---|---|
+| Gaps found | 7 |
+| Resolved | 1 |
+| Escalated | 6 |
