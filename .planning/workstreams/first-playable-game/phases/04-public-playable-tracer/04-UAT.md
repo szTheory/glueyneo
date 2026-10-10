@@ -1,25 +1,14 @@
 ---
-status: testing
+status: complete
 phase: 04-public-playable-tracer
 source: [04-01-SUMMARY.md, 04-02-SUMMARY.md, 04-03-SUMMARY.md, 04-04-SUMMARY.md, 04-05-SUMMARY.md, 04-06-SUMMARY.md, 04-07-SUMMARY.md, 04-08-SUMMARY.md, 04-09-SUMMARY.md, 04-10-SUMMARY.md, 04-11-SUMMARY.md, 04-12-SUMMARY.md, 04-13-SUMMARY.md, 04-14-SUMMARY.md, 04-15-SUMMARY.md, 04-16-SUMMARY.md, 04-17-SUMMARY.md, 04-18-SUMMARY.md, 04-19-SUMMARY.md, 04-20-SUMMARY.md, 04-21-SUMMARY.md, 04-22-SUMMARY.md]
 started: 2026-10-10T11:38:03Z
-updated: 2026-10-10T12:30:00Z
+updated: 2026-10-10T12:06:34.345Z
 ---
 
 ## Current Test
-<!-- OVERWRITE each test - shows where we are -->
 
-number: 4
-name: Open security and review findings have your disposition
-expected: |
-  You decide how to handle the four high/open disclosure threats (T-04-11, T-04-15,
-  T-04-18, T-04-20), the three medium/open threats (T-04-34, T-04-38, T-04-43) and the open
-  review findings (WR-01, WR-06, WR-08, WR-09): run an independent security review and close
-  what it proves, accept named risks, or keep them open. New related finding from this run:
-  the full ignored qualification receipt records installed-tree object paths containing the
-  local checkout path (the tracked summary drops them). Reply with your disposition, or
-  "keep open" to leave them as they are.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -48,7 +37,10 @@ coverage_id: 04-17 D1; 04-19 D1; 04-22 D2
 
 ### 4. Open security and review findings have your disposition
 expected: You have decided how to handle the four high/open disclosure threats (T-04-11, T-04-15, T-04-18, T-04-20), the three medium/open threats (T-04-34, T-04-38, T-04-43) and the open review findings (WR-01, WR-06, WR-08, WR-09): close them after an independent security review, accept them, or keep them open. Until then they stay open, and the evidence-map checker reconciles them exactly.
-result: [pending]
+result: pass
+source: delegated-decision
+reported: "so yeah i want u to fan out figure it out and auto decide"
+evidence: "Four independent analyses (adversarial security audit, claim-gate analysis, provenance cost analysis, primary-source research) agreed. T-04-11/15/18/20 closed by exact-root redaction plus fail-closed public-sink scans (c75f577, tests/tools/test_private_paths.py); retained run-directory logs accepted as medium T-04-44 with invalidation triggers; T-04-34 closed by bound receipt evidence (cc73f94); T-04-38/43 closed with the retired evidence-map checker; WR-01/06/08/09 fixed or superseded. 04-SECURITY.md threats_open 0, status verified, enforced by CTest planning_security_register."
 coverage_id: 04-16 D1; 04-16 D2; 04-17 D2; 04-20 D1; 04-20 D2
 
 ### 5. Phase closeout batching rule
@@ -235,9 +227,9 @@ coverage_id: 04-22 D1
 ## Summary
 
 total: 34
-passed: 33
+passed: 34
 issues: 0
-pending: 1
+pending: 0
 skipped: 0
 blocked: 0
 
