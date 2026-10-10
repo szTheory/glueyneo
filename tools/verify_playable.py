@@ -989,7 +989,10 @@ def write_frontend_records(source_root: Path, summary: dict[str, Any]) -> None:
     """Validate and scan all three new contents, then replace the files all-or-nothing in process (WR-01, T-04-53).
 
     Order: evidence JSON, validation row, guide status block. If any replace fails, every file already
-    replaced is restored byte-for-byte from the originals read beforehand, and the error propagates.
+    replaced is restored byte-for-byte from the originals read beforehand (a file that did not exist
+    before, as on first-time generation, is removed again), and the error propagates. Every restore is
+    attempted even if an earlier one fails; failed restores are then reported as one
+    `evidence rollback incomplete: <base names>` error, never naming a directory (G2WR-05).
     Limit (GWR-06): a hard crash (power loss, SIGKILL) between replaces cannot be rolled back and can
     leave a mix of old and new files. The guide block is written last, so `--check-docs` detects such a
     mix as an evidence/block mismatch instead of accepting it.
@@ -1021,7 +1024,7 @@ def write_frontend_records(source_root: Path, summary: dict[str, Any]) -> None:
     if claims:
         raise RuntimeError(f"integrator documentation makes a status claim outside the generated block: {claims[0]}")
     writes = ((evidence_path, evidence_text), (validation_path, updated), (guide_path, new_guide))
-    originals = [path.read_bytes() for path, _ in writes]
+    originals = [path.read_bytes() if path.exists() else None for path, _ in writes]
     temporaries = [path.with_name(path.name + ".tmp") for path, _ in writes]
     replaced: list[int] = []
     try:
@@ -1031,15 +1034,23 @@ def write_frontend_records(source_root: Path, summary: dict[str, Any]) -> None:
             for index, (temporary, (path, _)) in enumerate(zip(temporaries, writes)):
                 os.replace(temporary, path)
                 replaced.append(index)
-        except BaseException:
+        except BaseException as failure:
+            unrestored: list[str] = []
             for index in reversed(replaced):
                 path = writes[index][0]
                 restore = path.with_name(path.name + ".restore")
                 try:
-                    restore.write_bytes(originals[index])
-                    os.replace(restore, path)
+                    if originals[index] is None:
+                        path.unlink(missing_ok=True)
+                    else:
+                        restore.write_bytes(originals[index])
+                        os.replace(restore, path)
+                except OSError:
+                    unrestored.append(path.name)
                 finally:
                     restore.unlink(missing_ok=True)
+            if unrestored:
+                raise RuntimeError("evidence rollback incomplete: " + ", ".join(unrestored)) from failure
             raise
     finally:
         for temporary in temporaries:
