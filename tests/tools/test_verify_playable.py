@@ -532,6 +532,67 @@ class ProcessGroupTest(unittest.TestCase):
                     alive = False
             self.assertFalse(alive, f"grandchild survived: pid {pid}")
 
+    def test_grandchild_ignoring_sigterm_is_killed_after_a_lane_timeout(self) -> None:
+        program = (
+            "import signal, subprocess, sys, time\n"
+            "child = ('import signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(60)')\n"
+            "g = subprocess.Popen([sys.executable, '-c', child], stdout=subprocess.DEVNULL)\n"
+            "print('grandchild', g.pid, flush=True)\n"
+            "time.sleep(60)\n"
+        )
+        with tempfile.TemporaryDirectory(prefix="lane-ignore-") as temporary:
+            work = Path(temporary)
+            runner = self.make_runner(work)
+            with (
+                mock.patch.object(playable, "verify_snapshot"),
+                mock.patch.object(playable, "LANE_GRACE_SECONDS", 1),
+            ):
+                result = runner.command("ignore-lane", [sys.executable, "-c", program],
+                                        timeout=2, allow_failure=True)
+            log = (work / "ignore-lane.log").read_text(encoding="utf-8")
+            match = re.search(r"grandchild (\d+)", log)
+            self.assertIsNotNone(match, log)
+            pid = int(match.group(1))  # type: ignore[union-attr]
+            self.addCleanup(lambda: self.kill_quietly(pid))
+            self.assertEqual(result.returncode, -1)
+            deadline = time.monotonic() + 10
+            alive = True
+            while alive and time.monotonic() < deadline:
+                try:
+                    os.kill(pid, 0)
+                    time.sleep(0.1)
+                except ProcessLookupError:
+                    alive = False
+            self.assertFalse(alive, f"SIGTERM-ignoring grandchild survived: pid {pid}")
+
+    def test_no_group_signal_is_sent_after_the_leader_is_reaped(self) -> None:
+        for leader_exits in (True, False):
+            with self.subTest(leader_exits=leader_exits):
+                class Proc:
+                    pid = 424242
+                    returncode: int | None = None
+
+                    def communicate(self, timeout: float | None = None) -> tuple[str, None]:
+                        self.returncode = 0  # reaping happens here
+                        return ("partial\n", None)
+
+                proc = Proc()
+                seen: list[tuple[int, int | None]] = []
+                with (
+                    mock.patch.object(playable.os, "killpg",
+                                      side_effect=lambda g, sig: seen.append((sig, proc.returncode))),
+                    mock.patch.object(playable, "_leader_exited", return_value=leader_exits, create=True),
+                    mock.patch.object(playable, "LANE_GRACE_SECONDS", 0.2),
+                ):
+                    output = playable._terminate_lane_group(
+                        proc, subprocess.TimeoutExpired("lane", 1))  # type: ignore[arg-type]
+                self.assertIn("partial", output)
+                self.assertTrue(seen, "no group signal was sent")
+                self.assertEqual(seen[0][0], signal.SIGTERM)
+                self.assertEqual(seen[-1][0], signal.SIGKILL)
+                for _signum, returncode in seen:
+                    self.assertIsNone(returncode, "a group signal followed reaping (killpg after_reap)")
+
     @staticmethod
     def kill_quietly(pid: int) -> None:
         try:
@@ -540,7 +601,8 @@ class ProcessGroupTest(unittest.TestCase):
             pass
 
     def run_lane(self, work: Path, before: set[int] | None, after: set[int] | None,
-                 *, child: str | None, group: int | None) -> tuple[dict[str, object], mock.Mock, mock.Mock, mock.Mock]:
+                 *, child: str | None, group: int | None,
+                 later: list[set[int] | None] | None = None) -> tuple[dict[str, object], mock.Mock, mock.Mock, mock.Mock]:
         runner = mock.Mock()
         runner.work = work
         runner.lanes = {}
@@ -552,12 +614,19 @@ class ProcessGroupTest(unittest.TestCase):
             return subprocess.CompletedProcess(argv, 0, json.dumps({"status": "pass"}) + "\n")
 
         runner.command.side_effect = command
-        listings = iter([before, after])
+        sequence = [before, after, *(later if later is not None else [after])]
+
+        def listing() -> set[int] | None:
+            # Later polls repeat the last listing, as a stuck survivor would.
+            return sequence.pop(0) if len(sequence) > 1 else sequence[0]
+
         killpg = mock.Mock()
         kill = mock.Mock()
         getpgid = mock.Mock(return_value=group) if group is not None else mock.Mock(side_effect=ProcessLookupError)
         with (
-            mock.patch.object(playable, "_retroarch_pids", side_effect=lambda: next(listings)),
+            mock.patch.object(playable, "_retroarch_pids", side_effect=listing),
+            mock.patch.object(playable, "SURVIVOR_GRACE_SECONDS", 0.05, create=True),
+            mock.patch.object(playable.time, "sleep"),
             mock.patch.object(playable.os, "killpg", killpg),
             mock.patch.object(playable.os, "kill", kill),
             mock.patch.object(playable.os, "getpgid", getpgid),
@@ -586,8 +655,38 @@ class ProcessGroupTest(unittest.TestCase):
             outcome, _, killpg, kill = self.run_lane(
                 Path(temporary), set(), {8}, child="8", group=8)
         self.assertEqual(outcome["reason"], "retroarch-instance-survived")
-        killpg.assert_called_once_with(8, signal.SIGTERM)
+        self.assertEqual(killpg.call_args_list[0], mock.call(8, signal.SIGTERM))
         kill.assert_not_called()
+
+    def test_survivor_that_exits_after_sigterm_is_not_escalated(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            outcome, _, killpg, _ = self.run_lane(
+                Path(temporary), set(), {8}, child="8", group=8, later=[set()])
+        killpg.assert_called_once_with(8, signal.SIGTERM)
+        self.assertIn("recorded group terminated", outcome["receipt"]["detail"])  # type: ignore[index]
+
+    def test_survivor_ignoring_sigterm_is_escalated_to_sigkill_on_the_recorded_group(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            outcome, _, killpg, kill = self.run_lane(
+                Path(temporary), set(), {8}, child="8", group=8, later=[{8}, {8}, set()])
+        self.assertEqual(killpg.call_args_list, [mock.call(8, signal.SIGTERM), mock.call(8, signal.SIGKILL)])
+        kill.assert_not_called()
+        self.assertEqual(outcome["reason"], "retroarch-instance-survived")
+        self.assertIn("recorded group killed", outcome["receipt"]["detail"])  # type: ignore[index]
+
+    def test_escalation_reports_a_group_that_is_still_running(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            outcome, _, killpg, _ = self.run_lane(
+                Path(temporary), set(), {8}, child="8", group=8)
+        self.assertEqual([c.args[1] for c in killpg.call_args_list], [signal.SIGTERM, signal.SIGKILL])
+        self.assertIn("recorded group still-running", outcome["receipt"]["detail"])  # type: ignore[index]
+
+    def test_unrecorded_survivor_detail_counts_it_as_not_signalled(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            outcome, _, killpg, _ = self.run_lane(Path(temporary), set(), {9}, child="8", group=9)
+        killpg.assert_not_called()
+        self.assertIn("recorded group not-signalled; 1 not signalled",
+                      outcome["receipt"]["detail"])  # type: ignore[index]
 
     def test_foreign_survivor_is_reported_and_never_signalled(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

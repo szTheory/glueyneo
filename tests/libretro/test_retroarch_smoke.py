@@ -5,6 +5,7 @@ import io
 import json
 import os
 import plistlib
+import re
 import signal
 from pathlib import Path
 import shutil
@@ -1177,6 +1178,168 @@ Sensitive unrelated line: private capture name
         self.assertTrue(no_content["survived_window"])
         self.assertFalse(core_content["survived_window"])
         self.assertEqual(smoke.compare_launch_probes(no_content, core_content), "core-or-content-invocation-failed")
+
+
+class LaunchWindowTest(unittest.TestCase):
+    """GWR-05a: a termination signal during the frontend launch is deferred, never lost (T-04-66)."""
+
+    def install(self) -> dict[int, object]:
+        handlers: dict[int, object] = {}
+        patcher = mock.patch.object(
+            smoke.signal, "signal", side_effect=lambda signum, handler: handlers.__setitem__(signum, handler))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        smoke.install_signal_cleanup()
+        return handlers
+
+    def test_launch_window_defers_a_signal_and_raises_on_exit(self) -> None:
+        handlers = self.install()
+        handler = handlers[signal.SIGTERM]
+        with self.assertRaises(smoke.SmokeBlocked) as raised:
+            with smoke.launch_window():
+                handler(signal.SIGTERM, None)  # type: ignore[operator]
+                inside = True
+        self.assertTrue(inside)
+        self.assertEqual(raised.exception.stage, "interrupted")
+        # The second-signal guards are installed before the raise.
+        self.assertEqual(handlers[signal.SIGTERM], signal.SIG_IGN)
+
+    def test_launch_window_without_a_signal_exits_quietly(self) -> None:
+        self.install()
+        with smoke.launch_window():
+            pass
+
+    def test_handler_outside_the_launch_window_raises_immediately(self) -> None:
+        handlers = self.install()
+        with self.assertRaises(smoke.SmokeBlocked) as raised:
+            handlers[signal.SIGHUP](signal.SIGHUP, None)  # type: ignore[operator]
+        self.assertEqual(raised.exception.stage, "interrupted")
+
+    def test_signal_during_popen_still_records_and_kills_the_child(self) -> None:
+        handlers = self.install()
+        process = SingleInstanceTest.Running(pid=4321)
+        with tempfile.TemporaryDirectory() as temporary:
+            pid_file = Path(temporary) / "child.pid"
+            args = mock.Mock(timeout=1.0, child_pid_file=pid_file)
+
+            def popen(*_a: object, **_k: object) -> object:
+                handlers[signal.SIGTERM](signal.SIGTERM, None)  # type: ignore[operator]
+                return process
+
+            with (
+                mock.patch.object(smoke, "validate_inputs", return_value=(
+                    Path("/app"), Path("/core"), Path("/fixture"),
+                    {"bundle_id": smoke.EXPECTED_BUNDLE_IDENTIFIER})),
+                mock.patch.object(smoke, "crash_report_snapshot", return_value={}),
+                mock.patch.object(smoke, "running_retroarch_pids", return_value=set()),
+                mock.patch.object(smoke, "collect_frontend_output", return_value=""),
+                mock.patch.object(smoke, "request_frontend_quit") as quit_frontend,
+                mock.patch.object(smoke, "kill_launched_group") as kill_group,
+                mock.patch.object(smoke.subprocess, "Popen", side_effect=popen),
+                mock.patch.object(smoke.time, "sleep"),
+            ):
+                with self.assertRaises(smoke.SmokeBlocked) as raised:
+                    smoke.run_smoke(args)
+            self.assertEqual(raised.exception.stage, "interrupted")
+            self.assertEqual(pid_file.read_text(encoding="utf-8"), "4321\n")
+        quit_frontend.assert_called_once()
+        kill_group.assert_called_once_with(process)
+
+    def test_launch_window_does_not_use_a_signal_mask(self) -> None:
+        source = Path(smoke.__file__).read_text(encoding="utf-8")
+        calls = [line for line in source.splitlines()
+                 if "pthread_sigmask(" in line and not line.lstrip().startswith("#")]
+        self.assertEqual(calls, [], "a blocked mask would be inherited by the frontend")
+
+
+class LeaderSweepTest(unittest.TestCase):
+    """GWR-05b: liveness checks do not reap, and the group is swept while the leader pins it."""
+
+    def spawn(self, script: str) -> subprocess.Popen[bytes]:
+        process = subprocess.Popen(["/bin/sh", "-c", script], stdout=subprocess.PIPE,
+                                   stderr=subprocess.DEVNULL, start_new_session=True)
+        self.addCleanup(self.kill_group, process.pid)
+        return process
+
+    @staticmethod
+    def kill_group(pid: int) -> None:
+        try:
+            os.killpg(pid, signal.SIGKILL)
+        except OSError:
+            pass
+
+    @staticmethod
+    def gone(pid: int, timeout: float = 5.0) -> bool:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                return True
+            time.sleep(0.05)
+        return False
+
+    def test_frontend_exited_does_not_reap(self) -> None:
+        process = self.spawn("exit 3")
+        deadline = time.monotonic() + 5
+        while not smoke.frontend_exited(process) and time.monotonic() < deadline:
+            time.sleep(0.02)
+        self.assertTrue(smoke.frontend_exited(process))
+        self.assertIsNone(process.returncode, "the liveness check reaped the leader")
+        self.assertEqual(smoke.reap_frontend(process, 2.0), 3)
+        self.assertEqual(process.returncode, 3)
+
+    def test_frontend_exited_is_false_for_a_running_leader(self) -> None:
+        process = self.spawn("sleep 30")
+        self.assertFalse(smoke.frontend_exited(process))
+
+    def test_reap_frontend_returns_none_when_the_leader_outlives_the_timeout(self) -> None:
+        process = self.spawn("sleep 30")
+        self.assertIsNone(smoke.reap_frontend(process, 0.2))
+
+    def test_reap_frontend_sweeps_the_group_of_an_exited_leader(self) -> None:
+        process = self.spawn("sleep 60 </dev/null >/dev/null 2>&1 & echo $!; exit 0")
+        helper = int(process.stdout.readline())  # type: ignore[union-attr]
+        self.assertEqual(smoke.reap_frontend(process, 5.0), 0)
+        self.assertTrue(self.gone(helper), "a helper in the frontend group outlived cleanup")
+
+    def test_group_sweep_happens_before_the_leader_is_reaped(self) -> None:
+        process = self.spawn("exit 0")
+        seen: list[int | None] = []
+        real_killpg = os.killpg
+
+        def killpg(pgid: int, signum: int) -> None:
+            seen.append(process.returncode)
+            real_killpg(pgid, signum)
+
+        with mock.patch.object(smoke.os, "killpg", side_effect=killpg):
+            smoke.reap_frontend(process, 5.0)
+        self.assertEqual(seen, [None], "killpg must run exactly once, while the leader is unreaped")
+
+    def test_kill_launched_group_sweeps_an_exited_but_unreaped_leader(self) -> None:
+        process = self.spawn("sleep 60 </dev/null >/dev/null 2>&1 & echo $!; exit 0")
+        helper = int(process.stdout.readline())  # type: ignore[union-attr]
+        deadline = time.monotonic() + 5
+        while not smoke.frontend_exited(process) and time.monotonic() < deadline:
+            time.sleep(0.02)
+        self.assertIsNone(process.returncode)
+        smoke.kill_launched_group(process)
+        self.assertTrue(self.gone(helper), "the sweep skipped an exited but unreaped leader")
+        self.assertIsNotNone(process.returncode)
+
+    def test_kill_launched_group_never_signals_after_the_leader_is_reaped(self) -> None:
+        process = self.spawn("exit 0")
+        process.wait(timeout=5)
+        with mock.patch.object(smoke.os, "killpg") as killpg:
+            smoke.kill_launched_group(process)
+        killpg.assert_not_called()
+
+    def test_liveness_is_routed_through_the_non_reaping_helpers(self) -> None:
+        source = Path(smoke.__file__).read_text(encoding="utf-8")
+        direct = [line for line in source.splitlines()
+                  if re.search(r"process\.(poll|wait)\(", line)]
+        self.assertLessEqual(len(direct), 3, direct)
+        self.assertIn("WNOWAIT", source)
 
 
 if __name__ == "__main__":
