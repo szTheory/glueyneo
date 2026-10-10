@@ -92,6 +92,21 @@ def _decode_percent(match: re.Match[str]) -> str:
         return "".join(chr(byte) if byte < 0x80 else f"%{byte:02X}" for byte in raw)
 
 
+def _combines(character: str) -> bool:
+    """True for a code point that composes with the preceding one under NFC/NFKC."""
+    return (unicodedata.combining(character) != 0 or unicodedata.category(character).startswith("M")
+            or "\u1160" <= character <= "\u11ff")  # Hangul vowel and trailing jamo
+
+
+def _clusters(value: str, index: list[int]) -> Iterable[tuple[str, int]]:
+    """Yield (base plus following combining marks, origin of the base)."""
+    start = 0
+    for position in range(1, len(value) + 1):
+        if position == len(value) or not _combines(value[position]):
+            yield value[start:position], index[start]
+            start = position
+
+
 def _normalize(text: str) -> tuple[str, list[int]]:
     """Escapes, bounded percent fixpoint, NFKC and casefold, with an origin map."""
     value, index = text, list(range(len(text)))
@@ -108,8 +123,10 @@ def _normalize(text: str) -> tuple[str, list[int]]:
         return value.casefold(), index
     folded: list[str] = []
     mapped = []
-    for character, origin in zip(value, index):
-        piece = unicodedata.normalize("NFKC", character).casefold()
+    # NFKC must see a base letter together with its combining marks, or a decomposed
+    # (NFD) spelling never composes to the NFC form of the same root (T-04-11).
+    for cluster, origin in _clusters(value, index):
+        piece = unicodedata.normalize("NFKC", unicodedata.normalize("NFKC", cluster).casefold())
         folded.append(piece)
         mapped.extend([origin] * len(piece))
     return "".join(folded), mapped
@@ -234,7 +251,7 @@ def redact(text: str, marker: str = "[redacted-path]",
 
 def _username_token_present(text: str) -> bool:
     try:
-        name = Path.home().name.casefold()
+        name = _normalize(Path.home().name)[0]  # same NFKC form as the scanned text
     except (RuntimeError, KeyError, OSError):
         return False
     if len(name) < 3:
