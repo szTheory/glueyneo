@@ -74,6 +74,26 @@ class CoverageTest(unittest.TestCase):
             "0000000000001000 (__TEXT,__text) external _f\n")
         self.assertEqual(audit.writable_symbols(output, "darwin"), ["_tls_zero", "_tls_init", "_tls_desc"])
 
+    def test_t_04_56_private_and_weak_external_darwin_globals_are_reported(self) -> None:
+        output = (
+            "0000000000004000 (__DATA,__data) private external _hidden_counter\n"
+            "0000000000004008 (__DATA,__bss) weak external _weak_state\n"
+            "0000000000004010 (__DATA,__bss) weak private external _weak_hidden\n"
+            "0000000000004018 (__DATA,__data) non-external (was a private external) _demoted\n"
+            "0000000000001000 (__TEXT,__text) private external _hidden_function\n")
+        found, parsed = audit.parse_symbols(output, "darwin")
+        self.assertEqual(found, ["_hidden_counter", "_weak_state", "_weak_hidden", "_demoted"])
+        self.assertEqual(parsed, 5)
+
+    def test_wr_08_unlinked_common_darwin_symbols_are_reported(self) -> None:
+        output = (
+            "0000000000000004 (common) (alignment 2^2) external _tentative_global\n"
+            "0000000000000008 (common) (alignment 2^3) private external _tentative_hidden\n"
+            "0000000000001000 (__TEXT,__text) external _f\n")
+        found, parsed = audit.parse_symbols(output, "darwin")
+        self.assertEqual(found, ["_tentative_global", "_tentative_hidden"])
+        self.assertEqual(parsed, 3)
+
     def test_parse_reports_how_many_lines_were_symbols(self) -> None:
         self.assertEqual(audit.parse_symbols(DARWIN, "darwin")[1], 7)
         self.assertEqual(audit.parse_symbols(LINUX, "linux")[1], 12)
