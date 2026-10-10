@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
-current_plan: 3
+current_plan: 4
 status: executing
-stopped_at: Completed 04-33-PLAN.md
-last_updated: "2026-10-10T17:47:08.163Z"
+stopped_at: Completed 04-34-PLAN.md
+last_updated: "2026-10-10T18:09:19.465Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 04 execution started
-state_head: 6fe63885f5ac2764409fe355371ba94c61df314b
+state_head: 3956fbf84036e10444642072564f52670a69fb01
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 42
-  completed_plans: 39
+  completed_plans: 40
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 ## Current Position
 
 Phase: 04 (Public Playable Tracer) — EXECUTING
-Current Plan: 3
+Current Plan: 4
 Total Plans in Phase: 36
 Status: Ready to execute
 Last activity: 2026-10-10 — Phase 04 execution started
@@ -42,7 +42,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 3
+**Current Plan:** 4
 
 ## Performance Metrics
 
@@ -85,12 +85,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P31 | 40min | 3 tasks | 7 files |
 | Phase 04 P32 | 6 min | 3 tasks | 10 files |
 | Phase 04 P33 | 13 min | 4 tasks | 10 files |
+| Phase 04 P34 | 35 min | 2 tasks | 5 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-10T17:47:08.122Z
+**Last session:** 2026-10-10T18:09:19.437Z
 
-**Stopped At:** Completed 04-33-PLAN.md
+**Stopped At:** Completed 04-34-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
@@ -164,6 +165,7 @@ unchanged external-blocker plan. Plan/summary counts are not phase acceptance.
 - [Phase 04]: 04-30: bare home-name token skipped only for generic service-account names under GITHUB_ACTIONS (residual T-04-60 accepted)
 - [Phase 04]: D-GAP-01: scratch directory itself is contained in independent_review.py; '..' anywhere and unmatched absolute-prefix globs fail closed
 - [Phase 04]: 04-33: GIN-01 and GIN-04 accepted as fail-closed limits pinned by tests; smoke defers launch-window signals instead of masking them (mask is inherited by the frontend)
+- [Phase 04]: 04-34: contained review (D-GAP-01) left 9 threats/2 findings open; T-04-44/52/55/60 accepted per D-GAP-02
 
 ### Blockers
 
