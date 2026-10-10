@@ -791,6 +791,54 @@ class CrosswalkProvenanceTest(DocumentationCopies, unittest.TestCase):
                 self.mutate_row(transform, expected)
 
 
+class GuideClaimTest(DocumentationCopies, unittest.TestCase):
+    """Prose outside the generated block cannot state a claim the receipt does not bind (CR-04, E3)."""
+
+    CLAIMS = (
+        "HOST-02 passed in RetroArch.",
+        "QUAL-03 is done.",
+        "The receipt at 706516b5a60c passed every lane.",
+        "Frontend support is Complete.",
+        "Pinned build Qualified.",
+    )
+
+    def guide_with(self, source_root: Path, extra: str) -> None:
+        self.copy_documentation_with_evidence(source_root)
+        guide = source_root / playable.GUIDE
+        guide.write_text(guide.read_text(encoding="utf-8") + "\n" + extra + "\n", encoding="utf-8")
+
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    def test_claims_appended_after_the_generated_block_are_rejected(self) -> None:
+        for claim in self.CLAIMS:
+            with self.subTest(claim=claim), tempfile.TemporaryDirectory(prefix="playable-claim-") as temporary:
+                source_root = Path(temporary)
+                self.guide_with(source_root, claim)
+                with self.assertRaisesRegex(RuntimeError, "status claim outside the generated block"):
+                    playable.check_docs(source_root, repository=ROOT)
+
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    def test_digests_and_pinned_revisions_outside_the_block_are_allowed(self) -> None:
+        extra = f"Digest {'ab12' * 16} and pins {playable.YMFM_REVISION} {playable.Z80_REVISION}."
+        with tempfile.TemporaryDirectory(prefix="playable-claim-ok-") as temporary:
+            source_root = Path(temporary)
+            self.guide_with(source_root, extra)
+            playable.check_docs(source_root, repository=ROOT)
+
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    def test_live_guide_has_no_outside_block_claims(self) -> None:
+        guide = (ROOT / playable.GUIDE).read_text(encoding="utf-8")
+        self.assertEqual(playable.guide_claims_outside_block(guide), [])
+
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    def test_guide_with_a_private_checkout_path_is_rejected(self) -> None:
+        private = str(playable.ROOT).replace("/", "\u2215")
+        with tempfile.TemporaryDirectory(prefix="playable-claim-path-") as temporary:
+            source_root = Path(temporary)
+            self.guide_with(source_root, f"Build in {private}/build.")
+            with self.assertRaisesRegex(RuntimeError, "private absolute path"):
+                playable.check_docs(source_root, repository=ROOT)
+
+
 class MainErrorPathTest(unittest.TestCase):
     """Early failures still write a named fail receipt, and printed errors are redacted (CR-08, CR-09, IN-04)."""
 
