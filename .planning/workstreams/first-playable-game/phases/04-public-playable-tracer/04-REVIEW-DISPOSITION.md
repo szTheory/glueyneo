@@ -3,10 +3,94 @@ phase: 04
 review: 04-REVIEW.md
 titles: json
 findings:
+  - id: CR-01
+    severity: critical
+    disposition: open
+    title: "Private-path redaction and scan miss separator/encoding variants (confirmed)"
+  - id: CR-02
+    severity: critical
+    disposition: open
+    title: "`scan_public` is applied to `ensure_ascii` JSON, which defeats NFKC folding at every sink"
+  - id: CR-03
+    severity: critical
+    disposition: open
+    title: "Frontend-evidence inventory binding is skipped when `.git` is absent, including the documented `--clean --check-docs` path (confirmed)"
+  - id: CR-04
+    severity: critical
+    disposition: open
+    title: "`check_docs` passes affirmative success prose outside the generated status block (confirmed)"
+  - id: CR-05
+    severity: critical
+    disposition: open
+    title: "Crosswalk \"Existing Threat Scope\" accepts any non-empty text, including nonexistent paths (confirmed)"
+  - id: CR-06
+    severity: critical
+    disposition: open
+    title: "`check_security_register.py` reads only the first `threats_open` and only the first threat table (confirmed)"
+  - id: CR-07
+    severity: critical
+    disposition: open
+    title: "Outer timeout orphans the `start_new_session` RetroArch child; no pre-launch instance check (confirmed)"
+  - id: CR-08
+    severity: critical
+    disposition: open
+    title: "`main()` raises `AttributeError` on any early failure, so no receipt is written"
+  - id: CR-09
+    severity: critical
+    disposition: open
+    title: "Raw exception text is printed unredacted from `--record-frontend-evidence` and `--check-docs`"
+  - id: WR-01
+    severity: warning
+    disposition: open
+    title: "`write_frontend_records` is non-atomic and writes before validating its targets"
+  - id: WR-02
+    severity: warning
+    disposition: open
+    title: "`validate_frontend_evidence` does not type-check nested fields it later dereferences"
+  - id: WR-03
+    severity: warning
+    disposition: open
+    title: "`Runner.command` timeout kills only the direct child"
+  - id: WR-04
+    severity: warning
+    disposition: open
+    title: "Screenshot handling is racy and can raise uncaught non-`SmokeBlocked` exceptions"
+  - id: WR-05
+    severity: warning
+    disposition: open
+    title: "Unbounded read of non-GNMV content before the size check"
+  - id: WR-06
+    severity: warning
+    disposition: open
+    title: "`private_paths` fails closed on benign text (self-inflicted false positives)"
+  - id: WR-07
+    severity: warning
+    disposition: open
+    title: "Product CTest couples to planning state and a hard-coded workstream; `block_on` is brittle"
+  - id: WR-08
+    severity: warning
+    disposition: open
+    title: "`glueyneo_runtime_static` duplicates runtime state and the configure-time guard is heuristic"
   - id: WR-09
     severity: warning
     disposition: open
-    title: "Review provenance gate accepts unsupported extra file claims"
+    title: "Local `git` invocations use the caller's environment"
+  - id: IN-01
+    severity: info
+    disposition: open
+    title: "Stale and contradictory guide text"
+  - id: IN-02
+    severity: info
+    disposition: open
+    title: "Dead or redundant code in `retroarch_smoke.py`"
+  - id: IN-03
+    severity: info
+    disposition: open
+    title: "Minor issues in `check_package.py`"
+  - id: IN-04
+    severity: info
+    disposition: open
+    title: "Test-oracle gaps that let the confirmed defects through"
   - id: WR-10
     severity: warning
     disposition: fixed
@@ -15,73 +99,39 @@ findings:
     severity: warning
     disposition: fixed
     title: "Review identity parser accepts duplicate revision keys"
-  - id: WR-08
-    severity: warning
-    disposition: open
-    title: "Frontend output claim filter misses common success wording"
-  - id: WR-01
-    severity: warning
-    disposition: open
-    title: "Guide claim filter accepts affirmative frontend paraphrases"
-  - id: WR-02
-    severity: warning
-    disposition: fixed
-    title: "Evidence checker accepts a stale current qualification denominator"
-  - id: WR-06
-    severity: warning
-    disposition: open
-    title: "Frontend closure blacklist misses equivalent success claims [WARNING]"
-  - id: WR-07
-    severity: warning
-    disposition: fixed
-    title: "Evidence-map fixtures mask removal of the required verification sentence [WARNING]"
-  - id: CR-03
-    severity: critical
-    disposition: fixed
-    title: "Newline in diagnostic path exposes the remaining private path [BLOCKER]"
-  - id: WR-05
-    severity: warning
-    disposition: fixed
-    title: "Crosswalk disposition check accepts contradictory wording [WARNING]"
-  - id: CR-02
-    severity: critical
-    disposition: fixed
-    title: "Raw literal quotes inside private paths exposed suffixes [BLOCKER]"
-  - id: WR-04
-    severity: warning
-    disposition: fixed
-    title: "Validation-map parser rejected valid Info findings [WARNING]"
-  - id: CR-01
-    severity: critical
-    disposition: fixed
-    title: "Boolean byte count bypass fixed by exact integer validation"
-  - id: WR-03
-    severity: warning
-    disposition: fixed
-    title: "Repository-backed receipt validation accepts forged file-content hashes"
-open: 4
-total: 14
-recorded: 2026-10-09T01:01:14.211Z
+open: 22
+total: 24
+recorded: 2026-10-10T12:57:15.286Z
 ---
 
 # Phase 04: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-09 | warning | open | fixed: exact reviewed-path set enforced at 007f331; checker retired in c75f577 (provenance moves to GSD review frontmatter); Current standard-depth review at `04-REVIEW.md`, revision `48befe7a92d7c545e7c900c57e027b9e15952a7f`, reproduced acceptance of a nonexistent extra review path; Independent post-c75f577 review (04-23, aaf3f093ab0f) did not confirm the fix: the reviewer could still pass appended success wording through the docs gate or an unsupported review path, so the finding is open. (not in the current review) |
-| WR-08 | warning | open | fixed: superseded in c75f577; the uncertainty matcher is retired with the evidence-map checker; Independent review at `04-REVIEW.md`, revision `f1c8a1de5f25224b83da6ec9e4bc40bf51a249ae`, exercised the control-success counterexample; the current claim parser and 22 mutation tests reject it while preserving explicit unknown evidence. Independent post-c75f577 review (04-23, aaf3f093ab0f) did not confirm the fix: the reviewer could still pass appended success wording through the docs gate or an unsupported review path, so the finding is open. (not in the current review) |
-| WR-01 | warning | open | fixed: superseded in cc73f94; prose claim scan replaced by status generated from bound receipt evidence; Historical review `04-REVIEW.md` at `87f8d4c`; reviewed revision `870848e553aca6e43f6fec8ae0acefac87270f5b`, 2026-10-08T23:46:34Z; Independent post-c75f577 review (04-23, aaf3f093ab0f) did not confirm the fix: the reviewer could still pass appended success wording through the docs gate or an unsupported review path, so the finding is open. (not in the current review) |
-| WR-02 | warning | fixed | Independent current-revision review `04-REVIEW.md` at `870848e553aca6e43f6fec8ae0acefac87270f5b` inspected checker and mutation test; live qualification 25/25, 15/15 mutation tests reject stale 23/23, and direct checker passes. (not in the current review) |
-| WR-06 | warning | open | fixed: superseded in cc73f94; prose claim scan replaced by status generated from bound receipt evidence; The independent review at revision `f1c8a1de5f25224b83da6ec9e4bc40bf51a249ae` verified current tests reject “frontend booted the game and showed its output,” control-success wording, and a copied guide's “Guest pixels were displayed” claim. Independent post-c75f577 review (04-23, aaf3f093ab0f) did not confirm the fix: the reviewer could still pass appended success wording through the docs gate or an unsupported review path, so the finding is open. (not in the current review) |
-| WR-07 | warning | fixed | Current mutation fixture reads the actual verification source row before mutation; source-derived checker rows reject removal and false closure (14-test suite). (not in the current review) |
-| CR-03 | critical | fixed | Current qualification and frontend regressions remove the complete newline-containing private-path suffix at retained and printed sinks; reviewed at `9804351907e456b3ab85ebe4a49959c05b0714bb`. (not in the current review) |
-| WR-05 | warning | fixed | Current checker reconciles normalized exact crosswalk state against disposition records and mutation tests reject contradiction/duplicates. (not in the current review) |
-| CR-02 | critical | fixed | Plan 04-14 closes the raw-literal-quote case; fresh review confirms that specific suffix case is removed. CR-03 remains open for newline-containing paths. (not in the current review) |
-| WR-04 | warning | fixed | Plan 04-14 adds Info/IN parsing and severity reconciliation; fresh review confirms this finding is addressed. (not in the current review) |
-| CR-01 | critical | fixed | Plan 04-12 exact-integer receipt validation; absent from the fresh current review. (not in the current review) |
-| WR-03 | warning | fixed | Repository receipt validates committed archive rows and rejects forged file rows after aggregate recomputation; current qualification regression passes. (not in the current review) |
-| WR-10 | warning | fixed | Independent clean review at `04-REVIEW.md`, revision `007f331b1507331382826e779218d39a5f31fab4`, confirms the current validation row, 24/24 source-derived mutation suite, and target-specific rejection assertions; the original frozen finding at `1781f47c1331b4d5acb7ea52873c3e4125fbca96` is resolved. |
-| WR-11 | warning | fixed | Independent clean review at `04-REVIEW.md`, revision `007f331b1507331382826e779218d39a5f31fab4`, confirms exact-one-key parsing and regressions for valid/malformed duplicates and malformed sole values; the original frozen finding at `1781f47c1331b4d5acb7ea52873c3e4125fbca96` is resolved. The separate WR-09/T-04-43 scope threat remains open. |
+| CR-01 | critical | open | - |
+| CR-02 | critical | open | - |
+| CR-03 | critical | open | - |
+| CR-04 | critical | open | - |
+| CR-05 | critical | open | - |
+| CR-06 | critical | open | - |
+| CR-07 | critical | open | - |
+| CR-08 | critical | open | - |
+| CR-09 | critical | open | - |
+| WR-01 | warning | open | - |
+| WR-02 | warning | open | - |
+| WR-03 | warning | open | - |
+| WR-04 | warning | open | - |
+| WR-05 | warning | open | - |
+| WR-06 | warning | open | - |
+| WR-07 | warning | open | - |
+| WR-08 | warning | open | - |
+| WR-09 | warning | open | - |
+| IN-01 | info | open | - |
+| IN-02 | info | open | - |
+| IN-03 | info | open | - |
+| IN-04 | info | open | - |
+| WR-10 | warning | fixed | Independent clean review at `04-REVIEW.md`, revision `007f331b1507331382826e779218d39a5f31fab4`, confirms the current validation row, 24/24 source-derived mutation suite, and target-specific rejection assertions; the original frozen finding at `1781f47c1331b4d5acb7ea52873c3e4125fbca96` is resolved. (not in the current review) |
+| WR-11 | warning | fixed | Independent clean review at `04-REVIEW.md`, revision `007f331b1507331382826e779218d39a5f31fab4`, confirms exact-one-key parsing and regressions for valid/malformed duplicates and malformed sole values; the original frozen finding at `1781f47c1331b4d5acb7ea52873c3e4125fbca96` is resolved. The separate WR-09/T-04-43 scope threat remains open. (not in the current review) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
