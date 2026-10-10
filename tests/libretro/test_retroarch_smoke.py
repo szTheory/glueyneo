@@ -1289,6 +1289,46 @@ class LaunchWindowTest(unittest.TestCase):
         quit_frontend.assert_called_once()
         kill_group.assert_called_once_with(process)
 
+    def run_smoke_pid_record_failure(self, error: OSError) -> tuple[smoke.SmokeBlocked, mock.Mock, mock.Mock, mock.Mock]:
+        self.install()
+        process = SingleInstanceTest.Running(pid=4321)
+        args = mock.Mock(timeout=1.0, child_pid_file=Path("child.pid"))
+        with (
+            mock.patch.object(smoke, "validate_inputs", return_value=(
+                Path("/app"), Path("/core"), Path("/fixture"),
+                {"bundle_id": smoke.EXPECTED_BUNDLE_IDENTIFIER})),
+            mock.patch.object(smoke, "crash_report_snapshot", return_value={}),
+            mock.patch.object(smoke, "running_retroarch_pids", return_value=set()),
+            mock.patch.object(smoke, "collect_frontend_output", return_value=""),
+            mock.patch.object(smoke, "record_child_pid", side_effect=error),
+            mock.patch.object(smoke, "request_frontend_quit") as quit_frontend,
+            mock.patch.object(smoke, "kill_launched_group") as kill_group,
+            mock.patch.object(smoke, "build_diagnostic", wraps=smoke.build_diagnostic) as build,
+            mock.patch.object(smoke.subprocess, "Popen", return_value=process),
+            mock.patch.object(smoke.time, "sleep"),
+        ):
+            try:
+                smoke.run_smoke(args)
+            except smoke.SmokeBlocked as blocked:
+                return blocked, quit_frontend, kill_group, build
+            except Exception as unexpected:  # noqa: BLE001 - RED discipline: report, never error
+                self.fail(f"uncaught {type(unexpected).__name__}")
+        self.fail("run_smoke did not raise SmokeBlocked")
+
+    def test_g3in_02_pid_record_detail_keeps_the_error_class(self) -> None:
+        blocked, quit_frontend, kill_group, _build = self.run_smoke_pid_record_failure(
+            PermissionError("denied"))
+        self.assertEqual(blocked.stage, "pid-record")
+        self.assertIn("PermissionError", str(blocked))
+        self.assertEqual(blocked.diagnostic["stage"], "pid-record")
+        quit_frontend.assert_called_once()
+        kill_group.assert_called_once()
+
+    def test_g3in_02_single_pid_record_diagnostic(self) -> None:
+        _blocked, _quit, _kill, build = self.run_smoke_pid_record_failure(OSError("disk full"))
+        self.assertEqual(build.call_count, 1)
+        self.assertEqual(build.call_args.kwargs["stage"], "pid-record")
+
     def probe_with(self, *, popen: dict[str, object], pid_record: dict[str, object]) -> tuple[dict[str, object], mock.Mock, mock.Mock]:
         """Run `run_launch_probe` with every host operation mocked (G3WR-03)."""
         self.install()
