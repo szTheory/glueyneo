@@ -322,6 +322,12 @@ supervisor stack/vector behavior, 62 cycles, and no operand write.
 - `python3 tools/public_content.py --root . --history-revision HEAD` fails on
   personal-path findings in this local branch history. Finding details are
   intentionally omitted; this checkout history is not publishable.
+- An actual-process smoke using the generated public fixture,
+  `python3 tests/libretro/retroarch_smoke.py --retroarch /Applications/RetroArch.app --core build/sdk-debug/glueyneo_libretro.dylib --content build/sdk-debug/public-playable.bin --timeout 20`,
+  detected pinned RetroArch 1.22.2 but exited `-6` at `first-screenshot`
+  before producing a screenshot. The runner classified it
+  `blocked_or_unknown`; this public GNFX fixture attempt does not establish
+  selected MVS media behavior or a passing frontend flow.
 - The scan failure is distinct from the zero-finding public-content/history
   result for candidate `e80672845fc60d94d8a44eab416377534c9a99f1`. Candidate
   receipts and CI results remain valid only for that exact SHA.
