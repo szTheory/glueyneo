@@ -1,9 +1,9 @@
 {
-  "core_sha256": "46f258fcf92e48ffb80f034c54f36472a8617150fde33e678cabe83976b177a7",
+  "core_sha256": "d47ff1a7ae73757a485c3709184d33b85943f52fd33e977afce0f8dcd837d286",
   "fixture_sha256": "59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0",
   "frontend_unloaded": true,
   "input_mapping": "RetroPad RIGHT <- Right Arrow; LEFT control <- Left Arrow",
-  "inventory_sha256": "061004c3f84f130197d30fb8be2be365347b581def23232d83d5ae1af9fa079e",
+  "inventory_sha256": "865e60569c8fc1ba941b4ed8bade277e3a0e3d42c0680f83c7a02b0cb000b465",
   "lanes": {
     "actual-retroarch-smoke": "pass",
     "consumer-shared-build": "pass",
@@ -51,6 +51,6 @@
   },
   "retroarch_status": "pass",
   "schema": 1,
-  "source_revision": "7615dd91167878106d39b69d62d37e7cdc3013b5",
+  "source_revision": "0d9612130092e379186df63dddc7870d43b2ae58",
   "status": "pass"
 }
