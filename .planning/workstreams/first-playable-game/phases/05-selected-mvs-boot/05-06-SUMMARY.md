@@ -38,6 +38,40 @@ actuals:
   tokens: 10336
   tasks: 2
   commits: 1
+coverage:
+  - id: D1
+    description: "The reviewed oracle identity and affirmative public-rights rows clear the local public-content and MVS matrix gates."
+    verification:
+      - kind: unit
+        ref: "python3 tests/sdk/test_matrix_evidence.py"
+        status: pass
+      - kind: integration
+        ref: "python3 tools/public_content.py --root . --history-revision HEAD"
+        status: pass
+      - kind: integration
+        ref: "python3 tools/verify_sdk.py --suite matrix"
+        status: pass
+    human_judgment: false
+  - id: D2
+    description: "The selected guest reaches an independently justified guest-written attract/start predicate within the measured bound."
+    verification:
+      - kind: integration
+        ref: "Selected native qualification; latest accepted observation remains budget exhaustion without a source-backed predicate."
+        status: unknown
+    human_judgment: true
+    rationale: "No independent selected configuration or sourced guest-write predicate is available; do not invent a watchpoint or repeat the unchanged bounded run."
+  - id: D3
+    description: "The reviewed public candidate has an eligible hosted exact-SHA seven-test MVS receipt."
+    verification:
+      - kind: integration
+        ref: "PR #2 candidate SHA e80672845fc60d94d8a44eab416377534c9a99f1; hosted run 38001400110; seven named MVS tests, positive denominator, matching source/output digests, passing aggregate. Candidate-only; PR remains REVIEW_REQUIRED."
+        status: pass
+    human_judgment: false
+  - id: D4
+    description: "The selected media loads through the actual pinned RetroArch flow and satisfies the selected-game behavior."
+    verification: []
+    human_judgment: true
+    rationale: "The selected guest checkpoint prerequisite is unmet and the prior app launch preconditions did not materially change; actual selected-media app behavior remains unknown/manual-only."
 ---
 
 # Phase 05 Plan 06: Selected MVS evidence and exact-SHA hosted qualification
