@@ -183,8 +183,40 @@ findings:
     severity: info
     disposition: open
     title: "Qualification-failure reasons use bare `redact` while documentation reasons use the scan-backed helper"
-open: 12
-total: 45
+  - id: G3WR-01
+    severity: warning
+    disposition: open
+    title: "Lane timeout output is duplicated and out of order after the drain change (regression from G2IN-02)"
+  - id: G3WR-02
+    severity: warning
+    disposition: open
+    title: "Reviewer gate does not recognize G3 finding IDs; the ID alternation is hand-extended every round"
+  - id: G3WR-03
+    severity: warning
+    disposition: open
+    title: "Diagnostic probe still labels a child-PID-record failure as `launch` and reports a running frontend as not started"
+  - id: G3WR-04
+    severity: warning
+    disposition: open
+    title: "Rollback can still abort mid-way through the `.restore` cleanup, defeating \"every restore is attempted\" (G2WR-05)"
+  - id: G3WR-05
+    severity: warning
+    disposition: open
+    title: "Provenance window is anchored to the original review, so it cannot order dispositions of later gap-round findings"
+  - id: G3IN-01
+    severity: info
+    disposition: open
+    title: "`$`-prefixed patterns are refused inside groups but not at the top level, contradicting the comment and docs"
+  - id: G3IN-02
+    severity: info
+    disposition: open
+    title: "Dead launch diagnostic in `run_smoke` for the `pid-record` branch"
+  - id: G3IN-03
+    severity: info
+    disposition: open
+    title: "Register checker silently ignores mis-named register files and `verified` with a trailing comment"
+open: 20
+total: 53
 recorded: 2026-10-10T12:57:15.286Z
 ---
 
@@ -237,6 +269,14 @@ recorded: 2026-10-10T12:57:15.286Z
 | G2IN-01 | info | open | Reported by 04-REVIEW-GAPS-R2.md (dd10b8d). Gap-closure fix (04-37) at revision `fbb9438f4ee3d9ac411ba8acdcc85760dfad90c1`: tests/tools/check_security_register.py:54; regression tests test_g2in_01_verified_status_is_case_insensitive. Pending focused re-review. |
 | G2IN-02 | info | open | Reported by 04-REVIEW-GAPS-R2.md (dd10b8d). Gap-closure fix (04-39) at revision `51ce2ebfed6458e7653eb9018e0adb9da186a6a5`: tools/verify_playable.py:528-598; regression tests test_g2in_02_lane_drains_pipe_during_grace. Pending focused re-review. |
 | G2IN-03 | info | open | Reported by 04-REVIEW-GAPS-R2.md (dd10b8d). Gap-closure fix (04-38) at revision `756c2422c0b6fa41190d681d1c2ea2fb30117425`: tools/verify_playable.py:1598-1601; regression tests test_g2in_03_build_failure_reason_uses_public_reason. Pending focused re-review. |
+| G3WR-01 | warning | open | Reported by 04-REVIEW-GAPS-R3.md (f675d7c). Gap-closure fix (04-45) at revision `eebcddedfaa320052d5216c3dca2f5ad95681959`: tools/verify_playable.py:547 `_terminate_lane_group`; regression tests test_g3wr_01_timed_out_lane_output_is_single_copy_in_order, test_g3wr_01_no_earlier_output. Pending focused re-review. |
+| G3WR-02 | warning | open | Reported by 04-REVIEW-GAPS-R3.md (f675d7c). Gap-closure fix (04-47) at revision `fe04de2e9c56c419401b25a25160d4b19824b4fa`: tools/independent_review.py:71,213 `ID_PATTERN` and `review_ids`; regression tests test_g3wr_02_round_three_and_later_ids_are_reviewable, test_g3wr_02_review_ids_rejects_malformed_ids, test_g3wr_02_malformed_verdict_lines_leave_the_id_open. Pending focused re-review. |
+| G3WR-03 | warning | open | Reported by 04-REVIEW-GAPS-R3.md (f675d7c). Gap-closure fix (04-48) at revision `96a413ca6b6ec56bca506a0f3f7f38d91ad34dac`: tests/libretro/retroarch_smoke.py:205,798,974; regression tests test_g3wr_03_*. Pending focused re-review. |
+| G3WR-04 | warning | open | Reported by 04-REVIEW-GAPS-R3.md (f675d7c). Gap-closure fix (04-45) at revision `eebcddedfaa320052d5216c3dca2f5ad95681959`: tools/verify_playable.py:1038 `write_frontend_records`; regression tests test_g3wr_04_restore_unlink_failure_does_not_abort_rollback, test_g3wr_04_temporary_unlink_failure_does_not_mask_the_result. Pending focused re-review. |
+| G3WR-05 | warning | open | Reported by 04-REVIEW-GAPS-R3.md (f675d7c). Gap-closure fix (04-46) at revision `df7b9406508221277074e16da5761c76200fb3f3`: tools/verify_playable.py:1294,1313 `_review_round_anchor` and `review_provenance_errors`; regression tests test_g3wr_05_*. Pending focused re-review. |
+| G3IN-01 | info | open | Reported by 04-REVIEW-GAPS-R3.md (f675d7c). Gap-closure fix (04-47) at revision `fe04de2e9c56c419401b25a25160d4b19824b4fa`: tools/independent_review.py:101,112; regression tests test_g3in_01_leading_dollar_is_not_contained. Pending focused re-review. |
+| G3IN-02 | info | open | Reported by 04-REVIEW-GAPS-R3.md (f675d7c). Gap-closure fix (04-48) at revision `4ca3218e4ce1b892ee807d09a9b657e41ba3c533`: tests/libretro/retroarch_smoke.py:798,974; regression tests test_g3in_02_pid_record_detail_keeps_the_error_class, test_g3in_02_single_pid_record_diagnostic. Pending focused re-review. |
+| G3IN-03 | info | open | Reported by 04-REVIEW-GAPS-R3.md (f675d7c). Gap-closure fix (04-43) at revision `17e35704421bf85966c86343f33445973a7f17d5`: tests/tools/check_security_register.py:148,189; regression tests test_g3in_03_misnamed_register_shaped_files_fail, test_g3in_03_non_register_documents_are_skipped_and_reported, test_g3in_03_verified_may_carry_a_trailing_comment. Pending focused re-review. |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
