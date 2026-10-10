@@ -111,34 +111,44 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 
 ## Review Finding Crosswalk
 
-Rebased on the 2026-10-10 review (24 current disposition records). The earlier rows are historical in git history at the 04-23 revision.
+Rebased on the 2026-10-10 review (34 current disposition records). The earlier rows are historical in git history at the 04-23 revision.
 
 | Review Finding | Severity | Existing Threat Scope | Disposition |
 |----------------|----------|-----------------------|-------------|
-| CR-01 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20; `tools/private_paths.py` | open |
-| CR-02 | critical | T-04-11 / T-04-45; `tools/verify_playable.py`; `tests/libretro/retroarch_smoke.py` | open |
-| CR-03 | critical | T-04-46; `tools/verify_playable.py` | open |
-| CR-04 | critical | T-04-34; `docs/first-playable-build.md` | open |
-| CR-05 | critical | T-04-38 / T-04-43; `tools/verify_playable.py` | open |
-| CR-06 | critical | T-04-48; `tests/tools/check_security_register.py` | open |
-| CR-07 | critical | T-04-47; `tests/libretro/retroarch_smoke.py` | open |
-| CR-08 | critical | T-04-12; `tools/verify_playable.py` | open |
-| CR-09 | critical | T-04-11 / T-04-45; `tools/verify_playable.py` | open |
-| WR-01 | warning | T-04-45; `tools/verify_playable.py` | open |
-| WR-02 | warning | T-04-46; `tools/verify_playable.py` | open |
-| WR-03 | warning | T-04-47; `tools/verify_playable.py` | open |
-| WR-04 | warning | T-04-18 / T-04-47; `tests/libretro/retroarch_smoke.py` | open |
-| WR-05 | warning | T-04-21; `tests/libretro/retroarch_smoke.py` | open |
-| WR-06 | warning | `tools/private_paths.py` | open |
-| WR-07 | warning | `CMakeLists.txt`; `tests/tools/check_security_register.py` | open |
+| CR-01 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20; `tools/private_paths.py` | fixed |
+| CR-02 | critical | T-04-11 / T-04-45; `tools/verify_playable.py`; `tests/libretro/retroarch_smoke.py` | fixed |
+| CR-03 | critical | T-04-46; `tools/verify_playable.py` | fixed |
+| CR-04 | critical | T-04-34; `docs/first-playable-build.md` | fixed |
+| CR-05 | critical | T-04-38 / T-04-43; `tools/verify_playable.py` | fixed |
+| CR-06 | critical | T-04-48; `tests/tools/check_security_register.py` | fixed |
+| CR-07 | critical | T-04-47; `tests/libretro/retroarch_smoke.py` | fixed |
+| CR-08 | critical | T-04-12; `tools/verify_playable.py` | fixed |
+| CR-09 | critical | T-04-11 / T-04-45; `tools/verify_playable.py` | fixed |
+| WR-01 | warning | T-04-45; `tools/verify_playable.py` | fixed |
+| WR-02 | warning | T-04-46; `tools/verify_playable.py` | fixed |
+| WR-03 | warning | T-04-47; `tools/verify_playable.py` | fixed |
+| WR-04 | warning | T-04-18 / T-04-47; `tests/libretro/retroarch_smoke.py` | fixed |
+| WR-05 | warning | T-04-21; `tests/libretro/retroarch_smoke.py` | fixed |
+| WR-06 | warning | `tools/private_paths.py` | fixed |
+| WR-07 | warning | `CMakeLists.txt`; `tests/tools/check_security_register.py` | fixed |
 | WR-08 | warning | `CMakeLists.txt` | open |
-| WR-09 | warning | T-04-43 / T-04-46; `tools/verify_playable.py` | open |
-| IN-01 | info | `docs/first-playable-build.md` | open |
-| IN-02 | info | `tests/libretro/retroarch_smoke.py` | open |
-| IN-03 | info | `tests/consumers/check_package.py` | open |
-| IN-04 | info | `tests/tools/test_private_paths.py`; `tests/tools/test_check_security_register.py`; `tests/tools/test_verify_playable.py` | open |
+| WR-09 | warning | T-04-43 / T-04-46; `tools/verify_playable.py` | fixed |
+| IN-01 | info | `docs/first-playable-build.md` | fixed |
+| IN-02 | info | `tests/libretro/retroarch_smoke.py` | fixed |
+| IN-03 | info | `tests/consumers/check_package.py` | fixed |
+| IN-04 | info | `tests/tools/test_private_paths.py`; `tests/tools/test_check_security_register.py`; `tests/tools/test_verify_playable.py` | fixed |
 | WR-10 | warning | T-04-38 | fixed |
-| WR-11 | warning | T-04-43 | fixed |
+| WR-11 | warning | T-04-43 | open |
+| GWR-01 | warning | T-04-48 / T-04-62 | fixed |
+| GWR-02 | warning | T-04-56 | fixed |
+| GWR-03 | warning | T-04-57 / T-04-63 / T-04-64 | fixed |
+| GWR-04 | warning | T-04-54 / T-04-67 | fixed |
+| GWR-05 | warning | T-04-54 / T-04-66 | fixed |
+| GWR-06 | warning | T-04-53 | fixed |
+| GIN-01 | info | T-04-49 | deferred |
+| GIN-02 | info | T-04-45 | fixed |
+| GIN-03 | info | T-04-43 / T-04-62 | fixed |
+| GIN-04 | info | T-04-34 | deferred |
 
 ### Plan 04-20 Task 1 Current Evidence — 2026-10-08
 
