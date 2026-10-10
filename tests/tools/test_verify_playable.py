@@ -1255,6 +1255,7 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
             rows = "".join(f"| {finding} | warning | open | recorded |\n" for finding in ("WR-01", "GWR-01", "G2WR-01", "G3WR-01", "XX-01"))
             self.assertEqual(self.errors(rows, commits[4], repository=repository, reviewed=commits[0]), [])
 
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_t_04_38_unresolvable_reviewed_revision_fails(self) -> None:
         head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True, text=True,
                               stdout=subprocess.PIPE).stdout.strip()
@@ -1276,19 +1277,23 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
         return subprocess.run(["git", "-C", str(ROOT), "rev-list", "--max-parents=0", "HEAD"],
                               check=True, text=True, stdout=subprocess.PIPE).stdout.split()[0]
 
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_open_rows_need_no_revision(self) -> None:
         self.assertEqual(self.errors("| CR-01 | critical | open | recorded, not triaged |\n"), [])
 
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_closure_rows_without_a_revision_are_rejected(self) -> None:
         for state in ("fixed", "deferred", "skipped"):
             with self.subTest(state=state):
                 errors = self.errors(f"| CR-01 | critical | {state} | looked fine |\n")
                 self.assertEqual(errors, ["review finding CR-01 disposition cites no review revision"])
 
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_digests_and_unrelated_hex_are_not_revisions(self) -> None:
         errors = self.errors(f"| WR-01 | warning | fixed | digest `{'a1' * 32}` and 0123abcd |\n")
         self.assertEqual(errors, ["review finding WR-01 disposition cites no review revision"])
 
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_ancestor_revision_in_either_recognized_form_is_accepted(self) -> None:
         # G3WR-05: the reviewed revision defaults to the first commit and a citation must strictly follow it,
         # so cite the second commit; the recognized forms under test are unchanged.
@@ -1298,10 +1303,12 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
                 f"| WR-01 | warning | deferred | at revision `{first}` |\n")
         self.assertEqual(self.errors(rows), [])
 
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_unresolvable_revision_is_rejected(self) -> None:
         errors = self.errors("| CR-01 | critical | fixed | revision `" + "f" * 40 + "` |\n")
         self.assertEqual(errors, [f"review finding CR-01 cites revision {'f' * 12} that is not a committed ancestor"])
 
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_revision_that_is_not_an_ancestor_of_head_is_rejected(self) -> None:
         first = self.first_commit()
         head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True, text=True,
@@ -1310,6 +1317,7 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
         errors = self.errors(f"| CR-01 | critical | fixed | revision `{head}` |\n", head=first)
         self.assertEqual(errors, [f"review finding CR-01 cites revision {head[:12]} that is not a committed ancestor"])
 
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_check_docs_binds_the_live_record_and_rejects_a_stripped_revision(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-provenance-docs-") as temporary:
             root = Path(temporary)
