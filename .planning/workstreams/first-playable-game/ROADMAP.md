@@ -12,7 +12,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 
 ## first-playable-game — First Playable Game
 
-**Status:** Approved by the user on 2026-10-07. Phases 4–7; release version unassigned. Plans 04-01 through 04-18 are executed. Plan 04-18 repairs the current security-count, evidence-map, and frontend-claim gates. Four high disclosure threats and T-04-34 at medium severity remain open; CR-03/WR-05 and carried WR-01/WR-02/WR-03 remain open, while CR-02/WR-04 are fixed and CR-01 is fixed history. HOST-02 and frontend QUAL-03 remain Pending/unknown. Phase 04 still needs fresh independent audits and whole-phase verification; actual pinned-app evidence remains manual-only. Phases 05–07 have not started.
+**Status:** Approved by the user on 2026-10-07. Phases 4–7; release version unassigned. Plans 04-01 through 04-23 are executed. HOST-02 and frontend QUAL-03 are Complete from the tracked 04-FRONTEND-RECEIPT.json at the clean committed-snapshot receipt for aaf3f093ab0f (pinned RetroArch 1.22.2). The independent post-c75f577 security review (04-23) closed none of T-04-11, T-04-15, T-04-18, T-04-20, T-04-34, T-04-38 and T-04-43 and reopened them, so 04-SECURITY.md has threats_open 6 (the four disclosure threats plus T-04-48 and T-04-SC (04-23)); WR-01/06/08/09 are open again. Phase 04 is not accepted and needs a bounded gap plan, then fresh whole-phase verification. Phase 05 is in progress (blocked at Plan 05-06); Phases 06–07 have not started.
 
 ## Phases
 
@@ -35,8 +35,8 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   4. A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including license/source/state audits, cycle or clock and interrupt/bus behavior, deterministic timing, continuation and independent-instance evidence, contained C++ failures, and static/shared C-consumer linkage; a failed gate blocks admission and requires bounded replanning rather than phase completion.
   5. An integrator can follow the clean-tree build/install/load procedure for the native library and libretro adapter on the selected macOS configuration and identify exact dependency, compiler, SDK, OS, architecture, and frontend identities plus untested configurations.
 
-**Plans**: 23 plans (22 executed). The threat dispositions were settled on 2026-10-10: 04-SECURITY.md threats_open is 0 and T-04-44 is accepted at medium. HOST-02 and frontend QUAL-03 are Complete from the tracked 04-FRONTEND-RECEIPT.json. Gap-closure Plan 04-23 re-qualifies that receipt at the current revision and reconciles traceability. Phase 04 acceptance awaits fresh whole-phase verification.
-- [ ] 04-23-PLAN.md — Re-qualify pinned RetroArch at the current revision and reconcile Phase 04 traceability (gap closure, Wave 21)
+**Plans**: 23 plans (23 executed). The 2026-10-10 delegated threat dispositions were not confirmed by the independent post-c75f577 review (04-23): 04-SECURITY.md threats_open is 6 and T-04-44 stays accepted at medium. HOST-02 and frontend QUAL-03 are Complete from the tracked 04-FRONTEND-RECEIPT.json at aaf3f093ab0f. Phase 04 acceptance awaits repairs of the reproduced gaps and fresh whole-phase verification.
+- [x] 04-23-PLAN.md — Re-qualify pinned RetroArch at the current revision and reconcile Phase 04 traceability (gap closure, Wave 21)
 - [x] 04-22-PLAN.md
 - [x] 04-21-PLAN.md
 
@@ -101,7 +101,7 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
 ### Phase 5: Selected MVS Boot
 
 **Goal**: A user can load the selected private MVS media and see the guest-executed game reach its attract/start path with a documented, bounded configuration.
-**Depends on**: Phase 4's verified native API and fixture foundation; the unresolved Phase 4 RetroArch observation and user-directed threat dispositions do not block Phase 5 engineering, but remain blockers to Phase 4 acceptance and any corresponding frontend/security claim. The sound-CPU interaction needed by BIOS/game boot is delivered here even though audible output is qualified in Phase 7.
+**Depends on**: Phase 4's verified native API and fixture foundation; the Phase 4 threat dispositions reopened by the independent 04-23 review (threats_open 6) do not block Phase 5 engineering, but remain blockers to Phase 4 acceptance (HOST-02/frontend QUAL-03 are Complete at aaf3f093ab0f) and any corresponding frontend/security claim. The sound-CPU interaction needed by BIOS/game boot is delivered here even though audible output is qualified in Phase 7.
 **Requirements**: MEDIA-02, MEDIA-03, MEDIA-04, GAME-02
 **Success Criteria** (what must be TRUE):
   1. A C integrator can supply immutable normalized cartridge and BIOS regions for the selected MVS profile under explicit lifetimes, layout, byte order, and resource limits.
@@ -157,11 +157,11 @@ Each phase includes the automated evidence and independent review appropriate to
 
 ## Progress
 
-**Execution Order:** Phase 4's verified native API/fixture foundation → Phase 5 MVS boot engineering → Phase 6 → Phase 7. Phase 5 engineering may proceed while Phase 4 acceptance remains blocked: actual RetroArch behavior is unknown/manual-only and the user-directed threat dispositions remain open. Those findings block Phase 4 acceptance and related claims; they do not establish a technical dependency for the separate media, board, and guest-execution work. Phase 5 must not close or reinterpret Phase 4 findings.
+**Execution Order:** Phase 4's verified native API/fixture foundation → Phase 5 MVS boot engineering → Phase 6 → Phase 7. Phase 5 engineering may proceed while Phase 4 acceptance remains blocked: the independent 04-23 review reopened threat rows (threats_open 6) although the pinned RetroArch receipt at aaf3f093ab0f is current. Those findings block Phase 4 acceptance and related claims; they do not establish a technical dependency for the separate media, board, and guest-execution work. Phase 5 must not close or reinterpret Phase 4 findings.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. Public Playable Tracer | 22/22 | In Progress | - |
+| 4. Public Playable Tracer | 23/23 | In Progress | - |
 | 5. Selected MVS Boot | 6/6 | In Progress | - |
 | 6. Active Title Control | 0/TBD | Not started | - |
 | 7. Sound and Scenario Qualification | 0/TBD | Not started | - |

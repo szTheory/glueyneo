@@ -4,13 +4,13 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: public-playable-tracer
-current_plan: 6
-status: blocked
+current_plan: 1
+status: executing
 stopped_at: Plan 05-06 halted at Task 2 selected-guest evidence gate; candidate hosted receipt passed and frontend startup diagnosis reproduced SIGABRT
-last_updated: "2026-10-10T12:30:28.105Z"
+last_updated: "2026-10-10T12:34:16.252Z"
 last_activity: 2026-10-10
-last_activity_desc: Phase 04 planning complete — 23 plans ready
-state_head: 2f95b3e44d160742ae1360f61af53a65b6cf49f5
+last_activity_desc: Phase 04 execution started
+state_head: aaf3f093ab0fe4dcff453885af3352b9a400196a
 progress:
   total_phases: 4
   completed_phases: 0
@@ -26,23 +26,23 @@ progress:
 See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 **Core value:** Trustworthy Neo Geo emulation that other software can embed easily.
-**Current focus:** Phase 05 — Selected MVS Boot
+**Current focus:** Phase 04 — public-playable-tracer
 
 ## Current Position
 
-Phase: 04 (public-playable-tracer) — READY TO EXECUTE
+Phase: 04 (public-playable-tracer) — EXECUTING
 Current Plan: 6
 Total Plans in Phase: 23
-Status: Blocked
-Last activity: 2026-10-09 — 05-06 stopped at the selected-guest evidence gate
-Last Activity Description: Phase 04 planning complete — 23 plans ready
+Status: Executing Phase 04
+Last activity: 2026-10-10 — Phase 04 execution started
+Last Activity Description: Phase 04 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 6
+**Current Plan:** 1
 
 ## Performance Metrics
 
@@ -86,17 +86,17 @@ Progress: [░░░░░░░░░░] 0%
 ## Scope Notes
 
 - Accepted research and primary-source references are preserved in [RESEARCH.md](RESEARCH.md). Outcome: locally reach interactive Metal Slug X gameplay with movement, firing, scrolling, and representative sound in one pinned MVS/macOS RetroArch setup; public CI uses a separate first-party fixture and never commercial game/BIOS data. All 20 requirements and their primary allocations in the roadmap are user-approved.
-- Planning milestone ID: `first-playable-game`; release version remains unassigned. Plans 04-01 through 04-18 have execution summaries. Plan 04-14 repaired the raw-quote and Info/IN parser cases; Plan 04-15 preserved the unavailable actual-frontend prerequisite without retrying RetroArch. Plan 04-18 restored the current security-count, report-evidence, and frontend claim gates without changing evidence dispositions. The fresh security audit verified 46 threats: 42 closed and four high disclosure threats remain open by user direction; T-04-34 remains medium/open. The fresh review confirms CR-02/WR-04 fixed and records CR-03/WR-05 open; carried WR-01/WR-02/WR-03 remain open. HOST-02 and frontend QUAL-03 remain Pending/unknown. Project Phase 04 begins this workstream; independent playable work does not close or depend on completion of the sibling hosted-release gate.
+- Historical (superseded 2026-10-10; see Blockers): Planning milestone ID: `first-playable-game`; release version remains unassigned. Plans 04-01 through 04-18 have execution summaries. Plan 04-14 repaired the raw-quote and Info/IN parser cases; Plan 04-15 preserved the unavailable actual-frontend prerequisite without retrying RetroArch. Plan 04-18 restored the current security-count, report-evidence, and frontend claim gates without changing evidence dispositions. The fresh security audit verified 46 threats: 42 closed and four high disclosure threats remain open by user direction; T-04-34 remains medium/open. The fresh review confirms CR-02/WR-04 fixed and records CR-03/WR-05 open; carried WR-01/WR-02/WR-03 remain open. HOST-02 and frontend QUAL-03 remain Pending/unknown. Project Phase 04 begins this workstream; independent playable work does not close or depend on completion of the sibling hosted-release gate. Current facts: Plans 04-01 through 04-23 are executed; threats_open is 6 after the independent 04-23 review and the pinned RetroArch receipt is current at aaf3f093ab0f.
 - Milestone-start triage on 2026-10-07 found no open issues and one draft PR, [#1](https://github.com/szTheory/glueyneo/pull/1), for the separate diagnostic release work. It supplies no playable-game requirement or completion evidence.
 - Work is isolated on `docs/first-playable-game-milestone`. The existing 138 planning relocations into the diagnostic workstream were verified byte-identical and committed; unrelated pre-existing methodology/configuration/preparation edits remain outside this milestone's commits.
 - Carry-forward constraints: keep the owned native C17 core deterministic and host-independent; introduce the libretro/software-video path early; keep media/archive I/O outside the native core; retain the owned 68000 direction and gate Z80/YM2610 admission on evidence. PROJECT-D-48 permits the narrow ymfm C++14 exception behind a private C interface; a future C replacement is optional. The supplied BIOS is available locally, but the exact MVS profile and compatibility remain unqualified.
-- Approved Phase 04–07 sequencing is in [ROADMAP.md](ROADMAP.md): public playable tracer and early Z80/ymfm admission → selected MVS boot including required sound-CPU handshakes → active title control → sound and qualification. Plans 04-01 through 04-18 have summaries. Phase 04 remains incomplete. T-04-11, T-04-15, T-04-18 and T-04-20 remain high/open; T-04-34 remains medium/open. CR-02/WR-04 are fixed; CR-03/WR-05 and carried WR-01/WR-02/WR-03 remain open. Plan 04-18 restored the direct current-evidence gates; WR-06's independent disposition remains open. HOST-02 and frontend QUAL-03 remain Pending/unknown.
+- Historical (superseded 2026-10-10; see Blockers): Approved Phase 04–07 sequencing is in [ROADMAP.md](ROADMAP.md): public playable tracer and early Z80/ymfm admission → selected MVS boot including required sound-CPU handshakes → active title control → sound and qualification. Plans 04-01 through 04-18 have summaries. Phase 04 remains incomplete. T-04-11, T-04-15, T-04-18 and T-04-20 remain high/open; T-04-34 remains medium/open. CR-02/WR-04 are fixed; CR-03/WR-05 and carried WR-01/WR-02/WR-03 remain open. Plan 04-18 restored the direct current-evidence gates; WR-06's independent disposition remains open. HOST-02 and frontend QUAL-03 remain Pending/unknown. Current facts: Plans 04-01 through 04-23 are executed; threats_open is 6 after the independent 04-23 review and the pinned RetroArch receipt is current at aaf3f093ab0f.
 - Goal: advance from the diagnostic SDK toward a playable Neo Geo game.
 - Local qualification: a user-provided private game archive is stored under the Git-ignored `local/roms/` directory. Keep its contents and private checksums out of tracked files, CI, and release artifacts.
 - The user-provided BIOS archive is also stored under the Git-ignored `local/roms/` directory. The copy matches its source, passes ZIP CRC validation and is untracked; those checks do not establish BIOS compatibility.
 - Public CI: use original fixtures and/or homebrew assets only after confirming redistribution rights for the specific ROM assets; a source-code license alone is not sufficient evidence for bundled game data.
 - The local archive passed ZIP CRC checks and matched all 13 ROM size/SHA-1 entries in MAME's current Neo Geo software list. That confirms the archive identity, not emulator compatibility.
-- Next GSD work: no GSD command is warranted while the external evidence is unchanged. Plan 05-06 remains halted at Task 2: selected compatibility and GAME-02 need an independently observed selected configuration plus a source-backed guest attract/start predicate with oracle ancestry. The earlier RetroArch SIGABRT was the sandboxed launch context (debug session `.planning/debug/resolved/retroarch-startup-abort.md`); agent shells in the logged-in session launch the pinned app normally. Do not repeat verify-work or create another unchanged gap plan. When the missing selected-guest evidence is available, resume the existing bounded plan with $gsd-execute-phase 05 --gaps-only --ws first-playable-game. Candidate PR #2 has a passing exact-SHA hosted MVS receipt but remains OPEN / REVIEW_REQUIRED pending one approval. Phase 04 needs only fresh whole-phase verification (threat dispositions settled 2026-10-10): HOST-02 and frontend QUAL-03 closed on 2026-10-10 from the passing committed-snapshot receipt at 706516b5a60c (`04-FRONTEND-RECEIPT.json`), see `04-UAT.md`.
+- Next GSD work: no GSD command is warranted while the external evidence is unchanged. Plan 05-06 remains halted at Task 2: selected compatibility and GAME-02 need an independently observed selected configuration plus a source-backed guest attract/start predicate with oracle ancestry. The earlier RetroArch SIGABRT was the sandboxed launch context (debug session `.planning/debug/resolved/retroarch-startup-abort.md`); agent shells in the logged-in session launch the pinned app normally. Do not repeat verify-work or create another unchanged gap plan. When the missing selected-guest evidence is available, resume the existing bounded plan with $gsd-execute-phase 05 --gaps-only --ws first-playable-game. Candidate PR #2 has a passing exact-SHA hosted MVS receipt but remains OPEN / REVIEW_REQUIRED pending one approval. Phase 04: HOST-02 and frontend QUAL-03 are Complete from the passing committed-snapshot receipt at aaf3f093ab0f (`04-FRONTEND-RECEIPT.json`), but the independent 04-23 security review reopened T-04-11/15/18/20/34/38/43 and WR-01/06/08/09 (threats_open 6). Next: `/gsd-secure-phase 04 --ws first-playable-game`, then `/gsd-plan-phase 04 --gaps --ws first-playable-game` for the bounded repairs.
 
 The generic GSD progress router currently infers Phase 04 from its incomplete
 verification report, while this workstream remains on Phase 05 because the
@@ -149,6 +149,7 @@ unchanged external-blocker plan. Plan/summary counts are not phase acceptance.
 
 ### Blockers
 
+- 04-23 outcome (2026-10-10): clean committed-snapshot qualification passed at aaf3f093ab0f (pinned RetroArch 1.22.2, max one instance sampled); the independent separate-context security review at that revision returned OPEN for 15 of 16 IDs and unscoped Bash made the 16th OPEN by the containment rule, so 04-SECURITY.md threats_open is 6 and WR-01/06/08/09 are open. Supersedes the 2026-10-10 entries below that report these closed.
 - Owned-debug is now 47/47 passing, including refreshed identity/source-manifest and target-scoped inventory checks. This repairs the prior deterministic failure without establishing frontend acceptance.
 - Resolved 2026-10-10: HOST-02 and frontend QUAL-03 pass from the clean committed-snapshot receipt at 706516b5a60c after fixing the shared `mvs_qualify` link and the non-self-contained shared core; the earlier SIGABRT was the sandboxed launch context.
 - Resolved 2026-10-10: WR-01/06/08/09 fixed or superseded by bound receipt evidence and the retired evidence-map checker.
