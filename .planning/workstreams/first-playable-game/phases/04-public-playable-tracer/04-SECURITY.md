@@ -249,7 +249,7 @@ The fresh ASVS L1 review verified Plan 04-18's three additions: T-04-35, T-04-36
 
 The current register was reconciled against the 18 plan threat models and the prior ASVS L1 evidence; the active source delta since the 54-row audit is limited to Phase 04 evidence checkers, their tests, and the validation record. The checker changes were reviewed at ASVS L1 against the exact paths and current controlled records, and the full register still has no accepted risks or unmapped summary threat flag.
 
-| Threat ID | ASVS L1 result | Current evidence |
+| Audited Threat | ASVS L1 result | Current evidence |
 |---|---|---|
 | T-04-35 | CLOSED | `tests/tools/check_phase04_validation_map.py` parses all current security rows, rejects duplicate IDs, counts only high/open blockers, requires the exact four high/open IDs plus T-04-34 medium/open, rejects other open rows, and requires the blocking count to equal the parsed rows. It pins current frontend requirement/report rows; `tests/tools/test_check_phase04_validation_map.py` exercises count, severity, status, duplicate-row, and contradictory-evidence mutations. The direct checker and 14-test mutation suite pass. |
 | T-04-36 | CLOSED | `tools/verify_playable.py::check_docs()` requires exactly one current `04-15 T2` row, checks that both requirements are named, and full-matches the status against the Pending/unknown grammar. Its tests accept the canonical pending state and reject affirmative, appended, placeholder, missing, and contradictory status claims. The 23-test qualification suite and docs-only gate pass. |

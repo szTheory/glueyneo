@@ -873,20 +873,35 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
   add_test(NAME qualification_frontend_smoke
     COMMAND ${Python3_EXECUTABLE} -m unittest discover
             -s "${CMAKE_CURRENT_SOURCE_DIR}/tests/libretro" -p test_retroarch_smoke.py)
-  # The register gate reads planning state, which a source archive or a renamed
-  # workstream may not carry. Register it only when the configured workstream
-  # exists; the mutation suite stays unconditional.
-  set(GLUEYNEO_PLANNING_WORKSTREAM "first-playable-game" CACHE STRING
-    "Workstream under .planning/workstreams whose security registers planning_security_register checks")
-  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.planning/workstreams/${GLUEYNEO_PLANNING_WORKSTREAM}")
-    add_test(NAME planning_security_register
+  # The register consistency check reads planning state, which a source archive
+  # may not carry. An empty GLUEYNEO_PLANNING_WORKSTREAM means auto: the default
+  # workstream is checked when its directory exists and silently skipped when it
+  # does not. An explicitly set name that does not exist fails configure, so a
+  # misconfiguration cannot silently drop the gate. The CTest is a consistency
+  # check only; closure is `check_security_register.py --require-closed`
+  # (docs/testing.md, "Closure gates"). The mutation suite stays unconditional.
+  set(GLUEYNEO_PLANNING_WORKSTREAM "" CACHE STRING
+    "Workstream under .planning/workstreams whose security registers planning_security_register_consistency checks (empty: first-playable-game when present)")
+  if(GLUEYNEO_PLANNING_WORKSTREAM STREQUAL "")
+    set(_glueyneo_workstream "first-playable-game")
+  else()
+    set(_glueyneo_workstream "${GLUEYNEO_PLANNING_WORKSTREAM}")
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.planning/workstreams/${_glueyneo_workstream}")
+      # CMake word-wraps long messages; the break keeps the phrase on one line.
+      message(FATAL_ERROR
+        "GLUEYNEO_PLANNING_WORKSTREAM=${_glueyneo_workstream}\n"
+        "names no .planning/workstreams directory")
+    endif()
+  endif()
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.planning/workstreams/${_glueyneo_workstream}")
+    add_test(NAME planning_security_register_consistency
       COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/check_security_register.py"
-              "${GLUEYNEO_PLANNING_WORKSTREAM}")
-    set_tests_properties(planning_security_register
+              "${_glueyneo_workstream}")
+    set_tests_properties(planning_security_register_consistency
       PROPERTIES LABELS "qualification-tools" TIMEOUT 300)
   else()
-    message(STATUS "planning_security_register not registered: "
-      ".planning/workstreams/${GLUEYNEO_PLANNING_WORKSTREAM} does not exist")
+    message(STATUS "planning_security_register_consistency not registered: "
+      ".planning/workstreams/${_glueyneo_workstream} does not exist")
   endif()
   add_test(NAME planning_security_register_mutations
     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/test_check_security_register.py")

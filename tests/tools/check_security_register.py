@@ -8,19 +8,26 @@ must equal the number of open threat-register rows at or above the configured
 
 - `threats_open:` is read only from the YAML frontmatter (the first `---`
   block) and must appear exactly once; commented or indented copies are errors.
-- Rows are counted from every `| Threat ID |` table that has Severity and
-  Status columns. Cells split on unescaped pipes only.
+- Every table whose first header cell is exactly `Threat ID` is a register
+  table and must have Severity and Status columns; one that lacks either is an
+  error, never skipped (GWR-01). Non-register audit tables use another first
+  header such as `Audited Threat`. Cells split on unescaped pipes only.
 - Threat IDs must be unique across tables; status must be open, closed or
-  accepted; `status: verified` requires `threats_open: 0`.
+  accepted; `status: verified` (also quoted) requires `threats_open: 0`.
 - Default mode checks consistency only and prints per-register blocking counts,
   so a PASS is not closure. `--require-closed` additionally exits 1 while any
-  register has blocking open threats.
+  register has blocking open threats. `--phase NN` restricts the run to the one
+  `phases/NN-*/NN-SECURITY.md` register (exactly one must exist) for phase
+  acceptance; milestone shipping runs without it so every register counts.
 
 The blocking threshold is `workflow.security_block_on` from
 `.planning/workstreams/<workstream>/config.json` when that file sets it, else
-from `.planning/config.json` (default `high`). A missing or unreadable root
-config, an unreadable workstream config and an unknown severity at either level
-fail closed.
+from `.planning/config.json` (default `high`). A workstream config is local,
+untracked runtime state, so it may only be as strict as the root value or
+stricter: a less strict value fails with `weakens security_block_on`. A missing
+or unreadable root config, an unreadable workstream config and an unknown
+severity at either level fail closed. The PASS line names the threshold and the
+config file it came from.
 
 Prose, review provenance and other phase-specific wording are deliberately not
 checked here.
@@ -40,6 +47,8 @@ KEY = re.compile(r"^threats_open:\s*(\d+)\s*$")
 KEY_LIKE = re.compile(r"^\s*#?\s*threats_open\s*:")
 CELL_SPLIT = re.compile(r"(?<!\\)\|")
 HEADER = re.compile(r"^\|\s*Threat ID\s*\|(.+)\|\s*$")
+VERIFIED = re.compile(r"""^status:\s*["']?verified["']?\s*$""")
+PHASE_NUMBER = re.compile(r"^[0-9]{2}(\.[0-9]+)?$")
 
 
 def configured_level(path: Path, label: str) -> str | None | tuple[str]:
@@ -56,25 +65,30 @@ def configured_level(path: Path, label: str) -> str | None | tuple[str]:
     return value
 
 
-def block_on(root: Path, workstream: str) -> int | str:
-    """Return the severity threshold, or an error string.
+def block_on(root: Path, workstream: str) -> tuple[int, str, str] | str:
+    """Return (threshold, level name, source file), or an error string.
 
-    The workstream's own `.planning/workstreams/<name>/config.json` wins when
-    it sets `workflow.security_block_on`; otherwise `.planning/config.json`
-    applies (default `high`). Unreadable files and unknown severities at either
-    level are errors.
+    The workstream's own `.planning/workstreams/<name>/config.json` applies when
+    it sets `workflow.security_block_on`, but it may not be less strict than the
+    root value (default `high`): that untracked local file must not lower the
+    gate. Unreadable files and unknown severities at either level are errors.
     """
-    workstream_path = root / ".planning/workstreams" / workstream / "config.json"
-    value = None
+    root_label = ".planning/config.json"
+    level = configured_level(root / root_label, root_label)
+    if isinstance(level, tuple):
+        return level[0]
+    root_name, root_source = ("high", "default") if level is None else (level, root_label)
+    workstream_label = f".planning/workstreams/{workstream}/config.json"
+    workstream_path = root / workstream_label
     if workstream_path.exists():
-        value = configured_level(workstream_path, f".planning/workstreams/{workstream}/config.json")
+        value = configured_level(workstream_path, workstream_label)
         if isinstance(value, tuple):
             return value[0]
-    if value is None:
-        value = configured_level(root / ".planning/config.json", ".planning/config.json")
-        if isinstance(value, tuple):
-            return value[0]
-    return SEVERITY["high" if value is None else value]
+        if value is not None:
+            if SEVERITY[value] > SEVERITY[root_name]:
+                return f"{workstream_label} weakens security_block_on ({value} > {root_name})"
+            return SEVERITY[value], value, workstream_label
+    return SEVERITY[root_name], root_name, root_source
 
 
 def frontmatter(text: str) -> list[str] | None:
@@ -102,7 +116,7 @@ def register_errors(path: Path, threshold: int) -> tuple[list[str], int]:
     declared = [KEY.match(line) for line in keys]
     if len(keys) != 1 or declared[0] is None:
         return [f"{path.name}: frontmatter needs exactly one `threats_open: <n>` line, found {len(keys)}"], 0
-    verified = any(re.match(r"^status:\s*verified\s*$", line) for line in front)
+    verified = any(VERIFIED.match(line) for line in front)
     lines = text.splitlines()
     tables: list[tuple[list[str], list[list[str]]]] = []
     for index, line in enumerate(lines):
@@ -111,6 +125,7 @@ def register_errors(path: Path, threshold: int) -> tuple[list[str], int]:
             continue
         columns = ["Threat ID", *split_cells(header.group(1))]
         if "Severity" not in columns or "Status" not in columns:
+            errors.append(f"{path.name}: threat table at line {index + 1} lacks Severity or Status columns")
             continue
         table_rows: list[list[str]] = []
         for row in lines[index + 2:]:
@@ -119,7 +134,7 @@ def register_errors(path: Path, threshold: int) -> tuple[list[str], int]:
             table_rows.append(split_cells(row))
         tables.append((columns, table_rows))
     if not tables:
-        return [f"{path.name}: no threat register table"], 0
+        return [*errors, f"{path.name}: no threat register table"], 0
     seen: set[str] = set()
     blocking = 0
     for columns, rows in tables:
@@ -146,11 +161,38 @@ def register_errors(path: Path, threshold: int) -> tuple[list[str], int]:
     return errors, blocking
 
 
+def parse_arguments(words: list[str]) -> tuple[bool, str | None, list[str]] | str:
+    """Return (require_closed, phase, positional names), or an error string."""
+    require_closed = False
+    phase: str | None = None
+    names: list[str] = []
+    index = 0
+    while index < len(words):
+        word = words[index]
+        if word == "--require-closed":
+            require_closed = True
+        elif word == "--phase":
+            index += 1
+            if index >= len(words):
+                return "--phase needs a phase number"
+            phase = words[index]
+            if not PHASE_NUMBER.match(phase):
+                return f"invalid --phase argument {phase!r}"
+        else:
+            names.append(word)
+        index += 1
+    return require_closed, phase, names
+
+
 def main(arguments: list[str] | None = None, root: Path = ROOT) -> int:
     # One workstream per run: shipped workstreams keep their historical records.
     words = sys.argv[1:] if arguments is None else arguments
-    require_closed = "--require-closed" in words
-    names = [word for word in words if word != "--require-closed"] or ["first-playable-game"]
+    parsed = parse_arguments(words)
+    if isinstance(parsed, str):
+        print(f"FAIL: {parsed}", file=sys.stderr)
+        return 1
+    require_closed, phase, names = parsed
+    names = names or ["first-playable-game"]
     workstream = names[0]
     if len(names) > 1 or not WORKSTREAM.match(workstream):
         print(f"FAIL: invalid workstream argument {workstream!r}", file=sys.stderr)
@@ -159,15 +201,22 @@ def main(arguments: list[str] | None = None, root: Path = ROOT) -> int:
     if isinstance(threshold, str):
         print(f"FAIL: {threshold}", file=sys.stderr)
         return 1
-    registers = sorted(root.glob(f".planning/workstreams/{workstream}/phases/*/[0-9][0-9]-SECURITY.md"))
+    level, level_name, source = threshold
+    pattern = f"phases/{phase}-*/{phase}-SECURITY.md" if phase else "phases/*/[0-9][0-9]-SECURITY.md"
+    registers = sorted(root.glob(f".planning/workstreams/{workstream}/{pattern}"))
     if not registers:
-        print(f"FAIL: no security registers for workstream {workstream}", file=sys.stderr)
+        scope = f"phase {phase}" if phase else f"workstream {workstream}"
+        print(f"FAIL: no security registers for {scope}", file=sys.stderr)
+        return 1
+    if phase and len(registers) != 1:
+        print(f"FAIL: phase {phase} has {len(registers)} security registers, expected exactly one",
+              file=sys.stderr)
         return 1
     errors: list[str] = []
     counts: list[tuple[str, int]] = []
     for path in registers:
         try:
-            found, blocking = register_errors(path, threshold)
+            found, blocking = register_errors(path, level)
         except (OSError, UnicodeDecodeError) as error:
             found, blocking = [f"{path.name}: unreadable ({type(error).__name__})"], 0
         errors.extend(found)
@@ -183,7 +232,9 @@ def main(arguments: list[str] | None = None, root: Path = ROOT) -> int:
         if open_registers:
             return 1
     summary = ", ".join(f"{name}={count}" for name, count in counts)
-    print(f"PASS: {len(registers)} security registers reconcile with block_on; blocking open: {summary}")
+    scope = f"; scope: phase {phase}" if phase else ""
+    print(f"PASS: {len(registers)} security registers reconcile with block_on; blocking open: {summary}"
+          f"{scope}; block_on {level_name} from {source}")
     return 0
 
 

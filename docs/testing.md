@@ -86,43 +86,76 @@ empty in the corpus manifest.
 
 ## Planning security register gate
 
-`python3 tests/tools/check_security_register.py <workstream> [--require-closed]`
-checks every `phases/*/NN-SECURITY.md` register in one workstream. The CTest
-names are `planning_security_register` and
+`python3 tests/tools/check_security_register.py <workstream> [--require-closed] [--phase NN]`
+checks the `phases/*/NN-SECURITY.md` registers of one workstream, or only
+`phases/NN-*/NN-SECURITY.md` with `--phase NN`. The CTest names are
+`planning_security_register_consistency` and
 `planning_security_register_mutations` (the latter runs the mutation suite in
-`tests/tools/test_check_security_register.py`).
+`tests/tools/test_check_security_register.py`). The first is a consistency check
+only: a green CTest never means the threats are closed.
 
 The blocking threshold is `workflow.security_block_on` from
 `.planning/workstreams/<workstream>/config.json` when that file sets it, and
-otherwise from `.planning/config.json` (default `high`); the workstream setting
-overrides the root default. A missing or unreadable root config, an unreadable
-workstream config and an unknown severity at either level fail with `FAIL:`.
+otherwise from `.planning/config.json` (default `high`). A workstream config is
+local GSD runtime state that is not tracked, so it may not lower the gate: a
+value less strict than the root value (for example `critical` over `high`) fails
+with `weakens security_block_on`; an equal or stricter value is accepted. A
+missing or unreadable root config, an unreadable workstream config and an
+unknown severity at either level fail with `FAIL:`. The `PASS:` line names the
+threshold and its source (`block_on high from .planning/config.json`).
 
 Default mode checks consistency only. `threats_open` is read from the YAML
 frontmatter (the first `---` block), where exactly one `threats_open: <n>` line
 must exist, and must equal the open rows at or above
-`workflow.security_block_on` across every `| Threat ID |` table that has
-Severity and Status columns. Its `PASS:` line lists each register's blocking
-count (`blocking open: 04-SECURITY.md=6, ...`). A `PASS:` therefore means the
+`workflow.security_block_on` across every table whose first header cell is
+`Threat ID`. Such a table must have `Severity` and `Status` columns; one that
+lacks either (for example `Sev` and `State`) is an error naming its line, never
+silently skipped (GWR-01). A table that only audits threats, such as the ASVS
+result table in a SECURITY.md, uses another first header cell, by convention
+`Audited Threat`. The `PASS:` line lists each register's blocking count
+(`blocking open: 04-SECURITY.md=6, ...`). A `PASS:` therefore means the
 declared count matches the rows; it does not mean the threats are closed.
 
 `--require-closed` additionally exits 1 and prints
 `FAIL: <file>: <n> blocking open threats` for each register that still has
 blocking open threats. Use it, not the default mode, as the closure check.
 
+`--phase NN` (two digits, optionally `.N`) requires exactly one matching
+register, fails otherwise, and appends `scope: phase NN` to the `PASS:` line.
+It scopes a closure check to one phase, so a blocking draft row in another
+phase does not affect it.
+
 `FAIL:` reasons: missing frontmatter; a missing, duplicated, commented or
 indented `threats_open` key; a count that differs from the rows; a malformed
-row, duplicate threat ID, uncontrolled status or unknown severity;
-`status: verified` with a non-zero count; a missing or unreadable
-`.planning/config.json` or an unknown `security_block_on`; and a workstream
-name that does not match `^[A-Za-z0-9][A-Za-z0-9._-]*$`. Table cells split on
+row, duplicate threat ID, uncontrolled status or unknown severity; a `Threat ID`
+table without Severity and Status; `status: verified` (also `"verified"` or
+`'verified'`) with a non-zero count; a missing or unreadable
+`.planning/config.json` or an unknown `security_block_on`; a workstream config
+that weakens `security_block_on`; an invalid `--phase`; and a workstream name
+that does not match `^[A-Za-z0-9][A-Za-z0-9._-]*$`. Table cells split on
 unescaped pipes only, so `\|` inside a cell is literal.
 
-`planning_security_register` is registered only when
-`.planning/workstreams/${GLUEYNEO_PLANNING_WORKSTREAM}` exists. The cache
-variable defaults to `first-playable-game`; a configure without that directory
-(a source archive, an archived or renamed workstream) lists no such test and
-prints why. The mutation suite stays registered unconditionally.
+### Closure gates
+
+Phase acceptance runs
+`python3 tests/tools/check_security_register.py <workstream> --require-closed --phase NN`.
+Milestone shipping runs it without `--phase`, so every register counts there,
+including draft registers of later phases: a blocking draft row blocks milestone
+shipping by design. The CTest is a consistency check only. The
+`.github/workflows/release.yml` workflow is not wired to this gate because the
+first-playable-game workstream assigns no release version (ROADMAP); assigning
+one must add the unscoped `--require-closed` to that release gate.
+
+### CTest registration
+
+`planning_security_register_consistency` is registered when
+`.planning/workstreams/<name>` exists. The cache variable
+`GLUEYNEO_PLANNING_WORKSTREAM` defaults to the empty string, meaning auto: the
+`first-playable-game` workstream when present, with no test and a status message
+in a source archive. An explicitly set name that names no
+`.planning/workstreams` directory fails configure with
+`GLUEYNEO_PLANNING_WORKSTREAM=<name> names no .planning/workstreams directory`.
+The mutation suite stays registered unconditionally.
 
 ## Runtime writable-storage audit
 
