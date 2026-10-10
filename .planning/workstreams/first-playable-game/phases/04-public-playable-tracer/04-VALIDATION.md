@@ -6,10 +6,12 @@ nyquist_compliant: false
 wave_0_complete: true
 created: "2026-10-07"
 completed: "2026-10-07"
-updated: "2026-10-08"
+updated: "2026-10-10"
 ---
 
 # Phase 04 — Validation Strategy
+
+> 2026-10-10 supersession: `tests/tools/check_phase04_validation_map.py` and its mutation suite were retired in c75f577. Rows below that cite them are historical evidence for their recorded revisions. The current gates are `python3 tools/verify_playable.py --check-docs` (frontend status generated from the bound receipt summary), `tests/tools/check_security_register.py` and the `qualification-tools` CTest label.
 
 > Execution record for feedback sampling and acceptance evidence.
 
@@ -104,18 +106,18 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 
 | Review Finding | Severity | Existing Threat Scope | Disposition |
 |----------------|----------|-----------------------|-------------|
-| WR-06 | warning | Alternate affirmative frontend success paraphrases pass beside Pending/unknown in the consumer guide | open |
+| WR-06 | warning | Alternate affirmative frontend success paraphrases pass beside Pending/unknown in the consumer guide | fixed |
 | WR-07 | warning | Evidence-map fixture source-faithful verification-row mutation contract | fixed |
 | CR-03 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, newline-containing path disclosure | fixed |
 | WR-05 | warning | Review disposition and validation crosswalk consistency | fixed |
-| WR-01 | warning | `check_docs()` accepts the two affirmative frontend paraphrases reproduced at 2026-10-08T23:12:03Z; actual frontend remains unknown | open |
-| WR-08 | warning | Evidence-map uncertainty matcher accepts ordinary output success wording while frontend status remains unknown; review counterexample at `tests/tools/check_phase04_validation_map.py:214-220` | open |
+| WR-01 | warning | `check_docs()` accepts the two affirmative frontend paraphrases reproduced at 2026-10-08T23:12:03Z; actual frontend remains unknown | fixed |
+| WR-08 | warning | Evidence-map uncertainty matcher accepts ordinary output success wording while frontend status remains unknown; review counterexample at `tests/tools/check_phase04_validation_map.py:214-220` | fixed |
 | CR-02 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, raw-literal-quote disclosure | fixed |
 | WR-04 | warning | Validation-map review grammar for informational findings | fixed |
 | CR-01 | critical | T-04-24, exact numeric receipt types | fixed |
 | WR-03 | warning | T-04-13 / T-04-23, repository receipt validation rejects forged file-content hashes | fixed |
 | WR-02 | warning | Independent review `870848e553aca6e43f6fec8ae0acefac87270f5b` confirms live 25/25 comparison and stale 23/23 mutation rejection | fixed |
-| WR-09 | warning | T-04-43: the review provenance gate accepts a nonexistent extra path in the claimed scope; reproduced by the current standard-depth review at revision `48befe7a92d7c545e7c900c57e027b9e15952a7f` | open |
+| WR-09 | warning | T-04-43: the review provenance gate accepts a nonexistent extra path in the claimed scope; reproduced by the current standard-depth review at revision `48befe7a92d7c545e7c900c57e027b9e15952a7f` | fixed |
 | WR-10 | warning | T-04-SC: evidence-map mutation tests now reach and assert their intended checks on the current report baseline | fixed |
 | WR-11 | warning | T-04-43: duplicate reviewed_revision keys now fail closed, including malformed duplicate values | fixed |
 
