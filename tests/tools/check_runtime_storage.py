@@ -9,8 +9,9 @@ zero-initialized sections of one library and fails if there is one. There is
 no allowlist; a table that is never written is made `const`.
 
 Mach-O (`nm -m`) selects sections __DATA,__data, __DATA,__bss,
-__DATA,__common and the thread-local __DATA,__thread_data, __DATA,__thread_bss
-and __DATA,__thread_vars. Other POSIX hosts (`nm`) select symbol types D, d,
+__DATA,__common, the thread-local __DATA,__thread_data, __DATA,__thread_bss
+and __DATA,__thread_vars, and unlinked `(common)` symbols, whatever their
+binding (external, private external, weak external, non-external). Other POSIX hosts (`nm`) select symbol types D, d,
 B, b, G, g, V and v, ELF common C and c, and small-data S and s.
 
 The audit cannot pass without inspecting symbols: output in which no line
@@ -32,7 +33,12 @@ DARWIN_SECTIONS = {
     "__DATA,__data", "__DATA,__bss", "__DATA,__common",
     "__DATA,__thread_data", "__DATA,__thread_bss", "__DATA,__thread_vars",
 }
-MACHO_LINE = re.compile(r"^\s*[0-9A-Fa-f]*\s*\(([^)]*)\)\s+(?:non-external|external)\s+(?:\[[^\]]*\]\s+)?(\S+)")
+# `nm -m` binding forms: external, private external, weak external, weak private external and
+# non-external (was a private external); unlinked common symbols carry an alignment field.
+MACHO_LINE = re.compile(
+    r"^\s*[0-9A-Fa-f]*\s*\(([^)]*)\)\s+(?:\(alignment[^)]*\)\s+)?"
+    r"(?:weak\s+)?(?:private\s+external|non-external(?:\s+\(was a private external\))?|external)\s+"
+    r"(?:\[[^\]]*\]\s+)?(\S+)")
 ELF_LINE = re.compile(r"^\s*(?:[0-9A-Fa-f]+\s+)?([A-Za-z])\s+(\S+)\s*$")
 ELF_WRITABLE = set("DdBbGgVvCcSs")
 
@@ -46,7 +52,7 @@ def parse_symbols(output: str, platform: str) -> tuple[list[str], int]:
             match = MACHO_LINE.match(line)
             if match:
                 parsed += 1
-                if match.group(1).replace(" ", "") in DARWIN_SECTIONS:
+                if match.group(1).replace(" ", "") in DARWIN_SECTIONS | {"common"}:
                     found.append(match.group(2))
         else:
             match = ELF_LINE.match(line)
