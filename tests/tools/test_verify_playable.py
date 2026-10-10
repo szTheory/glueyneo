@@ -520,10 +520,11 @@ class ConsumerInputTest(unittest.TestCase):
             self.copy_documentation(Path(temporary))
             playable.check_docs(Path(temporary))
 
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_check_docs_accepts_complete_status_generated_from_tracked_receipt(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-docs-evidence-") as temporary:
             self.copy_documentation_with_evidence(Path(temporary))
-            playable.check_docs(Path(temporary))
+            playable.check_docs(Path(temporary), repository=ROOT)
 
     def test_check_docs_rejects_forged_or_incomplete_receipt_summaries(self) -> None:
         def drop(field: str, value: str):
@@ -580,6 +581,7 @@ class ConsumerInputTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "inventory digest does not match"):
                 playable.load_frontend_evidence(clone)
 
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_check_docs_requires_generated_status_to_match_evidence(self) -> None:
         cases = (
             ("evidence with pending block", self.copy_documentation, True, "status block does not match"),
@@ -597,7 +599,7 @@ class ConsumerInputTest(unittest.TestCase):
                     guide.write_text(guide.read_text(encoding="utf-8").replace(
                         playable.frontend_status_block(None), playable.frontend_status_block(summary)), encoding="utf-8")
                 with self.assertRaisesRegex(RuntimeError, expected_error):
-                    playable.check_docs(source_root)
+                    playable.check_docs(source_root, repository=ROOT)
         with tempfile.TemporaryDirectory(prefix="playable-docs-row-") as temporary:
             source_root = Path(temporary)
             self.copy_documentation_with_evidence(source_root)
@@ -605,7 +607,7 @@ class ConsumerInputTest(unittest.TestCase):
             validation.write_text(validation.read_text(encoding="utf-8").replace(
                 playable.frontend_row_status(summary), playable.frontend_row_status(None)), encoding="utf-8")
             with self.assertRaisesRegex(RuntimeError, "does not match the tracked evidence"):
-                playable.check_docs(source_root)
+                playable.check_docs(source_root, repository=ROOT)
 
     def test_record_frontend_evidence_summary_drops_receipt_paths(self) -> None:
         summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
