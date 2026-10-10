@@ -1835,21 +1835,22 @@ class MainErrorPathTest(unittest.TestCase):
             self.assertNotIn("Traceback", sink)
             self.assertNotIn(temporary, sink)
 
-    def run_script_entry(self, patch_lines: str) -> subprocess.CompletedProcess[str]:
+    def run_script_entry(self, patch_lines: str, tools: Path = ROOT / "tools") -> subprocess.CompletedProcess[str]:
         """Run the real script entry in a child interpreter; the child patches one failure and uses a test-owned cwd."""
-        script = ROOT / "tools" / "verify_playable.py"
+        script = tools / "verify_playable.py"
         with tempfile.TemporaryDirectory(prefix="playable-entry-") as temporary:
             work = Path(temporary) / "work"
             work.mkdir()
             code = (
                 "import platform, runpy, sys, tempfile\n"
                 f"sys.argv = ['verify_playable.py', '--retroarch', {str(Path(temporary) / 'R.app')!r}, '--clean']\n"
-                f"sys.path.insert(0, {str(ROOT / 'tools')!r})\n"
+                f"sys.path.insert(0, {str(tools)!r})\n"
                 f"_owned = {str(work)!r}\n"
                 + patch_lines +
                 f"runpy.run_path({str(script)!r}, run_name='__main__')\n"
             )
-            return subprocess.run([sys.executable, "-I", "-c", code], cwd=temporary, text=True,
+            # -I ignores PYTHONDONTWRITEBYTECODE; -B keeps the child from writing tools/__pycache__.
+            return subprocess.run([sys.executable, "-I", "-B", "-c", code], cwd=temporary, text=True,
                                   capture_output=True, timeout=120, check=False)
 
     def test_t_04_11_entry_maps_uncaught_errors_without_traceback(self) -> None:
@@ -1872,6 +1873,22 @@ class MainErrorPathTest(unittest.TestCase):
         for sink in (result.stdout, result.stderr):
             self.assertNotIn("Traceback", sink)
             self.assertNotIn(str(ROOT), sink)
+
+    def test_entry_child_writes_no_bytecode_into_the_source_tools(self) -> None:
+        # The qualification runner executes this suite inside the materialized source snapshot and
+        # verifies its inventory after the lane; -I ignores PYTHONDONTWRITEBYTECODE, so a child that
+        # imported private_paths wrote tools/__pycache__ into the snapshot (snapshot-inventory-mismatch).
+        with tempfile.TemporaryDirectory(prefix="playable-entry-tools-") as temporary:
+            tools = Path(temporary) / "tools"
+            tools.mkdir()
+            for name in ("verify_playable.py", "private_paths.py"):
+                shutil.copy2(ROOT / "tools" / name, tools / name)
+            result = self.run_script_entry(
+                "def _interrupt(*a, **k):\n    raise KeyboardInterrupt()\n"
+                "tempfile.mkdtemp = _interrupt\n", tools=tools)
+            self.assertEqual(result.returncode, 130, result.stderr)
+            self.assertEqual(sorted(path.name for path in tools.iterdir()),
+                             ["private_paths.py", "verify_playable.py"])
 
     def test_t_04_11_argparse_exit_passes_through(self) -> None:
         with self.assertRaises(SystemExit) as caught, contextlib.redirect_stderr(io.StringIO()):
