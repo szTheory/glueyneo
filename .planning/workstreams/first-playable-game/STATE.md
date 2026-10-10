@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
-current_plan: 3
+current_plan: 4
 status: executing
-stopped_at: Completed 04-38-PLAN.md
-last_updated: "2026-10-10T20:28:10.832Z"
+stopped_at: Completed 04-39-PLAN.md
+last_updated: "2026-10-10T20:33:48.022Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 04 execution started
-state_head: 244a1de0401fca2e5893dc73e8058f024cb65427
+state_head: f17ce82c6cf72df7fe7c880e43f077a333ff22c9
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 48
-  completed_plans: 44
+  completed_plans: 45
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 ## Current Position
 
 Phase: 04 (Public Playable Tracer) — EXECUTING
-Current Plan: 3
+Current Plan: 4
 Total Plans in Phase: 42
 Status: Ready to execute
 Last activity: 2026-10-10 — Phase 04 execution started
@@ -42,7 +42,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 3
+**Current Plan:** 4
 
 ## Performance Metrics
 
@@ -90,12 +90,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P36 | 35 min | 2 tasks | 8 files |
 | Phase 04 P37 | 25 min | 3 tasks | 6 files |
 | Phase 04 P38 | 25min | 2 tasks | 3 files |
+| Phase 04 P39 | 20min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-10T20:28:10.799Z
+**Last session:** 2026-10-10T20:33:47.995Z
 
-**Stopped At:** Completed 04-38-PLAN.md
+**Stopped At:** Completed 04-39-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
@@ -175,6 +176,7 @@ unchanged external-blocker plan. Plan/summary counts are not phase acceptance.
 - [Phase 04]: 04-36: receipt re-qualified at bd74482e0050; focused 73-ID re-review left T-04-11, T-04-38, T-04-61, T-04-67 and WR-11 open (residual branch, CLOSURE exit 1); routed to /gsd-plan-phase 04 --gaps
 - [Phase 04]: 04-37: glob_contained fails closed on /, ~ or $ alternatives in brace/extglob groups; review --revision pinned to 40-hex whole-line match
 - [Phase 04]: 04-38: review provenance is a reviewed_revision..head ordering window; proves ordering only, not verdict-to-file binding
+- [Phase 04]: 04-39: final lane reap isolated in _collect_after_kill; drain via select/os.read before SIGKILL (T-04-54 kept)
 
 ### Blockers
 
