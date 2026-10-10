@@ -116,6 +116,68 @@ class CanonicalRootTest(unittest.TestCase):
                 self.assertNotIn("\\u2215", written)
 
 
+def _variants(root: str) -> dict[str, str]:
+    """The CR-01 separator and encoding table for one root, applied to its path text."""
+    bare = root.lstrip("/")
+    table = {
+        "U+2215 separators": root.replace("/", "\u2215"),
+        "U+2044 separators": root.replace("/", "\u2044"),
+        "double percent": root.replace("/", "%252F"),
+        "json escape text": root.replace("/", "\\/"),
+        "NBSP separators": root.replace("/", "\u00a0"),
+        "colon separators": root.replace("/", ":"),
+    }
+    for label, mark in (("dash", "-"), ("underscore", "_"), ("dot", ".")):
+        table[f"{label}-mangled with leading separator"] = root.replace("/", mark)
+        table[f"{label}-mangled without leading separator"] = bare.replace("/", mark)
+    return table
+
+
+class BypassMatrixTest(unittest.TestCase):
+    """Every CR-01 variant for the home, checkout and a non-home root (CR-01, CR-02, IN-04)."""
+
+    ROOTS = {"home": HOME, "checkout": str(ROOT), "non-home": EXTRA_ROOT}
+    EXTRA = (ROOT, EXTRA_ROOT)
+
+    def test_every_variant_is_cut_and_fails_the_scan(self) -> None:
+        for root_label, root in self.ROOTS.items():
+            last = Path(root).name.casefold()
+            for label, variant in _variants(root).items():
+                value = "err " + variant + "/p/a.o"
+                with self.subTest(root=root_label, variant=label):
+                    safe = private_paths.redact(value, extra_roots=self.EXTRA)
+                    self.assertIn("[redacted-path]", safe)
+                    self.assertNotIn(last, safe.casefold())
+                    private_paths.scan_public(json.dumps(safe), self.EXTRA)
+                    with self.assertRaises(private_paths.PrivatePathError):
+                        private_paths.scan_public(value, self.EXTRA)
+                    with self.assertRaises(private_paths.PrivatePathError):
+                        private_paths.scan_public(json.dumps(value), self.EXTRA)
+                    with self.assertRaises(private_paths.PrivatePathError):
+                        private_paths.scan_public(json.dumps({"k": value}), self.EXTRA)
+
+    def test_temporary_directory_written_with_division_slash(self) -> None:
+        value = "err " + "/tmp/x".replace("/", "\u2215")
+        self.assertIn("[redacted-path]", private_paths.redact(value))
+        with self.assertRaises(private_paths.PrivatePathError):
+            private_paths.scan_public(value)
+        with self.assertRaises(private_paths.PrivatePathError):
+            private_paths.scan_public(json.dumps(value))
+
+    def test_existing_bypasses_are_rejected_in_json_encoded_form(self) -> None:
+        for label, value in RedactionTest.BYPASSES.items():
+            with self.subTest(bypass=label), self.assertRaises(private_paths.PrivatePathError):
+                private_paths.scan_public(json.dumps(value))
+
+    def test_benign_text_is_unchanged_and_passes(self) -> None:
+        for value in ("chrome/extension ok", "build/tmp-like ok", "docs/tmp/notes", "public_users_list",
+                      "lanes: shared-build pass", "RetroPad RIGHT <- Right Arrow", "macOS 26.6.2 arm64"):
+            with self.subTest(value=value):
+                self.assertEqual(private_paths.redact(value, extra_roots=self.EXTRA), value)
+                private_paths.scan_public(value, self.EXTRA)
+                private_paths.scan_public(json.dumps(value), self.EXTRA)
+
+
 class SinkTest(unittest.TestCase):
     def test_artifact_tree_omits_cmake_internals(self) -> None:
         with tempfile.TemporaryDirectory(prefix="glueyneo-artifacts-") as temporary:
@@ -147,6 +209,36 @@ class SinkTest(unittest.TestCase):
         text = retroarch_smoke.public_json(result)
         self.assertEqual(json.loads(text), {"status": "fail", "reason": "private-path-survived"})
         self.assertEqual(result["status"], "fail")
+
+    def test_scan_public_value_scans_keys_and_decoded_values(self) -> None:
+        for label, value in (("key", {"fullwidth key \uff0ftmp\uff0fx": "ok"}),
+                             ("nested value", {"a": [{"b": "x \u2215" + "tmp\u2215y"}]}),
+                             ("tuple value", {"a": ("ok", "\uff0fUsers\uff0fu")})):
+            with self.subTest(where=label), self.assertRaises(private_paths.PrivatePathError):
+                private_paths.scan_public_value(value)
+        private_paths.scan_public_value({"lane": {"status": "pass", "n": 3, "ok": None}})
+
+    def test_smoke_output_scans_decoded_values_and_keys(self) -> None:
+        division = str(ROOT).replace("/", "\u2215")
+        for label, result in (("nested value", {"status": "pass", "identity": {"core": [division + "/core"]}}),
+                              ("key", {"status": "pass", "identity": {division + "/core": "x"}})):
+            with self.subTest(where=label):
+                text = retroarch_smoke.public_json(dict(result))
+                self.assertEqual(json.loads(text), {"status": "fail", "reason": "private-path-survived"})
+
+    def test_diagnostic_output_never_keeps_a_mangled_checkout_root(self) -> None:
+        mangled = str(ROOT).replace("/", "-")
+        record = retroarch_smoke.build_diagnostic(
+            stage="load", return_code=1, survived_before_screenshot=False,
+            output="CMakeFiles/x.dir" + mangled + "/a.c.o failed")
+        self.assertNotIn("glueyneo", json.dumps(record))
+
+    def test_frontend_evidence_rejects_a_division_slash_home_path(self) -> None:
+        summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        playable.validate_frontend_evidence(summary)
+        summary["os"] = "macOS " + HOME.replace("/", "\u2215") + "/build"
+        with self.assertRaisesRegex(RuntimeError, "private absolute path"):
+            playable.validate_frontend_evidence(summary)
 
 
 if __name__ == "__main__":
