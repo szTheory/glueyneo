@@ -1505,94 +1505,110 @@ def main() -> int:
         status = "fail"
         reason = getattr(error, "reason", "qualification-failed")
         if not isinstance(error, SnapshotError):
-            reason = redact(str(error))
+            reason = _public_reason(str(error))
     except Exception as error:  # Fail closed while still retaining an inspectable receipt.
         status = "fail"
-        reason = f"qualification-internal-error: {type(error).__name__}: {redact(str(error))}"
+        reason = f"qualification-internal-error: {type(error).__name__}: {_public_reason(str(error))}"
 
-    receipt: dict[str, object] = {
-        "schema": "glueyneo.playable-qualification/v1",
-        "status": status,
-        "identity": identity,
-        "lanes": runner.lanes if runner is not None else {},
-        "fixture": {"status": "pass" if fixture_shared.is_file() and sha256(fixture_shared) == FIXTURE_SHA256 else "unknown",
-                    "sha256": sha256(fixture_shared) if fixture_shared.is_file() else "unknown"},
-        "retroarch_smoke": {"status": "unknown", "reason": "not run"},
-        "artifacts": {
-            "static_fixture": _artifact_file(fixture_static, OUTPUT),
-            "shared_fixture": _artifact_file(fixture_shared, OUTPUT),
-            "static_core": _artifact_file(static_core, OUTPUT),
-            "shared_core": _artifact_file(shared_core, OUTPUT),
-            "static_install": _artifact_tree(prefixes["static"], OUTPUT) if "static" in prefixes else {"status": "unknown"},
-            "shared_install": _artifact_tree(prefixes["shared"], OUTPUT) if "shared" in prefixes else {"status": "unknown"},
-            "ym2610_candidate_report": _artifact_file(report_path, OUTPUT),
-            "ym2610_candidate_builds": _artifact_tree(work / "installed", OUTPUT),
-            "ym2610_direct_test": _artifact_file(work / "candidate-generated-build/sdk-debug/ym2610_admission_test", OUTPUT),
-        },
-        "unsupported_configurations": ["non-macOS", "architectures other than this host", "unlisted compilers and SDKs"],
-    }
-    if snapshot is None:
-        receipt["identity"]["source_snapshot"] = {"status": "fail", "reason": reason}  # type: ignore[index]
-    if runner is None:
-        receipt["lanes"] = {}
-    if snapshot is not None and runner is not None and shared_core.is_file() and fixture_shared.is_file():
-        try:
-            smoke_record, lane_failure = run_frontend_smoke_lane(
-                runner, source_root, args.retroarch.resolve(), shared_core, fixture_shared)
-            receipt["retroarch_smoke"] = smoke_record
-            if lane_failure is not None:
+    # T-04-11 / G2CR-02: no traceback or exception message text leaves the receipt section;
+    # only the exception type name is printed and recorded.
+    try:
+        receipt: dict[str, object] = {
+            "schema": "glueyneo.playable-qualification/v1",
+            "status": status,
+            "identity": identity,
+            "lanes": runner.lanes if runner is not None else {},
+            "fixture": {"status": "pass" if fixture_shared.is_file() and sha256(fixture_shared) == FIXTURE_SHA256 else "unknown",
+                        "sha256": sha256(fixture_shared) if fixture_shared.is_file() else "unknown"},
+            "retroarch_smoke": {"status": "unknown", "reason": "not run"},
+            "artifacts": {
+                "static_fixture": _artifact_file(fixture_static, OUTPUT),
+                "shared_fixture": _artifact_file(fixture_shared, OUTPUT),
+                "static_core": _artifact_file(static_core, OUTPUT),
+                "shared_core": _artifact_file(shared_core, OUTPUT),
+                "static_install": _artifact_tree(prefixes["static"], OUTPUT) if "static" in prefixes else {"status": "unknown"},
+                "shared_install": _artifact_tree(prefixes["shared"], OUTPUT) if "shared" in prefixes else {"status": "unknown"},
+                "ym2610_candidate_report": _artifact_file(report_path, OUTPUT),
+                "ym2610_candidate_builds": _artifact_tree(work / "installed", OUTPUT),
+                "ym2610_direct_test": _artifact_file(work / "candidate-generated-build/sdk-debug/ym2610_admission_test", OUTPUT),
+            },
+            "unsupported_configurations": ["non-macOS", "architectures other than this host", "unlisted compilers and SDKs"],
+        }
+        if snapshot is None:
+            receipt["identity"]["source_snapshot"] = {"status": "fail", "reason": reason}  # type: ignore[index]
+        if runner is None:
+            receipt["lanes"] = {}
+        if snapshot is not None and runner is not None and shared_core.is_file() and fixture_shared.is_file():
+            try:
+                smoke_record, lane_failure = run_frontend_smoke_lane(
+                    runner, source_root, args.retroarch.resolve(), shared_core, fixture_shared)
+                receipt["retroarch_smoke"] = smoke_record
+                if lane_failure is not None:
+                    status = "fail"
+                    reason = reason or lane_failure
+            except Exception as error:
+                lane_reason = getattr(error, "reason", "smoke-lane-error")
+                receipt["retroarch_smoke"] = {"status": "unknown", "stage": "source-integrity" if isinstance(error, SnapshotError) else "frontend", "reason": lane_reason}
                 status = "fail"
-                reason = reason or lane_failure
-        except Exception as error:
-            lane_reason = getattr(error, "reason", "smoke-lane-error")
-            receipt["retroarch_smoke"] = {"status": "unknown", "stage": "source-integrity" if isinstance(error, SnapshotError) else "frontend", "reason": lane_reason}
+                reason = reason or lane_reason
+        else:
+            receipt["retroarch_smoke"] = {"status": "unknown", "reason": "clean installed core or fixture unavailable"}
             status = "fail"
-            reason = reason or lane_reason
-    else:
-        receipt["retroarch_smoke"] = {"status": "unknown", "reason": "clean installed core or fixture unavailable"}
-        status = "fail"
-        reason = reason or "actual RetroArch lane could not run"
-    if args.check_docs:
+            reason = reason or "actual RetroArch lane could not run"
+        if args.check_docs:
+            try:
+                if snapshot is None:
+                    raise SnapshotError("documentation-snapshot-unavailable", "documentation cannot be checked without a source snapshot")
+                verify_snapshot(snapshot)
+                check_docs(source_root, repository=ROOT, head=snapshot.commit)
+                verify_snapshot(snapshot)
+                receipt["documentation"] = {"status": "pass"}
+            except RuntimeError as error:
+                documentation_reason = _public_reason(str(error))
+                receipt["documentation"] = {"status": "fail", "reason": documentation_reason}
+                status = "fail"
+                reason = reason or documentation_reason
+            except Exception as error:  # Never let a traceback or message carry an unscanned path.
+                documentation_reason = f"documentation-check-error: {type(error).__name__}"
+                receipt["documentation"] = {"status": "fail", "reason": documentation_reason}
+                status = "fail"
+                reason = reason or documentation_reason
+        if snapshot is not None:
+            try:
+                verify_snapshot(snapshot)
+                validate_snapshot_record(receipt["identity"]["source_snapshot"], repository=ROOT)  # type: ignore[index]
+            except SnapshotError as error:
+                receipt["identity"]["source_snapshot"]["status"] = "fail"  # type: ignore[index]
+                receipt["identity"]["source_snapshot"]["reason"] = error.reason  # type: ignore[index]
+                status = "fail"
+                reason = reason or error.reason
+        if receipt["identity"]["source_snapshot"].get("status") == "pass":  # type: ignore[index]
+            try:
+                validate_snapshot_record(receipt["identity"]["source_snapshot"])  # type: ignore[index]
+            except SnapshotError as error:
+                receipt["identity"]["source_snapshot"]["status"] = "fail"  # type: ignore[index]
+                receipt["identity"]["source_snapshot"]["reason"] = error.reason  # type: ignore[index]
+                status = "fail"
+                reason = reason or error.reason
+        receipt["status"] = status
+        receipt["reason"] = reason
+        receipt["output"] = {"run_directory": work.relative_to(OUTPUT).as_posix()}
+        if runner is not None:
+            receipt["lanes"] = runner.lanes
+        return 0 if _write_receipt(receipt) == "pass" else 1
+    except Exception as error:
+        token = f"receipt-error: {type(error).__name__}"
+        emit_error("receipt: ", token)
         try:
-            if snapshot is None:
-                raise SnapshotError("documentation-snapshot-unavailable", "documentation cannot be checked without a source snapshot")
-            verify_snapshot(snapshot)
-            check_docs(source_root, repository=ROOT, head=snapshot.commit)
-            verify_snapshot(snapshot)
-            receipt["documentation"] = {"status": "pass"}
-        except RuntimeError as error:
-            documentation_reason = _public_reason(str(error))
-            receipt["documentation"] = {"status": "fail", "reason": documentation_reason}
-            status = "fail"
-            reason = reason or documentation_reason
-        except Exception as error:  # Never let a traceback or message carry an unscanned path.
-            documentation_reason = f"documentation-check-error: {type(error).__name__}"
-            receipt["documentation"] = {"status": "fail", "reason": documentation_reason}
-            status = "fail"
-            reason = reason or documentation_reason
-    if snapshot is not None:
-        try:
-            verify_snapshot(snapshot)
-            validate_snapshot_record(receipt["identity"]["source_snapshot"], repository=ROOT)  # type: ignore[index]
-        except SnapshotError as error:
-            receipt["identity"]["source_snapshot"]["status"] = "fail"  # type: ignore[index]
-            receipt["identity"]["source_snapshot"]["reason"] = error.reason  # type: ignore[index]
-            status = "fail"
-            reason = reason or error.reason
-    if receipt["identity"]["source_snapshot"].get("status") == "pass":  # type: ignore[index]
-        try:
-            validate_snapshot_record(receipt["identity"]["source_snapshot"])  # type: ignore[index]
-        except SnapshotError as error:
-            receipt["identity"]["source_snapshot"]["status"] = "fail"  # type: ignore[index]
-            receipt["identity"]["source_snapshot"]["reason"] = error.reason  # type: ignore[index]
-            status = "fail"
-            reason = reason or error.reason
-    receipt["status"] = status
-    receipt["reason"] = reason
-    receipt["output"] = {"run_directory": work.relative_to(OUTPUT).as_posix()}
-    if runner is not None:
-        receipt["lanes"] = runner.lanes
-    return 0 if _write_receipt(receipt) == "pass" else 1
+            _write_receipt({
+                "schema": "glueyneo.playable-qualification/v1", "status": "fail", "reason": token,
+                "identity": {"source_snapshot": {"status": "fail", "reason": "receipt-error"}},
+                "lanes": {}, "retroarch_smoke": {"status": "unknown", "reason": "receipt-error"},
+                "unsupported_configurations": ["non-macOS", "architectures other than this host", "unlisted compilers and SDKs"],
+            })
+        except Exception:
+            emit_error("receipt: ", "receipt-write-failed")
+        return 1
 
 
 if __name__ == "__main__":
