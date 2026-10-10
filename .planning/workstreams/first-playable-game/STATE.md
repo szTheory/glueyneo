@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
-current_plan: 9
+current_plan: 2
 status: executing
-stopped_at: "Completed 04-31-PLAN.md (review halted: containment-violation)"
-last_updated: "2026-10-10T17:13:36.983Z"
+stopped_at: Completed 04-32-PLAN.md
+last_updated: "2026-10-10T17:33:36.626Z"
 last_activity: 2026-10-10
-last_activity_desc: Phase 04 planning complete — 36 plans ready
-state_head: 2d75a5702704dcf2b8ed86faf82d036414f7bf21
+last_activity_desc: Phase 04 execution started
+state_head: f2bad8b4778b3f9f83885e2da6e7a1ec3545fc4d
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 42
-  completed_plans: 37
+  completed_plans: 38
   percent: 0
 ---
 
@@ -30,19 +30,19 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 ## Current Position
 
-Phase: 04 (public-playable-tracer) — READY TO EXECUTE
-Current Plan: 9
+Phase: 04 (Public Playable Tracer) — EXECUTING
+Current Plan: 2
 Total Plans in Phase: 36
 Status: Ready to execute
 Last activity: 2026-10-10 — Phase 04 execution started
-Last Activity Description: Phase 04 planning complete — 36 plans ready
+Last Activity Description: Phase 04 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 9
+**Current Plan:** 2
 
 ## Performance Metrics
 
@@ -83,12 +83,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P29 | 25min | 3 tasks | 9 files |
 | Phase 04 P30 | 30min | 3 tasks | 10 files |
 | Phase 04 P31 | 40min | 3 tasks | 7 files |
+| Phase 04 P32 | 6 min | 3 tasks | 10 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-10T15:53:51.770Z
+**Last session:** 2026-10-10T17:33:36.589Z
 
-**Stopped At:** Completed 04-31-PLAN.md (review halted: containment-violation)
+**Stopped At:** Completed 04-32-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
@@ -160,6 +161,7 @@ unchanged external-blocker plan. Plan/summary counts are not phase acceptance.
 - [Phase 04]: 04-28: smoke lane extracted to run_frontend_smoke_lane; lane signals only the PID its own smoke recorded
 - [Phase 04]: 04-29: WR-08 partially repaired by runtime_writable_storage audit; sdk_private.h guard stays heuristic (expected 04-31 disposition deferred)
 - [Phase 04]: 04-30: bare home-name token skipped only for generic service-account names under GITHUB_ACTIONS (residual T-04-60 accepted)
+- [Phase 04]: D-GAP-01: scratch directory itself is contained in independent_review.py; '..' anywhere and unmatched absolute-prefix globs fail closed
 
 ### Blockers
 
