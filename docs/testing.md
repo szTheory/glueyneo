@@ -140,6 +140,10 @@ unescaped pipes only, so `\|` inside a cell is literal.
 
 Phase acceptance runs
 `python3 tests/tools/check_security_register.py <workstream> --require-closed --phase NN`.
+The unscoped run counts every `NN-SECURITY.md` and `NN.N-SECURITY.md` register
+(names must fully match; G2WR-04), and `status: verified` is matched
+case-insensitively (G2IN-01). Executor-recorded fix evidence never closes a row:
+threat closure needs the separate headless security-audit verdict (T-04-48).
 Milestone shipping runs it without `--phase`, so every register counts there,
 including draft registers of later phases: a blocking draft row blocks milestone
 shipping by design. The CTest is a consistency check only. The
@@ -149,15 +153,58 @@ one must add the unscoped `--require-closed` to that release gate.
 
 ### Review provenance
 
-`python3 tools/verify_playable.py --check-docs` binds every review disposition
-that is not `open` to a committed ancestor revision (T-04-38). The Source cell
-must cite a revision in the form `review (04-NN, <12 to 40 hex>)` or
-`` revision `<40 hex>` ``; it must resolve to a commit that is an ancestor of the
-checked head. Other hexadecimal text, such as digests, is not a revision. A
-missing or non-ancestor revision fails the gate, and review crosswalk scope paths
-may not contain `..`. A `--clean --check-docs` failure that is not a reported
-documentation error is recorded as `documentation-check-error: <ExceptionType>`
-with no message text.
+`python3 tools/verify_playable.py --check-docs` binds review dispositions to a
+revision window (T-04-38, T-04-67, WR-11, G2WR-01, G2WR-02). 04-REVIEW.md must
+carry exactly one `reviewed_revision` of 40 lowercase hex characters that
+resolves to an ancestor of the checked head. Each disposition that is not `open`
+must cite a revision, in the form `review (04-NN, <12 to 40 hex>)` or
+`` revision `<40 hex>` ``, that resolves, descends from or equals
+`reviewed_revision`, and is an ancestor of the head. Other hexadecimal text, such
+as digests, is not a revision. A missing, unresolvable or out-of-window revision
+fails the gate, and review crosswalk scope paths may not contain `..`.
+
+The gate proves ordering only. It does not prove that a review ran at the cited
+commit, that the verdict covered the cited files, or that they are unchanged
+since; that freshness comes from the focused re-review's changed-path rule. A
+`--clean --check-docs` failure that is not a reported documentation error is
+recorded as `documentation-check-error: <ExceptionType>` with no message text.
+
+## Playable qualification tooling contracts
+
+These contracts back the Phase 04 playable-tracer gates. A passing unit test is
+evidence for the named behavior only; none of them closes a security register
+row (see Closure gates).
+
+- **Review-tool containment** (`tools/independent_review.py`, T-04-61,
+  G2CR-01). A glob is not contained when any `{}` or extglob alternative begins
+  with `/` or `~`, in relative and absolute patterns; `(` ends an absolute
+  pattern's literal prefix. `check --revision` accepts exactly 40 lowercase hex
+  characters (exit 2 otherwise, value not echoed) and matches the
+  `Reviewed revision:` line as a whole line (G2WR-03). R2 finding IDs of the
+  form `G2CR-NN`, `G2WR-NN` and `G2IN-NN` are reviewable IDs.
+- **Qualification receipt errors** (T-04-11, G2CR-02, G2IN-03). Any error after
+  the build yields stderr `receipt: receipt-error: <ExceptionType>` and a minimal
+  fail receipt; if that write also fails the output is
+  `receipt: receipt-write-failed`. Build-failure reasons pass through the
+  scan-backed reason helper.
+- **Frontend receipt currency.** The tracked receipt is current only while no
+  receipt-bound path has changed since its `source_revision`: anything under
+  `src/`, `include/`, `third_party/`, `tests/fixture/` or `tests/libretro/`, or
+  `tools/verify_playable.py`, `tools/private_paths.py`, `CMakeLists.txt` and
+  `CMakePresets.json`. `--check-docs` binds a receipt to its own committed
+  snapshot inventory and does not detect later changes, so a gap round that
+  changes a receipt-bound path re-qualifies pinned RetroArch before citing the
+  receipt.
+- **Evidence recording** (G2WR-05). First-time generation with absent files
+  works. Rollback unlinks files that did not exist before, continues past a
+  failed restore and raises `evidence rollback incomplete: <names>` (base names
+  only).
+- **Lane timeouts** (G2IN-02). Output is drained during the SIGTERM grace
+  without reaping the leader; the no-signal-after-reap invariant (T-04-54) is
+  unchanged.
+- **Smoke harness** (G2WR-06). A signal deferred in the launch window is always
+  raised as `interrupted`, even when launch raises; a child-PID record failure is
+  reported as `pid-record`.
 
 ### CTest registration
 
