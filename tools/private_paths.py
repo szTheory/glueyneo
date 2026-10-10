@@ -21,6 +21,14 @@ text, which also covers the slashless object-directory names CMake derives from
 absolute source paths. Generic roots (/Users/, /tmp/ and the rest) match only at
 a path start, so that ``build/tmp-like`` and ``docs/tmp/notes`` stay benign.
 
+The bare home-directory name is also rejected as a whole token, except for a
+generic service-account name (``runner``, ``build`` and similar) while running
+under GitHub Actions: there it is not a personal identifier and appears in
+ordinary prose. Every home-path form is still caught by root matching, a
+personal name is rejected everywhere, and a developer host is never relaxed even
+when its account has a generic name. The residual is a host that exports
+``GITHUB_ACTIONS=true`` with a generic account name (docs/testing.md, T-04-60).
+
 Redaction is best effort. scan_public() and scan_public_value() are the
 control: every public sink calls one of them on the decoded values and keys it
 is about to write, and refuses to write on any survivor. scan_public_value()
@@ -41,6 +49,11 @@ from typing import Any, Iterable
 GENERIC_ROOTS = ("/Users/", "/home/", "/Volumes/", "/tmp/", "/var/tmp/", "/var/folders/")
 # macOS reports the same directories under /private; they are generic roots too.
 _GENERIC_ALIASES = ("/private/tmp/", "/private/var/tmp/", "/private/var/folders/")
+# Generic CI account names; skipped as a bare token only under GitHub Actions.
+SERVICE_ACCOUNT_NAMES = frozenset({
+    "runner", "build", "builder", "ci", "user", "admin", "root", "ubuntu", "vagrant",
+    "jenkins", "github", "travis", "circleci", "buildkite-agent", "gitlab-runner",
+})
 _PERCENT_PASSES = 8
 _START_CHARACTERS = frozenset("\"'=([<,;:")
 _ESCAPE = re.compile(r"\\u([0-9a-fA-F]{4})|\\/")
@@ -189,14 +202,15 @@ def private_needles(extra_roots: Iterable[Path | str] = ()) -> tuple[tuple[str, 
     return ordered(specific), ordered(generic)
 
 
-def _first_match(canon: str, starts: set[int], extra_roots: Iterable[Path | str]) -> int | None:
+def _first_match(canon: str, starts: set[int], extra_roots: Iterable[Path | str],
+                 generic_roots: bool = True) -> int | None:
     specific, generic = private_needles(extra_roots)
     found: list[int] = []
     for needle in specific:
         position = canon.find(needle)
         if position >= 0:
             found.append(position)
-    for needle in generic:
+    for needle in generic if generic_roots else ():
         position = canon.find(needle)
         while position >= 0:
             if position in starts:
@@ -225,15 +239,18 @@ def _username_token_present(text: str) -> bool:
         return False
     if len(name) < 3:
         return False
+    if name in SERVICE_ACCOUNT_NAMES and os.environ.get("GITHUB_ACTIONS") == "true":
+        return False
     folded, _ = _normalize(text)
     tokens = "".join(c if c.isalnum() or c in "._-" else " " for c in folded).split()
     return any(token == name for token in tokens)
 
 
-def scan_public(text: str, extra_roots: Iterable[Path | str] = ()) -> None:
+def scan_public(text: str, extra_roots: Iterable[Path | str] = (), *, _generic_roots: bool = True) -> None:
     """Fail closed if any private root survives in text bound for a sink."""
     canon, _, starts = _canonical(text)
-    if _first_match(canon, starts, extra_roots) is not None or _username_token_present(text):
+    if _first_match(canon, starts, extra_roots, _generic_roots) is not None \
+            or _username_token_present(text):
         raise PrivatePathError("private-path-survived")
 
 
@@ -249,6 +266,8 @@ def scan_public_value(value: Any, extra_roots: Iterable[Path | str] = ()) -> Non
         item = stack.pop()
         if isinstance(item, str):
             scan_public(item, extra_roots)
+        elif item is not None and not isinstance(item, (bool, int, float, dict, list, tuple)):
+            scan_public(str(item), extra_roots)  # json.dumps(default=str) form of a non-JSON leaf
         elif isinstance(item, dict):
             for key, child in item.items():
                 if isinstance(key, str):
@@ -256,4 +275,9 @@ def scan_public_value(value: Any, extra_roots: Iterable[Path | str] = ()) -> Non
                 stack.append(child)
         elif isinstance(item, (list, tuple)):
             stack.extend(item)
-    scan_public(json.dumps(value, ensure_ascii=False, sort_keys=True, default=str), extra_roots)
+    # JSON punctuation (``": "``) makes the first character of every value look
+    # like a path start, so repository-relative ``tmp/x`` would match the generic
+    # ``/tmp/`` root. Generic roots were already checked per decoded string and key
+    # above; the serialization is scanned for specific roots and the username.
+    scan_public(json.dumps(value, ensure_ascii=False, sort_keys=True, default=str), extra_roots,
+                _generic_roots=False)

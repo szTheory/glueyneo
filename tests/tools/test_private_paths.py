@@ -67,6 +67,8 @@ class RedactionTest(unittest.TestCase):
         name = Path.home().name
         if len(name) < 3:
             self.skipTest("username too short to scan as a token")
+        if name.casefold() in private_paths.SERVICE_ACCOUNT_NAMES and os.environ.get("GITHUB_ACTIONS") == "true":
+            self.skipTest("generic service-account home name is not scanned as a token under GitHub Actions")
         with self.assertRaises(private_paths.PrivatePathError):
             private_paths.scan_public(f"owner {name} ran it")
 

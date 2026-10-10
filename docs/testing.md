@@ -142,6 +142,23 @@ targets only, ignores generator-expression links, and is enforced in static
 builds as the early warning for the shared-build link failure. The storage
 audit, not the guard, is the isolation control.
 
+## Private-path scan limits
+
+Receipts, smoke output and the artifact inventory pass through
+`tools/private_paths.py` before they are written. Generic roots (`/tmp/`,
+`/Users/` and the rest) match only at a path start (04-24), so repository
+relative paths such as `.planning/tmp/notes.md` and `tmp/home/x` pass. Full home
+paths are rejected in every canonical form (separator, percent and Unicode
+variants). The bare home-directory name is also rejected as a token, with one
+documented exception: when the casefolded name is a generic service-account
+name (`runner`, `build`, `admin` and the rest of `SERVICE_ACCOUNT_NAMES`) and
+`GITHUB_ACTIONS` equals `true`, the bare name in prose is not rejected, because
+it is not a personal identifier on a hosted runner. Personal usernames are
+rejected everywhere and a developer host is never relaxed, even with a generic
+account name. Exporting `GITHUB_ACTIONS=true` on a host whose account has a
+generic name disables only that bare-token check. This residual is accepted as
+register row T-04-60 (low).
+
 ## Unsupported coverage
 
 The matching AppleClang libFuzzer archive is absent on this host, so no
