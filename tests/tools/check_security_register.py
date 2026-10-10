@@ -13,12 +13,14 @@ must equal the number of open threat-register rows at or above the configured
   error, never skipped (GWR-01). Non-register audit tables use another first
   header such as `Audited Threat`. Cells split on unescaped pipes only.
 - Threat IDs must be unique across tables; status must be open, closed or
-  accepted; `status: verified` (also quoted) requires `threats_open: 0`.
+  accepted; `status: verified` (also quoted, any letter case: G2IN-01)
+  requires `threats_open: 0`.
 - Default mode checks consistency only and prints per-register blocking counts,
   so a PASS is not closure. `--require-closed` additionally exits 1 while any
   register has blocking open threats. `--phase NN` restricts the run to the one
   `phases/NN-*/NN-SECURITY.md` register (exactly one must exist) for phase
-  acceptance; milestone shipping runs without it so every register counts.
+  acceptance; milestone shipping runs without it so every register counts,
+  `NN-SECURITY.md` and decimal-phase `NN.N-SECURITY.md` alike (G2WR-04).
 
 The blocking threshold is `workflow.security_block_on` from
 `.planning/workstreams/<workstream>/config.json` when that file sets it, else
@@ -49,8 +51,10 @@ CELL_SPLIT = re.compile(r"(?<!\\)\|")
 # Any row whose first cell reads "Threat ID" starts a register table; the case and the trailing pipe
 # are not significant, so a loosely written table is checked rather than skipped (T-04-62).
 HEADER = re.compile(r"^\|\s*threat\s+id\s*\|(.*?)\|?\s*$", re.IGNORECASE)
-VERIFIED = re.compile(r"""^status:\s*["']?verified["']?\s*$""")
+VERIFIED = re.compile(r"""^status:\s*["']?verified["']?\s*$""", re.IGNORECASE)
 PHASE_NUMBER = re.compile(r"^[0-9]{2}(\.[0-9]+)?$")
+# One definition of a register file name, shared by the scoped and unscoped globs (G2WR-04).
+REGISTER_NAME = re.compile(r"[0-9]{2}(?:\.[0-9]+)?-SECURITY\.md")
 
 
 def configured_level(path: Path, label: str) -> str | None | tuple[str]:
@@ -204,8 +208,9 @@ def main(arguments: list[str] | None = None, root: Path = ROOT) -> int:
         print(f"FAIL: {threshold}", file=sys.stderr)
         return 1
     level, level_name, source = threshold
-    pattern = f"phases/{phase}-*/{phase}-SECURITY.md" if phase else "phases/*/[0-9][0-9]-SECURITY.md"
-    registers = sorted(root.glob(f".planning/workstreams/{workstream}/{pattern}"))
+    pattern = f"phases/{phase}-*/{phase}-SECURITY.md" if phase else "phases/*/[0-9][0-9]*-SECURITY.md"
+    registers = sorted(path for path in root.glob(f".planning/workstreams/{workstream}/{pattern}")
+                       if REGISTER_NAME.fullmatch(path.name))
     if not registers:
         scope = f"phase {phase}" if phase else f"workstream {workstream}"
         print(f"FAIL: no security registers for {scope}", file=sys.stderr)
