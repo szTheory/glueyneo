@@ -4,8 +4,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import io
 import json
+import os
 from pathlib import Path
 import struct
 import sys
@@ -177,6 +179,53 @@ class BypassMatrixTest(unittest.TestCase):
                 self.assertEqual(private_paths.redact(value, extra_roots=self.EXTRA), value)
                 private_paths.scan_public(value, self.EXTRA)
                 private_paths.scan_public(json.dumps(value), self.EXTRA)
+
+
+def _home(path: str, github_actions: bool):
+    """Patch the home lookup and set or remove GITHUB_ACTIONS regardless of the host."""
+    environment = {k: v for k, v in os.environ.items() if k != "GITHUB_ACTIONS"}
+    if github_actions:
+        environment["GITHUB_ACTIONS"] = "true"
+    stack = contextlib.ExitStack()
+    stack.enter_context(mock.patch.object(Path, "home", return_value=Path(path)))
+    stack.enter_context(mock.patch.dict(os.environ, environment, clear=True))
+    return stack
+
+
+class ServiceAccountTest(unittest.TestCase):
+    """WR-06: a generic account name is skipped only under GitHub Actions (T-04-59, T-04-60)."""
+
+    def test_generic_runner_name_passes_under_github_actions(self) -> None:
+        with _home("/home/runner", True):
+            private_paths.scan_public("lanes: the runner wrote a receipt")
+
+    def test_runner_receipt_is_written_under_github_actions(self) -> None:
+        receipt = {"status": "pass", "identity": {}, "lanes": {"lane": {"status": "the runner wrote it"}}}
+        with tempfile.TemporaryDirectory(prefix="glueyneo-ci-") as temporary:
+            output = Path(temporary)
+            with _home("/home/runner", True), \
+                    mock.patch.object(playable, "OUTPUT", output), \
+                    mock.patch("sys.stdout", new_callable=io.StringIO):
+                status = playable._write_receipt(receipt)
+        self.assertEqual(status, "pass")
+
+    def test_runner_home_paths_still_fail_under_github_actions(self) -> None:
+        with _home("/home/runner", True):
+            for value in ("/home/runner/work/x", "/home/runner/work/x".replace("/", "\u2215")):
+                with self.subTest(value=value), self.assertRaises(private_paths.PrivatePathError):
+                    private_paths.scan_public(value)
+
+    def test_generic_name_is_still_rejected_outside_github_actions(self) -> None:
+        with _home("/Users/build", False), self.assertRaises(private_paths.PrivatePathError):
+            private_paths.scan_public("build ok")
+
+    def test_personal_name_is_rejected_under_github_actions(self) -> None:
+        with _home("/Users/alice", True), self.assertRaises(private_paths.PrivatePathError):
+            private_paths.scan_public("owner alice ran it")
+
+    def test_repository_relative_inventory_paths_pass(self) -> None:
+        private_paths.scan_public_value({"entries": [{"path": ".planning/tmp/notes.md"},
+                                                     {"path": "tmp/home/x"}, {"path": "docs/var/y"}]})
 
 
 class SinkTest(unittest.TestCase):
