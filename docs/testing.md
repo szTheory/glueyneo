@@ -104,12 +104,22 @@ missing or unreadable root config, an unreadable workstream config and an
 unknown severity at either level fail with `FAIL:`. The `PASS:` line names the
 threshold and its source (`block_on high from .planning/config.json`).
 
-Default mode checks consistency only. `threats_open` is read from the YAML
-frontmatter (the first `---` block), where exactly one `threats_open: <n>` line
-must exist, and must equal the open rows at or above
-`workflow.security_block_on` across every table whose first header cell is
-`Threat ID` (matched case-insensitively, with or without a trailing pipe, so a
-loosely written table is counted rather than skipped, T-04-62). Such a table must have `Severity` and `Status` columns; one that
+Default mode checks consistency only. The YAML frontmatter (the first `---`
+block) is read as a set of top-level keys. Keys are compared after removing
+quotes and case-folding, so `"threats_open"`, `'threats_open'` and
+`Threats_Open` are one key, and any duplicate top-level key in any quoting form
+fails (T-04-48). A commented or indented `threats_open`/`status` key fails.
+Unsupported YAML lines (flow mappings, merge keys, complex keys, anchors,
+aliases, escaped quoted keys, top-level list items) fail with their line number
+instead of being skipped. `threats_open` must be a bare non-negative integer,
+optionally followed by a ` # comment`, and must equal the open rows at or above
+`workflow.security_block_on` across every GFM table whose header's first cell,
+whitespace-collapsed and case-folded, is `Threat ID`. Such a table is indented 0
+to 3 spaces, may omit leading and trailing pipes, has a delimiter row with the
+same cell count, and runs to the first blank line, heading, blockquote or fence;
+a row without a leading pipe still counts (T-04-62). Any other line whose first
+cell reads `Threat ID` (4 or more spaces or a tab of indentation, a blockquote,
+no delimiter row) fails as `unrecognized threat table form at line N`. Such a table must have `Severity` and `Status` columns; one that
 lacks either (for example `Sev` and `State`) is an error naming its line, never
 silently skipped (GWR-01). A table that only audits threats, such as the ASVS
 result table in a SECURITY.md, uses another first header cell, by convention
@@ -126,11 +136,13 @@ register, fails otherwise, and appends `scope: phase NN` to the `PASS:` line.
 It scopes a closure check to one phase, so a blocking draft row in another
 phase does not affect it.
 
-`FAIL:` reasons: missing frontmatter; a missing, duplicated, commented or
-indented `threats_open` key; a count that differs from the rows; a malformed
+`FAIL:` reasons: missing frontmatter; a missing, commented or indented
+`threats_open` key; a `duplicate frontmatter key`; an `unsupported frontmatter
+line`; a `threats_open` that is not a bare integer; an `unrecognized threat
+table form`; a `misnamed security register`; a count that differs from the rows; a malformed
 row, duplicate threat ID, uncontrolled status or unknown severity; a `Threat ID`
 table without Severity and Status; `status: verified` (also `"verified"` or
-`'verified'`) with a non-zero count; a missing or unreadable
+`'verified'`, optionally followed by a ` # comment`) with a non-zero count; a missing or unreadable
 `.planning/config.json` or an unknown `security_block_on`; a workstream config
 that weakens `security_block_on`; an invalid `--phase`; and a workstream name
 that does not match `^[A-Za-z0-9][A-Za-z0-9._-]*$`. Table cells split on
@@ -141,7 +153,10 @@ unescaped pipes only, so `\|` inside a cell is literal.
 Phase acceptance runs
 `python3 tests/tools/check_security_register.py <workstream> --require-closed --phase NN`.
 The unscoped run counts every `NN-SECURITY.md` and `NN.N-SECURITY.md` register
-(names must fully match; G2WR-04), and `status: verified` is matched
+(names must fully match; G2WR-04). A file matching `NN*-SECURITY.md` whose name
+is not a register name fails as `misnamed security register` when it has a
+`threats_open` key or a `Threat ID` table, and otherwise is reported as `SKIP:`
+and not counted (G3IN-03). `status: verified` is matched
 case-insensitively (G2IN-01). Executor-recorded fix evidence never closes a row:
 threat closure needs the separate headless security-audit verdict (T-04-48).
 Milestone shipping runs it without `--phase`, so every register counts there,
