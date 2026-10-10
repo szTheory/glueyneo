@@ -146,6 +146,18 @@ shipping by design. The CTest is a consistency check only. The
 first-playable-game workstream assigns no release version (ROADMAP); assigning
 one must add the unscoped `--require-closed` to that release gate.
 
+### Review provenance
+
+`python3 tools/verify_playable.py --check-docs` binds every review disposition
+that is not `open` to a committed ancestor revision (T-04-38). The Source cell
+must cite a revision in the form `review (04-NN, <12 to 40 hex>)` or
+`` revision `<40 hex>` ``; it must resolve to a commit that is an ancestor of the
+checked head. Other hexadecimal text, such as digests, is not a revision. A
+missing or non-ancestor revision fails the gate, and review crosswalk scope paths
+may not contain `..`. A `--clean --check-docs` failure that is not a reported
+documentation error is recorded as `documentation-check-error: <ExceptionType>`
+with no message text.
+
 ### CTest registration
 
 `planning_security_register_consistency` is registered when
@@ -165,9 +177,15 @@ private copy and the independent native reference. The CTest
 `tests/tools/check_runtime_storage.py` with the configured `nm` over the
 runtime library and fails on any object symbol in writable data or
 zero-initialized storage, so the two copies provably share no mutable global
-state. There is no allowlist: a never-written table is made `const`. On Windows
-it reports `unsupported` (CTest skip code 77) instead of passing. The unit
-tests (`runtime_writable_storage_audit`) cover canned Mach-O and ELF `nm` output.
+state. There is no allowlist: a never-written table is made `const`. The audit
+reports Mach-O sections `__DATA,__data`, `__DATA,__bss`, `__DATA,__common` and
+the thread-local `__DATA,__thread_data`, `__DATA,__thread_bss` and
+`__DATA,__thread_vars`, and ELF symbol types `D d B b G g V v` plus common
+(`C c`) and small-data (`S s`). It cannot pass vacuously: `nm` output in which no
+line parses as a symbol fails with `no symbols parsed`. On Windows, or with an
+empty `--nm`, it reports `unsupported` (CTest skip code 77) instead of passing; a
+failing `nm` still fails. The unit tests (`runtime_writable_storage_audit`) cover
+canned Mach-O and ELF `nm` output.
 
 The configure-time `sdk_private.h` guard in `CMakeLists.txt` stays heuristic and
 is an accepted residual: it inspects direct `.c`/`.cpp` sources only, top-level
@@ -191,6 +209,12 @@ rejected everywhere and a developer host is never relaxed, even with a generic
 account name. Exporting `GITHUB_ACTIONS=true` on a host whose account has a
 generic name disables only that bare-token check. This residual is accepted as
 register row T-04-60 (low).
+
+A specific root (the checkout, the temporary directory, the home directory)
+matches anywhere inside a value, so unrelated text that merely embeds one is also
+rejected. This over-matching is a deliberate fail-closed limit (GIN-01): matching
+is never narrowed to avoid it. A structure that cannot be serialized to JSON fails
+closed as `unscannable-value` (GIN-02).
 
 ## Unsupported coverage
 
