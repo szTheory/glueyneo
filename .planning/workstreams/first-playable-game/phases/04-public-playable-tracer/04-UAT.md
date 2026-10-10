@@ -1,14 +1,18 @@
 ---
-status: complete
+status: testing
 phase: 04-public-playable-tracer
-source: [04-01-SUMMARY.md, 04-02-SUMMARY.md, 04-03-SUMMARY.md, 04-04-SUMMARY.md, 04-05-SUMMARY.md, 04-06-SUMMARY.md, 04-07-SUMMARY.md, 04-08-SUMMARY.md, 04-09-SUMMARY.md, 04-10-SUMMARY.md, 04-11-SUMMARY.md, 04-12-SUMMARY.md, 04-13-SUMMARY.md, 04-14-SUMMARY.md, 04-15-SUMMARY.md, 04-16-SUMMARY.md, 04-17-SUMMARY.md, 04-18-SUMMARY.md, 04-19-SUMMARY.md, 04-20-SUMMARY.md, 04-21-SUMMARY.md, 04-22-SUMMARY.md]
+source: [04-01-SUMMARY.md, 04-02-SUMMARY.md, 04-03-SUMMARY.md, 04-04-SUMMARY.md, 04-05-SUMMARY.md, 04-06-SUMMARY.md, 04-07-SUMMARY.md, 04-08-SUMMARY.md, 04-09-SUMMARY.md, 04-10-SUMMARY.md, 04-11-SUMMARY.md, 04-12-SUMMARY.md, 04-13-SUMMARY.md, 04-14-SUMMARY.md, 04-15-SUMMARY.md, 04-16-SUMMARY.md, 04-17-SUMMARY.md, 04-18-SUMMARY.md, 04-19-SUMMARY.md, 04-20-SUMMARY.md, 04-21-SUMMARY.md, 04-22-SUMMARY.md, 04-VERIFICATION.md]
 started: 2026-10-10T11:38:03Z
-updated: 2026-10-10T12:06:34.345Z
+updated: 2026-10-10T20:52:48Z
 ---
 
 ## Current Test
 
-[testing complete]
+number: 35
+name: Headless security audit and focused re-review close the round-3 open rows (round 3 re-verification).
+expected: |
+  Audit closes or reopens the 9 open rows (T-04-11, T-04-38, T-04-48, T-04-61, T-04-67, T-04-SC 04-37..04-42); `check_security_register.py first-playable-game --require-closed --phase 04` exits 0; round-3 warnings G3WR-01..05 are fixed or dispositioned.
+awaiting: user response
 
 ## Tests
 
@@ -224,12 +228,18 @@ result: pass
 source: automated
 coverage_id: 04-22 D1
 
+### 35. Headless security audit and focused re-review close the round-3 open rows (round 3 re-verification).
+expected: Audit closes or reopens the 9 open rows (T-04-11, T-04-38, T-04-48, T-04-61, T-04-67, T-04-SC 04-37..04-42); `check_security_register.py first-playable-game --require-closed --phase 04` exits 0; round-3 warnings G3WR-01..05 are fixed or dispositioned.
+result: [pending]
+source: 04-VERIFICATION.md human_verification (round 3)
+why_human: Closure by design requires an independent headless gsd-security-auditor verdict (T-04-48); neither the executor nor the verifier may close rows by attestation.
+
 ## Summary
 
-total: 34
+total: 35
 passed: 34
 issues: 0
-pending: 0
+pending: 1
 skipped: 0
 blocked: 0
 
