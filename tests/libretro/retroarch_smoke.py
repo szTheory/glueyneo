@@ -41,6 +41,17 @@ RIGHT_KEY_CODE = 124
 DIAGNOSTIC_OUTPUT_LIMIT = 12 * 1024
 DIAGNOSTIC_PROBE_SECONDS = 1.0
 CRASH_REPORT_WAIT_SECONDS = 8.0
+APPLICATION_SERVICES = "/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices"
+CG_HID_EVENT_TAP = 0
+# RetroArch samples keyboard state once per frame (~16.7 ms at 60 Hz); hold
+# each injected key for several frames so the poll observes the press.
+KEY_HOLD_SECONDS = 0.1
+ARROW_HOLD_SECONDS = 0.25
+KEY_GAP_SECONDS = 0.05
+FOCUS_SETTLE_SECONDS = 0.2
+SCREENSHOT_KEY_CODE = 100
+SCREENSHOT_RETRY_SECONDS = 1.0
+LEFT_KEY_CODE = 123
 
 
 class SmokeBlocked(RuntimeError):
@@ -399,28 +410,66 @@ def request_screenshot(process: subprocess.Popen[bytes], directory: Path,
                        prior: dict[Path, int], timeout: float) -> Path:
     if process.poll() is not None:
         raise SmokeBlocked("first-screenshot", f"RetroArch exited before screenshot (status {process.returncode})")
-    inject_key(100, repeats=1)
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        fresh = select_fresh_screenshot(directory, prior)
-        if fresh is not None:
-            return fresh
-        time.sleep(0.1)
+        # A hotkey sent before the window and frame loop are ready is dropped,
+        # so repeat the request at a bounded interval until a capture appears.
+        if process.poll() is not None:
+            raise SmokeBlocked("first-screenshot", f"RetroArch exited before screenshot (status {process.returncode})")
+        inject_key(SCREENSHOT_KEY_CODE)
+        retry_at = min(deadline, time.monotonic() + SCREENSHOT_RETRY_SECONDS)
+        while time.monotonic() < retry_at:
+            fresh = select_fresh_screenshot(directory, prior)
+            if fresh is not None:
+                return fresh
+            time.sleep(0.1)
     raise SmokeBlocked("video", "RetroArch did not create a software-video screenshot")
 
 
-def inject_key(key_code: int, *, repeats: int = 24) -> None:
-    script = (
-        'tell application "System Events" to set frontmost of process "RetroArch" to true\n'
-        'tell application "System Events"\n'
-        f"repeat {repeats} times\nkey code {key_code}\ndelay 0.025\nend repeat\n"
-        "end tell"
-    )
+def post_held_key(key_code: int, hold: float) -> None:
+    """Post one HID keyDown, hold it, then post keyUp.
+
+    RetroArch's cocoa input driver records key state from events and samples
+    that state once per frame. System Events `key code` sends down and up
+    back-to-back, so both can land between samples and the press is never seen.
+    Holding for several frames makes the press visible to the per-frame poll.
+    """
+    import ctypes
+
+    services = ctypes.CDLL(APPLICATION_SERVICES)
+    services.CGPreflightPostEventAccess.restype = ctypes.c_bool
+    services.CGEventCreateKeyboardEvent.restype = ctypes.c_void_p
+    services.CGEventCreateKeyboardEvent.argtypes = [ctypes.c_void_p, ctypes.c_uint16, ctypes.c_bool]
+    services.CGEventPost.restype = None
+    services.CGEventPost.argtypes = [ctypes.c_uint32, ctypes.c_void_p]
+    services.CFRelease.restype = None
+    services.CFRelease.argtypes = [ctypes.c_void_p]
+    if not services.CGPreflightPostEventAccess():
+        raise OSError("macOS denied keyboard event posting")
+    events = [services.CGEventCreateKeyboardEvent(None, key_code, down) for down in (True, False)]
+    try:
+        if not all(events):
+            raise OSError("macOS could not create a keyboard event")
+        services.CGEventPost(CG_HID_EVENT_TAP, events[0])
+        time.sleep(hold)
+        services.CGEventPost(CG_HID_EVENT_TAP, events[1])
+    finally:
+        for event in events:
+            if event:
+                services.CFRelease(event)
+
+
+def inject_key(key_code: int, *, repeats: int = 1, hold: float = KEY_HOLD_SECONDS) -> None:
+    script = 'tell application "System Events" to set frontmost of process "RetroArch" to true'
     try:
         subprocess.run(["/usr/bin/osascript", "-e", script], check=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                        timeout=8)
-    except (OSError, subprocess.SubprocessError) as error:
+        time.sleep(FOCUS_SETTLE_SECONDS)
+        for _ in range(repeats):
+            post_held_key(key_code, hold)
+            time.sleep(KEY_GAP_SECONDS)
+    except (OSError, AttributeError, subprocess.SubprocessError) as error:
         raise SmokeBlocked("input", "macOS could not inject the mapped arrow-key input") from error
 
 
@@ -439,6 +488,10 @@ def write_frontend_config(work: Path, screenshots: Path) -> Path:
                 'video_scale = "2"',
                 'video_smooth = "false"',
                 'video_vsync = "true"',
+                # Capture the raw core frame (WIDTH x HEIGHT), not the scaled
+                # viewport, so OSD text cannot cover the guest marker.
+                'video_gpu_screenshot = "false"',
+                'notification_show_screenshot = "false"',
                 'input_driver = "cocoa"',
                 'input_player1_left = "left"',
                 'input_player1_right = "right"',
@@ -677,7 +730,7 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                     second_marker = find_marker(second_frame)
                     if second_marker != first_marker:
                         raise SmokeBlocked("input", "no-input control changed the guest marker")
-                    inject_key(123)
+                    inject_key(LEFT_KEY_CODE, hold=ARROW_HOLD_SECONDS)
                     time.sleep(0.25)
                     wrong_input = request_screenshot(
                         process, screenshots, screenshot_snapshot(screenshots), args.timeout
@@ -685,7 +738,7 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                     wrong_marker = find_marker(decode_png(wrong_input))
                     if wrong_marker != first_marker:
                         raise SmokeBlocked("input", "Left Arrow wrong-input control moved the guest marker")
-                    inject_key(RIGHT_KEY_CODE)
+                    inject_key(RIGHT_KEY_CODE, hold=ARROW_HOLD_SECONDS)
                     time.sleep(0.25)
                     third = request_screenshot(
                         process, screenshots, screenshot_snapshot(screenshots), args.timeout
@@ -696,7 +749,7 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                         raise SmokeBlocked("input", "mapped Right Arrow did not move the guest marker right")
                     outcome["input_response"] = "observed"
                 else:
-                    inject_key(RIGHT_KEY_CODE)
+                    inject_key(RIGHT_KEY_CODE, hold=ARROW_HOLD_SECONDS)
                     request_screenshot(process, screenshots,
                                        screenshot_snapshot(screenshots), args.timeout)
                     outcome["input_response"] = "unknown"

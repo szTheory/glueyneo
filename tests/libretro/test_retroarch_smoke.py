@@ -647,6 +647,112 @@ Sensitive unrelated line: private capture name
         self.assertIn("could not inject", str(raised.exception))
         self.assertEqual(raised.exception.availability, "unavailable")
 
+    def test_injected_keys_are_held_across_frame_polls_not_tapped(self) -> None:
+        # RetroArch samples key state once per frame; a back-to-back down/up
+        # (System Events `key code`) can fall between polls and be ignored.
+        with (
+            mock.patch.object(smoke.subprocess, "run") as run,
+            mock.patch.object(smoke, "post_held_key") as post,
+            mock.patch.object(smoke.time, "sleep"),
+        ):
+            smoke.inject_key(smoke.SCREENSHOT_KEY_CODE)
+            smoke.inject_key(smoke.RIGHT_KEY_CODE, hold=smoke.ARROW_HOLD_SECONDS)
+
+        for call in run.call_args_list:
+            self.assertNotIn("key code", call.args[0][-1])
+            self.assertIn("frontmost", call.args[0][-1])
+        self.assertEqual(post.call_args_list, [
+            mock.call(smoke.SCREENSHOT_KEY_CODE, smoke.KEY_HOLD_SECONDS),
+            mock.call(smoke.RIGHT_KEY_CODE, smoke.ARROW_HOLD_SECONDS),
+        ])
+        frame = 1.0 / 60.0
+        self.assertGreaterEqual(smoke.KEY_HOLD_SECONDS, 3 * frame)
+        self.assertGreaterEqual(smoke.ARROW_HOLD_SECONDS, smoke.KEY_HOLD_SECONDS)
+
+    def test_held_key_posts_down_then_waits_hold_then_up(self) -> None:
+        log: list[tuple[str, object]] = []
+
+        class Services:
+            def __init__(self, preflight: bool) -> None:
+                self.preflight = preflight
+                self.CGPreflightPostEventAccess = lambda: self.preflight
+                self.CGEventCreateKeyboardEvent = lambda source, key, down: 1000 + key * 2 + int(down)
+                self.CGEventPost = lambda tap, event: log.append(("post", (tap, event)))
+                self.CFRelease = lambda event: log.append(("release", event))
+
+        with (
+            mock.patch("ctypes.CDLL", return_value=Services(True)),
+            mock.patch.object(smoke.time, "sleep", side_effect=lambda s: log.append(("sleep", s))),
+        ):
+            smoke.post_held_key(smoke.RIGHT_KEY_CODE, 0.25)
+
+        down = 1000 + smoke.RIGHT_KEY_CODE * 2 + 1
+        up = 1000 + smoke.RIGHT_KEY_CODE * 2
+        self.assertEqual(log, [
+            ("post", (smoke.CG_HID_EVENT_TAP, down)), ("sleep", 0.25),
+            ("post", (smoke.CG_HID_EVENT_TAP, up)), ("release", down), ("release", up),
+        ])
+
+        log.clear()
+        with (
+            mock.patch("ctypes.CDLL", return_value=Services(False)),
+            mock.patch.object(smoke.subprocess, "run"),
+            mock.patch.object(smoke.time, "sleep"),
+        ):
+            with self.assertRaises(smoke.SmokeBlocked) as raised:
+                smoke.inject_key(smoke.RIGHT_KEY_CODE)
+        self.assertEqual(log, [])
+        self.assertEqual(raised.exception.availability, "unavailable")
+
+    def test_screenshot_request_repeats_hotkey_dropped_before_frontend_is_ready(self) -> None:
+        class Running:
+            returncode = None
+
+            def poll(self) -> None:
+                return None
+
+        clock = [0.0]
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            requests: list[int] = []
+
+            def inject(key_code: int) -> None:
+                requests.append(key_code)
+                if len(requests) == 3:  # first two requests are dropped
+                    (directory / "capture.png").write_bytes(b"png")
+
+            def sleep(seconds: float) -> None:
+                clock[0] += seconds
+
+            with (
+                mock.patch.object(smoke, "inject_key", side_effect=inject),
+                mock.patch.object(smoke.time, "monotonic", side_effect=lambda: clock[0]),
+                mock.patch.object(smoke.time, "sleep", side_effect=sleep),
+            ):
+                selected = smoke.request_screenshot(Running(), directory, {}, timeout=20.0)
+
+            self.assertEqual(selected, directory / "capture.png")
+            self.assertEqual(requests, [smoke.SCREENSHOT_KEY_CODE] * 3)
+
+            with (
+                mock.patch.object(smoke, "inject_key", side_effect=lambda key_code: requests.append(key_code)),
+                mock.patch.object(smoke.time, "monotonic", side_effect=lambda: clock[0]),
+                mock.patch.object(smoke.time, "sleep", side_effect=sleep),
+            ):
+                requests.clear()
+                with self.assertRaises(smoke.SmokeBlocked) as raised:
+                    smoke.request_screenshot(Running(), directory, smoke.screenshot_snapshot(directory), timeout=3.0)
+            self.assertEqual(raised.exception.stage, "video")
+            self.assertLessEqual(len(requests), 4)  # bounded by timeout / retry interval
+
+    def test_frontend_config_captures_raw_core_frame_without_osd(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            work = Path(temporary)
+            text = smoke.write_frontend_config(work, work / "screenshots").read_text(encoding="utf-8")
+        self.assertIn('video_gpu_screenshot = "false"', text)
+        self.assertIn('notification_show_screenshot = "false"', text)
+        self.assertIn('input_screenshot = "f8"', text)
+
     def test_blocked_keyboard_authority_stays_unknown_in_command_result(self) -> None:
         error = smoke.SmokeBlocked("input", "macOS could not inject the mapped arrow-key input")
         stdout = io.StringIO()

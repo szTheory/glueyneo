@@ -55,6 +55,16 @@ The 2026-10-07 probes used RetroArch 1.22.2 (`ed90b54434a2899de0ddbfed59f335255f
 
 A separate LaunchServices check (`open -n -W -a ...`) returned `kLSNoExecutableErr` even though the pinned bundle declares an executable that exists, is executable, and passes code-signature verification. The macOS unified log query was unavailable in this execution environment, so the underlying abort cause remains unknown. The required external precondition is a working interactive macOS launch context for this pinned app, with its startup failure diagnosable. HOST-02 remains unknown; neither launch probe is acceptance evidence.
 
+2026-10-09 update (supersedes the open abort cause above, not the HOST-02 status): every recorded `-6` report for this app aborts inside AppKit `_RegisterApplication` during `NSApplication` initialization, before option parsing, core loading or content handling. All of them came from the earlier agent-sandboxed launch context and its CMake/Python children. From an interactive login session, with the same executable digest and quarantine attribute, the app starts normally and answers `--version`. The startup abort is therefore a launch-context requirement (the process must be able to register with the logged-in window server), not an installation, core or fixture defect. Run the smoke from a terminal in the logged-in macOS session.
+
+The same investigation found three smoke-harness defects, now corrected:
+
+- System Events `key code` sends key down and key up back-to-back. The cocoa input driver samples key state once per frame, so such taps were dropped. The smoke now uses System Events only to bring the window frontmost. It posts each key as a held Quartz HID event (`CGEventPost`, 100 ms for the screenshot hotkey, 250 ms for arrows). This needs macOS permission to post keyboard events for the launching terminal (Accessibility). When `CGPreflightPostEventAccess` denies it, the `input` stage is reported as unavailable.
+- A screenshot hotkey sent before the window and frame loop are ready is lost, so the smoke repeats it once per second until a fresh capture appears or the timeout expires.
+- The default viewport capture is scaled and includes on-screen notifications, which can cover the guest marker. The per-run config now sets `video_gpu_screenshot = "false"` and `notification_show_screenshot = "false"`, so captures are the raw 320x224 core frame.
+
+HOST-02 still requires the committed-snapshot qualification receipt from `tools/verify_playable.py`; a direct smoke run is not that receipt.
+
 ## Previous qualification observation
 
 The values below are from the 2026-10-07 run made before complete source snapshots were introduced. They remain useful as toolchain and artifact history, but that receipt is superseded for QUAL-03 because it did not bind every input to its source. Plan 04-08 regenerates the receipt using the snapshot procedure above.
