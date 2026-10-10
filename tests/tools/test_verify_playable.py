@@ -594,6 +594,31 @@ class ProcessGroupTest(unittest.TestCase):
                 for _signum, returncode in seen:
                     self.assertIsNone(returncode, "a group signal followed reaping (killpg after_reap)")
 
+    def test_g2in_02_lane_drains_pipe_during_grace(self) -> None:
+        program = (
+            "import os, signal, sys, time\n"
+            "def term(signum, frame):\n"
+            "    os.write(1, b'x' * 262144 + b'TAIL-MARKER')\n"
+            "    os._exit(0)\n"
+            "signal.signal(signal.SIGTERM, term)\n"
+            "while True:\n"
+            "    time.sleep(0.05)\n"
+        )
+        proc = subprocess.Popen([sys.executable, "-c", program], stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True, start_new_session=True)
+        try:
+            with self.assertRaises(subprocess.TimeoutExpired) as caught:
+                proc.communicate(timeout=1)
+            started = time.monotonic()
+            with mock.patch.object(playable, "LANE_GRACE_SECONDS", 5):
+                output = playable._terminate_lane_group(proc, caught.exception)
+            elapsed = time.monotonic() - started
+        finally:
+            self.kill_quietly(proc.pid)
+            proc.wait()
+        self.assertLess(elapsed, 4, "the grace period was spent blocked on a full pipe")
+        self.assertIn("TAIL-MARKER", output)
+
     @staticmethod
     def kill_quietly(pid: int) -> None:
         try:
