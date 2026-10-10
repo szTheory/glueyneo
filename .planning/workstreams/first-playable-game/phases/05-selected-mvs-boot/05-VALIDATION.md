@@ -302,7 +302,8 @@ supervisor stack/vector behavior, 62 cycles, and no operand write.
   `e80672845fc60d94d8a44eab416377534c9a99f1` on PR #2. Local
   source-identity/evidence, rights, matrix (1,440 assertions, 43 cases, 10
   lanes), hosted-receipt tests, and public-content/history checks passed.
-  Independent review passed that exact SHA.
+  Independent review passed that exact SHA. These are candidate-scope results;
+  they do not describe the current shared checkout history.
 - Hosted PR run `38001400110` passed on the exact candidate SHA: all six matrix
   lanes, public-content, and `ci-policy`. The downloaded event, MVS receipt,
   canonical MVS output, and aggregate from that run were accepted by
@@ -312,11 +313,24 @@ supervisor stack/vector behavior, 62 cycles, and no operand write.
   unmerged because protected `main` requires one approving PR review and the
   PR has `REVIEW_REQUIRED`; no protection was bypassed.
 
+### Current shared checkout refresh — 2026-10-09
+
+- On shared checkout HEAD `8d4f4f471d33101361406f6700c46d9a66b64d89`,
+  `python3 tests/sdk/test_matrix_evidence.py` and
+  `python3 tools/verify_sdk.py --suite matrix` pass (1,440 assertions, 43
+  cases, 10 lanes).
+- `python3 tools/public_content.py --root . --history-revision HEAD` fails on
+  personal-path findings in this local branch history. Finding details are
+  intentionally omitted; this checkout history is not publishable.
+- The scan failure is distinct from the zero-finding public-content/history
+  result for candidate `e80672845fc60d94d8a44eab416377534c9a99f1`. Candidate
+  receipts and CI results remain valid only for that exact SHA.
+
 ### Current hosted-receipt coverage disposition
 
 | Task / requirement | Test type | Candidate command and artifact | Result and scope |
 |---|---|---|---|
-| 05-06 Task 3 / G-05-5 — reject malformed or mismatched hosted MVS receipts | Unit (receipt validator) | `python3 tests/sdk/test_hosted_mvs_receipt.py` (`tools/verify_hosted_mvs.py`) | Passed 11 tests on candidate `e80672845fc60d94d8a44eab416377534c9a99f1`; validates event eligibility and SHA, lane/test inventory, positive denominator, source/output digests, and aggregate. The test and checker are not present in shared checkout HEAD `f9e02f94d664c3f8170f4dc7ae8aa30bc24c13f6`, so this command is candidate evidence and is not runnable or asserted as a HEAD test. |
+| 05-06 Task 3 / G-05-5 — reject malformed or mismatched hosted MVS receipts | Unit (receipt validator) | `python3 tests/sdk/test_hosted_mvs_receipt.py` (`tools/verify_hosted_mvs.py`) | Passed 11 tests on candidate `e80672845fc60d94d8a44eab416377534c9a99f1`; validates event eligibility and SHA, lane/test inventory, positive denominator, source/output digests, and aggregate. The test and checker were absent from shared checkout HEAD `f9e02f94d664c3f8170f4dc7ae8aa30bc24c13f6` and remain absent from current shared checkout HEAD `8d4f4f471d33101361406f6700c46d9a66b64d89`, so this command is candidate evidence and is not runnable or asserted as a HEAD test. |
 | 05-06 Task 3 / G-05-5 — hosted MVS lane and aggregate | Hosted CI receipt | Run `38001400110`, PR event for candidate SHA `e80672845fc60d94d8a44eab416377534c9a99f1`; artifacts accepted by `tools/verify_hosted_mvs.py` on that candidate | Passed for the exact candidate: seven named MVS CTests, positive denominator, matching source/output digests, and passing aggregate. This does not qualify shared checkout HEAD, selected-game boot, merge, release, or frontend behavior. |
 | 05-06 Task 2 / G-05-3, GAME-02 | Manual/source evidence gate | No executable selected-game predicate command is justified yet | Open/unknown. Required before running the bounded private qualification: an independently observed selected configuration and an independently sourced guest-written attract/start predicate with source-flow evidence and oracle ancestry. Without those, do not invent a predicate or interpret coarse device-state activity as acceptance. |
 | Selected-media RetroArch flow / MEDIA-03 frontend observation | Manual | No command; launch preconditions did not materially change | Unknown/manual-only. Required evidence is direct observation in the functioning pinned RetroArch setup of selected-media import/load, stable presentation, input response, unload, and normal exit. Existing synthetic callback tests do not establish this flow. |

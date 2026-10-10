@@ -40,17 +40,20 @@ actuals:
   commits: 1
 coverage:
   - id: D1
-    description: "The reviewed oracle identity and affirmative public-rights rows clear the local public-content and MVS matrix gates."
+    description: "The reviewed oracle identity and affirmative public-rights rows clear the candidate public-content and MVS matrix gates."
     verification:
       - kind: unit
         ref: "python3 tests/sdk/test_matrix_evidence.py"
         status: pass
       - kind: integration
-        ref: "python3 tools/public_content.py --root . --history-revision HEAD"
+        ref: "PR #2 candidate SHA e80672845fc60d94d8a44eab416377534c9a99f1: public-content/history scan; zero findings and 42 rights rows. Candidate-only historical evidence."
         status: pass
       - kind: integration
         ref: "python3 tools/verify_sdk.py --suite matrix"
         status: pass
+      - kind: integration
+        ref: "Shared checkout HEAD 8d4f4f471d33101361406f6700c46d9a66b64d89: python3 tools/public_content.py --root . --history-revision HEAD; failed because local branch history contains personal-path findings. This checkout is not publishable."
+        status: fail
     human_judgment: false
   - id: D2
     description: "The selected guest reaches an independently justified guest-written attract/start predicate within the measured bound."
@@ -113,6 +116,18 @@ coverage:
 - `python3 tools/verify_sdk.py --suite matrix` — passed, 1,440 assertions / 43 cases / 10 local lanes.
 - Hosted PR run `38001400110` — passed for exact candidate `e80672845fc60d94d8a44eab416377534c9a99f1`; downloaded event, receipt, output, and aggregate accepted by the receipt checker.
 - Independent review — passed for exact candidate SHA.
+
+## Current shared checkout refresh — 2026-10-09
+
+- The local evidence matrix and SDK matrix pass on shared checkout HEAD
+  `8d4f4f471d33101361406f6700c46d9a66b64d89`.
+- A fresh `python3 tools/public_content.py --root . --history-revision HEAD`
+  scan fails because local branch history contains personal-path findings.
+  The finding details are intentionally not copied into this planning record;
+  this shared checkout history must not be published.
+- This local history failure does not change the separately recorded
+  zero-finding scan for public candidate `e80672845fc60d94d8a44eab416377534c9a99f1`.
+  Candidate CI and hosted-receipt results remain scoped to that exact SHA.
 
 ## Deviations from Plan
 
