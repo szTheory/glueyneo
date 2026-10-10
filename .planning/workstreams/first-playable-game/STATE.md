@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
-current_plan: 3
+current_plan: 4
 status: executing
-stopped_at: Completed 04-25-PLAN.md
-last_updated: "2026-10-10T15:10:44.079Z"
+stopped_at: Completed 04-26-PLAN.md
+last_updated: "2026-10-10T15:21:29.398Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 04 execution started
-state_head: edcb2882155db7262a09857e7e515f9bfabce3c8
+state_head: 4baee27084fe8a25de59766eb11439d21385f042
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 37
-  completed_plans: 31
+  completed_plans: 32
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 ## Current Position
 
 Phase: 04 (Public Playable Tracer) — EXECUTING
-Current Plan: 3
+Current Plan: 4
 Total Plans in Phase: 31
 Status: Ready to execute
 Last activity: 2026-10-10 — Phase 04 execution started
@@ -42,7 +42,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 3
+**Current Plan:** 4
 
 ## Performance Metrics
 
@@ -77,12 +77,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05 P06 | 20h 15m 23s | 2 tasks | 16 files |
 | Phase 04 P24 | 40min | 3 tasks | 6 files |
 | Phase 04 P25 | 15 min | 2 tasks | 4 files |
+| Phase 04 P26 | 25min | 2 tasks | 4 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-10T15:10:44.036Z
+**Last session:** 2026-10-10T15:21:29.370Z
 
-**Stopped At:** Completed 04-25-PLAN.md
+**Stopped At:** Completed 04-26-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
@@ -149,6 +150,7 @@ unchanged external-blocker plan. Plan/summary counts are not phase acceptance.
 - [Phase 05]: Do not claim selected-game compatibility or attract/start without an independently observed selected configuration and source-backed guest predicate.
 - [Phase 05]: The exact-SHA hosted PR receipt establishes MVS CI only; keep PR #2 unmerged until required approval and keep frontend observation separate.
 - [Phase 04]: 04-25: security register default mode checks consistency only; closure is the explicit --require-closed mode
+- [Phase 04]: 04-26: frontend evidence binding is mandatory in check_docs (explicit repository or own .git, else fail closed); crosswalk scopes must resolve to registered threats or reviewed existing paths
 
 ### Blockers
 
