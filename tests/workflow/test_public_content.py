@@ -237,7 +237,7 @@ class PublicContentTests(unittest.TestCase):
     def test_repository_inventory_matches_recorded_fixture_and_dependency_bytes(self) -> None:
         result = content.validate_repository_inventory(ROOT)
         self.assertTrue(result["passed"])
-        self.assertEqual(result["items"], 44)
+        self.assertEqual(result["items"], 45)
 
     def test_rights_inventory_binds_bytes_and_rejects_unknown_or_changed_item(self) -> None:
         inventory = {"schema": 1, "items": [{
