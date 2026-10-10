@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import copy
 import io
@@ -1344,6 +1345,91 @@ class MainErrorPathTest(unittest.TestCase):
         self.assertIn("integrator documentation omits", documentation["reason"])
         for sink in (stdout, stderr, receipt["text"]):
             self.assertNotIn(home, sink)
+
+
+    def receipt_run(self, patches: dict[str, object] | None = None, *, artifact_file=None,
+                    build_failure: BaseException | None = None) -> tuple[int, str, str, Path | None]:
+        """Run the clean qualification path with the snapshot stubbed; return the receipt path if written."""
+        patches = patches or {}
+        with tempfile.TemporaryDirectory(prefix="playable-receipt-") as temporary:
+            output = Path(temporary) / "out"
+            snapshot = mock.Mock(commit="a" * 40, root=Path(temporary) / "source")
+            stack = contextlib.ExitStack()
+            with stack:
+                stack.enter_context(mock.patch.object(playable, "OUTPUT", output))
+                stack.enter_context(mock.patch.object(
+                    playable, "create_snapshot", side_effect=build_failure, return_value=snapshot))
+                for name in ("verify_snapshot", "validate_snapshot_record"):
+                    stack.enter_context(mock.patch.object(playable, name))
+                stack.enter_context(mock.patch.object(playable, "snapshot_record", return_value={"status": "pass"}))
+                if artifact_file is not None:
+                    stack.enter_context(mock.patch.object(playable, "_artifact_file", side_effect=artifact_file(temporary)))
+                for name, value in patches.items():
+                    stack.enter_context(mock.patch.object(playable, name, **value))  # type: ignore[arg-type]
+                status, stdout, stderr = self.run_main("--retroarch", str(Path(temporary) / "R.app"), "--clean")
+            written = (output / "receipt.json")
+            text = written.read_text(encoding="utf-8") if written.exists() else None
+        return status, stderr, stdout, text  # type: ignore[return-value]
+
+    @unittest.skipIf(os.geteuid() == 0, "root can read a mode 000 file")
+    def test_t_04_11_unreadable_artifact_writes_a_fail_receipt_without_traceback(self) -> None:
+        real = playable._artifact_file
+        unreadable: list[Path] = []
+
+        def factory(temporary: str):
+            target = Path(temporary) / "unreadable-artifact.bin"
+            target.write_bytes(b"x")
+            target.chmod(0o000)
+            unreadable.append(target)
+            return lambda path, root: real(target, root)
+
+        try:
+            status, stderr, _stdout, text = self.receipt_run(artifact_file=factory)
+        finally:
+            for target in unreadable:
+                if target.exists():
+                    target.chmod(0o600)
+        self.assertEqual(status, 1)
+        self.assertIn("receipt: receipt-error: PermissionError", stderr)
+        for forbidden in ("Traceback", str(Path.home()), "unreadable-artifact", tempfile.gettempdir()):
+            self.assertNotIn(forbidden, stderr)
+        self.assertIsNotNone(text)
+        receipt = json.loads(text)  # type: ignore[arg-type]
+        self.assertEqual(receipt["status"], "fail")
+        self.assertEqual(receipt["reason"], "receipt-error: PermissionError")
+        self.assertNotIn("unreadable-artifact", text)  # type: ignore[arg-type]
+
+    def test_t_04_11_receipt_errors_of_any_type_are_fixed_tokens(self) -> None:
+        home = str(Path.home())
+        failures = (playable.SnapshotError("x", home + "/p"), KeyError(home + "/p"),
+                    OSError(2, "gone", home + "/p"))
+        for failure in failures:
+            with self.subTest(error=type(failure).__name__):
+                status, stderr, stdout, text = self.receipt_run({"_artifact_tree": {"side_effect": failure}})
+                self.assertEqual(status, 1)
+                self.assertIn(f"receipt: receipt-error: {type(failure).__name__}", stderr)
+                for sink in (stderr, stdout, text or ""):
+                    self.assertNotIn(home, sink)
+                    self.assertNotIn("Traceback", sink)
+
+    def test_t_04_11_failed_minimal_write_prints_receipt_write_failed(self) -> None:
+        home = str(Path.home())
+        status, stderr, stdout, _text = self.receipt_run(
+            {"_write_receipt": {"side_effect": OSError(28, "No space", home + "/out")}})
+        self.assertEqual(status, 1)
+        self.assertIn("receipt: receipt-write-failed", stderr)
+        for sink in (stderr, stdout):
+            self.assertNotIn("Traceback", sink)
+            self.assertNotIn(home, sink)
+
+    def test_g2in_03_build_failure_reason_uses_public_reason(self) -> None:
+        home = str(Path.home())
+        real = playable._public_reason
+        with mock.patch.object(playable, "_public_reason", side_effect=real) as wrapper:
+            status, _stderr, _stdout, text = self.receipt_run(build_failure=RuntimeError(home + "/x"))
+        self.assertEqual(status, 1)
+        self.assertTrue(any(home in call.args[0] for call in wrapper.call_args_list))
+        self.assertNotIn(home, text or "")
 
 
 if __name__ == "__main__":
