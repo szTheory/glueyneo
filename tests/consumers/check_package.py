@@ -308,7 +308,9 @@ def core_dependencies(core: Path) -> list[str]:
         if executable is None:
             raise CheckError("otool is required to inspect the installed Libretro core")
         lines = run([executable, "-L", str(core)]).stdout.splitlines()[1:]
-        return [line.split()[0] for line in lines if line.strip()]
+        # Paths may contain spaces; the path ends where the version suffix starts.
+        matches = (re.match(r"^\s*(.+?) \(compatibility version", line) for line in lines)
+        return [match.group(1) for match in matches if match]
     executable = shutil.which("readelf")
     if executable is None:
         raise CheckError("readelf is required to inspect the installed Libretro core")
@@ -329,6 +331,15 @@ def check_core_self_contained(prefix: Path) -> None:
     if needed:
         raise CheckError(f"Installed Libretro core depends on package libraries: {needed}",
                          code="core-not-self-contained")
+    if sys.platform == "darwin":
+        # The system allowlist is macOS-only because only macOS is exercised.
+        # otool -L lists the dylib's own install name first (@rpath/<core>).
+        unexpected = [name for name in core_dependencies(cores[0])
+                      if Path(name).name != own_name
+                      and not name.startswith(("/usr/lib/", "/System/Library/"))]
+        if unexpected:
+            raise CheckError(f"Installed Libretro core depends on non-system libraries: {unexpected}",
+                             code="core-dependency")
 
 
 def shared_exports(library: Path) -> list[str]:
@@ -434,7 +445,7 @@ def build_package(variant: str, work: Path) -> dict[str, object]:
     layout = installed_layout(prefix, variant)
     inspect_exports(prefix, build_dir, layout, variant)
     check_core_self_contained(prefix)
-    exports =shared_exports(layout["library"]) if variant == "shared" else []
+    exports = shared_exports(layout["library"]) if variant == "shared" else []
     export_tool = export_inspector_identity(layout["library"]) if variant == "shared" else None
 
     generated = work / "installed-runner-fixture.bin"

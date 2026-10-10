@@ -61,6 +61,9 @@ class CoreDependencyTest(unittest.TestCase):
         self.check("/usr/lib/libSystem.B.dylib",
                    "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation")
 
+    def test_own_install_name_line_is_not_a_dependency(self) -> None:
+        self.check("@rpath/glueyneo_libretro.dylib", "/usr/lib/libSystem.B.dylib")
+
     def test_unexpected_dependency_error_names_the_dependency(self) -> None:
         with self.assertRaises(check_package.CheckError) as raised:
             self.check("/opt/homebrew/lib/libz.1.dylib")

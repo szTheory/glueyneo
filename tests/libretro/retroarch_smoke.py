@@ -86,7 +86,7 @@ def is_normalized_mvs_bundle(content: bytes) -> bool:
     cursor = 16
     found: set[int] = set()
     for _ in range(len(GNMV_REGION_LENGTHS)):
-        if cursor > len(content) or len(content) - cursor < 12:
+        if len(content) - cursor < 12:
             return False
         role = int.from_bytes(content[cursor:cursor + 4], "big")
         size = int.from_bytes(content[cursor + 4:cursor + 12], "big")
@@ -751,9 +751,7 @@ def validate_inputs(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[st
     with plist_path.open("rb") as stream:
         info = plistlib.load(stream)
     bundle_id = info.get("CFBundleIdentifier")
-    if (not isinstance(bundle_id, str) or
-            bundle_id != EXPECTED_BUNDLE_IDENTIFIER or
-            re.fullmatch(r"[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+", bundle_id) is None):
+    if bundle_id != EXPECTED_BUNDLE_IDENTIFIER:
         raise SmokeBlocked("identity", "RetroArch bundle identifier does not match the pinned application")
     version = str(info.get("CFBundleShortVersionString", ""))
     executable_name = str(info.get("CFBundleExecutable", ""))
