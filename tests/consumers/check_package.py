@@ -296,6 +296,41 @@ def export_inspector_identity(library: Path) -> dict[str, str]:
     return {"name": name, "executable": Path(executable).name, "version": first_line}
 
 
+def core_dependencies(core: Path) -> list[str]:
+    if sys.platform == "win32":
+        executable = shutil.which("dumpbin")
+        if executable is None:
+            raise CheckError("dumpbin is required to inspect the installed Libretro core")
+        output = run([executable, "/DEPENDENTS", str(core)]).stdout
+        return [line.strip() for line in output.splitlines() if line.strip().lower().endswith(".dll")]
+    if sys.platform == "darwin":
+        executable = shutil.which("otool")
+        if executable is None:
+            raise CheckError("otool is required to inspect the installed Libretro core")
+        lines = run([executable, "-L", str(core)]).stdout.splitlines()[1:]
+        return [line.split()[0] for line in lines if line.strip()]
+    executable = shutil.which("readelf")
+    if executable is None:
+        raise CheckError("readelf is required to inspect the installed Libretro core")
+    output = run([executable, "-d", str(core)]).stdout
+    return re.findall(r"\(NEEDED\)\s+Shared library: \[([^\]]+)\]", output)
+
+
+def check_core_self_contained(prefix: Path) -> None:
+    # Frontends load a core from their own cores directory without this
+    # package's rpath, so the installed core must not need a Glueyneo library.
+    cores = [path for path in prefix.rglob("glueyneo_libretro.*")
+             if path.is_file() and path.suffix in {".dylib", ".so", ".dll"}]
+    if len(cores) != 1:
+        raise CheckError(f"Expected one installed Libretro core; found {cores}", code="missing-core")
+    own_name = cores[0].name
+    needed = [name for name in core_dependencies(cores[0])
+              if "glueyneo" in Path(name).name.lower() and Path(name).name != own_name]
+    if needed:
+        raise CheckError(f"Installed Libretro core depends on package libraries: {needed}",
+                         code="core-not-self-contained")
+
+
 def shared_exports(library: Path) -> list[str]:
     name, executable = export_inspector()
     if name == "dumpbin":
@@ -398,7 +433,8 @@ def build_package(variant: str, work: Path) -> dict[str, object]:
     identity = compiler_identity(build_dir)
     layout = installed_layout(prefix, variant)
     inspect_exports(prefix, build_dir, layout, variant)
-    exports = shared_exports(layout["library"]) if variant == "shared" else []
+    check_core_self_contained(prefix)
+    exports =shared_exports(layout["library"]) if variant == "shared" else []
     export_tool = export_inspector_identity(layout["library"]) if variant == "shared" else None
 
     generated = work / "installed-runner-fixture.bin"

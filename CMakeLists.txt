@@ -152,8 +152,38 @@ else()
 endif()
 glueyneo_apply_sdk_sanitizer(glueyneo)
 
+# A static copy of the production runtime (no test hooks) for binaries that
+# must not depend on a shared libglueyneo: the Libretro core, which frontends
+# load from their own cores directory without our rpath, and tools that call
+# private symbols the shared library hides. Static builds reuse glueyneo.
+if(BUILD_SHARED_LIBS)
+  add_library(glueyneo_runtime_static STATIC ${GLUEYNEO_RUNTIME_SOURCES})
+  target_compile_features(glueyneo_runtime_static PRIVATE c_std_17)
+  set_target_properties(glueyneo_runtime_static PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS NO
+    POSITION_INDEPENDENT_CODE ON
+    C_VISIBILITY_PRESET hidden
+  )
+  target_include_directories(glueyneo_runtime_static
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/experiments/owned_cpu
+  )
+  if(MSVC)
+    target_compile_options(glueyneo_runtime_static PRIVATE /W4 /WX)
+  else()
+    target_compile_options(glueyneo_runtime_static PRIVATE
+      -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(glueyneo_runtime_static)
+else()
+  add_library(glueyneo_runtime_static ALIAS glueyneo)
+endif()
+
 # The frontend adapter owns the Libretro ABI boundary; machine behavior and
-# deterministic frame buffers remain in the native C library.
+# deterministic frame buffers remain in the native C library, linked
+# statically so the installed core is a single self-contained module.
 add_library(glueyneo_libretro SHARED src/libretro/libretro_core.c)
 target_compile_features(glueyneo_libretro PRIVATE c_std_17)
 set_target_properties(glueyneo_libretro PROPERTIES
@@ -167,7 +197,7 @@ set_target_properties(glueyneo_libretro PROPERTIES
 target_include_directories(glueyneo_libretro PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libretro
 )
-target_link_libraries(glueyneo_libretro PRIVATE Glueyneo::glueyneo)
+target_link_libraries(glueyneo_libretro PRIVATE glueyneo_runtime_static)
 install(TARGETS glueyneo_libretro
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/libretro"
   RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/libretro"
@@ -541,36 +571,15 @@ if(GLUEYNEO_BUILD_TESTS)
   set_tests_properties(mvs_import_fuzz_corpus PROPERTIES
     LABELS "mvs;fuzz" TIMEOUT 180)
 
-  # mvs_qualify reads the private fetch trace, which a shared libglueyneo keeps
-  # hidden. It links a static copy of the production runtime (no test hooks) so
-  # it builds identically with and without BUILD_SHARED_LIBS.
-  add_library(glueyneo_private_runtime STATIC ${GLUEYNEO_RUNTIME_SOURCES})
-  target_compile_features(glueyneo_private_runtime PRIVATE c_std_17)
-  set_target_properties(glueyneo_private_runtime PROPERTIES
-    C_STANDARD 17
-    C_STANDARD_REQUIRED YES
-    C_EXTENSIONS NO
-    C_VISIBILITY_PRESET hidden
-  )
-  target_include_directories(glueyneo_private_runtime
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/experiments/owned_cpu
-  )
-  if(MSVC)
-    target_compile_options(glueyneo_private_runtime PRIVATE /W4 /WX)
-  else()
-    target_compile_options(glueyneo_private_runtime PRIVATE
-      -Wall -Wextra -Wpedantic -Werror)
-  endif()
-  glueyneo_apply_sdk_sanitizer(glueyneo_private_runtime)
-
+  # mvs_qualify reads the private fetch trace, which a shared libglueyneo
+  # hides, so it links the static runtime copy in every build mode.
   add_executable(mvs_qualify tools/mvs/mvs_qualify.c)
   target_include_directories(mvs_qualify PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include)
   target_compile_features(mvs_qualify PRIVATE c_std_17)
   set_target_properties(mvs_qualify PROPERTIES C_STANDARD 17
     C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
-  target_link_libraries(mvs_qualify PRIVATE glueyneo_private_runtime)
+  target_link_libraries(mvs_qualify PRIVATE glueyneo_runtime_static)
   if(MSVC)
     target_compile_options(mvs_qualify PRIVATE /W4 /WX)
   else()
@@ -882,7 +891,7 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
       if(_private_includes)
         message(FATAL_ERROR
           "${_target} includes src/sdk_private.h but links the public "
-          "glueyneo library; link glueyneo_private_runtime or glueyneo_test")
+          "glueyneo library; link glueyneo_runtime_static or glueyneo_test")
       endif()
     endforeach()
   endforeach()
