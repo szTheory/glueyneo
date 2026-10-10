@@ -1258,8 +1258,17 @@ class LeaderSweepTest(unittest.TestCase):
     def spawn(self, script: str) -> subprocess.Popen[bytes]:
         process = subprocess.Popen(["/bin/sh", "-c", script], stdout=subprocess.PIPE,
                                    stderr=subprocess.DEVNULL, start_new_session=True)
-        self.addCleanup(self.kill_group, process.pid)
+        self.addCleanup(self.finish, process)
         return process
+
+    def finish(self, process: subprocess.Popen[bytes]) -> None:
+        self.kill_group(process.pid)
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+        if process.stdout is not None:
+            process.stdout.close()
 
     @staticmethod
     def kill_group(pid: int) -> None:

@@ -491,6 +491,7 @@ def emit_error(prefix: str, error: BaseException | str) -> None:
 
 
 LANE_GRACE_SECONDS = 30
+SURVIVOR_GRACE_SECONDS = 5
 
 
 def _signal_group(proc: subprocess.Popen[str], signum: int) -> None:
@@ -500,20 +501,36 @@ def _signal_group(proc: subprocess.Popen[str], signum: int) -> None:
         pass
 
 
-def _terminate_lane_group(proc: subprocess.Popen[str], expired: subprocess.TimeoutExpired) -> str:
-    """SIGTERM the lane's group, wait a bounded grace period, then SIGKILL; keep partial output."""
-    _signal_group(proc, signal.SIGTERM)
+def _leader_exited(pid: int) -> bool:
+    """True once the child `pid` has exited, without reaping it (WNOWAIT).
+
+    An exited but unreaped leader is a zombie that still pins its PID and process group,
+    so a group signal sent while this is the only state change observed cannot reach a
+    recycled group. ChildProcessError means the child was already reaped.
+    """
     try:
-        output, _ = proc.communicate(timeout=LANE_GRACE_SECONDS)
-    except subprocess.TimeoutExpired:
-        output = None
-    # Descendants in the group may outlive the leader; end them even after a clean leader exit.
+        return os.waitid(os.P_PID, pid, os.WEXITED | os.WNOHANG | os.WNOWAIT) is not None
+    except ChildProcessError:
+        return True
+
+
+def _terminate_lane_group(proc: subprocess.Popen[str], expired: subprocess.TimeoutExpired) -> str:
+    """SIGTERM the lane's group, wait a bounded grace period, then SIGKILL; keep partial output.
+
+    Invariant (T-04-54): no group signal is sent after the leader is reaped. The leader
+    stays unreaped, alive or a zombie, until the final `communicate`, so its PID and group
+    cannot have been recycled while a signal is sent.
+    """
+    _signal_group(proc, signal.SIGTERM)
+    deadline = time.monotonic() + LANE_GRACE_SECONDS
+    while time.monotonic() < deadline and not _leader_exited(proc.pid):
+        time.sleep(0.1)
+    # Descendants in the group may outlive the leader or ignore SIGTERM; end them now.
     _signal_group(proc, signal.SIGKILL)
     try:
-        final, _ = proc.communicate(timeout=10)
-        output = final if final is not None else output
+        output, _ = proc.communicate(timeout=10)
     except subprocess.TimeoutExpired:
-        pass
+        output = None
     partial = output if isinstance(output, str) else ""
     return f"TimeoutExpired: {expired}\n{partial}"
 
@@ -533,6 +550,43 @@ def _retroarch_pids() -> set[int] | None:
         return {int(token) for token in result.stdout.split()}
     except ValueError:
         return None
+
+
+def _recorded_listed(recorded: int, grace: float) -> bool:
+    """Poll `pgrep` until `recorded` is no longer listed or `grace` seconds pass."""
+    deadline = time.monotonic() + grace
+    while True:
+        listed = _retroarch_pids()
+        if listed is not None and recorded not in listed:
+            return False
+        if time.monotonic() >= deadline:
+            return True
+        time.sleep(0.25)
+
+
+def _end_recorded_group(recorded: int) -> str:
+    """SIGTERM, then SIGKILL, the group of the PID the smoke recorded; never any other PID.
+
+    Returns terminated, killed, still-running or not-signalled. A group is signalled only
+    while the recorded PID is its leader (getpgid(recorded) == recorded).
+    """
+    try:
+        if os.getpgid(recorded) != recorded:
+            return "not-signalled"
+        os.killpg(recorded, signal.SIGTERM)
+    except (ProcessLookupError, PermissionError):
+        return "not-signalled"
+    if not _recorded_listed(recorded, SURVIVOR_GRACE_SECONDS):
+        return "terminated"
+    try:
+        if os.getpgid(recorded) != recorded:
+            return "terminated"
+        os.killpg(recorded, signal.SIGKILL)
+    except ProcessLookupError:
+        return "terminated"
+    except PermissionError:
+        return "still-running"
+    return "still-running" if _recorded_listed(recorded, 2) else "killed"
 
 
 def run_frontend_smoke_lane(runner: "Runner", source_root: Path, retroarch: Path, core: Path,
@@ -572,19 +626,16 @@ def run_frontend_smoke_lane(runner: "Runner", source_root: Path, retroarch: Path
         detail = "could not enumerate RetroArch instances after the lane"
     elif survivors:
         reason = "retroarch-instance-survived"
-        signalled = 0
+        recorded_state = "not-signalled"
         try:
             recorded = int(pid_file.read_text(encoding="utf-8").strip())
         except (OSError, ValueError):
             recorded = None
         if recorded is not None and recorded in survivors:
-            try:
-                if os.getpgid(recorded) == recorded:
-                    os.killpg(recorded, signal.SIGTERM)
-                    signalled = 1
-            except (ProcessLookupError, PermissionError):
-                pass
-        detail = f"{len(survivors)} surviving instance(s); {len(survivors) - signalled} not signalled"
+            recorded_state = _end_recorded_group(recorded)
+        signalled = 1 if recorded_state != "not-signalled" else 0
+        detail = (f"{len(survivors)} surviving instance(s); recorded group {recorded_state}; "
+                  f"{len(survivors) - signalled} not signalled")
     if reason is not None:
         runner.lanes["actual-retroarch-smoke"] = {
             **runner.lanes.get("actual-retroarch-smoke", {}), "status": "fail", "reason": reason}

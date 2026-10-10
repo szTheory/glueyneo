@@ -602,7 +602,8 @@ class ProcessGroupTest(unittest.TestCase):
 
     def run_lane(self, work: Path, before: set[int] | None, after: set[int] | None,
                  *, child: str | None, group: int | None,
-                 later: list[set[int] | None] | None = None) -> tuple[dict[str, object], mock.Mock, mock.Mock, mock.Mock]:
+                 later: list[set[int] | None] | None = None,
+                 gone_after_sigkill: bool = False) -> tuple[dict[str, object], mock.Mock, mock.Mock, mock.Mock]:
         runner = mock.Mock()
         runner.work = work
         runner.lanes = {}
@@ -618,6 +619,8 @@ class ProcessGroupTest(unittest.TestCase):
 
         def listing() -> set[int] | None:
             # Later polls repeat the last listing, as a stuck survivor would.
+            if gone_after_sigkill and any(c.args[1] == signal.SIGKILL for c in killpg.call_args_list):
+                return set()
             return sequence.pop(0) if len(sequence) > 1 else sequence[0]
 
         killpg = mock.Mock()
@@ -668,7 +671,7 @@ class ProcessGroupTest(unittest.TestCase):
     def test_survivor_ignoring_sigterm_is_escalated_to_sigkill_on_the_recorded_group(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             outcome, _, killpg, kill = self.run_lane(
-                Path(temporary), set(), {8}, child="8", group=8, later=[{8}, {8}, set()])
+                Path(temporary), set(), {8}, child="8", group=8, gone_after_sigkill=True)
         self.assertEqual(killpg.call_args_list, [mock.call(8, signal.SIGTERM), mock.call(8, signal.SIGKILL)])
         kill.assert_not_called()
         self.assertEqual(outcome["reason"], "retroarch-instance-survived")

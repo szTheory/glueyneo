@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import json
 import os
@@ -447,14 +448,14 @@ def find_marker(image: tuple[int, int, int, bytes]) -> tuple[int, int, int]:
 
 def request_screenshot(process: subprocess.Popen[bytes], directory: Path,
                        prior: dict[Path, int], timeout: float) -> Path:
-    if process.poll() is not None:
-        raise SmokeBlocked("first-screenshot", f"RetroArch exited before screenshot (status {process.returncode})")
+    if frontend_exited(process):
+        raise SmokeBlocked("first-screenshot", f"RetroArch exited before screenshot (status {frontend_returncode(process)})")
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         # A hotkey sent before the window and frame loop are ready is dropped,
         # so repeat the request at a bounded interval until a capture appears.
-        if process.poll() is not None:
-            raise SmokeBlocked("first-screenshot", f"RetroArch exited before screenshot (status {process.returncode})")
+        if frontend_exited(process):
+            raise SmokeBlocked("first-screenshot", f"RetroArch exited before screenshot (status {frontend_returncode(process)})")
         inject_key(SCREENSHOT_KEY_CODE)
         retry_at = min(deadline, time.monotonic() + SCREENSHOT_RETRY_SECONDS)
         while time.monotonic() < retry_at:
@@ -583,26 +584,120 @@ def record_child_pid(path: object, process: subprocess.Popen[bytes]) -> None:
     os.replace(temporary, path)
 
 
-def kill_launched_group(process: subprocess.Popen[bytes]) -> None:
-    """Kill the frontend's own session group if it is still ours and alive (pgid == pid)."""
+def _exited_unreaped(process: subprocess.Popen[bytes]) -> bool | None:
+    """True/False for an exited/running child of this process, None when it is not waitable.
+
+    Uses WNOWAIT so the leader is NOT reaped: an exited leader stays a zombie that pins
+    its PID and process group until `reap_frontend` has swept the group (GWR-05b).
+    """
     pid = getattr(process, "pid", None)
-    if not isinstance(pid, int) or pid <= 1 or process.poll() is not None:
+    if not isinstance(pid, int) or pid <= 1:
+        return None
+    try:
+        return os.waitid(os.P_PID, pid, os.WEXITED | os.WNOHANG | os.WNOWAIT) is not None
+    except ChildProcessError:
+        return None
+
+
+def frontend_exited(process: subprocess.Popen[bytes]) -> bool:
+    """Non-reaping liveness check for the launched frontend."""
+    if getattr(process, "returncode", None) is not None:
+        return True
+    state = _exited_unreaped(process)
+    if state is None:  # already reaped elsewhere, or not a waitable child
+        return process.poll() is not None
+    return state
+
+
+def reap_frontend(process: subprocess.Popen[bytes], timeout: float) -> int | None:
+    """Wait for the frontend leader to exit, sweep its group while it is a zombie, then reap.
+
+    Returns the return code, or None when the leader is still running at `timeout`.
+    """
+    deadline = time.monotonic() + timeout
+    while True:
+        if getattr(process, "returncode", None) is not None:
+            return process.returncode
+        state = _exited_unreaped(process)
+        if state is None:  # not a waitable child (already reaped elsewhere): plain bounded wait
+            try:
+                process.wait(timeout=max(0.0, deadline - time.monotonic()))
+            except subprocess.TimeoutExpired:
+                return None
+            return process.returncode
+        if state:
+            pid = process.pid
+            try:
+                os.killpg(pid, signal.SIGKILL)  # the unreaped leader pins the group
+            except (ProcessLookupError, PermissionError):
+                pass
+            process.wait()
+            return process.returncode
+        if time.monotonic() >= deadline:
+            return None
+        time.sleep(0.05)
+
+
+def frontend_returncode(process: subprocess.Popen[bytes]) -> int | None:
+    """Return code of an exited frontend (reaped after the group sweep), None while running."""
+    if frontend_exited(process):
+        return reap_frontend(process, 2.0)
+    return None
+
+
+def kill_launched_group(process: subprocess.Popen[bytes]) -> None:
+    """Kill the frontend's own session group while the leader is unreaped (pgid == pid).
+
+    The leader may be alive or an exited zombie; either pins the PID, so the group cannot
+    be a recycled one. After reaping nothing is signalled.
+    """
+    pid = getattr(process, "pid", None)
+    if not isinstance(pid, int) or pid <= 1 or getattr(process, "returncode", None) is not None:
         return
     try:
         os.killpg(pid, signal.SIGKILL)
     except (ProcessLookupError, PermissionError):
         return
+    reap_frontend(process, 2.0)
+
+
+# Launch-window state for GWR-05a. Signals are deferred (not masked) while the frontend is
+# being launched. Do NOT use pthread_sigmask for this: a blocked mask is inherited across
+# fork/exec, so the frontend would start with SIGTERM blocked and could never be stopped.
+_LAUNCH_WINDOW: dict[str, object] = {"open": False, "pending": None}
+
+
+def _ignore_further_signals() -> None:
+    for name in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        signal.signal(name, signal.SIG_IGN)  # a second signal must not abort the cleanup
+
+
+@contextlib.contextmanager
+def launch_window():  # type: ignore[no-untyped-def]
+    """Defer termination signals around Popen, process assignment and the child PID record.
+
+    On exit, a signal that arrived inside the window raises SmokeBlocked("interrupted"),
+    after the caller has assigned `process`, so its cleanup always sees the child.
+    """
+    _LAUNCH_WINDOW["open"] = True
+    _LAUNCH_WINDOW["pending"] = None
     try:
-        process.wait(timeout=2.0)
-    except subprocess.TimeoutExpired:
-        pass
+        yield
+    finally:
+        _LAUNCH_WINDOW["open"] = False
+    if _LAUNCH_WINDOW["pending"] is not None:
+        _LAUNCH_WINDOW["pending"] = None
+        _ignore_further_signals()
+        raise SmokeBlocked("interrupted", "smoke was signalled before completion")
 
 
 def install_signal_cleanup() -> None:
     """Turn SIGTERM/SIGINT/SIGHUP into SmokeBlocked so the launch `finally` quit runs."""
     def interrupted(signum: int, _frame: object) -> None:
-        for name in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
-            signal.signal(name, signal.SIG_IGN)  # a second signal must not abort the cleanup
+        if _LAUNCH_WINDOW["open"]:
+            _LAUNCH_WINDOW["pending"] = signum  # raised by launch_window on exit
+            return
+        _ignore_further_signals()
         raise SmokeBlocked("interrupted", "smoke was signalled before completion")
 
     for name in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
@@ -616,8 +711,8 @@ def refuse_stacked_launch() -> None:
 
 
 def request_frontend_quit(bundle_id: str, process: subprocess.Popen[bytes], timeout: float) -> bool:
-    if process.poll() is not None:
-        return process.returncode == 0
+    if frontend_exited(process):
+        return frontend_returncode(process) == 0
     sole_instance = False
     if bundle_id == EXPECTED_BUNDLE_IDENTIFIER:
         try:
@@ -632,16 +727,14 @@ def request_frontend_quit(bundle_id: str, process: subprocess.Popen[bytes], time
                 check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 timeout=min(8.0, timeout),
             )
-            process.wait(timeout=min(8.0, timeout))
-            return process.returncode == 0
+            if reap_frontend(process, min(8.0, timeout)) is not None:
+                return process.returncode == 0
         except (OSError, subprocess.SubprocessError):
             pass
     process.terminate()
-    try:
-        process.wait(timeout=2.0)
-    except subprocess.TimeoutExpired:
+    if reap_frontend(process, 2.0) is None:
         process.kill()
-        process.wait(timeout=2.0)
+        reap_frontend(process, 2.0)
     return process.returncode == 0
 
 
@@ -669,19 +762,18 @@ def run_launch_probe(
         started_at = time.time()
         refuse_stacked_launch()
         try:
+            process = None
             with process_log.open("wb") as log_stream:
-                process = subprocess.Popen(
-                    arguments, stdout=log_stream, stderr=subprocess.STDOUT,
-                    start_new_session=True,
-                )
                 try:
-                    record_child_pid(child_pid_file, process)
-                    try:
-                        process.wait(timeout=min(DIAGNOSTIC_PROBE_SECONDS, timeout))
-                        survived_window = False
-                    except subprocess.TimeoutExpired:
-                        survived_window = True
-                    return_code = process.poll()
+                    with launch_window():
+                        process = subprocess.Popen(
+                            arguments, stdout=log_stream, stderr=subprocess.STDOUT,
+                            start_new_session=True,
+                        )
+                        record_child_pid(child_pid_file, process)
+                    reaped = reap_frontend(process, min(DIAGNOSTIC_PROBE_SECONDS, timeout))
+                    survived_window = reaped is None
+                    return_code = reaped
                     crash_reason = (
                         wait_for_recent_crash_reason(started_at, prior_crash_reports)
                         if return_code is not None and return_code < 0
@@ -696,9 +788,10 @@ def run_launch_probe(
                         crash_report=crash_reason,
                     )
                     request_frontend_quit(bundle_id, process, timeout)
-                    cleanup_return_code = process.poll()
+                    cleanup_return_code = frontend_returncode(process)
                 finally:
-                    kill_launched_group(process)
+                    if process is not None:
+                        kill_launched_group(process)
         except OSError as error:
             survived_window = False
             return_code = None
@@ -816,28 +909,30 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
         started_at = time.time()
         with process_log.open("wb") as log_stream:
             refuse_stacked_launch()
-            try:
-                process = subprocess.Popen(
-                    [str(executable), "--verbose", "--config", str(config),
-                     "-L", str(core), str(content)],
-                    stdout=log_stream,
-                    stderr=subprocess.STDOUT,
-                    start_new_session=True,
-                )
-            except OSError as error:
-                diagnostic = build_diagnostic(
-                    stage="launch", return_code=None, survived_before_screenshot=False,
-                    output=str(error), temporary_root=work,
-                )
-                raise SmokeBlocked(
-                    "launch", "pinned RetroArch could not be started", diagnostic=diagnostic
-                ) from error
+            process = None
             outcome: dict[str, object] = {"observations": []}
             survived_before_screenshot = False
             try:
-                record_child_pid(getattr(args, "child_pid_file", None), process)
+                try:
+                    with launch_window():
+                        process = subprocess.Popen(
+                            [str(executable), "--verbose", "--config", str(config),
+                             "-L", str(core), str(content)],
+                            stdout=log_stream,
+                            stderr=subprocess.STDOUT,
+                            start_new_session=True,
+                        )
+                        record_child_pid(getattr(args, "child_pid_file", None), process)
+                except OSError as error:
+                    diagnostic = build_diagnostic(
+                        stage="launch", return_code=None, survived_before_screenshot=False,
+                        output=str(error), temporary_root=work,
+                    )
+                    raise SmokeBlocked(
+                        "launch", "pinned RetroArch could not be started", diagnostic=diagnostic
+                    ) from error
                 time.sleep(0.5)
-                survived_before_screenshot = process.poll() is None
+                survived_before_screenshot = not frontend_exited(process)
                 first = request_screenshot(process, screenshots, {}, args.timeout)
                 first_frame = decode_png(first)
                 time.sleep(0.25)
@@ -895,7 +990,9 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                     outcome["observations"].append("selected-game input response remains unclassified")
                 outcome["frontend_unloaded"] = True
             except SmokeBlocked as error:
-                return_code = process.poll()
+                if process is None:
+                    raise
+                return_code = frontend_returncode(process)
                 crash_reason = (
                     wait_for_recent_crash_reason(started_at, prior_crash_reports)
                     if return_code is not None and return_code < 0
@@ -911,10 +1008,11 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                 )
                 raise
             finally:
-                try:
-                    request_frontend_quit(identity["bundle_id"], process, args.timeout)
-                finally:
-                    kill_launched_group(process)
+                if process is not None:
+                    try:
+                        request_frontend_quit(identity["bundle_id"], process, args.timeout)
+                    finally:
+                        kill_launched_group(process)
             result_status = "pass" if identity["content_kind"] == "public-fixture" else "unknown"
             return {"status": result_status, "identity": identity, **outcome}
 
