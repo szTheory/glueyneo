@@ -495,7 +495,7 @@ class OuterTimeoutTest(unittest.TestCase):
             ):
                 with self.assertRaises(smoke.SmokeBlocked):
                     smoke.run_smoke(args)
-        self.assertEqual(observed, ["4321"])
+        self.assertEqual(observed, ["4321\n"])
 
     def test_outer_timeout_leaves_no_fake_frontend_behind(self) -> None:
         sys.path.insert(0, str(self.ROOT / "tools"))
@@ -523,11 +523,15 @@ class OuterTimeoutTest(unittest.TestCase):
                 "raise SystemExit(smoke.main())\n",
                 encoding="utf-8")
 
+            seen: list[int] = []
+
             def reap() -> None:
-                try:
-                    os.kill(int(pid_file.read_text(encoding="utf-8")), signal.SIGKILL)
-                except (OSError, ValueError):
-                    pass
+                # The temporary directory is gone by cleanup time; use the PID captured in the test body.
+                for survivor in seen:
+                    try:
+                        os.kill(survivor, signal.SIGKILL)
+                    except OSError:
+                        pass
 
             self.addCleanup(reap)
             work = base / "work"
@@ -541,6 +545,7 @@ class OuterTimeoutTest(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertTrue(pid_file.is_file(), "the fake frontend never started")
             pid = int(pid_file.read_text(encoding="utf-8"))
+            seen.append(pid)
             deadline = time.monotonic() + 10
             alive = True
             while alive and time.monotonic() < deadline:

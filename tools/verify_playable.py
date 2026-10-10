@@ -20,6 +20,7 @@ import plistlib
 import posixpath
 import re
 import shutil
+import signal
 import stat
 import subprocess
 import sys
@@ -489,6 +490,112 @@ def emit_error(prefix: str, error: BaseException | str) -> None:
     print(text, file=sys.stderr)
 
 
+LANE_GRACE_SECONDS = 30
+
+
+def _signal_group(proc: subprocess.Popen[str], signum: int) -> None:
+    try:
+        os.killpg(proc.pid, signum)  # pgid equals pid under start_new_session=True
+    except (ProcessLookupError, PermissionError):
+        pass
+
+
+def _terminate_lane_group(proc: subprocess.Popen[str], expired: subprocess.TimeoutExpired) -> str:
+    """SIGTERM the lane's group, wait a bounded grace period, then SIGKILL; keep partial output."""
+    _signal_group(proc, signal.SIGTERM)
+    try:
+        output, _ = proc.communicate(timeout=LANE_GRACE_SECONDS)
+    except subprocess.TimeoutExpired:
+        output = None
+    # Descendants in the group may outlive the leader; end them even after a clean leader exit.
+    _signal_group(proc, signal.SIGKILL)
+    try:
+        final, _ = proc.communicate(timeout=10)
+        output = final if final is not None else output
+    except subprocess.TimeoutExpired:
+        pass
+    partial = output if isinstance(output, str) else ""
+    return f"TimeoutExpired: {expired}\n{partial}"
+
+
+def _retroarch_pids() -> set[int] | None:
+    """Running RetroArch PIDs via `pgrep -x RetroArch`; None when enumeration fails."""
+    try:
+        result = subprocess.run(["/usr/bin/pgrep", "-x", "RetroArch"], stdout=subprocess.PIPE,
+                                stderr=subprocess.DEVNULL, text=True, check=False, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode == 1:
+        return set()
+    if result.returncode != 0:
+        return None
+    try:
+        return {int(token) for token in result.stdout.split()}
+    except ValueError:
+        return None
+
+
+def run_frontend_smoke_lane(runner: "Runner", source_root: Path, retroarch: Path, core: Path,
+                            fixture: Path) -> tuple[dict[str, object], str | None]:
+    """Run the pinned-frontend smoke lane with before/after instance assertions.
+
+    Returns the receipt's retroarch_smoke record and a failure reason (None on success).
+    The lane never signals a RetroArch PID it did not start: only the process group of
+    the PID the smoke itself recorded, and only while it is a surviving group leader.
+    """
+    def refused(reason: str, detail: str) -> tuple[dict[str, object], str]:
+        runner.lanes["actual-retroarch-smoke"] = {"status": "fail", "reason": reason}
+        return {"status": "unknown", "stage": "pre-launch", "reason": reason, "detail": detail}, reason
+
+    before = _retroarch_pids()
+    if before is None:
+        return refused("retroarch-instance-unknown", "could not enumerate RetroArch instances")
+    if before:
+        return refused("retroarch-instance-already-running",
+                       "a RetroArch instance exists; refusing to stack another")
+    pid_file = runner.work / "retroarch-child.pid"
+    pid_file.unlink(missing_ok=True)
+    smoke = runner.command("actual-retroarch-smoke", [
+        sys.executable, str(source_root / "tests/libretro/retroarch_smoke.py"),
+        "--retroarch", str(retroarch), "--core", str(core), "--content", str(fixture),
+        "--child-pid-file", str(pid_file),
+    ], timeout=180, allow_failure=True)
+    try:
+        smoke_data = json.loads(smoke.stdout.strip().splitlines()[-1])
+    except (json.JSONDecodeError, IndexError):
+        smoke_data = {"status": "unknown", "reason": "smoke omitted a machine-readable result"}
+    reason: str | None = None
+    after = _retroarch_pids()
+    survivors = (after or set()) - before
+    if after is None:
+        reason = "retroarch-instance-unknown"
+        detail = "could not enumerate RetroArch instances after the lane"
+    elif survivors:
+        reason = "retroarch-instance-survived"
+        signalled = 0
+        try:
+            recorded = int(pid_file.read_text(encoding="utf-8").strip())
+        except (OSError, ValueError):
+            recorded = None
+        if recorded is not None and recorded in survivors:
+            try:
+                if os.getpgid(recorded) == recorded:
+                    os.killpg(recorded, signal.SIGTERM)
+                    signalled = 1
+            except (ProcessLookupError, PermissionError):
+                pass
+        detail = f"{len(survivors)} surviving instance(s); {len(survivors) - signalled} not signalled"
+    if reason is not None:
+        runner.lanes["actual-retroarch-smoke"] = {
+            **runner.lanes.get("actual-retroarch-smoke", {}), "status": "fail", "reason": reason}
+        return {**smoke_data, "status": "unknown", "stage": "post-lane",
+                "reason": reason, "detail": detail}, reason
+    if smoke.returncode == 0 and smoke_data.get("status") == "pass":
+        return smoke_data, None
+    return {**smoke_data, "status": "unknown"}, (
+        "actual pinned RetroArch load/input/video/unload gate is unknown or failed")
+
+
 class Runner:
     def __init__(self, work: Path, source_root: Path, snapshot: SourceSnapshot) -> None:
         self.work = work
@@ -512,12 +619,18 @@ class Runner:
             build_link.symlink_to(overlay, target_is_directory=True)
         started = time.monotonic()
         try:
-            result = subprocess.run(argv, cwd=cwd or self.source_root, env=clean_environment(), text=True,
+            # Each lane runs in its own session so a timeout can end the whole process
+            # group, not only the direct child (WR-03).
+            proc = subprocess.Popen(argv, cwd=cwd or self.source_root, env=clean_environment(), text=True,
                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                    check=False, timeout=timeout)
-            output = result.stdout
-            code = result.returncode
-        except (OSError, subprocess.TimeoutExpired) as error:
+                                    start_new_session=True)
+            try:
+                output, _ = proc.communicate(timeout=timeout)
+                code = proc.returncode
+            except subprocess.TimeoutExpired as error:
+                output = _terminate_lane_group(proc, error)
+                code = -1
+        except OSError as error:
             output = f"{type(error).__name__}: {error}"
             code = -1
         finally:
@@ -1266,21 +1379,12 @@ def main() -> int:
         receipt["lanes"] = {}
     if snapshot is not None and runner is not None and shared_core.is_file() and fixture_shared.is_file():
         try:
-            smoke = runner.command("actual-retroarch-smoke", [
-                sys.executable, str(source_root / "tests/libretro/retroarch_smoke.py"),
-                "--retroarch", str(args.retroarch.resolve()), "--core", str(shared_core),
-                "--content", str(fixture_shared),
-            ], timeout=180, allow_failure=True)
-            try:
-                smoke_data = json.loads(smoke.stdout.strip().splitlines()[-1])
-            except (json.JSONDecodeError, IndexError):
-                smoke_data = {"status": "unknown", "reason": "smoke omitted a machine-readable result"}
-            if smoke.returncode == 0 and smoke_data.get("status") == "pass":
-                receipt["retroarch_smoke"] = smoke_data
-            else:
-                receipt["retroarch_smoke"] = {**smoke_data, "status": "unknown"}
+            smoke_record, lane_failure = run_frontend_smoke_lane(
+                runner, source_root, args.retroarch.resolve(), shared_core, fixture_shared)
+            receipt["retroarch_smoke"] = smoke_record
+            if lane_failure is not None:
                 status = "fail"
-                reason = reason or "actual pinned RetroArch load/input/video/unload gate is unknown or failed"
+                reason = reason or lane_failure
         except Exception as error:
             lane_reason = getattr(error, "reason", "smoke-lane-error")
             receipt["retroarch_smoke"] = {"status": "unknown", "stage": "source-integrity" if isinstance(error, SnapshotError) else "frontend", "reason": lane_reason}

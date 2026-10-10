@@ -391,9 +391,9 @@ class SnapshotTest(unittest.TestCase):
         work.mkdir()
         runner = playable.Runner(work, snapshot.root, snapshot)
         output = diagnostics[2]
-        with mock.patch.object(playable.subprocess, "run", return_value=subprocess.CompletedProcess(
-            ["tool"], 9, output,
-        )):
+        finished = mock.Mock(returncode=9, pid=1)
+        finished.communicate.return_value = (output, None)
+        with mock.patch.object(playable.subprocess, "Popen", return_value=finished):
             result = runner.command("quoted-path", ["tool", output], allow_failure=True)
         retained_log = (work / "quoted-path.log").read_text(encoding="utf-8")
         self.assertIn("exit_code': 9", repr(runner.lanes))
@@ -431,9 +431,9 @@ class SnapshotTest(unittest.TestCase):
         work = self.base / "qualification"
         work.mkdir()
         runner = playable.Runner(work, snapshot.root, snapshot)
-        with mock.patch.object(playable.subprocess, "run", return_value=subprocess.CompletedProcess(
-            ["tool"], 7, diagnostic,
-        )):
+        finished = mock.Mock(returncode=7, pid=1)
+        finished.communicate.return_value = (diagnostic, None)
+        with mock.patch.object(playable.subprocess, "Popen", return_value=finished):
             result = runner.command("newline-path", ["tool", diagnostic], allow_failure=True)
 
         retained = ((work / "newline-path.log").read_text(encoding="utf-8")
@@ -466,9 +466,9 @@ class SnapshotTest(unittest.TestCase):
         runner = playable.Runner(work, snapshot.root, snapshot)
         private_argument = "/Volumes/private drive/private capture/secret.rom"
         emitted = f"tool failed exit 6: {private_argument}"
-        with mock.patch.object(playable.subprocess, "run", return_value=subprocess.CompletedProcess(
-            ["tool"], 6, emitted,
-        )):
+        finished = mock.Mock(returncode=6, pid=1)
+        finished.communicate.return_value = (emitted, None)
+        with mock.patch.object(playable.subprocess, "Popen", return_value=finished):
             result = runner.command("private-path", ["tool", private_argument], allow_failure=True)
 
         retained = (work / "private-path.log").read_text(encoding="utf-8") + repr(runner.lanes) + result.stdout

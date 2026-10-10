@@ -10,6 +10,7 @@ import os
 import plistlib
 import platform
 import re
+import signal
 import struct
 import subprocess
 import sys
@@ -532,6 +533,42 @@ def running_retroarch_pids() -> set[int]:
         raise SmokeBlocked("pre-launch", "cannot enumerate running RetroArch instances") from error
 
 
+def record_child_pid(path: object, process: subprocess.Popen[bytes]) -> None:
+    """Persist the launched frontend PID atomically for the runner's scoped survivor cleanup."""
+    pid = getattr(process, "pid", None)
+    if not isinstance(path, Path) or not isinstance(pid, int):
+        return
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(f"{pid}\n", encoding="utf-8")
+    os.replace(temporary, path)
+
+
+def kill_launched_group(process: subprocess.Popen[bytes]) -> None:
+    """Kill the frontend's own session group if it is still ours and alive (pgid == pid)."""
+    pid = getattr(process, "pid", None)
+    if not isinstance(pid, int) or pid <= 1 or process.poll() is not None:
+        return
+    try:
+        os.killpg(pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        return
+    try:
+        process.wait(timeout=2.0)
+    except subprocess.TimeoutExpired:
+        pass
+
+
+def install_signal_cleanup() -> None:
+    """Turn SIGTERM/SIGINT/SIGHUP into SmokeBlocked so the launch `finally` quit runs."""
+    def interrupted(signum: int, _frame: object) -> None:
+        for name in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+            signal.signal(name, signal.SIG_IGN)  # a second signal must not abort the cleanup
+        raise SmokeBlocked("interrupted", "smoke was signalled before completion")
+
+    for name in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        signal.signal(name, interrupted)
+
+
 def refuse_stacked_launch() -> None:
     if running_retroarch_pids():
         raise SmokeBlocked(
@@ -576,6 +613,7 @@ def run_launch_probe(
     *,
     probe: str,
     timeout: float,
+    child_pid_file: Path | None = None,
 ) -> dict[str, object]:
     with tempfile.TemporaryDirectory(prefix=f"glueyneo-retroarch-{probe}-") as temporary:
         work = Path(temporary)
@@ -597,26 +635,30 @@ def run_launch_probe(
                     start_new_session=True,
                 )
                 try:
-                    process.wait(timeout=min(DIAGNOSTIC_PROBE_SECONDS, timeout))
-                    survived_window = False
-                except subprocess.TimeoutExpired:
-                    survived_window = True
-                return_code = process.poll()
-                crash_reason = (
-                    wait_for_recent_crash_reason(started_at, prior_crash_reports)
-                    if return_code is not None and return_code < 0
-                    else find_recent_crash_reason(started_at, prior_crash_reports)
-                )
-                diagnostic = build_diagnostic(
-                    stage="no-content-startup" if probe == "no_content" else "core-content-load",
-                    return_code=return_code,
-                    survived_before_screenshot=None,
-                    output=collect_frontend_output(process_log, log, work),
-                    temporary_root=work,
-                    crash_report=crash_reason,
-                )
-                request_frontend_quit(bundle_id, process, timeout)
-                cleanup_return_code = process.poll()
+                    record_child_pid(child_pid_file, process)
+                    try:
+                        process.wait(timeout=min(DIAGNOSTIC_PROBE_SECONDS, timeout))
+                        survived_window = False
+                    except subprocess.TimeoutExpired:
+                        survived_window = True
+                    return_code = process.poll()
+                    crash_reason = (
+                        wait_for_recent_crash_reason(started_at, prior_crash_reports)
+                        if return_code is not None and return_code < 0
+                        else find_recent_crash_reason(started_at, prior_crash_reports)
+                    )
+                    diagnostic = build_diagnostic(
+                        stage="no-content-startup" if probe == "no_content" else "core-content-load",
+                        return_code=return_code,
+                        survived_before_screenshot=None,
+                        output=collect_frontend_output(process_log, log, work),
+                        temporary_root=work,
+                        crash_report=crash_reason,
+                    )
+                    request_frontend_quit(bundle_id, process, timeout)
+                    cleanup_return_code = process.poll()
+                finally:
+                    kill_launched_group(process)
         except OSError as error:
             survived_window = False
             return_code = None
@@ -639,13 +681,14 @@ def run_launch_probe(
 
 def run_diagnostics(args: argparse.Namespace) -> dict[str, object]:
     executable, core, content, identity = validate_inputs(args)
+    child_pid_file = getattr(args, "child_pid_file", None)
     no_content = run_launch_probe(
         executable, core, content, identity["bundle_id"],
-        probe="no_content", timeout=args.timeout,
+        probe="no_content", timeout=args.timeout, child_pid_file=child_pid_file,
     )
     core_content = run_launch_probe(
         executable, core, content, identity["bundle_id"],
-        probe="core_content", timeout=args.timeout,
+        probe="core_content", timeout=args.timeout, child_pid_file=child_pid_file,
     )
     return {
         "status": "diagnostic_only",
@@ -752,6 +795,7 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
             outcome: dict[str, object] = {"observations": []}
             survived_before_screenshot = False
             try:
+                record_child_pid(getattr(args, "child_pid_file", None), process)
                 time.sleep(0.5)
                 survived_before_screenshot = process.poll() is None
                 first = request_screenshot(process, screenshots, {}, args.timeout)
@@ -827,7 +871,10 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                 )
                 raise
             finally:
-                request_frontend_quit(identity["bundle_id"], process, args.timeout)
+                try:
+                    request_frontend_quit(identity["bundle_id"], process, args.timeout)
+                finally:
+                    kill_launched_group(process)
             result_status = "pass" if identity["content_kind"] == "public-fixture" else "unknown"
             return {"status": result_status, "identity": identity, **outcome}
 
@@ -843,9 +890,12 @@ def main() -> int:
         help="compare fresh no-content and core/content launches; this is not acceptance",
     )
     parser.add_argument("--timeout", type=float, default=20.0)
+    parser.add_argument("--child-pid-file", type=Path, default=None,
+                        help="record the launched frontend PID here for the runner's scoped cleanup")
     args = parser.parse_args()
     if args.timeout <= 0 or args.timeout > 120:
         parser.error("--timeout must be greater than 0 and at most 120 seconds")
+    install_signal_cleanup()
     try:
         result = run_diagnostics(args) if args.diagnose else run_smoke(args)
         print(public_json(result))
