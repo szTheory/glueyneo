@@ -108,7 +108,8 @@ Default mode checks consistency only. `threats_open` is read from the YAML
 frontmatter (the first `---` block), where exactly one `threats_open: <n>` line
 must exist, and must equal the open rows at or above
 `workflow.security_block_on` across every table whose first header cell is
-`Threat ID`. Such a table must have `Severity` and `Status` columns; one that
+`Threat ID` (matched case-insensitively, with or without a trailing pipe, so a
+loosely written table is counted rather than skipped, T-04-62). Such a table must have `Severity` and `Status` columns; one that
 lacks either (for example `Sev` and `State`) is an error naming its line, never
 silently skipped (GWR-01). A table that only audits threats, such as the ASVS
 result table in a SECURITY.md, uses another first header cell, by convention
@@ -180,7 +181,9 @@ zero-initialized storage, so the two copies provably share no mutable global
 state. There is no allowlist: a never-written table is made `const`. The audit
 reports Mach-O sections `__DATA,__data`, `__DATA,__bss`, `__DATA,__common` and
 the thread-local `__DATA,__thread_data`, `__DATA,__thread_bss` and
-`__DATA,__thread_vars`, and ELF symbol types `D d B b G g V v` plus common
+`__DATA,__thread_vars`, whatever the symbol binding (`external`, `private
+external`, `weak external`, `non-external`), and unlinked `(common)` symbols
+(T-04-56, WR-08), and ELF symbol types `D d B b G g V v` plus common
 (`C c`) and small-data (`S s`). It cannot pass vacuously: `nm` output in which no
 line parses as a symbol fails with `no symbols parsed`. On Windows, or with an
 empty `--nm`, it reports `unsupported` (CTest skip code 77) instead of passing; a
@@ -200,7 +203,8 @@ Receipts, smoke output and the artifact inventory pass through
 `/Users/` and the rest) match only at a path start (04-24), so repository
 relative paths such as `.planning/tmp/notes.md` and `tmp/home/x` pass. Full home
 paths are rejected in every canonical form (separator, percent and Unicode
-variants). The bare home-directory name is also rejected as a token, with one
+variants, including composed and decomposed spellings of the same accented
+character, which are normalized together, T-04-11). The bare home-directory name is also rejected as a token, with one
 documented exception: when the casefolded name is a generic service-account
 name (`runner`, `build`, `admin` and the rest of `SERVICE_ACCOUNT_NAMES`) and
 `GITHUB_ACTIONS` equals `true`, the bare name in prose is not rejected, because
