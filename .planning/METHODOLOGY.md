@@ -147,6 +147,27 @@ do not repeat an unchanged attempt or relabel its result as passed. Reopen the
 same checkpoint only after its relevant implementation, input, environment,
 or acceptance contract changes.
 
+Checkpoint pre-flight (added 2026-10-10 after a verify-work run handed the user
+a check the agent could run itself). Before rendering any UAT checkpoint:
+
+1. Try the automated route in the current runtime first. An "unavailable" or
+   "blocked" result recorded by an earlier runtime, sandbox or launch context
+   describes that context only; re-test it once here before inheriting it.
+   On this project's macOS host, an agent shell in the logged-in session can
+   launch pinned RetroArch, so the frontend lane is agent-runnable:
+   `python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean`,
+   then `--record-frontend-evidence` and `--check-docs`. Clean up leftover
+   RetroArch processes before and after each launch.
+2. If the automated route fails, diagnose and fix it as repository work in the
+   same run when the cause is a repository defect; add the cheapest recurring
+   guard for that fault class (configure-time or existing package/test
+   entrypoint before a new CI lane).
+3. Present a checkpoint only for what remains: a decision that belongs to the
+   user (risk acceptance, scope, priorities), an unavailable credential or
+   physical input, or a genuinely subjective judgment. Never ask the user to
+   confirm a result the agent already measured, and never present a
+   machine-observable claim before step 1 has been tried.
+
 This preference does not remove the separate pause after each named GSD step
 for review and model selection. In the installed OpenGSD configuration,
 `workflow.human_verify_mode` controls checkpoint timing (`mid-flight` or
