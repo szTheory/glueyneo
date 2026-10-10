@@ -869,19 +869,49 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
   add_test(NAME qualification_frontend_smoke
     COMMAND ${Python3_EXECUTABLE} -m unittest discover
             -s "${CMAKE_CURRENT_SOURCE_DIR}/tests/libretro" -p test_retroarch_smoke.py)
-  add_test(NAME planning_security_register
-    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/check_security_register.py"
-            first-playable-game)
+  # The register gate reads planning state, which a source archive or a renamed
+  # workstream may not carry. Register it only when the configured workstream
+  # exists; the mutation suite stays unconditional.
+  set(GLUEYNEO_PLANNING_WORKSTREAM "first-playable-game" CACHE STRING
+    "Workstream under .planning/workstreams whose security registers planning_security_register checks")
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.planning/workstreams/${GLUEYNEO_PLANNING_WORKSTREAM}")
+    add_test(NAME planning_security_register
+      COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/check_security_register.py"
+              "${GLUEYNEO_PLANNING_WORKSTREAM}")
+    set_tests_properties(planning_security_register
+      PROPERTIES LABELS "qualification-tools" TIMEOUT 300)
+  else()
+    message(STATUS "planning_security_register not registered: "
+      ".planning/workstreams/${GLUEYNEO_PLANNING_WORKSTREAM} does not exist")
+  endif()
   add_test(NAME planning_security_register_mutations
     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/test_check_security_register.py")
+  # The duplicated runtime copies in libretro_callback_test must share no
+  # mutable state: reject any writable or zero-initialized runtime symbol.
+  add_test(NAME runtime_writable_storage
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/check_runtime_storage.py"
+            --nm "${CMAKE_NM}" "$<TARGET_FILE:glueyneo_runtime_static>")
+  add_test(NAME runtime_writable_storage_audit
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/test_check_runtime_storage.py")
+  set_tests_properties(runtime_writable_storage PROPERTIES SKIP_RETURN_CODE 77)
   set_tests_properties(qualification_private_paths qualification_runner qualification_frontend_smoke
-    planning_security_register planning_security_register_mutations
+    planning_security_register_mutations runtime_writable_storage runtime_writable_storage_audit
     PROPERTIES LABELS "qualification-tools" TIMEOUT 300)
 
   # CI builds tests only against a static libglueyneo, where hidden private
   # symbols still link. Reject at configure time any executable that includes
   # the private SDK header while linking the public library, because that
-  # combination fails to link once BUILD_SHARED_LIBS=ON.
+  # combination fails to link once BUILD_SHARED_LIBS=ON. It is deliberately
+  # enforced in static builds as the early warning for that shared-build link
+  # failure.
+  #
+  # Limits (best-effort, an accepted residual): it inspects direct .c/.cpp
+  # sources only (not headers or transitive sources), top-level targets of this
+  # directory only, and ignores links written as generator expressions.
+  # libretro_callback_test intentionally links two runtime copies (the core's
+  # private copy and the independent native reference); the
+  # runtime_writable_storage test is the control proving those copies share no
+  # mutable global state, not this guard.
   get_property(_glueyneo_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
   foreach(_target IN LISTS _glueyneo_targets)
     get_target_property(_type ${_target} TYPE)

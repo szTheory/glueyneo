@@ -112,6 +112,30 @@ row, duplicate threat ID, uncontrolled status or unknown severity;
 name that does not match `^[A-Za-z0-9][A-Za-z0-9._-]*$`. Table cells split on
 unescaped pipes only, so `\|` inside a cell is literal.
 
+`planning_security_register` is registered only when
+`.planning/workstreams/${GLUEYNEO_PLANNING_WORKSTREAM}` exists. The cache
+variable defaults to `first-playable-game`; a configure without that directory
+(a source archive, an archived or renamed workstream) lists no such test and
+prints why. The mutation suite stays registered unconditionally.
+
+## Runtime writable-storage audit
+
+`libretro_callback_test` intentionally links two runtime copies: the core's
+private copy and the independent native reference. The CTest
+`runtime_writable_storage` (label `qualification-tools`) runs
+`tests/tools/check_runtime_storage.py` with the configured `nm` over the
+runtime library and fails on any object symbol in writable data or
+zero-initialized storage, so the two copies provably share no mutable global
+state. There is no allowlist: a never-written table is made `const`. On Windows
+it reports `unsupported` (CTest skip code 77) instead of passing. The unit
+tests (`runtime_writable_storage_audit`) cover canned Mach-O and ELF `nm` output.
+
+The configure-time `sdk_private.h` guard in `CMakeLists.txt` stays heuristic and
+is an accepted residual: it inspects direct `.c`/`.cpp` sources only, top-level
+targets only, ignores generator-expression links, and is enforced in static
+builds as the early warning for the shared-build link failure. The storage
+audit, not the guard, is the isolation control.
+
 ## Unsupported coverage
 
 The matching AppleClang libFuzzer archive is absent on this host, so no
