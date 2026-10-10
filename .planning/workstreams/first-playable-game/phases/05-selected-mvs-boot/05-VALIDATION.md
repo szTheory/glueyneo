@@ -328,6 +328,13 @@ supervisor stack/vector behavior, 62 cycles, and no operand write.
   before producing a screenshot. The runner classified it
   `blocked_or_unknown`; this public GNFX fixture attempt does not establish
   selected MVS media behavior or a passing frontend flow.
+- A follow-up `--diagnose` comparison with the same fresh temporary config
+  tested no-content startup and core-plus-public-GNFX loading. Both probes
+  exited `-6` with macOS `EXC_CRASH SIGABRT` before a surviving window or
+  screenshot (stages `no-content-startup` and `core-content-load`). The
+  result is diagnostic-only: it does not isolate the core or fixture as the
+  cause, establish selected-media behavior, or pass HOST-02. Since the launch
+  context did not materially change, do not retry these probes.
 - The scan failure is distinct from the zero-finding public-content/history
   result for candidate `e80672845fc60d94d8a44eab416377534c9a99f1`. Candidate
   receipts and CI results remain valid only for that exact SHA.

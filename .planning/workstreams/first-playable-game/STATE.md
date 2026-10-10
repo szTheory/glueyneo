@@ -6,11 +6,11 @@ current_phase: 05
 current_phase_name: Selected MVS Boot
 current_plan: 6
 status: blocked
-stopped_at: Plan 05-06 halted at Task 2 evidence gate after Task 3 exact-SHA hosted receipt passed
-last_updated: "2026-10-09T22:58:16.086Z"
-last_activity: 2026-10-09
-last_activity_desc: 05-06 hosted candidate gate passed; selected-guest evidence remains blocked
-state_head: 183c489750d7974a09b11dadef876756b01b6210
+stopped_at: Plan 05-06 halted at Task 2 selected-guest evidence gate; candidate hosted receipt passed and frontend startup diagnosis reproduced SIGABRT
+last_updated: "2026-10-10T01:05:52.000Z"
+last_activity: 2026-10-10
+last_activity_desc: Compared fresh no-content and core-plus-public-fixture RetroArch launches; both abort before screenshot, while the selected-guest source/predicate gate remains blocked
+state_head: d3ce0949b14783547a4bffb4690a15c4f723ac8d
 progress:
   total_phases: 4
   completed_phases: 0
@@ -96,7 +96,14 @@ Progress: [░░░░░░░░░░] 0%
 - The user-provided BIOS archive is also stored under the Git-ignored `local/roms/` directory. The copy matches its source, passes ZIP CRC validation and is untracked; those checks do not establish BIOS compatibility.
 - Public CI: use original fixtures and/or homebrew assets only after confirming redistribution rights for the specific ROM assets; a source-code license alone is not sufficient evidence for bundled game data.
 - The local archive passed ZIP CRC checks and matched all 13 ROM size/SHA-1 entries in MAME's current Neo Geo software list. That confirms the archive identity, not emulator compatibility.
-- Next GSD work: `$gsd-verify-work 05 --ws first-playable-game` reviews the 05-06 halted summary and current validation. Phase 05 remains incomplete because selected compatibility and GAME-02 lack independent configuration/predicate evidence; the exact-SHA hosted MVS receipt passed on candidate PR #2. Protected `main` also requires one approving PR review before merge. Phase 04 remains incomplete; HOST-02/frontend QUAL-03 remain Pending/unknown/manual-only and all user-directed threat dispositions remain open.
+- Next GSD work: no GSD command is warranted while the external evidence is unchanged. Plan 05-06 remains halted at Task 2: selected compatibility and GAME-02 need an independently observed selected configuration plus a source-backed guest attract/start predicate with oracle ancestry. The diagnostic no-content and core-plus-public-fixture RetroArch launches both abort with SIGABRT before screenshot; this does not establish a core/content fault or close HOST-02. Do not repeat verify-work or create another unchanged gap plan. When the missing selected-guest evidence is available, resume the existing bounded plan with $gsd-execute-phase 05 --gaps-only --ws first-playable-game. Candidate PR #2 has a passing exact-SHA hosted MVS receipt but remains OPEN / REVIEW_REQUIRED pending one approval. Phase 04 remains incomplete; HOST-02/frontend QUAL-03 remain Pending/unknown/manual-only and all user-directed threat dispositions remain open.
+
+The generic GSD progress router currently infers Phase 04 from its incomplete
+verification report, while this workstream remains on Phase 05 because the
+roadmap permits independent boot engineering to continue. Do not route back to
+Phase 04 gap planning unless acceptance evidence or scope materially changes;
+the existing Phase 04 report and methodology explicitly prohibit repeating an
+unchanged external-blocker plan. Plan/summary counts are not phase acceptance.
 
 ## Decisions
 
@@ -143,7 +150,7 @@ Progress: [░░░░░░░░░░] 0%
 ### Blockers
 
 - Owned-debug is now 47/47 passing, including refreshed identity/source-manifest and target-scoped inventory checks. This repairs the prior deterministic failure without establishing frontend acceptance.
-- HOST-02 remains unknown: pinned RetroArch 1.22.2 aborts before the first screenshot in fresh no-content and core/content launches (EXC_CRASH SIGABRT, return -6). LaunchServices reported kLSNoExecutableErr despite bundle/executable/signature checks; unified-log inspection was sandbox-blocked. A functioning interactive macOS app launch context is still required; cause is not established. Preserve the screenshot, stable no-input frames, RIGHT/LEFT controls, unload and normal-exit observation; do not repeat the launch while its environment is unchanged.
+- HOST-02 remains unknown: pinned RetroArch 1.22.2 aborts before the first screenshot in both fresh no-content and core-plus-public-fixture diagnostic launches (EXC_CRASH SIGABRT, return -6). LaunchServices reported kLSNoExecutableErr despite bundle/executable/signature checks; unified-log inspection was sandbox-blocked. These probes do not establish a core/content fault. A functioning interactive app launch context is still required; cause is not established. Preserve the screenshot, stable no-input frames, RIGHT/LEFT controls, unload and normal-exit observation; do not repeat the launch while its environment is unchanged.
 - WR-06 remains open after independent review because affirmative paraphrases still pass the bounded docs gate; fresh post-execution audits must confirm current dispositions.
 - T-04-11, T-04-15, T-04-18, and T-04-20 remain high/open by user direction; Plan 04-16 sanitizer tests pass, but no threat closure was granted.
 - Current Plan 04-22 evidence: seven security findings remain open (four high, three medium), with no accepted risks; actual pinned RetroArch load, presentation, input, unload and exit remain unobserved/manual-only (HOST-02 Pending/unknown; frontend QUAL-03 partial/needs-human). Phase 04 remains In Progress, and no further repository gap plan is warranted unless evidence or scope changes.

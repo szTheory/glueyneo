@@ -151,6 +151,23 @@ coverage:
 - Task 1 commit `183c489` exists in the shared project history.
 - Task 3 candidate review, hosted run, and downloaded receipt correspond to exact SHA `e80672845fc60d94d8a44eab416377534c9a99f1`.
 
+## Post-verification continuity — 2026-10-10
+
+- The subsequent `$gsd-verify-work 05 --ws first-playable-game` step completed
+  and left Phase 05 blocked: the selected configuration and source-backed
+  guest-written attract/start predicate are still unsupported by independent
+  evidence. No new repository defect authorized another gap plan.
+- A diagnostic comparison then tested fresh no-content startup and
+  core-plus-public-fixture startup with pinned RetroArch 1.22.2. Both exited
+  -6 with SIGABRT before the first screenshot. The comparison does not identify
+  a core/content fault or establish selected-media behavior; see
+  05-VALIDATION.md.
+- Phase 05 remains incomplete. Do not rerun verify-work or create a gap plan
+  while these findings are unchanged. Once the selected configuration and
+  source-backed guest predicate are available, resume the existing plan with
+  `$gsd-execute-phase 05 --gaps-only --ws first-playable-game`. Phase 06
+  depends on Phase 05 and is not ready to plan.
+
 ---
 *Phase: 05-selected-mvs-boot*
 *Completed: 2026-10-09 (execution halted at Task 2 evidence gate)*
