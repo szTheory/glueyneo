@@ -46,7 +46,9 @@ WORKSTREAM = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 KEY = re.compile(r"^threats_open:\s*(\d+)\s*$")
 KEY_LIKE = re.compile(r"^\s*#?\s*threats_open\s*:")
 CELL_SPLIT = re.compile(r"(?<!\\)\|")
-HEADER = re.compile(r"^\|\s*Threat ID\s*\|(.+)\|\s*$")
+# Any row whose first cell reads "Threat ID" starts a register table; the case and the trailing pipe
+# are not significant, so a loosely written table is checked rather than skipped (T-04-62).
+HEADER = re.compile(r"^\|\s*threat\s+id\s*\|(.*?)\|?\s*$", re.IGNORECASE)
 VERIFIED = re.compile(r"""^status:\s*["']?verified["']?\s*$""")
 PHASE_NUMBER = re.compile(r"^[0-9]{2}(\.[0-9]+)?$")
 
