@@ -75,6 +75,46 @@ class RedactionTest(unittest.TestCase):
             with self.assertRaises(private_paths.PrivatePathError):
                 private_paths.scan_public(str(root.resolve()).lstrip("/"), (root,))
 
+EXTRA_ROOT = "/opt/ci/work/glueyneo"
+
+
+def _slash_variant(root: str, separator: str) -> str:
+    return root.replace("/", separator)
+
+
+class CanonicalRootTest(unittest.TestCase):
+    """One canonical form for every root, including a non-home extra root (CR-01, CR-02)."""
+
+    VALUE = "err " + _slash_variant(EXTRA_ROOT, "\u2215") + "/build/x.o"
+
+    def test_division_slash_root_is_redacted(self) -> None:
+        safe = private_paths.redact(self.VALUE, extra_roots=(EXTRA_ROOT,))
+        self.assertTrue(safe.endswith("[redacted-path]"), safe)
+        self.assertNotIn("glueyneo", safe)
+        with self.assertRaises(private_paths.PrivatePathError):
+            private_paths.scan_public(self.VALUE, (EXTRA_ROOT,))
+
+    def test_json_escaped_division_slash_root_fails_the_scan(self) -> None:
+        with self.assertRaises(private_paths.PrivatePathError):
+            private_paths.scan_public(json.dumps({"k": self.VALUE}), (EXTRA_ROOT,))
+
+    def test_receipt_sink_cleans_keys_and_values(self) -> None:
+        for where in ("key", "value"):
+            with self.subTest(where=where), tempfile.TemporaryDirectory(prefix="glueyneo-canon-") as temporary:
+                output = Path(temporary)
+                lanes = {self.VALUE: {"status": "pass"}} if where == "key" else {"lane": {"status": self.VALUE}}
+                receipt = {"status": "pass", "identity": {}, "lanes": lanes}
+                with mock.patch.object(playable, "OUTPUT", output), \
+                        mock.patch.object(playable, "ROOT", Path(EXTRA_ROOT)), \
+                        mock.patch("sys.stdout", new_callable=io.StringIO) as stdout:
+                    playable._write_receipt(receipt)
+                written = (output / "receipt.json").read_text(encoding="utf-8") + stdout.getvalue()
+                self.assertNotIn("opt\u2215ci", written)
+                self.assertNotIn("opt" + "\u2215" + "ci", written)
+                self.assertNotIn("glueyneo\u2215", written)
+                self.assertNotIn("glueyneo\\u2215", written)
+                self.assertNotIn("\\u2215", written)
+
 
 class SinkTest(unittest.TestCase):
     def test_artifact_tree_omits_cmake_internals(self) -> None:
