@@ -2,6 +2,7 @@
 phase: 04-public-playable-tracer
 reviewed: 2026-10-10T00:00:00Z
 depth: standard
+reviewed_revision: 82a75795e24c5fd62ff79bd0af564d16fb9fe0da
 files_reviewed: 13
 files_reviewed_list:
   - CMakeLists.txt

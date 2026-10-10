@@ -1056,9 +1056,36 @@ def _frontmatter(text: str) -> list[str]:
     return []
 
 
+FRONTMATTER_KEY = re.compile(r"""\s*(?:"([A-Za-z_][A-Za-z0-9_-]*)"|'([A-Za-z_][A-Za-z0-9_-]*)'|([A-Za-z_][A-Za-z0-9_-]*))\s*:""")
+
+
+def _frontmatter_keys(review_text: str) -> list[str]:
+    """Top-level frontmatter keys with quotes and padding before the colon normalized away (G2WR-02)."""
+    keys: list[str] = []
+    for line in _frontmatter(review_text):
+        match = FRONTMATTER_KEY.match(line)
+        if match is not None and not line[:1].isspace():
+            keys.append(next(group for group in match.groups() if group))
+    return keys
+
+
+def _reviewed_revision(review_text: str) -> str:
+    """The single 40-hex revision the review covered through (WR-11, G2WR-02)."""
+    values = [FRONTMATTER_KEY.sub("", line, count=1).strip() for line in _frontmatter(review_text)
+              if not line[:1].isspace() and (match := FRONTMATTER_KEY.match(line)) is not None
+              and next(group for group in match.groups() if group) == "reviewed_revision"]
+    if len(values) != 1:
+        raise RuntimeError("review frontmatter needs exactly one 40-hex reviewed_revision (WR-11)")
+    value = values[0]
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        value = value[1:-1]
+    if re.fullmatch(r"[0-9a-f]{40}", value) is None:
+        raise RuntimeError("review frontmatter needs exactly one 40-hex reviewed_revision (WR-11)")
+    return value
+
+
 def _reviewed_paths(review_text: str) -> set[str]:
-    keys = [line.split(":", 1)[0] for line in _frontmatter(review_text)
-            if re.match(r"[A-Za-z_][A-Za-z0-9_-]*:", line)]
+    keys = _frontmatter_keys(review_text)
     duplicates = sorted({key for key in keys if keys.count(key) > 1})
     if duplicates:
         raise RuntimeError(f"review frontmatter has duplicate key {duplicates[0]} (WR-11)")
@@ -1183,12 +1210,21 @@ REVIEW_REVISION_FORMS = (
 
 
 def review_provenance_errors(source_root: Path, repository: Path, head: str) -> list[str]:
-    """Closure-bearing dispositions cite a review revision that is a committed ancestor of `head` (T-04-38).
+    """Closure-bearing dispositions cite a revision inside the reviewed-revision..head window (T-04-38, T-04-67).
 
     A row that is not `open` must cite at least one revision in a recognized form
     (`review (04-NN, <12-40 hex>)` or ``revision `<40 hex>` ``); other hexadecimal text such as
-    digests is ignored. Each cited revision must resolve to a commit and be an ancestor of `head`.
+    digests is ignored. `reviewed_revision` in 04-REVIEW.md must be a committed ancestor of `head`.
+    Each cited revision must resolve to a commit, descend from the reviewed revision and be an ancestor of `head`.
+
+    This proves ordering only: a cited verdict postdates the review it answers. It does not prove that a
+    review ran at the cited commit, that the verdict covered the cited files, or that those files are
+    unchanged since; freshness is the focused re-review's changed-path rule.
     """
+    reviewed = _reviewed_revision((source_root / REVIEW).read_text(encoding="utf-8"))
+    if (_git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{reviewed}^{{commit}}"]) != 0
+            or _git_exit(repository, ["merge-base", "--is-ancestor", reviewed, head]) != 0):
+        return [f"reviewed revision {reviewed[:12]} is not a committed ancestor of the checked head"]
     text = (source_root / DISPOSITION).read_text(encoding="utf-8")
     errors: list[str] = []
     for row in _markdown_table_rows(text, "| Finding | Severity | Disposition | Source |"):
@@ -1206,6 +1242,8 @@ def review_provenance_errors(source_root: Path, repository: Path, head: str) -> 
             resolved = _git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}"]) == 0
             if not resolved or _git_exit(repository, ["merge-base", "--is-ancestor", revision, head]) != 0:
                 errors.append(f"review finding {finding_id} cites revision {revision[:12]} that is not a committed ancestor")
+            elif _git_exit(repository, ["merge-base", "--is-ancestor", reviewed, revision]) != 0:
+                errors.append(f"review finding {finding_id} cites revision {revision[:12]} that does not descend from the reviewed revision")
     return errors
 
 
