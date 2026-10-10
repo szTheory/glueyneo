@@ -803,6 +803,117 @@ def write_frontend_records(source_root: Path, summary: dict[str, Any]) -> None:
     validation_path.write_text(updated, encoding="utf-8")
 
 
+def _frontmatter(text: str) -> list[str]:
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return []
+    for index in range(1, len(lines)):
+        if lines[index].strip() == "---":
+            return lines[1:index]
+    return []
+
+
+def _reviewed_paths(review_text: str) -> set[str]:
+    paths: set[str] = set()
+    inside = False
+    for line in _frontmatter(review_text):
+        if line.startswith("files_reviewed_list:"):
+            inside = True
+        elif inside and line.startswith("  - "):
+            paths.add(line[4:].strip())
+        elif inside:
+            break
+    return paths
+
+
+def _disposition_triples(disposition_text: str) -> dict[str, tuple[str, str]]:
+    """Finding id -> (severity, disposition), cross-checked between the frontmatter and the table."""
+    from_frontmatter: dict[str, tuple[str, str]] = {}
+    current: dict[str, str] = {}
+    for line in _frontmatter(disposition_text):
+        match = re.fullmatch(r"\s*(?:-\s+)?(id|severity|disposition):\s*(\S+)\s*", line)
+        if match is None:
+            continue
+        if match.group(1) == "id":
+            current = {"id": match.group(2)}
+        elif current:
+            current[match.group(1)] = match.group(2)
+            if "severity" in current and "disposition" in current:
+                from_frontmatter[current["id"]] = (current["severity"], current["disposition"])
+    from_table: dict[str, tuple[str, str]] = {}
+    for row in _markdown_table_rows(disposition_text, "| Finding | Severity | Disposition | Source |"):
+        if len(row) != 4:
+            raise RuntimeError("review disposition record has a malformed row")
+        from_table[row[0]] = (row[1], row[2])
+    if from_frontmatter != from_table:
+        raise RuntimeError("review disposition record table differs from its frontmatter")
+    return from_table
+
+
+def _register_threats(security_text: str) -> set[str]:
+    threats: set[str] = set()
+    registered = False
+    for line in security_text.splitlines():
+        if not line.startswith("|"):
+            registered = False
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if cells and cells[0] == "Threat ID":
+            registered = "Severity" in cells and "Status" in cells
+        elif registered and cells and re.fullmatch(r"T-04-(?:\d{2}|SC \(04-\d{2}\))", cells[0]):
+            threats.add(cells[0])
+    return threats
+
+
+THREAT_REFERENCE = re.compile(r"T-04-(?:\d{2}|SC \(04-\d{2}\))")
+PATH_REFERENCE = re.compile(r"`([A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+)(?::\d+(?:-\d+)?)?`")
+
+
+def crosswalk_errors(source_root: Path, validation_text: str) -> list[str]:
+    """Check the review crosswalk against the disposition record, the threat register and the reviewed files."""
+    record = _disposition_triples((source_root / DISPOSITION).read_text(encoding="utf-8"))
+    threats = _register_threats((source_root / SECURITY).read_text(encoding="utf-8"))
+    reviewed = _reviewed_paths((source_root / REVIEW).read_text(encoding="utf-8"))
+    rows = _markdown_table_rows(
+        validation_text, "| Review Finding | Severity | Existing Threat Scope | Disposition |",
+    )
+    if not rows:
+        return ["validation map has no current review dispositions"]
+    errors: list[str] = []
+    seen: set[str] = set()
+    controlled_states = {"open", "fixed", "skipped", "deferred"}
+    for row in rows:
+        if len(row) != 4:
+            errors.append("validation map has a malformed review disposition row")
+            continue
+        finding_id, severity, scope, recorded_state = row
+        state = recorded_state.strip().lower()
+        if state not in controlled_states:
+            errors.append(f"review crosswalk controlled review disposition must be one controlled state ({finding_id})")
+            continue
+        if finding_id in seen:
+            errors.append(f"duplicate review finding {finding_id}")
+            continue
+        seen.add(finding_id)
+        threat_ids = THREAT_REFERENCE.findall(scope)
+        path_ids = PATH_REFERENCE.findall(scope)
+        if not threat_ids and not path_ids:
+            errors.append(f"review finding {finding_id} scope names no threat or reviewed path")
+        for threat in threat_ids:
+            if threat not in threats:
+                errors.append(f"review finding {finding_id} scope cites unknown threat {threat}")
+        for path in path_ids:
+            if not (source_root / path).is_file():
+                errors.append(f"review finding {finding_id} scope path {path} does not exist")
+            elif path not in reviewed:
+                errors.append(f"review finding {finding_id} scope path {path} is not in the reviewed file list")
+        if finding_id in record and (severity, state) != record[finding_id]:
+            errors.append(f"review finding {finding_id} differs from the disposition record")
+    if seen != set(record):
+        errors.append("crosswalk findings differ from the disposition record")
+    return errors
+
+
 def check_docs(source_root: Path, *, repository: Path | None = None, head: str = "HEAD") -> None:
     evidence = load_frontend_evidence(source_root, repository=repository, head=head)
     guide = (source_root / GUIDE).read_text(encoding="utf-8")
@@ -821,21 +932,9 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
     if missing:
         raise RuntimeError(f"integrator documentation omits: {', '.join(missing)}")
 
-    crosswalk = _markdown_table_rows(
-        validation, "| Review Finding | Severity | Existing Threat Scope | Disposition |",
-    )
-    if not crosswalk:
-        raise RuntimeError("validation map has no current review dispositions")
-    seen_findings: set[str] = set()
-    controlled_states = {"open", "fixed", "skipped", "deferred"}
-    for row in crosswalk:
-        if len(row) != 4:
-            raise RuntimeError("validation map has a malformed review disposition row")
-        finding_id, _severity, scope, recorded_state = row
-        state = recorded_state.strip().lower()
-        if finding_id in seen_findings or not scope.strip() or state not in controlled_states:
-            raise RuntimeError("review crosswalk controlled review disposition must be one controlled state")
-        seen_findings.add(finding_id)
+    crosswalk_problems = crosswalk_errors(source_root, validation)
+    if crosswalk_problems:
+        raise RuntimeError(crosswalk_problems[0])
 
     task_rows = _markdown_table_rows(
         validation,

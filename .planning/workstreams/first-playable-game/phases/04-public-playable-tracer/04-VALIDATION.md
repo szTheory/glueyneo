@@ -109,22 +109,34 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 
 ## Review Finding Crosswalk
 
+Rebased on the 2026-10-10 review (24 current disposition records). The earlier rows are historical in git history at the 04-23 revision.
+
 | Review Finding | Severity | Existing Threat Scope | Disposition |
 |----------------|----------|-----------------------|-------------|
-| WR-06 | warning | Alternate affirmative frontend success paraphrases pass beside Pending/unknown in the consumer guide | open |
-| WR-07 | warning | Evidence-map fixture source-faithful verification-row mutation contract | fixed |
-| CR-03 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, newline-containing path disclosure | fixed |
-| WR-05 | warning | Review disposition and validation crosswalk consistency | fixed |
-| WR-01 | warning | `check_docs()` accepts the two affirmative frontend paraphrases reproduced at 2026-10-08T23:12:03Z; actual frontend remains unknown | open |
-| WR-08 | warning | Evidence-map uncertainty matcher accepts ordinary output success wording while frontend status remains unknown; review counterexample at `tests/tools/check_phase04_validation_map.py:214-220` | open |
-| CR-02 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20, raw-literal-quote disclosure | fixed |
-| WR-04 | warning | Validation-map review grammar for informational findings | fixed |
-| CR-01 | critical | T-04-24, exact numeric receipt types | fixed |
-| WR-03 | warning | T-04-13 / T-04-23, repository receipt validation rejects forged file-content hashes | fixed |
-| WR-02 | warning | Independent review `870848e553aca6e43f6fec8ae0acefac87270f5b` confirms live 25/25 comparison and stale 23/23 mutation rejection | fixed |
-| WR-09 | warning | T-04-43: the review provenance gate accepts a nonexistent extra path in the claimed scope; reproduced by the current standard-depth review at revision `48befe7a92d7c545e7c900c57e027b9e15952a7f` | open |
-| WR-10 | warning | T-04-SC: evidence-map mutation tests now reach and assert their intended checks on the current report baseline | fixed |
-| WR-11 | warning | T-04-43: duplicate reviewed_revision keys now fail closed, including malformed duplicate values | fixed |
+| CR-01 | critical | T-04-11 / T-04-15 / T-04-18 / T-04-20; `tools/private_paths.py` | open |
+| CR-02 | critical | T-04-11 / T-04-45; `tools/verify_playable.py`; `tests/libretro/retroarch_smoke.py` | open |
+| CR-03 | critical | T-04-46; `tools/verify_playable.py` | open |
+| CR-04 | critical | T-04-34; `docs/first-playable-build.md` | open |
+| CR-05 | critical | T-04-38 / T-04-43; `tools/verify_playable.py` | open |
+| CR-06 | critical | T-04-48; `tests/tools/check_security_register.py` | open |
+| CR-07 | critical | T-04-47; `tests/libretro/retroarch_smoke.py` | open |
+| CR-08 | critical | T-04-12; `tools/verify_playable.py` | open |
+| CR-09 | critical | T-04-11 / T-04-45; `tools/verify_playable.py` | open |
+| WR-01 | warning | T-04-45; `tools/verify_playable.py` | open |
+| WR-02 | warning | T-04-46; `tools/verify_playable.py` | open |
+| WR-03 | warning | T-04-47; `tools/verify_playable.py` | open |
+| WR-04 | warning | T-04-18 / T-04-47; `tests/libretro/retroarch_smoke.py` | open |
+| WR-05 | warning | T-04-21; `tests/libretro/retroarch_smoke.py` | open |
+| WR-06 | warning | `tools/private_paths.py` | open |
+| WR-07 | warning | `CMakeLists.txt`; `tests/tools/check_security_register.py` | open |
+| WR-08 | warning | `CMakeLists.txt` | open |
+| WR-09 | warning | T-04-43 / T-04-46; `tools/verify_playable.py` | open |
+| IN-01 | info | `docs/first-playable-build.md` | open |
+| IN-02 | info | `tests/libretro/retroarch_smoke.py` | open |
+| IN-03 | info | `tests/consumers/check_package.py` | open |
+| IN-04 | info | `tests/tools/test_private_paths.py`; `tests/tools/test_check_security_register.py`; `tests/tools/test_verify_playable.py` | open |
+| WR-10 | warning | T-04-38 | fixed |
+| WR-11 | warning | T-04-43 | fixed |
 
 ### Plan 04-20 Task 1 Current Evidence — 2026-10-08
 
