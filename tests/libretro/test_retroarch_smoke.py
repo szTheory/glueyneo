@@ -13,6 +13,7 @@ import sys
 import tempfile
 import time
 import unittest
+import zlib
 from unittest import mock
 
 import retroarch_smoke as smoke
@@ -557,6 +558,102 @@ class OuterTimeoutTest(unittest.TestCase):
             self.assertFalse(alive, f"fake frontend survived the outer timeout: pid {pid}")
 
 
+class CaptureRobustnessTest(unittest.TestCase):
+    """WR-04/WR-05: partial captures and hostile PNGs stay inside the scanned smoke result."""
+
+    IEND = b"\x00\x00\x00\x00IEND\xaeB`\x82"
+
+    @staticmethod
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        crc = zlib.crc32(kind + data) & 0xFFFFFFFF
+        return len(data).to_bytes(4, "big") + kind + data + crc.to_bytes(4, "big")
+
+    def png(self, width: int, height: int, raw: bytes, *, ihdr: bytes | None = None,
+            idat: bytes | None = None) -> bytes:
+        header = ihdr if ihdr is not None else (
+            width.to_bytes(4, "big") + height.to_bytes(4, "big") + bytes([8, 2, 0, 0, 0]))
+        body = idat if idat is not None else zlib.compress(raw)
+        return (b"\x89PNG\r\n\x1a\n" + self.chunk(b"IHDR", header)
+                + self.chunk(b"IDAT", body) + self.chunk(b"IEND", b""))
+
+    def decode_error(self, data: bytes) -> smoke.SmokeBlocked:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "capture.png"
+            path.write_bytes(data)
+            with self.assertRaises(smoke.SmokeBlocked) as raised:
+                smoke.decode_png(path)
+        return raised.exception
+
+    def test_valid_png_still_decodes(self) -> None:
+        raw = b"".join(b"\x00" + bytes(range(6)) for _ in range(2))
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "ok.png"
+            path.write_bytes(self.png(2, 2, raw))
+            self.assertEqual(smoke.decode_png(path)[:3], (2, 2, 3))
+
+    def test_png_without_iend_is_not_selected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            (directory / "partial.png").write_bytes(b"\x89PNG\r\n\x1a\npartial")
+            self.assertIsNone(smoke.select_fresh_screenshot(directory, {}))
+
+    def test_complete_stable_png_is_selected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            capture = directory / "done.png"
+            capture.write_bytes(b"\x89PNG\r\n\x1a\nbody" + self.IEND)
+            self.assertEqual(smoke.select_fresh_screenshot(directory, {}), capture)
+
+    def test_still_growing_png_is_not_selected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            capture = directory / "growing.png"
+            capture.write_bytes(b"\x89PNG\r\n\x1a\nbody" + self.IEND)
+
+            def grow(_seconds: float) -> None:
+                with capture.open("ab") as stream:
+                    stream.write(self.IEND)
+
+            with mock.patch.object(smoke.time, "sleep", side_effect=grow):
+                self.assertIsNone(smoke.select_fresh_screenshot(directory, {}))
+
+    def test_decode_failures_are_video_stage_blocks(self) -> None:
+        width, height = 320, 224
+        expected = height * (1 + width * 3)
+        cases = {
+            "truncated-ihdr": self.png(width, height, b"", ihdr=b"\x00\x00\x01"),
+            "corrupt-idat": self.png(width, height, b"", idat=b"not a zlib stream" * 4),
+            "oversized-inflate": self.png(width, height, bytes(expected + 4096)),
+            "zero-dimensions": self.png(0, 0, b""),
+        }
+        for name, data in cases.items():
+            with self.subTest(case=name):
+                self.assertEqual(self.decode_error(data).stage, "video")
+
+    def test_truncated_chunk_stream_is_a_video_stage_block(self) -> None:
+        data = b"\x89PNG\r\n\x1a\n" + (500).to_bytes(4, "big") + b"IDATshort"
+        self.assertEqual(self.decode_error(data).stage, "video")
+
+    def test_non_gnmv_content_is_size_checked_before_it_is_read(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            content = directory / "blob.bin"
+            content.write_bytes(b"NOPE" + bytes(696))
+            fixtures = FixtureIdentityTests()
+            args, executable = fixtures.make_inputs(directory, content)
+            actual_sha = smoke.sha256
+            with (
+                mock.patch.object(smoke.sys, "platform", "darwin"),
+                mock.patch.object(smoke, "sha256", side_effect=lambda path: (
+                    smoke.EXPECTED_EXECUTABLE_SHA256 if Path(path).resolve() == executable.resolve()
+                    else actual_sha(Path(path)))),
+                mock.patch.object(Path, "read_bytes", side_effect=AssertionError("read before size check")),
+            ):
+                with self.assertRaises(smoke.SmokeBlocked) as raised:
+                    smoke.validate_inputs(args)
+        self.assertEqual(raised.exception.stage, "input")
+
+
 class ScreenshotFreshnessTests(unittest.TestCase):
     def test_ambiguous_paths_and_temporary_descendants_are_fully_redacted(self) -> None:
         roots = ("/Users/private-person", "/Volumes/synthetic", "/tmp/synthetic",
@@ -598,7 +695,7 @@ class ScreenshotFreshnessTests(unittest.TestCase):
             stale.write_bytes(b"old capture")
             prior = smoke.screenshot_snapshot(directory)
             fresh = directory / "fresh.png"
-            fresh.write_bytes(b"new capture")
+            fresh.write_bytes(b"new capture" + CaptureRobustnessTest.IEND)
             fresh.touch()
 
             selector = getattr(smoke, "select_fresh_screenshot", None)
