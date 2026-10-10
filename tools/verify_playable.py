@@ -552,14 +552,17 @@ def _terminate_lane_group(proc: subprocess.Popen[str], expired: subprocess.Timeo
     cannot have been recycled while a signal is sent. `communicate` and `wait` are therefore
     not used before the SIGKILL (they reap); the pipe is read with `select`/`os.read`
     instead so a lane that writes a large shutdown message after SIGTERM is not blocked on
-    a full pipe for the whole grace period (G2IN-02).
+    a full pipe for the whole grace period (G2IN-02). Output is recorded as the earlier segment
+    once, then the drained chunks, then the remaining `communicate` tail, so no segment is
+    duplicated or reordered (G3WR-01).
     """
     chunks: list[bytes] = []
     earlier = expired.output
     if isinstance(earlier, bytes):
-        chunks.append(earlier)
-    elif isinstance(earlier, str):
-        chunks.append(earlier.encode("utf-8", errors="replace"))
+        earlier = earlier.decode("utf-8", errors="replace")
+    elif not isinstance(earlier, str):
+        earlier = ""
+    earlier = earlier.replace("\r\n", "\n").replace("\r", "\n")  # text-mode Popen newline translation
     fd = proc.stdout.fileno() if getattr(proc, "stdout", None) is not None else None
     _signal_group(proc, signal.SIGTERM)
     deadline = time.monotonic() + LANE_GRACE_SECONDS
@@ -574,8 +577,14 @@ def _terminate_lane_group(proc: subprocess.Popen[str], expired: subprocess.Timeo
     if not eof:
         _drain(fd, chunks, 10)
     tail = _collect_after_kill(proc)
-    partial = b"".join(chunks).decode("utf-8", errors="replace") + tail
-    return f"TimeoutExpired: {expired}\n{partial}"
+    # `communicate` returns Popen's buffered earlier output again; keep exactly one copy (G3WR-01).
+    if tail.startswith(earlier):
+        rest = tail[len(earlier):]
+    else:
+        earlier = ""
+        rest = tail
+    drained = b"".join(chunks).decode("utf-8", errors="replace")
+    return f"TimeoutExpired: {expired}\n{earlier}{drained}{rest}"
 
 
 def _retroarch_pids() -> set[int] | None:
@@ -1033,7 +1042,9 @@ def write_frontend_records(source_root: Path, summary: dict[str, Any]) -> None:
     replaced is restored byte-for-byte from the originals read beforehand (a file that did not exist
     before, as on first-time generation, is removed again), and the error propagates. Every restore is
     attempted even if an earlier one fails; failed restores are then reported as one
-    `evidence rollback incomplete: <base names>` error, never naming a directory (G2WR-05).
+    `evidence rollback incomplete: <base names>` error, never naming a directory (G2WR-05). Every
+    `.restore` and `.tmp` cleanup is attempted too: an OSError removing one never aborts the loop or
+    replaces the original error, and a stray `.restore` file is named in the aggregated error (G3WR-04).
     Limit (GWR-06): a hard crash (power loss, SIGKILL) between replaces cannot be rolled back and can
     leave a mix of old and new files. The guide block is written last, so `--check-docs` detects such a
     mix as an evidence/block mismatch instead of accepting it.
@@ -1088,14 +1099,19 @@ def write_frontend_records(source_root: Path, summary: dict[str, Any]) -> None:
                         os.replace(restore, path)
                 except OSError:
                     unrestored.append(path.name)
-                finally:
+                try:
                     restore.unlink(missing_ok=True)
+                except OSError:
+                    unrestored.append(restore.name)
             if unrestored:
                 raise RuntimeError("evidence rollback incomplete: " + ", ".join(unrestored)) from failure
             raise
     finally:
         for temporary in temporaries:
-            temporary.unlink(missing_ok=True)
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError:
+                pass  # never mask the result or skip the remaining temporaries (G3WR-04)
 
 
 def _frontmatter(text: str) -> list[str]:
