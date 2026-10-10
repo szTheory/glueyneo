@@ -206,12 +206,38 @@ def compare_launch_probes(no_content: dict[str, object], core_content: dict[str,
     return "both-launch-probes-survived"
 
 
+PNG_IEND_TRAILER = b"\x00\x00\x00\x00IEND\xaeB`\x82"
+SCREENSHOT_STABLE_SECONDS = 0.05
+MAX_CAPTURE_DIMENSION = 4096
+
+
 def select_fresh_screenshot(directory: Path, prior: dict[Path, int]) -> Path | None:
-    candidates = [
-        path for path in directory.glob("*.png")
-        if path not in prior or path.stat().st_mtime_ns > prior[path]
-    ]
-    return max(candidates, key=lambda path: path.stat().st_mtime_ns) if candidates else None
+    """Pick the newest new capture that is a complete, no-longer-growing PNG (WR-04)."""
+    candidates: list[tuple[int, Path]] = []
+    for path in directory.glob("*.png"):
+        try:
+            stat = path.stat()
+            if path in prior and stat.st_mtime_ns <= prior[path]:
+                continue
+            if stat.st_size < len(PNG_IEND_TRAILER):
+                continue
+            with path.open("rb") as stream:
+                stream.seek(-len(PNG_IEND_TRAILER), os.SEEK_END)
+                if stream.read(len(PNG_IEND_TRAILER)) != PNG_IEND_TRAILER:
+                    continue
+        except OSError:
+            continue
+        candidates.append((stat.st_mtime_ns, path))
+    for _, path in sorted(candidates, reverse=True):
+        try:
+            first = path.stat()
+            time.sleep(SCREENSHOT_STABLE_SECONDS)
+            second = path.stat()
+        except OSError:
+            continue
+        if (first.st_size, first.st_mtime_ns) == (second.st_size, second.st_mtime_ns):
+            return path
+    return None
 
 
 def read_bounded_text(
@@ -302,6 +328,13 @@ def wait_for_recent_crash_reason(
 
 
 def decode_png(path: Path) -> tuple[int, int, int, bytes]:
+    try:
+        return _decode_png(path)
+    except (struct.error, zlib.error, IndexError, ValueError, OSError) as error:
+        raise SmokeBlocked("video", "frontend screenshot could not be decoded") from error
+
+
+def _decode_png(path: Path) -> tuple[int, int, int, bytes]:
     data = path.read_bytes()
     if not data.startswith(b"\x89PNG\r\n\x1a\n"):
         raise SmokeBlocked("video", "RetroArch screenshot is not a PNG")
@@ -311,9 +344,13 @@ def decode_png(path: Path) -> tuple[int, int, int, bytes]:
     while offset < len(data):
         length = struct.unpack_from(">I", data, offset)[0]
         kind = data[offset + 4 : offset + 8]
+        if length > len(data) - offset - 12:
+            raise SmokeBlocked("video", "PNG chunk is truncated")
         chunk = data[offset + 8 : offset + 8 + length]
         offset += length + 12
         if kind == b"IHDR":
+            if length != 13:
+                raise SmokeBlocked("video", "PNG header is malformed")
             width, height, bit_depth, color_type, compression, filtering, interlace = (
                 struct.unpack(">IIBBBBB", chunk)
             )
@@ -325,14 +362,17 @@ def decode_png(path: Path) -> tuple[int, int, int, bytes]:
             break
     if width is None or height is None or bit_depth != 8 or interlace != 0:
         raise SmokeBlocked("video", "PNG format is outside the bounded decoder")
+    if not (0 < width <= MAX_CAPTURE_DIMENSION and 0 < height <= MAX_CAPTURE_DIMENSION):
+        raise SmokeBlocked("video", "PNG dimensions are outside the bounded decoder")
     channels = {2: 3, 6: 4}.get(color_type)
     if channels is None:
         raise SmokeBlocked("video", "PNG is not RGB or RGBA")
     bpp = channels
     stride = width * bpp
-    raw = zlib.decompress(compressed)
     expected = height * (stride + 1)
-    if len(raw) != expected:
+    inflater = zlib.decompressobj()
+    raw = inflater.decompress(bytes(compressed), expected + 1)  # bounded: never inflate past expected
+    if len(raw) != expected or inflater.unconsumed_tail:
         raise SmokeBlocked("video", "PNG has an unexpected decoded byte count")
     pixels = bytearray(height * stride)
     source = 0
@@ -741,6 +781,8 @@ def validate_inputs(args: argparse.Namespace) -> tuple[Path, Path, Path, dict[st
             raise SmokeBlocked("input", "selected MVS bundle is malformed or outside the supported profile")
         content_kind = "selected-mvs"
     else:
+        if content.stat().st_size != 602:
+            raise SmokeBlocked("input", "content is neither the public GNFX fixture nor a normalized MVS bundle")
         fixture = content.read_bytes()
         if len(fixture) != 602 or fixture[:4] != b"GNFX" or fixture[4:8] != b"\0\0\0\1":
             raise SmokeBlocked("input", "content is neither the public GNFX fixture nor a normalized MVS bundle")

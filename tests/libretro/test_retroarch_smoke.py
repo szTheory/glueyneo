@@ -1047,7 +1047,7 @@ Sensitive unrelated line: private capture name
             def inject(key_code: int) -> None:
                 requests.append(key_code)
                 if len(requests) == 3:  # first two requests are dropped
-                    (directory / "capture.png").write_bytes(b"png")
+                    (directory / "capture.png").write_bytes(b"png" + CaptureRobustnessTest.IEND)
 
             def sleep(seconds: float) -> None:
                 clock[0] += seconds
