@@ -286,7 +286,11 @@ class BundleIdentifierTests(unittest.TestCase):
 
     def test_quit_helper_uses_one_bounded_fixed_command_for_pinned_identifier(self) -> None:
         process = self.RunningProcess()
-        with mock.patch.object(smoke.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)) as run:
+        process.pid = 4321
+        with (
+            mock.patch.object(smoke, "running_retroarch_pids", return_value={4321}),
+            mock.patch.object(smoke.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)) as run,
+        ):
             smoke.request_frontend_quit(self.VALID_BUNDLE_ID, process, 20.0)
 
         run.assert_called_once()
@@ -323,6 +327,135 @@ class BundleIdentifierTests(unittest.TestCase):
             with self.assertRaises(smoke.SmokeBlocked):
                 smoke.run_smoke(args)
 
+        run.assert_not_called()
+        self.assertTrue(process.terminated)
+
+
+class SingleInstanceTest(unittest.TestCase):
+    """E6/CR-07: never stack a second RetroArch and never quit an instance we did not start."""
+
+    class Running:
+        returncode: int | None = None
+
+        def __init__(self, pid: int = 4321) -> None:
+            self.pid = pid
+            self.terminated = False
+            self.killed = False
+
+        def poll(self) -> int | None:
+            return self.returncode
+
+        def wait(self, timeout: float | None = None) -> int:
+            self.returncode = 0
+            return 0
+
+        def terminate(self) -> None:
+            self.terminated = True
+
+        def kill(self) -> None:
+            self.killed = True
+
+    def stub_inputs(self) -> mock._patch:
+        identity = {"bundle_id": smoke.EXPECTED_BUNDLE_IDENTIFIER}
+        return mock.patch.object(
+            smoke, "validate_inputs",
+            return_value=(Path("/app"), Path("/core"), Path("/fixture"), identity))
+
+    def test_run_smoke_refuses_when_an_instance_exists(self) -> None:
+        args = mock.Mock(timeout=1.0, child_pid_file=None)
+        with (
+            self.stub_inputs(),
+            mock.patch.object(smoke, "crash_report_snapshot", return_value={}),
+            mock.patch.object(smoke, "running_retroarch_pids", return_value={4242}),
+            mock.patch.object(smoke.subprocess, "Popen") as popen,
+        ):
+            with self.assertRaises(smoke.SmokeBlocked) as raised:
+                smoke.run_smoke(args)
+        self.assertEqual(raised.exception.stage, "pre-launch")
+        popen.assert_not_called()
+
+    def test_run_launch_probe_refuses_when_an_instance_exists(self) -> None:
+        with (
+            mock.patch.object(smoke, "crash_report_snapshot", return_value={}),
+            mock.patch.object(smoke, "running_retroarch_pids", return_value={4242}),
+            mock.patch.object(smoke.subprocess, "Popen") as popen,
+        ):
+            with self.assertRaises(smoke.SmokeBlocked) as raised:
+                smoke.run_launch_probe(Path("/RetroArch"), Path("/core"), Path("/fixture"),
+                                       smoke.EXPECTED_BUNDLE_IDENTIFIER,
+                                       probe="no_content", timeout=1)
+        self.assertEqual(raised.exception.stage, "pre-launch")
+        popen.assert_not_called()
+
+    def test_main_prints_one_blocked_json_line_and_returns_one(self) -> None:
+        argv = ["retroarch_smoke.py", "--retroarch", "/app", "--core", "/core", "--content", "/fixture"]
+        with (
+            mock.patch.object(sys, "argv", argv),
+            self.stub_inputs(),
+            mock.patch.object(smoke, "crash_report_snapshot", return_value={}),
+            mock.patch.object(smoke, "running_retroarch_pids", return_value={4242}),
+            mock.patch.object(smoke.subprocess, "Popen") as popen,
+            contextlib.redirect_stdout(io.StringIO()) as stdout,
+        ):
+            exit_code = smoke.main()
+        lines = stdout.getvalue().strip().splitlines()
+        self.assertEqual(len(lines), 1)
+        result = json.loads(lines[0])
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(result["status"], "blocked_or_unknown")
+        self.assertEqual(result["stage"], "pre-launch")
+        popen.assert_not_called()
+
+    def test_lister_fails_closed(self) -> None:
+        failures = (
+            mock.patch.object(smoke.subprocess, "run", side_effect=OSError("no pgrep")),
+            mock.patch.object(smoke.subprocess, "run",
+                              side_effect=subprocess.TimeoutExpired("pgrep", 5)),
+            mock.patch.object(smoke.subprocess, "run", return_value=subprocess.CompletedProcess([], 2, "", "")),
+        )
+        for failure in failures:
+            with failure, self.assertRaises(smoke.SmokeBlocked) as raised:
+                smoke.running_retroarch_pids()
+            self.assertEqual(raised.exception.stage, "pre-launch")
+
+    def test_lister_maps_pgrep_exit_codes(self) -> None:
+        with mock.patch.object(smoke.subprocess, "run",
+                               return_value=subprocess.CompletedProcess([], 1, "", "")) as run:
+            self.assertEqual(smoke.running_retroarch_pids(), set())
+        self.assertEqual(run.call_args.args[0], ["/usr/bin/pgrep", "-x", "RetroArch"])
+        with mock.patch.object(smoke.subprocess, "run",
+                               return_value=subprocess.CompletedProcess([], 0, "4242\n4243\n", "")):
+            self.assertEqual(smoke.running_retroarch_pids(), {4242, 4243})
+
+    def test_quit_uses_osascript_only_when_started_pid_is_the_sole_instance(self) -> None:
+        process = self.Running(pid=4321)
+        with (
+            mock.patch.object(smoke, "running_retroarch_pids", return_value={4321}),
+            mock.patch.object(smoke.subprocess, "run",
+                              return_value=subprocess.CompletedProcess([], 0)) as run,
+        ):
+            smoke.request_frontend_quit(smoke.EXPECTED_BUNDLE_IDENTIFIER, process, 20.0)
+        run.assert_called_once()
+        self.assertFalse(process.terminated)
+
+    def test_quit_terminates_by_pid_when_a_foreign_instance_exists(self) -> None:
+        process = self.Running(pid=4321)
+        with (
+            mock.patch.object(smoke, "running_retroarch_pids", return_value={4321, 999}),
+            mock.patch.object(smoke.subprocess, "run") as run,
+        ):
+            smoke.request_frontend_quit(smoke.EXPECTED_BUNDLE_IDENTIFIER, process, 20.0)
+        run.assert_not_called()
+        self.assertTrue(process.terminated)
+
+    def test_quit_terminates_by_pid_when_the_lister_fails(self) -> None:
+        process = self.Running(pid=4321)
+        with (
+            mock.patch.object(smoke, "running_retroarch_pids",
+                              side_effect=smoke.SmokeBlocked("pre-launch", "cannot enumerate")),
+            mock.patch.object(smoke.subprocess, "run") as run,
+        ):
+            smoke.request_frontend_quit(smoke.EXPECTED_BUNDLE_IDENTIFIER, process, 20.0)
         run.assert_not_called()
         self.assertTrue(process.terminated)
 
