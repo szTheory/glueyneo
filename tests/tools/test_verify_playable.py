@@ -1162,7 +1162,10 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
             older = self.errors(row.format(c0), c3, repository=repository, reviewed=c1)
             self.assertEqual(older, [f"review finding CR-01 cites revision {c0[:12]} that does not descend from the reviewed revision"])
             self.assertEqual(self.errors(row.format(c2), c3, repository=repository, reviewed=c1), [])
-            self.assertEqual(self.errors(row.format(c1), c3, repository=repository, reviewed=c1), [])
+            # G3WR-05: equality with the anchor is no longer accepted; the citation must strictly follow it.
+            self.assertEqual(self.errors(row.format(c1), c3, repository=repository, reviewed=c1),
+                             [f"review finding CR-01 cites revision {c1[:12]} equal to its review round anchor "
+                              "(04-REVIEW.md reviewed_revision)"])
             beyond = self.errors(row.format(c3), c2, repository=repository, reviewed=c1)
             self.assertEqual(beyond, [f"review finding CR-01 cites revision {c3[:12]} that is not a committed ancestor"])
 
@@ -1287,7 +1290,10 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
         self.assertEqual(errors, ["review finding WR-01 disposition cites no review revision"])
 
     def test_ancestor_revision_in_either_recognized_form_is_accepted(self) -> None:
-        first = self.first_commit()
+        # G3WR-05: the reviewed revision defaults to the first commit and a citation must strictly follow it,
+        # so cite the second commit; the recognized forms under test are unchanged.
+        first = subprocess.run(["git", "-C", str(ROOT), "rev-list", "--reverse", "HEAD"], check=True, text=True,
+                               stdout=subprocess.PIPE).stdout.split()[1]
         rows = (f"| CR-01 | critical | fixed | independent review (04-31, {first[:12]}) confirmed |\n"
                 f"| WR-01 | warning | deferred | at revision `{first}` |\n")
         self.assertEqual(self.errors(rows), [])

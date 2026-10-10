@@ -1271,23 +1271,60 @@ def _git_exit(repository: Path, arguments: list[str]) -> int:
         raise RuntimeError("review provenance revision cannot be checked") from error
 
 
+def _git_stdout(repository: Path, arguments: list[str]) -> str | None:
+    """Stdout of a read-only Git command in a clean environment, or None on a non-zero exit."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repository), *arguments], env=clean_environment(),
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=False,
+            timeout=MAX_GIT_COMMAND_SECONDS, text=True)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise RuntimeError("review provenance revision cannot be checked") from error
+    return result.stdout if result.returncode == 0 else None
+
+
 REVIEW_REVISION_FORMS = (
     re.compile(r"review \(04-\d{2}, ([0-9a-f]{12,40})\)"),
     re.compile(r"revision `([0-9a-f]{40})`"),
 )
+# CR/WR/IN-NN come from 04-REVIEW.md; G<n>CR/G<n>WR/G<n>IN-NN from the gap round that raised them (G3WR-05).
+REVIEW_ROUND_ID = re.compile(r"^(?:(?:CR|WR|IN)|G(?P<round>\d*)(?:CR|WR|IN))-\d{2}$")
+
+
+def _review_round_anchor(finding_id: str, source_root: Path, repository: Path, head: str) -> tuple[str, str] | str:
+    """The (40-hex anchor, label) of the review round that raised a finding, or an error string (G3WR-05).
+
+    Gap-round anchors are mechanical: the earliest commit at `head` that added the round's review file.
+    """
+    match = REVIEW_ROUND_ID.match(finding_id)
+    if match is None:
+        return f"review finding {finding_id} has no known review round"
+    if not finding_id.startswith("G"):
+        return _reviewed_revision((source_root / REVIEW).read_text(encoding="utf-8")), "04-REVIEW.md reviewed_revision"
+    round_number = match.group("round")
+    name = "04-REVIEW-GAPS.md" if not round_number else f"04-REVIEW-GAPS-R{round_number}.md"
+    added = _git_stdout(repository, ["log", "--diff-filter=A", "--format=%H", head, "--", (PHASE_DIRECTORY / name).as_posix()])
+    lines = added.split() if added else []
+    if not lines:
+        return f"review round file {name} for {finding_id} is not committed at the checked head"
+    return lines[-1], name
 
 
 def review_provenance_errors(source_root: Path, repository: Path, head: str) -> list[str]:
-    """Closure-bearing dispositions cite a revision inside the reviewed-revision..head window (T-04-38, T-04-67).
+    """Closure-bearing dispositions cite a revision strictly after the review round that raised them (T-04-38, G3WR-05).
 
     A row that is not `open` must cite at least one revision in a recognized form
     (`review (04-NN, <12-40 hex>)` or ``revision `<40 hex>` ``); other hexadecimal text such as
     digests is ignored. `reviewed_revision` in 04-REVIEW.md must be a committed ancestor of `head`.
-    Each cited revision must resolve to a commit, descend from the reviewed revision and be an ancestor of `head`.
+    Each cited revision must resolve to a commit, be an ancestor of `head`, strictly descend from the
+    anchor of the round that raised the finding and differ from that anchor. The anchor is
+    04-REVIEW.md `reviewed_revision` for `CR/WR/IN`, and the commit that added 04-REVIEW-GAPS.md or
+    04-REVIEW-GAPS-R<n>.md for `G`, `G<n>` findings.
 
-    This proves ordering only: a cited verdict postdates the review it answers. It does not prove that a
-    review ran at the cited commit, that the verdict covered the cited files, or that those files are
-    unchanged since; freshness is the focused re-review's changed-path rule.
+    This proves ordering only, relative to the review round that raised the finding: the cited revision
+    comes strictly after it and is an ancestor of the head. It does not prove that a review ran at the
+    cited commit, that a verdict covered the cited files, or that those files are unchanged since;
+    freshness is the focused re-review's changed-path rule.
     """
     reviewed = _reviewed_revision((source_root / REVIEW).read_text(encoding="utf-8"))
     if (_git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{reviewed}^{{commit}}"]) != 0
@@ -1306,20 +1343,30 @@ def review_provenance_errors(source_root: Path, repository: Path, head: str) -> 
         if not revisions:
             errors.append(f"review finding {finding_id} disposition cites no review revision")
             continue
+        anchor = _review_round_anchor(finding_id, source_root, repository, head)
+        if isinstance(anchor, str):
+            errors.append(anchor)
+            continue
+        anchor_sha, label = anchor
+        base_round = not finding_id.startswith("G")
         for revision in revisions:
-            resolved = _git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}"]) == 0
-            if not resolved or _git_exit(repository, ["merge-base", "--is-ancestor", revision, head]) != 0:
+            full = (_git_stdout(repository, ["rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}"]) or "").strip()
+            if not full or _git_exit(repository, ["merge-base", "--is-ancestor", full, head]) != 0:
                 errors.append(f"review finding {finding_id} cites revision {revision[:12]} that is not a committed ancestor")
-            elif _git_exit(repository, ["merge-base", "--is-ancestor", reviewed, revision]) != 0:
-                errors.append(f"review finding {finding_id} cites revision {revision[:12]} that does not descend from the reviewed revision")
+            elif full == anchor_sha:
+                errors.append(f"review finding {finding_id} cites revision {revision[:12]} equal to its review round anchor ({label})")
+            elif _git_exit(repository, ["merge-base", "--is-ancestor", anchor_sha, full]) != 0:
+                where = "the reviewed revision" if base_round else f"its review round ({label})"
+                errors.append(f"review finding {finding_id} cites revision {revision[:12]} that does not descend from {where}")
     return errors
 
 
 def check_docs(source_root: Path, *, repository: Path | None = None, head: str = "HEAD") -> None:
     """Check the integrator guide, the validation map and the review records against tracked evidence.
 
-    The review provenance of each closure-bearing disposition is bound to a committed ancestor of
-    `head` (T-04-38). Without a Git repository and without tracked frontend evidence there is nothing to
+    The review provenance of each closure-bearing disposition is ordered strictly after the review round
+    that raised the finding and bound to a committed ancestor of `head` (T-04-38, G3WR-05); it proves
+    ordering only, not that a review ran at the cited commit. Without a Git repository and without tracked frontend evidence there is nothing to
     bind to, so only the repository-free checks run; tracked evidence without a repository fails closed.
     """
     evidence = load_frontend_evidence(source_root, repository=repository, head=head)
