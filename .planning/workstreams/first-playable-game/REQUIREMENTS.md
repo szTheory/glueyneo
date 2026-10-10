@@ -53,7 +53,7 @@ The two sound requirements (implemented; acceptance pending the Phase 04 securit
 
 - [ ] **QUAL-01**: A maintainer can run clean-tree automated native and libretro-consumer checks using only the public fixture, covering equivalent frame/input/audio observations for the same guest/input sequence at matching emulated boundaries (accounting for documented audio conversion), lifecycle and malformed-input boundaries, relevant fuzz/sanitizer regressions, and retained diagnostic-SDK regressions through proportionate local/CI entrypoints.
 - [ ] **QUAL-02**: A maintainer can reproduce a private local qualification scenario from boot through active movement, firing, scrolling, and sound in the actual pinned RetroArch build, retaining exact private media identities and derived evidence locally and publishing only permitted generic outcomes and public build/configuration identities. Machine-observable checks are automated; only residual subjective or unavailable evidence needs a human.
-- [x] **QUAL-03**: An integrator can follow the documented build/install/load procedure for the native library and libretro adapter from a clean source tree on the selected macOS configuration, with exact dependency/compiler/SDK/OS/architecture/frontend identities and untested configurations stated explicitly.
+- [ ] **QUAL-03**: An integrator can follow the documented build/install/load procedure for the native library and libretro adapter from a clean source tree on the selected macOS configuration, with exact dependency/compiler/SDK/OS/architecture/frontend identities and untested configurations stated explicitly.
 - [ ] **QUAL-04**: A consumer can identify the exact qualified game scenario, public-fixture coverage, remaining unknown/unsupported behavior, and oracle ancestry in current documentation; emulator agreement, BIOS/archive integrity, and fixture success are not presented as broader hardware or game compatibility.
 
 ## Future Requirements
@@ -123,7 +123,7 @@ Historical, superseded on 2026-10-10 by the receipt above: Plan 04-15 reconfirme
 | SND-04 | Phase 7 | Pending |
 | QUAL-01 | Phase 7 | Pending |
 | QUAL-02 | Phase 7 | Pending |
-| QUAL-03 | Phase 4 | Complete |
+| QUAL-03 | Phase 4 | Gaps Found |
 | QUAL-04 | Phase 7 | Pending |
 
 **Coverage:**
