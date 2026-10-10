@@ -222,10 +222,13 @@ row (see Closure gates).
 - **Evidence recording** (G2WR-05). First-time generation with absent files
   works. Rollback unlinks files that did not exist before, continues past a
   failed restore and raises `evidence rollback incomplete: <names>` (base names
-  only).
+  only). A failure removing a `.restore` or `.tmp` file never aborts the
+  rollback or replaces the original error, and a stray `.restore` file is named
+  in `evidence rollback incomplete` (G3WR-04).
 - **Lane timeouts** (G2IN-02). Output is drained during the SIGTERM grace
   without reaping the leader; the no-signal-after-reap invariant (T-04-54) is
-  unchanged.
+  unchanged. The recorded output contains each segment once, in emission order
+  (G3WR-01).
 - **Smoke harness** (G2WR-06). A signal deferred in the launch window is always
   raised as `interrupted`, even when launch raises; a child-PID record failure is
   reported as `pid-record`.
