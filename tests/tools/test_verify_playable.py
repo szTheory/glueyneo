@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import copy
 import io
+import json
 import os
 from pathlib import Path
 import re
@@ -501,7 +502,91 @@ class ConsumerInputTest(unittest.TestCase):
         validation = source_root / ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md"
         validation.parent.mkdir(parents=True)
         shutil.copyfile(ROOT / ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md", validation)
+        # Without the tracked receipt summary, the frontend row must read Pending.
+        text = validation.read_text(encoding="utf-8")
+        pending = "HOST-02 Pending; frontend QUAL-03 Pending; actual-app identities and observations unavailable; frontend claim unknown"
+        text = re.sub(r"(?m)^(\| 04-15 T2 \|(?:[^|]*\|){8})[^|]*\|$", rf"\1 {pending} |", text, count=1)
+        validation.write_text(text, encoding="utf-8")
         return validation
+
+    def copy_documentation_with_evidence(self, source_root: Path) -> dict[str, object]:
+        guide = source_root / "docs/first-playable-build.md"
+        guide.parent.mkdir(parents=True)
+        shutil.copyfile(ROOT / "docs/first-playable-build.md", guide)
+        for path in (playable.FRONTEND_EVIDENCE,
+                     Path(".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md")):
+            (source_root / path).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / path, source_root / path)
+        return json.loads((source_root / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+
+    def test_check_docs_accepts_complete_frontend_status_backed_by_tracked_receipt(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-docs-evidence-") as temporary:
+            source_root = Path(temporary)
+            self.copy_documentation_with_evidence(source_root)
+            guide = source_root / "docs/first-playable-build.md"
+            guide.write_text(guide.read_text(encoding="utf-8") + "\nRetroArch loaded the fixture successfully.\n",
+                             encoding="utf-8")
+            playable.check_docs(source_root)
+
+    def test_check_docs_rejects_invalid_tracked_frontend_receipts(self) -> None:
+        def drop_observation(summary: dict[str, object]) -> None:
+            summary["observations"] = [item for item in summary["observations"]
+                                       if item != "configured Left Arrow wrong-input control did not move the marker"]
+
+        mutations = (
+            ("failed receipt", lambda summary: summary.update(status="fail"), "passing committed-snapshot receipt"),
+            ("unknown frontend", lambda summary: summary.update(retroarch_status="unknown"),
+             "passing committed-snapshot receipt"),
+            ("short revision", lambda summary: summary.update(source_revision="706516b"), "full committed source revision"),
+            ("unpinned app", lambda summary: summary["retroarch"].update(executable_sha256="0" * 64), "pinned RetroArch"),
+            ("failed lane", lambda summary: summary["lanes"].update({"shared-build": "fail"}), "every qualification lane"),
+            ("missing LEFT control", drop_observation, "required load, video, input or exit observation"),
+            ("no unload", lambda summary: summary.update(frontend_unloaded=False), "content unload"),
+            ("private path", lambda summary: summary.update(os="macOS /Users/someone/build"), "private absolute path"),
+        )
+        for label, mutate, expected_error in mutations:
+            with self.subTest(mutation=label), tempfile.TemporaryDirectory(prefix="playable-docs-evidence-") as temporary:
+                source_root = Path(temporary)
+                summary = self.copy_documentation_with_evidence(source_root)
+                mutate(summary)
+                (source_root / playable.FRONTEND_EVIDENCE).write_text(json.dumps(summary), encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, expected_error):
+                    playable.check_docs(source_root)
+
+    def test_check_docs_requires_frontend_row_to_match_tracked_receipt(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-docs-evidence-") as temporary:
+            source_root = Path(temporary)
+            summary = self.copy_documentation_with_evidence(source_root)
+            validation = source_root / ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md"
+            text = validation.read_text(encoding="utf-8")
+            validation.write_text(text.replace(str(summary["source_revision"])[:12], "0123456789ab"), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "Complete with the tracked receipt revision"):
+                playable.check_docs(source_root)
+        with tempfile.TemporaryDirectory(prefix="playable-docs-pending-") as temporary:
+            source_root = Path(temporary)
+            self.copy_documentation(source_root)
+            shutil.copyfile(ROOT / playable.FRONTEND_EVIDENCE, source_root / playable.FRONTEND_EVIDENCE)
+            with self.assertRaisesRegex(RuntimeError, "Complete with the tracked receipt revision"):
+                playable.check_docs(source_root)
+
+    def test_record_frontend_evidence_summary_drops_receipt_paths(self) -> None:
+        receipt = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        full = {
+            "status": "pass",
+            "identity": {"source_revision": receipt["source_revision"], "retroarch": receipt["retroarch"]},
+            "lanes": {name: {"status": status, "command": ["/Users/someone/checkout"]}
+                      for name, status in receipt["lanes"].items()},
+            "retroarch_smoke": {
+                "status": "pass", "observations": receipt["observations"],
+                "marker_before": receipt["marker_before"], "marker_after_right": receipt["marker_after_right"],
+                "frontend_unloaded": True,
+                "identity": {"os": receipt["os"], "core_sha256": receipt["core_sha256"],
+                             "fixture_sha256": receipt["fixture_sha256"], "input_mapping": receipt["input_mapping"]},
+                "diagnostic": {"output": "/Users/someone/private"},
+            },
+            "artifacts": {"tree": ["/Users/someone/build/object.o"]},
+        }
+        self.assertEqual(playable.frontend_evidence_summary(full), receipt)
 
     def test_check_docs_accepts_controlled_review_states_and_pending_frontend_evidence(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-docs-positive-") as temporary:

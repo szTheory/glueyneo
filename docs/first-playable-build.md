@@ -65,6 +65,14 @@ The same investigation found three smoke-harness defects, now corrected:
 
 HOST-02 still requires the committed-snapshot qualification receipt from `tools/verify_playable.py`; a direct smoke run is not that receipt.
 
+2026-10-10 qualification: the clean committed-snapshot receipt at `706516b5a60c` passed every lane, including the pinned RetroArch 1.22.2 lane, from an agent-run terminal in the logged-in macOS session. Two build defects had to be fixed first. A shared build with tests did not link `mvs_qualify`, and the installed shared-variant core needed `libglueyneo.dylib` with no rpath, so RetroArch could not open it. The core is now a single self-contained module in both build modes, and the package build check rejects a core that depends on a Glueyneo library. After a passing run, record the public-safe summary with:
+
+```sh
+python3 tools/verify_playable.py --record-frontend-evidence
+```
+
+This writes `.planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-FRONTEND-RECEIPT.json` from the ignored receipt. The summary keeps identities, lane outcomes and smoke observations and drops paths. `--check-docs` accepts HOST-02 and frontend QUAL-03 as Complete only when that tracked summary records a passing receipt for a committed ancestor of `HEAD` with every required observation. Without it, any affirmative frontend claim fails the gate. The full ignored receipt still records installed-tree object paths that contain the local checkout path, so do not publish it.
+
 ## Previous qualification observation
 
 The values below are from the 2026-10-07 run made before complete source snapshots were introduced. They remain useful as toolchain and artifact history, but that receipt is superseded for QUAL-03 because it did not bind every input to its source. Plan 04-08 regenerates the receipt using the snapshot procedure above.

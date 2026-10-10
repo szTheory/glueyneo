@@ -1,0 +1,55 @@
+{
+  "core_sha256": "47ee6893a04753635f4941b0ba5e12bc59f9637793887ca5891fe528bf68bf8f",
+  "fixture_sha256": "59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0",
+  "frontend_unloaded": true,
+  "input_mapping": "RetroPad RIGHT <- Right Arrow; LEFT control <- Left Arrow",
+  "lanes": {
+    "actual-retroarch-smoke": "pass",
+    "consumer-shared-build": "pass",
+    "consumer-shared-check": "pass",
+    "consumer-shared-configure": "pass",
+    "consumer-static-build": "pass",
+    "consumer-static-check": "pass",
+    "consumer-static-configure": "pass",
+    "full-sdk-ctest": "pass",
+    "shared-build": "pass",
+    "shared-configure": "pass",
+    "shared-install": "pass",
+    "static-build": "pass",
+    "static-configure": "pass",
+    "static-install": "pass",
+    "ym2610-installed-linkages": "pass",
+    "ym2610-source": "pass",
+    "z80-source": "pass"
+  },
+  "marker_after_right": [
+    47,
+    16,
+    1
+  ],
+  "marker_before": [
+    16,
+    16,
+    1
+  ],
+  "observations": [
+    "RetroArch launched the requested core and content path",
+    "frontend produced bounded screenshots",
+    "configured Right Arrow input was injected",
+    "RetroArch exited through its application quit path",
+    "frontend screenshot contained the guest marker and black backdrop",
+    "repeated no-input screenshots retained the same marker position",
+    "configured Left Arrow wrong-input control did not move the marker",
+    "configured Right Arrow input moved the marker right"
+  ],
+  "os": "macOS 26.6.2 arm64",
+  "retroarch": {
+    "bundle_id": "com.libretro.dist.RetroArch",
+    "executable_sha256": "ed90b54434a2899de0ddbfed59f335255fb462c8691bd970a1a761ebb5656d65",
+    "version": "1.22.2"
+  },
+  "retroarch_status": "pass",
+  "schema": 1,
+  "source_revision": "706516b5a60c2b53df8cfca57a07cd16b87c21de",
+  "status": "pass"
+}

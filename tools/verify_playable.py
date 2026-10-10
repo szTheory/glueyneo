@@ -34,6 +34,7 @@ OUTPUT = ROOT / "build" / "playable-qualification"
 FIXTURE_SHA256 = "59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0"
 YMFM_REVISION = "81aec25ccbb98f4873a255f7551ac4dadac59b4a"
 Z80_REVISION = "9e88298ce56319953ac7a43213a1120359f7a3a6"
+RETROARCH_SHA256 = "ed90b54434a2899de0ddbfed59f335255fb462c8691bd970a1a761ebb5656d65"
 INVENTORY_SCHEMA = "glueyneo.source-inventory/v1"
 MAX_ARCHIVE_BYTES = 256 * 1024 * 1024
 MAX_GIT_COMMAND_SECONDS = 120
@@ -626,7 +627,88 @@ def _markdown_table_rows(document: str, header: str) -> list[list[str]]:
     return rows
 
 
+FRONTEND_EVIDENCE = Path(
+    ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-FRONTEND-RECEIPT.json")
+REQUIRED_FRONTEND_OBSERVATIONS = (
+    "RetroArch launched the requested core and content path",
+    "frontend screenshot contained the guest marker and black backdrop",
+    "repeated no-input screenshots retained the same marker position",
+    "configured Left Arrow wrong-input control did not move the marker",
+    "configured Right Arrow input moved the marker right",
+    "RetroArch exited through its application quit path",
+)
+PRIVATE_PATH = re.compile(r"(?:^|[\s\"'(\[=])(?:/Users/|/home/|/private/|/var/folders/|[A-Za-z]:\\)")
+
+
+def validate_frontend_evidence(summary: dict[str, Any]) -> str:
+    """Return the receipt revision when the tracked summary proves HOST-02."""
+    revision = summary.get("source_revision")
+    if summary.get("schema") != 1 or not isinstance(revision, str) or re.fullmatch(r"[0-9a-f]{40}", revision) is None:
+        raise RuntimeError("frontend evidence must name schema 1 and a full committed source revision")
+    if summary.get("status") != "pass" or summary.get("retroarch_status") != "pass":
+        raise RuntimeError("frontend evidence must come from a passing committed-snapshot receipt")
+    retroarch = summary.get("retroarch") or {}
+    if retroarch.get("version") != "1.22.2" or retroarch.get("executable_sha256") != RETROARCH_SHA256:
+        raise RuntimeError("frontend evidence must identify the pinned RetroArch build")
+    lanes = summary.get("lanes")
+    if not isinstance(lanes, dict) or not lanes or any(status != "pass" for status in lanes.values()):
+        raise RuntimeError("frontend evidence must record every qualification lane as pass")
+    observations = summary.get("observations")
+    if not isinstance(observations, list) or any(item not in observations for item in REQUIRED_FRONTEND_OBSERVATIONS):
+        raise RuntimeError("frontend evidence omits a required load, video, input or exit observation")
+    if summary.get("frontend_unloaded") is not True:
+        raise RuntimeError("frontend evidence must record content unload")
+    if PRIVATE_PATH.search(json.dumps(summary)):
+        raise RuntimeError("frontend evidence contains a private absolute path")
+    return revision
+
+
+def frontend_evidence_summary(receipt: dict[str, Any]) -> dict[str, Any]:
+    identity = receipt.get("identity") or {}
+    smoke = receipt.get("retroarch_smoke") or {}
+    smoke_identity = smoke.get("identity") or {}
+    retroarch = identity.get("retroarch") or {}
+    summary = {
+        "schema": 1,
+        "source_revision": identity.get("source_revision"),
+        "status": receipt.get("status"),
+        "retroarch_status": smoke.get("status"),
+        "retroarch": {key: retroarch.get(key) for key in ("bundle_id", "version", "executable_sha256")},
+        "os": smoke_identity.get("os"),
+        "core_sha256": smoke_identity.get("core_sha256"),
+        "fixture_sha256": smoke_identity.get("fixture_sha256"),
+        "input_mapping": smoke_identity.get("input_mapping"),
+        "observations": smoke.get("observations"),
+        "marker_before": smoke.get("marker_before"),
+        "marker_after_right": smoke.get("marker_after_right"),
+        "frontend_unloaded": smoke.get("frontend_unloaded"),
+        "lanes": {name: (lane or {}).get("status") for name, lane in sorted((receipt.get("lanes") or {}).items())},
+    }
+    validate_frontend_evidence(summary)
+    return summary
+
+
+def tracked_frontend_revision(source_root: Path) -> str | None:
+    path = source_root / FRONTEND_EVIDENCE
+    if not path.is_file():
+        return None
+    try:
+        summary = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        raise RuntimeError(f"frontend evidence is unreadable: {error}") from error
+    if not isinstance(summary, dict):
+        raise RuntimeError("frontend evidence must be a JSON object")
+    revision = validate_frontend_evidence(summary)
+    if (source_root / ".git").exists():
+        ancestor = subprocess.run(["git", "-C", str(source_root), "merge-base", "--is-ancestor", revision, "HEAD"],
+                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        if ancestor.returncode != 0:
+            raise RuntimeError("frontend evidence revision is not a committed ancestor of HEAD")
+    return revision
+
+
 def check_docs(source_root: Path) -> None:
+    frontend_revision = tracked_frontend_revision(source_root)
     guide = (source_root / "docs/first-playable-build.md").read_text(encoding="utf-8")
     validation = (source_root / ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md").read_text(encoding="utf-8")
     affirmative_frontend_claims = (
@@ -652,7 +734,9 @@ def check_docs(source_root: Path) -> None:
         re.IGNORECASE,
     )
     clauses = re.split(r"(?<=[.!?;])\s+|\s+(?:but|however|although)\s+", guide)
-    for clause in clauses:
+    # A tracked passing committed-snapshot receipt is the only basis for
+    # affirmative frontend wording; without it, any such claim fails.
+    for clause in clauses if frontend_revision is None else ():
         for pattern in affirmative_frontend_claims:
             for match in re.finditer(pattern, clause, re.IGNORECASE):
                 if not negated_claim.search(clause[:match.start()]):
@@ -697,6 +781,19 @@ def check_docs(source_root: Path) -> None:
     frontend_status = frontend_rows[0][9]
     if re.search(r"\b(TBD|planned)\b", frontend_status, re.IGNORECASE):
         raise RuntimeError("unfinished placeholder in current frontend status")
+    if frontend_revision is not None:
+        complete_frontend_status = re.compile(
+            r"\s*HOST-02\s+Complete\s*;\s*frontend\s+QUAL-03\s+Complete\s*;\s*"
+            rf"committed-snapshot receipt\s+{frontend_revision[:12]}\s+pass\s*",
+            re.IGNORECASE,
+        )
+        if (
+            not {"HOST-02", "QUAL-03"}.issubset(requirement_ids)
+            or complete_frontend_status.fullmatch(frontend_status) is None
+        ):
+            raise RuntimeError(
+                "HOST-02 and frontend QUAL-03 must be Complete with the tracked receipt revision in the current validation map")
+        return
     pending_frontend_status = re.compile(
         r"\s*HOST-02\s+Pending\s*;\s*frontend\s+QUAL-03\s+Pending\s*;\s*"
         r"actual-app identities and observations unavailable\s*;\s*frontend claim unknown\s*",
@@ -767,7 +864,19 @@ def main() -> int:
     parser.add_argument("--retroarch", type=Path)
     parser.add_argument("--clean", action="store_true", help="qualify a fresh committed-source snapshot and fresh build/install directories")
     parser.add_argument("--check-docs", action="store_true")
+    parser.add_argument("--record-frontend-evidence", action="store_true",
+                        help="write the public-safe summary of a passing receipt to the tracked Phase 04 evidence file")
     args = parser.parse_args()
+    if args.record_frontend_evidence:
+        try:
+            receipt = json.loads((OUTPUT / "receipt.json").read_text(encoding="utf-8"))
+            summary = frontend_evidence_summary(receipt)
+        except (OSError, ValueError, RuntimeError) as error:
+            print(f"frontend evidence not recorded: {error}", file=sys.stderr)
+            return 1
+        (ROOT / FRONTEND_EVIDENCE).write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"Recorded frontend evidence for {summary['source_revision']}.")
+        return 0
     if args.check_docs and not args.clean:
         try:
             check_docs(ROOT)

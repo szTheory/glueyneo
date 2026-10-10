@@ -1,7 +1,7 @@
 # Requirements: First Playable Game
 
 **Defined:** 2026-10-07
-**Status:** Approved by the user on 2026-10-07; six requirements are complete: TRAC-01/02/03, API-05, and the bounded SND-01/02 candidate admissions documented below.
+**Status:** Approved by the user on 2026-10-07; eight requirements are complete: TRAC-01/02/03, API-05, the bounded SND-01/02 candidate admissions, and HOST-02/QUAL-03 (2026-10-10 committed-snapshot receipt), documented below.
 **Workstream / planning milestone ID:** `first-playable-game`
 **Release version:** Unassigned. This planning identifier is not v0.2 and does not complete v0.1.
 **Core Value:** Trustworthy Neo Geo emulation that other software can embed easily.
@@ -24,7 +24,7 @@ Here, `v1` means this workstream's scoped deliverable, not a software release ve
 
 ### Native and Frontend Integration
 
-- [ ] **HOST-02**: A user can load, run, and unload the fixture through a thin libretro adapter in an actual pinned macOS RetroArch build, using the ordinary native API, software video, documented controller mapping, and frontend-owned pacing.
+- [x] **HOST-02**: A user can load, run, and unload the fixture through a thin libretro adapter in an actual pinned macOS RetroArch build, using the ordinary native API, software video, documented controller mapping, and frontend-owned pacing.
 - [x] **API-05**: A C integrator can advance the selected machine through a documented bounded frame operation with explicit input sampling, output-buffer ownership/lifetimes, video/audio capacities, audio sample format/channel layout/rate/produced count and relationship to emulated time, progress/stop information, and actionable errors, without native filesystem, device, network, or wall-clock services.
 - [ ] **API-06**: A maintainer can repeat and partition the supported fixture workload and run distinguishable native instances interleaved and concurrently while matching isolated-baseline guest, video, and audio results at equal emulated boundaries. This is native-instance evidence, not a claim of libretro frontend reentrancy or public snapshot compatibility.
 
@@ -53,7 +53,7 @@ The two completed sound requirements admit only the named synthetic Phase 04 Z80
 
 - [ ] **QUAL-01**: A maintainer can run clean-tree automated native and libretro-consumer checks using only the public fixture, covering equivalent frame/input/audio observations for the same guest/input sequence at matching emulated boundaries (accounting for documented audio conversion), lifecycle and malformed-input boundaries, relevant fuzz/sanitizer regressions, and retained diagnostic-SDK regressions through proportionate local/CI entrypoints.
 - [ ] **QUAL-02**: A maintainer can reproduce a private local qualification scenario from boot through active movement, firing, scrolling, and sound in the actual pinned RetroArch build, retaining exact private media identities and derived evidence locally and publishing only permitted generic outcomes and public build/configuration identities. Machine-observable checks are automated; only residual subjective or unavailable evidence needs a human.
-- [ ] **QUAL-03**: An integrator can follow the documented build/install/load procedure for the native library and libretro adapter from a clean source tree on the selected macOS configuration, with exact dependency/compiler/SDK/OS/architecture/frontend identities and untested configurations stated explicitly.
+- [x] **QUAL-03**: An integrator can follow the documented build/install/load procedure for the native library and libretro adapter from a clean source tree on the selected macOS configuration, with exact dependency/compiler/SDK/OS/architecture/frontend identities and untested configurations stated explicitly.
 - [ ] **QUAL-04**: A consumer can identify the exact qualified game scenario, public-fixture coverage, remaining unknown/unsupported behavior, and oracle ancestry in current documentation; emulator agreement, BIOS/archive integrity, and fixture success are not presented as broader hardware or game compatibility.
 
 ## Future Requirements
@@ -99,16 +99,16 @@ All 20 current requirements have current-revision evidence, documentation, and i
 
 ## Traceability
 
-Requirements and their primary phase allocation in [ROADMAP.md](ROADMAP.md) are user-approved. Six requirements are complete: TRAC-01/02/03, API-05, and bounded candidate-admission SND-01/02. HOST-02 and frontend QUAL-03 remain pending actual pinned-app evidence.
+Requirements and their primary phase allocation in [ROADMAP.md](ROADMAP.md) are user-approved. Eight requirements are complete: TRAC-01/02/03, API-05, bounded candidate-admission SND-01/02, HOST-02 and QUAL-03. HOST-02 and frontend QUAL-03 closed on 2026-10-10 from the passing committed-snapshot receipt at `706516b5a60c`, summarized in `phases/04-public-playable-tracer/04-FRONTEND-RECEIPT.json` and enforced by `tools/verify_playable.py --check-docs`.
 
-Plan 04-15 reconfirmed HOST-02 and frontend QUAL-03 as Pending from separate observation predicates. The materially changed, functioning launch context required for the pinned RetroArch 1.22.2 observation remains unavailable: the prior launch aborted with exit `-6` before a screenshot, LaunchServices returned `kLSNoExecutableErr`, unified-log inspection was blocked, and the current inventory showed no app window or process. No app was invoked; no current app, core, or fixture identity or actual frontend observation is available. The focused smoke-script contract suite does not satisfy either requirement. HOST-02 still lacks screenshot, stable no-input, RIGHT/LEFT, content-unload, normal-exit, ordinary content-load, guest-video, and frontend-pacing observations. QUAL-03 retains its documented build/install procedure and environment identity list, but its actual frontend load remains unobserved.
+Historical, superseded on 2026-10-10 by the receipt above: Plan 04-15 reconfirmed HOST-02 and frontend QUAL-03 as Pending from separate observation predicates. The materially changed, functioning launch context required for the pinned RetroArch 1.22.2 observation remains unavailable: the prior launch aborted with exit `-6` before a screenshot, LaunchServices returned `kLSNoExecutableErr`, unified-log inspection was blocked, and the current inventory showed no app window or process. No app was invoked; no current app, core, or fixture identity or actual frontend observation is available. The focused smoke-script contract suite does not satisfy either requirement. HOST-02 still lacks screenshot, stable no-input, RIGHT/LEFT, content-unload, normal-exit, ordinary content-load, guest-video, and frontend-pacing observations. QUAL-03 retains its documented build/install procedure and environment identity list, but its actual frontend load remains unobserved.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | TRAC-01 | Phase 4 | Complete |
 | TRAC-02 | Phase 4 | Complete |
 | TRAC-03 | Phase 4 | Complete |
-| HOST-02 | Phase 4 | Pending |
+| HOST-02 | Phase 4 | Complete |
 | API-05 | Phase 4 | Complete |
 | API-06 | Phase 7 | Pending |
 | MEDIA-02 | Phase 5 | Complete |
@@ -123,7 +123,7 @@ Plan 04-15 reconfirmed HOST-02 and frontend QUAL-03 as Pending from separate obs
 | SND-04 | Phase 7 | Pending |
 | QUAL-01 | Phase 7 | Pending |
 | QUAL-02 | Phase 7 | Pending |
-| QUAL-03 | Phase 4 | Pending |
+| QUAL-03 | Phase 4 | Complete |
 | QUAL-04 | Phase 7 | Pending |
 
 **Coverage:**
@@ -131,7 +131,7 @@ Plan 04-15 reconfirmed HOST-02 and frontend QUAL-03 as Pending from separate obs
 - Current requirements: 20
 - Mapped to one primary phase: 20 (approved roadmap)
 - Unmapped: 0
-- Implemented: 6
+- Implemented: 8
 
 ---
 *Requirements defined: 2026-10-07*
