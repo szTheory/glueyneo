@@ -839,6 +839,56 @@ class GuideClaimTest(DocumentationCopies, unittest.TestCase):
                 playable.check_docs(source_root, repository=ROOT)
 
 
+class AtomicRecordTest(DocumentationCopies, unittest.TestCase):
+    """`--record-frontend-evidence` validates and scans everything before writing any file (WR-01, T-04-53)."""
+
+    def targets(self, source_root: Path) -> list[Path]:
+        return [source_root / playable.FRONTEND_EVIDENCE, source_root / playable.GUIDE, source_root / playable.VALIDATION]
+
+    def digests(self, source_root: Path) -> list[str]:
+        return [hashlib.sha256(path.read_bytes()).hexdigest() for path in self.targets(source_root)]
+
+    def changed_summary(self, summary: dict[str, object]) -> dict[str, object]:
+        changed = dict(summary)
+        changed["os"] = "macOS 99.0 arm64"
+        return changed
+
+    def test_missing_validation_row_leaves_all_three_files_unchanged(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-atomic-") as temporary:
+            source_root = Path(temporary)
+            summary = self.copy_documentation_with_evidence(source_root)
+            validation = source_root / playable.VALIDATION
+            validation.write_text(re.sub(r"(?m)^\| 04-15 T2 \|.*\n", "", validation.read_text(encoding="utf-8")),
+                                  encoding="utf-8")
+            before = self.digests(source_root)
+            with self.assertRaises(RuntimeError):
+                playable.write_frontend_records(source_root, self.changed_summary(summary))
+            self.assertEqual(self.digests(source_root), before)
+            self.assertEqual(list(source_root.rglob("*.tmp")), [])
+
+    def test_private_root_in_generated_block_leaves_all_three_files_unchanged(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-atomic-") as temporary:
+            source_root = Path(temporary)
+            summary = self.copy_documentation_with_evidence(source_root)
+            before = self.digests(source_root)
+            leaking = playable.frontend_status_block(summary).replace(
+                playable.STATUS_END, str(playable.ROOT) + "\n" + playable.STATUS_END)
+            with mock.patch.object(playable, "frontend_status_block", return_value=leaking):
+                with self.assertRaises(RuntimeError):
+                    playable.write_frontend_records(source_root, self.changed_summary(summary))
+            self.assertEqual(self.digests(source_root), before)
+            self.assertEqual(list(source_root.rglob("*.tmp")), [])
+
+    def test_successful_write_leaves_no_temporary_sibling(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-atomic-") as temporary:
+            source_root = Path(temporary)
+            summary = self.copy_documentation_with_evidence(source_root)
+            before = self.digests(source_root)
+            playable.write_frontend_records(source_root, self.changed_summary(summary))
+            self.assertNotEqual(self.digests(source_root)[0], before[0])
+            self.assertEqual(list(source_root.rglob("*.tmp")), [])
+
+
 class MainErrorPathTest(unittest.TestCase):
     """Early failures still write a named fail receipt, and printed errors are redacted (CR-08, CR-09, IN-04)."""
 
