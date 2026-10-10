@@ -131,7 +131,7 @@ Rebased on the 2026-10-10 review (34 current disposition records). The earlier r
 | WR-05 | warning | T-04-21; `tests/libretro/retroarch_smoke.py` | fixed |
 | WR-06 | warning | `tools/private_paths.py` | fixed |
 | WR-07 | warning | `CMakeLists.txt`; `tests/tools/check_security_register.py` | fixed |
-| WR-08 | warning | `CMakeLists.txt` | open |
+| WR-08 | warning | `CMakeLists.txt` | deferred |
 | WR-09 | warning | T-04-43 / T-04-46; `tools/verify_playable.py` | fixed |
 | IN-01 | info | `docs/first-playable-build.md` | fixed |
 | IN-02 | info | `tests/libretro/retroarch_smoke.py` | fixed |
