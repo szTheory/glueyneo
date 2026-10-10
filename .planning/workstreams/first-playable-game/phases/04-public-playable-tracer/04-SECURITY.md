@@ -1,8 +1,8 @@
 ---
 phase: "04"
 slug: "public-playable-tracer"
-status: verified
-threats_open: 0
+status: open
+threats_open: 6
 asvs_level: 1
 created: "2026-10-07"
 updated: "2026-10-10"
@@ -40,20 +40,20 @@ updated: "2026-10-10"
 | T-04-09 | Denial of service | C/C++ YM2610 shim | high | mitigate | `src/chips/ym2610_candidate.cpp` checks callback bounds and reentry, limits clock/capacity and catches exceptions at the C boundary; failure tests cover these paths. | closed |
 | T-04-10 | Denial of service | installed consumer linkage | medium | mitigate | `tests/chips/check_ym2610.py` compiles and runs installed static/shared C consumers and inspects exports and runtime dependencies. | closed |
 | T-04-SC (04-05) | Tampering | ymfm source closure | high | mitigate | `tests/chips/check_ym2610.py` gates the pinned Git source closure and BSD notice without a registry install. | closed |
-| T-04-11 | Information disclosure | qualification logs | high | mitigate | `tools/private_paths.py` (c75f577): exact runtime roots in every observed form drop the rest of the value, and each public sink fails closed with `private-path-survived`; `tests/tools/test_private_paths.py` reproduces every audited bypass class; printed qualification output and receipt are covered. Retained run-directory logs are accepted separately as T-04-44. | closed |
+| T-04-11 | Information disclosure | qualification logs | high | mitigate | `tools/private_paths.py` (c75f577): exact runtime roots in every observed form drop the rest of the value, and each public sink fails closed with `private-path-survived`; `tests/tools/test_private_paths.py` reproduces every audited bypass class; printed qualification output and receipt are covered. Retained run-directory logs are accepted separately as T-04-44. Independent post-c75f577 review (04-23, aaf3f093ab0f): OPEN, printed output leaks via raw OSError in --record-frontend-evidence, unredacted runner None traceback, and U+2215/dash-mangled/double-percent forms passing redact+scan_public. | open |
 | T-04-12 | Repudiation | qualification receipt | medium | mitigate | `tools/verify_playable.py` records command status and log hashes with source, toolchain, frontend, fixture and artifact identities. | closed |
 | T-04-SC (04-06) | Tampering | qualification dependency closure | high | mitigate | The clean runner requires pinned Z80 and ymfm source and installed-linkage gates; it contains no package-manager install. | closed |
 | T-04-13 | Tampering | snapshot/receipt binding | high | mitigate | Derive bounded rows from the committed archive and compare the complete row list, including type, size, mode, digest and symlink target. | closed |
 | T-04-14 | Elevation of privilege | archived path/symlink execution | high | mitigate | `tools/verify_playable.py` rejects unsafe archive paths and links, sanitizes the build environment and routes lanes through the snapshot root. | closed |
 | T-04-SC (04-07) | Tampering | dependency/source closure | high | mitigate | `tools/verify_playable.py` reuses the pinned Z80 and ymfm source gates without package-manager installation. | closed |
-| T-04-15 | Information disclosure | receipt and qualification logs | high | mitigate | `tools/private_paths.py` (c75f577): exact runtime roots in every observed form drop the rest of the value, and each public sink fails closed with `private-path-survived`; `tests/tools/test_private_paths.py` reproduces every audited bypass class; the receipt writer fails closed and artifact inventories omit CMakeFiles internals (`test_receipt_writer_fails_closed_on_a_surviving_path`, `test_artifact_tree_omits_cmake_internals`). | closed |
+| T-04-15 | Information disclosure | receipt and qualification logs | high | mitigate | `tools/private_paths.py` (c75f577): exact runtime roots in every observed form drop the rest of the value, and each public sink fails closed with `private-path-survived`; `tests/tools/test_private_paths.py` reproduces every audited bypass class; the receipt writer fails closed and artifact inventories omit CMakeFiles internals (`test_receipt_writer_fails_closed_on_a_surviving_path`, `test_artifact_tree_omits_cmake_internals`). Independent post-c75f577 review (04-23, aaf3f093ab0f): OPEN, receipt sanitize() skips dict keys and scan_public runs on ensure_ascii JSON so fullwidth key and U+2215 value survive. | open |
 | T-04-16 | Tampering | frontend process/input evidence | high | mitigate | Hash the fixture bytes and reject any mismatch against the pinned public fixture digest before launching the direct smoke. | closed |
 | T-04-17 | Elevation of privilege | local app/script execution | high | mitigate | Check the exact pinned bundle identifier before constructing AppleScript quit commands; the shared quit helper enforces it for normal and cleanup paths. | closed |
-| T-04-18 | Information disclosure | screenshots/crash logs | high | mitigate | `tools/private_paths.py` (c75f577): exact runtime roots in every observed form drop the rest of the value, and each public sink fails closed with `private-path-survived`; `tests/tools/test_private_paths.py` reproduces every audited bypass class; smoke stdout passes through `public_json()` (`test_smoke_output_fails_closed_on_a_surviving_path`); screenshots stay in a deleted temporary directory. | closed |
+| T-04-18 | Information disclosure | screenshots/crash logs | high | mitigate | `tools/private_paths.py` (c75f577): exact runtime roots in every observed form drop the rest of the value, and each public sink fails closed with `private-path-survived`; `tests/tools/test_private_paths.py` reproduces every audited bypass class; smoke stdout passes through `public_json()` (`test_smoke_output_fails_closed_on_a_surviving_path`); screenshots stay in a deleted temporary directory. Independent post-c75f577 review (04-23, aaf3f093ab0f): OPEN, public_json() passed dash-mangled and U+2215 diagnostics; uncaught struct/zlib errors in decode_png bypass public_json. | open |
 | T-04-SC (04-08) | Tampering | installed runtime/dependency closure | high | mitigate | The final qualification uses the committed snapshot and existing pinned source and linkage gates without new package installation. | closed |
 | T-04-19 | Tampering | P04-02-HOST coverage metadata | high | mitigate | `04-02-SUMMARY.md` retains `automated_ui`/`unknown` and `human_judgment: true`; the installed classifier reports zero errors, routes HOST to `present[]`, and excludes it from `auto_passed[]`. | closed |
 | T-04-SC (04-09) | Tampering | installed GSD classifier/template | high | mitigate | Plan 04-09 uses the installed local classifier and template without package installation. | closed |
-| T-04-20 | Information disclosure | qualification/frontend diagnostics | high | mitigate | `tools/private_paths.py` (c75f577): exact runtime roots in every observed form drop the rest of the value, and each public sink fails closed with `private-path-survived`; `tests/tools/test_private_paths.py` reproduces every audited bypass class; no boundary inference remains, and the newline-suffix regressions pass in both pipelines. | closed |
+| T-04-20 | Information disclosure | qualification/frontend diagnostics | high | mitigate | `tools/private_paths.py` (c75f577): exact runtime roots in every observed form drop the rest of the value, and each public sink fails closed with `private-path-survived`; `tests/tools/test_private_paths.py` reproduces every audited bypass class; no boundary inference remains, and the newline-suffix regressions pass in both pipelines. Independent post-c75f577 review (04-23, aaf3f093ab0f): OPEN, build_diagnostic+public_json and Runner redact+_write_receipt pass dash-mangled, U+2215, double-percent and HFS/tmpdir forms. | open |
 | T-04-21 | Tampering | direct smoke fixture identity | high | mitigate | `tests/libretro/retroarch_smoke.py` checks the generated fixture SHA-256 against the documented digest before launch. | closed |
 | T-04-22 | Elevation of privilege | app bundle quit target | high | mitigate | `tests/libretro/retroarch_smoke.py` validates the pinned Info.plist identifier before constructing either AppleScript quit path. | closed |
 | T-04-SC (04-10) | Tampering | dependency closure | high | mitigate | Plan 04-10 uses the Python standard library and existing test infrastructure; no package or runtime dependency was added. | closed |
@@ -74,21 +74,26 @@ updated: "2026-10-10"
 | T-04-32 | Information disclosure | qualification and frontend diagnostic sinks | high | mitigate | Both sanitizers remove the complete unstructured diagnostic suffix after a private-root match; retained and printed sinks have newline-path regressions. | closed |
 | T-04-33 | Tampering | review validation crosswalk | medium | mitigate | The direct checker compares one normalized controlled state exactly with the disposition record; mutation tests reject contradictory state text. | closed |
 | T-04-SC (04-16) | Tampering | source/dependency closure | high | mitigate | Plan 04-16 uses Python standard-library and repository code only; no dependency or external source was added. | closed |
-| T-04-34 | Tampering | frontend qualification status and uncertainty claims | medium | mitigate | Superseded (cc73f94): the prose claim scan is retired; frontend status is generated from the tracked receipt summary, which must carry the exact passing lane set, fixture and pinned RetroArch digests, a rightward marker move and an inventory digest reproduced from `git archive`; forgery and mismatch mutations in `tests/tools/test_verify_playable.py`. | closed |
+| T-04-34 | Tampering | frontend qualification status and uncertainty claims | medium | mitigate | Superseded (cc73f94): the prose claim scan is retired; frontend status is generated from the tracked receipt summary, which must carry the exact passing lane set, fixture and pinned RetroArch digests, a rightward marker move and an inventory digest reproduced from `git archive`; forgery and mismatch mutations in `tests/tools/test_verify_playable.py`. Independent post-c75f577 review (04-23, aaf3f093ab0f): OPEN, check_docs passed a forged Complete summary because ancestry/inventory binding runs only when source_root/.git exists, never in the --clean snapshot. | open |
 | T-04-SC (04-17) | Tampering | source/dependency closure | high | mitigate | Plan 04-17 uses existing Python standard-library tooling and tracked documents; no package install or external source is added. | closed |
 | T-04-35 | Tampering | validation-map authorization and status rows | medium | mitigate | The evidence-map checker binds each row to the current controlled threat and requirement states; mutation tests reject stale and invented authorities. | closed |
 | T-04-36 | Tampering | frontend documentation closure grammar | medium | mitigate | `tools/verify_playable.py` constrains frontend state claims and cross-checks controlled requirement rows; mutation tests cover contradictory and unsupported claims. | closed |
 | T-04-SC (04-18) | Tampering | source/dependency closure | high | mitigate | Plan 04-18 changes tracked Python standard-library tooling and documentation only; it adds no dependency or external source. | closed |
 | T-04-37 | Repudiation | review/disposition/evidence crosswalk | medium | mitigate | Plan 04-19 records revision-scoped independent findings, commands, denominators, limits, and explicit unresolved dispositions; mutation-checked records retain WR-06 as open. | closed |
 | T-04-SC (04-19) | Tampering | source/dependency closure | high | mitigate | Plan 04-19 uses tracked Python standard-library code and existing tests only; no dependency or external source was added. | closed |
-| T-04-38 | Repudiation | current review provenance and sanitizer coverage | medium | mitigate | Superseded (c75f577): the bespoke evidence-map checker is retired; review provenance is the GSD code-review `reviewed_revision`/`files_reviewed_list` record and verification `covered_digest` freshness. | closed |
+| T-04-38 | Repudiation | current review provenance and sanitizer coverage | medium | mitigate | Superseded (c75f577): the bespoke evidence-map checker is retired; review provenance is the GSD code-review `reviewed_revision`/`files_reviewed_list` record and verification `covered_digest` freshness. Independent post-c75f577 review (04-23, aaf3f093ab0f): OPEN, no phase-04 gate checks review provenance; check_docs crosswalk accepts any non-empty scope marked fixed. | open |
 | T-04-39 | Tampering | qualification result crosswalk | medium | mitigate | `tests/tools/check_phase04_validation_map.py` compares the report denominator with the live `run_suite()` count and rejects stale, absent, duplicate, or malformed rows. | closed |
 | T-04-40 | Tampering | source/dependency closure (04-20) | high | mitigate | Plan 04-20 checker and test imports use tracked repository code and Python standard library only; no external dependency or source was added. | closed |
 | T-04-41 | Tampering | security/evidence-map reconciliation | medium | mitigate | `tests/tools/check_phase04_validation_map.py` enforces the exact open-threat rows and rejects duplicate or unexpected open rows; mutation tests cover those changes. | closed |
 | T-04-42 | Tampering | frontend claim predicates and docs gate | medium | mitigate | The validation checker and `tools/verify_playable.py` reject affirmative frontend output, control, and lifecycle claims while actual frontend evidence is unknown. | closed |
-| T-04-43 | Repudiation | review provenance | medium | mitigate | Fixed before retirement (exact reviewed-path set at 007f331, rejected nonexistent-path mutation), then superseded with the checker in c75f577. | closed |
+| T-04-43 | Repudiation | review provenance | medium | mitigate | Fixed before retirement (exact reviewed-path set at 007f331, rejected nonexistent-path mutation), then superseded with the checker in c75f577. Independent post-c75f577 review (04-23, aaf3f093ab0f): OPEN, check_docs accepted a crosswalk row naming a nonexistent review path marked fixed. | open |
 | T-04-44 | Information disclosure | retained run-directory logs under ignored `build/playable-qualification/` | medium | accept | The run directory holds raw build trees (`CMakeCache.txt`, compiler logs) that cannot be made publishable; it is git-ignored, no CI job or release reads it, and the guide declares it private. See Accepted Risks Log. | accepted |
 | T-04-SC (04-21) | Tampering | source/dependency closure | high | mitigate | Plan 04-21 uses tracked repository code and Python standard library only; no dependency or external source was added. | closed |
+| T-04-45 | Information disclosure | `--record-frontend-evidence` to tracked receipt summary | medium | mitigate | validate_frontend_evidence runs private_paths.scan_public on the summary and fails closed; Task 1 greps the tracked file for home-directory paths. Independent post-c75f577 review (04-23, aaf3f093ab0f): OPEN, frontend_evidence_summary accepted a fullwidth-separator home path and the generated guide block is written unscanned. | open |
+| T-04-46 | Repudiation | receipt-to-revision binding | medium | mitigate | --clean archives committed HEAD only; check_docs re-archives the revision and checks ancestry and inventory digest. Independent post-c75f577 review (04-23, aaf3f093ab0f): OPEN, load_frontend_evidence skips ancestry and inventory checks when source_root/.git is absent, as in the --clean snapshot. | open |
+| T-04-47 | Denial of service | pinned RetroArch launch on the shared host | low | mitigate | `pgrep -x RetroArch` empty before and after each run; sampled maximum 1 during qualification; no retry-to-green. Independent post-c75f577 review (04-23, aaf3f093ab0f): OPEN, an outer timeout can skip the finally-quit and orphan the app, and no pre-launch instance check exists in the harness. | open |
+| T-04-48 | Repudiation | threat and review closure records | high | mitigate | Closure needs a verdict from a separate headless gsd-security-auditor session; a zero, duplicate or malformed verdict counts as OPEN; check_security_register.py keeps threats_open equal to open high rows. Independent post-c75f577 review (04-23, aaf3f093ab0f): OPEN, register_errors() returned no errors for a commented or duplicated frontmatter key and for a second table with a high open row. | open |
+| T-04-SC (04-23) | Tampering | npm/pip/cargo installs | high | mitigate | No package or dependency is added; the plan uses only tracked tools, the installed GSD agent and the Python standard library. The reviewer found no installs (raw CLOSED) but its session had unscoped Bash, so under the plan containment rule the verdict is treated as OPEN. | open |
 
 ## Threat Flags
 
@@ -113,15 +118,16 @@ Accepted 2026-10-10 under the user's delegated decision (verify-work Test 4), af
 | 2026-10-08 | 49 | 45 | 4 | gsd-security-auditor |
 | 2026-10-08 | 54 | 49 | 5 | gsd-security-auditor |
 | 2026-10-08 | 59 | 53 | 6 | gsd-security-auditor |
+| 2026-10-10 | 69 | 56 | 12 | gsd-security-auditor (headless separate session, 04-23) |
 
 ## Sign-Off
 
 - [x] All declared threats have a disposition (mitigate / accept / transfer)
 - [x] Accepted risks documented in Accepted Risks Log
-- [x] `threats_open: 0` confirmed (2026-10-10)
-- [x] `status: verified` set in frontmatter (2026-10-10)
+- [ ] `threats_open: 0` not confirmed: the 04-23 independent review reopened rows (threats_open 6)
+- [ ] `status: verified` withdrawn; status is open pending repair
 
-**Approval:** verified 2026-10-10 by delegated decision; earlier 2026-10-08 direction kept the four high threats open until a durable mitigation existed.
+**Approval:** withdrawn 2026-10-10 by the independent 04-23 review; the earlier delegated verification (56f4fbd) rested on self-attestation. Earlier 2026-10-08 direction kept the four high threats open until a durable mitigation existed.
 
 ## Security Audit 2026-10-08
 
@@ -314,3 +320,23 @@ The configured ASVS L1 audit verified the Plan 04-21 additions before the phase-
 
 An independent adversarial audit at 6f91a7e reproduced bypasses of both regex sanitizers (CMake slashless object paths, word or dot prefixes, percent and JSON escaping, case, `/home`, `/var/tmp`, Windows and fullwidth separators). c75f577 replaces them with exact-root redaction plus a fail-closed scan at every public sink and adds a regression for each bypass class; T-04-11, T-04-15, T-04-18 and T-04-20 close on that evidence. Raw run-directory logs cannot be made publishable and are accepted as medium T-04-44 with explicit invalidation triggers. T-04-34 closes because status is now generated from bound receipt evidence rather than prose; T-04-38 and T-04-43 close with the retired evidence-map checker. `tests/tools/check_security_register.py` (CTest `planning_security_register`) now enforces that `threats_open` equals open rows at `block_on`.
 
+## Security Audit — independent post-c75f577 review (04-23)
+
+Reviewed revision: `aaf3f093ab0fe4dcff453885af3352b9a400196a` (git archive, `.planning` excluded). Route: headless `claude -p --agent gsd-security-auditor` (Claude Code 2.1.296) in a separate context, working directory a scratch extraction, read-and-probe only. Containment: the effective tool list was the agent frontmatter list (Read, Bash, Glob, Grep, Skill), so Bash was unscoped; no permission denials were recorded; no tool call ran subprocess, osascript or git -C, and the only Read calls were under the scratch extraction. Because Bash was unscoped, the plan containment rule treats every verdict as OPEN; the reviewer's own verdict set was 15 OPEN and 1 CLOSED (T-04-SC). Reviewer-raw verdicts:
+
+- T-04-11: OPEN, printed-output leaks (raw OSError path, runner None traceback, alternate separator forms)
+- T-04-15: OPEN, receipt sanitize() skips dict keys; scan runs on ensure_ascii JSON
+- T-04-18: OPEN, public_json() passes dash-mangled and U+2215 forms; decode_png errors bypass it
+- T-04-20: OPEN, both pipelines pass dash-mangled, U+2215, double-percent and HFS forms
+- T-04-34: OPEN, forged summary passes check_docs without a .git directory
+- T-04-38: OPEN, no phase-04 gate checks review provenance
+- T-04-43: OPEN, nonexistent review path accepted in the crosswalk
+- T-04-45: OPEN, fullwidth-separator home path accepted into the summary and guide block
+- T-04-46: OPEN, ancestry and inventory checks skipped without .git
+- T-04-47: OPEN, outer timeout can orphan RetroArch; no pre-launch instance check
+- T-04-48: OPEN, register checker misses commented/duplicate frontmatter keys and later tables
+- T-04-SC (04-23): CLOSED by the reviewer, recorded OPEN by the containment rule
+- WR-01, WR-06, WR-08: OPEN, appended success prose outside the generated block passes the docs gate
+- WR-09: OPEN, nonexistent extra review path accepted
+
+Next step: `/gsd-plan-phase 04 --gaps --ws first-playable-game` to plan bounded repairs, then a fresh separate review.
