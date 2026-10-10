@@ -240,7 +240,11 @@ row (see Closure gates).
   (G3WR-01).
 - **Smoke harness** (G2WR-06). A signal deferred in the launch window is always
   raised as `interrupted`, even when launch raises; a child-PID record failure is
-  reported as `pid-record`.
+  reported as `pid-record`, not `launch`, by both paths. The actual smoke
+  (`run_smoke`) builds one diagnostic whose detail keeps the error class
+  (G3IN-02). The diagnostic launch probes record `survived_window` as unknown,
+  still kill the started frontend, and the probe comparison reports the finding
+  `diagnostic-pid-record-failed` (G3WR-03).
 
 ### CTest registration
 
