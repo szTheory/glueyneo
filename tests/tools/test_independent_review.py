@@ -336,9 +336,11 @@ class TranscriptionTest(PhaseFixture):
 
     def test_fixed_means_deferred_only_for_listed_ids(self) -> None:
         verdicts = dict(self.ALL_OPEN, **{"WR-08": "FIXED", "CR-01": "FIXED"})
-        phase = self.write_phase(findings={"CR-01": "fixed", "WR-08": "deferred"})
+        open_threats = {"T-04-11": ("mitigate", "open"), "T-04-44": ("accept", "open"),
+                        "T-04-52": ("accept", "open")}
+        phase = self.write_phase(threats=open_threats, findings={"CR-01": "fixed", "WR-08": "deferred"})
         self.assertEqual(self.errors(phase, verdicts, deferred=("WR-08",)), [])
-        phase = self.write_phase(findings={"CR-01": "fixed", "WR-08": "fixed"})
+        phase = self.write_phase(threats=open_threats, findings={"CR-01": "fixed", "WR-08": "fixed"})
         self.assertTrue(any("WR-08" in e for e in self.errors(phase, verdicts, deferred=("WR-08",))))
 
     def test_missing_or_duplicated_row_is_an_error(self) -> None:
