@@ -1166,6 +1166,92 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
             beyond = self.errors(row.format(c3), c2, repository=repository, reviewed=c1)
             self.assertEqual(beyond, [f"review finding CR-01 cites revision {c3[:12]} that is not a committed ancestor"])
 
+    def rounds(self, base: Path) -> list[str]:
+        """C0 -> C1 (adds 04-REVIEW-GAPS.md) -> C2 (adds 04-REVIEW-GAPS-R2.md) -> C3 -> C4 (G3WR-05)."""
+        subprocess.run(["git", "init", "-q", str(base)], check=True)
+        commits = []
+        for index, name in enumerate((None, "04-REVIEW-GAPS.md", "04-REVIEW-GAPS-R2.md", None, None)):
+            if name is not None:
+                target = base / playable.PHASE_DIRECTORY / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("review\n", encoding="utf-8")
+                subprocess.run(["git", "-C", str(base), "add", str(playable.PHASE_DIRECTORY / name)], check=True)
+            subprocess.run(["git", "-C", str(base), "-c", "user.name=t", "-c", "user.email=t@example.invalid",
+                            "commit", "-q", "--allow-empty", "-m", f"c{index}"], check=True)
+            commits.append(subprocess.run(["git", "-C", str(base), "rev-parse", "HEAD"], check=True, text=True,
+                                          stdout=subprocess.PIPE).stdout.strip())
+        return commits
+
+    def round_errors(self, finding: str, cited: str, head: str, repository: Path, reviewed: str) -> list[str]:
+        try:
+            return self.errors(f"| {finding} | warning | fixed | revision `{cited}` |\n", head,
+                               repository=repository, reviewed=reviewed)
+        except Exception as error:  # noqa: BLE001 - a red run must fail on the assertion, not on an exception
+            self.fail(f"uncaught {type(error).__name__}")
+
+    def check_round(self, finding: str, label: str, anchor_index: int) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-rounds-") as temporary:
+            repository = Path(temporary) / "repo"
+            commits = self.rounds(repository)
+            head = commits[4]
+            anchor = commits[anchor_index]
+            before = commits[anchor_index - 1]
+            later = commits[anchor_index + 1]
+            self.assertEqual(
+                self.round_errors(finding, before, head, repository, commits[0]),
+                [f"review finding {finding} cites revision {before[:12]} that does not descend from its review round ({label})"])
+            self.assertEqual(
+                self.round_errors(finding, anchor, head, repository, commits[0]),
+                [f"review finding {finding} cites revision {anchor[:12]} equal to its review round anchor ({label})"])
+            self.assertEqual(self.round_errors(finding, later, head, repository, commits[0]), [])
+
+    def test_g3wr_05_gap_round_two_closure_must_strictly_follow_its_round_file(self) -> None:
+        self.check_round("G2WR-01", "04-REVIEW-GAPS-R2.md", 2)
+
+    def test_g3wr_05_first_gap_round_closure_is_bound_to_its_round_file(self) -> None:
+        self.check_round("GWR-01", "04-REVIEW-GAPS.md", 1)
+
+    def test_g3wr_05_base_round_closure_equal_to_reviewed_revision_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-rounds-") as temporary:
+            repository = Path(temporary) / "repo"
+            commits = self.rounds(repository)
+            self.assertEqual(
+                self.round_errors("WR-01", commits[1], commits[4], repository, commits[1]),
+                [f"review finding WR-01 cites revision {commits[1][:12]} equal to its review round anchor "
+                 "(04-REVIEW.md reviewed_revision)"])
+            self.assertEqual(self.round_errors("WR-01", commits[3], commits[4], repository, commits[1]), [])
+
+    def test_g3wr_05_round_file_missing_at_head_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-rounds-") as temporary:
+            repository = Path(temporary) / "repo"
+            commits = self.rounds(repository)
+            self.assertEqual(
+                self.round_errors("G3WR-01", commits[3], commits[4], repository, commits[0]),
+                ["review round file 04-REVIEW-GAPS-R3.md for G3WR-01 is not committed at the checked head"])
+
+    def test_g3wr_05_round_file_added_after_head_is_not_committed_at_head(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-rounds-") as temporary:
+            repository = Path(temporary) / "repo"
+            commits = self.rounds(repository)
+            self.assertEqual(
+                self.round_errors("G2WR-01", commits[1], commits[1], repository, commits[0]),
+                ["review round file 04-REVIEW-GAPS-R2.md for G2WR-01 is not committed at the checked head"])
+
+    def test_g3wr_05_unknown_finding_id_has_no_review_round(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-rounds-") as temporary:
+            repository = Path(temporary) / "repo"
+            commits = self.rounds(repository)
+            self.assertEqual(
+                self.round_errors("XX-01", commits[3], commits[4], repository, commits[0]),
+                ["review finding XX-01 has no known review round"])
+
+    def test_g3wr_05_open_rows_need_no_citation_in_any_round(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-rounds-") as temporary:
+            repository = Path(temporary) / "repo"
+            commits = self.rounds(repository)
+            rows = "".join(f"| {finding} | warning | open | recorded |\n" for finding in ("WR-01", "GWR-01", "G2WR-01", "G3WR-01", "XX-01"))
+            self.assertEqual(self.errors(rows, commits[4], repository=repository, reviewed=commits[0]), [])
+
     def test_t_04_38_unresolvable_reviewed_revision_fails(self) -> None:
         head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True, text=True,
                               stdout=subprocess.PIPE).stdout.strip()
