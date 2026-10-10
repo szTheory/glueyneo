@@ -191,6 +191,72 @@ class WorkstreamConfigTest(unittest.TestCase):
                 self.assertNotIn("Traceback", err)
 
 
+class GfmTableFormTest(SecurityRegisterTest):
+    """T-04-62: every table form GFM renders is counted; other Threat ID header lines fail closed."""
+
+    COLUMNS = "Threat ID | Category | Component | Severity | Disposition | Mitigation | Status"
+    DELIMITER = "---|---|---|---|---|---|---"
+    ROW = "T-09-05 | Tampering | docs | high | mitigate | gate | open"
+
+    def table(self, indent: str = "", lead: str = "", trail: str = "", delimiter: str | None = None,
+              row_lead: str | None = None, row_trail: str | None = None) -> str:
+        row_lead = lead if row_lead is None else row_lead
+        row_trail = trail if row_trail is None else row_trail
+        return "\n".join((f"{indent}{lead}{self.COLUMNS}{trail}",
+                          f"{indent}{lead}{delimiter or self.DELIMITER}{trail}",
+                          f"{indent}{row_lead}{self.ROW}{row_trail}"))
+
+    def assert_counted(self, table: str) -> None:
+        # The declared count of 1 matches the first table only; the second adds a blocking row.
+        code, _, err = self.run_checker_output(register(1, extra=table))
+        self.assertEqual(code, 1)
+        self.assertIn("threats_open is 1 but 2 open rows", err)
+        self.assertEqual(self.run_checker(register(2, extra=table)), 0)
+
+    def test_t_04_62_table_without_any_pipes_at_the_edges_is_counted(self) -> None:
+        self.assert_counted(self.table())
+
+    def test_t_04_62_indented_one_to_three_spaces_is_counted(self) -> None:
+        for indent in (" ", "  ", "   "):
+            with self.subTest(indent=len(indent)):
+                self.assert_counted(self.table(indent=indent))
+                self.assert_counted(self.table(indent=indent, lead="| ", trail=" |"))
+
+    def test_t_04_62_header_and_rows_may_disagree_about_pipes(self) -> None:
+        self.assert_counted(self.table(lead="| ", trail=" |", row_lead="", row_trail=""))
+        self.assert_counted(self.table(row_lead="| ", row_trail=" |"))
+
+    def test_t_04_62_delimiter_alignment_colons_and_spaces(self) -> None:
+        for delimiter in (":--- | ---: | :---: | --- | --- | --- | ---", "  :-- |--:| :-: |-|-|-|-  "):
+            with self.subTest(delimiter=delimiter):
+                self.assert_counted(self.table(delimiter=delimiter))
+
+    def test_t_04_62_unparsed_threat_id_header_forms_fail_closed(self) -> None:
+        pipe = self.table(lead="| ", trail=" |")
+        forms = {
+            "four spaces": self.table(indent="    "),
+            "tab": "\t" + pipe.replace("\n", "\n\t"),
+            "blockquote": "\n".join("> " + line for line in pipe.split("\n")),
+            "no delimiter row": f"| {self.COLUMNS} |\n| {self.ROW} |",
+            "delimiter with other cell count": f"| {self.COLUMNS} |\n|---|---|\n| {self.ROW} |",
+        }
+        for label, table in forms.items():
+            with self.subTest(form=label):
+                code, _, err = self.run_checker_output(register(1, extra=table))
+                self.assertEqual(code, 1)
+                self.assertRegex(err, r"unrecognized threat table form at line \d+")
+
+    def test_t_04_62_malformed_row_still_fails(self) -> None:
+        table = f"| {self.COLUMNS} |\n|{self.DELIMITER}|\n| T-09-06 | only | three |"
+        code, _, err = self.run_checker_output(register(1, extra=table))
+        self.assertEqual(code, 1)
+        self.assertIn("malformed threat row", err)
+
+    def test_t_04_62_prose_mentioning_the_header_is_not_a_table(self) -> None:
+        prose = "- T-04-62 OPEN: the table form (`Threat ID | Severity | Status`) was skipped."
+        self.assertEqual(self.run_checker(register(1, extra=prose)), 0)
+
+
 class SchemaDriftTest(unittest.TestCase):
     """GWR-01: a `Threat ID` table lacking Severity or Status must fail, never be skipped."""
 
@@ -273,14 +339,41 @@ class PhaseScopeTest(unittest.TestCase):
 
     def test_g2wr_04_non_register_names_are_not_counted(self) -> None:
         phases = {"04-x": self.CLOSED, "04.1-y": register(1)}
+        # G3IN-03 (intentional baseline change): a register-shaped file with a non-register name used to be
+        # skipped silently, which hid its open rows. It must now fail instead of being ignored.
         code, out, err = self.run_phases(phases, ("ws",), {"04-x/04-draft-SECURITY.md": register(1)})
-        self.assertEqual(code, 0, err)
-        self.assertIn("2 security registers", out)
-        self.assertNotIn("draft", out)
+        self.assertEqual(code, 1)
+        self.assertIn("misnamed security register 04-draft-SECURITY.md", err)
         code, out, err = self.run_phases(phases, ("ws", "--phase", "04.1"))
         self.assertEqual(code, 0, err)
         self.assertIn("1 security registers", out)
         self.assertIn("04.1-SECURITY.md=1", out)
+
+    def test_g3in_03_misnamed_register_shaped_files_fail(self) -> None:
+        phases = {"04-x": self.CLOSED}
+        for name, text in (("04-x/04-draft-SECURITY.md", register(1)),
+                           ("04-x/04-notes-SECURITY.md", "---\nthreats_open: 0\n---\n"),
+                           ("04-x/04-table-SECURITY.md", "# t\n\n" + register(1).split("---\n", 2)[2])):
+            with self.subTest(name=name):
+                code, _, err = self.run_phases(phases, ("ws",), {name: text})
+                self.assertEqual(code, 1)
+                self.assertIn(f"misnamed security register {name.split('/')[1]}", err)
+
+    def test_g3in_03_non_register_documents_are_skipped_and_reported(self) -> None:
+        phases = {"04-x": self.CLOSED}
+        admission = "---\nphase: 04\nstatus: draft\n---\n\nNo threat table here.\n"
+        code, out, err = self.run_phases(phases, ("ws",), {"04-x/04-29-ADMISSION-SECURITY.md": admission})
+        self.assertEqual(code, 0, err)
+        self.assertIn("SKIP: 04-29-ADMISSION-SECURITY.md is not a register name", out)
+        self.assertIn("1 security registers", out)
+
+    def test_g3in_03_verified_may_carry_a_trailing_comment(self) -> None:
+        code, _, err = self.run_phases({"04-x": register(1, frontmatter_lines=("status: verified  # reviewed",))},
+                                       ("ws",))
+        self.assertEqual(code, 1)
+        self.assertIn("status verified with threats_open 1", err)
+        closed = register(0, ROWS[:1] + ROWS[3:], frontmatter_lines=("status: verified  # reviewed",))
+        self.assertEqual(self.run_phases({"04-x": closed}, ("ws",))[0], 0)
 
     def test_g2in_01_verified_status_is_case_insensitive(self) -> None:
         for status in ("status: Verified", "status: VERIFIED", 'status: "Verified"'):
