@@ -1431,6 +1431,32 @@ def _write_receipt(receipt: dict[str, Any]) -> str:
     return str(safe_receipt["status"])
 
 
+def _write_minimal_fail_receipt(token: str) -> None:
+    """Write a path-free fail receipt for a setup or receipt error (T-04-11); report a failed write by token only."""
+    leading = token.split(":", 1)[0]
+    try:
+        _write_receipt({
+            "schema": "glueyneo.playable-qualification/v1", "status": "fail", "reason": token,
+            "identity": {"source_snapshot": {"status": "fail", "reason": leading}},
+            "lanes": {}, "retroarch_smoke": {"status": "unknown", "reason": leading},
+            "unsupported_configurations": ["non-macOS", "architectures other than this host", "unlisted compilers and SDKs"],
+        })
+    except Exception:
+        emit_error("receipt: ", "receipt-write-failed")
+
+
+def entry() -> int:
+    """Script entry guard (T-04-11): no uncaught error or interrupt prints a traceback or private path."""
+    try:
+        return main()
+    except KeyboardInterrupt:
+        emit_error("verify_playable: ", "interrupted")
+        return 130
+    except Exception as error:
+        emit_error("verify_playable: ", f"internal-error: {type(error).__name__}")
+        return 1
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--retroarch", type=Path)
@@ -1466,8 +1492,19 @@ def main() -> int:
         return 0
     if args.retroarch is None:
         parser.error("--retroarch is required unless --check-docs is used without --clean")
-    OUTPUT.mkdir(parents=True, exist_ok=True)
-    work = Path(tempfile.mkdtemp(prefix="clean-", dir=OUTPUT))
+    try:
+        OUTPUT.mkdir(parents=True, exist_ok=True)
+        work = Path(tempfile.mkdtemp(prefix="clean-", dir=OUTPUT))
+    except Exception as error:  # T-04-11: setup failures are typed tokens, never tracebacks.
+        token = f"setup-error: {type(error).__name__}"
+        emit_error("qualification: ", token)
+        try:
+            output_exists = OUTPUT.is_dir()
+        except OSError:
+            output_exists = False
+        if output_exists:
+            _write_minimal_fail_receipt(token)
+        return 1
     snapshot: SourceSnapshot | None = None
     runner: Runner | None = None
     source_root = work / "source"
@@ -1689,17 +1726,9 @@ def main() -> int:
     except Exception as error:
         token = f"receipt-error: {type(error).__name__}"
         emit_error("receipt: ", token)
-        try:
-            _write_receipt({
-                "schema": "glueyneo.playable-qualification/v1", "status": "fail", "reason": token,
-                "identity": {"source_snapshot": {"status": "fail", "reason": "receipt-error"}},
-                "lanes": {}, "retroarch_smoke": {"status": "unknown", "reason": "receipt-error"},
-                "unsupported_configurations": ["non-macOS", "architectures other than this host", "unlisted compilers and SDKs"],
-            })
-        except Exception:
-            emit_error("receipt: ", "receipt-write-failed")
+        _write_minimal_fail_receipt(token)
         return 1
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(entry())
