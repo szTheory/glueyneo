@@ -619,6 +619,41 @@ class ProcessGroupTest(unittest.TestCase):
         self.assertLess(elapsed, 4, "the grace period was spent blocked on a full pipe")
         self.assertIn("TAIL-MARKER", output)
 
+    def lane_output_after_timeout(self, early: bool) -> str:
+        program = (
+            "import os, signal, sys, time\n"
+            "def term(signum, frame):\n"
+            "    os.write(1, b'LATE\\n')\n"
+            "    os._exit(0)\n"
+            "signal.signal(signal.SIGTERM, term)\n"
+            + ("print('EARLY', flush=True)\n" if early else "")
+            + "while True:\n"
+            "    time.sleep(0.05)\n"
+        )
+        proc = subprocess.Popen([sys.executable, "-c", program], stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True, start_new_session=True)
+        try:
+            with self.assertRaises(subprocess.TimeoutExpired) as caught:
+                proc.communicate(timeout=1)
+            with mock.patch.object(playable, "LANE_GRACE_SECONDS", 5):
+                recorded = playable._terminate_lane_group(proc, caught.exception)
+        finally:
+            self.kill_quietly(proc.pid)
+            proc.wait()
+        # The first line is the TimeoutExpired header, which quotes the program text.
+        return recorded.split("\n", 1)[1]
+
+    def test_g3wr_01_timed_out_lane_output_is_single_copy_in_order(self) -> None:
+        output = self.lane_output_after_timeout(early=True)
+        self.assertEqual(output.count("EARLY"), 1, output)
+        self.assertEqual(output.count("LATE"), 1, output)
+        self.assertLess(output.index("EARLY"), output.index("LATE"))
+
+    def test_g3wr_01_no_earlier_output(self) -> None:
+        output = self.lane_output_after_timeout(early=False)
+        self.assertEqual(output.count("LATE"), 1, output)
+        self.assertNotIn("EARLY", output)
+
     @staticmethod
     def kill_quietly(pid: int) -> None:
         try:
@@ -1382,6 +1417,67 @@ class AtomicRecordTest(DocumentationCopies, unittest.TestCase):
                     self.assertNotEqual((source_root / failed_file).read_bytes(), originals[source_root / failed_file])
                 self.assertEqual(list(source_root.rglob("*.restore")), [])
                 self.assertEqual(list(source_root.rglob("*.tmp")), [])
+
+    def test_g3wr_04_restore_unlink_failure_does_not_abort_rollback(self) -> None:
+        real_replace = os.replace
+        real_unlink = Path.unlink
+        with tempfile.TemporaryDirectory(prefix="playable-g3wr04-") as temporary:
+            source_root = Path(temporary)
+            summary = self.copy_documentation_with_evidence(source_root)
+            originals = {path: path.read_bytes() for path in self.targets(source_root)}
+            calls: list[str] = []
+
+            def replace(source: object, destination: object) -> None:
+                calls.append(Path(destination).name)  # type: ignore[arg-type]
+                if len(calls) == 3:
+                    raise OSError("injected replace failure")
+                real_replace(source, destination)  # type: ignore[arg-type]
+
+            def unlink(self_path: Path, missing_ok: bool = False) -> None:
+                if self_path.name.endswith(".restore"):
+                    raise PermissionError("injected restore cleanup failure")
+                real_unlink(self_path, missing_ok=missing_ok)
+
+            raised: BaseException | None = None
+            with mock.patch.object(playable.os, "replace", side_effect=replace), \
+                    mock.patch.object(Path, "unlink", unlink):
+                try:
+                    playable.write_frontend_records(source_root, self.changed_summary(summary))
+                except RuntimeError as error:
+                    raised = error
+                except Exception as error:  # noqa: BLE001 - report as an assertion, not an error
+                    self.fail(f"uncaught {type(error).__name__}")
+            self.assertIsNotNone(raised, "the rollback did not raise")
+            message = str(raised)
+            self.assertTrue(message.startswith("evidence rollback incomplete:"), message)
+            self.assertIn(".restore", message)
+            self.assertNotIn(temporary, message)
+            self.assertRegex(str(raised.__cause__), "injected replace failure")
+            for path, content in originals.items():
+                self.assertEqual(path.read_bytes(), content)
+
+    def test_g3wr_04_temporary_unlink_failure_does_not_mask_the_result(self) -> None:
+        real_unlink = Path.unlink
+        attempts: list[str] = []
+        with tempfile.TemporaryDirectory(prefix="playable-g3wr04-") as temporary:
+            source_root = Path(temporary)
+            summary = self.copy_documentation_with_evidence(source_root)
+
+            def unlink(self_path: Path, missing_ok: bool = False) -> None:
+                if self_path.name.endswith(".tmp"):
+                    attempts.append(self_path.name)
+                    if len(attempts) == 1:
+                        raise PermissionError("injected temporary cleanup failure")
+                real_unlink(self_path, missing_ok=missing_ok)
+
+            with mock.patch.object(Path, "unlink", unlink):
+                try:
+                    playable.write_frontend_records(source_root, self.changed_summary(summary))
+                except Exception as error:  # noqa: BLE001 - report as an assertion, not an error
+                    self.fail(f"uncaught {type(error).__name__}")
+            self.assertEqual(len(attempts), 3, "cleanup stopped after the first failing temporary")
+            evidence = source_root / playable.FRONTEND_EVIDENCE
+            self.assertEqual(json.loads(evidence.read_text(encoding="utf-8"))["os"], "macOS 99.0 arm64")
 
     def test_guide_status_block_is_written_last(self) -> None:
         real_replace = os.replace
