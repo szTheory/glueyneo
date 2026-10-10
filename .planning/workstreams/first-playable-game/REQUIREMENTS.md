@@ -1,7 +1,7 @@
 # Requirements: First Playable Game
 
 **Defined:** 2026-10-07
-**Status:** Approved by the user on 2026-10-07; eight requirements are complete: TRAC-01/02/03, API-05, the bounded SND-01/02 candidate admissions, and HOST-02/QUAL-03 (2026-10-10 committed-snapshot receipt), documented below.
+**Status:** Approved by the user on 2026-10-07; eight requirements are implemented and evidenced (TRAC-01/02/03, API-05, the bounded SND-01/02 candidate admissions, and HOST-02/QUAL-03 from the 2026-10-10 committed-snapshot receipt) but acceptance is pending the Phase 04 security closure (04-SECURITY.md threats_open 2), documented below.
 **Workstream / planning milestone ID:** `first-playable-game`
 **Release version:** Unassigned. This planning identifier is not v0.2 and does not complete v0.1.
 **Core Value:** Trustworthy Neo Geo emulation that other software can embed easily.
@@ -45,7 +45,7 @@ Here, `v1` means this workstream's scoped deliverable, not a software release ve
 - [ ] **SND-01**: A maintainer can reproduce admission of the pinned C Z80 candidate for the selected workload using license/source and mutable-state inventories plus cycle, interrupt, bus-effect, supported-boundary continuation, and independent-instance evidence.
 - [ ] **SND-02**: A maintainer can reproduce admission of a pinned ymfm YM2610 subset behind a private C interface under PROJECT-D-48, with license/source and mutable-state/callback inventories, deterministic clock/sample and instance-isolation evidence, contained C++ failure behavior, and exercised static/shared C-consumer linkage. The C++ exception alone is not admission.
 
-The two completed sound requirements admit only the named synthetic Phase 04 Z80 workload and the selected pinned ymfm YM2610 candidate behind its private C interface. They do not establish a game sound-driver workload, audible game sound, silicon fidelity, or broad compatibility; SND-03/04 and Phase 5 handshakes remain pending.
+The two sound requirements (implemented; acceptance pending the Phase 04 security closure) admit only the named synthetic Phase 04 Z80 workload and the selected pinned ymfm YM2610 candidate behind its private C interface. They do not establish a game sound-driver workload, audible game sound, silicon fidelity, or broad compatibility; SND-03/04 and Phase 5 handshakes remain pending.
 - [ ] **SND-03**: A maintainer can run a guest-driven public sound fixture through the Z80/YM2610 path and reproduce non-silent, signal-qualified output with justified expected controls, distinguishing native chip timing/output from adapter resampling and frontend audio-device behavior.
 - [ ] **SND-04**: A user hears representative game music and action-triggered effects while controlling the selected Metal Slug X scene in the pinned RetroArch setup; evidence identifies the covered scenario and any missing sound behavior.
 
@@ -99,7 +99,7 @@ All 20 current requirements have current-revision evidence, documentation, and i
 
 ## Traceability
 
-Requirements and their primary phase allocation in [ROADMAP.md](ROADMAP.md) are user-approved. Eight requirements are complete: TRAC-01/02/03, API-05, bounded candidate-admission SND-01/02, HOST-02 and QUAL-03. HOST-02 and frontend QUAL-03 closed on 2026-10-10 from a passing committed-snapshot receipt; the current revision is recorded in `phases/04-public-playable-tracer/04-FRONTEND-RECEIPT.json`, and `tools/verify_playable.py --check-docs` enforces it.
+Requirements and their primary phase allocation in [ROADMAP.md](ROADMAP.md) are user-approved. Eight requirements (TRAC-01/02/03, API-05, bounded candidate-admission SND-01/02, HOST-02 and QUAL-03) are implemented and evidenced, but acceptance is pending the Phase 04 security closure (04-SECURITY.md threats_open 2); their rows keep `Gaps Found` until `check_security_register.py first-playable-game --require-closed --phase 04` exits 0. HOST-02 and frontend QUAL-03 have a passing committed-snapshot receipt (re-qualified 2026-10-10 at `bd74482e0050`); the current revision is recorded in `phases/04-public-playable-tracer/04-FRONTEND-RECEIPT.json`, and `tools/verify_playable.py --check-docs` enforces it.
 
 Historical, superseded on 2026-10-10 by the receipt above: Plan 04-15 reconfirmed HOST-02 and frontend QUAL-03 as Pending from separate observation predicates. The materially changed, functioning launch context required for the pinned RetroArch 1.22.2 observation remains unavailable: the prior launch aborted with exit `-6` before a screenshot, LaunchServices returned `kLSNoExecutableErr`, unified-log inspection was blocked, and the current inventory showed no app window or process. No app was invoked; no current app, core, or fixture identity or actual frontend observation is available. The focused smoke-script contract suite does not satisfy either requirement. HOST-02 still lacks screenshot, stable no-input, RIGHT/LEFT, content-unload, normal-exit, ordinary content-load, guest-video, and frontend-pacing observations. QUAL-03 retains its documented build/install procedure and environment identity list, but its actual frontend load remains unobserved.
 

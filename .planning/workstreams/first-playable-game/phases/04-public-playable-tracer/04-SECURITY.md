@@ -162,10 +162,10 @@ Accepted 2026-10-10 under the user's delegated decision (verify-work Test 4), af
 
 - [x] All declared threats have a disposition (mitigate / accept / transfer)
 - [x] Accepted risks documented in Accepted Risks Log
-- [ ] `threats_open: 0` not confirmed: the 04-23 independent review reopened rows (threats_open 6)
+- [ ] `threats_open: 0` not confirmed: the contained 04-34 and 04-36 reviews left rows open (threats_open 2)
 - [ ] `status: verified` withdrawn; status is open pending repair
 
-**Approval:** withdrawn 2026-10-10 by the independent 04-23 review; the earlier delegated verification (56f4fbd) rested on self-attestation. Earlier 2026-10-08 direction kept the four high threats open until a durable mitigation existed.
+**Approval:** not approved (residual branch, 2026-10-10). The focused contained re-review (04-36, `bd74482e0050`) left T-04-11, T-04-38, T-04-61 and T-04-67 open (threats_open 2 high); next is `/gsd-plan-phase 04 --gaps --ws first-playable-game`. Accepted risks T-04-44/52/55/60 stand per D-GAP-02. The earlier delegated verification (56f4fbd) rested on self-attestation and stays withdrawn.
 
 ## Security Audit 2026-10-08
 

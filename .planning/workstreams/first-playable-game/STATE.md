@@ -7,10 +7,10 @@ current_phase_name: Public Playable Tracer
 current_plan: 5
 status: executing
 stopped_at: Completed 04-35-PLAN.md
-last_updated: "2026-10-10T18:22:11.038Z"
+last_updated: "2026-10-10T18:36:31.012Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 04 execution started
-state_head: e45c0f14ee311445183ae188afddcaf4121b0f12
+state_head: 72f84deb655107f39e478c70f80f87ac08a77adb
 progress:
   total_phases: 4
   completed_phases: 0
@@ -108,7 +108,7 @@ Progress: [░░░░░░░░░░] 0%
 - The user-provided BIOS archive is also stored under the Git-ignored `local/roms/` directory. The copy matches its source, passes ZIP CRC validation and is untracked; those checks do not establish BIOS compatibility.
 - Public CI: use original fixtures and/or homebrew assets only after confirming redistribution rights for the specific ROM assets; a source-code license alone is not sufficient evidence for bundled game data.
 - The local archive passed ZIP CRC checks and matched all 13 ROM size/SHA-1 entries in MAME's current Neo Geo software list. That confirms the archive identity, not emulator compatibility.
-- Next GSD work: no GSD command is warranted while the external evidence is unchanged. Plan 05-06 remains halted at Task 2: selected compatibility and GAME-02 need an independently observed selected configuration plus a source-backed guest attract/start predicate with oracle ancestry. The earlier RetroArch SIGABRT was the sandboxed launch context (debug session `.planning/debug/resolved/retroarch-startup-abort.md`); agent shells in the logged-in session launch the pinned app normally. Do not repeat verify-work or create another unchanged gap plan. When the missing selected-guest evidence is available, resume the existing bounded plan with $gsd-execute-phase 05 --gaps-only --ws first-playable-game. Candidate PR #2 has a passing exact-SHA hosted MVS receipt but remains OPEN / REVIEW_REQUIRED pending one approval. Phase 04: HOST-02 and frontend QUAL-03 are Complete from the passing committed-snapshot receipt at 7615dd911678 (`04-FRONTEND-RECEIPT.json`, bound by the post-commit --check-docs); the 04-31 tool-scoped independent review halted on its containment gate, so threats_open is 14, 22 review findings remain open and 0 are deferred. Next: `/gsd-secure-phase 04 --ws first-playable-game`.
+- Next GSD work: no GSD command is warranted while the external evidence is unchanged. Plan 05-06 remains halted at Task 2: selected compatibility and GAME-02 need an independently observed selected configuration plus a source-backed guest attract/start predicate with oracle ancestry. The earlier RetroArch SIGABRT was the sandboxed launch context (debug session `.planning/debug/resolved/retroarch-startup-abort.md`); agent shells in the logged-in session launch the pinned app normally. Do not repeat verify-work or create another unchanged gap plan. When the missing selected-guest evidence is available, resume the existing bounded plan with $gsd-execute-phase 05 --gaps-only --ws first-playable-game. Candidate PR #2 has a passing exact-SHA hosted MVS receipt but remains OPEN / REVIEW_REQUIRED pending one approval. Phase 04: HOST-02 and frontend QUAL-03 are implemented and evidenced from the passing committed-snapshot receipt at bd74482e0050 (`04-FRONTEND-RECEIPT.json`, bound by the post-commit --check-docs) but acceptance is pending; after the contained 04-34 and 04-36 reviews 04-SECURITY.md has threats_open 2 (T-04-11 and T-04-61; T-04-38 and T-04-67 also open), 1 review finding is open (WR-11) and 3 are deferred, and `--require-closed --phase 04` exits 1 (CLOSURE). Open IDs and paths: tools/verify_playable.py (T-04-11, T-04-38, T-04-67, WR-11) and tools/independent_review.py (T-04-61). Next: `/gsd-plan-phase 04 --gaps --ws first-playable-game`.
 
 The generic GSD progress router currently infers Phase 04 from its incomplete
 verification report, while this workstream remains on Phase 05 because the
@@ -168,9 +168,12 @@ unchanged external-blocker plan. Plan/summary counts are not phase acceptance.
 - [Phase 04]: 04-33: GIN-01 and GIN-04 accepted as fail-closed limits pinned by tests; smoke defers launch-window signals instead of masking them (mask is inherited by the frontend)
 - [Phase 04]: 04-34: contained review (D-GAP-01) left 9 threats/2 findings open; T-04-44/52/55/60 accepted per D-GAP-02
 - [Phase 04]: 04-35: residual verdicts citing CMakeLists.txt only as context (T-04-56, WR-08) classified gates; fix confined to check_runtime_storage.py
+- [Phase 04]: D-GAP-02 (2026-10-10): the maintainer accepted T-04-44/52/55/60; they gate Phase 04 closure only through register status accepted, contained verdicts are evidence only
+- [Phase 04]: 04-36: receipt re-qualified at bd74482e0050; focused 73-ID re-review left T-04-11, T-04-38, T-04-61, T-04-67 and WR-11 open (residual branch, CLOSURE exit 1); routed to /gsd-plan-phase 04 --gaps
 
 ### Blockers
 
+- 04-34/04-35/04-36 outcome (2026-10-10, supersedes the 04-31 line below): RetroArch re-qualified at 0d9612130092 (04-34) and bd74482e0050 (04-36, single instance, pinned 1.22.2); contained reviews (D-GAP-01) at both revisions; 04-35 repaired all 11 residual IDs with none unrepaired and no routed writable runtime symbol. The focused 04-36 re-review (73 IDs: 11 residual, 60 fresh, 2 supply-chain) left threats_open 2 (T-04-11, T-04-61; T-04-38 and T-04-67 also open) and WR-11 open; WR-08, GIN-01 and GIN-04 are deferred; T-04-44/52/55/60 stay accepted (D-GAP-02). Unrepaired paths routed to /gsd-plan-phase 04 --gaps: tools/verify_playable.py (T-04-11 receipt build outside any try block; T-04-38 and WR-11 reviewed_revision not validated; T-04-67 sole review revision value not checked) and tools/independent_review.py (T-04-61 brace-alternative absolute glob). CLOSURE exit 1; UNSCOPED exit 1 (2 in 04-SECURITY.md, 9 in the Phase 05 draft 05-SECURITY.md).
 - 04-31 outcome (2026-10-10): clean committed-snapshot qualification passed all 17 lanes at 7615dd911678 (pinned RetroArch 1.22.2) and the fresh summary is bound by the post-commit docs gate; the tool-scoped independent review halted on containment (REVIEW HALTED: containment-violation), so all 33 threat IDs and 22 findings are recorded open and 04-SECURITY.md threats_open is 14. Supersedes the 04-23 line below.
 - 04-23 outcome (2026-10-10): clean committed-snapshot qualification passed at aaf3f093ab0f (pinned RetroArch 1.22.2, max one instance sampled); the independent separate-context security review at that revision returned OPEN for 15 of 16 IDs and unscoped Bash made the 16th OPEN by the containment rule, so 04-SECURITY.md threats_open is 6 and WR-01/06/08/09 are open. Supersedes the 2026-10-10 entries below that report these closed.
 - Owned-debug is now 47/47 passing, including refreshed identity/source-manifest and target-scoped inventory checks. This repairs the prior deterministic failure without establishing frontend acceptance.
