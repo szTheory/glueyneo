@@ -31,7 +31,11 @@ scratch tree holding a symlink that resolves outside it. A brace or extglob
 group alternative that starts with `/`, `~` or `$` is not contained whatever the
 pattern prefix (G2CR-01, 04-REVIEW-GAPS-R2.md), and `check` accepts only a
 40-lowercase-hex `--revision` matched as the whole first review line (G2WR-03);
-both strengthen the gate under the D-GAP-01 clarification. The reviewer prompt
+both strengthen the gate under the D-GAP-01 clarification. A pattern or path that
+begins with `$` is not contained either (G3IN-01). Reviewable finding IDs are any
+`CR/WR/IN`, `GCR/GWR/GIN` or `G<n>CR/G<n>WR/G<n>IN` ID plus threat numbers; a
+malformed ID in the prompt ID list raises, and a malformed verdict line leaves its
+ID OPEN (G3WR-02). The reviewer prompt
 forbids `..` and asks for scratch-relative paths, so a compliant all-in-scratch
 review never trips the `..` rule.
 
@@ -56,13 +60,15 @@ ALLOWED_TOOLS = frozenset({"Read", "Grep", "Glob"})
 WILDCARDS = "*?[{("
 # G2CR-01: an alternative inside a brace group or an extglob group (`@( )`, `!( )`, `+( )`, `*( )`,
 # `?( )`) that begins with `/` or `~` is absolute or home-relative whatever the pattern prefix. An
-# alternative beginning with `$` is refused too: Glob/Grep patterns are not shell-expanded today, but a
-# variable reference cannot be proven scratch-relative, so the gate fails closed instead of relying on
-# that tool behavior.
+# alternative beginning with `$` is refused too, and so is a whole pattern or path that begins with `$`
+# (G3IN-01): Glob/Grep patterns are not shell-expanded today, but a variable reference cannot be proven
+# scratch-relative, so the gate fails closed instead of relying on that tool behavior.
 ABS_IN_GROUP = re.compile(r"[{,(|]\s*[/~$]")
 PROMPT_PREFIX = "Review IDs: "
 HALT_PREFIX = "REVIEW HALTED:"
-ID_PATTERN = r"T-\d{2}-\d{2}|T-\d{2}-SC \(\d{2}-\d{2}\)|(?:CR|WR|IN|GWR|GIN|G2CR|G2WR|G2IN)-\d{2}"
+# G3WR-02: any review round's IDs (`CR/WR/IN`, `GCR/GWR/GIN`, `G<n>CR/G<n>WR/G<n>IN`) are reviewable
+# without editing this pattern, and threat numbers may exceed two digits (`T-04-100`).
+ID_PATTERN = r"T-\d{2}-\d{2,}|T-\d{2}-SC \(\d{2}-\d{2}\)|(?:G\d*)?(?:CR|WR|IN)-\d{2}"
 ATTEMPT = re.compile(rf"^VERDICT ({ID_PATTERN})(?= |$)")
 VERDICT_LINE = re.compile(rf"^VERDICT ({ID_PATTERN}) (CLOSED|OPEN|FIXED) (\S.*)$")
 CELL_SPLIT = re.compile(r"(?<!\\)\|")
@@ -92,7 +98,7 @@ def has_tilde_expansion(text: str) -> bool:
 
 def path_contained(path: str, scratch: str, cwd: str) -> bool:
     """D-GAP-01: equal to the scratch realpath, or under it, after symlinks resolve."""
-    if has_dotdot(path) or has_tilde_expansion(path):
+    if has_dotdot(path) or has_tilde_expansion(path) or path.startswith("$"):
         return False
     try:
         joined = path if os.path.isabs(path) else os.path.join(cwd, path)
@@ -103,7 +109,8 @@ def path_contained(path: str, scratch: str, cwd: str) -> bool:
 
 def glob_contained(pattern: str, scratch: str, base: str) -> bool:
     """Whether every match of `pattern` stays inside the scratch directory."""
-    if has_dotdot(pattern) or has_tilde_expansion(pattern) or ABS_IN_GROUP.search(pattern):
+    if (has_dotdot(pattern) or has_tilde_expansion(pattern) or pattern.startswith("$")
+            or ABS_IN_GROUP.search(pattern)):
         return False
     if os.path.isabs(pattern):
         wild = [pattern.find(char) for char in WILDCARDS if char in pattern]
@@ -210,6 +217,8 @@ def review_ids(prompt_text: str) -> list[str]:
     ids = [item.strip() for item in lines[0][len(PROMPT_PREFIX):].split(", ")]
     if not ids or any(not item for item in ids):
         raise ValueError("empty ID in the review ID list")
+    if any(re.fullmatch(ID_PATTERN, item) is None for item in ids):
+        raise ValueError("malformed ID in the review ID list")
     if len(ids) != len(set(ids)):
         raise ValueError("duplicate ID in the review ID list")
     return ids
