@@ -666,5 +666,61 @@ class ConsumerInputTest(unittest.TestCase):
         self.assertEqual(fixture, build / "diagnostic-original-a.bin")
 
 
+class MainErrorPathTest(unittest.TestCase):
+    """Early failures still write a named fail receipt, and printed errors are redacted (CR-08, CR-09, IN-04)."""
+
+    def run_main(self, *arguments: str) -> tuple[int, str, str]:
+        with mock.patch.object(sys, "argv", ["verify_playable.py", *arguments]), \
+                mock.patch("sys.stdout", new_callable=io.StringIO) as stdout, \
+                mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+            status = playable.main()
+        return status, stdout.getvalue(), stderr.getvalue()
+
+    def test_early_snapshot_failure_writes_a_named_fail_receipt(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-main-") as temporary:
+            output = Path(temporary) / "out"
+            failure = playable.SnapshotError(
+                "runner-source-mismatch", "executing qualification runner differs from the committed archive")
+            with mock.patch.object(playable, "OUTPUT", output), \
+                    mock.patch.object(playable, "create_snapshot", side_effect=failure):
+                status, _, _ = self.run_main("--retroarch", str(Path(temporary) / "RetroArch.app"), "--clean")
+            receipt = json.loads((output / "receipt.json").read_text(encoding="utf-8"))
+        self.assertEqual(status, 1)
+        self.assertEqual(receipt["status"], "fail")
+        self.assertEqual(receipt["reason"], "runner-source-mismatch")
+        self.assertEqual(receipt["lanes"], {})
+
+    def test_check_docs_error_text_is_redacted(self) -> None:
+        home = str(Path.home())
+        failures = (OSError(2, "No such file or directory", home + "/private/guide.md"),
+                    UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte"),
+                    ValueError("bad value " + home + "/private/guide.md"))
+        for failure in failures:
+            with self.subTest(error=type(failure).__name__), \
+                    mock.patch.object(playable, "check_docs", side_effect=failure):
+                status, _, stderr = self.run_main("--check-docs")
+            self.assertEqual(status, 1)
+            self.assertNotIn(home, stderr)
+            self.assertNotIn("guide.md", stderr)
+
+    def test_record_frontend_evidence_error_text_is_redacted(self) -> None:
+        for failure in (OSError(2, "No such file", str(ROOT / "receipt.json")),
+                        UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")):
+            with self.subTest(error=type(failure).__name__), \
+                    mock.patch.object(Path, "read_text", side_effect=failure):
+                status, _, stderr = self.run_main("--record-frontend-evidence")
+            self.assertEqual(status, 1)
+            self.assertNotIn(str(ROOT), stderr)
+            self.assertNotIn("receipt.json", stderr)
+
+    def test_surviving_private_root_prints_only_the_fixed_reason(self) -> None:
+        with mock.patch.object(playable, "redact", side_effect=lambda text: text), \
+                mock.patch.object(playable, "check_docs", side_effect=OSError(str(Path.home()) + "/x")):
+            status, _, stderr = self.run_main("--check-docs")
+        self.assertEqual(status, 1)
+        self.assertIn("private-path-survived", stderr)
+        self.assertNotIn(str(Path.home()), stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

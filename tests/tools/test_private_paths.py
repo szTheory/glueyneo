@@ -7,6 +7,7 @@ from __future__ import annotations
 import io
 import json
 from pathlib import Path
+import struct
 import sys
 import tempfile
 import unittest
@@ -239,6 +240,18 @@ class SinkTest(unittest.TestCase):
         summary["os"] = "macOS " + HOME.replace("/", "\u2215") + "/build"
         with self.assertRaisesRegex(RuntimeError, "private absolute path"):
             playable.validate_frontend_evidence(summary)
+
+    def test_smoke_main_turns_unexpected_errors_into_a_scanned_failure(self) -> None:
+        arguments = ["retroarch_smoke.py", "--retroarch", "a.app", "--core", "b.dylib", "--content", "c.bin"]
+        with mock.patch.object(sys, "argv", arguments), \
+                mock.patch.object(retroarch_smoke, "run_smoke", side_effect=struct.error("unpack requires a buffer")), \
+                mock.patch("sys.stdout", new_callable=io.StringIO) as stdout:
+            status = retroarch_smoke.main()
+        self.assertEqual(status, 1)
+        lines = stdout.getvalue().strip().splitlines()
+        self.assertEqual(len(lines), 1)
+        result = json.loads(lines[0])
+        self.assertEqual((result["status"], result["stage"]), ("blocked_or_unknown", "internal"))
 
 
 if __name__ == "__main__":
