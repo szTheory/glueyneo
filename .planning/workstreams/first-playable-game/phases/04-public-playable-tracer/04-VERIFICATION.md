@@ -1,8 +1,8 @@
 ---
 phase: 04-public-playable-tracer
-verified: 2026-10-10T12:00:00Z
+verified: 2026-10-10T18:00:00Z
 status: gaps_found
-score: 3/5 roadmap truths verified
+score: 5/5 roadmap truths implemented and evidenced; phase not accepted (open security gate)
 covered_files:
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-01-PLAN.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-01-SUMMARY.md"
@@ -50,9 +50,27 @@ covered_files:
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-22-SUMMARY.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-23-PLAN.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-23-SUMMARY.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-24-PLAN.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-24-SUMMARY.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-25-PLAN.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-25-SUMMARY.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-26-PLAN.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-26-SUMMARY.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-27-PLAN.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-27-SUMMARY.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-28-PLAN.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-28-SUMMARY.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-29-PLAN.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-29-SUMMARY.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-30-PLAN.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-30-SUMMARY.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-31-PLAN.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-31-SUMMARY.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-FRONTEND-RECEIPT.json"
   - "CMakeLists.txt"
   - "docs/first-playable-build.md"
   - "docs/rights-inventory.md"
+  - "docs/testing.md"
   - "include/glueyneo/glueyneo.h"
   - "src/instance.c"
   - "src/libretro/libretro_core.c"
@@ -61,84 +79,74 @@ covered_files:
   - "tests/fixture/test_public_guest.c"
   - "tests/libretro/retroarch_smoke.py"
   - "tests/libretro/test_retroarch_smoke.py"
+  - "tests/tools/check_runtime_storage.py"
   - "tests/tools/check_security_register.py"
   - "tests/tools/test_check_security_register.py"
   - "tests/tools/test_private_paths.py"
   - "tests/tools/test_verify_playable.py"
   - "tools/private_paths.py"
   - "tools/verify_playable.py"
-covered_digest: "v3:sha256:b6e6198069509389ca7232e81012c94ef0bd1f0ee37f9fc919e955388b71eef0"
+covered_digest: "v3:sha256:75dc2ca515700d038cd0ab39c12bd3640d2f2a10d2dae3078f2ba3f761f1f1da"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
   previous_status: gaps_found
   previous_score: 3/5
   gaps_closed:
-    - "HOST-02 / frontend QUAL-03: a clean committed-snapshot run of pinned RetroArch 1.22.2 at aaf3f093ab0f produced a tool-generated tracked receipt (04-FRONTEND-RECEIPT.json) and --check-docs passes."
-    - "Prior evidence-map checker (retired) and reviewer-provenance concerns are superseded by the GSD code-review record (see T-04-38/T-04-43 below, still open)."
+    - "Prior gap 1 (disclosure bypass CR-01/02/09): U+2215 home path now redacts and scans clean (re-probed); review-gaps finds private-path scanning now canonical with every public sink fail-closed. Code-level closed; security rows remain open for lack of a valid independent verdict."
+    - "Prior gap 2 (receipt binding CR-03): review-gaps reports no silent skip when .git is absent; clean-snapshot run at 7615dd911678 passed --check-docs."
+    - "Prior gap 3 (doc gate / crosswalk CR-04/05): repaired per review-gaps (whole-guide claim scan, reviewed-list path check); --check-docs passes. Residual GIN-03/04 loose matching."
+    - "Prior gap 5 (RetroArch launch safety CR-07): pre-launch refusal and scoped process-group control exist per review-gaps; pgrep shows 0 instances. Edge cases GWR-04/05 remain."
+    - "Prior gap 4 (register parser CR-06): duplicates/commented keys handled per review-gaps, but GWR-01 fail-open reproduced here (see gaps)."
   gaps_remaining:
-    - "Six security rows remain open after the independent 04-23 review (threats_open: 6)."
-    - "Six confirmed critical code defects (CR-01, CR-03, CR-04, CR-05, CR-06, CR-07) plus CR-02, CR-08, CR-09 undermine the qualification and privacy gates that the frontend evidence depends on."
+    - "Prior gap 6 / security closure: threats_open 14; independent review HALTED on containment."
+    - "Register gate fail-open (GWR-01) and gate naming (GWR-03)."
+    - "GWR-02/04/05/06 warnings undispositioned."
   regressions: []
 gaps:
-  - truth: "Qualification and frontend diagnostics never expose private paths (T-04-11, T-04-15, T-04-18, T-04-20 -- high)."
+  - truth: "Threat-register closure: no blocking (high) security threat is open and the independent security verdict is valid (T-04-11, T-04-15, T-04-18, T-04-20, T-04-48, T-04-SC rows)."
     status: failed
-    reason: "04-SECURITY.md keeps all four high disclosure rows open. I re-probed CR-01: redact() leaves a home path written with U+2215 (division slash) unredacted (output 'err <U+2215>Users<U+2215>jon/x'); only scan_public catches it, and CR-02 (scan on ensure_ascii JSON defeats NFKC folding), CR-09 (raw exception text printed unredacted from --record-frontend-evidence and --check-docs) mean the final sinks are not reliably fail-closed."
-    artifacts:
-      - path: "tools/private_paths.py"
-        issue: "_forms covers only '/', escaped '/', backslash, single-pass quote and slashless forms; U+2215/U+2044, dash-mangled and double-percent variants not redacted (CR-01)."
-      - path: "tools/verify_playable.py"
-        issue: "scan_public applied to ensure_ascii JSON (CR-02); unredacted raw error text printed (CR-09); main() raises AttributeError on runner.lanes for early failures so no receipt is written (CR-08)."
-    missing:
-      - "Fold/normalize all separator and encoding variants in _forms and redact; scan the decoded (ensure_ascii=False) payload; route every printed exception through redact+scan_public; fix runner.lanes AttributeError; add reproducing regression tests."
-  - truth: "The receipt-to-revision binding and frontend evidence validate in every documented path, including the clean snapshot (T-04-46)."
-    status: failed
-    reason: "tools/verify_playable.py:712 gates the ancestry/inventory checks on (source_root / '.git').exists(); in the .git-less --clean snapshot the binding is skipped (CR-03). Independent review marks T-04-46 OPEN."
-    artifacts:
-      - path: "tools/verify_playable.py"
-        issue: "load_frontend_evidence skips ancestry and inventory-digest verification when .git is absent."
-    missing:
-      - "Fail closed (or resolve against the original repository) when .git is absent; test the --clean --check-docs path."
-  - truth: "The documentation gate rejects unsupported frontend success claims and review/crosswalk claims (T-04-34, T-04-38, T-04-43, T-04-45)."
-    status: failed
-    reason: "CR-04: check_docs passes affirmative success prose outside the generated status block. CR-05: crosswalk 'Existing Threat Scope' accepts any non-empty text including nonexistent paths. T-04-45: frontend_evidence_summary accepted a fullwidth-separator home path and the generated guide block is written unscanned."
-    artifacts:
-      - path: "tools/verify_playable.py"
-        issue: "check_docs scope limited to the status block; crosswalk path existence not checked."
-      - path: "docs/first-playable-build.md"
-        issue: "Generated guide block written without public scan."
-    missing:
-      - "Scan the whole guide for claims, require crosswalk scope paths to exist in the reviewed set, scan generated guide output."
-  - truth: "The security register gate is a trustworthy closure control (T-04-48)."
-    status: failed
-    reason: "CR-06: check_security_register.py reads only the first threats_open key and only the first threat table; duplicated or commented frontmatter keys and a second table with an open high row are not detected. I ran it and it reports PASS while 04-SECURITY.md is status: open with threats_open: 6 -- the gate cannot be relied on as a closure oracle."
-    artifacts:
-      - path: "tests/tools/check_security_register.py"
-        issue: "Parser covers first key/table only; register_errors() returns no errors for the reviewer's mutations."
-    missing:
-      - "Parse all tables and reject duplicate/commented keys; add mutation tests."
-  - truth: "The pinned RetroArch launch is safe on a shared host: no orphaned instances, no stacked launches (T-04-47; also project rule 'never stack RetroArch instances')."
-    status: failed
-    reason: "CR-07: an outer timeout can skip the finally-quit and orphan the start_new_session child (retroarch_smoke.py lines 560 and 704 use start_new_session=True); grep finds no pgrep/pre-launch instance check in the harness. WR-03: Runner.command timeout kills only the direct child."
-    artifacts:
-      - path: "tests/libretro/retroarch_smoke.py"
-        issue: "No pre-launch instance check; process group not killed on outer timeout."
-    missing:
-      - "Refuse to launch when a RetroArch instance exists; kill the process group on timeout; test."
-  - truth: "No dependency or package installation entered the qualification path (T-04-SC 04-23)."
-    status: partial
-    reason: "Reviewer's raw verdict was CLOSED (no installs found) but its session had unscoped Bash so the plan containment rule forces OPEN. Needs a re-run with a scoped session; not a code defect."
+    reason: "04-SECURITY.md is status open with threats_open 14 (T-04-11/15/18/20/48, T-04-SC 04-23 and eight new T-04-SC rows 04-24..04-31). `check_security_register.py first-playable-game --require-closed` exits 1 (04: 14 open, 05 draft: 9 open; re-run here). The 04-31 tool-scoped independent review HALTED on its containment gate, so no verdict exists for any of the 55 IDs; all are open by rule. No repair is claimed unverified: the code-level bypass I re-probed in the prior round (U+2215 home path through redact) now redacts and scans clean, so the open rows are open for want of a valid independent verdict, not a reproduced defect."
     artifacts:
       - path: ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-SECURITY.md"
-        issue: "Row T-04-SC (04-23) open by containment rule."
+        issue: "threats_open 14; Accepted Risks T-04-52/55/60 still 'proposed' pending a contained verdict."
+      - path: ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-REVIEW-DISPOSITION.md"
+        issue: "22 findings (CR/WR/IN) recorded open because the review halted."
     missing:
-      - "Re-run the security audit in a tool-scoped headless session and record the verdict."
+      - "Re-run the headless tool-scoped independent security audit and code review with paths strictly under the scratch root (or a user decision on whether the scratch root itself counts as contained), then transcribe verdicts and close or fix each row."
+      - "Obtain explicit user acceptance for T-04-44/52/55/60."
+  - truth: "The security-register gate is a trustworthy fail-closed closure control (T-04-48; review GWR-01, GWR-03)."
+    status: failed
+    reason: "Reproduced in this run: appending a second table with an open high row whose header uses `Sev`/`State` instead of Severity/Status makes register_errors return ([], 14) -- no error, count unchanged (GWR-01 confirmed fail-open). The CTest `planning_security_register` runs without --require-closed and passes while 23 blocking threats are open, and the workstream config.json that sets security_block_on is untracked."
+    artifacts:
+      - path: "tests/tools/check_security_register.py"
+        issue: "Skips Threat ID tables lacking Severity/Status columns instead of reporting an error (lines ~111-113)."
+      - path: "CMakeLists.txt"
+        issue: "planning_security_register passes while threats are open; gate absent if workstream dir missing."
+    missing:
+      - "Report an error for such tables and add a mutation test; rename the CTest to a consistency check and run --require-closed at ship/release; track or document the config."
+  - truth: "Qualification-tool robustness: remaining fail-open and process-safety defects (GWR-02, GWR-04, GWR-05, GWR-06; GIN-01..03)."
+    status: partial
+    reason: "04-REVIEW-GAPS.md lists 6 warnings and 4 info items, none yet fixed or dispositioned: writable-storage audit can pass with nothing parsed or with common/TLS symbols (GWR-02); lane-group SIGKILL after reap and SIGTERM-only survivor cleanup (GWR-04); signal handler can orphan a child and surviving group members are left once the leader exits (GWR-05); three-file evidence write is not all-or-nothing (GWR-06). These do not by themselves falsify a roadmap truth but weaken the HOST-02/QUAL-03 evidence chain and the single-instance rule."
+    artifacts:
+      - path: "tests/tools/check_runtime_storage.py"
+        issue: "GWR-02"
+      - path: "tools/verify_playable.py"
+        issue: "GWR-04, GWR-06"
+      - path: "tests/libretro/retroarch_smoke.py"
+        issue: "GWR-05"
+    missing:
+      - "Fix or explicitly accept each warning with a regression test."
 deferred: []
 advisory:
-  - finding: "Nine review warnings (WR-01..WR-09) and four info items remain open in 04-REVIEW-DISPOSITION.md; notably WR-07 (product CTest coupled to planning state and a hard-coded workstream) and WR-08 (runtime-static duplicates state)."
+  - finding: "REQUIREMENTS.md is internally inconsistent: the status header and prose list TRAC-01/02/03, API-05, SND-01/02, HOST-02, QUAL-03 as complete while the traceability table (lines ~108-126) still reads 'Gaps Found' for all eight. Verification does not edit REQUIREMENTS.md."
     category: other
-    reason: "Robustness/maintainability; none changes a roadmap truth on its own."
-    evidence_status: "04-REVIEW.md 2026-10-10"
+    reason: "Reconcile after the open security/review items are resolved or accepted."
+    evidence_status: "REQUIREMENTS.md lines 4, 102, 108-126"
+  - finding: "The 04-31 raw reviewer stream (not authoritative, not transcribed) reportedly returned mostly CLOSED/FIXED with OPEN only for T-04-11, T-04-38, T-04-48, T-04-54; the sole trigger of the halt was a read-only call rooted at the scratch directory."
+    category: security
+    reason: "Not evidence for closure; a contained re-run would likely resolve most rows cheaply, but T-04-11/38/48/54 would remain to fix."
+    evidence_status: "04-31-SUMMARY.md Task 2 (observation only)"
 behavior_unverified_items: []
 human_verification: []
 ---
@@ -146,9 +154,9 @@ human_verification: []
 # Phase 04: Public Playable Tracer Verification Report
 
 **Phase Goal:** A maintainer can rebuild and run an original guest with visible, input-driven behavior through the ordinary native API and an actual pinned RetroArch build, while resolving the selected sound candidates' admission gates before full integration.
-**Verified:** 2026-10-10 at revision `71e936b9bcea` (receipt qualified at `aaf3f093ab0f`).
+**Verified:** 2026-10-10 at HEAD `2f08a40a3dbd` (receipt qualified at `7615dd911678`).
 **Status:** gaps_found
-**Re-verification:** Yes -- after Plan 04-23 (RetroArch re-qualification and independent security/code review).
+**Re-verification:** Yes -- after gap-closure plans 04-24..04-31.
 
 ## Goal Achievement
 
@@ -156,83 +164,62 @@ human_verification: []
 
 | # | Truth | Status | Evidence |
 |---|---|---|---|
-| 1 | Rebuild the rights-audited fixture from tracked source, run it through a C consumer, see guest-produced software frame with checked dimensions, format, pitch, bounds. | VERIFIED | `tests/fixture/public_guest.c`, `tests/fixture/test_public_guest.c`, rights manifest; `ctest --preset owned-debug` re-run this verification: 59 tests, summary reports no failures. |
-| 2 | Bounded frame API with explicit input, owned buffers, timing, produced counts, progress/stop, actionable errors; correct input changes guest/output, wrong-input control fails. | VERIFIED | `include/glueyneo/glueyneo.h`, `src/instance.c`; named native tests incl. wrong-input control are inside the passing CTest run. |
-| 3 | Load, run, control and unload the fixture in an actual pinned macOS RetroArch build with software video, documented mapping, frontend-owned pacing. | VERIFIED (receipt) with qualification-tooling caveat | `04-FRONTEND-RECEIPT.json` (tool generated): pinned core/fixture SHA-256, all 17 lanes pass incl. `actual-retroarch-smoke`, `marker_before [16,16,1]` -> `marker_after_right [47,16,1]`, `frontend_unloaded: true`, mapping Right Arrow/Left Arrow. `verify_playable.py --check-docs` passes. I did NOT launch RetroArch (per constraints); the receipt is accepted as recorded evidence, but its binding is weakened by CR-03 in the `.git`-less path and the launch harness leaks processes (CR-07). Receipt inventory binding was not re-derivable independently of the flawed gate. |
-| 4 | Passing admission evidence for pinned Z80 and private-interface ymfm YM2610 candidates (license/source/state audits, timing, continuation, isolation, contained C++ failures, static/shared C linkage). | VERIFIED (bounded workloads) | z80/ym2610 lanes pass in receipt; CTest includes z80-mutation and chips tests; installed static/shared consumer lanes pass. Scope remains the bounded synthetic workloads. |
-| 5 | Clean-tree build/install/load procedure with exact dependency/compiler/SDK/OS/architecture/frontend identities and untested configurations stated. | VERIFIED with caveat | `docs/first-playable-build.md` and generated frontend block pass `--check-docs`; but CR-04 (prose outside status block escapes the gate) means the doc gate does not guarantee claim honesty. |
+| 1 | Rebuild the rights-audited fixture from tracked source, run it through a C consumer, see a guest-produced software frame with checked dimensions/format/pitch/bounds. | VERIFIED | Tracked fixture source, rights inventory and native fixture tests; orchestrator-observed `ctest --preset owned-debug` 62/62 (not re-run here). |
+| 2 | Bounded frame API with explicit input, owned buffers, timing, counts, actionable errors; correct input changes output, wrong-input control fails. | VERIFIED | `include/glueyneo/glueyneo.h`, `src/instance.c`, named native tests inside the passing CTest run. |
+| 3 | Load, run, control and unload the fixture in an actual pinned macOS RetroArch with software video, documented mapping, frontend-owned pacing. | VERIFIED (recorded receipt) | `04-FRONTEND-RECEIPT.json`: source_revision `7615dd911678`, retroarch_status pass, 17 lanes, `frontend_unloaded: true`, marker moved rightward, mapping Right/Left Arrow, core and fixture SHA-256 recorded; receipt commit `b5ce2b1`; `--check-docs` passes (re-run). RetroArch was not launched here per constraints, so the receipt is accepted as recorded evidence only. |
+| 4 | Passing admission evidence for pinned Z80 and private-interface ymfm YM2610 candidates. | VERIFIED (bounded workloads) | Receipt lanes and CTest chip tests; scope remains the bounded synthetic workloads. |
+| 5 | Clean-tree build/install/load procedure with exact identities and untested configurations stated. | VERIFIED | `docs/first-playable-build.md` generated block binds to the tracked receipt; `--check-docs` passes; clean-snapshot run reported by 04-31. |
 
-**Score:** 3/5 truths cleanly verified (1, 2, 4); 3 and 5 are verified on evidence but depend on qualification tooling with confirmed critical defects, and are counted as not clean. Overall status is gaps_found because open high threats and confirmed critical defects undermine the phase's own qualification and privacy gates.
+**Score:** 5/5 roadmap truths implemented and evidenced. These are product-capability truths; the phase is nonetheless NOT accepted because the phase's own security closure gate fails (below). No truth is upgraded past the evidence.
 
-### Plan 04-23 Outcome
+### Gate Results (re-run in this verification)
 
-| Item | Result |
+| Check | Result |
 |---|---|
-| Task 1 re-qualification | Receipt regenerated by tool at `aaf3f093ab0f`; `--check-docs` PASS (re-run here). |
-| Task 2 independent review | Reviewer returned OPEN on 15 of 16 IDs; `04-SECURITY.md` is `status: open`, `threats_open: 6`. Sign-off boxes unchecked. |
+| `python3 tools/verify_playable.py --check-docs` | PASS |
+| `check_security_register.py first-playable-game` (consistency) | PASS -- blocking open 04=14, 05=9 |
+| `check_security_register.py first-playable-game --require-closed` | FAIL (04: 14 open; 05 draft: 9 open) |
+| `pgrep -x RetroArch` | 0 instances |
+| `private_paths.redact` on U+2215-separator home path (prior CR-01) | redacted; `scan_public_value` clean |
+| GWR-01 mutation (second table with `Sev`/`State` headers and an open high row appended to 04-SECURITY.md copy) | `register_errors` -> `([], 14)`: NO error -- fail-open CONFIRMED |
 
 ### Required Artifacts and Key Links
 
 | Artifact / link | Status | Details |
 |---|---|---|
-| Fixture -> `gn_load` -> frame pixels | VERIFIED | CTest passes. |
-| Libretro adapter -> native frame -> video callback | VERIFIED | `src/libretro/libretro_core.c`; callback harness tests pass; receipt covers actual frontend. |
-| Pinned Z80 / ymfm -> private adapters -> installed consumers | VERIFIED (bounded) | Lanes pass. |
-| Receipt -> committed revision (ancestry + inventory digest) | NOT_WIRED in `.git`-less snapshot | `tools/verify_playable.py:712` conditional on `.git` (CR-03). |
-| Diagnostics -> `redact` -> `scan_public` -> sinks | PARTIAL | U+2215 variant survives `redact` (reproduced); CR-02, CR-09 additionally. |
-| `check_security_register.py` -> register truth | PARTIAL | Passes on a register that is `status: open`; parser blind to duplicates and second tables (CR-06). |
+| Fixture -> `gn_load` -> frame pixels | VERIFIED | native tests |
+| Libretro adapter -> native frame -> video callback | VERIFIED | adapter tests plus recorded frontend receipt |
+| Pinned Z80 / ymfm -> private adapters -> installed consumers | VERIFIED (bounded) | lanes pass |
+| Receipt -> committed revision | WIRED per review-gaps (no silent skip without `.git`); `--check-docs` passes | not independently re-derived beyond the gate |
+| Diagnostics -> canonical scan -> sinks | WIRED; U+2215 variant re-probed clean | independent security verdict missing |
+| `check_security_register.py` -> register truth | PARTIAL | consistency passes, --require-closed fails correctly, but GWR-01 fail-open |
 
-### Data-Flow Trace (Level 4)
+### Behavioral Spot-Checks / Probes
 
-| Output | Source | Status |
-|---|---|---|
-| Native guest pixels | Guest execution -> renderer -> caller buffer | FLOWING |
-| Frontend receipt summary | Tool-generated from observed run | FLOWING, with binding caveat (CR-03) |
-| Printed diagnostics | Exceptions -> stdout | LEAKY (CR-09) |
+No `probe-*.sh` declared; skipped. RetroArch not launched (constraint). Full CTest not re-run (orchestrator reports 62/62); I relied on gate commands above.
 
-### Behavioral Spot-Checks
-
-| Behavior | Command | Result | Status |
-|---|---|---|---|
-| Native and chip suite | `ctest --preset owned-debug` | all tests pass, 59 tests | PASS |
-| Docs gate | `python3 tools/verify_playable.py --check-docs` | "Phase 04 documentation gate passed." | PASS |
-| Qualification unit tests | `python3 tests/tools/test_verify_playable.py`, `test_private_paths.py` | OK, OK | PASS |
-| Security register gate | `python3 tests/tools/check_security_register.py` | PASS despite status open | PASS (gate weak, CR-06) |
-| Redaction of U+2215 home path | `private_paths.redact` probe | path not redacted; `scan_public` raises | FAIL (CR-01) |
-| Stray RetroArch process | `pgrep -x RetroArch` | 0 | PASS |
-
-Probe execution: no `probe-*.sh` declared for this phase; skipped.
-
-### Requirements Coverage
+### Requirements Coverage (all eight IDs accounted for; none orphaned)
 
 | Requirement | Status | Evidence |
 |---|---|---|
-| TRAC-01 | SATISFIED | Rebuildable fixture, rights manifest, oracle ancestry; CTest and fixture checker. |
-| TRAC-02 | SATISFIED | Native C consumer observes guest frame with bounded contract. |
-| TRAC-03 | SATISFIED | Fixed input sequence and wrong-input control in native tests. |
-| API-05 | SATISFIED | Public header and `src/instance.c`, bounded-frame tests. |
-| SND-01 | SATISFIED (bounded) | Z80 source/state/mutation/instance evidence. |
-| SND-02 | SATISFIED (bounded) | ymfm shim, linkage and failure-containment lanes. |
-| HOST-02 | SATISFIED on recorded receipt; caveats CR-03/CR-07 | Receipt at `aaf3f093ab0f`. Not independently re-observed (no launch permitted). |
-| QUAL-03 | SATISFIED on recorded receipt; caveat CR-04 | Doc gate passes but is bypassable by prose outside the status block. |
+| TRAC-01 | SATISFIED | rebuildable fixture, rights inventory, oracle ancestry |
+| TRAC-02 | SATISFIED | native C consumer frame observation |
+| TRAC-03 | SATISFIED | fixed input sequence plus wrong-input control |
+| API-05 | SATISFIED | public header, `src/instance.c`, bounded-frame tests |
+| SND-01 | SATISFIED (bounded) | Z80 source/state/mutation/instance evidence |
+| SND-02 | SATISFIED (bounded) | ymfm shim, linkage, containment lanes |
+| HOST-02 | SATISFIED on recorded receipt; acceptance withheld | receipt at `7615dd911678`; not re-observed |
+| QUAL-03 | SATISFIED on recorded receipt; acceptance withheld | `--check-docs` passes; residual GIN-03/04 |
 
-All eight IDs appear in REQUIREMENTS.md as Complete; none orphaned. Completion of HOST-02/QUAL-03 rests on evidence whose gates have confirmed defects, so acceptance is withheld until the gaps are repaired.
+Note: REQUIREMENTS.md prose marks all eight complete while its traceability table still says "Gaps Found" (advisory above). Acceptance of the phase should follow the security gate, not precede it.
 
 ### Anti-Patterns / Review Findings
 
-| File | Finding | Severity |
-|---|---|---|
-| `tools/private_paths.py` | CR-01 redaction variants | Blocker |
-| `tools/verify_playable.py` | CR-02, CR-03, CR-04, CR-05(crosswalk), CR-08, CR-09 | Blocker |
-| `tests/tools/check_security_register.py` | CR-06 | Blocker |
-| `tests/libretro/retroarch_smoke.py` | CR-07 orphaned child, no pre-launch check | Blocker |
-| various | WR-01..WR-09, IN-01..IN-04 | Warning/Info |
-
-No unreferenced TBD/FIXME/XXX markers were checked beyond the review; the review reports none as blockers.
+04-REVIEW-GAPS.md: 0 critical, 6 warnings (GWR-01..06), 4 info. GWR-01 reproduced here. 04-REVIEW-DISPOSITION.md records 22 findings open because the independent review halted. Debt markers were not exhaustively scanned beyond the review.
 
 ### Gaps Summary
 
-The product-facing goal (fixture, bounded API, libretro adapter, bounded sound admissions) is implemented and the test evidence is green, and a tool-generated frontend receipt exists. However, the phase's own qualification and privacy controls -- which are what make the HOST-02/QUAL-03 claim trustworthy and publishable -- have nine confirmed critical defects and six open security rows (four-fold disclosure family T-04-11/15/18/20, receipt binding T-04-46, doc-gate/provenance T-04-34/38/43/45, register gate T-04-48, launch safety T-04-47, plus T-04-SC (04-23) pending a scoped re-audit). Per the fail-closed rule, the phase is not accepted. Run `/gsd-plan-phase 04 --gaps` to plan the repairs, then re-verify with a fresh independent security audit. No override is suggested; these are defects, not intentional deviations.
+The product goal is implemented and the evidence is green: fixture, bounded API, libretro adapter, bounded Z80/ymfm admissions, a fresh 17-lane receipt at `7615dd911678`, and a passing documentation gate. The prior code-level blockers (redaction variants, receipt binding, doc-gate scope, process safety) appear repaired and the critical review count dropped to zero. The phase is nevertheless not accepted: (1) `04-SECURITY.md` has 14 open blocking threats because the 04-31 independent review halted on a containment technicality and so produced no valid verdict, and `--require-closed` fails; (2) the register gate still has a confirmed fail-open (GWR-01); (3) six review warnings are undispositioned. Next step: re-run the tool-scoped independent security/code review with paths strictly under the scratch root (or obtain a user ruling on the boundary), fix GWR-01 with a mutation test, disposition GWR-02..06, then re-verify. Use `/gsd-plan-phase 04 --gaps` for the repair plan; `/gsd-secure-phase 04` for the audit. No override suggested.
 
 ---
 
