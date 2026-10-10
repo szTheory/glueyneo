@@ -965,16 +965,14 @@ def run_smoke(args: argparse.Namespace) -> dict[str, object]:
                         ) from error
                     # Signals stay deferred around the PID record (T-04-66). A record failure is
                     # not a launch failure (G2WR-06): `process` is already assigned, so the outer
-                    # cleanup still quits and reaps the started frontend.
+                    # cleanup still quits and reaps the started frontend. The outer handler
+                    # builds the single diagnostic; the detail keeps the error class (G3IN-02).
                     try:
                         record_child_pid(getattr(args, "child_pid_file", None), process)
                     except OSError as error:
-                        diagnostic = build_diagnostic(
-                            stage="launch", return_code=None, survived_before_screenshot=False,
-                            output=str(error), temporary_root=work,
-                        )
                         raise SmokeBlocked(
-                            "pid-record", "child PID could not be recorded", diagnostic=diagnostic
+                            "pid-record",
+                            f"child PID could not be recorded ({type(error).__name__})",
                         ) from error
                 time.sleep(0.5)
                 survived_before_screenshot = not frontend_exited(process)
