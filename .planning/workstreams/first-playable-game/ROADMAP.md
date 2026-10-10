@@ -35,7 +35,8 @@ The `first-playable-game` planning milestone advances the bounded diagnostic SDK
   4. A maintainer can reproduce passing admission evidence for the pinned Z80 and private-interface ymfm YM2610 candidates, including license/source/state audits, cycle or clock and interrupt/bus behavior, deterministic timing, continuation and independent-instance evidence, contained C++ failures, and static/shared C-consumer linkage; a failed gate blocks admission and requires bounded replanning rather than phase completion.
   5. An integrator can follow the clean-tree build/install/load procedure for the native library and libretro adapter on the selected macOS configuration and identify exact dependency, compiler, SDK, OS, architecture, and frontend identities plus untested configurations.
 
-**Plans**: 22/22 plans executed across 18 waves. Bounded gap-closure Plan 04-20 closed current review provenance, evidence-map validation, and independent frontend-sanitizer review. Phase 04 remains incomplete while the four reserved high/open threats, T-04-34 medium/open, other review findings, and actual pinned-app evidence remain unresolved; HOST-02 and frontend QUAL-03 remain Pending/unknown.
+**Plans**: 23 plans (22 executed). The threat dispositions were settled on 2026-10-10: 04-SECURITY.md threats_open is 0 and T-04-44 is accepted at medium. HOST-02 and frontend QUAL-03 are Complete from the tracked 04-FRONTEND-RECEIPT.json. Gap-closure Plan 04-23 re-qualifies that receipt at the current revision and reconciles traceability. Phase 04 acceptance awaits fresh whole-phase verification.
+- [ ] 04-23-PLAN.md — Re-qualify pinned RetroArch at the current revision and reconcile Phase 04 traceability (gap closure, Wave 21)
 - [x] 04-22-PLAN.md
 - [x] 04-21-PLAN.md
 

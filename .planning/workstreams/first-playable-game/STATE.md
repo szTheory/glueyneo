@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: first-playable-game
 milestone_name: First Playable Game
-current_phase: 05
-current_phase_name: Selected MVS Boot
+current_phase: 04
+current_phase_name: public-playable-tracer
 current_plan: 6
 status: blocked
 stopped_at: Plan 05-06 halted at Task 2 selected-guest evidence gate; candidate hosted receipt passed and frontend startup diagnosis reproduced SIGABRT
-last_updated: "2026-10-10T12:30:00.000Z"
+last_updated: "2026-10-10T12:30:28.105Z"
 last_activity: 2026-10-10
-last_activity_desc: Phase 04 verify-work automated the pinned RetroArch receipt (pass at 706516b5a60c), closing HOST-02/frontend QUAL-03; selected-guest gate and threat dispositions remain
-state_head: d3ce0949b14783547a4bffb4690a15c4f723ac8d
+last_activity_desc: Phase 04 planning complete — 23 plans ready
+state_head: 2f95b3e44d160742ae1360f61af53a65b6cf49f5
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 28
+  total_plans: 29
   completed_plans: 28
   percent: 0
 ---
@@ -30,12 +30,12 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 ## Current Position
 
-Phase: 05 (Selected MVS Boot) — BLOCKED
+Phase: 04 (public-playable-tracer) — READY TO EXECUTE
 Current Plan: 6
-Total Plans in Phase: 6
+Total Plans in Phase: 23
 Status: Blocked
 Last activity: 2026-10-09 — 05-06 stopped at the selected-guest evidence gate
-Last Activity Description: Hosted MVS receipt passed for the exact candidate; no sourced selected configuration/predicate is available.
+Last Activity Description: Phase 04 planning complete — 23 plans ready
 
 Progress: [░░░░░░░░░░] 0%
 
