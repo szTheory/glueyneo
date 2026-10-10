@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
-current_plan: 4
+current_plan: 5
 status: executing
-stopped_at: Completed 04-39-PLAN.md
-last_updated: "2026-10-10T20:33:48.022Z"
+stopped_at: Completed 04-40-PLAN.md
+last_updated: "2026-10-10T20:38:36.020Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 04 execution started
-state_head: f17ce82c6cf72df7fe7c880e43f077a333ff22c9
+state_head: 3f04f7015ff967644fc1544004ecf87f6d675fbb
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 48
-  completed_plans: 45
+  completed_plans: 46
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 ## Current Position
 
 Phase: 04 (Public Playable Tracer) — EXECUTING
-Current Plan: 4
+Current Plan: 5
 Total Plans in Phase: 42
 Status: Ready to execute
 Last activity: 2026-10-10 — Phase 04 execution started
@@ -42,7 +42,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 4
+**Current Plan:** 5
 
 ## Performance Metrics
 
@@ -91,12 +91,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P37 | 25 min | 3 tasks | 6 files |
 | Phase 04 P38 | 25min | 2 tasks | 3 files |
 | Phase 04 P39 | 20min | 2 tasks | 2 files |
+| Phase 04 P40 | 25 min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-10T20:33:47.995Z
+**Last session:** 2026-10-10T20:38:35.991Z
 
-**Stopped At:** Completed 04-39-PLAN.md
+**Stopped At:** Completed 04-40-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
@@ -177,6 +178,7 @@ unchanged external-blocker plan. Plan/summary counts are not phase acceptance.
 - [Phase 04]: 04-37: glob_contained fails closed on /, ~ or $ alternatives in brace/extglob groups; review --revision pinned to 40-hex whole-line match
 - [Phase 04]: 04-38: review provenance is a reviewed_revision..head ordering window; proves ordering only, not verdict-to-file binding
 - [Phase 04]: 04-39: final lane reap isolated in _collect_after_kill; drain via select/os.read before SIGKILL (T-04-54 kept)
+- [Phase 04]: 04-40: T-04-48 reopened (G2WR-03 defect in its own mitigation); round-3 fix evidence recorded, no row closed pending /gsd-secure-phase
 
 ### Blockers
 
