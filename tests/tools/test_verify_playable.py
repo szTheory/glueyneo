@@ -494,12 +494,24 @@ class SnapshotTest(unittest.TestCase):
         self.assertIn("exit 12", serialized)
 
 
-class ConsumerInputTest(unittest.TestCase):
+class DocumentationCopies:
+    """Copy the documents `check_docs` reads, with their review provenance, into a temporary root."""
+
+    def copy_review_provenance(self, source_root: Path) -> None:
+        reviewed = [line[4:].strip() for line in (ROOT / playable.REVIEW).read_text(encoding="utf-8").splitlines()
+                    if line.startswith("  - ")]
+        for path in (playable.SECURITY, playable.REVIEW, playable.DISPOSITION, Path("README.md"),
+                     *(Path(item) for item in reviewed)):
+            if (ROOT / path).is_file():
+                (source_root / path).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / path, source_root / path)
+
     def copy_documentation(self, source_root: Path) -> Path:
         """Copy the docs as they read without tracked frontend evidence."""
         for path in (playable.GUIDE, playable.VALIDATION):
             (source_root / path).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / path, source_root / path)
+        self.copy_review_provenance(source_root)
         summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
         guide = source_root / playable.GUIDE
         guide.write_text(guide.read_text(encoding="utf-8").replace(
@@ -513,8 +525,11 @@ class ConsumerInputTest(unittest.TestCase):
         for path in (playable.GUIDE, playable.VALIDATION, playable.FRONTEND_EVIDENCE):
             (source_root / path).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / path, source_root / path)
+        self.copy_review_provenance(source_root)
         return json.loads((source_root / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
 
+
+class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
     def test_check_docs_accepts_pending_status_without_evidence(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-docs-pending-") as temporary:
             self.copy_documentation(Path(temporary))
@@ -674,14 +689,8 @@ class ConsumerInputTest(unittest.TestCase):
         self.assertEqual(fixture, build / "diagnostic-original-a.bin")
 
 
-class EvidenceBindingTest(unittest.TestCase):
+class EvidenceBindingTest(DocumentationCopies, unittest.TestCase):
     """Tracked frontend evidence is bound to committed bytes in every check_docs path (CR-03, WR-09, E2)."""
-
-    def copy_documentation_with_evidence(self, source_root: Path) -> dict[str, object]:
-        for path in (playable.GUIDE, playable.VALIDATION, playable.FRONTEND_EVIDENCE):
-            (source_root / path).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(ROOT / path, source_root / path)
-        return json.loads((source_root / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
 
     def test_evidence_without_a_repository_is_never_accepted(self) -> None:
         for forged in (False, True):
@@ -727,6 +736,59 @@ class EvidenceBindingTest(unittest.TestCase):
                 playable.main()
         check.assert_called_once()
         self.assertEqual(check.call_args.kwargs, {"repository": ROOT, "head": "a" * 40})
+
+
+class CrosswalkProvenanceTest(DocumentationCopies, unittest.TestCase):
+    """The review crosswalk equals the disposition record and resolves its scopes (CR-05, E4)."""
+
+    def mutate_row(self, transform, expected_error: str) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-crosswalk-") as temporary:
+            validation = self.copy_documentation(Path(temporary))
+            original = validation.read_text(encoding="utf-8")
+            mutated = transform(original)
+            self.assertNotEqual(mutated, original, "mutation did not change the crosswalk")
+            validation.write_text(mutated, encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, expected_error):
+                playable.check_docs(Path(temporary))
+
+    @staticmethod
+    def with_scope(finding: str, scope: str):
+        return lambda text: re.sub(rf"(?m)^(\| {finding} \|[^|]*\|)[^|]*(\|[^|]*\|)$",
+                                   lambda match: f"{match.group(1)} {scope} {match.group(2)}", text, count=1)
+
+    def test_live_crosswalk_is_accepted(self) -> None:
+        text = (ROOT / playable.VALIDATION).read_text(encoding="utf-8")
+        self.assertEqual(playable.crosswalk_errors(ROOT, text), [])
+
+    def test_scope_references_must_resolve(self) -> None:
+        cases = (
+            ("nonexistent path (E4)", self.with_scope("CR-05", "`tools/does_not_exist.py`"),
+             "scope path tools/does_not_exist.py does not exist"),
+            ("existing but unreviewed path", self.with_scope("CR-05", "`README.md`"), "is not in the reviewed file list"),
+            ("unregistered threat", self.with_scope("CR-05", "T-04-99"), "unknown threat T-04-99"),
+            ("no reference", self.with_scope("CR-05", "n/a"), "names no threat or reviewed path"),
+        )
+        for label, transform, expected in cases:
+            with self.subTest(case=label):
+                self.mutate_row(transform, expected)
+
+    def test_rows_must_equal_the_disposition_record(self) -> None:
+        cases = (
+            ("state differs", lambda text: re.sub(r"(?m)^(\| CR-01 \|[^|]*\|[^|]*\|)[^|]*(\|)$", r"\1 fixed \2", text, count=1),
+             "differs from the disposition record"),
+            ("severity differs", lambda text: re.sub(r"(?m)^(\| CR-01 \|)[^|]*(\|)", r"\1 warning \2", text, count=1),
+             "differs from the disposition record"),
+            ("deleted row", lambda text: re.sub(r"(?m)^\| IN-03 \|.*\n", "", text, count=1),
+             "crosswalk findings differ from the disposition record"),
+            ("extra row", lambda text: re.sub(
+                r"(?m)^(\| IN-03 \|.*\n)", r"\1| CR-99 | critical | T-04-46 | open |\n", text, count=1),
+             "crosswalk findings differ from the disposition record"),
+            ("duplicate row", lambda text: re.sub(r"(?m)^(\| IN-03 \|.*\n)", r"\1\1", text, count=1),
+             "duplicate review finding"),
+        )
+        for label, transform, expected in cases:
+            with self.subTest(case=label):
+                self.mutate_row(transform, expected)
 
 
 class MainErrorPathTest(unittest.TestCase):

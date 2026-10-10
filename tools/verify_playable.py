@@ -627,6 +627,10 @@ FRONTEND_EVIDENCE = Path(
     ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-FRONTEND-RECEIPT.json")
 GUIDE = Path("docs/first-playable-build.md")
 VALIDATION = Path(".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md")
+PHASE_DIRECTORY = Path(".planning/workstreams/first-playable-game/phases/04-public-playable-tracer")
+SECURITY = PHASE_DIRECTORY / "04-SECURITY.md"
+REVIEW = PHASE_DIRECTORY / "04-REVIEW.md"
+DISPOSITION = PHASE_DIRECTORY / "04-REVIEW-DISPOSITION.md"
 REQUIRED_FRONTEND_OBSERVATIONS = (
     "RetroArch launched the requested core and content path",
     "frontend screenshot contained the guest marker and black backdrop",
