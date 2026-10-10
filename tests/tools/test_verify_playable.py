@@ -1021,6 +1021,29 @@ class CrosswalkProvenanceTest(DocumentationCopies, unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "duplicate"):
                 playable.check_docs(root)
 
+    def test_wr_11_reviewed_revision_must_appear_exactly_once_and_be_40_hex(self) -> None:
+        good = "a" * 40
+
+        def review(*lines: str) -> str:
+            return "---\nphase: x\n" + "".join(line + "\n" for line in lines) + "---\n\nbody\n"
+
+        for label, text in (
+                ("absent", review()),
+                ("empty", review("reviewed_revision:")),
+                ("two keys", review(f"reviewed_revision: {good}", f"reviewed_revision: {'b' * 40}")),
+                ("quoted duplicate", review(f"reviewed_revision: {good}", f'"reviewed_revision" : {good}')),
+                ("padded duplicate", review(f"reviewed_revision: {good}", f"reviewed_revision : {good}")),
+                ("12 hex", review("reviewed_revision: " + "a" * 12)),
+                ("non-hex letter", review("reviewed_revision: " + "a" * 39 + "g")),
+                ("uppercase", review("reviewed_revision: " + "A" * 40)),
+                ("trailing comment", review(f"reviewed_revision: {good} # note"))):
+            with self.subTest(case=label):
+                with self.assertRaisesRegex(RuntimeError, "reviewed_revision"):
+                    playable._reviewed_revision(text)
+        for label, value in (("bare", good), ("double quoted", f'"{good}"'), ("single quoted", f"'{good}'")):
+            with self.subTest(case=label):
+                self.assertEqual(playable._reviewed_revision(review(f"reviewed_revision: {value}")), good)
+
     def test_rows_must_equal_the_disposition_record(self) -> None:
         cases = (
             # Toggle away from the live state so the mutation is never a no-op (the live CR-01 row is already `fixed`).
@@ -1049,12 +1072,55 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
 
     HEADER = "| Finding | Severity | Disposition | Source |\n|---|---|---|---|\n"
 
-    def errors(self, rows: str, head: str = "HEAD") -> list[str]:
+    def errors(self, rows: str, head: str = "HEAD", *, repository: Path = ROOT, reviewed: str | None = None) -> list[str]:
+        # The reviewed revision defaults to the first commit, so every existing case stays inside the window.
+        reviewed = reviewed or self.first_commit()
         with tempfile.TemporaryDirectory(prefix="playable-provenance-") as temporary:
             root = Path(temporary)
             (root / playable.DISPOSITION).parent.mkdir(parents=True, exist_ok=True)
             (root / playable.DISPOSITION).write_text(self.HEADER + rows, encoding="utf-8")
-            return playable.review_provenance_errors(root, ROOT, head)
+            (root / playable.REVIEW).write_text(
+                f"---\nphase: x\nreviewed_revision: {reviewed}\n---\n\nbody\n", encoding="utf-8")
+            return playable.review_provenance_errors(root, repository, head)
+
+    def history(self, base: Path) -> list[str]:
+        """Linear history C0 -> C1 (review) -> C2 (verdict) -> C3 (head) in a temporary repository."""
+        subprocess.run(["git", "init", "-q", str(base)], check=True)
+        commits = []
+        for index in range(4):
+            subprocess.run(["git", "-C", str(base), "-c", "user.name=t", "-c", "user.email=t@example.invalid",
+                            "commit", "-q", "--allow-empty", "-m", f"c{index}"], check=True)
+            commits.append(subprocess.run(["git", "-C", str(base), "rev-parse", "HEAD"], check=True, text=True,
+                                          stdout=subprocess.PIPE).stdout.strip())
+        return commits
+
+    def test_t_04_38_disposition_older_than_reviewed_revision_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-window-") as temporary:
+            repository = Path(temporary) / "repo"
+            c0, c1, c2, c3 = self.history(repository)
+            row = "| CR-01 | critical | fixed | revision `{}` |\n"
+            older = self.errors(row.format(c0), c3, repository=repository, reviewed=c1)
+            self.assertEqual(older, [f"review finding CR-01 cites revision {c0[:12]} that does not descend from the reviewed revision"])
+            self.assertEqual(self.errors(row.format(c2), c3, repository=repository, reviewed=c1), [])
+            self.assertEqual(self.errors(row.format(c1), c3, repository=repository, reviewed=c1), [])
+            beyond = self.errors(row.format(c3), c2, repository=repository, reviewed=c1)
+            self.assertEqual(beyond, [f"review finding CR-01 cites revision {c3[:12]} that is not a committed ancestor"])
+
+    def test_t_04_38_unresolvable_reviewed_revision_fails(self) -> None:
+        head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True, text=True,
+                              stdout=subprocess.PIPE).stdout.strip()
+        for label, reviewed in (("not a commit", "f" * 40), ("not an ancestor of head", head)):
+            with self.subTest(case=label), tempfile.TemporaryDirectory(prefix="playable-reviewed-") as temporary:
+                root = Path(temporary)
+                self.copy_documentation(root)
+                review = root / playable.REVIEW
+                text = review.read_text(encoding="utf-8")
+                text = re.sub(r"(?m)^reviewed_revision:.*\n", "", text)
+                review.write_text(text.replace("depth: standard\n", f"depth: standard\nreviewed_revision: {reviewed}\n", 1),
+                                  encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, "reviewed revision"):
+                    # Check against the first commit so the current head is no ancestor of it.
+                    playable.check_docs(root, repository=ROOT, head=self.first_commit() if label != "not a commit" else "HEAD")
 
     @staticmethod
     def first_commit() -> str:
