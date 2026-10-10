@@ -560,6 +560,7 @@ class ConsumerInputTest(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, expected_error):
                     playable.check_docs(source_root)
 
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_tracked_receipt_must_match_its_committed_inventory(self) -> None:
         summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
         self.assertIsNotNone(playable.load_frontend_evidence(ROOT))

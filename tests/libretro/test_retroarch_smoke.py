@@ -501,7 +501,7 @@ class DiagnosticTests(unittest.TestCase):
         self.assertNotIn("bob", serialized)
         self.assertNotIn("private/game.rom", serialized)
         self.assertNotIn("/private/var/folders/private-person/temp", serialized)
-        self.assertIn("[user]", serialized)
+        self.assertIn("[redacted-path]", serialized)
         self.assertNotIn("temporary", serialized)
         self.assertNotIn("checkout", serialized)
 

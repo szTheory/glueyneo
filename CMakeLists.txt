@@ -860,6 +860,24 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
   set_tests_properties(sdk_package_capabilities
     PROPERTIES LABELS "sdk-package-capabilities" TIMEOUT 180)
 
+  # Qualification tooling regressions (redaction, sink scans, evidence gate)
+  # run in every local CTest and in the clean qualification's full CTest lane.
+  add_test(NAME qualification_private_paths
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/test_private_paths.py")
+  add_test(NAME qualification_runner
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/test_verify_playable.py")
+  add_test(NAME qualification_frontend_smoke
+    COMMAND ${Python3_EXECUTABLE} -m unittest discover
+            -s "${CMAKE_CURRENT_SOURCE_DIR}/tests/libretro" -p test_retroarch_smoke.py)
+  add_test(NAME planning_security_register
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/check_security_register.py"
+            first-playable-game)
+  add_test(NAME planning_security_register_mutations
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/test_check_security_register.py")
+  set_tests_properties(qualification_private_paths qualification_runner qualification_frontend_smoke
+    planning_security_register planning_security_register_mutations
+    PROPERTIES LABELS "qualification-tools" TIMEOUT 300)
+
   # CI builds tests only against a static libglueyneo, where hidden private
   # symbols still link. Reject at configure time any executable that includes
   # the private SDK header while linking the public library, because that

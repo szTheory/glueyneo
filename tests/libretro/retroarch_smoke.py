@@ -18,6 +18,9 @@ import time
 import zlib
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
+import private_paths  # noqa: E402
+
 
 EXPECTED_VERSION = "1.22.2"
 EXPECTED_EXECUTABLE_SHA256 = (
@@ -97,30 +100,25 @@ def is_normalized_mvs_bundle(content: bytes) -> bool:
 
 
 def sanitize_diagnostic_text(text: str, *, temporary_root: Path | None = None) -> str:
-    roots = [str(Path.home()), "/Users/", "/Volumes/", "/tmp/", "/private/tmp/",
-             "/var" + "/folders/", "/private" + "/var" + "/folders/", str(Path(__file__).resolve().parents[2])]
-    if temporary_root is not None:
-        roots.append(str(temporary_root))
-    roots = sorted({root for root in roots if root}, key=len, reverse=True)
-    root_pattern = re.compile(r"(?<![A-Za-z0-9._-])(?:" + "|".join(re.escape(root) for root in roots) + r")")
-    match = root_pattern.search(text)
-    if match is not None:
-        # Frontend and crash output is one unstructured value. A newline or
-        # punctuation cannot prove a private-path boundary, so drop its tail.
-        root = match.group()
-        if root.startswith(str(Path(__file__).resolve().parents[2])):
-            marker = "[repo]"
-        elif root == str(Path.home()):
-            marker = "[home]"
-        elif (temporary_root is not None and root == str(temporary_root)) or "/tmp/" in root or "var/folders" in root:
-            marker = "[temporary]"
-        else:
-            marker = "[user]"
-        text = text[:match.start()] + marker
+    # Frontend and crash output is one unstructured value; drop everything
+    # from the first private root (in any known form) to its end.
+    roots = [Path(__file__).resolve().parents[2]] + ([temporary_root] if temporary_root is not None else [])
+    text = private_paths.redact(text, extra_roots=roots)
     if len(text) > DIAGNOSTIC_OUTPUT_LIMIT:
         marker = "\n[diagnostic output truncated]"
         text = text[-(DIAGNOSTIC_OUTPUT_LIMIT - len(marker)):] + marker
     return text.strip()
+
+
+def public_json(result: dict[str, object]) -> str:
+    """Serialize a result for stdout, failing closed if a private root survives."""
+    text = json.dumps(result, sort_keys=True)
+    try:
+        private_paths.scan_public(text, (Path(__file__).resolve().parents[2],))
+    except private_paths.PrivatePathError:
+        result["status"] = "fail"
+        text = json.dumps({"status": "fail", "reason": "private-path-survived"}, sort_keys=True)
+    return text
 
 
 def extract_crash_reason(report: str) -> str:
@@ -812,7 +810,7 @@ def main() -> int:
         parser.error("--timeout must be greater than 0 and at most 120 seconds")
     try:
         result = run_diagnostics(args) if args.diagnose else run_smoke(args)
-        print(json.dumps(result, sort_keys=True))
+        print(public_json(result))
         return 0 if result.get("status") == "pass" else 1
     except SmokeBlocked as error:
         identity: dict[str, str] = {}
@@ -830,7 +828,7 @@ def main() -> int:
             result["diagnostic"] = error.diagnostic
         if error.availability is not None:
             result["availability"] = error.availability
-        print(json.dumps(result, sort_keys=True))
+        print(public_json(result))
         return 1
 
 
