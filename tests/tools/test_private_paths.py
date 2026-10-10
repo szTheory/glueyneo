@@ -262,6 +262,21 @@ class SinkTest(unittest.TestCase):
         self.assertEqual(json.loads(text), {"status": "fail", "reason": "private-path-survived"})
         self.assertEqual(result["status"], "fail")
 
+    def test_unscannable_value_fails_closed_as_a_private_path_error(self) -> None:
+        """GIN-02: a structure json.dumps cannot serialize is refused, not raised as TypeError."""
+        for value in ({("a", "b"): 1}, {"k": {(1, 2): "v"}}):
+            with self.subTest(value=repr(value)):
+                with self.assertRaises(private_paths.PrivatePathError):
+                    private_paths.scan_public_value(value)
+
+    def test_specific_root_overmatch_in_unrelated_text_is_a_deliberate_fail_closed_limit(self) -> None:
+        """GIN-01 (accepted): a specific root is matched anywhere, so embedded look-alikes are flagged."""
+        root = "/opt/glueyneo-overmatch/checkout"
+        with self.assertRaises(private_paths.PrivatePathError):
+            private_paths.scan_public("x" + root + "/file", (root,))
+        with self.assertRaises(private_paths.PrivatePathError):
+            private_paths.scan_public_value({"note": "x" + root}, (root,))
+
     def test_scan_public_value_scans_keys_and_decoded_values(self) -> None:
         for label, value in (("key", {"fullwidth key \uff0ftmp\uff0fx": "ok"}),
                              ("nested value", {"a": [{"b": "x \u2215" + "tmp\u2215y"}]}),

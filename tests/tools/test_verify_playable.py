@@ -1176,6 +1176,43 @@ class AtomicRecordTest(DocumentationCopies, unittest.TestCase):
             self.assertEqual(self.digests(source_root), before)
             self.assertEqual(list(source_root.rglob("*.tmp")), [])
 
+    def test_replace_failure_rolls_back_every_replaced_file(self) -> None:
+        real_replace = os.replace
+        for failing_call in (1, 2, 3):
+            with self.subTest(failing_call=failing_call), \
+                    tempfile.TemporaryDirectory(prefix="playable-rollback-") as temporary:
+                source_root = Path(temporary)
+                summary = self.copy_documentation_with_evidence(source_root)
+                before = self.digests(source_root)
+                calls: list[str] = []
+
+                def replace(source: object, destination: object) -> None:
+                    calls.append(Path(destination).name)  # type: ignore[arg-type]
+                    if len(calls) == failing_call:
+                        raise OSError("injected replace failure")
+                    real_replace(source, destination)  # type: ignore[arg-type]
+
+                with mock.patch.object(playable.os, "replace", side_effect=replace):
+                    with self.assertRaisesRegex(OSError, "injected replace failure"):
+                        playable.write_frontend_records(source_root, self.changed_summary(summary))
+                self.assertEqual(self.digests(source_root), before)
+                self.assertEqual(list(source_root.rglob("*.tmp")), [])
+
+    def test_guide_status_block_is_written_last(self) -> None:
+        real_replace = os.replace
+        with tempfile.TemporaryDirectory(prefix="playable-order-") as temporary:
+            source_root = Path(temporary)
+            summary = self.copy_documentation_with_evidence(source_root)
+            order: list[str] = []
+
+            def replace(source: object, destination: object) -> None:
+                order.append(Path(destination).name)  # type: ignore[arg-type]
+                real_replace(source, destination)  # type: ignore[arg-type]
+
+            with mock.patch.object(playable.os, "replace", side_effect=replace):
+                playable.write_frontend_records(source_root, self.changed_summary(summary))
+        self.assertEqual(order, [playable.FRONTEND_EVIDENCE.name, playable.VALIDATION.name, playable.GUIDE.name])
+
     def test_successful_write_leaves_no_temporary_sibling(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-atomic-") as temporary:
             source_root = Path(temporary)
