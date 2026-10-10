@@ -801,21 +801,43 @@ def frontend_row_status(summary: dict[str, Any] | None) -> str:
 
 
 def write_frontend_records(source_root: Path, summary: dict[str, Any]) -> None:
+    """Validate and scan all three new contents, then replace each file atomically (WR-01, T-04-53)."""
     validate_frontend_evidence(summary)
-    (source_root / FRONTEND_EVIDENCE).write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    evidence_path = source_root / FRONTEND_EVIDENCE
     guide_path = source_root / GUIDE
+    validation_path = source_root / VALIDATION
+    evidence_text = json.dumps(summary, indent=2, sort_keys=True) + "\n"
     guide = guide_path.read_text(encoding="utf-8")
     block = re.compile(re.escape(STATUS_BEGIN) + r".*?" + re.escape(STATUS_END), re.DOTALL)
     if block.search(guide) is None:
         raise RuntimeError("integrator documentation has no generated frontend status block")
-    guide_path.write_text(block.sub(lambda _: frontend_status_block(summary), guide, count=1), encoding="utf-8")
-    validation_path = source_root / VALIDATION
+    generated_block = frontend_status_block(summary)
+    new_guide = block.sub(lambda _: generated_block, guide, count=1)
     text = validation_path.read_text(encoding="utf-8")
+    row_status = frontend_row_status(summary)
     updated = re.sub(r"(?m)^(\| 04-15 T2 \|(?:[^|]*\|){8})[^|]*\|$",
-                     lambda match: f"{match.group(1)} {frontend_row_status(summary)} |", text, count=1)
-    if updated == text and frontend_row_status(summary) not in text:
+                     lambda match: f"{match.group(1)} {row_status} |", text, count=1)
+    if updated == text and row_status not in text:
         raise RuntimeError("validation map has no 04-15 T2 frontend row")
-    validation_path.write_text(updated, encoding="utf-8")
+    try:
+        private_paths.scan_public_value(summary, (ROOT, OUTPUT))
+        for candidate in (generated_block, row_status, new_guide):
+            private_paths.scan_public(candidate, (ROOT, OUTPUT))
+    except private_paths.PrivatePathError as error:
+        raise RuntimeError("frontend evidence records contain a private absolute path") from error
+    claims = guide_claims_outside_block(new_guide)
+    if claims:
+        raise RuntimeError(f"integrator documentation makes a status claim outside the generated block: {claims[0]}")
+    writes = ((evidence_path, evidence_text), (guide_path, new_guide), (validation_path, updated))
+    temporaries = [path.with_name(path.name + ".tmp") for path, _ in writes]
+    try:
+        for temporary, (_, content) in zip(temporaries, writes):
+            temporary.write_text(content, encoding="utf-8")
+        for temporary, (path, _) in zip(temporaries, writes):
+            os.replace(temporary, path)
+    finally:
+        for temporary in temporaries:
+            temporary.unlink(missing_ok=True)
 
 
 def _frontmatter(text: str) -> list[str]:
