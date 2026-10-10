@@ -14,7 +14,7 @@ import hashlib
 import io
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import platform
 import plistlib
 import posixpath
@@ -478,6 +478,16 @@ def redact(text: str) -> str:
     # Subprocess output is one unstructured value; drop everything from the
     # first private root (in any known form) to its end.
     return private_paths.redact(text, extra_roots=(ROOT, OUTPUT))
+
+
+def _public_reason(text: str) -> str:
+    """Redact a failure reason and fall back to a fixed token if a private root survives the scan."""
+    cleaned = redact(text)
+    try:
+        private_paths.scan_public(cleaned, (ROOT, OUTPUT))
+    except private_paths.PrivatePathError:
+        return "private-path-survived"
+    return cleaned
 
 
 def emit_error(prefix: str, error: BaseException | str) -> None:
@@ -1104,7 +1114,10 @@ def crosswalk_errors(source_root: Path, validation_text: str) -> list[str]:
             if threat not in threats:
                 errors.append(f"review finding {finding_id} scope cites unknown threat {threat}")
         for path in path_ids:
-            if not (source_root / path).is_file():
+            parts = PurePosixPath(path).parts
+            if ".." in parts or PurePosixPath(path).is_absolute():
+                errors.append(f"review finding {finding_id} scope path {path} has a parent segment")
+            elif not (source_root / path).is_file():
                 errors.append(f"review finding {finding_id} scope path {path} does not exist")
             elif path not in reviewed:
                 errors.append(f"review finding {finding_id} scope path {path} is not in the reviewed file list")
@@ -1115,7 +1128,57 @@ def crosswalk_errors(source_root: Path, validation_text: str) -> list[str]:
     return errors
 
 
+def _git_exit(repository: Path, arguments: list[str]) -> int:
+    """Exit code of a read-only Git command in a clean environment; raises RuntimeError on timeout."""
+    try:
+        return subprocess.run(
+            ["git", "-C", str(repository), *arguments], env=clean_environment(),
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False,
+            timeout=MAX_GIT_COMMAND_SECONDS).returncode
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise RuntimeError("review provenance revision cannot be checked") from error
+
+
+REVIEW_REVISION_FORMS = (
+    re.compile(r"review \(04-\d{2}, ([0-9a-f]{12,40})\)"),
+    re.compile(r"revision `([0-9a-f]{40})`"),
+)
+
+
+def review_provenance_errors(source_root: Path, repository: Path, head: str) -> list[str]:
+    """Closure-bearing dispositions cite a review revision that is a committed ancestor of `head` (T-04-38).
+
+    A row that is not `open` must cite at least one revision in a recognized form
+    (`review (04-NN, <12-40 hex>)` or ``revision `<40 hex>` ``); other hexadecimal text such as
+    digests is ignored. Each cited revision must resolve to a commit and be an ancestor of `head`.
+    """
+    text = (source_root / DISPOSITION).read_text(encoding="utf-8")
+    errors: list[str] = []
+    for row in _markdown_table_rows(text, "| Finding | Severity | Disposition | Source |"):
+        if len(row) != 4:
+            errors.append("review disposition record has a malformed row")
+            continue
+        finding_id, _severity, state, source = row
+        if state.strip().lower() == "open":
+            continue
+        revisions = [match for form in REVIEW_REVISION_FORMS for match in form.findall(source)]
+        if not revisions:
+            errors.append(f"review finding {finding_id} disposition cites no review revision")
+            continue
+        for revision in revisions:
+            resolved = _git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}"]) == 0
+            if not resolved or _git_exit(repository, ["merge-base", "--is-ancestor", revision, head]) != 0:
+                errors.append(f"review finding {finding_id} cites revision {revision[:12]} that is not a committed ancestor")
+    return errors
+
+
 def check_docs(source_root: Path, *, repository: Path | None = None, head: str = "HEAD") -> None:
+    """Check the integrator guide, the validation map and the review records against tracked evidence.
+
+    The review provenance of each closure-bearing disposition is bound to a committed ancestor of
+    `head` (T-04-38). Without a Git repository and without tracked frontend evidence there is nothing to
+    bind to, so only the repository-free checks run; tracked evidence without a repository fails closed.
+    """
     evidence = load_frontend_evidence(source_root, repository=repository, head=head)
     guide = (source_root / GUIDE).read_text(encoding="utf-8")
     validation = (source_root / VALIDATION).read_text(encoding="utf-8")
@@ -1144,6 +1207,13 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
     crosswalk_problems = crosswalk_errors(source_root, validation)
     if crosswalk_problems:
         raise RuntimeError(crosswalk_problems[0])
+    provenance_repository = repository
+    if provenance_repository is None and (source_root / ".git").exists():
+        provenance_repository = source_root
+    if provenance_repository is not None:
+        provenance_problems = review_provenance_errors(source_root, provenance_repository, head)
+        if provenance_problems:
+            raise RuntimeError(provenance_problems[0])
 
     task_rows = _markdown_table_rows(
         validation,
@@ -1454,9 +1524,15 @@ def main() -> int:
             verify_snapshot(snapshot)
             receipt["documentation"] = {"status": "pass"}
         except RuntimeError as error:
-            receipt["documentation"] = {"status": "fail", "reason": str(error)}
+            documentation_reason = _public_reason(str(error))
+            receipt["documentation"] = {"status": "fail", "reason": documentation_reason}
             status = "fail"
-            reason = reason or str(error)
+            reason = reason or documentation_reason
+        except Exception as error:  # Never let a traceback or message carry an unscanned path.
+            documentation_reason = f"documentation-check-error: {type(error).__name__}"
+            receipt["documentation"] = {"status": "fail", "reason": documentation_reason}
+            status = "fail"
+            reason = reason or documentation_reason
     if snapshot is not None:
         try:
             verify_snapshot(snapshot)
