@@ -108,28 +108,28 @@ recorded: 2026-10-10T12:57:15.286Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | open | - |
-| CR-02 | critical | open | - |
-| CR-03 | critical | open | - |
-| CR-04 | critical | open | - |
-| CR-05 | critical | open | - |
-| CR-06 | critical | open | - |
-| CR-07 | critical | open | - |
-| CR-08 | critical | open | - |
-| CR-09 | critical | open | - |
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
-| WR-04 | warning | open | - |
-| WR-05 | warning | open | - |
-| WR-06 | warning | open | - |
-| WR-07 | warning | open | - |
-| WR-08 | warning | open | - |
-| WR-09 | warning | open | - |
-| IN-01 | info | open | - |
-| IN-02 | info | open | - |
-| IN-03 | info | open | - |
-| IN-04 | info | open | - |
+| CR-01 | critical | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| CR-02 | critical | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| CR-03 | critical | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| CR-04 | critical | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| CR-05 | critical | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| CR-06 | critical | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| CR-07 | critical | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| CR-08 | critical | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| CR-09 | critical | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| WR-01 | warning | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| WR-02 | warning | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| WR-03 | warning | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| WR-04 | warning | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| WR-05 | warning | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| WR-06 | warning | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| WR-07 | warning | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| WR-08 | warning | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| WR-09 | warning | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| IN-01 | info | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| IN-02 | info | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| IN-03 | info | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
+| IN-04 | info | open | Tool-scoped independent review (04-31, 7615dd911678): REVIEW HALTED: containment-violation, recorded open |
 | WR-10 | warning | fixed | Independent clean review at `04-REVIEW.md`, revision `007f331b1507331382826e779218d39a5f31fab4`, confirms the current validation row, 24/24 source-derived mutation suite, and target-specific rejection assertions; the original frozen finding at `1781f47c1331b4d5acb7ea52873c3e4125fbca96` is resolved. (not in the current review) |
 | WR-11 | warning | fixed | Independent clean review at `04-REVIEW.md`, revision `007f331b1507331382826e779218d39a5f31fab4`, confirms exact-one-key parsing and regressions for valid/malformed duplicates and malformed sole values; the original frozen finding at `1781f47c1331b4d5acb7ea52873c3e4125fbca96` is resolved. The separate WR-09/T-04-43 scope threat remains open. (not in the current review) |
 
