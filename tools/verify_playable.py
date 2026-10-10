@@ -856,6 +856,9 @@ def _write_receipt(receipt: dict[str, Any]) -> str:
         if isinstance(value, tuple):
             return [sanitize(item) for item in value]
         if isinstance(value, dict):
+            # Keys are identities (lane names), never paths. They are not
+            # rewritten: a key holding a private root must fail the key scan
+            # below closed instead of silently renaming an identity.
             return {key: sanitize(item) for key, item in value.items()}
         return value
 
