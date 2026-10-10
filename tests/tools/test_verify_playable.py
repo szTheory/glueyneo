@@ -1590,6 +1590,106 @@ class MainErrorPathTest(unittest.TestCase):
         self.assertTrue(any(home in call.args[0] for call in wrapper.call_args_list))
         self.assertNotIn(home, text or "")
 
+    def guarded_main(self, output: Path, *arguments: str) -> tuple[int | None, str, str]:
+        """Run main() against a test-owned OUTPUT; report an escaped exception as a failure, not an error."""
+        try:
+            with mock.patch.object(playable, "OUTPUT", output):
+                return self.run_main(*arguments)
+        except Exception as error:  # noqa: BLE001 - the regression is that main() leaks it
+            self.fail(f"uncaught {type(error).__name__}")
+        return None, "", ""
+
+    def test_t_04_11_output_mkdir_error_is_a_typed_token(self) -> None:
+        home = str(Path.home())
+        with tempfile.TemporaryDirectory(prefix="playable-setup-") as temporary:
+            output = Path(temporary) / "out"
+            failure = PermissionError(13, "Permission denied", str(ROOT / "build/playable-qualification"))
+            with mock.patch.object(Path, "mkdir", side_effect=failure):
+                status, stdout, stderr = self.guarded_main(
+                    output, "--retroarch", str(Path(temporary) / "RetroArch.app"), "--clean")
+        self.assertEqual(status, 1)
+        self.assertEqual(stderr.strip(), "qualification: setup-error: PermissionError")
+        for sink in (stdout, stderr):
+            for forbidden in ("Traceback", str(ROOT), home):
+                self.assertNotIn(forbidden, sink)
+
+    def test_t_04_11_mkdtemp_error_writes_a_setup_fail_receipt(self) -> None:
+        home = str(Path.home())
+        with tempfile.TemporaryDirectory(prefix="playable-setup-") as temporary:
+            output = Path(temporary) / "out"
+            output.mkdir()
+            failure = OSError(28, "No space left on device", str(output))
+            with mock.patch.object(playable.tempfile, "mkdtemp", side_effect=failure):
+                status, stdout, stderr = self.guarded_main(
+                    output, "--retroarch", str(Path(temporary) / "RetroArch.app"), "--clean")
+            text = (output / "receipt.json").read_text(encoding="utf-8")
+        receipt = json.loads(text)
+        self.assertEqual(status, 1)
+        self.assertIn("qualification: setup-error: OSError", stderr)
+        self.assertEqual(receipt["status"], "fail")
+        self.assertEqual(receipt["reason"], "setup-error: OSError")
+        for sink in (stdout, stderr, text):
+            for forbidden in ("Traceback", str(ROOT), home, temporary):
+                self.assertNotIn(forbidden, sink)
+
+    def test_t_04_11_setup_error_with_failed_receipt_write(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-setup-") as temporary:
+            output = Path(temporary) / "out"
+            output.mkdir()
+            with mock.patch.object(playable.tempfile, "mkdtemp", side_effect=OSError(28, "No space", str(output))), \
+                    mock.patch.object(playable, "_write_receipt", side_effect=OSError(28, "No space", str(output))):
+                status, stdout, stderr = self.guarded_main(
+                    output, "--retroarch", str(Path(temporary) / "RetroArch.app"), "--clean")
+        self.assertEqual(status, 1)
+        self.assertIn("qualification: setup-error: OSError", stderr)
+        self.assertIn("receipt: receipt-write-failed", stderr)
+        for sink in (stdout, stderr):
+            self.assertNotIn("Traceback", sink)
+            self.assertNotIn(temporary, sink)
+
+    def run_script_entry(self, patch_lines: str) -> subprocess.CompletedProcess[str]:
+        """Run the real script entry in a child interpreter; the child patches one failure and uses a test-owned cwd."""
+        script = ROOT / "tools" / "verify_playable.py"
+        with tempfile.TemporaryDirectory(prefix="playable-entry-") as temporary:
+            work = Path(temporary) / "work"
+            work.mkdir()
+            code = (
+                "import platform, runpy, sys, tempfile\n"
+                f"sys.argv = ['verify_playable.py', '--retroarch', {str(Path(temporary) / 'R.app')!r}, '--clean']\n"
+                f"sys.path.insert(0, {str(ROOT / 'tools')!r})\n"
+                f"_owned = {str(work)!r}\n"
+                + patch_lines +
+                f"runpy.run_path({str(script)!r}, run_name='__main__')\n"
+            )
+            return subprocess.run([sys.executable, "-I", "-c", code], cwd=temporary, text=True,
+                                  capture_output=True, timeout=120, check=False)
+
+    def test_t_04_11_entry_maps_uncaught_errors_without_traceback(self) -> None:
+        result = self.run_script_entry(
+            "tempfile.mkdtemp = lambda *a, **k: _owned\n"
+            f"def _boom(*a, **k):\n    raise ValueError({str(ROOT)!r})\n"
+            "platform.platform = _boom\n")
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("verify_playable: internal-error: ValueError", result.stderr)
+        for sink in (result.stdout, result.stderr):
+            self.assertNotIn("Traceback", sink)
+            self.assertNotIn(str(ROOT), sink)
+
+    def test_t_04_11_entry_maps_interrupt_to_130(self) -> None:
+        result = self.run_script_entry(
+            "def _interrupt(*a, **k):\n    raise KeyboardInterrupt()\n"
+            "tempfile.mkdtemp = _interrupt\n")
+        self.assertEqual(result.returncode, 130, result.stderr)
+        self.assertIn("verify_playable: interrupted", result.stderr)
+        for sink in (result.stdout, result.stderr):
+            self.assertNotIn("Traceback", sink)
+            self.assertNotIn(str(ROOT), sink)
+
+    def test_t_04_11_argparse_exit_passes_through(self) -> None:
+        with self.assertRaises(SystemExit) as caught, contextlib.redirect_stderr(io.StringIO()):
+            self.run_main("--bogus")
+        self.assertEqual(caught.exception.code, 2)
+
 
 if __name__ == "__main__":
     unittest.main()
