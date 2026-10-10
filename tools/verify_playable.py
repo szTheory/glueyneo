@@ -975,7 +975,14 @@ def frontend_row_status(summary: dict[str, Any] | None) -> str:
 
 
 def write_frontend_records(source_root: Path, summary: dict[str, Any]) -> None:
-    """Validate and scan all three new contents, then replace each file atomically (WR-01, T-04-53)."""
+    """Validate and scan all three new contents, then replace the files all-or-nothing in process (WR-01, T-04-53).
+
+    Order: evidence JSON, validation row, guide status block. If any replace fails, every file already
+    replaced is restored byte-for-byte from the originals read beforehand, and the error propagates.
+    Limit (GWR-06): a hard crash (power loss, SIGKILL) between replaces cannot be rolled back and can
+    leave a mix of old and new files. The guide block is written last, so `--check-docs` detects such a
+    mix as an evidence/block mismatch instead of accepting it.
+    """
     validate_frontend_evidence(summary)
     evidence_path = source_root / FRONTEND_EVIDENCE
     guide_path = source_root / GUIDE
@@ -1002,13 +1009,27 @@ def write_frontend_records(source_root: Path, summary: dict[str, Any]) -> None:
     claims = guide_claims_outside_block(new_guide)
     if claims:
         raise RuntimeError(f"integrator documentation makes a status claim outside the generated block: {claims[0]}")
-    writes = ((evidence_path, evidence_text), (guide_path, new_guide), (validation_path, updated))
+    writes = ((evidence_path, evidence_text), (validation_path, updated), (guide_path, new_guide))
+    originals = [path.read_bytes() for path, _ in writes]
     temporaries = [path.with_name(path.name + ".tmp") for path, _ in writes]
+    replaced: list[int] = []
     try:
         for temporary, (_, content) in zip(temporaries, writes):
             temporary.write_text(content, encoding="utf-8")
-        for temporary, (path, _) in zip(temporaries, writes):
-            os.replace(temporary, path)
+        try:
+            for index, (temporary, (path, _)) in enumerate(zip(temporaries, writes)):
+                os.replace(temporary, path)
+                replaced.append(index)
+        except BaseException:
+            for index in reversed(replaced):
+                path = writes[index][0]
+                restore = path.with_name(path.name + ".restore")
+                try:
+                    restore.write_bytes(originals[index])
+                    os.replace(restore, path)
+                finally:
+                    restore.unlink(missing_ok=True)
+            raise
     finally:
         for temporary in temporaries:
             temporary.unlink(missing_ok=True)

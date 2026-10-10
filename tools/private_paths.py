@@ -260,6 +260,10 @@ def scan_public_value(value: Any, extra_roots: Iterable[Path | str] = ()) -> Non
     Strings and dict keys are scanned as decoded values, then the whole
     structure is scanned again as JSON text, so a sink that writes the
     serialization is covered as well as one that writes the values.
+
+    A structure json.dumps cannot serialize fails closed as ``unscannable-value`` (GIN-02).
+    Known limit (GIN-01, accepted fail-closed): a specific root matches anywhere inside a
+    value, so unrelated text that embeds a root is also flagged; matching is never narrowed.
     """
     stack: list[Any] = [value]
     while stack:
@@ -279,5 +283,8 @@ def scan_public_value(value: Any, extra_roots: Iterable[Path | str] = ()) -> Non
     # like a path start, so repository-relative ``tmp/x`` would match the generic
     # ``/tmp/`` root. Generic roots were already checked per decoded string and key
     # above; the serialization is scanned for specific roots and the username.
-    scan_public(json.dumps(value, ensure_ascii=False, sort_keys=True, default=str), extra_roots,
-                _generic_roots=False)
+    try:
+        serialized = json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    except (TypeError, ValueError) as error:
+        raise PrivatePathError("unscannable-value") from error
+    scan_public(serialized, extra_roots, _generic_roots=False)
