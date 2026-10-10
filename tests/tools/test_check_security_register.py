@@ -231,7 +231,8 @@ class SchemaDriftTest(unittest.TestCase):
 
 
 class PhaseScopeTest(unittest.TestCase):
-    def run_phases(self, phases: dict[str, str], arguments: tuple[str, ...]) -> tuple[int, str, str]:
+    def run_phases(self, phases: dict[str, str], arguments: tuple[str, ...],
+                   extra_files: dict[str, str] | None = None) -> tuple[int, str, str]:
         with tempfile.TemporaryDirectory(prefix="security-register-phase-") as temporary:
             root = Path(temporary)
             (root / ".planning").mkdir()
@@ -242,6 +243,8 @@ class PhaseScopeTest(unittest.TestCase):
                 target = root / ".planning/workstreams/ws/phases" / directory
                 target.mkdir(parents=True)
                 (target / f"{number}-SECURITY.md").write_text(text, encoding="utf-8")
+            for relative, text in (extra_files or {}).items():
+                (root / ".planning/workstreams/ws/phases" / relative).write_text(text, encoding="utf-8")
             with mock.patch("sys.stdout", new_callable=io.StringIO) as out, \
                     mock.patch("sys.stderr", new_callable=io.StringIO) as err:
                 code = checker.main(list(arguments), root)
@@ -257,6 +260,34 @@ class PhaseScopeTest(unittest.TestCase):
         code, _, err = self.run_phases(phases, ("ws", "--require-closed"))
         self.assertEqual(code, 1)
         self.assertIn("05-SECURITY.md", err)
+
+    def test_g2wr_04_unscoped_gate_counts_decimal_phase_registers(self) -> None:
+        phases = {"04-x": self.CLOSED, "04.1-y": register(1)}
+        code, _, err = self.run_phases(phases, ("ws", "--require-closed"))
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL: 04.1-SECURITY.md: 1 blocking open threats", err)
+        code, out, err = self.run_phases(phases, ("ws",))
+        self.assertEqual(code, 0, err)
+        self.assertIn("2 security registers", out)
+        self.assertIn("04.1-SECURITY.md=1", out)
+
+    def test_g2wr_04_non_register_names_are_not_counted(self) -> None:
+        phases = {"04-x": self.CLOSED, "04.1-y": register(1)}
+        code, out, err = self.run_phases(phases, ("ws",), {"04-x/04-draft-SECURITY.md": register(1)})
+        self.assertEqual(code, 0, err)
+        self.assertIn("2 security registers", out)
+        self.assertNotIn("draft", out)
+        code, out, err = self.run_phases(phases, ("ws", "--phase", "04.1"))
+        self.assertEqual(code, 0, err)
+        self.assertIn("1 security registers", out)
+        self.assertIn("04.1-SECURITY.md=1", out)
+
+    def test_g2in_01_verified_status_is_case_insensitive(self) -> None:
+        for status in ("status: Verified", "status: VERIFIED", 'status: "Verified"'):
+            with self.subTest(status=status):
+                code, _, err = self.run_phases({"04-x": register(1, frontmatter_lines=(status,))}, ("ws",))
+                self.assertEqual(code, 1)
+                self.assertIn("status verified with threats_open 1", err)
 
     def test_phase_scope_fails_for_that_phases_blocking_rows(self) -> None:
         code, _, err = self.run_phases({"04-a": register(1), "05-b": self.CLOSED},
