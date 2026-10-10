@@ -7,14 +7,14 @@ current_phase_name: Public Playable Tracer
 current_plan: 7
 status: executing
 stopped_at: Completed 04-42-PLAN.md
-last_updated: "2026-10-10T20:43:50.924Z"
+last_updated: "2026-10-10T21:49:35.252Z"
 last_activity: 2026-10-10
-last_activity_desc: Phase 04 execution started
-state_head: 52a4dbd6f9d2354edd71dd3292c643043946990b
+last_activity_desc: Phase 04 planning complete — 51 plans ready
+state_head: 7fe360c80ef3ee0453d1387fe2e4a154d3c39773
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 48
+  total_plans: 57
   completed_plans: 48
   percent: 0
 ---
@@ -30,12 +30,12 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 ## Current Position
 
-Phase: 04 (Public Playable Tracer) — EXECUTING
+Phase: 04 (Public Playable Tracer) — READY TO EXECUTE
 Current Plan: 7
-Total Plans in Phase: 42
+Total Plans in Phase: 51
 Status: Ready to execute
 Last activity: 2026-10-10 — Phase 04 execution started
-Last Activity Description: Phase 04 execution started
+Last Activity Description: Phase 04 planning complete — 51 plans ready
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -115,7 +115,7 @@ Progress: [░░░░░░░░░░] 0%
 - The user-provided BIOS archive is also stored under the Git-ignored `local/roms/` directory. The copy matches its source, passes ZIP CRC validation and is untracked; those checks do not establish BIOS compatibility.
 - Public CI: use original fixtures and/or homebrew assets only after confirming redistribution rights for the specific ROM assets; a source-code license alone is not sufficient evidence for bundled game data.
 - The local archive passed ZIP CRC checks and matched all 13 ROM size/SHA-1 entries in MAME's current Neo Geo software list. That confirms the archive identity, not emulator compatibility.
-- Next GSD work: no GSD command is warranted while the external evidence is unchanged. Plan 05-06 remains halted at Task 2: selected compatibility and GAME-02 need an independently observed selected configuration plus a source-backed guest attract/start predicate with oracle ancestry. The earlier RetroArch SIGABRT was the sandboxed launch context (debug session `.planning/debug/resolved/retroarch-startup-abort.md`); agent shells in the logged-in session launch the pinned app normally. Do not repeat verify-work or create another unchanged gap plan. When the missing selected-guest evidence is available, resume the existing bounded plan with $gsd-execute-phase 05 --gaps-only --ws first-playable-game. Candidate PR #2 has a passing exact-SHA hosted MVS receipt but remains OPEN / REVIEW_REQUIRED pending one approval. Phase 04: round-3 gap plans 04-37..04-42 executed; fixes recorded as evidence with rows open and T-04-48 reopened; pinned RetroArch re-qualified at 2c449bdfec18 (`04-FRONTEND-RECEIPT.json`, bound by the post-commit --check-docs; HOST-02 and frontend QUAL-03 evidenced but acceptance pending); 04-SECURITY.md threats_open 9; `--require-closed --phase 04` exits 1 (expected pre-audit). Next: `/gsd-secure-phase 04 --ws first-playable-game` (headless audit, the only closure path) and the focused re-review `/gsd-code-review 04 --ws first-playable-game`, then `/gsd-verify-work 04 --ws first-playable-game`.
+- Next GSD work: no GSD command is warranted while the external evidence is unchanged. Plan 05-06 remains halted at Task 2: selected compatibility and GAME-02 need an independently observed selected configuration plus a source-backed guest attract/start predicate with oracle ancestry. The earlier RetroArch SIGABRT was the sandboxed launch context (debug session `.planning/debug/resolved/retroarch-startup-abort.md`); agent shells in the logged-in session launch the pinned app normally. Do not repeat verify-work or create another unchanged gap plan. When the missing selected-guest evidence is available, resume the existing bounded plan with $gsd-execute-phase 05 --gaps-only --ws first-playable-game. Candidate PR #2 has a passing exact-SHA hosted MVS receipt but remains OPEN / REVIEW_REQUIRED pending one approval. Phase 04: the round-3 headless security audit (7fe360c, reviewed at b98cbc670d0d) closed 44 of 47 IDs and left T-04-11, T-04-48 and T-04-62 open, so 04-SECURITY.md threats_open is 3 and `--require-closed --phase 04` exits 1; 04-REVIEW-GAPS-R3.md G3WR-01..05/G3IN-01..03 are undispositioned. Round-4 gap plans 04-43..04-51 (waves 40–48, sequential) are planned and checked: fix the three rows and the eight R3 findings test-first, record evidence with rows left open, re-qualify pinned RetroArch once, then route to the audit. Next: `/gsd-execute-phase 04 --gaps-only --ws first-playable-game`.
 
 The generic GSD progress router currently infers Phase 04 from its incomplete
 verification report, while this workstream remains on Phase 05 because the
