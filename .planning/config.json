@@ -52,7 +52,8 @@
     "ui_review": false,
     "_auto_chain_active": false,
     "build_command": "cmake --preset owned-debug && cmake --build --preset owned-debug",
-    "test_command": "ctest --preset owned-debug"
+    "test_command": "ctest --preset owned-debug",
+    "use_worktrees": false
   },
   "ship": {
     "pr_body_sections": [
@@ -107,14 +108,18 @@
       "heavy": "medium"
     }
   },
-  "resolve_model_ids": "omit",
   "granularity": "coarse",
-  "runtime": "codex",
+  "runtime": "claude",
   "model_profile_overrides": {
     "codex": {
-      "haiku": "gpt-6-luna",
-      "sonnet": "gpt-6.1-sol",
-      "opus": "gpt-6.1-sol"
+      "opus": "gpt-6-sol",
+      "sonnet": "gpt-6-luna",
+      "haiku": "gpt-6-luna"
+    },
+    "claude": {
+      "opus": "claude-opus-5-5",
+      "sonnet": "claude-sonnet-5-5",
+      "haiku": "claude-haiku-5-5"
     }
   }
 }
