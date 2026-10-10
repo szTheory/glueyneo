@@ -24,8 +24,8 @@ Here, `v1` means this workstream's scoped deliverable, not a software release ve
 
 ### Native and Frontend Integration
 
-- [x] **HOST-02**: A user can load, run, and unload the fixture through a thin libretro adapter in an actual pinned macOS RetroArch build, using the ordinary native API, software video, documented controller mapping, and frontend-owned pacing.
-- [x] **API-05**: A C integrator can advance the selected machine through a documented bounded frame operation with explicit input sampling, output-buffer ownership/lifetimes, video/audio capacities, audio sample format/channel layout/rate/produced count and relationship to emulated time, progress/stop information, and actionable errors, without native filesystem, device, network, or wall-clock services.
+- [ ] **HOST-02**: A user can load, run, and unload the fixture through a thin libretro adapter in an actual pinned macOS RetroArch build, using the ordinary native API, software video, documented controller mapping, and frontend-owned pacing.
+- [ ] **API-05**: A C integrator can advance the selected machine through a documented bounded frame operation with explicit input sampling, output-buffer ownership/lifetimes, video/audio capacities, audio sample format/channel layout/rate/produced count and relationship to emulated time, progress/stop information, and actionable errors, without native filesystem, device, network, or wall-clock services.
 - [ ] **API-06**: A maintainer can repeat and partition the supported fixture workload and run distinguishable native instances interleaved and concurrently while matching isolated-baseline guest, video, and audio results at equal emulated boundaries. This is native-instance evidence, not a claim of libretro frontend reentrancy or public snapshot compatibility.
 
 ### Private Game and BIOS Loading
@@ -53,7 +53,7 @@ The two completed sound requirements admit only the named synthetic Phase 04 Z80
 
 - [ ] **QUAL-01**: A maintainer can run clean-tree automated native and libretro-consumer checks using only the public fixture, covering equivalent frame/input/audio observations for the same guest/input sequence at matching emulated boundaries (accounting for documented audio conversion), lifecycle and malformed-input boundaries, relevant fuzz/sanitizer regressions, and retained diagnostic-SDK regressions through proportionate local/CI entrypoints.
 - [ ] **QUAL-02**: A maintainer can reproduce a private local qualification scenario from boot through active movement, firing, scrolling, and sound in the actual pinned RetroArch build, retaining exact private media identities and derived evidence locally and publishing only permitted generic outcomes and public build/configuration identities. Machine-observable checks are automated; only residual subjective or unavailable evidence needs a human.
-- [x] **QUAL-03**: An integrator can follow the documented build/install/load procedure for the native library and libretro adapter from a clean source tree on the selected macOS configuration, with exact dependency/compiler/SDK/OS/architecture/frontend identities and untested configurations stated explicitly.
+- [ ] **QUAL-03**: An integrator can follow the documented build/install/load procedure for the native library and libretro adapter from a clean source tree on the selected macOS configuration, with exact dependency/compiler/SDK/OS/architecture/frontend identities and untested configurations stated explicitly.
 - [ ] **QUAL-04**: A consumer can identify the exact qualified game scenario, public-fixture coverage, remaining unknown/unsupported behavior, and oracle ancestry in current documentation; emulator agreement, BIOS/archive integrity, and fixture success are not presented as broader hardware or game compatibility.
 
 ## Future Requirements
@@ -108,8 +108,8 @@ Historical, superseded on 2026-10-10 by the receipt above: Plan 04-15 reconfirme
 | TRAC-01 | Phase 4 | Gaps Found |
 | TRAC-02 | Phase 4 | Gaps Found |
 | TRAC-03 | Phase 4 | Gaps Found |
-| HOST-02 | Phase 4 | Complete |
-| API-05 | Phase 4 | Complete |
+| HOST-02 | Phase 4 | Gaps Found |
+| API-05 | Phase 4 | Gaps Found |
 | API-06 | Phase 7 | Pending |
 | MEDIA-02 | Phase 5 | Complete |
 | MEDIA-03 | Phase 5 | Pending |
@@ -123,7 +123,7 @@ Historical, superseded on 2026-10-10 by the receipt above: Plan 04-15 reconfirme
 | SND-04 | Phase 7 | Pending |
 | QUAL-01 | Phase 7 | Pending |
 | QUAL-02 | Phase 7 | Pending |
-| QUAL-03 | Phase 4 | Complete |
+| QUAL-03 | Phase 4 | Gaps Found |
 | QUAL-04 | Phase 7 | Pending |
 
 **Coverage:**
