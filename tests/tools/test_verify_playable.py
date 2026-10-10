@@ -684,6 +684,15 @@ class ProcessGroupTest(unittest.TestCase):
         self.assertEqual([c.args[1] for c in killpg.call_args_list], [signal.SIGTERM, signal.SIGKILL])
         self.assertIn("recorded group still-running", outcome["receipt"]["detail"])  # type: ignore[index]
 
+    def test_t_04_67_unconfirmed_listing_never_escalates_to_sigkill(self) -> None:
+        # pgrep fails for the whole grace period: the recorded PID was never confirmed listed.
+        with tempfile.TemporaryDirectory() as temporary:
+            outcome, _, killpg, kill = self.run_lane(
+                Path(temporary), set(), {8}, child="8", group=8, later=[None])
+        self.assertEqual([c.args[1] for c in killpg.call_args_list], [signal.SIGTERM])
+        kill.assert_not_called()
+        self.assertIn("recorded group still-running", outcome["receipt"]["detail"])  # type: ignore[index]
+
     def test_unrecorded_survivor_detail_counts_it_as_not_signalled(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             outcome, _, killpg, _ = self.run_lane(Path(temporary), set(), {9}, child="8", group=9)
@@ -998,6 +1007,18 @@ class CrosswalkProvenanceTest(DocumentationCopies, unittest.TestCase):
         for scope in ("`../x.md`", "`docs/../x.md`", "`tools/../tools/verify_playable.py`"):
             with self.subTest(scope=scope):
                 self.mutate_row(self.with_scope("CR-05", scope), "has a parent segment")
+
+    def test_wr_11_duplicate_review_frontmatter_keys_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-review-keys-") as temporary:
+            root = Path(temporary)
+            self.copy_documentation(root)
+            review = root / playable.REVIEW
+            text = review.read_text(encoding="utf-8")
+            head, separator, rest = text.partition("\n---\n")
+            self.assertTrue(separator)
+            review.write_text(head + "\nfiles_reviewed_list:\n  - README.md\n" + separator + rest, encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "duplicate"):
+                playable.check_docs(root)
 
     def test_rows_must_equal_the_disposition_record(self) -> None:
         cases = (
