@@ -1289,6 +1289,69 @@ class LaunchWindowTest(unittest.TestCase):
         quit_frontend.assert_called_once()
         kill_group.assert_called_once_with(process)
 
+    def probe_with(self, *, popen: dict[str, object], pid_record: dict[str, object]) -> tuple[dict[str, object], mock.Mock, mock.Mock]:
+        """Run `run_launch_probe` with every host operation mocked (G3WR-03)."""
+        self.install()
+        try:
+            with (
+                mock.patch.object(smoke, "running_retroarch_pids", return_value=set()),
+                mock.patch.object(smoke, "crash_report_snapshot", return_value={}),
+                mock.patch.object(smoke, "collect_frontend_output", return_value=""),
+                mock.patch.object(smoke, "find_recent_crash_reason", return_value=None),
+                mock.patch.object(smoke, "record_child_pid", **pid_record),
+                mock.patch.object(smoke, "request_frontend_quit"),
+                mock.patch.object(smoke, "reap_frontend", return_value=None) as reap,
+                mock.patch.object(smoke, "kill_launched_group") as kill_group,
+                mock.patch.object(smoke.subprocess, "Popen", **popen),
+                mock.patch.object(smoke, "DIAGNOSTIC_PROBE_SECONDS", 0.01),
+            ):
+                record = smoke.run_launch_probe(
+                    Path("/RetroArch"), Path("/core"), Path("/fixture"), "org.example.RetroArch",
+                    probe="no_content", timeout=1, child_pid_file=Path("child.pid"),
+                )
+        except Exception as error:  # noqa: BLE001 - RED discipline: report, never error
+            self.fail(f"uncaught {type(error).__name__}")
+        return record, kill_group, reap
+
+    def test_g3wr_03_probe_pid_record_failure_is_not_a_launch_failure(self) -> None:
+        process = SingleInstanceTest.Running(pid=4321)
+        record, kill_group, reap = self.probe_with(
+            popen={"return_value": process}, pid_record={"side_effect": OSError("disk full")})
+        self.assertEqual(record["diagnostic"]["stage"], "pid-record")
+        self.assertIsNone(record["survived_window"])
+        self.assertIsNone(record["return_code"])
+        self.assertIn("OSError", record["diagnostic"]["output"])
+        kill_group.assert_called_once_with(process)
+        reap.assert_not_called()
+
+    def test_g3wr_03_probe_popen_failure_is_still_launch(self) -> None:
+        record, kill_group, _reap = self.probe_with(
+            popen={"side_effect": OSError("no such file")}, pid_record={"return_value": None})
+        self.assertEqual(record["diagnostic"]["stage"], "launch")
+        self.assertIs(record["survived_window"], False)
+        kill_group.assert_not_called()
+
+    def test_g3wr_03_compare_launch_probes_reports_pid_record(self) -> None:
+        failed = {"survived_window": None, "diagnostic": {"stage": "pid-record"}}
+        ok = {"survived_window": True, "diagnostic": {"stage": "no-content-startup"}}
+        self.assertEqual(smoke.compare_launch_probes(failed, ok), "diagnostic-pid-record-failed")
+        self.assertEqual(smoke.compare_launch_probes(ok, failed), "diagnostic-pid-record-failed")
+        self.assertEqual(smoke.compare_launch_probes(ok, ok), "both-launch-probes-survived")
+        dead = {"survived_window": False, "diagnostic": {"stage": "launch"}}
+        self.assertEqual(smoke.compare_launch_probes(dead, ok), "frontend-startup-failed")
+
+    def test_g3wr_03_run_diagnostics_reports_pid_record_finding(self) -> None:
+        failed = {"survived_window": None, "diagnostic": {"stage": "pid-record"}}
+        ok = {"survived_window": True, "diagnostic": {"stage": "core-content-load"}}
+        args = mock.Mock(timeout=1.0, child_pid_file=None)
+        with (
+            mock.patch.object(smoke, "validate_inputs", return_value=(
+                Path("/app"), Path("/core"), Path("/fixture"), {"bundle_id": "org.example.RetroArch"})),
+            mock.patch.object(smoke, "run_launch_probe", side_effect=[failed, ok]),
+        ):
+            result = smoke.run_diagnostics(args)
+        self.assertEqual(result["finding"], "diagnostic-pid-record-failed")
+
     def test_launch_window_does_not_use_a_signal_mask(self) -> None:
         source = Path(smoke.__file__).read_text(encoding="utf-8")
         calls = [line for line in source.splitlines()
