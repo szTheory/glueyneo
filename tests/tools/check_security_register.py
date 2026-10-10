@@ -15,19 +15,30 @@ must equal the number of open threat-register rows at or above the configured
   alias, escaped quoted key, top-level list item) is an error, never skipped.
   `threats_open` must be one bare non-negative integer, optionally followed by
   ` # comment`.
-- Every table whose first header cell is exactly `Threat ID` is a register
-  table and must have Severity and Status columns; one that lacks either is an
-  error, never skipped (GWR-01). Non-register audit tables use another first
-  header such as `Audited Threat`. Cells split on unescaped pipes only.
+- Every GFM table whose header's first cell, whitespace-collapsed and
+  case-folded, is `threat id` is a register table and must have Severity and
+  Status columns (any letter case); one that lacks either is an error, never
+  skipped (GWR-01). A header is indented 0 to 3 spaces, has optional leading
+  and trailing pipes and is followed by a valid delimiter row with the same
+  cell count; rows run to the first blank line, heading, blockquote or fence
+  and need no leading pipe (T-04-62). Any other line whose first cell reads
+  `Threat ID` (4 or more spaces or a tab of indentation, a blockquote, no
+  delimiter row) fails as `unrecognized threat table form`. Non-register audit
+  tables use another first header such as `Audited Threat`. Cells split on
+  unescaped pipes only.
 - Threat IDs must be unique across tables; status must be open, closed or
   accepted; `status: verified` (also quoted, any letter case: G2IN-01)
-  requires `threats_open: 0`.
+  requires `threats_open: 0` (a trailing ` # comment` is allowed).
 - Default mode checks consistency only and prints per-register blocking counts,
   so a PASS is not closure. `--require-closed` additionally exits 1 while any
   register has blocking open threats. `--phase NN` restricts the run to the one
   `phases/NN-*/NN-SECURITY.md` register (exactly one must exist) for phase
   acceptance; milestone shipping runs without it so every register counts,
-  `NN-SECURITY.md` and decimal-phase `NN.N-SECURITY.md` alike (G2WR-04).
+  `NN-SECURITY.md` and decimal-phase `NN.N-SECURITY.md` alike (G2WR-04). In the
+  unscoped run a `phases/*/NN*-SECURITY.md` file with another name fails as a
+  `misnamed security register` when it has a `threats_open` key or a `Threat ID`
+  table; otherwise it prints `SKIP: <name> is not a register name` and is not
+  counted (G3IN-03).
 
 The blocking threshold is `workflow.security_block_on` from
 `.planning/workstreams/<workstream>/config.json` when that file sets it, else
@@ -57,9 +68,9 @@ KEY_LINE = re.compile(r"""^(?P<key>[A-Za-z_][A-Za-z0-9_.-]*|"[^"\\]*"|'(?:[^']|'
 GUARDED_KEYS = frozenset({"threats_open", "status"})
 INTEGER = re.compile(r"\d+")
 CELL_SPLIT = re.compile(r"(?<!\\)\|")
-# Any row whose first cell reads "Threat ID" starts a register table; the case and the trailing pipe
-# are not significant, so a loosely written table is checked rather than skipped (T-04-62).
-HEADER = re.compile(r"^\|\s*threat\s+id\s*\|(.*?)\|?\s*$", re.IGNORECASE)
+INDENT = re.compile(r"^ {0,3}(?![ \t])")
+DELIMITER = re.compile(r"^ {0,3}\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$")
+TABLE_END = re.compile(r"^ {0,3}(?:#|>|```|~~~)")
 PHASE_NUMBER = re.compile(r"^[0-9]{2}(\.[0-9]+)?$")
 # One definition of a register file name, shared by the scoped and unscoped globs (G2WR-04).
 REGISTER_NAME = re.compile(r"[0-9]{2}(?:\.[0-9]+)?-SECURITY\.md")
@@ -160,7 +171,46 @@ def frontmatter_keys(front: list[str]) -> tuple[dict[str, list[tuple[int, str]]]
 
 
 def split_cells(row: str) -> list[str]:
-    return [cell.strip() for cell in CELL_SPLIT.split(row.strip().strip("|"))]
+    text = row.strip()
+    text = text[1:] if text.startswith("|") else text
+    text = re.sub(r"(?<!\\)\|$", "", text)
+    return [cell.strip() for cell in CELL_SPLIT.split(text)]
+
+
+def _first_cell(line: str) -> str:
+    return " ".join(split_cells(line)[0].split()).casefold()
+
+
+def _first_cell_is_threat_id(line: str) -> bool:
+    text = re.sub(r"^[\s>]+", "", line)
+    return CELL_SPLIT.search(text) is not None and _first_cell(text) == "threat id"
+
+
+def register_tables(lines: list[str]) -> tuple[list[tuple[int, list[str], list[list[str]]]], list[str]]:
+    """Return ([(header line number, columns, rows)], errors) for every GFM Threat ID table."""
+    tables: list[tuple[int, list[str], list[list[str]]]] = []
+    headers: set[int] = set()
+    rows_end = -1
+    for index, line in enumerate(lines):
+        if index <= rows_end or INDENT.match(line) is None or not _first_cell_is_threat_id(line):
+            continue
+        if index + 1 >= len(lines) or DELIMITER.match(lines[index + 1]) is None:
+            continue
+        columns = split_cells(line)
+        if len(split_cells(lines[index + 1])) != len(columns):
+            continue
+        rows: list[list[str]] = []
+        rows_end = index + 1
+        for row in lines[index + 2:]:
+            if not row.strip() or TABLE_END.match(row):
+                break
+            rows.append(split_cells(row))
+            rows_end += 1
+        headers.add(index)
+        tables.append((index + 1, columns, rows))
+    errors = [f"unrecognized threat table form at line {index + 1}"
+              for index, line in enumerate(lines) if index not in headers and _first_cell_is_threat_id(line)]
+    return tables, errors
 
 
 def register_errors(path: Path, threshold: int) -> tuple[list[str], int]:
@@ -181,27 +231,22 @@ def register_errors(path: Path, threshold: int) -> tuple[list[str], int]:
         return errors, 0
     verified = any(unquoted(strip_comment(value)).casefold() == "verified" for _, value in keys.get("status", []))
     lines = text.splitlines()
+    found_tables, table_errors = register_tables(lines)
+    errors.extend(f"{path.name}: {error}" for error in table_errors)
     tables: list[tuple[list[str], list[list[str]]]] = []
-    for index, line in enumerate(lines):
-        header = HEADER.match(line)
-        if header is None:
+    for number, columns, rows in found_tables:
+        folded = [column.casefold() for column in columns]
+        if "severity" not in folded or "status" not in folded:
+            errors.append(f"{path.name}: threat table at line {number} lacks Severity or Status columns")
             continue
-        columns = ["Threat ID", *split_cells(header.group(1))]
-        if "Severity" not in columns or "Status" not in columns:
-            errors.append(f"{path.name}: threat table at line {index + 1} lacks Severity or Status columns")
-            continue
-        table_rows: list[list[str]] = []
-        for row in lines[index + 2:]:
-            if not row.startswith("|"):
-                break
-            table_rows.append(split_cells(row))
-        tables.append((columns, table_rows))
+        tables.append((columns, rows))
     if not tables:
         return [*errors, f"{path.name}: no threat register table"], 0
     seen: set[str] = set()
     blocking = 0
     for columns, rows in tables:
-        severity_at, status_at = columns.index("Severity"), columns.index("Status")
+        folded = [column.casefold() for column in columns]
+        severity_at, status_at = folded.index("severity"), folded.index("status")
         for row in rows:
             if len(row) != len(columns):
                 errors.append(f"{path.name}: malformed threat row {row[:1]}")
@@ -266,9 +311,28 @@ def main(arguments: list[str] | None = None, root: Path = ROOT) -> int:
         return 1
     level, level_name, source = threshold
     pattern = f"phases/{phase}-*/{phase}-SECURITY.md" if phase else "phases/*/[0-9][0-9]*-SECURITY.md"
-    registers = sorted(path for path in root.glob(f".planning/workstreams/{workstream}/{pattern}")
-                       if REGISTER_NAME.fullmatch(path.name))
+    candidates = sorted(root.glob(f".planning/workstreams/{workstream}/{pattern}"))
+    registers = [path for path in candidates if REGISTER_NAME.fullmatch(path.name)]
+    errors: list[str] = []
+    for path in candidates:
+        if REGISTER_NAME.fullmatch(path.name):
+            continue
+        # G3IN-03: a register-shaped file with another name is never silently ignored.
+        try:
+            text = path.read_text(encoding="utf-8")
+            front = frontmatter(text)
+            shaped = (front is not None and "threats_open" in frontmatter_keys(front)[0]) or any(
+                register_tables(text.splitlines()))
+        except (OSError, UnicodeDecodeError) as error:
+            errors.append(f"{path.name}: unreadable ({type(error).__name__})")
+            continue
+        if shaped:
+            errors.append(f"misnamed security register {path.name}")
+        else:
+            print(f"SKIP: {path.name} is not a register name")
     if not registers:
+        for error in errors:
+            print(f"FAIL: {error}", file=sys.stderr)
         scope = f"phase {phase}" if phase else f"workstream {workstream}"
         print(f"FAIL: no security registers for {scope}", file=sys.stderr)
         return 1
@@ -276,7 +340,6 @@ def main(arguments: list[str] | None = None, root: Path = ROOT) -> int:
         print(f"FAIL: phase {phase} has {len(registers)} security registers, expected exactly one",
               file=sys.stderr)
         return 1
-    errors: list[str] = []
     counts: list[tuple[str, int]] = []
     for path in registers:
         try:

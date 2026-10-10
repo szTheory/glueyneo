@@ -275,13 +275,14 @@ class SchemaDriftTest(unittest.TestCase):
         self.assertTrue(any("lacks Severity or Status" in error for error in errors), errors)
 
     def test_table_with_only_one_of_severity_or_status_errors(self) -> None:
-        for label, header in (
-            ("only Severity", "| Threat ID | Category | Severity | Disposition | State |"),
-            ("only Status", "| Threat ID | Category | Sev | Disposition | Status |"),
-            ("neither", "| Threat ID | ASVS L1 result | Current evidence |"),
+        for label, header, delimiter in (
+            ("only Severity", "| Threat ID | Category | Severity | Disposition | State |", "|---|---|---|---|---|"),
+            ("only Status", "| Threat ID | Category | Sev | Disposition | Status |", "|---|---|---|---|---|"),
+            # T-04-62: the delimiter row must have the header's cell count to form a GFM table.
+            ("neither", "| Threat ID | ASVS L1 result | Current evidence |", "|---|---|---|"),
         ):
             with self.subTest(table=label):
-                text = register(1) + "\n" + header + "\n|---|---|---|---|---|\n"
+                text = register(1) + "\n" + header + "\n" + delimiter + "\n"
                 self.assertTrue(any("lacks Severity or Status" in e for e in self.errors_for(text)))
 
     def test_exit_code_is_nonzero_for_the_mutation(self) -> None:
