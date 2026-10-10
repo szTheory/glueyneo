@@ -541,13 +541,36 @@ if(GLUEYNEO_BUILD_TESTS)
   set_tests_properties(mvs_import_fuzz_corpus PROPERTIES
     LABELS "mvs;fuzz" TIMEOUT 180)
 
+  # mvs_qualify reads the private fetch trace, which a shared libglueyneo keeps
+  # hidden. It links a static copy of the production runtime (no test hooks) so
+  # it builds identically with and without BUILD_SHARED_LIBS.
+  add_library(glueyneo_private_runtime STATIC ${GLUEYNEO_RUNTIME_SOURCES})
+  target_compile_features(glueyneo_private_runtime PRIVATE c_std_17)
+  set_target_properties(glueyneo_private_runtime PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS NO
+    C_VISIBILITY_PRESET hidden
+  )
+  target_include_directories(glueyneo_private_runtime
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/experiments/owned_cpu
+  )
+  if(MSVC)
+    target_compile_options(glueyneo_private_runtime PRIVATE /W4 /WX)
+  else()
+    target_compile_options(glueyneo_private_runtime PRIVATE
+      -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(glueyneo_private_runtime)
+
   add_executable(mvs_qualify tools/mvs/mvs_qualify.c)
   target_include_directories(mvs_qualify PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include)
   target_compile_features(mvs_qualify PRIVATE c_std_17)
   set_target_properties(mvs_qualify PROPERTIES C_STANDARD 17
     C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
-  target_link_libraries(mvs_qualify PRIVATE Glueyneo::glueyneo)
+  target_link_libraries(mvs_qualify PRIVATE glueyneo_private_runtime)
   if(MSVC)
     target_compile_options(mvs_qualify PRIVATE /W4 /WX)
   else()
@@ -827,6 +850,42 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
     PROPERTIES LABELS "sdk-package-docs" TIMEOUT 600)
   set_tests_properties(sdk_package_capabilities
     PROPERTIES LABELS "sdk-package-capabilities" TIMEOUT 180)
+
+  # CI builds tests only against a static libglueyneo, where hidden private
+  # symbols still link. Reject at configure time any executable that includes
+  # the private SDK header while linking the public library, because that
+  # combination fails to link once BUILD_SHARED_LIBS=ON.
+  get_property(_glueyneo_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+  foreach(_target IN LISTS _glueyneo_targets)
+    get_target_property(_type ${_target} TYPE)
+    if(NOT _type STREQUAL "EXECUTABLE")
+      continue()
+    endif()
+    get_target_property(_links ${_target} LINK_LIBRARIES)
+    if(NOT _links)
+      continue()
+    endif()
+    list(FIND _links glueyneo _plain)
+    list(FIND _links Glueyneo::glueyneo _alias)
+    if(_plain EQUAL -1 AND _alias EQUAL -1)
+      continue()
+    endif()
+    get_target_property(_sources ${_target} SOURCES)
+    foreach(_source IN LISTS _sources)
+      if(NOT _source MATCHES "\\.(c|cpp)$")
+        continue()
+      endif()
+      if(NOT IS_ABSOLUTE "${_source}")
+        set(_source "${CMAKE_CURRENT_SOURCE_DIR}/${_source}")
+      endif()
+      file(STRINGS "${_source}" _private_includes REGEX "sdk_private\\.h")
+      if(_private_includes)
+        message(FATAL_ERROR
+          "${_target} includes src/sdk_private.h but links the public "
+          "glueyneo library; link glueyneo_private_runtime or glueyneo_test")
+      endif()
+    endforeach()
+  endforeach()
 endif()
 
 if(GLUEYNEO_CPU_EXPERIMENT)
