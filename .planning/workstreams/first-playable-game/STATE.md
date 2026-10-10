@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
-current_plan: 6
+current_plan: 7
 status: executing
-stopped_at: Completed 04-28-PLAN.md
-last_updated: "2026-10-10T15:33:30.923Z"
+stopped_at: Completed 04-29-PLAN.md
+last_updated: "2026-10-10T15:37:47.877Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 04 execution started
-state_head: 28e33de3bfa9f9dfd29841ed5d8cc92a4c656300
+state_head: 2cb5257370f24e584efae4cb75a7b339df49069a
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 37
-  completed_plans: 34
+  completed_plans: 35
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 ## Current Position
 
 Phase: 04 (Public Playable Tracer) — EXECUTING
-Current Plan: 6
+Current Plan: 7
 Total Plans in Phase: 31
 Status: Ready to execute
 Last activity: 2026-10-10 — Phase 04 execution started
@@ -42,7 +42,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 6
+**Current Plan:** 7
 
 ## Performance Metrics
 
@@ -80,12 +80,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P26 | 25min | 2 tasks | 4 files |
 | Phase 04 P27 | 15 min | 2 tasks | 4 files |
 | Phase 04 P28 | 40min | 3 tasks | 6 files |
+| Phase 04 P29 | 25min | 3 tasks | 9 files |
 
 ## Session Continuity
 
-**Last session:** 2026-10-10T15:33:30.892Z
+**Last session:** 2026-10-10T15:37:47.840Z
 
-**Stopped At:** Completed 04-28-PLAN.md
+**Stopped At:** Completed 04-29-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
@@ -155,6 +156,7 @@ unchanged external-blocker plan. Plan/summary counts are not phase acceptance.
 - [Phase 04]: 04-26: frontend evidence binding is mandatory in check_docs (explicit repository or own .git, else fail closed); crosswalk scopes must resolve to registered threats or reviewed existing paths
 - [Phase 04]: 04-27: guide prose outside the generated block may carry no requirement IDs, revision-like hex (except pinned YMFM/Z80) or capitalized status words; evidence records are written atomically after validate-and-scan
 - [Phase 04]: 04-28: smoke lane extracted to run_frontend_smoke_lane; lane signals only the PID its own smoke recorded
+- [Phase 04]: 04-29: WR-08 partially repaired by runtime_writable_storage audit; sdk_private.h guard stays heuristic (expected 04-31 disposition deferred)
 
 ### Blockers
 
