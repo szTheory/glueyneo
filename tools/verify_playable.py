@@ -19,6 +19,7 @@ import platform
 import plistlib
 import posixpath
 import re
+import select
 import shutil
 import signal
 import stat
@@ -524,24 +525,56 @@ def _leader_exited(pid: int) -> bool:
         return True
 
 
+def _drain(fd: int, chunks: list[bytes], seconds: float) -> bool:
+    """Read what `fd` offers for up to `seconds`; True on EOF. Never reaps the child (T-04-54)."""
+    end = time.monotonic() + seconds
+    while True:
+        remaining = end - time.monotonic()
+        if remaining <= 0:
+            return False
+        ready, _, _ = select.select([fd], [], [], remaining)
+        if not ready:
+            return False
+        try:
+            data = os.read(fd, 65536)
+        except OSError:
+            return True
+        if not data:
+            return True
+        chunks.append(data)
+
+
 def _terminate_lane_group(proc: subprocess.Popen[str], expired: subprocess.TimeoutExpired) -> str:
-    """SIGTERM the lane's group, wait a bounded grace period, then SIGKILL; keep partial output.
+    """SIGTERM the lane's group, drain output for a bounded grace period, then SIGKILL; keep partial output.
 
     Invariant (T-04-54): no group signal is sent after the leader is reaped. The leader
-    stays unreaped, alive or a zombie, until the final `communicate`, so its PID and group
-    cannot have been recycled while a signal is sent.
+    stays unreaped, alive or a zombie, until after the group SIGKILL, so its PID and group
+    cannot have been recycled while a signal is sent. `communicate` and `wait` are therefore
+    not used before the SIGKILL (they reap); the pipe is read with `select`/`os.read`
+    instead so a lane that writes a large shutdown message after SIGTERM is not blocked on
+    a full pipe for the whole grace period (G2IN-02).
     """
+    chunks: list[bytes] = []
+    earlier = expired.output
+    if isinstance(earlier, bytes):
+        chunks.append(earlier)
+    elif isinstance(earlier, str):
+        chunks.append(earlier.encode("utf-8", errors="replace"))
+    fd = proc.stdout.fileno() if getattr(proc, "stdout", None) is not None else None
     _signal_group(proc, signal.SIGTERM)
     deadline = time.monotonic() + LANE_GRACE_SECONDS
+    eof = fd is None
     while time.monotonic() < deadline and not _leader_exited(proc.pid):
-        time.sleep(0.1)
+        if eof:
+            time.sleep(0.1)
+        else:
+            eof = _drain(fd, chunks, 0.1)
     # Descendants in the group may outlive the leader or ignore SIGTERM; end them now.
     _signal_group(proc, signal.SIGKILL)
-    try:
-        output, _ = proc.communicate(timeout=10)
-    except subprocess.TimeoutExpired:
-        output = None
-    partial = output if isinstance(output, str) else ""
+    if not eof:
+        _drain(fd, chunks, 10)
+    tail = _collect_after_kill(proc)
+    partial = b"".join(chunks).decode("utf-8", errors="replace") + tail
     return f"TimeoutExpired: {expired}\n{partial}"
 
 
@@ -561,6 +594,14 @@ def _retroarch_pids() -> set[int] | None:
     except ValueError:
         return None
 
+
+def _collect_after_kill(proc: subprocess.Popen[str]) -> str:
+    """Reap the lane leader and return any output still buffered; only valid after the group SIGKILL."""
+    try:
+        output, _ = proc.communicate(timeout=10)
+    except subprocess.TimeoutExpired:
+        return ""
+    return output if isinstance(output, str) else ""
 
 def _recorded_listed(recorded: int, grace: float) -> bool | None:
     """Poll `pgrep` until `recorded` is no longer listed or `grace` seconds pass.
