@@ -1,5 +1,10 @@
 # Phase 05 Validation Map
 
+This map combines earlier phase evidence with the later Plan 05-06 candidate
+receipt. The dated Plan 05-01 through 05-05 entries below are historical
+snapshots; statements in those entries that G-05-5 has no hosted receipt are
+superseded by the exact-candidate evidence recorded at the end of this map.
+
 ## Plan 05-04 checkpoint investigation — 2026-10-09
 
 - The existing evidence does not provide an independently observed selected
@@ -306,6 +311,22 @@ supervisor stack/vector behavior, 62 cycles, and no operand write.
   This closes the candidate's G-05-5 hosted-evidence gate only. PR #2 remains
   unmerged because protected `main` requires one approving PR review and the
   PR has `REVIEW_REQUIRED`; no protection was bypassed.
+
+### Current hosted-receipt coverage disposition
+
+| Task / requirement | Test type | Candidate command and artifact | Result and scope |
+|---|---|---|---|
+| 05-06 Task 3 / G-05-5 — reject malformed or mismatched hosted MVS receipts | Unit (receipt validator) | `python3 tests/sdk/test_hosted_mvs_receipt.py` (`tools/verify_hosted_mvs.py`) | Passed 11 tests on candidate `e80672845fc60d94d8a44eab416377534c9a99f1`; validates event eligibility and SHA, lane/test inventory, positive denominator, source/output digests, and aggregate. The test and checker are not present in shared checkout HEAD `f9e02f94d664c3f8170f4dc7ae8aa30bc24c13f6`, so this command is candidate evidence and is not runnable or asserted as a HEAD test. |
+| 05-06 Task 3 / G-05-5 — hosted MVS lane and aggregate | Hosted CI receipt | Run `38001400110`, PR event for candidate SHA `e80672845fc60d94d8a44eab416377534c9a99f1`; artifacts accepted by `tools/verify_hosted_mvs.py` on that candidate | Passed for the exact candidate: seven named MVS CTests, positive denominator, matching source/output digests, and passing aggregate. This does not qualify shared checkout HEAD, selected-game boot, merge, release, or frontend behavior. |
+| 05-06 Task 2 / G-05-3, GAME-02 | Manual/source evidence gate | No executable selected-game predicate command is justified yet | Open/unknown. Required before running the bounded private qualification: an independently observed selected configuration and an independently sourced guest-written attract/start predicate with source-flow evidence and oracle ancestry. Without those, do not invent a predicate or interpret coarse device-state activity as acceptance. |
+| Selected-media RetroArch flow / MEDIA-03 frontend observation | Manual | No command; launch preconditions did not materially change | Unknown/manual-only. Required evidence is direct observation in the functioning pinned RetroArch setup of selected-media import/load, stable presentation, input response, unload, and normal exit. Existing synthetic callback tests do not establish this flow. |
+
+The candidate's 11-test receipt-validator command and hosted artifacts are
+recorded from Plan 05-06's candidate history. They must not be presented as
+tests of `f9e02f94d664c3f8170f4dc7ae8aa30bc24c13f6`; the checker and test are
+absent from that shared checkout. G-05-5 is resolved only for the stated
+candidate evidence. The selected guest compatibility/checkpoint requirement
+and the actual frontend flow remain open/unknown.
 
 Phase 05 remains incomplete: selected guest compatibility/checkpoint evidence
 is still missing. Phase 04 status, its threat dispositions, and `05-UAT.md` were
