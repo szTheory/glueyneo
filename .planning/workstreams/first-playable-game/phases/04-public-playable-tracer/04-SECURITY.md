@@ -2,7 +2,7 @@
 phase: "04"
 slug: "public-playable-tracer"
 status: open
-threats_open: 12
+threats_open: 15
 asvs_level: 1
 created: "2026-10-07"
 updated: "2026-10-10"
@@ -139,8 +139,11 @@ updated: "2026-10-10"
 | T-04-SC (04-47) | Tampering | npm/pip/cargo installs | high | mitigate | No package installs; only tracked first-party Python and documentation changes (standard library only). Evidence only, pending the headless security audit (T-04-48). | open |
 | T-04-SC (04-48) | Tampering | npm/pip/cargo installs | high | mitigate | No package installs; only tracked first-party Python and documentation changes (standard library only). Evidence only, pending the headless security audit (T-04-48). | open |
 | T-04-SC (04-49) | Tampering | npm/pip/cargo installs | high | mitigate | No package installs; planning-record changes only. Evidence only, pending the headless security audit (T-04-48). | open |
-| T-04-SC (04-50) | Tampering | npm/pip/cargo installs | high | mitigate | Planned scope, recorded before 04-50 runs: no package installs; refresh rights-inventory rows and run the pinned RetroArch 1.22.2 qualification from tracked sources (generated evidence only). Pending the headless security audit (T-04-48), which verifies the executed scope. | open |
-| T-04-SC (04-51) | Tampering | npm/pip/cargo installs | high | mitigate | Planned scope, recorded before 04-51 runs: no package installs; planning-state changes only. Pending the headless security audit (T-04-48), which verifies the executed scope. | open |
+| T-04-SC (04-50) | Tampering | npm/pip/cargo installs | high | mitigate | Planned scope, recorded before 04-50 runs: no package installs; refresh rights-inventory rows and run the pinned RetroArch 1.22.2 qualification from tracked sources (generated evidence only). Executed: rights refresh 0a126ae; the qualification halted before launch (receipt-halt, snapshot-inventory-mismatch); debug fixes 59c53b3, 8face2a, 2bbaff3 (test harness only) with rights refreshes cffdddd, c21eb23, 06b9a40; no installs. Pending the headless security audit (T-04-48), which verifies the executed scope. | open |
+| T-04-SC (04-51) | Tampering | npm/pip/cargo installs | high | mitigate | Planned scope, recorded before 04-51 runs: no package installs; planning-state changes only. Superseded by 04-54 before execution (2026-10-10); no work ran. Pending the headless security audit (T-04-48), which verifies the executed scope. | open |
+| T-04-SC (04-52) | Tampering | npm/pip/cargo installs | high | mitigate | No package installs; tracked first-party Python (standard library only), docs and a rights-row refresh. Evidence only, pending the headless security audit (T-04-48). | open |
+| T-04-SC (04-53) | Tampering | npm/pip/cargo installs | high | mitigate | Planned scope, recorded before 04-53 runs: no package installs; run the pinned RetroArch 1.22.2 qualification from tracked sources once and regenerate the three evidence files. Pending the headless security audit (T-04-48), which verifies the executed scope. | open |
+| T-04-SC (04-54) | Tampering | npm/pip/cargo installs | high | mitigate | Planned scope, recorded before 04-54 runs: no package installs; planning-state changes only. Pending the headless security audit (T-04-48), which verifies the executed scope. | open |
 
 ## Threat Flags
 
@@ -178,10 +181,10 @@ Accepted 2026-10-10 under the user's delegated decision (verify-work Test 4), af
 
 - [x] All declared threats have a disposition (mitigate / accept / transfer)
 - [x] Accepted risks documented in Accepted Risks Log
-- [ ] `threats_open: 12 (T-04-11, T-04-48, T-04-62 and T-04-SC (04-43..04-51) open with round-4 fix evidence, pending the headless security audit)`
+- [ ] `threats_open: 15 (T-04-11, T-04-48, T-04-62 and T-04-SC (04-43..04-54) open with round-4 fix evidence, pending the headless security audit)`
 - [ ] `status: verified` withdrawn; status is open pending repair
 
-**Approval:** not approved: pending the headless security audit (/gsd-secure-phase 04 --ws first-playable-game), the pinned RetroArch re-qualification (04-50), the focused re-review and re-verification (round 4). Accepted risks T-04-44/52/55/60 stand per D-GAP-02. The 56f4fbd self-attestation stays withdrawn; round-4 fix evidence is recorded for the auditor and closes nothing.
+**Approval:** not approved: pending the headless security audit (/gsd-secure-phase 04 --ws first-playable-game), the pinned RetroArch re-qualification (04-53; 04-50 halted and was debugged), the focused re-review and re-verification (round 4). Accepted risks T-04-44/52/55/60 stand per D-GAP-02. The 56f4fbd self-attestation stays withdrawn; round-4 fix evidence is recorded for the auditor and closes nothing.
 
 ## Security Audit 2026-10-08
 
@@ -679,3 +682,10 @@ Evidence recorded by plan 04-49 (2026-10-10). Each red revision was re-run in a 
 - G3IN-03: OPEN, fix evidence red b826114f6309 / fix 17e35704421b, tests test_g3in_03_misnamed_register_shaped_files_fail, test_g3in_03_non_register_documents_are_skipped_and_reported, test_g3in_03_verified_may_carry_a_trailing_comment
 - Closed rows whose cited files changed this round, for the audit's freshness rule to re-judge: T-04-38 and T-04-53/54 (tools/verify_playable.py), T-04-61 (tools/independent_review.py), T-04-66 (tests/libretro/retroarch_smoke.py), T-04-51/63/64 (tests/tools/check_security_register.py). No status of these rows changed here.
 - T-04-SC (04-43..04-51): OPEN, no package installs recorded; the 04-50 and 04-51 rows describe planned scope pending those plans.
+
+## Gap-closure round 4 continuation evidence (04-52..04-54) — not an audit verdict
+
+- 04-50 receipt-halt (snapshot-inventory-mismatch): debugged and resolved in .planning/debug/resolved/snapshot-inventory-mismatch.md (46b0681). Causes were in tests/tools/test_verify_playable.py: an isolated entry child wrote bytecode into the snapshot (fix 59c53b3), eight ReviewProvenanceTest cases needed .git (fix 8face2a), and the entry child created build/playable-qualification in the snapshot (fix 2bbaff3). Rights refreshes cffdddd, c21eb23, 06b9a40. The debug session's own qualification run is an untracked build output and is not evidence.
+- Snapshot directory-set guard (debug follow-up): red c3be168d6c66 / fix b25a5a35b755, tests test_snapshot_dir_*, red re-proven in a detached worktree (build/playable-qualification/04-52-evidence.txt, ignored).
+- Closed rows whose cited file changed, for the audit's freshness rule to re-judge: T-04-13 and T-04-23 (tools/verify_playable.py snapshot binding; the directory set is now also compared). No status changed here.
+- T-04-SC (04-50..04-54): OPEN; 04-51 superseded by 04-54 before execution; the 04-53 and 04-54 rows describe planned scope pending those plans.
