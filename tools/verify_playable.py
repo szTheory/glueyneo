@@ -601,7 +601,10 @@ def _terminate_lane_group(proc: subprocess.Popen[bytes], expired: subprocess.Tim
     """
     chunks: list[bytes] = []
     earlier = _as_bytes(expired.output)
-    fd = proc.stdout.fileno() if getattr(proc, "stdout", None) is not None else None
+    # `communicate` closes the parent's pipe end at EOF, so a lane that closed its stdout and kept running
+    # reaches here with a closed stream; it must still be signalled (D58WR-02).
+    stream = getattr(proc, "stdout", None)
+    fd = stream.fileno() if stream is not None and not stream.closed else None
     _signal_group(proc, signal.SIGTERM)
     deadline = time.monotonic() + LANE_GRACE_SECONDS
     eof = fd is None
@@ -1171,6 +1174,12 @@ def write_frontend_records(source_root: Path, summary: dict[str, Any]) -> None:
     if failure is None:
         return  # a fully successful write is unchanged; leftover cleanup failures cannot undo it
     leftovers = "; could not remove: " + ", ".join(debris) if debris else ""
+    if not isinstance(failure, Exception):
+        # An interrupt or exit stays what it is; the leftovers are reported beside it (D58IN-01).
+        if unrestored or debris:
+            incomplete = "evidence rollback incomplete: " + ", ".join(unrestored) if unrestored else "evidence rollback complete"
+            print(incomplete + leftovers, file=sys.stderr)
+        raise failure
     if unrestored:
         raise RuntimeError("evidence rollback incomplete: " + ", ".join(unrestored) + leftovers) from failure
     if debris:

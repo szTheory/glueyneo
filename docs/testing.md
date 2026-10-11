@@ -266,7 +266,9 @@ row (see Closure gates).
   <names>`, and with unrestored files the `incomplete` message gains a
   `; could not remove: <names>` clause (G3WR-04). Any surviving `.tmp` file is
   named, and the original failure is always the `__cause__`. A write that
-  succeeded returns normally even if a temporary could not be removed.
+  succeeded returns normally even if a temporary could not be removed. An
+  interrupt or exit is never replaced by that error: it is re-raised unchanged
+  with the leftover report on stderr.
 - **Lane timeouts** (G2IN-02, G4WR-01, G4WR-03). Output is drained during the
   SIGTERM grace without reaping the leader; the no-signal-after-reap invariant
   (T-04-54) is unchanged. The lane pipe is binary: the first segment, the
@@ -276,9 +278,10 @@ row (see Closure gates).
   is translated and a character split across segments is whole. The earlier
   segment survives a detached descendant that keeps the pipe open (the second
   collection is bounded by `LANE_AFTER_KILL_SECONDS`, then the leader is reaped
-  and the parent's pipe end closed). Non-UTF-8 output is recorded with U+FFFD
-  on both the normal and the timeout path, and no decode error escapes
-  `Runner.command`.
+  and the parent's pipe end closed). A lane that closed its own stdout and kept
+  running is still signalled, because a closed stream no longer stops the group
+  signals. Non-UTF-8 output is recorded with U+FFFD on both the normal and the
+  timeout path, and no decode error escapes `Runner.command`.
 - **Smoke harness** (G2WR-06). A signal deferred in the launch window is always
   raised as `interrupted`, even when launch raises; a child-PID record failure is
   reported as `pid-record`, not `launch`, by both paths. The actual smoke
