@@ -1394,13 +1394,108 @@ RIGHTS_REVISION = re.compile(r"[0-9a-f]{40}")
 RIGHTS_EXEMPT_PREFIX = "third_party/"
 
 
+HISTORY_ALLOWLIST = Path("docs/history-allowlist.json")
+HISTORY_ALLOWLIST_KINDS = ("reviewed_revision", "review_citation", "frontend_receipt", "rights")
+PRE_SHIP_ROW = "allowlisted pre-ship row (first-playable-game branch)"
+
+
+def _canonical_digest(value: object) -> str:
+    """SHA-256 of the canonical JSON form of a value (sorted keys, compact separators, UTF-8)."""
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _disposition_row_pin(text: str, finding_id: str) -> str | None:
+    """SHA-256 of a finding's own disposition table row (leading to trailing `|`), or None when it is absent."""
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        if stripped.strip("|").split("|", 1)[0].strip() == finding_id:
+            return hashlib.sha256(stripped.encode("utf-8")).hexdigest()
+    return None
+
+
+def _reviewed_revision_pin(reviewed: str) -> str:
+    return hashlib.sha256(f"reviewed_revision: {reviewed}".encode("utf-8")).hexdigest()
+
+
+@dataclass(frozen=True)
+class HistoryAllowlist:
+    """Per-row, per-record-pinned list of pre-ship rows whose cited revision may be history-absent (T-04-104)."""
+
+    rows: dict[tuple[str, str, str], str]
+    base_revision: str | None = None
+
+    def covers(self, kind: str, key: str, revision: str, current_pin: str | None) -> bool:
+        """True only for a listed (kind, key, revision) row whose pin equals the pin of the record as it is now."""
+        return current_pin is not None and self.rows.get((kind, key, revision)) == current_pin
+
+
+HistoryAllowlist.EMPTY = HistoryAllowlist(rows={})  # type: ignore[attr-defined]
+
+
+def load_history_allowlist(source_root: Path) -> HistoryAllowlist:
+    """Read `docs/history-allowlist.json`: an absent file is the empty allowlist, a malformed one fails closed."""
+    path = source_root / HISTORY_ALLOWLIST
+    if not path.is_file():
+        return HistoryAllowlist.EMPTY  # type: ignore[attr-defined]
+    malformed = RuntimeError("history allowlist is malformed")
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        raise malformed from error
+    if (not isinstance(document, dict) or type(document.get("schema")) is not int or document["schema"] != 1
+            or not isinstance(document.get("scope"), str) or not isinstance(document.get("rows"), list)
+            or not isinstance(document.get("base_revision"), str)
+            or re.fullmatch(r"[0-9a-f]{40}", document["base_revision"]) is None):
+        raise malformed
+    rows: dict[tuple[str, str, str], str] = {}
+    for row in document["rows"]:
+        if (not isinstance(row, dict) or row.get("kind") not in HISTORY_ALLOWLIST_KINDS
+                or not isinstance(row.get("key"), str) or row["key"] == ""
+                or not isinstance(row.get("revision"), str) or re.fullmatch(r"[0-9a-f]{12,40}", row["revision"]) is None
+                or not isinstance(row.get("pin"), str) or re.fullmatch(r"[0-9a-f]{64}", row["pin"]) is None):
+            raise malformed
+        rows[(row["kind"], row["key"], row["revision"])] = row["pin"]
+    return HistoryAllowlist(rows=rows, base_revision=document["base_revision"])
+
+
+def _relation_of_commit(repository: Path, commit: str, head: str) -> str:
+    """`ancestor`, `descendant` or `absent` (unrelated history) for a revision that resolves to a commit."""
+    if _git_exit(repository, ["merge-base", "--is-ancestor", commit, head]) == 0:
+        return "ancestor"
+    if _git_exit(repository, ["merge-base", "--is-ancestor", head, commit]) == 0:
+        return "descendant"
+    return "absent"
+
+
+def _revision_relation(repository: Path, revision: str, head: str) -> str:
+    """History relation of a form-validated revision to `head`: `ancestor`, `descendant` or `absent`.
+
+    A revision is history-absent when it does not resolve, or resolves but is neither an ancestor nor a
+    descendant of `head` (unrelated history, for example a squashed-away feature branch whose objects a
+    local clone still holds).
+    """
+    if _git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}"]) != 0:
+        return "absent"
+    return _relation_of_commit(repository, revision, head)
+
+
+def _note_once(notes: list[str] | None, note: str) -> None:
+    if notes is not None and note not in notes:
+        notes.append(note)
+
+
 def _rights_path_is_relative_posix(path: object) -> bool:
     """Non-empty, not rooted, no `..` segment and no leading `-` (T-04-103: it becomes part of a Git argument)."""
     return (isinstance(path, str) and path != "" and not path.startswith(("/", "-"))
             and ".." not in path.split("/"))
 
 
-def rights_revision_errors(source_root: Path, repository: Path, head: str) -> list[str]:
+def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
+                           allowlist: HistoryAllowlist | None = None,
+                           unverifiable: list[str] | None = None) -> list[str]:
     """Every non-third_party rights row cites a commit that holds its recorded bytes (G4WR-04, T-04-103).
 
     For a row whose path is not under `third_party/` (those cite an upstream pin), `path` must be a
@@ -1409,7 +1504,19 @@ def rights_revision_errors(source_root: Path, repository: Path, head: str) -> li
     `sha256`. That five-part predicate is the whole check; it does not require the last commit that
     touched the file (merge commits make that fragile). The inventory is the single JSON block of
     `docs/rights-inventory.md` under `source_root`.
+
+    Tolerance is per row (G5WR-01, T-04-104). A revision is history-absent when it does not resolve, or
+    when it resolves but is neither an ancestor nor a descendant of `head` (unrelated history, for
+    example a squashed-away feature branch whose objects a local clone still holds), so a local squash
+    behaves like a fresh clone. Only a history-absent row that is listed in `docs/history-allowlist.json`
+    with a pin equal to the canonical digest of its own inventory item, and whose working-tree file
+    hashes to the recorded `sha256`, is tolerated; it is appended to `unverifiable`. An ancestor or
+    descendant revision and any unlisted or edited row keep the strict checks. The allowlist covers only
+    listed pre-ship rows of the first-playable-game milestone branch. `allowlist=None` reads the file
+    under `source_root`.
     """
+    if allowlist is None:
+        allowlist = load_history_allowlist(source_root)
     text = (source_root / RIGHTS_INVENTORY).read_text(encoding="utf-8")
     blocks = re.findall(r"```json\s*\n(.*?)\n```", text, re.DOTALL)
     if len(blocks) != 1:
@@ -1431,14 +1538,29 @@ def rights_revision_errors(source_root: Path, repository: Path, head: str) -> li
             errors.append(f"rights source_revision for {path} is not 40 hex")
             continue
         label = f"rights source_revision {revision[:12]} for {path}"
-        if _git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}"]) != 0:
-            errors.append(f"{label} does not resolve")
-        elif _git_exit(repository, ["merge-base", "--is-ancestor", revision, head]) != 0:
-            errors.append(f"{label} is not an ancestor of the checked head")
-        else:
+        relation = _revision_relation(repository, revision, head)
+        if relation == "ancestor":
             blob = _git_bytes(repository, ["cat-file", "blob", f"{revision}:{path}"])
             if blob is None or hashlib.sha256(blob).hexdigest() != item.get("sha256"):
                 errors.append(f"{label} does not hold the recorded SHA-256")
+        elif relation == "absent" and allowlist.covers("rights", path, revision, _canonical_digest(item)):
+            unverifiable_label = (f"{label} is unverifiable-history "
+                                  "(allowlisted pre-ship row, first-playable-game branch)")
+            try:
+                held = hashlib.sha256((source_root / path).read_bytes()).hexdigest()
+            except OSError:
+                held = None
+            if held is None:
+                errors.append(f"{unverifiable_label} and the working-tree file is missing")
+            elif held != item.get("sha256"):
+                errors.append(f"{unverifiable_label} and the working-tree file does not hold the recorded SHA-256")
+            else:
+                _note_once(unverifiable, f"rights {path} source_revision {revision[:12]}: {PRE_SHIP_ROW}; "
+                                         "working-tree digest matches")
+        elif _git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}"]) != 0:
+            errors.append(f"{label} does not resolve")
+        else:
+            errors.append(f"{label} is not an ancestor of the checked head")
     return errors
 
 
@@ -1520,7 +1642,7 @@ def review_provenance_errors(source_root: Path, repository: Path, head: str) -> 
     return errors
 
 
-def check_docs(source_root: Path, *, repository: Path | None = None, head: str = "HEAD") -> None:
+def check_docs(source_root: Path, *, repository: Path | None = None, head: str = "HEAD") -> list[str]:
     """Check the integrator guide, the validation map and the review records against tracked evidence.
 
     The review provenance of each closure-bearing disposition is ordered strictly after the review round
@@ -1529,7 +1651,12 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
     non-third_party rights row must also cite a resolvable ancestor commit that holds its recorded
     SHA-256 (`rights_revision_errors`, G4WR-04). Without a Git repository and without tracked frontend evidence there is nothing to
     bind to, so only the repository-free checks run; tracked evidence without a repository fails closed.
+
+    Returns the tolerated items: one note per listed pre-ship row of `docs/history-allowlist.json`
+    whose cited revision is history-absent (G5WR-01); empty on full history or with no allowlist.
     """
+    allowlist = load_history_allowlist(source_root)
+    notes: list[str] = []
     evidence = load_frontend_evidence(source_root, repository=repository, head=head)
     guide = (source_root / GUIDE).read_text(encoding="utf-8")
     validation = (source_root / VALIDATION).read_text(encoding="utf-8")
@@ -1565,7 +1692,8 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
         provenance_problems = review_provenance_errors(source_root, provenance_repository, head)
         if provenance_problems:
             raise RuntimeError(provenance_problems[0])
-        rights_problems = rights_revision_errors(source_root, provenance_repository, head)
+        rights_problems = rights_revision_errors(source_root, provenance_repository, head,
+                                                 allowlist=allowlist, unverifiable=notes)
         if rights_problems:
             raise RuntimeError(rights_problems[0])
 
@@ -1585,6 +1713,7 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
         raise RuntimeError("unfinished placeholder in current frontend status")
     if not {"HOST-02", "QUAL-03"}.issubset(requirement_ids) or frontend_status != frontend_row_status(evidence):
         raise RuntimeError("HOST-02 and frontend QUAL-03 status in the validation map does not match the tracked evidence")
+    return notes
 
 
 def _tool_record(name: str) -> dict[str, str]:
@@ -1708,13 +1837,15 @@ def main() -> int:
         return 0
     if args.check_docs and not args.clean:
         try:
-            check_docs(ROOT)
+            notes = check_docs(ROOT)
         except (RuntimeError, OSError, UnicodeError, ValueError) as error:
             emit_error("", error)
             return 1
         except Exception as error:  # Never let a traceback carry an unscanned path.
             emit_error("", type(error).__name__)
             return 1
+        for note in notes:
+            print(f"unverifiable-history: {note}")
         print("Phase 04 documentation gate passed.")
         return 0
     if args.retroarch is None:
