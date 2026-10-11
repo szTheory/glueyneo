@@ -1806,16 +1806,21 @@ def history_allowlist_stale(source_root: Path) -> list[str]:
 
 HISTORY_ALLOWLIST_SCOPE = "first-playable-game milestone branch pre-ship records"
 HISTORY_BASE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]*")
+# G7CR-02: the default base is the upstream main ref, the base a pull request is compared with in
+# CI; a local `main` branch can be arbitrarily stale. It must be fetched (`git fetch origin`).
+HISTORY_DEFAULT_BASE = "origin/main"
 
 
 def _allowlist_refusal(reason: str) -> RuntimeError:
     return RuntimeError(f"history allowlist cannot be generated: {reason}")
 
 
-def history_allowlist_document(source_root: Path, repository: Path, head: str, base: str = "main") -> str:
+def history_allowlist_document(source_root: Path, repository: Path, head: str,
+                               base: str = HISTORY_DEFAULT_BASE) -> str:
     """Deterministic `docs/history-allowlist.json` text for the rows introduced on this branch (G5WR-01, T-04-106).
 
-    M is `git merge-base <head> <base>`. Generation first runs the three history gates strictly (empty
+    M is `git merge-base <head> <base>`; `base` defaults to `origin/main`, the ref a pull request to main
+    is compared with, never the possibly stale local `main` branch (G7CR-02). Generation first runs the three history gates strictly (empty
     allowlist) and refuses on any error or note, so only rows that verified against the checked head can
     be listed and nothing can be generated on a squashed history, where listed rows are absent. A row is
     listed only when its cited revision is not an ancestor of M (rows reachable from main stay strict),
@@ -1823,6 +1828,9 @@ def history_allowlist_document(source_root: Path, repository: Path, head: str, b
     """
     if not isinstance(base, str) or (RIGHTS_REVISION.fullmatch(base) is None and HISTORY_BASE_NAME.fullmatch(base) is None):
         raise _allowlist_refusal("base is not a revision or branch name")
+    if _git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{base}^{{commit}}"]) != 0:
+        raise _allowlist_refusal(f"base {base} does not resolve to a commit; run `git fetch origin` "
+                                 "or pass --base <revision>")
     merge_base = (_git_stdout(repository, ["merge-base", head, base]) or "").strip()
     if RIGHTS_REVISION.fullmatch(merge_base) is None:
         raise _allowlist_refusal(f"base {base} has no merge-base with the checked head")
@@ -1877,7 +1885,8 @@ def history_allowlist_document(source_root: Path, repository: Path, head: str, b
     return json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
 
-def history_allowlist_is_current(source_root: Path, repository: Path, head: str, base: str = "main") -> bool:
+def history_allowlist_is_current(source_root: Path, repository: Path, head: str,
+                                 base: str = HISTORY_DEFAULT_BASE) -> bool:
     """True only when the tracked allowlist file equals what `history_allowlist_document` produces now."""
     path = source_root / HISTORY_ALLOWLIST
     if not path.is_file():
@@ -2078,7 +2087,8 @@ def main() -> int:
     parser.add_argument("--history-allowlist", choices=("write", "check"),
                         help="write or freshness-check docs/history-allowlist.json for this milestone branch (G5WR-01)")
     parser.add_argument("--base", default=None,
-                        help="revision or branch the allowlist excludes (default main); only with --history-allowlist")
+                        help=f"revision or branch the allowlist excludes (default {HISTORY_DEFAULT_BASE}, which must be "
+                             "fetched); only with --history-allowlist")
     args = parser.parse_args()
     if args.base is not None and args.history_allowlist is None:
         parser.error("--base is only accepted with --history-allowlist")
@@ -2086,7 +2096,7 @@ def main() -> int:
         if args.retroarch is not None or args.clean or args.check_docs or args.record_frontend_evidence:
             parser.error("--history-allowlist cannot be combined with --retroarch, --clean, "
                          "--check-docs or --record-frontend-evidence")
-        base = args.base if args.base is not None else "main"
+        base = args.base if args.base is not None else HISTORY_DEFAULT_BASE
         try:
             if args.history_allowlist == "write":
                 text = history_allowlist_document(ROOT, ROOT, "HEAD", base)

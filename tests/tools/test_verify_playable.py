@@ -3106,15 +3106,15 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
                 status = playable.main()
             return status, stdout.getvalue(), stderr.getvalue()
 
-        status, out, _err = run("--history-allowlist", "write")
+        status, out, _err = run("--history-allowlist", "write", "--base", "main")
         self.assertEqual((status, out), (0, "Wrote docs/history-allowlist.json (4 rows).\n"))
-        status, out, _err = run("--history-allowlist", "check")
+        status, out, _err = run("--history-allowlist", "check", "--base", "main")
         self.assertEqual((status, out), (0, "History allowlist is current (4 rows).\n"))
         text = (fx.repo / playable.DISPOSITION).read_text(encoding="utf-8")
         (fx.repo / playable.DISPOSITION).write_text(
             text.replace(f"| CR-01 | critical | fixed | revision `{fx.F2}` |",
                          f"| CR-01 | critical | fixed | revision `{fx.F2}` x |"), encoding="utf-8")
-        status, out, err = run("--history-allowlist", "check")
+        status, out, err = run("--history-allowlist", "check", "--base", "main")
         self.assertEqual((status, out), (1, ""))
         self.assertIn("history allowlist is stale or missing", err)
         self.assertIn("review_citation CR-01", err)
@@ -3123,6 +3123,22 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
             with self.assertRaises(SystemExit) as caught:
                 run(*arguments)
             self.assertEqual(caught.exception.code, 2, arguments)
+
+    def test_g7cr_02_default_base_is_the_upstream_main_ref(self) -> None:
+        """Without --base the generator uses origin/main, never a stale local main, and refuses when it is absent."""
+        fx = self.on_feature(base_row=True)
+        self.assertEqual(playable.HISTORY_DEFAULT_BASE, "origin/main")
+        function = playable.history_allowlist_document
+        with self.assertRaisesRegex(RuntimeError, self.GENERATOR_REFUSAL + "base origin/main does not resolve"):
+            function(fx.repo, fx.repo, "HEAD")
+        # The upstream main has moved past the stale local main: F2 is already upstream.
+        self.git(fx.repo, "update-ref", "refs/remotes/origin/main", fx.F2)
+        upstream = json.loads(function(fx.repo, fx.repo, "HEAD"))
+        self.assertEqual(upstream["base_revision"], fx.F2)
+        self.assertEqual(upstream["rows"], [])
+        stale_local = json.loads(self.generate(fx.repo, base="main"))
+        self.assertEqual(stale_local["base_revision"], fx.B)
+        self.assertEqual(len(stale_local["rows"]), 4)
 
     def test_g5wr_01_one_note_per_listed_revision_form(self) -> None:
         """A finding citing one commit in two recognized forms lists two rows and prints two lines (04-60 SIM-CHECK)."""

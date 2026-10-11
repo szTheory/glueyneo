@@ -245,7 +245,11 @@ Commands: `python3 tools/verify_playable.py --history-allowlist write [--base <r
 generates the file (a strict pre-check; it refuses on a squashed history and on
 any row that does not verify), and
 `python3 tools/verify_playable.py --history-allowlist check [--base <rev>]`
-reports whether the committed file is current.
+reports whether the committed file is current. `--base` defaults to
+`origin/main`, the ref a pull request to main is compared with, and never to the
+local `main` branch, which can be arbitrarily stale (G7CR-02); run
+`git fetch origin` first, or the commands refuse because the base does not
+resolve.
 
 The allowlist is checked against git, not only against its own pins (G6WR-01).
 `base_revision` must be a commit of the repository and an ancestor of the checked
@@ -261,7 +265,9 @@ CI runs `--history-allowlist check --base <pull request base>` on every pull
 request that changes `docs/history-allowlist.json`, from a full-history
 checkout, so a changed allowlist cannot merge unless every row verifies against
 that branch's history. The CTest `qualification_history_allowlist` runs the same
-check locally and is registered only with `-DGLUEYNEO_PRE_SHIP_HISTORY_CHECK=ON`.
+check locally against `-DGLUEYNEO_HISTORY_BASE=<ref>` (default `origin/main`,
+which must be fetched) and is registered only with
+`-DGLUEYNEO_PRE_SHIP_HISTORY_CHECK=ON`.
 It is off by default because the check refuses on a squashed or shallow
 checkout, which includes main after the squash merge. Once squashed, the pins
 are an accepted, documented residual (G6WR-01, deferred under the 2026-10-11
@@ -270,8 +276,9 @@ allowlist after the squash fails the CI check, because its rows no longer
 resolve.
 
 Pre-ship step, required before the milestone squash merge: run
-`--history-allowlist check`; if it reports stale, run
-`--history-allowlist write` (which lists only strictly passing rows), commit the
+`git fetch origin`, then `--history-allowlist check --base origin/main`; if it
+reports stale, run `--history-allowlist write --base origin/main` (which lists
+only strictly passing rows), commit the
 file alone, run `check` again, then run the squash simulation with the committed
 file. The allowlist docs/history-allowlist.json is tracked: plan 04-64
 generated it after its last pinned-record change and proved it with the squash

@@ -50,6 +50,8 @@ option(GLUEYNEO_YM2610_ADMISSION "Build the private ymfm YM2610 admission candid
 option(GLUEYNEO_CPU_EXPERIMENT "Build the private CPU acceptance experiment" OFF)
 option(GLUEYNEO_OWNED_CPU_EXPERIMENT "Build the private owned MC68000 experiment" OFF)
 option(GLUEYNEO_PRE_SHIP_HISTORY_CHECK "Register the pre-ship history allowlist CTest (needs full branch history)" OFF)
+set(GLUEYNEO_HISTORY_BASE "origin/main" CACHE STRING
+    "Base ref for the pre-ship history allowlist CTest (the pull request base; fetch it first)")
 set(GLUEYNEO_SDK_SANITIZER "NONE" CACHE STRING
     "SDK-only instrumentation: NONE, ADDRESS_UNDEFINED, or THREAD")
 set_property(CACHE GLUEYNEO_SDK_SANITIZER PROPERTY STRINGS
@@ -879,7 +881,7 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
     endif()
     add_test(NAME qualification_history_allowlist
       COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_playable.py"
-              --history-allowlist check)
+              --history-allowlist check --base "${GLUEYNEO_HISTORY_BASE}")
     set_tests_properties(qualification_history_allowlist
       PROPERTIES LABELS "qualification-tools" TIMEOUT 120)
   endif()
