@@ -3142,6 +3142,57 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, self.GENERATOR_REFUSAL):
             self.current(fx.repo)
 
+    def run_cli(self, root: Path, *arguments: str) -> tuple[int, str, str]:
+        with mock.patch.object(playable, "ROOT", root), \
+                mock.patch.object(sys, "argv", ["verify_playable.py", *arguments]), \
+                mock.patch("sys.stdout", new_callable=io.StringIO) as stdout, \
+                mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+            status = playable.main()
+        return status, stdout.getvalue(), stderr.getvalue()
+
+    def test_g7wr_02_ci_mode_checks_every_pre_ship_pull_request(self) -> None:
+        """On the pre-ship branch the check applies even when the allowlist file is unchanged."""
+        fx = self.on_feature()
+        (fx.repo / "docs/history-allowlist.json").write_text(self.generate(fx.repo, base="main"), encoding="utf-8")
+        self.commit(fx.repo, "allowlist", "docs/history-allowlist.json")
+        # A base holding the identical allowlist file: the check still applies through the listed rows.
+        reason = playable.history_allowlist_check_applies(fx.repo, fx.repo, "HEAD", "HEAD")
+        self.assertIsNotNone(reason)
+        self.assertIn("listed revision", reason)
+        status, out, _err = self.run_cli(fx.repo, "--history-allowlist", "ci", "--base", fx.B)
+        self.assertEqual(status, 0, out)
+        self.assertIn("History allowlist check applies", out)
+        self.assertIn("History allowlist is current", out)
+        # A later pull request edits a pinned disposition row but not the allowlist: it must fail.
+        text = (fx.repo / playable.DISPOSITION).read_text(encoding="utf-8")
+        (fx.repo / playable.DISPOSITION).write_text(
+            text.replace(f"| CR-01 | critical | fixed | revision `{fx.F2}` |",
+                         f"| CR-01 | critical | fixed | revision `{fx.F2}` x |"), encoding="utf-8")
+        self.commit(fx.repo, "edit a pinned row", playable.DISPOSITION.as_posix())
+        status, _out, err = self.run_cli(fx.repo, "--history-allowlist", "ci", "--base", fx.B)
+        self.assertEqual(status, 1)
+        self.assertIn("review_citation CR-01", err)
+
+    def test_g7wr_02_ci_mode_after_the_squash(self) -> None:
+        """After the squash an unchanged allowlist does not apply; editing it applies and fails."""
+        fx = self.fixture()
+        root = fx.clone
+        self.git(root, "checkout", "-q", "-b", "later")
+        (root / "notes.txt").write_text("notes\n", encoding="utf-8")
+        self.commit(root, "notes", "notes.txt")
+        status, out, _err = self.run_cli(root, "--history-allowlist", "ci", "--base", "main")
+        self.assertEqual(status, 0, out)
+        self.assertIn("does not apply", out)
+        path = root / "docs/history-allowlist.json"
+        path.write_text(path.read_text(encoding="utf-8") + " ", encoding="utf-8")
+        self.commit(root, "edit allowlist", "docs/history-allowlist.json")
+        status, out, _err = self.run_cli(root, "--history-allowlist", "ci", "--base", "main")
+        self.assertEqual(status, 1)
+        self.assertIn("differs from main", out)
+        with self.assertRaises(SystemExit) as caught:
+            self.run_cli(root, "--history-allowlist", "ci")
+        self.assertEqual(caught.exception.code, 2)
+
     def test_g7cr_02_default_base_is_the_upstream_main_ref(self) -> None:
         """Without --base the generator uses origin/main, never a stale local main, and refuses when it is absent."""
         fx = self.on_feature(base_row=True)

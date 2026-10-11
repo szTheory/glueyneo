@@ -872,8 +872,8 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
   # G6WR-01: the allowlist pins are self-attested, so the freshness and history
   # check is the verifier. It needs the full pre-ship branch history and refuses
   # on a squashed or shallow checkout, including main after the squash merge, so
-  # it is opt-in here; CI runs it on every pull request that changes the
-  # allowlist (docs/testing.md).
+  # it is opt-in here; CI runs it on every pull request to which it applies
+  # (docs/testing.md).
   if(GLUEYNEO_PRE_SHIP_HISTORY_CHECK)
     if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git"
        OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/history-allowlist.json")

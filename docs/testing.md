@@ -265,10 +265,19 @@ pre-ship branch verifies them; signing them would be a policy change and is not
 done. A repeated (kind, key, revision) row is malformed. The tolerated rights
 branch hashes only a normalized path that is a regular file (not a symlink) in
 the checked head's tree.
-CI runs `--history-allowlist check --base <pull request base>` on every pull
-request that changes `docs/history-allowlist.json`, from a full-history
-checkout, so a changed allowlist cannot merge unless every row verifies against
-that branch's history. The CTest `qualification_history_allowlist` runs the same
+CI runs `--history-allowlist ci --base <pull request base>` on every pull
+request, from a full-history checkout (G7WR-02). It runs the full `check`
+whenever `docs/history-allowlist.json` differs from the base or any listed
+revision is an ancestor of the checked head, which holds for every pull request
+from the pre-ship branch whatever it touches: a disposition row, the receipt, a
+rights item or a rights file's bytes can each make the allowlist stale without
+changing it. So neither a changed nor a stale allowlist can merge from that
+branch. After the milestone squash merge an unchanged allowlist none of whose
+rows is in the history does not apply (the check refuses on squashed history by
+design, and a voided row is strict, so `--check-docs` is the gate there); a
+history-independent staleness check was not added because a legitimate
+post-squash rights refresh voids a listed row, and failing on that would leave
+no way to proceed, since the allowlist can no longer be regenerated. The CTest `qualification_history_allowlist` runs the same
 check locally against `-DGLUEYNEO_HISTORY_BASE=<ref>` (default `origin/main`,
 which must be fetched) and is registered only with
 `-DGLUEYNEO_PRE_SHIP_HISTORY_CHECK=ON`.

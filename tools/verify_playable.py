@@ -1908,6 +1908,27 @@ def history_allowlist_is_current(source_root: Path, repository: Path, head: str,
         return False
 
 
+def history_allowlist_check_applies(source_root: Path, repository: Path, head: str, base: str) -> str | None:
+    """Why the pull request freshness check applies, or None when it cannot apply (G7WR-02).
+
+    The check applies whenever `docs/history-allowlist.json` differs from `base` (a failed diff counts as
+    a change), and whenever any listed revision is an ancestor of `head`, which holds on the pre-ship
+    branch whose history the rows come from, whatever file the pull request touches: a disposition
+    row, a receipt, a rights item or a rights file's bytes can each make the shipped allowlist stale.
+    It does not apply to an unchanged allowlist none of whose rows is in this history, which is every
+    pull request after the milestone squash merge; there `check` refuses by design and a voided row is
+    strict, so `--check-docs` is the gate. A malformed allowlist raises.
+    """
+    if not isinstance(base, str) or (RIGHTS_REVISION.fullmatch(base) is None and HISTORY_BASE_NAME.fullmatch(base) is None):
+        raise RuntimeError("history allowlist base is not a revision or branch name")
+    if _git_exit(repository, ["diff", "--quiet", base, head, "--", HISTORY_ALLOWLIST.as_posix()]) != 0:
+        return f"{HISTORY_ALLOWLIST.as_posix()} differs from {base}"
+    for _kind, _key, revision in sorted(load_history_allowlist(source_root).rows):
+        if _revision_relation(repository, revision, head) == "ancestor":
+            return f"listed revision {revision[:12]} is in this history"
+    return None
+
+
 def check_docs(source_root: Path, *, repository: Path | None = None, head: str = "HEAD") -> list[str]:
     """Check the integrator guide, the validation map and the review records against tracked evidence.
 
@@ -2094,8 +2115,9 @@ def main() -> int:
     parser.add_argument("--check-docs", action="store_true")
     parser.add_argument("--record-frontend-evidence", action="store_true",
                         help="write the public-safe summary of a passing receipt to the tracked Phase 04 evidence file")
-    parser.add_argument("--history-allowlist", choices=("write", "check"),
-                        help="write or freshness-check docs/history-allowlist.json for this milestone branch (G5WR-01)")
+    parser.add_argument("--history-allowlist", choices=("write", "check", "ci"),
+                        help="write or freshness-check docs/history-allowlist.json for this milestone branch "
+                             "(G5WR-01); `ci` runs `check` whenever it applies to the pull request (G7WR-02)")
     parser.add_argument("--base", default=None,
                         help=f"revision or branch the allowlist excludes (default {HISTORY_DEFAULT_BASE}, which must be "
                              "fetched); only with --history-allowlist")
@@ -2106,8 +2128,17 @@ def main() -> int:
         if args.retroarch is not None or args.clean or args.check_docs or args.record_frontend_evidence:
             parser.error("--history-allowlist cannot be combined with --retroarch, --clean, "
                          "--check-docs or --record-frontend-evidence")
+        if args.history_allowlist == "ci" and args.base is None:
+            parser.error("--history-allowlist ci requires --base <pull request base>")
         base = args.base if args.base is not None else HISTORY_DEFAULT_BASE
         try:
+            if args.history_allowlist == "ci":
+                reason = history_allowlist_check_applies(ROOT, ROOT, "HEAD", base)
+                if reason is None:
+                    print(f"History allowlist check does not apply: {HISTORY_ALLOWLIST.as_posix()} is unchanged "
+                          "and none of its rows is in this history.")
+                    return 0
+                print(f"History allowlist check applies: {reason}.")
             if args.history_allowlist == "write":
                 text = history_allowlist_document(ROOT, ROOT, "HEAD", base)
                 target = ROOT / HISTORY_ALLOWLIST
