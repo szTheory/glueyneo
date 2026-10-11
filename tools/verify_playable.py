@@ -1827,7 +1827,8 @@ def history_allowlist_document(source_root: Path, repository: Path, head: str,
     allowlist) and refuses on any error or note, so only rows that verified against the checked head can
     be listed and nothing can be generated on a squashed history, where listed rows are absent. A row is
     listed only when its cited revision is not an ancestor of M (rows reachable from main stay strict),
-    with the per-record pin the gates compare. The text has no timestamp, host or absolute path.
+    with the per-record pin the gates compare. A listed rights row must also pass the post-squash
+    predicate now: the file at the checked head holds the recorded SHA-256 (G7CR-01). The text has no timestamp, host or absolute path.
     """
     if not isinstance(base, str) or (RIGHTS_REVISION.fullmatch(base) is None and HISTORY_BASE_NAME.fullmatch(base) is None):
         raise _allowlist_refusal("base is not a revision or branch name")
@@ -1879,6 +1880,12 @@ def history_allowlist_document(source_root: Path, repository: Path, head: str,
         if item["path"].startswith(RIGHTS_EXEMPT_PREFIX):
             continue
         if introduced(item["source_revision"]):
+            # G7CR-01: after the squash a listed row is judged by the file at the checked head, so a row
+            # whose file changed after its source_revision would pass strictly here and fail on main.
+            held = _head_blob(repository, head, item["path"])
+            if held is None or hashlib.sha256(held).hexdigest() != item.get("sha256"):
+                raise _allowlist_refusal(f"rights row {item['path']} would fail after the squash: "
+                                         "the checked head does not hold the recorded SHA-256")
             rows.add(("rights", item["path"], item["source_revision"], _canonical_digest(item)))
     document = {
         "schema": 1, "scope": HISTORY_ALLOWLIST_SCOPE, "base_revision": merge_base,

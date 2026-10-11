@@ -3126,6 +3126,22 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
                 run(*arguments)
             self.assertEqual(caught.exception.code, 2, arguments)
 
+    def test_g7cr_01_generator_refuses_rights_row_stale_at_head(self) -> None:
+        """A rights row that verifies at its source_revision but not at the head would fail after the squash."""
+        fx = self.on_feature()
+        (fx.repo / "docs/history-allowlist.json").write_text(self.generate(fx.repo, base="main"), encoding="utf-8")
+        self.commit(fx.repo, "allowlist", "docs/history-allowlist.json")
+        self.assertTrue(self.current(fx.repo))
+        (fx.repo / "tests/a.txt").write_text("three\n", encoding="utf-8")
+        self.commit(fx.repo, "edit without refreshing the rights row", "tests/a.txt")
+        errors, _notes = self.gate("rights_revision_errors", fx.repo)
+        self.assertEqual(errors, [], "the strict branch alone does not catch this")
+        with self.assertRaisesRegex(RuntimeError, self.GENERATOR_REFUSAL + "rights row tests/a.txt would fail "
+                                    "after the squash"):
+            self.generate(fx.repo, base="main")
+        with self.assertRaisesRegex(RuntimeError, self.GENERATOR_REFUSAL):
+            self.current(fx.repo)
+
     def test_g7cr_02_default_base_is_the_upstream_main_ref(self) -> None:
         """Without --base the generator uses origin/main, never a stale local main, and refuses when it is absent."""
         fx = self.on_feature(base_row=True)
