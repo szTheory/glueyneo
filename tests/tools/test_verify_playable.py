@@ -3150,6 +3150,44 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "^history allowlist is malformed$"):
             playable.load_history_allowlist(fx.repo)
 
+    # ---- G6WR: the allowlist is verified against history, duplicates and symlinks fail closed ----
+
+    ALL_ROWS_KEYS = (("reviewed_revision", "04-REVIEW.md"), ("review_citation", "CR-01"),
+                     ("review_citation", "GWR-01"), ("rights", "tests/a.txt"))
+
+    def all_rows(self, fx: "SimpleNamespace") -> list[tuple[str, str, str]]:
+        revisions = {"reviewed_revision": fx.F1}
+        return [(kind, key, revisions.get(kind, fx.F2)) for kind, key in self.ALL_ROWS_KEYS]
+
+    def test_g6wr_01_forged_base_revision_voids_tolerance(self) -> None:
+        """A base_revision that is not a commit of this repository or not an ancestor of the head tolerates nothing."""
+        fx = self.fixture()
+        for label, base in (("unresolvable", "e" * 40), ("not an ancestor of head", fx.F4)):
+            with self.subTest(label):
+                self.allowlist(fx.repo, self.all_rows(fx), base)
+                rights_errors, rights_notes, review_errors, review_notes = self.both(fx.repo)
+                self.assertEqual((rights_notes, review_notes), ([], []))
+                self.assertTrue(rights_errors and review_errors, (rights_errors, review_errors))
+                reported = playable.history_allowlist_anchor_errors(
+                    playable.load_history_allowlist(fx.repo), fx.repo, "HEAD")
+                self.assertTrue(reported and "base_revision" in reported[0], reported)
+        self.allowlist(fx.repo, self.all_rows(fx), fx.B)
+        errors, notes = self.gate("rights_revision_errors", fx.repo)
+        self.assertEqual((errors, len(notes)), ([], 1))
+
+    def test_g6wr_01_row_reachable_from_base_is_rejected(self) -> None:
+        """A row whose revision resolves inside the base's history is outside the documented scope."""
+        fx = self.on_feature()
+        self.allowlist(fx.repo, self.all_rows(fx), fx.F2)
+        allowlist = playable.load_history_allowlist(fx.repo)
+        errors = playable.history_allowlist_anchor_errors(allowlist, fx.repo, "HEAD")
+        self.assertTrue(any("reachable from base_revision" in error and fx.F1[:12] in error for error in errors), errors)
+        kept = playable.anchored_history_allowlist(allowlist, fx.repo, "HEAD")
+        self.assertNotIn(("reviewed_revision", "04-REVIEW.md", fx.F1), kept.rows)
+        self.allowlist(fx.repo, self.all_rows(fx), fx.B)
+        self.assertEqual(playable.history_allowlist_anchor_errors(
+            playable.load_history_allowlist(fx.repo), fx.repo, "HEAD"), [])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1060,6 +1060,7 @@ def load_frontend_evidence(source_root: Path, *, repository: Path | None = None,
     if ancestor.returncode != 0:
         if allowlist is None:
             allowlist = load_history_allowlist(source_root)
+        allowlist = anchored_history_allowlist(allowlist, repository, head)
         if (_revision_relation(repository, revision, head) == "absent"
                 and allowlist.covers("frontend_receipt", "source_revision", revision, _canonical_digest(summary))):
             _note_once(unverifiable, f"frontend evidence revision {revision[:12]}: {PRE_SHIP_ROW}")
@@ -1480,6 +1481,51 @@ def load_history_allowlist(source_root: Path) -> HistoryAllowlist:
     return HistoryAllowlist(rows=rows, base_revision=document["base_revision"])
 
 
+def history_allowlist_anchor_errors(allowlist: HistoryAllowlist, repository: Path, head: str) -> list[str]:
+    """Rows of the allowlist that do not satisfy the documented scope relation against real history (G6WR-01).
+
+    Scope: pre-ship rows of the milestone branch, not reachable from `git merge-base HEAD main`, which
+    the file records as `base_revision`. `base_revision` must resolve to a commit that is an ancestor of
+    `head`; a row whose revision resolves to a commit must not be reachable from `base_revision`. A row
+    whose revision does not resolve cannot be checked (a squashed-away branch is the point of the
+    tolerance, user decision 2026-10-11), so it is accepted on its pin alone. The pins themselves are
+    self-attested; only a signature would change that, and that is a policy decision, not made here.
+    """
+    if not allowlist.rows:
+        return []
+    base = allowlist.base_revision
+    if (base is None or RIGHTS_REVISION.fullmatch(base) is None
+            or _git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{base}^{{commit}}"]) != 0):
+        return ["history allowlist base_revision is not a commit of this repository"]
+    if _git_exit(repository, ["merge-base", "--is-ancestor", base, head]) != 0:
+        return ["history allowlist base_revision is not an ancestor of the checked head"]
+    errors: list[str] = []
+    for kind, key, revision in sorted(allowlist.rows):
+        full = (_git_stdout(repository, ["rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}"]) or "").strip()
+        if RIGHTS_REVISION.fullmatch(full) is not None and _git_exit(
+                repository, ["merge-base", "--is-ancestor", full, base]) == 0:
+            errors.append(f"history allowlist row {kind} {key} cites revision {revision[:12]} "
+                          "reachable from base_revision")
+    return errors
+
+
+def anchored_history_allowlist(allowlist: HistoryAllowlist, repository: Path, head: str) -> HistoryAllowlist:
+    """The allowlist with every row that fails `history_allowlist_anchor_errors` removed, so it is strict (G6WR-01)."""
+    if not allowlist.rows:
+        return allowlist
+    base = allowlist.base_revision
+    if (base is None or RIGHTS_REVISION.fullmatch(base) is None
+            or _git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{base}^{{commit}}"]) != 0
+            or _git_exit(repository, ["merge-base", "--is-ancestor", base, head]) != 0):
+        return HistoryAllowlist(rows={}, base_revision=base)
+    kept: dict[tuple[str, str, str], str] = {}
+    for triple, pin in allowlist.rows.items():
+        single = HistoryAllowlist(rows={triple: pin}, base_revision=base)
+        if not history_allowlist_anchor_errors(single, repository, head):
+            kept[triple] = pin
+    return HistoryAllowlist(rows=kept, base_revision=base)
+
+
 def _relation_of_commit(repository: Path, commit: str, head: str) -> str:
     """`ancestor`, `descendant` or `absent` (unrelated history) for a revision that resolves to a commit."""
     if _git_exit(repository, ["merge-base", "--is-ancestor", commit, head]) == 0:
@@ -1556,6 +1602,7 @@ def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
         if path.startswith(RIGHTS_EXEMPT_PREFIX):
             continue
         revision = item.get("source_revision")
+    allowlist = anchored_history_allowlist(allowlist, repository, head)
         if not isinstance(revision, str) or RIGHTS_REVISION.fullmatch(revision) is None:
             errors.append(f"rights source_revision for {path} is not 40 hex")
             continue
@@ -1662,6 +1709,7 @@ def review_provenance_errors(source_root: Path, repository: Path, head: str, *,
             continue
         finding_id, _severity, state, source = row
         if state.strip().lower() == "open":
+    allowlist = anchored_history_allowlist(allowlist, repository, head)
             continue
         revisions = [match for form in REVIEW_REVISION_FORMS for match in form.findall(source)]
         if not revisions:
@@ -1892,6 +1940,9 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
         if len(row) == 10 and row[0] == "04-15 T2" and row[1] == "04-15"
     ]
     if len(frontend_rows) != 1:
+        anchor_problems = history_allowlist_anchor_errors(allowlist, provenance_repository, head)
+        if anchor_problems:
+            raise RuntimeError(anchor_problems[0])
         raise RuntimeError("HOST-02 and frontend QUAL-03 must remain Pending/unknown in the current validation map")
     requirement_ids = {item.strip() for item in frontend_rows[0][3].split(",")}
     frontend_status = frontend_rows[0][9]
