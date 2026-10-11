@@ -182,9 +182,9 @@ Rebased on the 2026-10-10 review (63 current disposition records). The earlier r
 | G4IN-01 | info | T-04-62 / `tests/tools/check_security_register.py` | fixed |
 | G4IN-02 | info | T-04-53 / `tools/verify_playable.py` | fixed |
 | G4IN-03 | info | T-04-66 / `tests/libretro/retroarch_smoke.py` | fixed |
-| G5WR-01 | warning | T-04-103 / `tools/verify_playable.py` | open |
-| G5WR-02 | warning | `tests/tools/test_verify_playable.py` | open |
-| G5IN-01 | info | T-04-103 / `tools/verify_playable.py` | open |
+| G5WR-01 | warning | T-04-103 / `tools/verify_playable.py` | fixed |
+| G5WR-02 | warning | `tests/tools/test_verify_playable.py` | fixed |
+| G5IN-01 | info | T-04-103 / `tools/verify_playable.py` | fixed |
 
 ### Plan 04-20 Task 1 Current Evidence — 2026-10-08
 
