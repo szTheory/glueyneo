@@ -2935,6 +2935,23 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
                 run(*arguments)
             self.assertEqual(caught.exception.code, 2, arguments)
 
+    def test_g5wr_01_one_note_per_listed_revision_form(self) -> None:
+        """A finding citing one commit in two recognized forms lists two rows and prints two lines (04-60 SIM-CHECK)."""
+        fx = self.fixture()
+        root = fx.clone
+        short = fx.F2[:12]
+        text = (root / playable.DISPOSITION).read_text(encoding="utf-8")
+        (root / playable.DISPOSITION).write_text(
+            text.replace(f"| CR-01 | critical | fixed | revision `{fx.F2}` |",
+                         f"| CR-01 | critical | fixed | revision `{fx.F2}` and review (04-59, {short}) |"), encoding="utf-8")
+        self.allowlist(root, [("reviewed_revision", "04-REVIEW.md", fx.F1), ("review_citation", "CR-01", fx.F2),
+                              ("review_citation", "CR-01", short), ("review_citation", "GWR-01", fx.F2),
+                              ("rights", "tests/a.txt", fx.F2)], fx.B)
+        errors, notes = self.gate("review_provenance_errors", root)
+        self.assertEqual(errors, [])
+        self.assertEqual(len([note for note in notes if "CR-01" in note]), 2, notes)
+        self.assertEqual(len(notes), 4, notes)
+
 
 if __name__ == "__main__":
     unittest.main()
