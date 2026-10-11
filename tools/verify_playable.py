@@ -1020,11 +1020,21 @@ def frontend_evidence_summary(receipt: dict[str, Any]) -> dict[str, Any]:
 
 
 def load_frontend_evidence(source_root: Path, *, repository: Path | None = None,
-                           head: str = "HEAD") -> dict[str, Any] | None:
+                           head: str = "HEAD", allowlist: HistoryAllowlist | None = None,
+                           unverifiable: list[str] | None = None) -> dict[str, Any] | None:
     """Load tracked evidence and bind it to committed bytes, or fail closed.
 
     The binding repository is the explicit ``repository`` (the originating checkout when the docs are
     checked inside a ``.git``-less snapshot) or the checked tree's own ``.git``.
+
+    Tolerance is per row (G5WR-01, T-04-104). A receipt revision is history-absent when it does not
+    resolve, or resolves but is neither an ancestor nor a descendant of ``head`` (unrelated history), so
+    a local squash behaves like a fresh clone. Only a history-absent receipt listed in
+    ``docs/history-allowlist.json`` with a pin equal to the canonical digest of the receipt object is
+    tolerated (appended to ``unverifiable``, without the snapshot binding). An ancestor or descendant
+    revision and any unlisted or edited receipt keep today's checks. The allowlist covers only listed
+    pre-ship rows of the first-playable-game milestone branch. ``allowlist=None`` reads the file under
+    ``source_root``.
     """
     path = source_root / FRONTEND_EVIDENCE
     if not path.is_file():
@@ -1047,9 +1057,15 @@ def load_frontend_evidence(source_root: Path, *, repository: Path | None = None,
             timeout=MAX_GIT_COMMAND_SECONDS)
     except (OSError, subprocess.TimeoutExpired) as error:
         raise RuntimeError("frontend evidence revision cannot be checked") from error
-    if ancestor.returncode == 1:
-        raise RuntimeError("frontend evidence revision is not a committed ancestor of the checked head")
     if ancestor.returncode != 0:
+        if allowlist is None:
+            allowlist = load_history_allowlist(source_root)
+        if (_revision_relation(repository, revision, head) == "absent"
+                and allowlist.covers("frontend_receipt", "source_revision", revision, _canonical_digest(summary))):
+            _note_once(unverifiable, f"frontend evidence revision {revision[:12]}: {PRE_SHIP_ROW}")
+            return summary
+        if ancestor.returncode == 1:
+            raise RuntimeError("frontend evidence revision is not a committed ancestor of the checked head")
         raise RuntimeError("frontend evidence revision cannot be checked")
     # Bind the summary to the committed bytes it was observed on.
     with tempfile.TemporaryDirectory(prefix="glueyneo-evidence-") as temporary:
@@ -1591,7 +1607,9 @@ def _review_round_anchor(finding_id: str, source_root: Path, repository: Path, h
     return lines[-1], name
 
 
-def review_provenance_errors(source_root: Path, repository: Path, head: str) -> list[str]:
+def review_provenance_errors(source_root: Path, repository: Path, head: str, *,
+                             allowlist: HistoryAllowlist | None = None,
+                             unverifiable: list[str] | None = None) -> list[str]:
     """Closure-bearing dispositions cite a revision strictly after the review round that raised them (T-04-38, G3WR-05).
 
     A row that is not `open` must cite at least one revision in a recognized form
@@ -1606,11 +1624,30 @@ def review_provenance_errors(source_root: Path, repository: Path, head: str) -> 
     comes strictly after it and is an ancestor of the head. It does not prove that a review ran at the
     cited commit, that a verdict covered the cited files, or that those files are unchanged since;
     freshness is the focused re-review's changed-path rule.
+
+    Tolerance is per row (G5WR-01, T-04-104). A revision is history-absent when it does not resolve, or
+    when it resolves but is neither an ancestor nor a descendant of `head` (unrelated history, for
+    example a squashed-away feature branch whose objects a local clone still holds), so a local squash
+    behaves like a fresh clone. Only a history-absent `reviewed_revision` or citation that is listed in
+    `docs/history-allowlist.json` with a pin equal to the digest of its own record (the
+    `reviewed_revision` field, or that finding's disposition table row) is tolerated, and it is appended
+    to `unverifiable`. An ancestor or descendant revision and any unlisted or edited row keep the strict
+    checks; an ancestor cited against an unverifiable anchor fails closed. The allowlist covers only
+    listed pre-ship rows of the first-playable-game milestone branch. `allowlist=None` reads the file
+    under `source_root`.
     """
+    if allowlist is None:
+        allowlist = load_history_allowlist(source_root)
     reviewed = _reviewed_revision((source_root / REVIEW).read_text(encoding="utf-8"))
-    if (_git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{reviewed}^{{commit}}"]) != 0
-            or _git_exit(repository, ["merge-base", "--is-ancestor", reviewed, head]) != 0):
-        return [f"reviewed revision {reviewed[:12]} is not a committed ancestor of the checked head"]
+    anchor_unverifiable = False
+    relation = _revision_relation(repository, reviewed, head)
+    if relation != "ancestor":
+        if relation == "absent" and allowlist.covers(
+                "reviewed_revision", "04-REVIEW.md", reviewed, _reviewed_revision_pin(reviewed)):
+            _note_once(unverifiable, f"04-REVIEW.md reviewed_revision {reviewed[:12]}: {PRE_SHIP_ROW}")
+            anchor_unverifiable = True
+        else:
+            return [f"reviewed revision {reviewed[:12]} is not a committed ancestor of the checked head"]
     text = (source_root / DISPOSITION).read_text(encoding="utf-8")
     errors: list[str] = []
     for row in _markdown_table_rows(text, "| Finding | Severity | Disposition | Source |"):
@@ -1632,14 +1669,67 @@ def review_provenance_errors(source_root: Path, repository: Path, head: str) -> 
         base_round = not finding_id.startswith("G")
         for revision in revisions:
             full = (_git_stdout(repository, ["rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}"]) or "").strip()
-            if not full or _git_exit(repository, ["merge-base", "--is-ancestor", full, head]) != 0:
+            relation = _relation_of_commit(repository, full, head) if full else "absent"
+            if relation == "absent" and allowlist.covers(
+                    "review_citation", finding_id, revision, _disposition_row_pin(text, finding_id)):
+                _note_once(unverifiable, f"review finding {finding_id} revision {revision[:12]}: {PRE_SHIP_ROW}")
+            elif relation != "ancestor":
                 errors.append(f"review finding {finding_id} cites revision {revision[:12]} that is not a committed ancestor")
+            elif anchor_unverifiable and base_round:
+                errors.append(f"review finding {finding_id} cites revision {revision[:12]} that cannot be ordered "
+                              "after its unverifiable review round anchor")
             elif full == anchor_sha:
                 errors.append(f"review finding {finding_id} cites revision {revision[:12]} equal to its review round anchor ({label})")
             elif _git_exit(repository, ["merge-base", "--is-ancestor", anchor_sha, full]) != 0:
                 where = "the reviewed revision" if base_round else f"its review round ({label})"
                 errors.append(f"review finding {finding_id} cites revision {revision[:12]} that does not descend from {where}")
     return errors
+
+
+def history_allowlist_stale(source_root: Path) -> list[str]:
+    """`<kind> <key>` of each listed row whose current record is missing or no longer matches its pin (report only).
+
+    A voided row is already evaluated strictly by the gates, so `check_docs` does not fail on it; this
+    report feeds the pre-ship regeneration step. Empty when no allowlist is tracked.
+    """
+    allowlist = load_history_allowlist(source_root)
+    if not allowlist.rows:
+        return []
+    current: dict[tuple[str, str], str | None] = {}
+    try:
+        review = _reviewed_revision((source_root / REVIEW).read_text(encoding="utf-8"))
+    except (OSError, RuntimeError):
+        review = None
+    disposition = None
+    try:
+        disposition = (source_root / DISPOSITION).read_text(encoding="utf-8")
+    except OSError:
+        pass
+    receipt = None
+    try:
+        receipt = json.loads((source_root / FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        pass
+    items: list[object] = []
+    try:
+        blocks = re.findall(r"```json\s*\n(.*?)\n```", (source_root / RIGHTS_INVENTORY).read_text(encoding="utf-8"), re.DOTALL)
+        items = json.loads(blocks[0])["items"] if len(blocks) == 1 else []
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    stale: set[str] = set()
+    for (kind, key, revision), pin in allowlist.rows.items():
+        if kind == "reviewed_revision":
+            now = _reviewed_revision_pin(review) if review is not None and review == revision else None
+        elif kind == "review_citation":
+            now = _disposition_row_pin(disposition, key) if disposition is not None else None
+        elif kind == "frontend_receipt":
+            now = _canonical_digest(receipt) if isinstance(receipt, dict) and receipt.get("source_revision") == revision else None
+        else:
+            now = next((_canonical_digest(item) for item in items
+                        if isinstance(item, dict) and item.get("path") == key and item.get("source_revision") == revision), None)
+        if now != pin:
+            stale.add(f"{kind} {key}")
+    return sorted(stale)
 
 
 def check_docs(source_root: Path, *, repository: Path | None = None, head: str = "HEAD") -> list[str]:
@@ -1657,7 +1747,11 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
     """
     allowlist = load_history_allowlist(source_root)
     notes: list[str] = []
-    evidence = load_frontend_evidence(source_root, repository=repository, head=head)
+    binding = repository
+    if binding is None and (source_root / ".git").exists():
+        binding = source_root
+    evidence = load_frontend_evidence(source_root, repository=binding, head=head,
+                                      allowlist=allowlist, unverifiable=notes)
     guide = (source_root / GUIDE).read_text(encoding="utf-8")
     validation = (source_root / VALIDATION).read_text(encoding="utf-8")
     # Frontend status is generated from structured evidence. Prose outside the
@@ -1689,7 +1783,8 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
     if provenance_repository is None and (source_root / ".git").exists():
         provenance_repository = source_root
     if provenance_repository is not None:
-        provenance_problems = review_provenance_errors(source_root, provenance_repository, head)
+        provenance_problems = review_provenance_errors(source_root, provenance_repository, head,
+                                                       allowlist=allowlist, unverifiable=notes)
         if provenance_problems:
             raise RuntimeError(provenance_problems[0])
         rights_problems = rights_revision_errors(source_root, provenance_repository, head,

@@ -954,7 +954,7 @@ class DocumentationCopies:
                     if line.startswith("  - ")]
         rounds = sorted(path.relative_to(ROOT) for path in (ROOT / playable.PHASE_DIRECTORY).glob("04-REVIEW-GAPS*.md"))
         for path in (playable.SECURITY, playable.REVIEW, playable.DISPOSITION, Path("README.md"), playable.RIGHTS_INVENTORY,
-                     *rounds, *(Path(item) for item in reviewed)):
+                     playable.HISTORY_ALLOWLIST, *rounds, *(Path(item) for item in reviewed)):
             if (ROOT / path).is_file():
                 (source_root / path).parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / path, source_root / path)
