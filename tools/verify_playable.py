@@ -1473,7 +1473,10 @@ def load_history_allowlist(source_root: Path) -> HistoryAllowlist:
                 or not isinstance(row.get("revision"), str) or re.fullmatch(r"[0-9a-f]{12,40}", row["revision"]) is None
                 or not isinstance(row.get("pin"), str) or re.fullmatch(r"[0-9a-f]{64}", row["pin"]) is None):
             raise malformed
-        rows[(row["kind"], row["key"], row["revision"])] = row["pin"]
+        triple = (row["kind"], row["key"], row["revision"])
+        if triple in rows:  # G6WR-02: a repeated row is ambiguous, never "last one wins"
+            raise malformed
+        rows[triple] = row["pin"]
     return HistoryAllowlist(rows=rows, base_revision=document["base_revision"])
 
 

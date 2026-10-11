@@ -3141,6 +3141,15 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         self.assertEqual(len([note for note in notes if "CR-01" in note]), 2, notes)
         self.assertEqual(len(notes), 4, notes)
 
+    def test_g6wr_02_duplicate_rows_are_malformed(self) -> None:
+        fx = self.fixture()
+        path = fx.repo / "docs/history-allowlist.json"
+        document = json.loads(path.read_text(encoding="utf-8"))
+        duplicate = {**document["rows"][0], "pin": "0" * 64}
+        path.write_text(json.dumps({**document, "rows": [*document["rows"], duplicate]}), encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "^history allowlist is malformed$"):
+            playable.load_history_allowlist(fx.repo)
+
 
 if __name__ == "__main__":
     unittest.main()
