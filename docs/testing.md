@@ -116,8 +116,16 @@ optionally followed by a ` # comment`, and must equal the open rows at or above
 `workflow.security_block_on` across every GFM table whose header's first cell,
 whitespace-collapsed and case-folded, is `Threat ID`. Such a table is indented 0
 to 3 spaces, may omit leading and trailing pipes, has a delimiter row with the
-same cell count, and runs to the first blank line, heading, blockquote or fence;
-a row without a leading pipe still counts (T-04-62). Any other line whose first
+same cell count, and runs to the first blank line or the first line that opens
+a CommonMark ATX heading (0 to 3 spaces, then 1 to 6 `#` followed by a space, a
+tab or the end of the line), a blockquote (`>`) or a code fence (three or more
+backticks with no backtick after them on the line, or three or more tildes).
+Any other line, such as `#note`, `####### x` or a backtick line whose info
+string contains a backtick, is read as a row, as GFM renders it, so a line that
+is not a threat row fails as a malformed row instead of hiding the rows after
+it (T-04-48, T-04-62; 04-55). Lines GFM may also treat as a table end, such as
+list items or thematic breaks, are read as rows too, which fails closed. A row
+without a leading pipe still counts (T-04-62). Any other line whose first
 cell reads `Threat ID` (4 or more spaces or a tab of indentation, a blockquote,
 no delimiter row) fails as `unrecognized threat table form at line N`. Such a table must have `Severity` and `Status` columns; one that
 lacks either (for example `Sev` and `State`) is an error naming its line, never
