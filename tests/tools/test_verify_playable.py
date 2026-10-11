@@ -2428,16 +2428,24 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         self.git(repo, "commit", "-q", "-m", message)
         return self.git(repo, "rev-parse", "HEAD")
 
-    def squashed(self, base: Path):
-        """A feature branch (F1..F4) squash-merged into main, plus a single-branch clone without the branch objects."""
+    def squashed(self, base: Path, base_row: bool = False):
+        """A feature branch (F1..F4) squash-merged into main, plus a single-branch clone without the branch objects.
+
+        With `base_row`, the base commit also adds `tests/base.txt` and the inventory gets a row citing it.
+        """
         from types import SimpleNamespace
         repo = base / "repo"
         repo.mkdir()
         self.git(repo, "init", "-q", "-b", "main")
         (repo / "base.txt").write_text("base\n", encoding="utf-8")
-        main_base = self.commit(repo, "base", "base.txt")
+        base_paths = ["base.txt"]
+        if base_row:
+            (repo / "tests").mkdir()
+            (repo / "tests/base.txt").write_text("base two\n", encoding="utf-8")
+            base_paths.append("tests/base.txt")
+        main_base = self.commit(repo, "base", *base_paths)
         self.git(repo, "checkout", "-q", "-b", "feature")
-        (repo / "tests").mkdir()
+        (repo / "tests").mkdir(exist_ok=True)
         (repo / "tests/a.txt").write_text("one\n", encoding="utf-8")
         gaps = repo / playable.PHASE_DIRECTORY / "04-REVIEW-GAPS.md"
         gaps.parent.mkdir(parents=True)
@@ -2445,7 +2453,8 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         f1 = self.commit(repo, "f1", "tests/a.txt", gaps.relative_to(repo).as_posix())
         (repo / "tests/a.txt").write_text("two\n", encoding="utf-8")
         f2 = self.commit(repo, "f2", "tests/a.txt")
-        self.write_inventory(repo, [self.item("tests/a.txt", "two\n", f2)])
+        self.write_inventory(repo, [self.item("tests/a.txt", "two\n", f2),
+                                    *([self.item("tests/base.txt", "base two\n", main_base)] if base_row else [])])
         self.write_review(repo, f1)
         self.write_disposition(repo, [("CR-01", "critical", "fixed", f"revision `{f2}`"),
                                       ("GWR-01", "warning", "fixed", f"revision `{f2}`")])
@@ -2461,10 +2470,10 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         self.git(base, "clone", "-q", "--no-local", "--single-branch", "--branch", "main", str(repo), str(clone))
         return SimpleNamespace(repo=repo, clone=clone, B=main_base, F1=f1, F2=f2, F3=f3, F4=f4)
 
-    def fixture(self) -> "SimpleNamespace":
+    def fixture(self, base_row: bool = False) -> "SimpleNamespace":
         temporary = tempfile.TemporaryDirectory(prefix="playable-squash-")
         self.addCleanup(temporary.cleanup)
-        return self.squashed(Path(temporary.name))
+        return self.squashed(Path(temporary.name), base_row)
 
     def gate(self, function_name: str, root: Path, *extra: object) -> tuple[list[str], list[str]]:
         function = getattr(playable, function_name, None)
@@ -2802,6 +2811,129 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
                 (root / "docs/history-allowlist.json").write_text(json.dumps(document), encoding="utf-8")
                 with self.assertRaisesRegex(RuntimeError, "^history allowlist is malformed$"):
                     load(root)
+
+    # ---- allowlist generator and freshness check (G5WR-01, 04-60) ----
+
+    GENERATOR_REFUSAL = "^history allowlist cannot be generated: "
+
+    def generate(self, root: Path, base: str = "main", head: str = "HEAD") -> str:
+        function = getattr(playable, "history_allowlist_document", None)
+        self.assertIsNotNone(function, "history_allowlist_document is missing")
+        return function(root, root, head, base)
+
+    def current(self, root: Path, base: str = "main") -> bool:
+        function = getattr(playable, "history_allowlist_is_current", None)
+        self.assertIsNotNone(function, "history_allowlist_is_current is missing")
+        return function(root, root, "HEAD", base)
+
+    def on_feature(self, base_row: bool = False) -> "SimpleNamespace":
+        fx = self.fixture(base_row)
+        self.git(fx.repo, "checkout", "-q", "feature")
+        return fx
+
+    @staticmethod
+    def sorted_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+        return sorted(rows, key=lambda row: (row["kind"], row["key"], row["revision"]))
+
+    def test_g5wr_01_generator_reproduces_fixture_allowlist(self) -> None:
+        fx = self.on_feature()
+        text = self.generate(fx.repo)
+        document = json.loads(text)
+        expected = json.loads((fx.repo / "docs/history-allowlist.json").read_text(encoding="utf-8"))
+        self.assertEqual(document["schema"], expected["schema"])
+        self.assertEqual(document["scope"], expected["scope"])
+        self.assertEqual(document["base_revision"], fx.B)
+        self.assertEqual(document["rows"], self.sorted_rows(expected["rows"]))
+        self.assertEqual(len(document["rows"]), 4)
+        self.assertEqual(self.generate(fx.repo), text)
+        self.assertTrue(text.endswith("}\n") and not text.endswith("\n\n"), repr(text[-4:]))
+
+    def test_g5wr_01_generator_excludes_rows_reachable_from_base(self) -> None:
+        fx = self.on_feature(base_row=True)
+        document = json.loads(self.generate(fx.repo))
+        self.assertEqual(document["base_revision"], fx.B)
+        self.assertEqual(sorted((row["kind"], row["key"]) for row in document["rows"]),
+                         [("review_citation", "CR-01"), ("review_citation", "GWR-01"),
+                          ("reviewed_revision", "04-REVIEW.md"), ("rights", "tests/a.txt")])
+        everything = json.loads(self.generate(fx.repo, base=fx.F2))
+        self.assertEqual(everything["base_revision"], fx.F2)
+        self.assertEqual(everything["rows"], [])
+
+    def test_g5wr_01_generator_refuses_on_squashed_history(self) -> None:
+        fx = self.fixture()
+        with self.assertRaisesRegex(RuntimeError, self.GENERATOR_REFUSAL):
+            self.generate(fx.clone)
+
+    def test_g5wr_01_generator_refuses_fabricated_row(self) -> None:
+        fx = self.on_feature()
+        self.add_rights_row(fx.repo, "tests/b.txt", "b\n", "f" * 40)
+        with self.assertRaisesRegex(RuntimeError, self.GENERATOR_REFUSAL):
+            self.generate(fx.repo)
+
+    def test_g5wr_01_generator_refuses_bad_base(self) -> None:
+        fx = self.on_feature()
+        real = subprocess.run
+        with mock.patch("subprocess.run", wraps=real) as run:
+            with self.assertRaisesRegex(RuntimeError, self.GENERATOR_REFUSAL):
+                self.generate(fx.repo, base="-x")
+        for call in run.call_args_list:
+            self.assertNotIn("-x", [str(part) for part in call.args[0]], call)
+        with self.assertRaisesRegex(RuntimeError, self.GENERATOR_REFUSAL):
+            self.generate(fx.repo, base="nosuchref")
+
+    def test_g5wr_01_generator_skips_open_and_third_party_rows(self) -> None:
+        fx = self.on_feature()
+        self.append_disposition(fx.repo, "| CR-03 | info | open | recorded |")
+        third_party = self.item("third_party/x", "x\n", "upstream-pin")
+        self.write_inventory(fx.repo, [*self.items(fx.repo), third_party])
+        document = json.loads(self.generate(fx.repo))
+        keys = [row["key"] for row in document["rows"]]
+        self.assertEqual(len(keys), 4, keys)
+        self.assertNotIn("CR-03", keys)
+        self.assertNotIn("third_party/x", keys)
+
+    def test_g5wr_01_check_detects_stale(self) -> None:
+        fx = self.on_feature()
+        (fx.repo / "docs/history-allowlist.json").write_text(self.generate(fx.repo), encoding="utf-8")
+        self.assertTrue(self.current(fx.repo))
+        self.append_disposition(fx.repo, "| CR-03 | info | open | recorded |")
+        self.assertTrue(self.current(fx.repo))
+        text = (fx.repo / playable.DISPOSITION).read_text(encoding="utf-8")
+        (fx.repo / playable.DISPOSITION).write_text(
+            text.replace(f"revision `{fx.F2}` |\n| GWR-01", f"revision `{fx.F2}` x |\n| GWR-01"), encoding="utf-8")
+        self.assertFalse(self.current(fx.repo))
+        self.assertEqual(self.stale(fx.repo), ["review_citation CR-01"])
+        (fx.repo / "docs/history-allowlist.json").unlink()
+        self.assertFalse(self.current(fx.repo))
+
+    def test_g5wr_01_cli_allowlist_check_and_write(self) -> None:
+        fx = self.on_feature()
+
+        def run(*arguments: str) -> tuple[int, str, str]:
+            with mock.patch.object(playable, "ROOT", fx.repo), \
+                    mock.patch.object(sys, "argv", ["verify_playable.py", *arguments]), \
+                    mock.patch("sys.stdout", new_callable=io.StringIO) as stdout, \
+                    mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+                status = playable.main()
+            return status, stdout.getvalue(), stderr.getvalue()
+
+        status, out, _err = run("--history-allowlist", "write")
+        self.assertEqual((status, out), (0, "Wrote docs/history-allowlist.json (4 rows).\n"))
+        status, out, _err = run("--history-allowlist", "check")
+        self.assertEqual((status, out), (0, "History allowlist is current (4 rows).\n"))
+        text = (fx.repo / playable.DISPOSITION).read_text(encoding="utf-8")
+        (fx.repo / playable.DISPOSITION).write_text(
+            text.replace(f"| CR-01 | critical | fixed | revision `{fx.F2}` |",
+                         f"| CR-01 | critical | fixed | revision `{fx.F2}` x |"), encoding="utf-8")
+        status, out, err = run("--history-allowlist", "check")
+        self.assertEqual((status, out), (1, ""))
+        self.assertIn("history allowlist is stale or missing", err)
+        self.assertIn("review_citation CR-01", err)
+        for arguments in (("--base", "main"), ("--history-allowlist", "check", "--check-docs"),
+                          ("--history-allowlist", "write", "--clean")):
+            with self.assertRaises(SystemExit) as caught:
+                run(*arguments)
+            self.assertEqual(caught.exception.code, 2, arguments)
 
 
 if __name__ == "__main__":
