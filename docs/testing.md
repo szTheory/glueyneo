@@ -251,9 +251,11 @@ Pre-ship step, required before the milestone squash merge: run
 `--history-allowlist check`; if it reports stale, run
 `--history-allowlist write` (which lists only strictly passing rows), commit the
 file alone, run `check` again, then run the squash simulation with the committed
-file. Plan 04-62 leaves the allowlist current at its plan end; later steps on
-this branch (for example `/gsd-code-review` closing rows) make it stale until
-this step runs.
+file. The allowlist docs/history-allowlist.json is tracked: plan 04-64
+generated it after its last pinned-record change and proved it with the squash
+simulation using the committed file. Later steps on this branch (for example
+`/gsd-code-review` editing disposition rows, or a new receipt) make it stale
+until this step runs.
 
 Stated openly: listed rows are tolerated permanently on a squashed history, and
 for them the ordering and ancestry proof is replaced by the digest pins; on full
