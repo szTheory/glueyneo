@@ -1672,7 +1672,7 @@ def review_provenance_errors(source_root: Path, repository: Path, head: str, *,
             relation = _relation_of_commit(repository, full, head) if full else "absent"
             if relation == "absent" and allowlist.covers(
                     "review_citation", finding_id, revision, _disposition_row_pin(text, finding_id)):
-                _note_once(unverifiable, f"review finding {finding_id} revision {revision[:12]}: {PRE_SHIP_ROW}")
+                _note_once(unverifiable, f"review finding {finding_id} revision {revision}: {PRE_SHIP_ROW}")
             elif relation != "ancestor":
                 errors.append(f"review finding {finding_id} cites revision {revision[:12]} that is not a committed ancestor")
             elif anchor_unverifiable and base_round:
