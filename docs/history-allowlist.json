@@ -1,5 +1,5 @@
 {
-  "base_revision": "2e5d8849a57f812958a905ca01eb493c2a522360",
+  "base_revision": "4b2120d57f486ef7561409ff80db109b7494ae5d",
   "rows": [
     {
       "key": "source_revision",
@@ -674,60 +674,6 @@
       "revision": "290e218fe4bed3f11f984fef0d4f2f768d23917d"
     },
     {
-      "key": "tests/cpu/ORACLE.md",
-      "kind": "rights",
-      "pin": "10b0fc7b7a2d5364890bab96eb54b905ad77483774ec06a43db070e460be92c1",
-      "revision": "14e7be15b8c9490157435a831efd32e07bee5ace"
-    },
-    {
-      "key": "tests/cpu/audit-red-evidence.json",
-      "kind": "rights",
-      "pin": "d71b48ae86652d23384a0579222634a34ccc1f5aa49eca5f5e0ea9f6681e64f0",
-      "revision": "165022876f9bdb612c6b8841a04b8e112880c9d9"
-    },
-    {
-      "key": "tests/cpu/faults-red-evidence.json",
-      "kind": "rights",
-      "pin": "c681b503905b5e5d1098c94ff4ff5a16b180553b7b1c1b679f5f15b4010d4dce",
-      "revision": "d5a535579f81b5e58f1d877d350b93786d50f387"
-    },
-    {
-      "key": "tests/cpu/fixture-manifest.json",
-      "kind": "rights",
-      "pin": "64ec77e449d34d37dc551293ba0241f2f015f6adb54f5dabd4cd4c88facac1e6",
-      "revision": "5ed70a61abbfef82e9cea9a68369cac9a34f629c"
-    },
-    {
-      "key": "tests/cpu/guest_fixture.c",
-      "kind": "rights",
-      "pin": "3582b27cdef64628f363d3c4477ab07d68b23bf960733570ec6c8c7ccda4f5b5",
-      "revision": "6ecfa4b98032478bb8f84730d9e8123bfebb5aee"
-    },
-    {
-      "key": "tests/cpu/guest_fixture.h",
-      "kind": "rights",
-      "pin": "c1641e0d8c26e08996d6b16d18acca18328d5bdd1fa0ac1a781b781e4c52ae8b",
-      "revision": "6ecfa4b98032478bb8f84730d9e8123bfebb5aee"
-    },
-    {
-      "key": "tests/cpu/isolation-red-evidence.json",
-      "kind": "rights",
-      "pin": "f03429bc848b0177f4741e8af24aa13f7f06788b255ff19c941efc65aa93a62f",
-      "revision": "fc45d7d9d7113412cac82f483be35cb6ce41e3e5"
-    },
-    {
-      "key": "tests/cpu/isolation_fixture.h",
-      "kind": "rights",
-      "pin": "2ce166b811ac0836b3c9f70ffd2169aa0464971fea968d819f2903dd1914f448",
-      "revision": "fc45d7d9d7113412cac82f483be35cb6ce41e3e5"
-    },
-    {
-      "key": "tests/cpu/red-evidence.json",
-      "kind": "rights",
-      "pin": "c3969969eef91810f83a15d85aac7662df7373f2db64a06ad50efa4e454c5c86",
-      "revision": "6ecfa4b98032478bb8f84730d9e8123bfebb5aee"
-    },
-    {
       "key": "tests/fixture/ORACLE.md",
       "kind": "rights",
       "pin": "50f02bf4f6a869a7c8be55eb7f8342fbd0ecaed98d2f78792191a986ee4ac535",
@@ -756,12 +702,6 @@
       "kind": "rights",
       "pin": "6ea6600abd76399f5abe15a69b0eae9ae33cf0b4db3a6f495ec1e0ef1ac9dd21",
       "revision": "64c10656822f56691fc2d78fe8856257a39709b5"
-    },
-    {
-      "key": "tests/fuzz/regressions.json",
-      "kind": "rights",
-      "pin": "7763b28be0fde5119177717c0ec6838f7037f582774934bf59278afed8863669",
-      "revision": "615a6ac8bf678d1f9434ee769095f6eaf0df327e"
     },
     {
       "key": "tests/libretro/callback_harness.c",
@@ -818,18 +758,6 @@
       "revision": "183c489750d7974a09b11dadef876756b01b6210"
     },
     {
-      "key": "tests/sdk/guest_fixture.c",
-      "kind": "rights",
-      "pin": "cdd6e4f87f1c5234d9615defbfe22011fa893d16a2b052605b0a8403d270509f",
-      "revision": "73ef17d28012a80eea845ca9b014566bc4b88f25"
-    },
-    {
-      "key": "tests/sdk/guest_fixture.h",
-      "kind": "rights",
-      "pin": "a6ba8876aaaa8006ba315ae9a7555a65161afb59bc72035ee03a55b6f439a490",
-      "revision": "73ef17d28012a80eea845ca9b014566bc4b88f25"
-    },
-    {
       "key": "tests/tools/check_runtime_storage.py",
       "kind": "rights",
       "pin": "6c20a759da1ede4e5e40676e3ee2252b1b29de1b5e54f320534cbfef50c59561",
@@ -868,8 +796,8 @@
     {
       "key": "tests/tools/test_verify_playable.py",
       "kind": "rights",
-      "pin": "6194d541f7d3003cf284c4cb14e84c47c73f62186b0757d247f48a7123822eac",
-      "revision": "027e41777783bb90d2e7b0fee1fd07f6343e93ee"
+      "pin": "caefafa4e3f43aaf35b89793feabdad93226078450896a939ab6e81ccf5d8c0b",
+      "revision": "2cee0e2bcb727a5d0ff8aa0f03038b0248aac8cf"
     }
   ],
   "schema": 1,
