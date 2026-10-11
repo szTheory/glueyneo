@@ -49,6 +49,7 @@ option(GLUEYNEO_BUILD_TESTS "Build SDK tests and the headless diagnostic" ${BUIL
 option(GLUEYNEO_YM2610_ADMISSION "Build the private ymfm YM2610 admission candidate" ${GLUEYNEO_BUILD_TESTS})
 option(GLUEYNEO_CPU_EXPERIMENT "Build the private CPU acceptance experiment" OFF)
 option(GLUEYNEO_OWNED_CPU_EXPERIMENT "Build the private owned MC68000 experiment" OFF)
+option(GLUEYNEO_PRE_SHIP_HISTORY_CHECK "Register the pre-ship history allowlist CTest (needs full branch history)" OFF)
 set(GLUEYNEO_SDK_SANITIZER "NONE" CACHE STRING
     "SDK-only instrumentation: NONE, ADDRESS_UNDEFINED, or THREAD")
 set_property(CACHE GLUEYNEO_SDK_SANITIZER PROPERTY STRINGS
@@ -867,11 +868,15 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
   add_test(NAME qualification_runner
     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/test_verify_playable.py")
   # G6WR-01: the allowlist pins are self-attested, so the freshness and history
-  # check is the verifier. It needs full milestone-branch history and refuses on
-  # a squashed or shallow checkout, so it is registered only for a Git checkout
-  # that tracks the allowlist, and it is a pre-ship step (docs/testing.md).
-  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git"
-     AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/history-allowlist.json")
+  # check is the verifier. It needs the full pre-ship branch history and refuses
+  # on a squashed or shallow checkout, including main after the squash merge, so
+  # it is opt-in here; CI runs it on every pull request that changes the
+  # allowlist (docs/testing.md).
+  if(GLUEYNEO_PRE_SHIP_HISTORY_CHECK)
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git"
+       OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/history-allowlist.json")
+      message(FATAL_ERROR "GLUEYNEO_PRE_SHIP_HISTORY_CHECK needs a Git checkout that tracks docs/history-allowlist.json")
+    endif()
     add_test(NAME qualification_history_allowlist
       COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_playable.py"
               --history-allowlist check)

@@ -139,6 +139,18 @@ jobs:
           persist-credentials: false
       - name: Scan public source, history, notices, and rights inventory
         run: python3 tools/verify_sdk.py --suite public-content
+      - name: Verify a changed history allowlist against the pull request history
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet "$BASE_SHA" HEAD -- docs/history-allowlist.json; then
+            echo "docs/history-allowlist.json is unchanged; the pre-ship history check does not apply"
+          else
+            python3 tools/verify_playable.py --history-allowlist check --base "$BASE_SHA"
+          fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:

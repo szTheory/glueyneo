@@ -257,9 +257,17 @@ self-attested after the squash, and only `--history-allowlist check` on the
 pre-ship branch verifies them; signing them would be a policy change and is not
 done. A repeated (kind, key, revision) row is malformed. The tolerated rights
 branch hashes only a regular, non-symlink, normalized path under the source root.
-The CTest `qualification_history_allowlist` runs `--history-allowlist check` in
-a Git checkout that tracks the allowlist; it is expected to fail on a squashed
-or shallow checkout, which is why it is a pre-ship step.
+CI runs `--history-allowlist check --base <pull request base>` on every pull
+request that changes `docs/history-allowlist.json`, from a full-history
+checkout, so a changed allowlist cannot merge unless every row verifies against
+that branch's history. The CTest `qualification_history_allowlist` runs the same
+check locally and is registered only with `-DGLUEYNEO_PRE_SHIP_HISTORY_CHECK=ON`.
+It is off by default because the check refuses on a squashed or shallow
+checkout, which includes main after the squash merge. Once squashed, the pins
+are an accepted, documented residual (G6WR-01, deferred under the 2026-10-11
+squash-tolerance decision): no signing scheme is added, and editing the
+allowlist after the squash fails the CI check, because its rows no longer
+resolve.
 
 Pre-ship step, required before the milestone squash merge: run
 `--history-allowlist check`; if it reports stale, run
