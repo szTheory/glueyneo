@@ -1584,6 +1584,9 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
             with self.subTest(case=label), tempfile.TemporaryDirectory(prefix="playable-reviewed-") as temporary:
                 root = Path(temporary)
                 self.copy_documentation(root)
+                # The live allowlist's base_revision is no ancestor of the first commit, so its anchor
+                # error would preempt the gate under test; without it every row is strict.
+                (root / playable.HISTORY_ALLOWLIST).unlink()
                 review = root / playable.REVIEW
                 text = review.read_text(encoding="utf-8")
                 text = re.sub(r"(?m)^reviewed_revision:.*\n", "", text)
