@@ -1178,7 +1178,10 @@ def write_frontend_records(source_root: Path, summary: dict[str, Any]) -> None:
         # An interrupt or exit stays what it is; the leftovers are reported beside it (D58IN-01).
         if unrestored or debris:
             incomplete = "evidence rollback incomplete: " + ", ".join(unrestored) if unrestored else "evidence rollback complete"
-            print(incomplete + leftovers, file=sys.stderr)
+            try:
+                print(incomplete + leftovers, file=sys.stderr)
+            except OSError:
+                pass  # a broken stderr never replaces the interrupt (D58IN-03)
         raise failure
     if unrestored:
         raise RuntimeError("evidence rollback incomplete: " + ", ".join(unrestored) + leftovers) from failure

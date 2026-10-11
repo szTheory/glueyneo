@@ -1980,6 +1980,44 @@ class AtomicRecordTest(DocumentationCopies, unittest.TestCase):
             self.assertIn("could not remove", stderr.getvalue())
             self.assertNotIn(temporary, stderr.getvalue())
 
+    def test_d58in_03_broken_stderr_does_not_replace_the_interrupt(self) -> None:
+        class BrokenStream:
+            def write(self, _text: str) -> int:
+                raise OSError("injected broken stderr")
+
+            def flush(self) -> None:
+                raise OSError("injected broken stderr")
+
+        real_replace = os.replace
+        real_unlink = Path.unlink
+        with tempfile.TemporaryDirectory(prefix="playable-d58in03-") as temporary:
+            source_root = Path(temporary)
+            summary = self.copy_documentation_with_evidence(source_root)
+            calls: list[str] = []
+
+            def replace(source: object, destination: object) -> None:
+                calls.append(Path(destination).name)  # type: ignore[arg-type]
+                if len(calls) == 2:
+                    raise KeyboardInterrupt()
+                real_replace(source, destination)  # type: ignore[arg-type]
+
+            def unlink(self_path: Path, missing_ok: bool = False) -> None:
+                if self_path.name.endswith(".restore"):
+                    raise PermissionError("injected restore cleanup failure")
+                real_unlink(self_path, missing_ok=missing_ok)
+
+            with mock.patch.object(playable.os, "replace", side_effect=replace), \
+                    mock.patch.object(Path, "unlink", unlink), \
+                    mock.patch("sys.stderr", BrokenStream()):
+                try:
+                    playable.write_frontend_records(source_root, self.changed_summary(summary))
+                except KeyboardInterrupt:
+                    pass
+                except BaseException as error:  # noqa: BLE001 - report as an assertion, not an error
+                    self.fail(f"the interrupt was replaced by {type(error).__name__}")
+                else:
+                    self.fail("no exception was raised")
+
     def test_guide_status_block_is_written_last(self) -> None:
         real_replace = os.replace
         with tempfile.TemporaryDirectory(prefix="playable-order-") as temporary:
