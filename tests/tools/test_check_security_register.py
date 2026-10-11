@@ -256,6 +256,33 @@ class GfmTableFormTest(SecurityRegisterTest):
         prose = "- T-04-62 OPEN: the table form (`Threat ID | Severity | Status`) was skipped."
         self.assertEqual(self.run_checker(register(1, extra=prose)), 0)
 
+    TRAILING_ROW = "| T-09-06 | Tampering | docs | high | mitigate | gate | open |"
+
+    def table_then(self, line: str) -> str:
+        return "\n".join((self.table(lead="| ", trail=" |"), line, self.TRAILING_ROW))
+
+    def assert_row_not_hidden(self, line: str) -> None:
+        # The declared count of 2 covers the rows before the line; the row after it still renders.
+        code, _, err = self.run_checker_output(register(2, extra=self.table_then(line)))
+        self.assertEqual(code, 1)
+        self.assertIn("threats_open is 2 but 3 open rows meet block_on", err)
+        self.assertIn("malformed threat row", err)
+
+    def test_t_04_62_table_end_non_heading_hash_lines_do_not_hide_rows(self) -> None:
+        for line in ("#note", "#x", "#5 bolt", "   #note", "####### x"):
+            with self.subTest(line=line):
+                self.assert_row_not_hidden(line)
+
+    def test_t_04_62_table_end_backtick_fence_lookalike_does_not_hide_rows(self) -> None:
+        self.assert_row_not_hidden("```a`b")
+
+    def test_t_04_62_commonmark_block_starts_still_close_the_table(self) -> None:
+        forms = ("# H", "## H", "###### H", "#", "#\tH", "   ## H", "> quote", "```", "```py", "~~~", "~~~ x`y")
+        for line in forms:
+            with self.subTest(line=line):
+                code, _, err = self.run_checker_output(register(2, extra=self.table_then(line)))
+                self.assertEqual((code, err), (0, ""))
+
 
 class SchemaDriftTest(unittest.TestCase):
     """GWR-01: a `Threat ID` table lacking Severity or Status must fail, never be skipped."""
