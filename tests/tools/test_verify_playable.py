@@ -425,7 +425,7 @@ class SnapshotTest(unittest.TestCase):
         runner = playable.Runner(work, snapshot.root, snapshot)
         output = diagnostics[2]
         finished = mock.Mock(returncode=9, pid=1)
-        finished.communicate.return_value = (output, None)
+        finished.communicate.return_value = (output.encode("utf-8"), None)
         with mock.patch.object(playable.subprocess, "Popen", return_value=finished):
             result = runner.command("quoted-path", ["tool", output], allow_failure=True)
         retained_log = (work / "quoted-path.log").read_text(encoding="utf-8")
@@ -465,7 +465,7 @@ class SnapshotTest(unittest.TestCase):
         work.mkdir()
         runner = playable.Runner(work, snapshot.root, snapshot)
         finished = mock.Mock(returncode=7, pid=1)
-        finished.communicate.return_value = (diagnostic, None)
+        finished.communicate.return_value = (diagnostic.encode("utf-8"), None)
         with mock.patch.object(playable.subprocess, "Popen", return_value=finished):
             result = runner.command("newline-path", ["tool", diagnostic], allow_failure=True)
 
@@ -500,7 +500,7 @@ class SnapshotTest(unittest.TestCase):
         private_argument = "/Volumes/private drive/private capture/secret.rom"
         emitted = f"tool failed exit 6: {private_argument}"
         finished = mock.Mock(returncode=6, pid=1)
-        finished.communicate.return_value = (emitted, None)
+        finished.communicate.return_value = (emitted.encode("utf-8"), None)
         with mock.patch.object(playable.subprocess, "Popen", return_value=finished):
             result = runner.command("private-path", ["tool", private_argument], allow_failure=True)
 
@@ -605,9 +605,9 @@ class ProcessGroupTest(unittest.TestCase):
                     pid = 424242
                     returncode: int | None = None
 
-                    def communicate(self, timeout: float | None = None) -> tuple[str, None]:
+                    def communicate(self, timeout: float | None = None) -> tuple[bytes, None]:
                         self.returncode = 0  # reaping happens here
-                        return ("partial\n", None)
+                        return (b"partial\n", None)
 
                 proc = Proc()
                 seen: list[tuple[int, int | None]] = []
@@ -637,7 +637,7 @@ class ProcessGroupTest(unittest.TestCase):
             "    time.sleep(0.05)\n"
         )
         proc = subprocess.Popen([sys.executable, "-c", program], stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT, text=True, start_new_session=True)
+                                stderr=subprocess.STDOUT, start_new_session=True)
         try:
             with self.assertRaises(subprocess.TimeoutExpired) as caught:
                 proc.communicate(timeout=1)
@@ -663,7 +663,7 @@ class ProcessGroupTest(unittest.TestCase):
             "    time.sleep(0.05)\n"
         )
         proc = subprocess.Popen([sys.executable, "-c", program], stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT, text=True, start_new_session=True)
+                                stderr=subprocess.STDOUT, start_new_session=True)
         try:
             with self.assertRaises(subprocess.TimeoutExpired) as caught:
                 proc.communicate(timeout=1)
@@ -1807,7 +1807,8 @@ class AtomicRecordTest(DocumentationCopies, unittest.TestCase):
                     self.fail(f"uncaught {type(error).__name__}")
             self.assertIsNotNone(raised, "the rollback did not raise")
             message = str(raised)
-            self.assertTrue(message.startswith("evidence rollback incomplete:"), message)
+            # G4IN-02 (intentional contract change): every file was restored, only `.restore` debris remains.
+            self.assertTrue(message.startswith("evidence rollback complete; could not remove:"), message)
             self.assertIn(".restore", message)
             self.assertNotIn(temporary, message)
             self.assertRegex(str(raised.__cause__), "injected replace failure")

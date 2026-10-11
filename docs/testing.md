@@ -247,16 +247,29 @@ row (see Closure gates).
   snapshot inventory and does not detect later changes, so a gap round that
   changes a receipt-bound path re-qualifies pinned RetroArch before citing the
   receipt.
-- **Evidence recording** (G2WR-05). First-time generation with absent files
-  works. Rollback unlinks files that did not exist before, continues past a
-  failed restore and raises `evidence rollback incomplete: <names>` (base names
-  only). A failure removing a `.restore` or `.tmp` file never aborts the
-  rollback or replaces the original error, and a stray `.restore` file is named
-  in `evidence rollback incomplete` (G3WR-04).
-- **Lane timeouts** (G2IN-02). Output is drained during the SIGTERM grace
-  without reaping the leader; the no-signal-after-reap invariant (T-04-54) is
-  unchanged. The recorded output contains each segment once, in emission order
-  (G3WR-01).
+- **Evidence recording** (G2WR-05, G4IN-02). First-time generation with absent
+  files works. Rollback unlinks files that did not exist before, continues past
+  a failed restore and raises `evidence rollback incomplete: <names>` (base
+  names only) for files whose content was not restored. A failure removing a
+  `.restore` or `.tmp` file never aborts the rollback or replaces the original
+  error. Such leftover files are reported apart from unrestored files: after a
+  full restore the error is `evidence rollback complete; could not remove:
+  <names>`, and with unrestored files the `incomplete` message gains a
+  `; could not remove: <names>` clause (G3WR-04). Any surviving `.tmp` file is
+  named, and the original failure is always the `__cause__`. A write that
+  succeeded returns normally even if a temporary could not be removed.
+- **Lane timeouts** (G2IN-02, G4WR-01, G4WR-03). Output is drained during the
+  SIGTERM grace without reaping the leader; the no-signal-after-reap invariant
+  (T-04-54) is unchanged. The lane pipe is binary: the first segment, the
+  drained chunks and the genuinely new tail are kept as bytes, joined in
+  emission order and decoded once as UTF-8 with replacement, with one newline
+  translation, so each segment is recorded once, CRLF written during the grace
+  is translated and a character split across segments is whole. The earlier
+  segment survives a detached descendant that keeps the pipe open (the second
+  collection is bounded by `LANE_AFTER_KILL_SECONDS`, then the leader is reaped
+  and the parent's pipe end closed). Non-UTF-8 output is recorded with U+FFFD
+  on both the normal and the timeout path, and no decode error escapes
+  `Runner.command`.
 - **Smoke harness** (G2WR-06). A signal deferred in the launch window is always
   raised as `interrupted`, even when launch raises; a child-PID record failure is
   reported as `pid-record`, not `launch`, by both paths. The actual smoke

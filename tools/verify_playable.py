@@ -528,10 +528,11 @@ def emit_error(prefix: str, error: BaseException | str) -> None:
 
 
 LANE_GRACE_SECONDS = 30
+LANE_AFTER_KILL_SECONDS = 10
 SURVIVOR_GRACE_SECONDS = 5
 
 
-def _signal_group(proc: subprocess.Popen[str], signum: int) -> None:
+def _signal_group(proc: subprocess.Popen[bytes], signum: int) -> None:
     try:
         os.killpg(proc.pid, signum)  # pgid equals pid under start_new_session=True
     except (ProcessLookupError, PermissionError):
@@ -570,7 +571,21 @@ def _drain(fd: int, chunks: list[bytes], seconds: float) -> bool:
         chunks.append(data)
 
 
-def _terminate_lane_group(proc: subprocess.Popen[str], expired: subprocess.TimeoutExpired) -> str:
+def _decode_lane_output(data: bytes) -> str:
+    """Decode lane bytes once as UTF-8 with replacement, then apply the text-mode newline translation (G4WR-01, G4WR-03)."""
+    return data.decode("utf-8", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _as_bytes(value: object) -> bytes:
+    """Bytes of captured lane output; a str from a test double is encoded UTF-8 and anything else is empty."""
+    if isinstance(value, bytes):
+        return value
+    if isinstance(value, str):
+        return value.encode("utf-8", errors="replace")
+    return b""
+
+
+def _terminate_lane_group(proc: subprocess.Popen[bytes], expired: subprocess.TimeoutExpired) -> str:
     """SIGTERM the lane's group, drain output for a bounded grace period, then SIGKILL; keep partial output.
 
     Invariant (T-04-54): no group signal is sent after the leader is reaped. The leader
@@ -578,17 +593,14 @@ def _terminate_lane_group(proc: subprocess.Popen[str], expired: subprocess.Timeo
     cannot have been recycled while a signal is sent. `communicate` and `wait` are therefore
     not used before the SIGKILL (they reap); the pipe is read with `select`/`os.read`
     instead so a lane that writes a large shutdown message after SIGTERM is not blocked on
-    a full pipe for the whole grace period (G2IN-02). Output is recorded as the earlier segment
-    once, then the drained chunks, then the remaining `communicate` tail, so no segment is
-    duplicated or reordered (G3WR-01).
+    a full pipe for the whole grace period (G2IN-02). The lane pipe is binary: the bytes of
+    the first `communicate`, the drained chunks and the genuinely new tail are joined in
+    emission order and decoded once, so a pipe held open by a detached descendant cannot drop
+    the earlier segment, no segment repeats, and a character split across segments is whole
+    (G4WR-01, G4WR-03).
     """
     chunks: list[bytes] = []
-    earlier = expired.output
-    if isinstance(earlier, bytes):
-        earlier = earlier.decode("utf-8", errors="replace")
-    elif not isinstance(earlier, str):
-        earlier = ""
-    earlier = earlier.replace("\r\n", "\n").replace("\r", "\n")  # text-mode Popen newline translation
+    earlier = _as_bytes(expired.output)
     fd = proc.stdout.fileno() if getattr(proc, "stdout", None) is not None else None
     _signal_group(proc, signal.SIGTERM)
     deadline = time.monotonic() + LANE_GRACE_SECONDS
@@ -601,16 +613,12 @@ def _terminate_lane_group(proc: subprocess.Popen[str], expired: subprocess.Timeo
     # Descendants in the group may outlive the leader or ignore SIGTERM; end them now.
     _signal_group(proc, signal.SIGKILL)
     if not eof:
-        _drain(fd, chunks, 10)
+        _drain(fd, chunks, LANE_AFTER_KILL_SECONDS)
     tail = _collect_after_kill(proc)
-    # `communicate` returns Popen's buffered earlier output again; keep exactly one copy (G3WR-01).
-    if tail.startswith(earlier):
-        rest = tail[len(earlier):]
-    else:
-        earlier = ""
-        rest = tail
-    drained = b"".join(chunks).decode("utf-8", errors="replace")
-    return f"TimeoutExpired: {expired}\n{earlier}{drained}{rest}"
+    # Popen's buffer starts with the first-communicate bytes; only the suffix is new. If it somehow does not,
+    # keep the whole tail rather than drop bytes.
+    rest = tail[len(earlier):] if tail.startswith(earlier) else tail
+    return f"TimeoutExpired: {expired}\n" + _decode_lane_output(earlier + b"".join(chunks) + rest)
 
 
 def _retroarch_pids() -> set[int] | None:
@@ -630,13 +638,29 @@ def _retroarch_pids() -> set[int] | None:
         return None
 
 
-def _collect_after_kill(proc: subprocess.Popen[str]) -> str:
-    """Reap the lane leader and return any output still buffered; only valid after the group SIGKILL."""
+def _collect_after_kill(proc: subprocess.Popen[bytes]) -> bytes:
+    """Reap the lane leader and return Popen's buffered bytes; only valid after the group SIGKILL.
+
+    When a descendant that left the group keeps the pipe open, the second `communicate` expires too; its
+    `output` is then Popen's full buffer so far (G4WR-01). The leader is reaped with a bounded wait and the
+    parent's pipe end is closed so that descendant does not keep our descriptor.
+    """
     try:
-        output, _ = proc.communicate(timeout=10)
-    except subprocess.TimeoutExpired:
-        return ""
-    return output if isinstance(output, str) else ""
+        output, _ = proc.communicate(timeout=LANE_AFTER_KILL_SECONDS)
+    except subprocess.TimeoutExpired as again:
+        output = again.output
+        try:
+            proc.wait(timeout=LANE_AFTER_KILL_SECONDS)
+        except subprocess.TimeoutExpired:
+            pass
+        stream = getattr(proc, "stdout", None)
+        if stream is not None:
+            try:
+                stream.close()
+            except OSError:
+                pass
+    return _as_bytes(output)
+
 
 def _recorded_listed(recorded: int, grace: float) -> bool | None:
     """Poll `pgrep` until `recorded` is no longer listed or `grace` seconds pass.
@@ -769,16 +793,19 @@ class Runner:
         try:
             # Each lane runs in its own session so a timeout can end the whole process
             # group, not only the direct child (WR-03).
-            proc = subprocess.Popen(argv, cwd=cwd or self.source_root, env=clean_environment(), text=True,
+            # The pipe is binary: output is decoded exactly once, with replacement, so non-UTF-8 bytes
+            # are recorded rather than raised (G4WR-03).
+            proc = subprocess.Popen(argv, cwd=cwd or self.source_root, env=clean_environment(),
                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                     start_new_session=True)
             try:
-                output, _ = proc.communicate(timeout=timeout)
+                raw_output, _ = proc.communicate(timeout=timeout)
+                output = _decode_lane_output(raw_output)
                 code = proc.returncode
             except subprocess.TimeoutExpired as error:
                 output = _terminate_lane_group(proc, error)
                 code = -1
-        except OSError as error:
+        except (OSError, ValueError) as error:
             output = f"{type(error).__name__}: {error}"
             code = -1
         finally:
@@ -1067,10 +1094,13 @@ def write_frontend_records(source_root: Path, summary: dict[str, Any]) -> None:
     Order: evidence JSON, validation row, guide status block. If any replace fails, every file already
     replaced is restored byte-for-byte from the originals read beforehand (a file that did not exist
     before, as on first-time generation, is removed again), and the error propagates. Every restore is
-    attempted even if an earlier one fails; failed restores are then reported as one
-    `evidence rollback incomplete: <base names>` error, never naming a directory (G2WR-05). Every
+    attempted even if an earlier one fails; files whose content could not be restored are then reported as
+    one `evidence rollback incomplete: <base names>` error, never naming a directory (G2WR-05). Every
     `.restore` and `.tmp` cleanup is attempted too: an OSError removing one never aborts the loop or
-    replaces the original error, and a stray `.restore` file is named in the aggregated error (G3WR-04).
+    replaces the original error. A `.restore` or `.tmp` file that survives is debris, reported apart from
+    unrestored files as `; could not remove: <base names>`, or as `evidence rollback complete; could not
+    remove: <base names>` when every file was restored; the original failure is always the `__cause__`
+    (G3WR-04, G4IN-02).
     Limit (GWR-06): a hard crash (power loss, SIGKILL) between replaces cannot be rolled back and can
     leave a mix of old and new files. The guide block is written last, so `--check-docs` detects such a
     mix as an evidence/block mismatch instead of accepting it.
@@ -1105,15 +1135,18 @@ def write_frontend_records(source_root: Path, summary: dict[str, Any]) -> None:
     originals = [path.read_bytes() if path.exists() else None for path, _ in writes]
     temporaries = [path.with_name(path.name + ".tmp") for path, _ in writes]
     replaced: list[int] = []
+    failure: BaseException | None = None
+    unrestored: list[str] = []
+    debris: list[str] = []
     try:
-        for temporary, (_, content) in zip(temporaries, writes):
-            temporary.write_text(content, encoding="utf-8")
         try:
+            for temporary, (_, content) in zip(temporaries, writes):
+                temporary.write_text(content, encoding="utf-8")
             for index, (temporary, (path, _)) in enumerate(zip(temporaries, writes)):
                 os.replace(temporary, path)
                 replaced.append(index)
-        except BaseException as failure:
-            unrestored: list[str] = []
+        except BaseException as error:
+            failure = error
             for index in reversed(replaced):
                 path = writes[index][0]
                 restore = path.with_name(path.name + ".restore")
@@ -1128,16 +1161,21 @@ def write_frontend_records(source_root: Path, summary: dict[str, Any]) -> None:
                 try:
                     restore.unlink(missing_ok=True)
                 except OSError:
-                    unrestored.append(restore.name)
-            if unrestored:
-                raise RuntimeError("evidence rollback incomplete: " + ", ".join(unrestored)) from failure
-            raise
+                    debris.append(restore.name)
     finally:
         for temporary in temporaries:
             try:
                 temporary.unlink(missing_ok=True)
             except OSError:
-                pass  # never mask the result or skip the remaining temporaries (G3WR-04)
+                debris.append(temporary.name)  # never mask the result or skip the remaining temporaries (G3WR-04)
+    if failure is None:
+        return  # a fully successful write is unchanged; leftover cleanup failures cannot undo it
+    leftovers = "; could not remove: " + ", ".join(debris) if debris else ""
+    if unrestored:
+        raise RuntimeError("evidence rollback incomplete: " + ", ".join(unrestored) + leftovers) from failure
+    if debris:
+        raise RuntimeError("evidence rollback complete" + leftovers) from failure
+    raise failure
 
 
 def _frontmatter(text: str) -> list[str]:
