@@ -1378,6 +1378,128 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
                 playable.check_docs(root, repository=ROOT)
 
 
+class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
+    """Every non-third_party rights row cites a commit holding its recorded bytes (G4WR-04, T-04-103)."""
+
+    def helper(self):
+        function = getattr(playable, "rights_revision_errors", None)
+        self.assertIsNotNone(function, "rights_revision_errors is missing")
+        return function
+
+    @staticmethod
+    def git(repository: Path, *arguments: str) -> str:
+        return subprocess.run(
+            ["git", "-C", str(repository), "-c", "user.name=t", "-c", "user.email=t@example.invalid", *arguments],
+            check=True, text=True, stdout=subprocess.PIPE).stdout.strip()
+
+    def make_repository(self, base: Path) -> tuple[Path, str, str]:
+        """A repository whose tests/a.txt is `one` at the first commit and `two` at the second."""
+        repository = base / "repo"
+        subprocess.run(["git", "init", "-q", str(repository)], check=True)
+        (repository / "tests").mkdir()
+        revisions = []
+        for content in ("one\n", "two\n"):
+            (repository / "tests/a.txt").write_text(content, encoding="utf-8")
+            self.git(repository, "add", "tests/a.txt")
+            self.git(repository, "commit", "-q", "-m", content.strip())
+            revisions.append(self.git(repository, "rev-parse", "HEAD"))
+        return repository, revisions[0], revisions[1]
+
+    @staticmethod
+    def write_inventory(repository: Path, items: list[dict[str, str]]) -> None:
+        (repository / "docs").mkdir(exist_ok=True)
+        (repository / "docs/rights-inventory.md").write_text(
+            "# Inventory\n\n```json\n" + json.dumps({"schema": 1, "items": items}) + "\n```\n", encoding="utf-8")
+
+    @staticmethod
+    def digest(text: str) -> str:
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+    def errors(self, repository: Path, items: list[dict[str, str]], head: str = "HEAD") -> list[str]:
+        function = self.helper()
+        self.write_inventory(repository, items)
+        try:
+            return function(repository, repository, head)
+        except Exception as error:  # noqa: BLE001 - a red run must fail on the assertion, not on an exception
+            self.fail(f"uncaught {type(error).__name__}")
+
+    def test_g4wr_04_unresolvable_revision_names_the_path(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-rights-") as temporary:
+            repository, _first, _second = self.make_repository(Path(temporary))
+            errors = self.errors(repository, [{"path": "tests/a.txt", "sha256": self.digest("two\n"), "source_revision": "e" * 40}])
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("tests/a.txt", errors[0])
+            self.assertIn("does not resolve", errors[0])
+
+    def test_g4wr_04_stale_revision_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-rights-") as temporary:
+            repository, first, _second = self.make_repository(Path(temporary))
+            errors = self.errors(repository, [{"path": "tests/a.txt", "sha256": self.digest("two\n"), "source_revision": first}])
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("tests/a.txt", errors[0])
+            self.assertIn("does not hold the recorded SHA-256", errors[0])
+
+    def test_g4wr_04_third_party_rows_are_exempt_and_correct_rows_pass(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-rights-") as temporary:
+            repository, _first, second = self.make_repository(Path(temporary))
+            items = [
+                {"path": "third_party/unity/src/unity.c", "sha256": "0" * 64, "source_revision": "b" * 40},
+                {"path": "tests/a.txt", "sha256": self.digest("two\n"), "source_revision": second},
+            ]
+            self.assertEqual(self.errors(repository, items), [])
+
+    def test_g4wr_04_malformed_revision_never_reaches_git(self) -> None:
+        for bad in ("--output=x", "HEAD", "a" * 39, "A" * 40, ""):
+            with self.subTest(revision=bad), tempfile.TemporaryDirectory(prefix="playable-rights-") as temporary:
+                repository, _first, _second = self.make_repository(Path(temporary))
+                real = subprocess.run
+                with mock.patch.object(subprocess, "run", wraps=real) as run:
+                    errors = self.errors(repository, [{"path": "tests/a.txt", "sha256": self.digest("two\n"), "source_revision": bad}])
+                self.assertEqual(len(errors), 1, errors)
+                self.assertIn("not 40 hex", errors[0])
+                arguments = [argument for call in run.call_args_list for argument in call.args[0]]
+                self.assertFalse(any(argument == bad or (bad and bad in argument) for argument in arguments), arguments)
+
+    def test_g4wr_04_malformed_path_never_reaches_git(self) -> None:
+        for bad in ("", "/etc/passwd", "tests/../x", "-x"):
+            with self.subTest(path=bad), tempfile.TemporaryDirectory(prefix="playable-rights-") as temporary:
+                repository, _first, second = self.make_repository(Path(temporary))
+                real = subprocess.run
+                with mock.patch.object(subprocess, "run", wraps=real) as run:
+                    errors = self.errors(repository, [{"path": bad, "sha256": self.digest("two\n"), "source_revision": second}])
+                self.assertEqual(len(errors), 1, errors)
+                self.assertIn("not a relative POSIX path", errors[0])
+                arguments = [argument for call in run.call_args_list for argument in call.args[0]]
+                self.assertFalse(any(argument == bad or (bad and bad in argument) for argument in arguments), arguments)
+
+    def test_g4wr_04_revision_outside_the_checked_head_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-rights-") as temporary:
+            repository, first, second = self.make_repository(Path(temporary))
+            self.git(repository, "checkout", "-q", "-b", "side", first)
+            (repository / "tests/a.txt").write_text("three\n", encoding="utf-8")
+            self.git(repository, "add", "tests/a.txt")
+            self.git(repository, "commit", "-q", "-m", "side")
+            side = self.git(repository, "rev-parse", "HEAD")
+            errors = self.errors(repository, [{"path": "tests/a.txt", "sha256": self.digest("three\n"), "source_revision": side}], head=second)
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("is not an ancestor of the checked head", errors[0])
+
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the inventory is bound to")
+    def test_g4wr_04_check_docs_raises_the_first_rights_error(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-rights-docs-") as temporary:
+            root = Path(temporary)
+            self.copy_documentation_with_evidence(root)
+            with mock.patch.object(playable, "rights_revision_errors", create=True, return_value=["rights sentinel"]):
+                with self.assertRaisesRegex(RuntimeError, "rights sentinel"):
+                    playable.check_docs(root, repository=ROOT)
+
+    def test_g4wr_04_repository_rights_revisions_resolve(self) -> None:
+        if not (ROOT / ".git").exists():
+            self.skipTest("no .git: source archive")
+        function = self.helper()
+        self.assertEqual(function(ROOT, ROOT, "HEAD"), [])
+
+
 class GuideClaimTest(DocumentationCopies, unittest.TestCase):
     """Prose outside the generated block cannot state a claim the receipt does not bind (CR-04, E3)."""
 
