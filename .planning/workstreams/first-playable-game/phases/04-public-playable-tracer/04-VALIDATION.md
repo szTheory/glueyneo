@@ -118,7 +118,7 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 
 ## Review Finding Crosswalk
 
-Rebased on the 2026-10-10 review (60 current disposition records). The earlier rows are historical in git history at the 04-23 revision.
+Rebased on the 2026-10-10 review (63 current disposition records). The earlier rows are historical in git history at the 04-23 revision.
 
 | Review Finding | Severity | Existing Threat Scope | Disposition |
 |----------------|----------|-----------------------|-------------|

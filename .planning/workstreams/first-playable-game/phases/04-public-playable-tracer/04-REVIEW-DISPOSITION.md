@@ -257,7 +257,7 @@ findings:
     title: "third_party/ rows skip the path-form check, and a non-list items raises a bare TypeError"
 open: 3
 total: 63
-recorded: 2026-10-11T00:00:00.000Z
+recorded: 2026-10-11T16:50:43.000Z
 ---
 
 # Phase 04: Code Review Disposition
@@ -324,9 +324,9 @@ recorded: 2026-10-11T00:00:00.000Z
 | G4IN-01 | info | fixed | Reported by 04-REVIEW-GAPS-R4.md (310109e). Gap-closure fix (04-58) at revision `443f980963d89a8d48720e426878ff434cdada2d`: tests/tools/check_security_register.py `main` candidate scan; regression tests test_g4in_01_stray_register_names_fail, test_g4in_01_non_register_security_named_file_is_skipped, red commit fe3db246567e. In-run diff review (04-58, 443f980963d8): FIXED. |
 | G4IN-02 | info | fixed | Reported by 04-REVIEW-GAPS-R4.md (310109e). Gap-closure fix (04-58) at revision `a9fbfd3b5b54e56abae5e6bda21655adfe469cc7`: tools/verify_playable.py `write_frontend_records`; regression tests test_g4in_02_restore_succeeded_but_restore_file_remains, test_g4in_02_surviving_tmp_is_named, red commit 682b520537d2. In-run diff review (04-58, 443f980963d8): FIXED. |
 | G4IN-03 | info | fixed | Reported by 04-REVIEW-GAPS-R4.md (310109e). Gap-closure fix (04-58) at revision `443f980963d89a8d48720e426878ff434cdada2d`: tests/libretro/retroarch_smoke.py `run_diagnostics`; regression tests test_g4in_03_pid_record_failure_skips_second_probe, red commit fe3db246567e. In-run diff review (04-58, 443f980963d8): FIXED. |
-| G5WR-01 | warning | open | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Not yet repaired. |
-| G5WR-02 | warning | open | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Not yet repaired. |
-| G5IN-01 | info | open | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Not yet repaired. |
+| G5WR-01 | warning | open | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Fix incomplete: scope-split-needed: 6 (04-60 squash simulation shows 6 history-dependent clone-only suite failures, above the bound of 5; none repaired); pending /gsd-plan-phase 04 --gaps. Partial landing (user decision 2026-10-11, scope tolerance; allowlist scope: pre-ship rows of the first-playable-game milestone branch) at revisions 37e9f0f640b5c0d1d6a76763dde4ed21c1968327 and 1a208248331f7137610e2b60864d6dcc1b79f4d2 (04-59) and generator revision 9dc602c36f8f00d21d1cdd2e5e3dac4e8d0a8240 and 266675573ec2fd8e183b9fd4f069d940ae0eaee6 (04-60). |
+| G5WR-02 | warning | open | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Fix landed, pending the diff-scoped /gsd-code-review: single lane.ready gate before the lane timeout at revision 591d0f795498d928a5070eeba14c4a2153a8f1fa: tests/tools/test_verify_playable.py `wait_ready`; tests test_g5wr_02_*. |
+| G5IN-01 | info | open | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Fix landed, pending the diff-scoped /gsd-code-review: path form before the third_party/ exemption and items shape check at revision 591d0f795498d928a5070eeba14c4a2153a8f1fa: `rights_revision_errors`; tests test_g5in_01_*. |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
