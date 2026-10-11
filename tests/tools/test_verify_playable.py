@@ -532,22 +532,58 @@ class SnapshotTest(unittest.TestCase):
 class ProcessGroupTest(unittest.TestCase):
     """WR-03 and the RetroArch lane instance assertions (CR-07, T-04-54)."""
 
+    # G5WR-02: a lane-signalling test waits (bounded, read at call time) for one child marker, lane.ready,
+    # before the lane timeout starts, so a slow interpreter start cannot become an output failure.
+    READY_SECONDS = 30
+
     def make_runner(self, work: Path) -> "playable.Runner":
         return playable.Runner(work, work, None)  # type: ignore[arg-type]
+
+    def wait_ready(self, path: Path, seconds: float | None = None) -> None:
+        bound = self.READY_SECONDS if seconds is None else seconds
+        deadline = time.monotonic() + bound
+        while not path.exists():
+            if time.monotonic() >= deadline:
+                self.fail(f"lane child never became ready: {path.name}")
+            time.sleep(0.02)
+
+    @contextlib.contextmanager
+    def ready_gate(self, work: Path, argv: list[str]):  # type: ignore[no-untyped-def]
+        """Make the first timed communicate of the lane argv wait for `work/lane.ready`; other Popen pass through."""
+        real = subprocess.Popen
+        test = self
+
+        class ReadyPopen(real):  # type: ignore[valid-type, misc]
+            waited = False
+
+            def communicate(self, input=None, timeout=None):  # type: ignore[no-untyped-def]
+                if timeout is not None and not self.waited and list(self.args) == argv:
+                    self.waited = True
+                    try:
+                        test.wait_ready(work / "lane.ready")
+                    except AssertionError:
+                        with contextlib.suppress(OSError):
+                            os.killpg(self.pid, signal.SIGKILL)
+                        raise
+                return super().communicate(input, timeout)
+
+        with mock.patch.object(playable.subprocess, "Popen", ReadyPopen):
+            yield
 
     def test_timeout_kills_the_whole_lane_group_and_keeps_partial_output(self) -> None:
         program = (
             "import subprocess, sys, time\n"
             "g = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'])\n"
             "print('grandchild', g.pid, flush=True)\n"
+            "open('lane.ready', 'w').close()\n"
             "time.sleep(60)\n"
         )
         with tempfile.TemporaryDirectory(prefix="lane-group-") as temporary:
             work = Path(temporary)
             runner = self.make_runner(work)
-            with mock.patch.object(playable, "verify_snapshot"):
-                result = runner.command("group-lane", [sys.executable, "-c", program],
-                                        timeout=2, allow_failure=True)
+            argv = [sys.executable, "-c", program]
+            with mock.patch.object(playable, "verify_snapshot"), self.ready_gate(work, argv):
+                result = runner.command("group-lane", argv, timeout=2, allow_failure=True)
             log = (work / "group-lane.log").read_text(encoding="utf-8")
             match = re.search(r"grandchild (\d+)", log)
             self.assertIsNotNone(match, log)
@@ -571,17 +607,19 @@ class ProcessGroupTest(unittest.TestCase):
             "child = ('import signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(60)')\n"
             "g = subprocess.Popen([sys.executable, '-c', child], stdout=subprocess.DEVNULL)\n"
             "print('grandchild', g.pid, flush=True)\n"
+            "open('lane.ready', 'w').close()\n"
             "time.sleep(60)\n"
         )
         with tempfile.TemporaryDirectory(prefix="lane-ignore-") as temporary:
             work = Path(temporary)
             runner = self.make_runner(work)
+            argv = [sys.executable, "-c", program]
             with (
                 mock.patch.object(playable, "verify_snapshot"),
                 mock.patch.object(playable, "LANE_GRACE_SECONDS", 1),
+                self.ready_gate(work, argv),
             ):
-                result = runner.command("ignore-lane", [sys.executable, "-c", program],
-                                        timeout=2, allow_failure=True)
+                result = runner.command("ignore-lane", argv, timeout=2, allow_failure=True)
             log = (work / "ignore-lane.log").read_text(encoding="utf-8")
             match = re.search(r"grandchild (\d+)", log)
             self.assertIsNotNone(match, log)
@@ -633,12 +671,17 @@ class ProcessGroupTest(unittest.TestCase):
             "    os.write(1, b'x' * 262144 + b'TAIL-MARKER')\n"
             "    os._exit(0)\n"
             "signal.signal(signal.SIGTERM, term)\n"
+            "open(sys.argv[1], 'w').close()\n"
             "while True:\n"
             "    time.sleep(0.05)\n"
         )
-        proc = subprocess.Popen([sys.executable, "-c", program], stdout=subprocess.PIPE,
+        ready = tempfile.TemporaryDirectory(prefix="lane-ready-")
+        self.addCleanup(ready.cleanup)
+        marker = Path(ready.name) / "lane.ready"
+        proc = subprocess.Popen([sys.executable, "-c", program, str(marker)], stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, start_new_session=True)
         try:
+            self.wait_ready(marker)
             with self.assertRaises(subprocess.TimeoutExpired) as caught:
                 proc.communicate(timeout=1)
             started = time.monotonic()
@@ -660,12 +703,17 @@ class ProcessGroupTest(unittest.TestCase):
             "    os._exit(0)\n"
             "signal.signal(signal.SIGTERM, term)\n"
             + ("print('EARLY', flush=True)\n" if early else "")
-            + "while True:\n"
+            + "open(sys.argv[1], 'w').close()\n"
+            "while True:\n"
             "    time.sleep(0.05)\n"
         )
-        proc = subprocess.Popen([sys.executable, "-c", program], stdout=subprocess.PIPE,
+        ready = tempfile.TemporaryDirectory(prefix="lane-ready-")
+        self.addCleanup(ready.cleanup)
+        marker = Path(ready.name) / "lane.ready"
+        proc = subprocess.Popen([sys.executable, "-c", program, str(marker)], stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, start_new_session=True)
         try:
+            self.wait_ready(marker)
             with self.assertRaises(subprocess.TimeoutExpired) as caught:
                 proc.communicate(timeout=1)
             with mock.patch.object(playable, "LANE_GRACE_SECONDS", 5):
@@ -687,21 +735,24 @@ class ProcessGroupTest(unittest.TestCase):
         self.assertEqual(output.count("LATE"), 1, output)
         self.assertNotIn("EARLY", output)
 
-    def g4_lane(self, program: str, *, timeout: int, startup_delay: float = 0) -> tuple[subprocess.CompletedProcess[str], bytes, dict[str, dict[str, object]]]:
+    def g4_lane(self, program: str, *, timeout: int, startup_delay: float = 0, ready: bool = True) -> tuple[subprocess.CompletedProcess[str], bytes, dict[str, dict[str, object]]]:
         """Run `program` as a lane through `Runner.command`; any escaping exception is an assertion failure."""
         if startup_delay:
             program = f"import time\ntime.sleep({startup_delay})\n" + program
         with tempfile.TemporaryDirectory(prefix="lane-g4-") as temporary:
             work = Path(temporary)
             runner = self.make_runner(work)
+            argv = [sys.executable, "-c", program]
             try:
                 with (
                     mock.patch.object(playable, "verify_snapshot"),
                     mock.patch.object(playable, "LANE_GRACE_SECONDS", 1),
                     mock.patch.object(playable, "LANE_AFTER_KILL_SECONDS", 1, create=True),
+                    self.ready_gate(work, argv) if ready else contextlib.nullcontext(),
                 ):
-                    result = runner.command("g4-lane", [sys.executable, "-c", program],
-                                            timeout=timeout, allow_failure=True)
+                    result = runner.command("g4-lane", argv, timeout=timeout, allow_failure=True)
+            except AssertionError:
+                raise
             except Exception as error:  # noqa: BLE001 - a red run must fail on the assertion, not on an exception
                 self.fail(f"uncaught {type(error).__name__}")
             return result, (work / "g4-lane.log").read_bytes(), dict(runner.lanes)
@@ -712,6 +763,7 @@ class ProcessGroupTest(unittest.TestCase):
             "print('EARLY-MARKER', flush=True)\n"
             "g = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'], start_new_session=True)\n"
             "print('sleeper', g.pid, flush=True)\n"
+            "open('lane.ready', 'w').close()\n"
             "time.sleep(60)\n"
         )
         result, raw, _lanes = self.g4_lane(program, timeout=2)
@@ -731,6 +783,7 @@ class ProcessGroupTest(unittest.TestCase):
             "    os._exit(0)\n"
             "signal.signal(signal.SIGTERM, term)\n"
             "os.write(1, b'A')\n"
+            "open('lane.ready', 'w').close()\n"
             "while True:\n"
             "    time.sleep(0.05)\n"
         )
@@ -746,6 +799,7 @@ class ProcessGroupTest(unittest.TestCase):
             "    os._exit(0)\n"
             "signal.signal(signal.SIGTERM, term)\n"
             "os.write(1, b'A\\xe2\\x82')\n"
+            "open('lane.ready', 'w').close()\n"
             "while True:\n"
             "    time.sleep(0.05)\n"
         )
@@ -756,13 +810,13 @@ class ProcessGroupTest(unittest.TestCase):
 
     def test_g4wr_03_non_utf8_lane_output_is_recorded(self) -> None:
         program = "import os\nos.write(1, b'\\xff\\n')\n"
-        result, raw, lanes = self.g4_lane(program, timeout=20)
+        result, raw, lanes = self.g4_lane(program, timeout=20, ready=False)
         self.assertEqual(result.returncode, 0)
         self.assertIn("\ufffd", raw.decode("utf-8"))
         self.assertEqual(lanes["g4-lane"]["status"], "pass")
 
     def test_g4wr_03_non_utf8_output_on_the_timeout_path(self) -> None:
-        program = "import os, time\nos.write(1, b'\\xff')\ntime.sleep(60)\n"
+        program = "import os, time\nos.write(1, b'\\xff')\nopen('lane.ready', 'w').close()\ntime.sleep(60)\n"
         result, raw, _lanes = self.g4_lane(program, timeout=2)
         log = raw.decode("utf-8")
         self.assertEqual(result.returncode, -1)
@@ -784,6 +838,7 @@ class ProcessGroupTest(unittest.TestCase):
             "import os, time\n"
             "open('lane.pid', 'w').write(str(os.getpid()))\n"
             "print('EARLY-CLOSED', flush=True)\n"
+            "open('lane.ready', 'w').close()\n"
             "os.close(1)\n"
             "os.close(2)\n"
             "time.sleep(60)\n"
@@ -791,17 +846,21 @@ class ProcessGroupTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="lane-d58wr02-") as temporary:
             work = Path(temporary)
             runner = self.make_runner(work)
+            argv = [sys.executable, "-c", program]
             try:
                 with (
                     mock.patch.object(playable, "verify_snapshot"),
                     mock.patch.object(playable, "LANE_GRACE_SECONDS", 1),
                     mock.patch.object(playable, "LANE_AFTER_KILL_SECONDS", 1, create=True),
+                    self.ready_gate(work, argv),
                 ):
-                    result = runner.command("closed-lane", [sys.executable, "-c", program],
-                                            timeout=2, allow_failure=True)
+                    result = runner.command("closed-lane", argv, timeout=2, allow_failure=True)
+            except AssertionError:
+                raise
             except Exception as error:  # noqa: BLE001 - a red run must fail on the assertion, not on an exception
                 self.fail(f"uncaught {type(error).__name__}")
             log = (work / "closed-lane.log").read_text(encoding="utf-8")
+            self.assertTrue((work / "lane.pid").exists(), "lane child never wrote lane.pid")
             pid = int((work / "lane.pid").read_text(encoding="utf-8"))
             self.addCleanup(lambda: self.kill_quietly(pid))
             deadline = time.monotonic() + 10

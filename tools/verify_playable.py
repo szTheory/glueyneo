@@ -1541,13 +1541,16 @@ def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
         items = json.loads(blocks[0])["items"]
     except (ValueError, KeyError, TypeError) as error:
         raise RuntimeError("rights inventory JSON is malformed") from error
+    if not isinstance(items, list):
+        raise RuntimeError("rights inventory JSON is malformed")
     errors: list[str] = []
     for item in items:
         path = item.get("path") if isinstance(item, dict) else None
-        if isinstance(path, str) and path.startswith(RIGHTS_EXEMPT_PREFIX):
-            continue
+        # G5IN-01: the path form is checked before the exemption, so `third_party/../x` is not exempt.
         if not _rights_path_is_relative_posix(path):
             errors.append(f"rights path {path} is not a relative POSIX path")
+            continue
+        if path.startswith(RIGHTS_EXEMPT_PREFIX):
             continue
         revision = item.get("source_revision")
         if not isinstance(revision, str) or RIGHTS_REVISION.fullmatch(revision) is None:
