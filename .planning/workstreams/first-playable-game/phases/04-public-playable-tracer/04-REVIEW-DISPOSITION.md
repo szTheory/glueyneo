@@ -243,8 +243,20 @@ findings:
     severity: info
     disposition: fixed
     title: "The diagnostic runner proceeds to the second probe after a pid-record failure"
-open: 0
-total: 60
+  - id: G5WR-01
+    severity: warning
+    disposition: open
+    title: "Rights source_revision gate requires branch commits to be ancestors of head, but the repository only allows squash merges"
+  - id: G5WR-02
+    severity: warning
+    disposition: open
+    title: "Lane-signalling tests have no readiness handshake with the child they SIGTERM"
+  - id: G5IN-01
+    severity: info
+    disposition: open
+    title: "third_party/ rows skip the path-form check, and a non-list items raises a bare TypeError"
+open: 3
+total: 63
 recorded: 2026-10-11T00:00:00.000Z
 ---
 
@@ -312,6 +324,9 @@ recorded: 2026-10-11T00:00:00.000Z
 | G4IN-01 | info | fixed | Reported by 04-REVIEW-GAPS-R4.md (310109e). Gap-closure fix (04-58) at revision `443f980963d89a8d48720e426878ff434cdada2d`: tests/tools/check_security_register.py `main` candidate scan; regression tests test_g4in_01_stray_register_names_fail, test_g4in_01_non_register_security_named_file_is_skipped, red commit fe3db246567e. In-run diff review (04-58, 443f980963d8): FIXED. |
 | G4IN-02 | info | fixed | Reported by 04-REVIEW-GAPS-R4.md (310109e). Gap-closure fix (04-58) at revision `a9fbfd3b5b54e56abae5e6bda21655adfe469cc7`: tools/verify_playable.py `write_frontend_records`; regression tests test_g4in_02_restore_succeeded_but_restore_file_remains, test_g4in_02_surviving_tmp_is_named, red commit 682b520537d2. In-run diff review (04-58, 443f980963d8): FIXED. |
 | G4IN-03 | info | fixed | Reported by 04-REVIEW-GAPS-R4.md (310109e). Gap-closure fix (04-58) at revision `443f980963d89a8d48720e426878ff434cdada2d`: tests/libretro/retroarch_smoke.py `run_diagnostics`; regression tests test_g4in_03_pid_record_failure_skips_second_probe, red commit fe3db246567e. In-run diff review (04-58, 443f980963d8): FIXED. |
+| G5WR-01 | warning | open | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Not yet repaired. |
+| G5WR-02 | warning | open | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Not yet repaired. |
+| G5IN-01 | info | open | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Not yet repaired. |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
