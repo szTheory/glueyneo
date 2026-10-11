@@ -1146,11 +1146,39 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
     def test_tracked_receipt_must_match_its_committed_inventory(self) -> None:
         summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
         self.assertIsNotNone(playable.load_frontend_evidence(ROOT))
-        forged = dict(summary, inventory_sha256="0" * 64)
+        # Forge the receipt against the clone's own HEAD commit, which exists in every checkout (full or
+        # squash-merged), instead of checking out the live receipt revision (G5WR-01, C2).
+        head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+                              check=True, text=True, stdout=subprocess.PIPE).stdout.strip()
+        forged = dict(summary, source_revision=head, inventory_sha256="0" * 64)
         with tempfile.TemporaryDirectory(prefix="playable-docs-inventory-") as temporary:
             clone = Path(temporary) / "clone"
             subprocess.run(["git", "clone", "--quiet", "--no-checkout", str(ROOT), str(clone)], check=True)
-            subprocess.run(["git", "-C", str(clone), "checkout", "--quiet", summary["source_revision"]], check=True)
+            subprocess.run(["git", "-C", str(clone), "checkout", "--quiet", head], check=True)
+            (clone / playable.FRONTEND_EVIDENCE).parent.mkdir(parents=True, exist_ok=True)
+            (clone / playable.FRONTEND_EVIDENCE).write_text(json.dumps(forged), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "inventory digest does not match"):
+                playable.load_frontend_evidence(clone)
+
+    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    def test_live_receipt_binds_its_committed_inventory_on_full_history(self) -> None:
+        summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        revision = summary["source_revision"]
+        present = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--verify", "--quiet", revision + "^{commit}"],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+        ancestor = present and subprocess.run(["git", "-C", str(ROOT), "merge-base", "--is-ancestor", revision, "HEAD"],
+                                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+        if not ancestor:
+            self.skipTest(f"live receipt revision {revision[:12]} absent from history (squashed checkout); "
+                          "binding is pinned on full history")
+        notes: list[str] = []
+        self.assertIsNotNone(playable.load_frontend_evidence(ROOT, unverifiable=notes))
+        self.assertEqual(notes, [])
+        forged = dict(summary, inventory_sha256="0" * 64)
+        with tempfile.TemporaryDirectory(prefix="playable-docs-inventory-live-") as temporary:
+            clone = Path(temporary) / "clone"
+            subprocess.run(["git", "clone", "--quiet", "--no-checkout", str(ROOT), str(clone)], check=True)
+            subprocess.run(["git", "-C", str(clone), "checkout", "--quiet", revision], check=True)
             (clone / playable.FRONTEND_EVIDENCE).parent.mkdir(parents=True, exist_ok=True)
             (clone / playable.FRONTEND_EVIDENCE).write_text(json.dumps(forged), encoding="utf-8")
             with self.assertRaisesRegex(RuntimeError, "inventory digest does not match"):
