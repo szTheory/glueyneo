@@ -2,11 +2,11 @@
 phase: "04"
 slug: "public-playable-tracer"
 status: validated
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: true
 created: "2026-10-07"
 completed: "2026-10-07"
-updated: "2026-10-10"
+updated: "2026-10-11"
 ---
 
 # Phase 04 — Validation Strategy
@@ -98,6 +98,7 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 | 04-21 T3 | 04-21 | 19 | HOST-02, QUAL-03 | T-04-41, T-04-42, T-04-43, T-04-SC | Frozen independent review and current direct gates reconcile exact review provenance, dispositions, current denominators and remaining manual-only limits | independent review evidence and integration gates | `python3 tests/tools/check_phase04_validation_map.py`; `python3 tools/verify_playable.py --check-docs`; `ctest --preset owned-debug --output-on-failure` | Yes | independent review of `f1c8a1de5f25224b83da6ec9e4bc40bf51a249ae` found no new actionable issue; direct checker and docs gate pass; CTest 47/47; HOST-02/frontend QUAL-03 remain Pending/unknown (historical; superseded by the 04-23 rows) |
 | 04-23 T1 | 04-23 | — | HOST-02, QUAL-03 | T-04-11, T-04-15, T-04-18, T-04-20 | Pinned RetroArch 1.22.2 qualification at committed snapshot `aaf3f093ab0f` writes a tracked passing receipt bound to the committed inventory | tool-generated qualification receipt and docs gate | `python3 tools/verify_playable.py --check-docs`; receipt from `python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean`, then `--record-frontend-evidence` (04-23 Task 1) | Yes | pass: receipt status and retroarch_status pass, 17/17 lanes pass; docs gate passes 2026-10-10; observations are from the 04-23 run and were not re-observed (no GUI launched by audit); COVERED-by-automated-command with WARNING: receipt-based, not a fresh observation |
 | 04-23 T2 | 04-23 | — | Review audit, HOST-02, QUAL-03, T-04-11, T-04-15, T-04-18, T-04-20, T-04-34, T-04-43, T-04-45, T-04-46, T-04-47, T-04-48 | Independent post-c75f577 review reproduced implementation defects in the docs gate, privacy redaction, security register checker and smoke-process lifecycle | reproduction probes outside Git (no failing tests committed); see Manual-Only / Escalated | Yes | escalated: E1-E6 open implementation defects, route to `/gsd-plan-phase 04 --gaps`; no implementation file modified |
+| 04-58 T1-T5 | 04-58 | 55 | TRAC-01, TRAC-02, TRAC-03, HOST-02, API-05, SND-01, SND-02, QUAL-03 | T-04-53, T-04-54, T-04-62, T-04-66, T-04-103, T-04-SC | G-04-35: rights-inventory revision predicate, byte-mode lane capture and post-kill bound, exact security-register keys over every security-named file, second probe recorded not-run; one guarded clean re-qualification | regression red/green, qualification and docs gates | `python3 -m unittest tests/tools/test_verify_playable.py`; `python3 tests/tools/test_check_security_register.py`; `python3 tests/libretro/test_retroarch_smoke.py`; `python3 tests/tools/check_security_register.py --require-closed --phase 04`; `python3 tools/verify_playable.py --check-docs`; `ctest --preset owned-debug` | Yes | pass (2026-10-11): G4WR-01..04 and G4IN-01..03 red then green; qualification 125/125 (one unreproduced `errors=1` closeout run, see audit below), ctest 63/63; clean RetroArch receipt at `4e6a40e` passes with 17/17 lanes |
 
 ## Threat Coverage
 
@@ -259,7 +260,7 @@ Escalated: six implementation defect groups reproduced by the independent post-c
 
 | ID | Implementation area | Reproduced defect (control in parentheses) | Suggested regression test (path and case) | Threat / finding | Status |
 |----|--------------------|--------------------------------------------|-------------------------------------------|------------------|--------|
-| E1 | `tools/private_paths.py` `redact()` and `scan_public()` | Separator and encoding variants survive: U+2215 and U+2044 separators between user-home root components, a double-percent-encoded user-home root, and a dash-mangled checkout root when the checkout is passed as `extra_roots` (control: a plain user-home root and a fullwidth solidus are rejected) | `tests/tools/test_private_paths.py`: "separator and encoding variants of a private root are redacted and rejected by scan_public" | T-04-11, T-04-15, T-04-18, T-04-20 (high/open) | fix evidence recorded (04-44, f63691b13bba); open pending the headless security audit and focused re-review |
+| E1 | `tools/private_paths.py` `redact()` and `scan_public()` | Separator and encoding variants survive: U+2215 and U+2044 separators between user-home root components, a double-percent-encoded user-home root, and a dash-mangled checkout root when the checkout is passed as `extra_roots` (control: a plain user-home root and a fullwidth solidus are rejected) | `tests/tools/test_private_paths.py`: "separator and encoding variants of a private root are redacted and rejected by scan_public" | T-04-11, T-04-15, T-04-18, T-04-20 (high/open) | repaired by Plan 04-44 (f63691b13bba); T-04-11, T-04-15, T-04-18 and T-04-20 closed in 04-SECURITY.md (status reconciled 2026-10-11) |
 | E2 | `tools/verify_playable.py` `load_frontend_evidence()` (inventory binding runs only `if (source_root / ".git").exists()`) | A `.git`-less source tree with `inventory_sha256` forged to all zeros passes `check_docs`; the same forgery is rejected when `.git` is present (control) | `tests/tools/test_verify_playable.py`: "check_docs fails closed when frontend evidence cannot be bound to committed bytes without .git" | QUAL-03 docs-gate provenance; T-04-12 | repaired by Plan 04-26; confirmed by the 04-34 and 04-36 contained reviews (CR-03 FIXED) |
 | E3 | `tools/verify_playable.py` `check_docs()` (prose outside the generated status block is not inspected) | Affirmative frontend success prose appended after the generated block passes the gate | `tests/tools/test_verify_playable.py`: "check_docs rejects affirmative frontend success prose outside the generated status block" | T-04-34 (medium/open); WR-01, WR-06, WR-08 | repaired by Plan 04-27; confirmed by the 04-34 and 04-36 contained reviews (T-04-34 CLOSED; WR-01 and WR-06 FIXED; WR-08 deferred with its documented residual) |
 | E4 | `tools/verify_playable.py` `check_docs()` review crosswalk | An "Existing Threat Scope" cell naming a nonexistent repository path passes (the gate only requires a non-empty scope) | `tests/tools/test_verify_playable.py`: "review crosswalk scope naming a nonexistent repository path is rejected" | T-04-43 (medium/open); WR-09 | repaired by Plan 04-26; confirmed by the 04-34 and 04-36 contained reviews (T-04-43 CLOSED; WR-09 FIXED) |
@@ -477,3 +478,13 @@ HOST-02 remains Pending/unknown and frontend QUAL-03 remains partial/needs-human
 | Gaps found | 7 |
 | Resolved | 1 |
 | Escalated | 6 |
+
+## Validation Audit 2026-10-11
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+All eight phase requirements map to green automated commands (04-58 row above); E1-E6 are repaired and their threats closed. Open observation, not a pass: one 04-58 closeout run of `tests/tools/test_verify_playable.py` printed `FAILED (errors=1)` with the failing test name truncated. It did not reproduce in 8 full-suite runs under doubled load or 6 `ProcessGroupTest` runs under CPU saturation. Suspected source: `lane_output_after_timeout` and the 262144-byte pipe test give a fresh Python child 1 s to install its SIGTERM handler. Routed to the diff-scoped code review.
