@@ -810,3 +810,11 @@ Evidence recorded by plan 04-58 (2026-10-11). Each red revision was re-run in a 
 - Hardened existing mitigations (no Status, Severity or Disposition changed): T-04-54 (G4WR-01, G4WR-03: lane bytes kept and decoded once; the no-signal-after-reap invariant is unchanged and a closed pipe no longer skips the group signals, D58WR-02); T-04-62 and T-04-48 (G4WR-02, G4IN-01: exact `threats_open`/`status` spelling, ASCII digits, security-named candidate scan); T-04-53 (G4IN-02: leftover files reported apart from unrestored files); T-04-66 (G4IN-03: no second launch after a pid-record failure); T-04-11 (lane text still passes `redact` and the sink scans; replacement characters do not bypass them).
 - New rows added open for the next headless audit: T-04-103 (medium) and T-04-SC (04-58) (low); both are below `block_on` high, so `threats_open: 0` remains the blocking count.
 - Closed rows whose cited files changed this round, for the audit's freshness rule to re-judge: T-04-11, T-04-38, T-04-53 and T-04-54 (tools/verify_playable.py), T-04-48, T-04-51, T-04-62, T-04-63 and T-04-64 (tests/tools/check_security_register.py), T-04-66 (tests/libretro/retroarch_smoke.py). No status of these rows changed here.
+
+## Security Audit 2026-10-11
+
+| Metric | Count |
+|---|---|
+| Threats found | 90 |
+| Closed | 88 |
+| Open | 2 |
