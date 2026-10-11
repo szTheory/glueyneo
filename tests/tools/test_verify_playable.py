@@ -120,6 +120,38 @@ class SnapshotTest(unittest.TestCase):
             playable.verify_snapshot(snapshot)
         self.assertEqual(raised.exception.reason, "snapshot-inventory-mismatch")
 
+    def test_snapshot_dir_added_empty_directory_fails(self) -> None:
+        commit = self.commit_fixture_project()
+        snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")
+        (snapshot.root / "build" / "playable-qualification").mkdir(parents=True)
+        with self.assertRaises(playable.SnapshotError) as raised:
+            playable.verify_snapshot(snapshot)
+        self.assertEqual(raised.exception.reason, "snapshot-inventory-mismatch")
+        self.assertEqual(str(raised.exception), "materialized source directory set changed after archive creation")
+
+    def test_snapshot_dir_added_nested_empty_directory_fails(self) -> None:
+        commit = self.commit_fixture_project()
+        snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")
+        (snapshot.root / "tests" / "fixture" / "__pycache__").mkdir()
+        with self.assertRaises(playable.SnapshotError) as raised:
+            playable.verify_snapshot(snapshot)
+        self.assertEqual(raised.exception.reason, "snapshot-inventory-mismatch")
+        self.assertEqual(str(raised.exception), "materialized source directory set changed after archive creation")
+
+    def test_snapshot_dir_committed_tree_and_directory_symlink_pass(self) -> None:
+        self.commit_fixture_project()
+        (self.repository / "fixture-link").symlink_to("tests/fixture")
+        subprocess.run(["git", "-C", str(self.repository), "add", "fixture-link"], check=True)
+        subprocess.run(["git", "-C", str(self.repository), "commit", "-qm", "directory symlink"], check=True)
+        commit = subprocess.run(
+            ["git", "-C", str(self.repository), "rev-parse", "HEAD"],
+            check=True, text=True, stdout=subprocess.PIPE,
+        ).stdout.strip()
+        snapshot = playable.create_snapshot(self.repository, commit, self.base / "snapshot")
+        rows, _digest = playable.verify_snapshot(snapshot)
+        self.assertEqual(rows, snapshot.inventory)
+        self.assertIn("fixture-link", {row["path"] for row in rows})
+
     def test_snapshot_hashes_symlink_target_and_rejects_escape(self) -> None:
         commit = self.commit_fixture_project()
         link = self.repository / "inside-link"
