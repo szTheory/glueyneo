@@ -26,8 +26,11 @@ repository, written as 40 lowercase hex, that resolves, is an
 ancestor of the checked head, and whose blob at `path` has exactly the
 recorded sha256. Those five parts (path form, 40 lowercase hex, resolves,
 ancestor of the checked head, digest equals the recorded sha256) are the whole
-definition and are exactly what `tools/verify_playable.py --check-docs` and the
-`qualification_runner` CTest check for every non-third_party row. By convention
+definition for every row whose revision is an ancestor or descendant of the
+checked head and for every row not listed in `docs/history-allowlist.json`, and
+are exactly what `tools/verify_playable.py --check-docs` and the
+`qualification_runner` CTest check for those rows.
+History-absent rule: a cited revision is history-absent when it does not resolve, or when it resolves but is neither an ancestor nor a descendant of the checked head (unrelated history, for example a squashed-away feature branch whose objects a local clone still holds). Ancestor and descendant revisions are always strict, and unlisted rows are strict in every case. A local squashed repository that still holds the branch objects and a fresh clone without them behave identically: both tolerate an allowlisted, pin-matching row, and both are strict for an unlisted row. A listed pre-ship row of the first-playable-game milestone branch (cited revision not reachable from `git merge-base HEAD main`) whose revision is history-absent (as after a squash merge, in a fresh clone or in a local clone still holding the branch objects) is instead accepted, permanently, when the working-tree file hashes to the recorded sha256 and the row's own pin (the canonical digest of this item) matches, and is reported as `unverifiable-history`; editing the item voids that pin until the pre-ship `--history-allowlist write` runs; see docs/testing.md "History gates after a squash merge". By convention
 the refresh procedure writes the last commit that changed the file; that is a
 convention, not part of the definition, and the gate does not check it.
 

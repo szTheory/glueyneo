@@ -206,6 +206,80 @@ commit, that the verdict covered the cited files, or that they are unchanged
 since; that freshness comes from the focused re-review's changed-path rule. A
 `--clean --check-docs` failure that is not a reported documentation error is
 recorded as `documentation-check-error: <ExceptionType>` with no message text.
+After a squash merge the ordering proof above cannot hold for every row; see
+"History gates after a squash merge" below.
+
+### History gates after a squash merge
+
+The repository merges by squash only, so the first-playable-game milestone
+branch history disappears from `main`. The revision gates (review provenance,
+frontend receipt evidence and rights provenance) therefore tolerate selected rows
+whose cited revision is gone (G5WR-01, T-04-104). User decision 2026-10-11,
+"Scope tolerance": the change is in the tooling; the repository merge settings
+are unchanged. There is no repository-wide mode: tolerance is decided per row.
+
+Scope (orchestrator resolution, 2026-10-11): `main` is a single commit, so every
+phase of the first-playable-game milestone was built on this branch. The
+allowlist covers pre-ship records of that milestone branch. The generator lists
+only rows whose cited revision is not reachable from `git merge-base HEAD main`
+and that pass strictly; rows citing a revision reachable from main are never
+listed and stay strict.
+
+History-absent rule: a cited revision is history-absent when it does not resolve, or when it resolves but is neither an ancestor nor a descendant of the checked head (unrelated history, for example a squashed-away feature branch whose objects a local clone still holds). Ancestor and descendant revisions are always strict, and unlisted rows are strict in every case. A local squashed repository that still holds the branch objects and a fresh clone without them behave identically: both tolerate an allowlisted, pin-matching row, and both are strict for an unlisted row. Rationale: with does-not-resolve alone, every developer checkout that still holds the old feature-branch objects would fail `--check-docs` permanently after the squash merge while fresh clones pass; the protection is the allowlist plus the per-record pin plus (rights) the working-tree digest, not object presence.
+
+The per-row rule: a row is tolerated only when its revision is history-absent,
+the row is listed in `docs/history-allowlist.json` with a matching per-record
+pin, and, for a rights row, the working-tree file at its path hashes to the
+recorded `sha256`. The result is the same function of the records, the
+allowlist and the history on full history, on the squashed main and on any
+branch cut from it.
+
+Per-record pins: the 04-REVIEW.md `reviewed_revision` field, the finding's own
+04-REVIEW-DISPOSITION.md table row, the canonical digest of the receipt object,
+and the canonical digest of each rights item. Appending rows, rounds or prose to
+a record voids no pin; editing a pinned row voids that row only, which is then
+evaluated strictly. A stale row is reported by `--history-allowlist check`, not
+by `--check-docs`.
+
+Commands: `python3 tools/verify_playable.py --history-allowlist write [--base <rev>]`
+generates the file (a strict pre-check; it refuses on a squashed history and on
+any row that does not verify), and
+`python3 tools/verify_playable.py --history-allowlist check [--base <rev>]`
+reports whether the committed file is current.
+
+Pre-ship step, required before the milestone squash merge: run
+`--history-allowlist check`; if it reports stale, run
+`--history-allowlist write` (which lists only strictly passing rows), commit the
+file alone, run `check` again, then run the squash simulation with the committed
+file. Plan 04-62 leaves the allowlist current at its plan end; later steps on
+this branch (for example `/gsd-code-review` closing rows) make it stale until
+this step runs.
+
+Stated openly: listed rows are tolerated permanently on a squashed history, and
+for them the ordering and ancestry proof is replaced by the digest pins; on full
+history they are checked strictly only because their revisions are ancestors of
+the checked head there. Ancestor and descendant revisions and unlisted rows
+(including an unlisted row whose revision resolves on unrelated history) are
+always strict: a row on this branch is strict until a pre-ship `write` lists it,
+and rows added after the milestone squash merge are never covered because
+`write` refuses on a squashed history.
+
+Every row, tolerated or not, still gets the path-form, 40-hex, recognized-form,
+known-round, round-file-committed and receipt-schema checks. Each tolerated row
+is printed as `unverifiable-history: <item>` before the pass line (none are
+expected on full history). On a tolerated frontend_receipt row the receipt-to-archived-snapshot content binding is not re-verified on squashed history; only the canonical receipt object digest is pinned.
+
+Evidence: `SquashMergeHistoryTest`, and the real-repository squash simulation
+(`build/playable-qualification/04-59-squash/`), which checks that a local
+squashed clone and a fresh clone give byte-identical `--check-docs` output. Its
+suite arbiter accepts a clone-only failure only for a repository-relative
+ignored input under `build/` with a recorded provisioning command, after
+verifying the input and showing that adding only that input to a fresh copy of
+the squashed clone makes the test pass (a main-checkout pass is not evidence).
+The residual, stated honestly: a test that is both history-dependent and
+satisfied by supplying an ignored `build/` input cannot be distinguished
+mechanically, so the history-dependent or environmental label is
+executor-authored and is reviewed by the diff-scoped `/gsd-code-review`.
 
 ## Playable qualification tooling contracts
 
@@ -281,7 +355,10 @@ row (see Closure gates).
   and the parent's pipe end closed). A lane that closed its own stdout and kept
   running is still signalled, because a closed stream no longer stops the group
   signals. Non-UTF-8 output is recorded with U+FFFD on both the normal and the
-  timeout path, and no decode error escapes `Runner.command`.
+  timeout path, and no decode error escapes `Runner.command`. The lane-signalling
+  regression tests wait (bounded, 30 s) for a single child ready marker,
+  `lane.ready`, before the lane timeout starts, so a slow interpreter start
+  cannot turn into an output failure (G5WR-02).
 - **Smoke harness** (G2WR-06). A signal deferred in the launch window is always
   raised as `interrupted`, even when launch raises; a child-PID record failure is
   reported as `pid-record`, not `launch`, by both paths. The actual smoke
@@ -301,7 +378,11 @@ row (see Closure gates).
   lowercase hex; it resolves to a commit; it is an ancestor of the checked head;
   and the blob at `path` in that commit hashes to the recorded `sha256`. The path
   form and the hex form are checked before any Git call, so no unvalidated
-  inventory value becomes a Git argument. `--check-docs` raises on the first
+  inventory value becomes a Git argument. The path-form check precedes the
+  `third_party/` exemption, so `third_party/../x` is rejected, and an `items`
+  value that is not a list is a malformed inventory (G5IN-01). Rows of the
+  milestone branch whose revision is history-absent after a squash merge follow
+  "History gates after a squash merge". `--check-docs` raises on the first
   error whenever a repository is available, and the `qualification_runner` CTest
   runs the same check on the real repository. A source archive without `.git`
   skips that CTest case visibly. The refresh writes the last commit that
