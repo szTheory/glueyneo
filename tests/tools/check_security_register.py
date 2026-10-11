@@ -30,19 +30,27 @@ must equal the number of open threat-register rows at or above the configured
   delimiter row) fails as `unrecognized threat table form`. Non-register audit
   tables use another first header such as `Audited Threat`. Cells split on
   unescaped pipes only.
+- Duplicate and guarded-key detection is case-insensitive, but the `threats_open`
+  and `status` declarations themselves must be spelled exactly (bare or quoted,
+  no case folding): `Threats_Open: 0` and `Status: verified` fail with
+  `<key> key must be spelled exactly`, because GSD reads the literal key. Only
+  ASCII digits form the integer (G4WR-02).
 - Threat IDs must be unique across tables; status must be open, closed or
-  accepted; `status: verified` (also quoted, any letter case: G2IN-01)
-  requires `threats_open: 0` (a trailing ` # comment` is allowed).
+  accepted; `status: verified` (also quoted, its value in any letter case:
+  G2IN-01) requires `threats_open: 0` (a trailing ` # comment` is allowed).
 - Default mode checks consistency only and prints per-register blocking counts,
   so a PASS is not closure. `--require-closed` additionally exits 1 while any
   register has blocking open threats. `--phase NN` restricts the run to the one
   `phases/NN-*/NN-SECURITY.md` register (exactly one must exist) for phase
   acceptance; milestone shipping runs without it so every register counts,
-  `NN-SECURITY.md` and decimal-phase `NN.N-SECURITY.md` alike (G2WR-04). In the
-  unscoped run a `phases/*/NN*-SECURITY.md` file with another name fails as a
-  `misnamed security register` when it has a `threats_open` key or a `Threat ID`
-  table; otherwise it prints `SKIP: <name> is not a register name` and is not
-  counted (G3IN-03).
+  `NN-SECURITY.md` and decimal-phase `NN.N-SECURITY.md` alike (G2WR-04). In
+  both modes every `*.md` file whose name contains `security` (any letter case)
+  directly under the scoped `phases/<NN>-*/` directories, or under every phase
+  directory when unscoped, and that is not a register fails as a `misnamed
+  security register` when it has a `threats_open` key or a `Threat ID` table;
+  otherwise it prints `SKIP: <name> is not a register name` and is not counted,
+  so `4-SECURITY.md`, `SECURITY.md` and `phase-04-security.md` cannot hide open
+  rows (G3IN-03, G4IN-01).
 
 The blocking threshold is `workflow.security_block_on` from
 `.planning/workstreams/<workstream>/config.json` when that file sets it, else
@@ -70,7 +78,7 @@ WORKSTREAM = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 # One simple top-level `key: value` line: bare, double-quoted (no backslash) or single-quoted key.
 KEY_LINE = re.compile(r"""^(?P<key>[A-Za-z_][A-Za-z0-9_.-]*|"[^"\\]*"|'(?:[^']|'')*') *:(?: (?P<value>.*))?$""")
 GUARDED_KEYS = frozenset({"threats_open", "status"})
-INTEGER = re.compile(r"\d+")
+INTEGER = re.compile(r"[0-9]+")  # ASCII digits only: YAML reads other Unicode digits as a string (G4WR-02)
 CELL_SPLIT = re.compile(r"(?<!\\)\|")
 INDENT = re.compile(r"^ {0,3}(?![ \t])")
 DELIMITER = re.compile(r"^ {0,3}\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$")
@@ -134,12 +142,18 @@ def frontmatter(text: str) -> list[str] | None:
     return None
 
 
-def normalized_key(raw: str) -> str:
+def unquoted_key(raw: str) -> str:
+    """The key spelling after quote removal, with its letter case kept (G4WR-02)."""
     if raw[0] == '"':
-        raw = raw[1:-1]
-    elif raw[0] == "'":
-        raw = raw[1:-1].replace("''", "'")
-    return raw.casefold()
+        return raw[1:-1]
+    if raw[0] == "'":
+        return raw[1:-1].replace("''", "'")
+    return raw
+
+
+def normalized_key(raw: str) -> str:
+    """Case-folded key for duplicate and guarded-key detection only; a declaration needs `unquoted_key`."""
+    return unquoted_key(raw).casefold()
 
 
 def strip_comment(value: str) -> str:
@@ -153,9 +167,9 @@ def unquoted(value: str) -> str:
     return value
 
 
-def frontmatter_keys(front: list[str]) -> tuple[dict[str, list[tuple[int, str]]], list[str]]:
-    """Return (normalized key -> [(file line number, raw value)], errors) for the frontmatter lines."""
-    keys: dict[str, list[tuple[int, str]]] = {}
+def frontmatter_keys(front: list[str]) -> tuple[dict[str, list[tuple[int, str, str]]], list[str]]:
+    """Return (normalized key -> [(file line number, raw value, exact spelling)], errors) for the frontmatter lines."""
+    keys: dict[str, list[tuple[int, str, str]]] = {}
     errors: list[str] = []
     for index, line in enumerate(front):
         number = index + 2
@@ -173,7 +187,8 @@ def frontmatter_keys(front: list[str]) -> tuple[dict[str, list[tuple[int, str]]]
         if found is None:
             errors.append(f"unsupported frontmatter line {number}")
             continue
-        keys.setdefault(normalized_key(found.group("key")), []).append((number, found.group("value") or ""))
+        keys.setdefault(normalized_key(found.group("key")), []).append(
+            (number, found.group("value") or "", unquoted_key(found.group("key"))))
     errors.extend(f"duplicate frontmatter key {key}" for key, entries in keys.items() if len(entries) > 1)
     return keys, errors
 
@@ -230,6 +245,10 @@ def register_errors(path: Path, threshold: int) -> tuple[list[str], int]:
         return [f"{path.name}: missing frontmatter"], 0
     keys, key_errors = frontmatter_keys(front)
     errors.extend(f"{path.name}: {error}" for error in key_errors)
+    # Duplicate and guarded-key detection above is case-insensitive; the declarations GSD reads are not (G4WR-02).
+    for guarded in sorted(GUARDED_KEYS):
+        if any(spelling != guarded for _, _, spelling in keys.get(guarded, [])):
+            errors.append(f"{path.name}: {guarded} key must be spelled exactly")
     declared = keys.get("threats_open", [])
     if not declared:
         errors.append(f"{path.name}: frontmatter needs exactly one `threats_open: <n>` line, found 0")
@@ -237,7 +256,7 @@ def register_errors(path: Path, threshold: int) -> tuple[list[str], int]:
         errors.append(f"{path.name}: threats_open must be a bare non-negative integer")
     if errors:
         return errors, 0
-    verified = any(unquoted(strip_comment(value)).casefold() == "verified" for _, value in keys.get("status", []))
+    verified = any(unquoted(strip_comment(value)).casefold() == "verified" for _, value, _ in keys.get("status", []))
     lines = text.splitlines()
     found_tables, table_errors = register_tables(lines)
     errors.extend(f"{path.name}: {error}" for error in table_errors)
@@ -318,14 +337,17 @@ def main(arguments: list[str] | None = None, root: Path = ROOT) -> int:
         print(f"FAIL: {threshold}", file=sys.stderr)
         return 1
     level, level_name, source = threshold
-    pattern = f"phases/{phase}-*/{phase}-SECURITY.md" if phase else "phases/*/[0-9][0-9]*-SECURITY.md"
-    candidates = sorted(root.glob(f".planning/workstreams/{workstream}/{pattern}"))
-    registers = [path for path in candidates if REGISTER_NAME.fullmatch(path.name)]
+    # G4IN-01: every security-named Markdown file in scope is a candidate, whatever its prefix.
+    directories = f"{phase}-*" if phase else "*"
+    candidates = sorted(path for path in root.glob(f".planning/workstreams/{workstream}/phases/{directories}/*.md")
+                        if "security" in path.name.casefold())
+    registers = [path for path in candidates
+                 if (path.name == f"{phase}-SECURITY.md" if phase else REGISTER_NAME.fullmatch(path.name))]
     errors: list[str] = []
     for path in candidates:
-        if REGISTER_NAME.fullmatch(path.name):
+        if path in registers:
             continue
-        # G3IN-03: a register-shaped file with another name is never silently ignored.
+        # G3IN-03, G4IN-01: a register-shaped file with another name is never silently ignored.
         try:
             text = path.read_text(encoding="utf-8")
             front = frontmatter(text)

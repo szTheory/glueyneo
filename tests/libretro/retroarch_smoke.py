@@ -852,10 +852,16 @@ def run_diagnostics(args: argparse.Namespace) -> dict[str, object]:
         executable, core, content, identity["bundle_id"],
         probe="no_content", timeout=args.timeout, child_pid_file=child_pid_file,
     )
-    core_content = run_launch_probe(
-        executable, core, content, identity["bundle_id"],
-        probe="core_content", timeout=args.timeout, child_pid_file=child_pid_file,
-    )
+    diagnostic = no_content.get("diagnostic")
+    if isinstance(diagnostic, dict) and diagnostic.get("stage") == "pid-record":
+        # The PID file cannot be trusted after a record failure, and the finding is already decided, so a
+        # second frontend launch adds nothing (G4IN-03).
+        core_content = {"probe": "core_content", "status": "not-run", "reason": "skipped-after-pid-record"}
+    else:
+        core_content = run_launch_probe(
+            executable, core, content, identity["bundle_id"],
+            probe="core_content", timeout=args.timeout, child_pid_file=child_pid_file,
+        )
     return {
         "status": "diagnostic_only",
         "finding": compare_launch_probes(no_content, core_content),

@@ -106,9 +106,15 @@ threshold and its source (`block_on high from .planning/config.json`).
 
 Default mode checks consistency only. The YAML frontmatter (the first `---`
 block) is read as a set of top-level keys. Keys are compared after removing
-quotes and case-folding, so `"threats_open"`, `'threats_open'` and
-`Threats_Open` are one key, and any duplicate top-level key in any quoting form
-fails (T-04-48). A commented or indented `threats_open`/`status` key fails.
+quotes and case-folding for duplicate and guarded-key detection, so
+`"threats_open"`, `'threats_open'` and `Threats_Open` are one key, and any
+duplicate top-level key in any quoting form fails (T-04-48). The `threats_open`
+and `status` declarations themselves must be spelled exactly (bare or quoted, no
+case folding): `Threats_Open: 0`, `"THREATS_OPEN": 0` and `Status: verified` fail
+with `<key> key must be spelled exactly`, because GSD reads the literal key. The
+integer accepts ASCII digits only, so `threats_open: ٣` fails as not a bare
+non-negative integer; the `verified` value stays case-insensitive (G4WR-02,
+G2IN-01). A commented or indented `threats_open`/`status` key fails.
 Unsupported YAML lines (flow mappings, merge keys, complex keys, anchors,
 aliases, escaped quoted keys, top-level list items) fail with their line number
 instead of being skipped. `threats_open` must be a bare non-negative integer,
@@ -145,7 +151,7 @@ It scopes a closure check to one phase, so a blocking draft row in another
 phase does not affect it.
 
 `FAIL:` reasons: missing frontmatter; a missing, commented or indented
-`threats_open` key; a `duplicate frontmatter key`; an `unsupported frontmatter
+`threats_open` key; a `threats_open`/`status` key that is not spelled exactly; a `duplicate frontmatter key`; an `unsupported frontmatter
 line`; a `threats_open` that is not a bare integer; an `unrecognized threat
 table form`; a `misnamed security register`; a count that differs from the rows; a malformed
 row, duplicate threat ID, uncontrolled status or unknown severity; a `Threat ID`
@@ -161,10 +167,13 @@ unescaped pipes only, so `\|` inside a cell is literal.
 Phase acceptance runs
 `python3 tests/tools/check_security_register.py <workstream> --require-closed --phase NN`.
 The unscoped run counts every `NN-SECURITY.md` and `NN.N-SECURITY.md` register
-(names must fully match; G2WR-04). A file matching `NN*-SECURITY.md` whose name
-is not a register name fails as `misnamed security register` when it has a
-`threats_open` key or a `Threat ID` table, and otherwise is reported as `SKIP:`
-and not counted (G3IN-03). `status: verified` is matched
+(names must fully match; G2WR-04). In both the unscoped and the `--phase` run,
+every `*.md` file whose name contains `security` in any letter case, directly
+under the scoped phase directories (every phase directory when unscoped), is a
+candidate (G4IN-01). A candidate that is not a register fails as `misnamed
+security register` when it has a `threats_open` key or a `Threat ID` table, so
+`4-SECURITY.md`, `SECURITY.md` and `phase-04-security.md` cannot hide open
+rows; otherwise it is reported as `SKIP:` and not counted (G3IN-03). `status: verified` is matched
 case-insensitively (G2IN-01). Executor-recorded fix evidence never closes a row:
 threat closure needs the separate headless security-audit verdict (T-04-48).
 Milestone shipping runs it without `--phase`, so every register counts there,
@@ -276,7 +285,11 @@ row (see Closure gates).
   (`run_smoke`) builds one diagnostic whose detail keeps the error class
   (G3IN-02). The diagnostic launch probes record `survived_window` as unknown,
   still kill the started frontend, and the probe comparison reports the finding
-  `diagnostic-pid-record-failed` (G3WR-03).
+  `diagnostic-pid-record-failed` (G3WR-03). The diagnostic runner
+  (`run_diagnostics`) stops after a `pid-record` failure of the first probe: it
+  does not launch the second probe, which could not trust the PID file, and
+  records it as `{"status": "not-run", "reason": "skipped-after-pid-record"}`
+  (G4IN-03).
 - **Rights provenance** (G4WR-04, T-04-103). `rights_revision_errors` in
   `tools/verify_playable.py` checks every `docs/rights-inventory.md` row whose
   path is not under `third_party/` (those cite an upstream pin and are exempt).
