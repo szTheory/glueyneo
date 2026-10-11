@@ -651,10 +651,11 @@ class ProcessGroupTest(unittest.TestCase):
         self.assertLess(elapsed, 4, "the grace period was spent blocked on a full pipe")
         self.assertIn("TAIL-MARKER", output)
 
-    def lane_output_after_timeout(self, early: bool) -> str:
+    def lane_output_after_timeout(self, early: bool, startup_delay: float = 0) -> str:
         program = (
             "import os, signal, sys, time\n"
-            "def term(signum, frame):\n"
+            + (f"time.sleep({startup_delay})\n" if startup_delay else "")
+            + "def term(signum, frame):\n"
             "    os.write(1, b'LATE\\n')\n"
             "    os._exit(0)\n"
             "signal.signal(signal.SIGTERM, term)\n"
@@ -686,8 +687,10 @@ class ProcessGroupTest(unittest.TestCase):
         self.assertEqual(output.count("LATE"), 1, output)
         self.assertNotIn("EARLY", output)
 
-    def g4_lane(self, program: str, *, timeout: int) -> tuple[subprocess.CompletedProcess[str], bytes, dict[str, dict[str, object]]]:
+    def g4_lane(self, program: str, *, timeout: int, startup_delay: float = 0) -> tuple[subprocess.CompletedProcess[str], bytes, dict[str, dict[str, object]]]:
         """Run `program` as a lane through `Runner.command`; any escaping exception is an assertion failure."""
+        if startup_delay:
+            program = f"import time\ntime.sleep({startup_delay})\n" + program
         with tempfile.TemporaryDirectory(prefix="lane-g4-") as temporary:
             work = Path(temporary)
             runner = self.make_runner(work)
@@ -813,6 +816,40 @@ class ProcessGroupTest(unittest.TestCase):
         self.assertEqual(result.returncode, -1)
         self.assertIn("TimeoutExpired", log)
         self.assertEqual(log.split("\n", 1)[1].count("EARLY-CLOSED"), 1, log)
+
+    def test_g5wr_02_slow_start_direct_lane_keeps_late_output(self) -> None:
+        output = self.lane_output_after_timeout(early=False, startup_delay=3)
+        self.assertEqual(output.count("LATE"), 1, output)
+
+    def test_g5wr_02_slow_start_runner_lane_keeps_late_output(self) -> None:
+        program = (
+            "import os, signal, time\n"
+            "def term(signum, frame):\n"
+            "    os.write(1, b'LATE\\n')\n"
+            "    os._exit(0)\n"
+            "signal.signal(signal.SIGTERM, term)\n"
+            "os.write(1, b'A')\n"
+            "open('lane.ready', 'w').close()\n"
+            "while True:\n"
+            "    time.sleep(0.05)\n"
+        )
+        started = time.monotonic()
+        _result, raw, _lanes = self.g4_lane(program, timeout=2, startup_delay=3)
+        elapsed = time.monotonic() - started
+        log = raw.decode("utf-8")
+        self.assertIn("TimeoutExpired", log)
+        self.assertEqual(log.split("\n", 1)[1].count("LATE"), 1, log)
+        # The lane timeout starts only after lane.ready: 3 s startup + 2 s timeout - 0.5 s slack.
+        self.assertGreaterEqual(elapsed, 4.5, "the lane timeout started before the child was ready")
+
+    def test_g5wr_02_never_ready_child_fails_clearly(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="lane-never-ready-") as temporary:
+            started = time.monotonic()
+            with mock.patch.object(ProcessGroupTest, "READY_SECONDS", 1):
+                with self.assertRaises(AssertionError) as caught:
+                    self.wait_ready(Path(temporary) / "lane.ready")
+            self.assertLess(time.monotonic() - started, 5)
+            self.assertIn("lane child never became ready: lane.ready", str(caught.exception))
 
     @staticmethod
     def kill_quietly(pid: int) -> None:
@@ -1599,6 +1636,28 @@ class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
                 self.assertIn("not a relative POSIX path", errors[0])
                 arguments = [argument for call in run.call_args_list for argument in call.args[0]]
                 self.assertFalse(any(argument == bad or (bad and bad in argument) for argument in arguments), arguments)
+
+    def test_g5in_01_third_party_dot_dot_path_is_not_exempt(self) -> None:
+        bad = "third_party/../tests/x.py"
+        with tempfile.TemporaryDirectory(prefix="playable-rights-") as temporary:
+            repository, _first, second = self.make_repository(Path(temporary))
+            real = subprocess.run
+            with mock.patch.object(subprocess, "run", wraps=real) as run:
+                errors = self.errors(repository, [{"path": bad, "sha256": self.digest("two\n"), "source_revision": second}])
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("not a relative POSIX path", errors[0])
+            arguments = [argument for call in run.call_args_list for argument in call.args[0]]
+            self.assertFalse(any(bad in argument for argument in arguments), arguments)
+
+    def test_g5in_01_non_list_items_is_malformed(self) -> None:
+        for items in (3, {"a": 1}):
+            with self.subTest(items=items), tempfile.TemporaryDirectory(prefix="playable-rights-") as temporary:
+                repository, _first, _second = self.make_repository(Path(temporary))
+                (repository / "docs").mkdir(exist_ok=True)
+                (repository / "docs/rights-inventory.md").write_text(
+                    "# Inventory\n\n```json\n" + json.dumps({"schema": 1, "items": items}) + "\n```\n", encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, "rights inventory JSON is malformed"):
+                    self.helper()(repository, repository, "HEAD")
 
     def test_g4wr_04_revision_outside_the_checked_head_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-rights-") as temporary:
