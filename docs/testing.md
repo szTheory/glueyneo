@@ -286,7 +286,10 @@ check locally against `-DGLUEYNEO_HISTORY_BASE=<ref>` (default `origin/main`,
 which must be fetched) and is registered only with
 `-DGLUEYNEO_PRE_SHIP_HISTORY_CHECK=ON`.
 It is off by default because the check refuses on a squashed or shallow
-checkout, which includes main after the squash merge. Once squashed, the pins
+checkout, which includes main after the squash merge. `--check-docs` itself also
+needs the history back to the allowlist's `base_revision` (a full clone, or
+`--shallow-since` reaching it); otherwise it fails first with "history
+allowlist base_revision is not a commit of this repository" (G7IN-01). Once squashed, the pins
 are an accepted, documented residual (G6WR-01, deferred under the 2026-10-11
 squash-tolerance decision): no signing scheme is added, and editing the
 allowlist after the squash fails the CI check, because its rows no longer

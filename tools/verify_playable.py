@@ -1949,6 +1949,12 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
     binding = repository
     if binding is None and (source_root / ".git").exists():
         binding = source_root
+    if binding is not None:
+        # G7IN-01: report an unanchored allowlist (for example a shallow clone without base_revision)
+        # before the frontend gate turns the emptied allowlist into a less specific error.
+        anchor_problems = history_allowlist_anchor_errors(allowlist, binding, head)
+        if anchor_problems:
+            raise RuntimeError(anchor_problems[0])
     evidence = load_frontend_evidence(source_root, repository=binding, head=head,
                                       allowlist=allowlist, unverifiable=notes)
     guide = (source_root / GUIDE).read_text(encoding="utf-8")
@@ -1982,9 +1988,6 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
     if provenance_repository is None and (source_root / ".git").exists():
         provenance_repository = source_root
     if provenance_repository is not None:
-        anchor_problems = history_allowlist_anchor_errors(allowlist, provenance_repository, head)
-        if anchor_problems:
-            raise RuntimeError(anchor_problems[0])
         provenance_problems = review_provenance_errors(source_root, provenance_repository, head,
                                                        allowlist=allowlist, unverifiable=notes)
         if provenance_problems:

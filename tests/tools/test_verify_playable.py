@@ -3193,6 +3193,13 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
             self.run_cli(root, "--history-allowlist", "ci")
         self.assertEqual(caught.exception.code, 2)
 
+    def test_g7in_01_check_docs_reports_unanchored_allowlist_first(self) -> None:
+        """An unresolvable base_revision (as in a shallow clone) is reported before any other docs check."""
+        fx = self.fixture()
+        self.allowlist(fx.repo, self.all_rows(fx), "e" * 40)
+        with self.assertRaisesRegex(RuntimeError, "^history allowlist base_revision is not a commit"):
+            playable.check_docs(fx.repo)
+
     def test_g7cr_02_default_base_is_the_upstream_main_ref(self) -> None:
         """Without --base the generator uses origin/main, never a stale local main, and refuses when it is absent."""
         fx = self.on_feature(base_row=True)
