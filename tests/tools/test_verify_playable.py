@@ -2504,5 +2504,305 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
                          "Phase 04 documentation gate passed.\n")
 
 
+    # ---- helpers for the adversarial cases ----
+
+    def items(self, root: Path) -> list[dict[str, str]]:
+        text = (root / playable.RIGHTS_INVENTORY).read_text(encoding="utf-8")
+        return json.loads(re.search(r"```json\s*\n(.*?)\n```", text, re.DOTALL).group(1))["items"]
+
+    def add_rights_row(self, root: Path, path: str, text: str, revision: str) -> None:
+        (root / path).parent.mkdir(parents=True, exist_ok=True)
+        (root / path).write_text(text, encoding="utf-8")
+        self.write_inventory(root, [*self.items(root), self.item(path, text, revision)])
+
+    def append_disposition(self, root: Path, row: str) -> None:
+        with (root / playable.DISPOSITION).open("a", encoding="utf-8") as handle:
+            handle.write(row + "\n")
+
+    def both(self, root: Path) -> tuple[list[str], list[str], list[str], list[str]]:
+        rights_errors, rights_notes = self.gate("rights_revision_errors", root)
+        review_errors, review_notes = self.gate("review_provenance_errors", root)
+        return rights_errors, rights_notes, review_errors, review_notes
+
+    def stale(self, root: Path) -> list[str]:
+        function = getattr(playable, "history_allowlist_stale", None)
+        self.assertIsNotNone(function, "history_allowlist_stale is missing")
+        try:
+            return function(root)
+        except Exception as error:  # noqa: BLE001
+            self.fail(f"uncaught {type(error).__name__}")
+
+    def assert_all_noted(self, root: Path) -> None:
+        rights_errors, rights_notes, review_errors, review_notes = self.both(root)
+        self.assertEqual((rights_errors, review_errors), ([], []))
+        self.assertEqual(len(rights_notes), 1, rights_notes)
+        self.assertEqual(len(review_notes), 3, review_notes)
+        for note in (*rights_notes, *review_notes):
+            self.assertIn(self.NOTE, note)
+
+    def check_fabricated(self, root: Path, *, tolerated: bool) -> None:
+        """Fabricated rows (never in the allowlist) fail the same way on full history and on a squashed main."""
+        inventory = (root / playable.RIGHTS_INVENTORY).read_text(encoding="utf-8")
+        review = (root / playable.REVIEW).read_text(encoding="utf-8")
+        disposition = (root / playable.DISPOSITION).read_text(encoding="utf-8")
+        # (1) a fabricated rights revision
+        self.add_rights_row(root, "tests/b.txt", "b\n", "f" * 40)
+        errors, notes = self.gate("rights_revision_errors", root)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("tests/b.txt", errors[0])
+        self.assertTrue(errors[0].endswith("does not resolve"), errors[0])
+        self.assertFalse([note for note in notes if "tests/b.txt" in note], notes)
+        (root / playable.RIGHTS_INVENTORY).write_text(inventory, encoding="utf-8")
+        # (2) a fabricated reviewed_revision
+        self.write_review(root, "e" * 40)
+        errors, _notes = self.gate("review_provenance_errors", root)
+        self.assertEqual(errors, ["reviewed revision eeeeeeeeeeee is not a committed ancestor of the checked head"])
+        (root / playable.REVIEW).write_text(review, encoding="utf-8")
+        # (3) a fabricated citation; the append voids no other pin
+        self.append_disposition(root, f"| CR-02 | warning | fixed | revision `{'f' * 40}` |")
+        errors, notes = self.gate("review_provenance_errors", root)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("review finding CR-02 cites revision ffffffffffff that is not a committed ancestor", errors[0])
+        self.assertEqual(any("CR-01" in note for note in notes), tolerated, notes)
+        self.assertEqual(any("GWR-01" in note for note in notes), tolerated, notes)
+        (root / playable.DISPOSITION).write_text(disposition, encoding="utf-8")
+
+    # ---- review provenance, receipts and adversarial rows ----
+
+    def test_g5wr_01_review_tolerated_after_squash(self) -> None:
+        fx = self.fixture()
+        results = []
+        for root in (fx.repo, fx.clone):
+            errors, notes = self.gate("review_provenance_errors", root)
+            self.assertEqual(errors, [])
+            self.assertEqual(len(notes), 3, notes)
+            for note in notes:
+                self.assertIn(self.NOTE, note)
+            self.assertTrue(any("04-REVIEW.md" in note and fx.F1[:12] in note for note in notes), notes)
+            self.assertTrue(any("CR-01" in note for note in notes), notes)
+            self.assertTrue(any("GWR-01" in note for note in notes), notes)
+            results.append((errors, notes))
+        self.assertEqual(results[0], results[1])
+
+    def test_g5wr_01_unrelated_resolving_unlisted_row_fails_strict(self) -> None:
+        fx = self.fixture()
+        for root, rights_message in ((fx.repo, "is not an ancestor of the checked head"), (fx.clone, "does not resolve")):
+            self.add_rights_row(root, "tests/c.txt", "c\n", fx.F1)
+            self.append_disposition(root, f"| CR-04 | warning | fixed | revision `{fx.F1}` |")
+            rights_errors, rights_notes, review_errors, review_notes = self.both(root)
+            self.assertEqual(len(rights_errors), 1, rights_errors)
+            self.assertIn("tests/c.txt", rights_errors[0])
+            self.assertTrue(rights_errors[0].endswith(rights_message), rights_errors[0])
+            self.assertFalse([note for note in rights_notes if "tests/c.txt" in note], rights_notes)
+            self.assertEqual(len(rights_notes), 1, rights_notes)
+            self.assertEqual(len(review_errors), 1, review_errors)
+            self.assertIn(f"review finding CR-04 cites revision {fx.F1[:12]} that is not a committed ancestor", review_errors[0])
+            self.assertEqual(len(review_notes), 3, review_notes)
+
+    def test_g5wr_01_full_history_has_no_notes(self) -> None:
+        fx = self.fixture()
+        self.git(fx.repo, "checkout", "-q", "feature")
+        rights_errors, rights_notes, review_errors, review_notes = self.both(fx.repo)
+        self.assertEqual((rights_errors, rights_notes, review_errors, review_notes), ([], [], [], []))
+        self.assertEqual(self.stale(fx.repo), [])
+
+    def test_g5wr_01_fabricated_rows_not_allowlisted_fail_everywhere(self) -> None:
+        fx = self.fixture()
+        self.git(fx.repo, "checkout", "-q", "feature")
+        self.check_fabricated(fx.repo, tolerated=False)
+        self.check_fabricated(fx.clone, tolerated=True)
+
+    def test_g5wr_01_side_branch_and_descendant_fail_on_full_history(self) -> None:
+        fx = self.fixture()
+        self.git(fx.repo, "checkout", "-q", "-b", "side", fx.F1)
+        (fx.repo / "tests/a.txt").write_text("two\n", encoding="utf-8")
+        side = self.commit(fx.repo, "side", "tests/a.txt")
+        self.git(fx.repo, "checkout", "-q", "feature")
+        self.write_inventory(fx.repo, [self.item("tests/a.txt", "two\n", side)])
+        errors, notes = self.gate("rights_revision_errors", fx.repo)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertTrue(errors[0].endswith("is not an ancestor of the checked head"), errors[0])
+        self.assertEqual(notes, [])
+        self.git(fx.repo, "checkout", "-q", "--", playable.RIGHTS_INVENTORY.as_posix())
+        self.git(fx.repo, "checkout", "-q", "--detach", fx.F2)
+        self.write_inventory(fx.repo, [self.item("tests/a.txt", "two\n", fx.F3)])
+        self.allowlist(fx.repo, [("rights", "tests/a.txt", fx.F3)], fx.B)
+        errors, notes = self.gate("rights_revision_errors", fx.repo)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertTrue(errors[0].endswith("is not an ancestor of the checked head"), errors[0])
+        self.assertEqual(notes, [])
+
+    def test_g5wr_01_editing_a_pinned_row_voids_only_that_row(self) -> None:
+        fx = self.fixture()
+        root = fx.clone
+        text = (root / playable.DISPOSITION).read_text(encoding="utf-8")
+        (root / playable.DISPOSITION).write_text(
+            text.replace(f"| CR-01 | critical | fixed | revision `{fx.F2}` |",
+                         f"| CR-01 | critical | fixed | revision `{fx.F2}` x |"), encoding="utf-8")
+        errors, notes = self.gate("review_provenance_errors", root)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn(f"review finding CR-01 cites revision {fx.F2[:12]} that is not a committed ancestor", errors[0])
+        self.assertFalse([note for note in notes if "CR-01" in note], notes)
+        self.assertTrue([note for note in notes if "GWR-01" in note], notes)
+        self.assertEqual(self.stale(root), ["review_citation CR-01"])
+        (root / playable.DISPOSITION).write_text(text, encoding="utf-8")
+        self.write_inventory(root, [self.item("tests/a.txt", "two\n", fx.F2, license="Apache-2.0")])
+        errors, notes = self.gate("rights_revision_errors", root)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertTrue(errors[0].endswith("does not resolve"), errors[0])
+        self.assertEqual(notes, [])
+
+    def test_g5wr_01_appending_keeps_every_pin(self) -> None:
+        fx = self.fixture()
+        root = fx.clone
+        head = self.git(root, "rev-parse", "HEAD")
+        self.append_disposition(root, "| CR-03 | info | open | recorded |")
+        with (root / playable.REVIEW).open("a", encoding="utf-8") as handle:
+            handle.write("\nA new paragraph of review prose.\n")
+        (root / playable.PHASE_DIRECTORY / "04-REVIEW-GAPS-R2.md").write_text("round two\n", encoding="utf-8")
+        self.write_inventory(root, [*self.items(root), self.item("base.txt", "base\n", head)])
+        self.commit(root, "append", playable.DISPOSITION.as_posix(), playable.REVIEW.as_posix(),
+                    (playable.PHASE_DIRECTORY / "04-REVIEW-GAPS-R2.md").as_posix(), playable.RIGHTS_INVENTORY.as_posix())
+        self.assert_all_noted(root)
+        self.assertEqual(self.stale(root), [])
+
+    def test_g5wr_01_rights_digest_still_binds(self) -> None:
+        fx = self.fixture()
+        (fx.clone / "tests/a.txt").write_text("tampered\n", encoding="utf-8")
+        errors, notes = self.gate("rights_revision_errors", fx.clone)
+        self.assertEqual(len(errors), 1, errors)
+        for expected in ("tests/a.txt", "unverifiable-history", "does not hold the recorded SHA-256"):
+            self.assertIn(expected, errors[0])
+        self.assertEqual(notes, [])
+        (fx.clone / "tests/a.txt").unlink()
+        errors, _notes = self.gate("rights_revision_errors", fx.clone)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("is missing", errors[0])
+
+    def test_g5wr_01_branch_cut_from_squashed_main(self) -> None:
+        fx = self.fixture()
+        root = fx.clone
+        self.git(root, "checkout", "-q", "-b", "later")
+        (root / "notes.txt").write_text("notes\n", encoding="utf-8")
+        self.commit(root, "notes", "notes.txt")
+        self.assert_all_noted(root)
+        self.add_rights_row(root, "tests/b.txt", "b\n", fx.F1)
+        self.commit(root, "new row", "tests/b.txt", playable.RIGHTS_INVENTORY.as_posix())
+        rights_errors, rights_notes, review_errors, review_notes = self.both(root)
+        self.assertEqual(len(rights_errors), 1, rights_errors)
+        self.assertIn("tests/b.txt", rights_errors[0])
+        self.assertTrue(rights_errors[0].endswith("does not resolve"), rights_errors[0])
+        self.assertEqual(len(rights_notes), 1, rights_notes)
+        self.assertIn("tests/a.txt", rights_notes[0])
+        self.assertEqual((review_errors, len(review_notes)), ([], 3))
+
+    def test_g5wr_01_one_commit_shape_changes_nothing(self) -> None:
+        self.assertFalse(hasattr(playable, "phase_history_complete"))
+        temporary = tempfile.TemporaryDirectory(prefix="playable-oneshot-")
+        self.addCleanup(temporary.cleanup)
+        repo = Path(temporary.name) / "repo"
+        repo.mkdir()
+        self.git(repo, "init", "-q", "-b", "main")
+        (repo / "tests").mkdir()
+        (repo / "tests/a.txt").write_text("one\n", encoding="utf-8")
+        x1 = self.commit(repo, "x1", "tests/a.txt")
+        self.write_review(repo, x1)
+        gaps = playable.PHASE_DIRECTORY / "04-REVIEW-GAPS.md"
+        (repo / gaps).write_text("gaps\n", encoding="utf-8")
+        self.commit(repo, "x2 review and gaps together", playable.REVIEW.as_posix(), gaps.as_posix())
+        (repo / "tests/a.txt").write_text("two\n", encoding="utf-8")
+        x3 = self.commit(repo, "x3", "tests/a.txt")
+        self.write_inventory(repo, [self.item("tests/a.txt", "two\n", x3)])
+        self.write_disposition(repo, [("CR-01", "critical", "fixed", f"revision `{x3}`"),
+                                      ("GWR-01", "warning", "fixed", f"revision `{x3}`")])
+        self.allowlist(repo, [("reviewed_revision", "04-REVIEW.md", x1), ("review_citation", "CR-01", x3),
+                              ("review_citation", "GWR-01", x3), ("rights", "tests/a.txt", x3)], x1)
+        self.commit(repo, "x4", playable.RIGHTS_INVENTORY.as_posix(), playable.DISPOSITION.as_posix(),
+                    "docs/history-allowlist.json")
+        self.assertEqual(self.both(repo), ([], [], [], []))
+        self.assertEqual(self.stale(repo), [])
+        self.check_fabricated(repo, tolerated=False)
+
+    def test_g5wr_01_form_checks_precede_git(self) -> None:
+        fx = self.fixture()
+        root = fx.clone
+        bad = "a" * 39
+        self.write_inventory(root, [self.item("tests/a.txt", "two\n", bad)])
+        real = subprocess.run
+        with mock.patch("subprocess.run", wraps=real) as run:
+            errors, _notes = self.gate("rights_revision_errors", root)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("not 40 hex", errors[0])
+        for call in run.call_args_list:
+            self.assertFalse([part for part in call.args[0] if bad in str(part)], call)
+        self.write_disposition(root, [("WR-90", "warning", "fixed", "no cited revision"),
+                                      ("XX-01", "warning", "fixed", f"revision `{'f' * 40}`")])
+        errors, _notes = self.gate("review_provenance_errors", root)
+        self.assertEqual(errors, ["review finding WR-90 disposition cites no review revision",
+                                  "review finding XX-01 has no known review round"])
+
+    def test_g5wr_01_frontend_receipt_row(self) -> None:
+        fx = self.fixture()
+        load = getattr(playable, "load_frontend_evidence")
+        summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        summary["source_revision"] = fx.F2
+        temporary = tempfile.TemporaryDirectory(prefix="playable-receipt-")
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+
+        def write(value: dict[str, object]) -> None:
+            (root / playable.FRONTEND_EVIDENCE).parent.mkdir(parents=True, exist_ok=True)
+            (root / playable.FRONTEND_EVIDENCE).write_text(json.dumps(value, indent=2), encoding="utf-8")
+
+        write(summary)
+        self.allowlist(root, [("frontend_receipt", "source_revision", fx.F2)], fx.B)
+        notes: list[str] = []
+        try:
+            loaded = load(root, repository=fx.clone, head="HEAD", unverifiable=notes)
+        except Exception as error:  # noqa: BLE001
+            self.fail(f"uncaught {type(error).__name__}")
+        self.assertEqual(loaded, summary)
+        self.assertEqual(len(notes), 1, notes)
+        self.assertIn("frontend evidence", notes[0])
+        self.assertIn(self.NOTE, notes[0])
+        # An edited receipt voids its pin and takes today's strict path.
+        write({**summary, "inventory_sha256": "0" * 64})
+        notes = []
+        with self.assertRaisesRegex(RuntimeError, "^frontend evidence revision cannot be checked$"):
+            load(root, repository=fx.clone, head="HEAD", unverifiable=notes)
+        self.assertEqual(notes, [])
+        # Unrelated-but-resolving revision, not listed after the edit: today's not-an-ancestor message.
+        with self.assertRaisesRegex(RuntimeError, "^frontend evidence revision is not a committed ancestor of the checked head$"):
+            load(root, repository=fx.repo, head="HEAD", unverifiable=notes)
+        # No allowlist at all: strict.
+        write(summary)
+        (root / "docs/history-allowlist.json").unlink()
+        with self.assertRaisesRegex(RuntimeError, "^frontend evidence revision cannot be checked$"):
+            load(root, repository=fx.clone, head="HEAD", unverifiable=notes)
+        # An ancestor revision is never tolerated: it takes the snapshot-binding path and today's error.
+        self.allowlist(root, [("frontend_receipt", "source_revision", fx.F2)], fx.B)
+        self.git(fx.repo, "checkout", "-q", "feature")
+        with self.assertRaises(RuntimeError) as caught:
+            load(root, repository=fx.repo, head="HEAD", unverifiable=notes)
+        self.assertNotIn("allowlisted", str(caught.exception))
+        self.assertEqual(notes, [])
+
+    def test_g5wr_01_malformed_allowlist(self) -> None:
+        load = getattr(playable, "load_history_allowlist", None)
+        self.assertIsNotNone(load, "load_history_allowlist is missing")
+        good = {"kind": "rights", "key": "tests/a.txt", "revision": "a" * 40, "pin": "b" * 64}
+        base = {"schema": 1, "scope": "first-playable-game milestone branch pre-ship records", "base_revision": "c" * 40}
+        for label, document in (("rows not a list", {**base, "rows": 3}),
+                                ("row without pin", {**base, "rows": [{k: v for k, v in good.items() if k != "pin"}]}),
+                                ("wrong schema", {**base, "schema": 2, "rows": [good]}),
+                                ("unknown kind", {**base, "rows": [{**good, "kind": "other"}]})):
+            with self.subTest(label), tempfile.TemporaryDirectory(prefix="playable-malformed-") as temporary:
+                root = Path(temporary)
+                (root / "docs").mkdir()
+                (root / "docs/history-allowlist.json").write_text(json.dumps(document), encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, "^history allowlist is malformed$"):
+                    load(root)
+
+
 if __name__ == "__main__":
     unittest.main()
