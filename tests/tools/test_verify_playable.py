@@ -1297,12 +1297,24 @@ class EvidenceBindingTest(DocumentationCopies, unittest.TestCase):
             source_root = Path(temporary)
             summary = self.copy_documentation_with_evidence(source_root)
             playable.check_docs(source_root, repository=ROOT)
-            parent = subprocess.run(["git", "-C", str(ROOT), "rev-parse", summary["source_revision"] + "^"],
+            # Forge the receipt against the repository's own HEAD commit, which exists in every checkout
+            # (full or squash-merged), instead of the live receipt revision and its parent (G5WR-01, C3).
+            head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+                                  check=True, text=True, stdout=subprocess.PIPE).stdout.strip()
+            parent = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD^"],
                                     check=True, text=True, stdout=subprocess.PIPE).stdout.strip()
+            forged = dict(summary, source_revision=head)
+            guide = source_root / playable.GUIDE
+            guide.write_text(guide.read_text(encoding="utf-8").replace(
+                playable.frontend_status_block(summary), playable.frontend_status_block(forged)), encoding="utf-8")
+            validation = source_root / playable.VALIDATION
+            validation.write_text(validation.read_text(encoding="utf-8").replace(
+                playable.frontend_row_status(summary), playable.frontend_row_status(forged)), encoding="utf-8")
+            (source_root / playable.FRONTEND_EVIDENCE).write_text(json.dumps(forged), encoding="utf-8")
             with self.assertRaisesRegex(RuntimeError, "not a committed ancestor"):
                 playable.check_docs(source_root, repository=ROOT, head=parent)
-            summary["inventory_sha256"] = "0" * 64
-            (source_root / playable.FRONTEND_EVIDENCE).write_text(json.dumps(summary), encoding="utf-8")
+            forged["inventory_sha256"] = "0" * 64
+            (source_root / playable.FRONTEND_EVIDENCE).write_text(json.dumps(forged), encoding="utf-8")
             with self.assertRaisesRegex(RuntimeError, "inventory digest does not match"):
                 playable.check_docs(source_root, repository=ROOT)
 
