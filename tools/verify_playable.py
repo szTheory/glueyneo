@@ -1481,6 +1481,9 @@ def load_history_allowlist(source_root: Path) -> HistoryAllowlist:
     return HistoryAllowlist(rows=rows, base_revision=document["base_revision"])
 
 
+HISTORY_ALLOWLIST_BASE_MISSING = "history allowlist base_revision is not a commit of this repository"
+
+
 def history_allowlist_anchor_errors(allowlist: HistoryAllowlist, repository: Path, head: str) -> list[str]:
     """Rows of the allowlist that do not satisfy the documented scope relation against real history (G6WR-01).
 
@@ -1498,7 +1501,7 @@ def history_allowlist_anchor_errors(allowlist: HistoryAllowlist, repository: Pat
     base = allowlist.base_revision
     if (base is None or RIGHTS_REVISION.fullmatch(base) is None
             or _git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{base}^{{commit}}"]) != 0):
-        return ["history allowlist base_revision is not a commit of this repository"]
+        return [HISTORY_ALLOWLIST_BASE_MISSING]
     if _git_exit(repository, ["merge-base", "--is-ancestor", base, head]) != 0:
         return ["history allowlist base_revision is not an ancestor of the checked head"]
     errors: list[str] = []
@@ -1950,10 +1953,11 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
     if binding is None and (source_root / ".git").exists():
         binding = source_root
     if binding is not None:
-        # G7IN-01: report an unanchored allowlist (for example a shallow clone without base_revision)
-        # before the frontend gate turns the emptied allowlist into a less specific error.
+        # G7IN-01: a base_revision missing from this repository (for example a shallow clone) is
+        # reported before the frontend gate turns the emptied allowlist into a less specific error;
+        # every other anchor problem keeps its place after the crosswalk check below.
         anchor_problems = history_allowlist_anchor_errors(allowlist, binding, head)
-        if anchor_problems:
+        if anchor_problems and anchor_problems[0] == HISTORY_ALLOWLIST_BASE_MISSING:
             raise RuntimeError(anchor_problems[0])
     evidence = load_frontend_evidence(source_root, repository=binding, head=head,
                                       allowlist=allowlist, unverifiable=notes)
@@ -1988,6 +1992,9 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
     if provenance_repository is None and (source_root / ".git").exists():
         provenance_repository = source_root
     if provenance_repository is not None:
+        anchor_problems = history_allowlist_anchor_errors(allowlist, provenance_repository, head)
+        if anchor_problems:
+            raise RuntimeError(anchor_problems[0])
         provenance_problems = review_provenance_errors(source_root, provenance_repository, head,
                                                        allowlist=allowlist, unverifiable=notes)
         if provenance_problems:
