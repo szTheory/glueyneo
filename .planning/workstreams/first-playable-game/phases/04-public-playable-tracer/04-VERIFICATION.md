@@ -1,8 +1,8 @@
 ---
 phase: 04-public-playable-tracer
-verified: 2026-10-11T08:00:00Z
+verified: 2026-10-11T18:00:00Z
 status: gaps_found
-score: 5/5 roadmap truths verified; 8/8 requirement IDs implemented and evidenced; acceptance blocked by one open gap (G-04-35: unrepaired R4 warnings)
+score: 5/5 roadmap truths verified; 8/8 requirement IDs implemented and evidenced; acceptance blocked by one gate-breaking Warning (G5WR-01) from the round-5 review
 covered_files:
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-01-PLAN.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-01-SUMMARY.md"
@@ -115,62 +115,63 @@ covered_files:
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-55-SUMMARY.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-56-PLAN.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-57-PLAN.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-58-PLAN.md"
+  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-58-SUMMARY.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-FRONTEND-RECEIPT.json"
   - "docs/first-playable-build.md"
   - "docs/rights-inventory.md"
+  - "docs/testing.md"
   - "tests/libretro/retroarch_smoke.py"
   - "tests/tools/check_security_register.py"
+  - "tests/tools/test_verify_playable.py"
   - "tools/independent_review.py"
   - "tools/verify_playable.py"
-covered_digest: "v3:sha256:f45f0e4faa7051a30ca41a576a8ed75d6680c87bf9cd8deca725aa7895a029f9"
+covered_digest: "v3:sha256:1939829aa514258ee230881f41cd6f261d4cf0e2d57ce675844be6a774c38178"
 behavior_unverified: 0
 re_verification:
-  previous_status: human_needed
-  previous_score: 5/5 truths; 9 open register rows; 5 undispositioned R3 warnings
+  previous_status: gaps_found
+  previous_score: 5/5 truths; G-04-35 open (G4WR-01..04, G4IN-01..03 unrepaired)
   gaps_closed:
-    - "Headless security audit: 04-SECURITY.md status verified, threats_open 0; check_security_register.py first-playable-game --require-closed --phase 04 exits 0"
-    - "Round-3 human-verification item (audit) resolved by automated evidence"
+    - "G-04-35: G4WR-01..04 and G4IN-01..03 repaired by 04-58 (R5 re-derived each as FIXED; test_verify_playable 125 OK, test_check_security_register 65 OK, test_retroarch_smoke 78 OK re-run/observed here)"
+    - "R3/R4 verdicts transcribed; 04-REVIEW-DISPOSITION.md total 60 with the 57 prior rows fixed; --check-docs passes"
+    - "Planning traceability text now states threats_open 0 and the 04-58 repair (REQUIREMENTS.md lines 4 and 102 checked)"
+    - "Pinned RetroArch re-qualified once at 4e6a40e66e9e; no receipt-bound path changed since (git diff 4e6a40e HEAD over receipt-bound paths is empty)"
   gaps_remaining:
-    - "G-04-35 / G4WR-01..04: R4 warnings unrepaired; R3 and R4 verdicts untranscribed in 04-REVIEW-DISPOSITION.md"
-  regressions: []
+    - "G5WR-01 (Warning, gate-breaking, introduced by the 04-58 repair): rights_revision_errors fails on main after a squash merge"
+  regressions:
+    - "G5WR-01 is a repair regression: the gate added by 04-58 (G4WR-04) cannot pass on main under the repository's squash-only merge policy"
 gaps:
-  - truth: "Round-3 review warnings are fixed or dispositioned in 04-REVIEW-DISPOSITION.md, and the round-4 re-review leaves no unrepaired in-scope Critical/Warning (UAT Test 35, gap G-04-35)"
+  - truth: "The rights provenance gate added for G4WR-04 keeps passing on main after the milestone ships (METHODOLOGY: Criticals, repair regressions and gate-weakening Warnings block; this one breaks a CI gate)"
     status: failed
-    reason: "Recorded as G-04-35; independently re-confirmed here at HEAD 7a2b454. G4WR-01 (tools/verify_playable.py:605-613 drain), G4WR-02 (tests/tools/check_security_register.py normalized_key casefold, INTEGER \\d+), G4WR-03 (tools/verify_playable.py:772 lane Popen text=True without errors=replace) and G4WR-04 (docs/rights-inventory.md) are unchanged in the tree. 04-REVIEW-DISPOSITION.md holds 15 G3/G4 rows plus older G2 rows at open, although R4 judges G3WR-02..05 and G3IN-01/02 fixed."
+    reason: "G5WR-01, re-verified here. rights_revision_errors (tools/verify_playable.py:1401-1440) requires every non-third_party source_revision to resolve and be an ancestor of the checked head; it runs inside check_docs (line 1568) and the qualification_runner CTest. Probe at HEAD 7ffb305: 41 non-third_party rows, 0 cite a commit that is an ancestor of main (main is a single commit, 2e5d884). Orchestrator verified allow_squash_merge true, merge commits and rebase merges disabled. After a squash merge of this branch, main HEAD is a new commit and a fresh clone does not fetch the branch commits, so --check-docs and qualification_runner fail on main, and no refresh can repair it because a row cannot cite the commit that contains its own refresh. The pre-existing review_provenance_errors shares the ancestry rule (R5), so a fix should cover both."
+    classification: "(1) actionable in-scope repository change; one choice is a user decision (merge strategy vs tooling), recommended default is the tooling change"
     artifacts:
       - path: "tools/verify_playable.py"
-        issue: "G4WR-01 lane timeout output blanked/reordered; G4WR-03 UnicodeDecodeError on non-UTF-8 lane output; G4IN-02 rollback wording/debris"
-      - path: "tests/tools/check_security_register.py"
-        issue: "G4WR-02 case-folded threats_open key and Unicode digits accepted; G4IN-01 two-digit filename prefix glob"
+        issue: "rights_revision_errors (and review_provenance_errors) hard-fail unresolvable or non-ancestor revisions; no squash-tolerant fallback"
       - path: "docs/rights-inventory.md"
-        issue: "G4WR-04 source_revision e6547a1e671a2a615315487bc5d95d5bfe442d70 for tests/fixture/check_fixture.py does not resolve (git cat-file rc=128, re-verified here); four rows pair a stale revision with the HEAD digest; field undefined"
-      - path: "tests/libretro/retroarch_smoke.py"
-        issue: "G4IN-03 run_diagnostics proceeds to the second probe after a pid-record failure"
-      - path: ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-REVIEW-DISPOSITION.md"
-        issue: "G3 and G4 rows still open; R4 verdicts not transcribed"
+        issue: "documents the five-part predicate as the whole definition, including ancestry"
+      - path: "tests/tools/test_verify_playable.py"
+        issue: "test_g4wr_04_repository_rights_revisions_resolve runs against the real branch history only; no squash-merge fixture"
     missing:
-      - "Fix G4WR-01..04 test-first (regressions listed in 04-REVIEW-GAPS-R4.md); keep any new tool/doc change inside one bounded plan"
-      - "Fix or defer-with-reason G4IN-01..03"
-      - "Transcribe R4 verdicts (G3WR-02..05, G3IN-01/02 fixed; G3WR-01 fixed or superseded by G4WR-01) into 04-REVIEW-DISPOSITION.md and the validation crosswalk, keeping check-docs green"
-      - "Focused review of the repair diff, re-qualify the frontend receipt only if receipt-bound paths change (verify_playable.py and retroarch_smoke.py are likely receipt-bound; the docs gate will say), then re-run --require-closed --phase 04"
-  - truth: "Planning traceability text matches the closed security register (new evidence, not in R4)"
+      - "Either allow merge/rebase for milestone PRs (user decision) or, preferred, make both history gates tolerate an unresolvable or non-ancestor revision by requiring the working-tree file at path to hash to the recorded sha256 and reporting the row as unverifiable-history instead of failing; keep the path-form and 40-hex checks before any git call (T-04-103)"
+      - "Test that squashes a branch into a fresh main and runs rights_revision_errors and the review provenance check against it; document the rule in docs/rights-inventory.md and docs/testing.md"
+  - truth: "Lane-signalling regression tests are deterministic (G5WR-02, Warning, recorded)"
     status: partial
-    reason: "REQUIREMENTS.md line 4 and line 102 still say 04-SECURITY.md threats_open 2 and keep all eight rows at Gaps Found; the register is now verified with threats_open 0 and the --require-closed gate exits 0. ROADMAP Plans paragraph still says threats_open 9 and awaits the audit. Statement is stale rather than wrong behavior; update only once G-04-35 closes so traceability flips once."
+    reason: "Tests added or reworked by 04-58 SIGTERM a fresh python child after a fixed wall-clock budget with no readiness handshake. R5 attributes the one unreproduced closeout 'FAILED (errors=1)' to this (test_d58wr_02 reads lane.pid that may not exist). Evidence is the reviewer's analysis plus the orchestrator's 12 full and 6 ProcessGroupTest runs under load, all OK; the flake is not reproduced. It is not gate-weakening (it can fail a correct tree, not pass a broken one) and not an Info, so under review-round convergence it is recorded; classification (1), cheap to bundle into the G5WR-01 plan."
     artifacts:
-      - path: ".planning/workstreams/first-playable-game/REQUIREMENTS.md"
-        issue: "stale threats_open 2 narrative; rows Gaps Found"
-      - path: ".planning/workstreams/first-playable-game/ROADMAP.md"
-        issue: "stale threats_open 9 narrative; Phase 4 unchecked"
+      - path: "tests/tools/test_verify_playable.py"
+        issue: "lines ~629-815: no readiness handshake before SIGTERM"
     missing:
-      - "After G-04-35 closes, flip the eight traceability rows and refresh the ROADMAP/STATE narrative from the closed register"
+      - "Child writes a READY marker after installing its handler; test waits for it (bounded) before starting the timeout; lane.pid read with bounded retry"
+deferred: []
 ---
 
-# Phase 04: Public Playable Tracer Verification Report (round 4 re-verification)
+# Phase 04: Public Playable Tracer Verification Report (round 5 re-verification)
 
 **Phase Goal:** A maintainer can rebuild and run an original guest with visible, input-driven behavior through the ordinary native API and an actual pinned RetroArch build, while resolving the selected sound candidates' admission gates before full integration.
-**Verified:** 2026-10-11 at HEAD `7a2b454` (receipt qualified at `5a40e93147bf`).
+**Verified:** 2026-10-11 at HEAD `7ffb305` (receipt qualified at `4e6a40e66e9e`, ancestor of HEAD).
 **Status:** gaps_found
-**Re-verification:** Yes -- after gap-closure plans 04-43..04-55, the headless security audit (15904ce) and R4 review (310109e).
+**Re-verification:** Yes -- after gap plan 04-58 (supersedes the stale report at 7a2b454) and the round-5 diff-scoped review (d21f71d, dispositions 7ffb305).
 
 ## Goal Achievement
 
@@ -178,28 +179,26 @@ gaps:
 
 | # | Truth | Status | Evidence |
 |---|---|---|---|
-| 1 | Rebuild the rights-audited fixture from tracked source, run it through a C consumer, see a guest-produced software frame with checked dimensions/format/pitch/bounds. | VERIFIED | `cmake --preset owned-debug`, build (diagnostic-original-a.bin generated) and `ctest --preset owned-debug`: 100% passed out of 63 (run twice here). |
-| 2 | Bounded frame API with explicit input, owned buffers, timing, counts, actionable errors; correct input changes output, wrong-input control fails. | VERIFIED | Named native/SDK tests inside the 63/63 run (sdk-run passes); no src/ or include/ file changed since the receipt revision (`git diff 5a40e93147bf HEAD -- src include` empty). |
-| 3 | Load, run, control and unload the fixture in an actual pinned macOS RetroArch with software video and frontend-owned pacing. | VERIFIED (recorded receipt) | `04-FRONTEND-RECEIPT.json`: status pass, retroarch_status pass, frontend_unloaded true, mapping RIGHT/LEFT documented, source_revision `5a40e93147bf`. RetroArch not launched here (pgrep = 0 before). Files changed since: tools/verify_playable.py, tests/tools/*, check_security_register.py, docs/first-playable-build.md; `--check-docs` (receipt currency rule) passes. |
-| 4 | Passing admission evidence for pinned Z80 and private-interface ymfm YM2610 candidates. | VERIFIED (bounded workloads) | z80-admission (6), z80-mutation (5), ym2610-admission pass in 63/63; scope stays bounded synthetic workloads. |
-| 5 | Clean-tree build/install/load procedure with exact identities and untested configurations stated. | VERIFIED | `python3 tools/verify_playable.py --check-docs` exits 0 ("Phase 04 documentation gate passed"); receipt records OS/arch, core/fixture/inventory hashes. |
+| 1 | Rebuild the rights-audited fixture from tracked source, run it through a C consumer, see a guest-produced software frame with checked dimensions/format/pitch/bounds. | VERIFIED | `cmake --build --preset owned-debug` then `ctest --preset owned-debug -j4` here: 100% tests passed out of 63 (63 listed by `-N`). |
+| 2 | Bounded frame API with explicit input, owned buffers, timing, counts, actionable errors; correct input changes output, wrong-input control fails. | VERIFIED | Named native/SDK tests in the 63/63 run; `git diff 4e6a40e HEAD` over src/, include/, third_party/, tests/fixture/, tests/libretro/, tools/verify_playable.py, tools/private_paths.py, CMake files is empty. |
+| 3 | Load, run, control and unload the fixture in an actual pinned macOS RetroArch with software video and frontend-owned pacing. | VERIFIED (recorded receipt) | 04-FRONTEND-RECEIPT.json read here: source_revision 4e6a40e66e9e, status pass, retroarch_status pass, frontend_unloaded true, 17/17 lanes pass; committed after the guarded clean qualification. RetroArch was not launched by this verifier (`pgrep -x RetroArch` exit 1 before and after). |
+| 4 | Passing admission evidence for pinned Z80 and private-interface ymfm YM2610 candidates. | VERIFIED (bounded workloads) | z80-admission, z80-mutation, ym2610-admission inside 63/63; scope stays the bounded synthetic workloads. |
+| 5 | Clean-tree build/install/load procedure with exact identities and untested configurations stated. | VERIFIED | `python3 tools/verify_playable.py --check-docs` prints `Phase 04 documentation gate passed.` (re-run here). |
 
-**Score:** 5/5 truths verified. The phase is not accepted because the review-convergence gate (G-04-35) fails, below.
+**Score:** 5/5 roadmap truths verified. Plan 04-58 truth "rights gate cannot recur silently" is VERIFIED as written but the gate it added is itself broken for the post-merge state (gap 1).
 
-### Gate Results (re-run here at HEAD 7a2b454)
+### Gate Results (re-run here at HEAD 7ffb305)
 
 | Check | Result |
 |---|---|
-| `ctest --preset owned-debug` | 100% tests passed out of 63 (a stale 29-byte LastTestsFailed.log dated 2026-10-10 names owned_cpu_inventory_check; the current run passes it) |
-| `check_security_register.py first-playable-game --require-closed --phase 04` | exit 0; blocking open 04-SECURITY.md=0 |
-| `verify_playable.py --check-docs` | exit 0 |
-| `tests/tools/test_verify_playable.py` | 106 tests OK |
-| `tests/tools/test_independent_review.py` | 70 tests OK |
-| `tests/tools/test_check_security_register.py` | 59 tests OK |
-| `tests/libretro/test_retroarch_smoke.py` | 77 tests OK |
-| Debt markers in changed tools/tests | only fixture strings and a status-text regex in tooling; no unreferenced TBD/FIXME/XXX debt |
-| `git cat-file -e e6547a1e671a2a615315487bc5d95d5bfe442d70^{commit}` | rc=128 (source_revision in docs/rights-inventory.md does not resolve; confirms G4WR-04) |
-| `pgrep -x RetroArch` | 0 |
+| `ctest --preset owned-debug` | 100% passed, 63/63 |
+| `tools/verify_playable.py --check-docs` | `Phase 04 documentation gate passed.` |
+| `check_security_register.py first-playable-game --require-closed --phase 04` | PASS, blocking open 04-SECURITY.md=0 (T-04-103 medium, T-04-SC (04-58) low open, below block_on high) |
+| `tests/tools/test_check_security_register.py` | OK (re-run) |
+| `tests/libretro/test_retroarch_smoke.py` | OK (re-run) |
+| `tests/tools/test_verify_playable.py` | not re-run here (about 2-4 min under load); orchestrator: 125/125 in 12 full runs plus R5: 125 OK |
+| Rights rows vs `main` | 41 non-third_party rows, 0 cite an ancestor of main (G5WR-01 confirmed) |
+| `pgrep -x RetroArch` | exit 1 |
 
 ### Required Artifacts and Key Links
 
@@ -208,38 +207,49 @@ gaps:
 | Fixture -> `gn_load` -> frame pixels | VERIFIED | native tests in 63/63 |
 | Libretro adapter -> native frame -> video callback | VERIFIED | adapter tests plus receipt |
 | Pinned Z80 / ymfm -> private adapters -> installed consumers | VERIFIED (bounded) | admission tests |
-| Receipt -> committed revision | WIRED | currency rule passes in `--check-docs` |
+| Receipt -> committed revision | WIRED | receipt 4e6a40e66e9e; docs gate passes |
 | Security register -> closure gate | WIRED | verified, threats_open 0, gate exits 0 |
-| Review findings -> disposition record | PARTIAL | `--check-docs` now fails on an unrecorded finding and passes because all are recorded, but G3/G4 rows remain `open` with R4 verdicts untranscribed |
-| Lane timeout drain (`_terminate_lane_group`) | PARTIAL | G4WR-01/03 defects present |
-| Register key/digit normalization | PARTIAL | G4WR-02 present |
+| Review findings -> disposition record | WIRED | 04-REVIEW-DISPOSITION.md total 60; G5WR-01, G5WR-02, G5IN-01 recorded `open` at 7ffb305 |
+| Rights source_revision -> `rights_revision_errors` -> `check_docs` | WIRED but PARTIAL | enforced (tools/verify_playable.py:1568) and correct on this branch; breaks after squash merge (G5WR-01) |
+| Lane byte collection / single decode (G4WR-01/03) | VERIFIED | R5 re-derived FIXED; lane Popen byte mode test passes |
+| Register exact spelling / ASCII digits (G4WR-02, G4IN-01) | VERIFIED | R5 FIXED; real gates pass |
 
-### Requirements Coverage (all eight IDs from PLAN frontmatter accounted for; none orphaned)
+### Requirements Coverage (all eight IDs from PLAN frontmatter accounted for against REQUIREMENTS.md; none orphaned)
 
 | Requirement | Status | Evidence |
 |---|---|---|
-| TRAC-01 | SATISFIED (implemented); acceptance blocked by G-04-35 | fixture builds in 63/63; rights inventory hashes match (R4); G4WR-04 provenance defect is metadata-only |
+| TRAC-01 | SATISFIED (implemented); acceptance blocked by G5WR-01 | fixture build in 63/63; 41 rights digests match working tree (R5 probe) |
 | TRAC-02 | SATISFIED; acceptance blocked | native C consumer frame tests |
 | TRAC-03 | SATISFIED; acceptance blocked | input sequence and wrong-input control tests |
 | API-05 | SATISFIED; acceptance blocked | public header, src/instance.c, sdk-run |
 | SND-01 | SATISFIED (bounded); acceptance blocked | z80-admission, z80-mutation |
 | SND-02 | SATISFIED (bounded); acceptance blocked | ym2610-admission, static/shared consumers |
-| HOST-02 | SATISFIED on recorded receipt; acceptance blocked | receipt `5a40e93147bf` |
+| HOST-02 | SATISFIED on recorded receipt; acceptance blocked | receipt 4e6a40e66e9e |
 | QUAL-03 | SATISFIED on recorded receipt; acceptance blocked | `--check-docs` passes |
 
-REQUIREMENTS.md traceability keeps `Gaps Found` for all eight; leave until G-04-35 closes (see second gap).
+REQUIREMENTS.md traceability rows (lines 108-126) keep `Gaps Found` for all eight, matching this verdict.
 
 ### Anti-Patterns / Review Findings
 
-04-REVIEW-GAPS-R4.md: 0 critical, 4 warning (G4WR-01..04), 3 info (G4IN-01..03); recorded open and not repaired. Verifier re-confirmed by inspection that the cited code at HEAD is unchanged (normalized_key casefolds; lane Popen uses `text=True` with no errors argument; unresolvable revision). Not restated as new gaps; see G-04-35.
+04-REVIEW-GAPS-R5.md: 0 critical, 2 warning, 1 info; all recorded `open`. Verifier checked the cited code at HEAD; no TBD/FIXME/XXX debt introduced was found by the review. R5 judged D58IN-02 (working-tree digest not compared in the rights gate) not a defect: public_content `rights-digest` covers it.
+
+### Gap classification (METHODOLOGY (1)-(4))
+
+| ID | Severity | Class | Blocks? | Rationale |
+|---|---|---|---|---|
+| G5WR-01 | Warning | (1) actionable; merge-strategy choice is a user decision | Yes | Repair-introduced, gate-breaking on main after the intended squash merge; convergence rule says repair regressions and gate-weakening Warnings still block |
+| G5WR-02 | Warning | (1) actionable | No by itself | Test-determinism, not gate-weakening; unreproduced; recorded per convergence, but cheap to bundle |
+| G5IN-01 | Info | (1) minor | No | `third_party/` prefix exemption precedes path-form check; non-list `items` raises TypeError; both need an inventory edit; record or fold into the same plan |
+
+None is (2) external, (3) scope mismatch or (4) a verifier defect. This is the first recurrence of a gate-breaking item after the bounded 04-58 plan; it is a new finding in newly added code (not the same gap and evidence recurring), so one further bounded plan is justified, with the stop condition below.
 
 ### Human Verification Required
 
-None. The prior round's audit item is resolved by automated evidence.
+None for the product claims. The merge-strategy choice (allow merge commits/rebase, or accept the tooling change) is a maintainer decision: the recommended default is the tooling change so repository settings stay untouched.
 
 ### Gaps Summary
 
-All five roadmap truths hold and all eight requirement IDs are implemented and evidenced at the current revision (63/63 CTest, four Python suites, docs gate, register gate exit 0, current receipt). The security closure that blocked round 3 is done. What remains is one bounded review-convergence gap (G-04-35, UAT Test 35): four unrepaired R4 warnings, three infos needing fix or reasoned deferral, and untranscribed dispositions, plus stale traceability text to refresh once it closes. Next: `/gsd-plan-phase 04 --gaps --ws first-playable-game` (single bounded plan), then execute, focused review of the repair diff, and `/gsd-verify-work 04 --ws first-playable-game`. No override suggested.
+All five roadmap truths and all eight requirement IDs hold at HEAD with fresh evidence, and G-04-35 is closed (G4WR-01..04 and G4IN-01..03 fixed, dispositions transcribed, traceability text current). The phase is not accepted because the round-5 review found G5WR-01: the rights provenance gate introduced by 04-58 will fail on main after a squash merge (probe: 0 of 41 cited revisions are ancestors of main), a repair regression that breaks a CI gate. Next: one bounded plan `/gsd-plan-phase 04 --gaps --ws first-playable-game` covering G5WR-01 (with a squash-merge test, applied to both history gates), bundling G5WR-02 and G5IN-01 if cheap. Stop condition: the following review is scoped to that diff; further Info or non-gate-weakening Warnings are recorded, not repaired. No receipt-bound path changes are required unless tools/verify_playable.py changes (it is receipt-bound, so one re-qualification would follow). No override suggested.
 
 ---
 
@@ -247,6 +257,8 @@ _Verified: 2026-10-11_
 _Verifier: Claude (gsd-verifier)_
 
 ---
+
+# Prior verification history (round 4, HEAD 7a2b454, superseded)
 
 # Prior verification history
 
