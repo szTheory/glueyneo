@@ -264,6 +264,19 @@ row (see Closure gates).
   (G3IN-02). The diagnostic launch probes record `survived_window` as unknown,
   still kill the started frontend, and the probe comparison reports the finding
   `diagnostic-pid-record-failed` (G3WR-03).
+- **Rights provenance** (G4WR-04, T-04-103). `rights_revision_errors` in
+  `tools/verify_playable.py` checks every `docs/rights-inventory.md` row whose
+  path is not under `third_party/` (those cite an upstream pin and are exempt).
+  The rule has five parts: `path` is a relative POSIX path (non-empty, not
+  starting with `/`, no `..` segment, no leading `-`); `source_revision` is 40
+  lowercase hex; it resolves to a commit; it is an ancestor of the checked head;
+  and the blob at `path` in that commit hashes to the recorded `sha256`. The path
+  form and the hex form are checked before any Git call, so no unvalidated
+  inventory value becomes a Git argument. `--check-docs` raises on the first
+  error whenever a repository is available, and the `qualification_runner` CTest
+  runs the same check on the real repository. A source archive without `.git`
+  skips that CTest case visibly. The refresh writes the last commit that
+  changed the file by convention; the gate does not require it.
 
 ### CTest registration
 
