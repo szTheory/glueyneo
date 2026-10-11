@@ -1558,24 +1558,27 @@ def _rights_path_is_relative_posix(path: object) -> bool:
             and all(segment not in ("", ".", "..") for segment in path.split("/")))
 
 
-def _confined_file_bytes(source_root: Path, path: str) -> bytes | None:
-    """Bytes of `source_root/path` only when every component is a real entry and the file is regular (G6WR-03).
+def _head_blob(repository: Path, head: str, path: str) -> bytes | None:
+    """Committed bytes of `path` at `head`, or None unless it is a regular file there (G6WR-03, G7WR-03).
 
-    A symlink anywhere along the path, a non-regular file, or a resolved path outside the source root
-    yields None, so the working-tree branch cannot hash bytes the strict `git cat-file` branch would not.
+    The tolerated rights branch judges the bytes Git holds at the checked head, as the strict branch
+    judges the blob at the cited revision, so untracked, ignored, dirty or hard-linked working-tree
+    content cannot pass or fail a row differently than a fresh clone. A symlink entry (mode 120000), a
+    path through a symlinked directory (which Git does not resolve), a submodule or a missing entry
+    yields None. `path` is form-validated by `_rights_path_is_relative_posix` before this call.
     """
-    root = source_root.resolve()
-    current = source_root
-    try:
-        for segment in path.split("/"):
-            current = current / segment
-            if current.is_symlink():
-                return None
-        if not current.is_file() or not current.resolve().is_relative_to(root):
-            return None
-        return current.read_bytes()
-    except OSError:
+    listing = _git_stdout(repository, ["ls-tree", "-z", head, "--", path])
+    if not listing:
         return None
+    entries = [entry for entry in listing.split("\0") if entry]
+    if len(entries) != 1:
+        return None
+    meta, _tab, listed = entries[0].partition("\t")
+    fields = meta.split(" ")
+    if (listed != path or len(fields) != 3 or fields[0] not in ("100644", "100755") or fields[1] != "blob"
+            or re.fullmatch(r"[0-9a-f]{40,64}", fields[2]) is None):
+        return None
+    return _git_bytes(repository, ["cat-file", "blob", fields[2]])
 
 
 def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
@@ -1594,8 +1597,8 @@ def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
     when it resolves but is neither an ancestor nor a descendant of `head` (unrelated history, for
     example a squashed-away feature branch whose objects a local clone still holds), so a local squash
     behaves like a fresh clone. Only a history-absent row that is listed in `docs/history-allowlist.json`
-    with a pin equal to the canonical digest of its own inventory item, and whose working-tree file
-    hashes to the recorded `sha256`, is tolerated; it is appended to `unverifiable`. An ancestor or
+    with a pin equal to the canonical digest of its own inventory item, and whose committed file at
+    `head` (a regular file, read with `git cat-file`) hashes to the recorded `sha256`, is tolerated; it is appended to `unverifiable`. An ancestor or
     descendant revision and any unlisted or edited row keep the strict checks. The allowlist covers only
     listed pre-ship rows of the first-playable-game milestone branch. `allowlist=None` reads the file
     under `source_root`.
@@ -1635,15 +1638,15 @@ def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
         elif relation == "absent" and allowlist.covers("rights", path, revision, _canonical_digest(item)):
             unverifiable_label = (f"{label} is unverifiable-history "
                                   "(allowlisted pre-ship row, first-playable-game branch)")
-            content = _confined_file_bytes(source_root, path)
+            content = _head_blob(repository, head, path)
             held = hashlib.sha256(content).hexdigest() if content is not None else None
             if held is None:
-                errors.append(f"{unverifiable_label} and the working-tree file is missing")
+                errors.append(f"{unverifiable_label} and the file at the checked head is missing")
             elif held != item.get("sha256"):
-                errors.append(f"{unverifiable_label} and the working-tree file does not hold the recorded SHA-256")
+                errors.append(f"{unverifiable_label} and the file at the checked head does not hold the recorded SHA-256")
             else:
                 _note_once(unverifiable, f"rights {path} source_revision {revision[:12]}: {PRE_SHIP_ROW}; "
-                                         "working-tree digest matches")
+                                         "digest at the checked head matches")
         elif _git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}"]) != 0:
             errors.append(f"{label} does not resolve")
         else:

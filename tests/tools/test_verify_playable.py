@@ -2867,12 +2867,14 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
     def test_g5wr_01_rights_digest_still_binds(self) -> None:
         fx = self.fixture()
         (fx.clone / "tests/a.txt").write_text("tampered\n", encoding="utf-8")
+        self.commit(fx.clone, "tamper", "tests/a.txt")
         errors, notes = self.gate("rights_revision_errors", fx.clone)
         self.assertEqual(len(errors), 1, errors)
         for expected in ("tests/a.txt", "unverifiable-history", "does not hold the recorded SHA-256"):
             self.assertIn(expected, errors[0])
         self.assertEqual(notes, [])
-        (fx.clone / "tests/a.txt").unlink()
+        self.git(fx.clone, "rm", "-q", "--", "tests/a.txt")
+        self.git(fx.clone, "commit", "-q", "-m", "remove")
         errors, _notes = self.gate("rights_revision_errors", fx.clone)
         self.assertEqual(len(errors), 1, errors)
         self.assertIn("is missing", errors[0])
@@ -3211,10 +3213,11 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         target = fx.repo / "tests/a.txt"
         target.unlink()
         target.symlink_to(outside)
+        self.commit(fx.repo, "symlink", "tests/a.txt")
         errors, notes = self.gate("rights_revision_errors", fx.repo)
         self.assertEqual(notes, [])
         self.assertEqual(len(errors), 1, errors)
-        self.assertIn("working-tree file is missing", errors[0])
+        self.assertIn("file at the checked head is missing", errors[0])
 
     def test_g6wr_03_symlinked_directory_and_unnormalized_paths_are_rejected(self) -> None:
         fx = self.fixture()
@@ -3222,6 +3225,8 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         moved = fx.repo.parent / "elsewhere"
         real.rename(moved)
         real.symlink_to(moved)
+        self.git(fx.repo, "add", "-A", "--", "tests")
+        self.git(fx.repo, "commit", "-q", "-m", "symlinked directory")
         errors, notes = self.gate("rights_revision_errors", fx.repo)
         self.assertEqual(notes, [])
         self.assertEqual(len(errors), 1, errors)
@@ -3229,6 +3234,27 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
             with self.subTest(path):
                 self.assertFalse(playable._rights_path_is_relative_posix(path))
         self.assertTrue(playable._rights_path_is_relative_posix("tests/a.txt"))
+
+    # ---- G7WR-03: the tolerated rights branch judges the committed bytes at the checked head ----
+
+    def test_g7wr_03_tolerated_rights_row_ignores_working_tree_bytes(self) -> None:
+        """Dirty, deleted or untracked working-tree content cannot change a tolerated row's outcome."""
+        fx = self.fixture()
+        target = fx.clone / "tests/a.txt"
+        target.write_text("dirty, uncommitted\n", encoding="utf-8")
+        errors, notes = self.gate("rights_revision_errors", fx.clone)
+        self.assertEqual((errors, len(notes)), ([], 1))
+        self.assertIn("digest at the checked head matches", notes[0])
+        target.unlink()
+        errors, notes = self.gate("rights_revision_errors", fx.clone)
+        self.assertEqual((errors, len(notes)), ([], 1))
+        # An untracked file holding the recorded bytes does not stand in for a missing tracked file.
+        self.add_rights_row(fx.clone, "tests/untracked.txt", "u\n", fx.F2)
+        self.allowlist(fx.clone, [*self.all_rows(fx), ("rights", "tests/untracked.txt", fx.F2)], fx.B)
+        errors, _notes = self.gate("rights_revision_errors", fx.clone)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("tests/untracked.txt", errors[0])
+        self.assertIn("file at the checked head is missing", errors[0])
 
 
 if __name__ == "__main__":

@@ -225,12 +225,15 @@ only rows whose cited revision is not reachable from `git merge-base HEAD main`
 and that pass strictly; rows citing a revision reachable from main are never
 listed and stay strict.
 
-History-absent rule: a cited revision is history-absent when it does not resolve, or when it resolves but is neither an ancestor nor a descendant of the checked head (unrelated history, for example a squashed-away feature branch whose objects a local clone still holds). Ancestor and descendant revisions are always strict, and unlisted rows are strict in every case. A local squashed repository that still holds the branch objects and a fresh clone without them behave identically: both tolerate an allowlisted, pin-matching row, and both are strict for an unlisted row. Rationale: with does-not-resolve alone, every developer checkout that still holds the old feature-branch objects would fail `--check-docs` permanently after the squash merge while fresh clones pass; the protection is the allowlist plus the per-record pin plus (rights) the working-tree digest, not object presence.
+History-absent rule: a cited revision is history-absent when it does not resolve, or when it resolves but is neither an ancestor nor a descendant of the checked head (unrelated history, for example a squashed-away feature branch whose objects a local clone still holds). Ancestor and descendant revisions are always strict, and unlisted rows are strict in every case. A local squashed repository that still holds the branch objects and a fresh clone without them behave identically: both tolerate an allowlisted, pin-matching row, and both are strict for an unlisted row. Rationale: with does-not-resolve alone, every developer checkout that still holds the old feature-branch objects would fail `--check-docs` permanently after the squash merge while fresh clones pass; the protection is the allowlist plus the per-record pin plus (rights) the digest of the file at the checked head, not object presence.
 
 The per-row rule: a row is tolerated only when its revision is history-absent,
 the row is listed in `docs/history-allowlist.json` with a matching per-record
-pin, and, for a rights row, the working-tree file at its path hashes to the
-recorded `sha256`. The result is the same function of the records, the
+pin, and, for a rights row, the committed file at its path in the checked head
+(a regular file, read with `git cat-file`, never the working tree) hashes to the
+recorded `sha256` (G7WR-03), so untracked, ignored, dirty or hard-linked
+working-tree content cannot pass or fail a row differently than a fresh clone.
+The result is the same function of the records, the
 allowlist and the history on full history, on the squashed main and on any
 branch cut from it.
 
@@ -260,7 +263,8 @@ pin alone, because that is the squash tolerance itself. The pins are therefore
 self-attested after the squash, and only `--history-allowlist check` on the
 pre-ship branch verifies them; signing them would be a policy change and is not
 done. A repeated (kind, key, revision) row is malformed. The tolerated rights
-branch hashes only a regular, non-symlink, normalized path under the source root.
+branch hashes only a normalized path that is a regular file (not a symlink) in
+the checked head's tree.
 CI runs `--history-allowlist check --base <pull request base>` on every pull
 request that changes `docs/history-allowlist.json`, from a full-history
 checkout, so a changed allowlist cannot merge unless every row verifies against
@@ -308,9 +312,9 @@ suite arbiter accepts a clone-only failure only for a repository-relative
 ignored input under `build/` with a recorded provisioning command, after
 verifying the input and showing that adding only that input to a fresh copy of
 the squashed clone makes the test pass (a main-checkout pass is not evidence).
-The suite's documentation copies include the working-tree files of rights
-rows, so a tolerated row is checked against its working-tree digest exactly as
-in a checkout. No suite test checks out a live receipt revision, so the
+A tolerated rights row is checked against the file at the checked head of the
+bound repository, so the suite's documentation copies judge it exactly as a
+checkout does. No suite test checks out a live receipt revision, so the
 qualification suite passes in full on a squash-merged clone; the live receipt's
 committed-inventory binding stays pinned on full history by
 `test_live_receipt_binds_its_committed_inventory_on_full_history`, which skips
