@@ -824,8 +824,9 @@ class DocumentationCopies:
     def copy_review_provenance(self, source_root: Path) -> None:
         reviewed = [line[4:].strip() for line in (ROOT / playable.REVIEW).read_text(encoding="utf-8").splitlines()
                     if line.startswith("  - ")]
+        rounds = sorted(path.relative_to(ROOT) for path in (ROOT / playable.PHASE_DIRECTORY).glob("04-REVIEW-GAPS*.md"))
         for path in (playable.SECURITY, playable.REVIEW, playable.DISPOSITION, Path("README.md"),
-                     *(Path(item) for item in reviewed)):
+                     *rounds, *(Path(item) for item in reviewed)):
             if (ROOT / path).is_file():
                 (source_root / path).parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / path, source_root / path)
@@ -1157,6 +1158,19 @@ class CrosswalkProvenanceTest(DocumentationCopies, unittest.TestCase):
         for label, transform, expected in cases:
             with self.subTest(case=label):
                 self.mutate_row(transform, expected)
+
+
+    def test_every_review_round_finding_needs_a_disposition_record(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-round-") as temporary:
+            root = Path(temporary)
+            validation = self.copy_documentation(root)
+            text = validation.read_text(encoding="utf-8")
+            self.assertEqual(playable.crosswalk_errors(root, text), [])
+            late_round = root / playable.PHASE_DIRECTORY / "04-REVIEW-GAPS-R99.md"
+            late_round.write_text("# Round\n\n### G99WR-01: an unrecorded warning\n\n### G99IN-01: an unrecorded note\n",
+                                  encoding="utf-8")
+            self.assertIn("review findings have no disposition record: G99IN-01, G99WR-01",
+                          playable.crosswalk_errors(root, text))
 
 
 class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):

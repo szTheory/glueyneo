@@ -1219,6 +1219,20 @@ def _disposition_triples(disposition_text: str) -> dict[str, tuple[str, str]]:
     return from_table
 
 
+REVIEW_FINDING_HEADING = re.compile(r"(?m)^#{2,4} ((?:G\d*)?(?:CR|WR|IN)-\d{2}):")
+
+
+def _review_round_findings(source_root: Path) -> set[str]:
+    """Every finding ID raised by 04-REVIEW.md and each 04-REVIEW-GAPS[-R<n>].md round present under the root."""
+    directory = source_root / PHASE_DIRECTORY
+    rounds = [directory / "04-REVIEW.md", *sorted(directory.glob("04-REVIEW-GAPS*.md"))]
+    findings: set[str] = set()
+    for path in rounds:
+        if path.is_file():
+            findings.update(REVIEW_FINDING_HEADING.findall(path.read_text(encoding="utf-8")))
+    return findings
+
+
 def _register_threats(security_text: str) -> set[str]:
     threats: set[str] = set()
     registered = False
@@ -1283,6 +1297,10 @@ def crosswalk_errors(source_root: Path, validation_text: str) -> list[str]:
             errors.append(f"review finding {finding_id} differs from the disposition record")
     if seen != set(record):
         errors.append("crosswalk findings differ from the disposition record")
+    # A new review round cannot pass silently: each raised finding needs a recorded disposition, even `open`.
+    undispositioned = sorted(_review_round_findings(source_root) - set(record))
+    if undispositioned:
+        errors.append("review findings have no disposition record: " + ", ".join(undispositioned))
     return errors
 
 

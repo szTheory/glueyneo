@@ -167,6 +167,32 @@ a check the agent could run itself). Before rendering any UAT checkpoint:
    physical input, or a genuinely subjective judgment. Never ask the user to
    confirm a result the agent already measured, and never present a
    machine-observable claim before step 1 has been tried.
+4. Review and security findings are routed by policy, not by a checkpoint
+   (added 2026-10-11 after a verify-work run asked the user whether a residual
+   review warning was "fixed or dispositioned"). Read the answer from the
+   disposition record and the gates (`tools/verify_playable.py --check-docs`
+   fails when any `04-REVIEW*.md` finding lacks a record row;
+   `check_security_register.py --require-closed`). A reproducible Critical or
+   Warning that fits phase scope is gap work: record the UAT row as an
+   automated issue and route it to the bounded gap plan. Only a proposal *not*
+   to fix such a finding (risk acceptance or deferral of a Critical/Warning)
+   goes to the user. Info findings may be dispositioned `deferred` by the agent,
+   with the reason in the record.
+
+Write each UAT row as a check whose outcome a command decides, naming the
+command and the expected result, so a later verify-work resolves it without
+asking. A criterion like "fixed or dispositioned" must name the record and the
+controlled states that satisfy it.
+
+Review-round convergence. A gap plan that repairs review findings carries its
+own focused review of the repair diff and the regression tests for each
+finding, in the same execute run, before the next named GSD step. The next
+`/gsd-code-review` round is scoped to the repair diff only. When that round
+reports only Info findings, or Warnings that are not regressions from the
+repair and do not weaken an evidence, security or release gate, record them
+(`open` or `deferred` with reason) and close the loop. Do not start another
+repair round for them in the same phase; they go to the backlog. Criticals,
+repair regressions and gate-weakening Warnings still block.
 
 This preference does not remove the separate pause after each named GSD step
 for review and model selection. In the installed OpenGSD configuration,

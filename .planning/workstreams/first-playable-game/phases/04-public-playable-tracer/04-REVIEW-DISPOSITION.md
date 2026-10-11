@@ -215,8 +215,36 @@ findings:
     severity: info
     disposition: open
     title: "Register checker silently ignores mis-named register files and `verified` with a trailing comment"
-open: 20
-total: 53
+  - id: G4WR-01
+    severity: warning
+    disposition: open
+    title: "Lane timeout output is lost (or reordered) when the post-kill `communicate` yields no tail"
+  - id: G4WR-02
+    severity: warning
+    disposition: open
+    title: "Register checker accepts case-folded and non-ASCII-digit spellings that the GSD reader does not read as `threats_open`"
+  - id: G4WR-03
+    severity: warning
+    disposition: open
+    title: "A lane that emits non-UTF-8 bytes raises `UnicodeDecodeError` instead of being recorded (pre-existing, on the path this round rewrote)"
+  - id: G4WR-04
+    severity: warning
+    disposition: open
+    title: "R3's rights-inventory claim does not hold; one `source_revision` does not resolve and four are stale"
+  - id: G4IN-01
+    severity: info
+    disposition: open
+    title: "Misnamed-register detection still depends on a two-digit filename prefix"
+  - id: G4IN-02
+    severity: info
+    disposition: open
+    title: "Rollback reports 'incomplete' for a successful restore and swallows `.tmp` debris silently"
+  - id: G4IN-03
+    severity: info
+    disposition: open
+    title: "The diagnostic runner proceeds to the second probe after a pid-record failure"
+open: 27
+total: 60
 recorded: 2026-10-10T12:57:15.286Z
 ---
 
@@ -277,6 +305,13 @@ recorded: 2026-10-10T12:57:15.286Z
 | G3IN-01 | info | open | Reported by 04-REVIEW-GAPS-R3.md (f675d7c). Gap-closure fix (04-47) at revision `fe04de2e9c56c419401b25a25160d4b19824b4fa`: tools/independent_review.py:101,112; regression tests test_g3in_01_leading_dollar_is_not_contained. Pending focused re-review. |
 | G3IN-02 | info | open | Reported by 04-REVIEW-GAPS-R3.md (f675d7c). Gap-closure fix (04-48) at revision `4ca3218e4ce1b892ee807d09a9b657e41ba3c533`: tests/libretro/retroarch_smoke.py:798,974; regression tests test_g3in_02_pid_record_detail_keeps_the_error_class, test_g3in_02_single_pid_record_diagnostic. Pending focused re-review. |
 | G3IN-03 | info | open | Reported by 04-REVIEW-GAPS-R3.md (f675d7c). Gap-closure fix (04-43) at revision `17e35704421bf85966c86343f33445973a7f17d5`: tests/tools/check_security_register.py:148,189; regression tests test_g3in_03_misnamed_register_shaped_files_fail, test_g3in_03_non_register_documents_are_skipped_and_reported, test_g3in_03_verified_may_carry_a_trailing_comment. Pending focused re-review. |
+| G4WR-01 | warning | open | Reported by 04-REVIEW-GAPS-R4.md (310109e). Not yet repaired. |
+| G4WR-02 | warning | open | Reported by 04-REVIEW-GAPS-R4.md (310109e). Not yet repaired. |
+| G4WR-03 | warning | open | Reported by 04-REVIEW-GAPS-R4.md (310109e). Not yet repaired. |
+| G4WR-04 | warning | open | Reported by 04-REVIEW-GAPS-R4.md (310109e). Not yet repaired. |
+| G4IN-01 | info | open | Reported by 04-REVIEW-GAPS-R4.md (310109e). Not yet repaired. |
+| G4IN-02 | info | open | Reported by 04-REVIEW-GAPS-R4.md (310109e). Not yet repaired. |
+| G4IN-03 | info | open | Reported by 04-REVIEW-GAPS-R4.md (310109e). Not yet repaired. |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
