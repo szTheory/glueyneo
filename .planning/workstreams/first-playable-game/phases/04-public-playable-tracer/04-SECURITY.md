@@ -2,7 +2,7 @@
 phase: "04"
 slug: "public-playable-tracer"
 status: open
-threats_open: 50
+threats_open: 51
 asvs_level: 1
 created: "2026-10-07"
 updated: "2026-10-10"
@@ -144,6 +144,8 @@ updated: "2026-10-10"
 | T-04-SC (04-52) | Tampering | npm/pip/cargo installs | high | mitigate | No package installs; tracked first-party Python (standard library only), docs and a rights-row refresh. Evidence only, pending the headless security audit (T-04-48). Tool-scoped independent review (secure-phase R4b, 848149bbc7ea): REVIEW HALTED: containment-violation, recorded open (the session read a file outside the scratch tree, so no verdict is transcribed). | open |
 | T-04-SC (04-53) | Tampering | npm/pip/cargo installs | high | mitigate | Planned scope, recorded before 04-53 runs: no package installs; run the pinned RetroArch 1.22.2 qualification from tracked sources once and regenerate the three evidence files. Pending the headless security audit (T-04-48), which verifies the executed scope. Tool-scoped independent review (secure-phase R4b, 848149bbc7ea): REVIEW HALTED: containment-violation, recorded open (the session read a file outside the scratch tree, so no verdict is transcribed). | open |
 | T-04-SC (04-54) | Tampering | npm/pip/cargo installs | high | mitigate | Planned scope, recorded before 04-54 runs: no package installs; planning-state changes only. Pending the headless security audit (T-04-48), which verifies the executed scope. Tool-scoped independent review (secure-phase R4b, 848149bbc7ea): REVIEW HALTED: containment-violation, recorded open (the session read a file outside the scratch tree, so no verdict is transcribed). | open |
+| T-04-SC (04-55) | Tampering | npm/pip/cargo installs | high | mitigate | Executed scope (04-55, a3b7d2d..808edd7): no package installs; standard-library Python test and checker change, docs and rights-row refreshes only. Pending the headless security audit (T-04-48). | open |
+| T-04-102 | Denial of service | `TABLE_END` over-continuation in tests/tools/check_security_register.py | low | mitigate | A line that GFM would treat as a table end but the checker reads as a row fails the gate as `malformed threat row` (fail closed, never an undercount); documented in docs/testing.md; the guard test pins the real block starts that still end a table. Pending the headless security audit (T-04-48). | open |
 
 ## Threat Flags
 
