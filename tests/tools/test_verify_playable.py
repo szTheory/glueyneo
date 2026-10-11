@@ -1044,7 +1044,11 @@ class ProcessGroupTest(unittest.TestCase):
 
 
 class DocumentationCopies:
-    """Copy the documents `check_docs` reads, with their review provenance, into a temporary root."""
+    """Copy the documents `check_docs` reads, with their review provenance, into a temporary root.
+
+    The copies include the working-tree files of the rights rows, so a tolerated history-absent row is checked
+    against its working-tree digest as in a real checkout.
+    """
 
     def copy_review_provenance(self, source_root: Path) -> None:
         reviewed = [line[4:].strip() for line in (ROOT / playable.REVIEW).read_text(encoding="utf-8").splitlines()
@@ -1055,6 +1059,12 @@ class DocumentationCopies:
             if (ROOT / path).is_file():
                 (source_root / path).parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / path, source_root / path)
+        for item in public_content.load_rights_inventory(ROOT)["items"]:
+            row = Path(item["path"])
+            if item["path"].startswith("third_party/") or not (ROOT / row).is_file() or (source_root / row).exists():
+                continue
+            (source_root / row).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / row, source_root / row)
 
     def copy_documentation(self, source_root: Path) -> Path:
         """Copy the docs as they read without tracked frontend evidence."""
