@@ -686,6 +686,96 @@ class ProcessGroupTest(unittest.TestCase):
         self.assertEqual(output.count("LATE"), 1, output)
         self.assertNotIn("EARLY", output)
 
+    def g4_lane(self, program: str, *, timeout: int) -> tuple[subprocess.CompletedProcess[str], bytes, dict[str, dict[str, object]]]:
+        """Run `program` as a lane through `Runner.command`; any escaping exception is an assertion failure."""
+        with tempfile.TemporaryDirectory(prefix="lane-g4-") as temporary:
+            work = Path(temporary)
+            runner = self.make_runner(work)
+            try:
+                with (
+                    mock.patch.object(playable, "verify_snapshot"),
+                    mock.patch.object(playable, "LANE_GRACE_SECONDS", 1),
+                    mock.patch.object(playable, "LANE_AFTER_KILL_SECONDS", 1, create=True),
+                ):
+                    result = runner.command("g4-lane", [sys.executable, "-c", program],
+                                            timeout=timeout, allow_failure=True)
+            except Exception as error:  # noqa: BLE001 - a red run must fail on the assertion, not on an exception
+                self.fail(f"uncaught {type(error).__name__}")
+            return result, (work / "g4-lane.log").read_bytes(), dict(runner.lanes)
+
+    def test_g4wr_01_pipe_held_by_detached_descendant_keeps_earlier_output(self) -> None:
+        program = (
+            "import subprocess, sys, time\n"
+            "print('EARLY-MARKER', flush=True)\n"
+            "g = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'], start_new_session=True)\n"
+            "print('sleeper', g.pid, flush=True)\n"
+            "time.sleep(60)\n"
+        )
+        result, raw, _lanes = self.g4_lane(program, timeout=2)
+        log = raw.decode("utf-8")
+        match = re.search(r"sleeper (\d+)", log.split("\n", 1)[1])
+        if match is not None:
+            self.addCleanup(lambda: self.kill_quietly(int(match.group(1))))
+        self.assertEqual(result.returncode, -1)
+        self.assertIn("TimeoutExpired", log)
+        self.assertEqual(log.split("\n", 1)[1].count("EARLY-MARKER"), 1, log)
+
+    def test_g4wr_01_crlf_in_drained_segment_is_translated(self) -> None:
+        program = (
+            "import os, signal, time\n"
+            "def term(signum, frame):\n"
+            "    os.write(1, b'B\\r\\nLATE\\r\\n')\n"
+            "    os._exit(0)\n"
+            "signal.signal(signal.SIGTERM, term)\n"
+            "os.write(1, b'A')\n"
+            "while True:\n"
+            "    time.sleep(0.05)\n"
+        )
+        _result, raw, _lanes = self.g4_lane(program, timeout=2)
+        self.assertNotIn(b"\r", raw)
+        self.assertIn("AB\nLATE\n", raw.decode("utf-8"))
+
+    def test_g4wr_01_multibyte_split_across_segments(self) -> None:
+        program = (
+            "import os, signal, time\n"
+            "def term(signum, frame):\n"
+            "    os.write(1, b'\\xac\\n')\n"
+            "    os._exit(0)\n"
+            "signal.signal(signal.SIGTERM, term)\n"
+            "os.write(1, b'A\\xe2\\x82')\n"
+            "while True:\n"
+            "    time.sleep(0.05)\n"
+        )
+        _result, raw, _lanes = self.g4_lane(program, timeout=2)
+        log = raw.decode("utf-8").split("\n", 1)[1]
+        self.assertEqual(log.count("A\u20ac\n"), 1, log)
+        self.assertNotIn("\ufffd", log)
+
+    def test_g4wr_03_non_utf8_lane_output_is_recorded(self) -> None:
+        program = "import os\nos.write(1, b'\\xff\\n')\n"
+        result, raw, lanes = self.g4_lane(program, timeout=20)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("\ufffd", raw.decode("utf-8"))
+        self.assertEqual(lanes["g4-lane"]["status"], "pass")
+
+    def test_g4wr_03_non_utf8_output_on_the_timeout_path(self) -> None:
+        program = "import os, time\nos.write(1, b'\\xff')\ntime.sleep(60)\n"
+        result, raw, _lanes = self.g4_lane(program, timeout=2)
+        log = raw.decode("utf-8")
+        self.assertEqual(result.returncode, -1)
+        self.assertIn("TimeoutExpired", log)
+        self.assertIn("\ufffd", log)
+
+    def test_g4wr_03_lane_popen_is_byte_mode(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="lane-g4-popen-") as temporary:
+            runner = self.make_runner(Path(temporary))
+            with mock.patch.object(playable, "verify_snapshot"), \
+                    mock.patch.object(playable.subprocess, "Popen", wraps=subprocess.Popen) as popen:
+                runner.command("byte-lane", [sys.executable, "-c", "print('x')"], timeout=20)
+        self.assertEqual(popen.call_count, 1)
+        for option in ("text", "universal_newlines", "encoding", "errors"):
+            self.assertFalse(popen.call_args.kwargs.get(option), f"lane Popen sets {option}")
+
     @staticmethod
     def kill_quietly(pid: int) -> None:
         try:
@@ -1746,6 +1836,77 @@ class AtomicRecordTest(DocumentationCopies, unittest.TestCase):
             self.assertEqual(len(attempts), 3, "cleanup stopped after the first failing temporary")
             evidence = source_root / playable.FRONTEND_EVIDENCE
             self.assertEqual(json.loads(evidence.read_text(encoding="utf-8"))["os"], "macOS 99.0 arm64")
+
+    def test_g4in_02_restore_succeeded_but_restore_file_remains(self) -> None:
+        real_replace = os.replace
+        real_unlink = Path.unlink
+        with tempfile.TemporaryDirectory(prefix="playable-g4in02-") as temporary:
+            source_root = Path(temporary)
+            summary = self.copy_documentation_with_evidence(source_root)
+            originals = {path: path.read_bytes() for path in self.targets(source_root)}
+            calls: list[str] = []
+
+            def replace(source: object, destination: object) -> None:
+                calls.append(Path(destination).name)  # type: ignore[arg-type]
+                if len(calls) == 2:
+                    raise OSError("injected replace failure")
+                real_replace(source, destination)  # type: ignore[arg-type]
+
+            def unlink(self_path: Path, missing_ok: bool = False) -> None:
+                if self_path.name.endswith(".restore"):
+                    raise PermissionError("injected restore cleanup failure")
+                real_unlink(self_path, missing_ok=missing_ok)
+
+            raised: BaseException | None = None
+            with mock.patch.object(playable.os, "replace", side_effect=replace), \
+                    mock.patch.object(Path, "unlink", unlink):
+                try:
+                    playable.write_frontend_records(source_root, self.changed_summary(summary))
+                except RuntimeError as error:
+                    raised = error
+                except Exception as error:  # noqa: BLE001 - report as an assertion, not an error
+                    self.fail(f"uncaught {type(error).__name__}")
+            self.assertIsNotNone(raised, "the rollback did not raise")
+            message = str(raised)
+            self.assertTrue(message.startswith("evidence rollback complete; could not remove:"), message)
+            self.assertIn(playable.FRONTEND_EVIDENCE.name + ".restore", message)
+            self.assertNotIn("incomplete", message)
+            self.assertNotIn(temporary, message)
+            self.assertRegex(str(raised.__cause__), "injected replace failure")
+            for path, content in originals.items():
+                self.assertEqual(path.read_bytes(), content)
+
+    def test_g4in_02_surviving_tmp_is_named(self) -> None:
+        real_replace = os.replace
+        real_unlink = Path.unlink
+        attempts: list[str] = []
+        with tempfile.TemporaryDirectory(prefix="playable-g4in02-") as temporary:
+            source_root = Path(temporary)
+            summary = self.copy_documentation_with_evidence(source_root)
+
+            def replace(source: object, destination: object) -> None:
+                raise OSError("injected replace failure")
+
+            def unlink(self_path: Path, missing_ok: bool = False) -> None:
+                if self_path.name.endswith(".tmp"):
+                    attempts.append(self_path.name)
+                    if len(attempts) == 1:
+                        raise PermissionError("injected temporary cleanup failure")
+                real_unlink(self_path, missing_ok=missing_ok)
+
+            raised: BaseException | None = None
+            with mock.patch.object(playable.os, "replace", side_effect=replace), \
+                    mock.patch.object(Path, "unlink", unlink):
+                try:
+                    playable.write_frontend_records(source_root, self.changed_summary(summary))
+                except RuntimeError as error:
+                    raised = error
+                except Exception as error:  # noqa: BLE001 - report as an assertion, not an error
+                    self.fail(f"uncaught {type(error).__name__}")
+            self.assertIsNotNone(raised, "the failure with surviving debris did not raise a named error")
+            self.assertIn(attempts[0], str(raised))
+            self.assertNotIn(temporary, str(raised))
+            self.assertRegex(str(raised.__cause__), "injected replace failure")
 
     def test_guide_status_block_is_written_last(self) -> None:
         real_replace = os.replace
