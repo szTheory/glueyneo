@@ -247,6 +247,20 @@ any row that does not verify), and
 `python3 tools/verify_playable.py --history-allowlist check [--base <rev>]`
 reports whether the committed file is current.
 
+The allowlist is checked against git, not only against its own pins (G6WR-01).
+`base_revision` must be a commit of the repository and an ancestor of the checked
+head, and a row whose revision resolves must not be reachable from
+`base_revision`; a row failing either test is dropped to strict and `--check-docs`
+fails with the reason. A row whose revision does not resolve is accepted on its
+pin alone, because that is the squash tolerance itself. The pins are therefore
+self-attested after the squash, and only `--history-allowlist check` on the
+pre-ship branch verifies them; signing them would be a policy change and is not
+done. A repeated (kind, key, revision) row is malformed. The tolerated rights
+branch hashes only a regular, non-symlink, normalized path under the source root.
+The CTest `qualification_history_allowlist` runs `--history-allowlist check` in
+a Git checkout that tracks the allowlist; it is expected to fail on a squashed
+or shallow checkout, which is why it is a pre-ship step.
+
 Pre-ship step, required before the milestone squash merge: run
 `--history-allowlist check`; if it reports stale, run
 `--history-allowlist write` (which lists only strictly passing rows), commit the

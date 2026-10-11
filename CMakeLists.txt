@@ -866,6 +866,18 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/test_private_paths.py")
   add_test(NAME qualification_runner
     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/test_verify_playable.py")
+  # G6WR-01: the allowlist pins are self-attested, so the freshness and history
+  # check is the verifier. It needs full milestone-branch history and refuses on
+  # a squashed or shallow checkout, so it is registered only for a Git checkout
+  # that tracks the allowlist, and it is a pre-ship step (docs/testing.md).
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git"
+     AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/history-allowlist.json")
+    add_test(NAME qualification_history_allowlist
+      COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_playable.py"
+              --history-allowlist check)
+    set_tests_properties(qualification_history_allowlist
+      PROPERTIES LABELS "qualification-tools" TIMEOUT 120)
+  endif()
   add_test(NAME qualification_independent_review
     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/test_independent_review.py")
   add_test(NAME qualification_check_package
