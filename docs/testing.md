@@ -220,6 +220,17 @@ row (see Closure gates).
   errors keep exit 2. No path prints a traceback. Limit: an import-time failure
   (a missing standard-library or `tools/private_paths.py` module) happens before
   the entry guard runs.
+- **Snapshot integrity** (04-52). The clean qualification materializes the
+  committed Git archive, and `verify_snapshot` runs before and after every
+  lane. It compares the file and symlink rows (type, mode, size, SHA-256,
+  symlink target) and the directory set, which must equal the parent
+  directories of those rows. An added file, an added empty directory (for
+  example `build/playable-qualification`) or a changed byte fails with
+  `snapshot-inventory-mismatch` at the lane that caused it. Symlinked
+  directories are rows, not directories. The receipt inventory schema and
+  `inventory_sha256` are unchanged (directories are checked but not recorded).
+  Limit: this proves the snapshot was not mutated between checks, not that a
+  lane wrote nothing outside the snapshot.
 - **Frontend receipt currency.** The tracked receipt is current only while no
   receipt-bound path has changed since its `source_revision`: anything under
   `src/`, `include/`, `third_party/`, `tests/fixture/` or `tests/libretro/`, or
