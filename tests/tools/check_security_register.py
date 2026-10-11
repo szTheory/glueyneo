@@ -20,8 +20,12 @@ must equal the number of open threat-register rows at or above the configured
   Status columns (any letter case); one that lacks either is an error, never
   skipped (GWR-01). A header is indented 0 to 3 spaces, has optional leading
   and trailing pipes and is followed by a valid delimiter row with the same
-  cell count; rows run to the first blank line, heading, blockquote or fence
-  and need no leading pipe (T-04-62). Any other line whose first cell reads
+  cell count; rows run to the first blank line or the first line opening a
+  CommonMark ATX heading (1-6 `#` then a space, a tab or the end of the line),
+  a blockquote or a code fence, and need no leading pipe. Any other line,
+  including `#note` or `####### x`, is read as a row, so a non-row line fails
+  as a malformed row instead of hiding the rows after it (T-04-48, T-04-62).
+  Any other line whose first cell reads
   `Threat ID` (4 or more spaces or a tab of indentation, a blockquote, no
   delimiter row) fails as `unrecognized threat table form`. Non-register audit
   tables use another first header such as `Audited Threat`. Cells split on
@@ -70,7 +74,11 @@ INTEGER = re.compile(r"\d+")
 CELL_SPLIT = re.compile(r"(?<!\\)\|")
 INDENT = re.compile(r"^ {0,3}(?![ \t])")
 DELIMITER = re.compile(r"^ {0,3}\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$")
-TABLE_END = re.compile(r"^ {0,3}(?:#|>|```|~~~)")
+# A table ends only where CommonMark certainly starts another block: an ATX heading (0.31.2 section 4.2: 1-6 `#`
+# then a space, a tab or the end of the line), a blockquote or a code fence (section 4.5: a backtick fence's info
+# string holds no backtick). GFM 0.29-gfm section 4.10 ends a table at such a block start. Every other line is
+# read as a row, so a disagreement fails closed as a malformed row (T-04-48, T-04-62; 04-55).
+TABLE_END = re.compile(r"^ {0,3}(?:#{1,6}(?:[ \t]|$)|>|`{3,}[^`]*$|~{3,})")
 PHASE_NUMBER = re.compile(r"^[0-9]{2}(\.[0-9]+)?$")
 # One definition of a register file name, shared by the scoped and unscoped globs (G2WR-04).
 REGISTER_NAME = re.compile(r"[0-9]{2}(?:\.[0-9]+)?-SECURITY\.md")
