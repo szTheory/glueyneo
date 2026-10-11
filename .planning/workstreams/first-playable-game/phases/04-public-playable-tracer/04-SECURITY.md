@@ -815,6 +815,8 @@ Evidence recorded by plan 04-58 (2026-10-11). Each red revision was re-run in a 
 
 | Metric | Count |
 |---|---|
-| Threats found | 90 |
-| Closed | 88 |
+| Threats found | 123 |
+| Closed | 121 |
 | Open | 2 |
+
+Counts are whole-register rows (117 closed, 4 accepted, 2 open). The open rows T-04-103 (medium) and T-04-SC (04-58) (low) are below `block_on` high, so `threats_open: 0` and phase advancement is not blocked; they await the next headless audit (T-04-48), together with the FRESH re-judgement of the closed rows listed under the 04-58 fix evidence.
