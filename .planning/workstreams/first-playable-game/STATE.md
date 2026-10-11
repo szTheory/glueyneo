@@ -4,18 +4,18 @@ milestone: first-playable-game
 milestone_name: First Playable Game
 current_phase: 04
 current_phase_name: Public Playable Tracer
-current_plan: 1
+current_plan: 2
 status: executing
-stopped_at: Completed 04-55-PLAN.md
-last_updated: "2026-10-11T12:37:31.081Z"
+stopped_at: Completed 04-58-PLAN.md
+last_updated: "2026-10-11T13:27:24.117Z"
 last_activity: 2026-10-11
 last_activity_desc: Phase 04 execution started
-state_head: ffb8bf13b068f872a579bd1b532996774c674cf8
+state_head: ed969cf58921e28b687c7cc1a55da1579feb1363
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 61
-  completed_plans: 60
+  completed_plans: 61
   percent: 0
 ---
 
@@ -33,7 +33,7 @@ See [PROJECT.md](../../PROJECT.md) for the current project contract.
 Phase: 04 (Public Playable Tracer) — EXECUTING
 Current Plan: 2
 Total Plans in Phase: 55
-Status: Executing Phase 04
+Status: Ready to execute
 Last activity: 2026-10-11 — Phase 04 execution started
 Last Activity Description: Phase 04 execution started
 
@@ -42,7 +42,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Progress
 
 **Phases Complete:** 0
-**Current Plan:** 1
+**Current Plan:** 2
 
 ## Performance Metrics
 
@@ -105,6 +105,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P52 | 20min | 3 tasks | 5 files |
 | Phase 04 P53 | 12 min | 2 tasks | 3 files |
 | Phase 04 P55 | 12 min | 2 tasks | 4 files |
+| Phase 04 P58 | 52 min | 5 tasks | 16 files |
 
 ### Backlog
 
@@ -112,9 +113,9 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Session Continuity
 
-**Last session:** 2026-10-11T02:56:52.413Z
+**Last session:** 2026-10-11T13:27:24.071Z
 
-**Stopped At:** Completed 04-55-PLAN.md
+**Stopped At:** Completed 04-58-PLAN.md
 **Resume File:** None
 
 ## Scope Notes
@@ -214,6 +215,7 @@ unchanged external-blocker plan. Plan/summary counts are not phase acceptance.
 - [Phase 04]: 04-52: verify_snapshot also compares the materialized directory set with the inventory's parent directories (same snapshot-inventory-mismatch token, fixed path-free detail), so a lane that creates a directory in the snapshot fails at that lane — debug follow-up of snapshot-inventory-mismatch
 - [Phase 04]: 04-51 superseded by 04-54 before execution (its route input was the debugged 04-50 halt); one live routing plan
 - [Phase 04]: 04-55: register TABLE_END ends tables only at CommonMark ATX heading, blockquote and exact fence openers; other lines are rows and fail closed as malformed rows
+- [Phase 04]: 04-58: lane Popen is byte mode and decoded once; rights source_revision is a five-part predicate checked before any Git call (T-04-103); D58IN-02 deferred to the diff-scoped review
 
 ### Blockers
 
