@@ -1327,6 +1327,71 @@ def _git_stdout(repository: Path, arguments: list[str]) -> str | None:
     return result.stdout if result.returncode == 0 else None
 
 
+def _git_bytes(repository: Path, arguments: list[str]) -> bytes | None:
+    """Stdout bytes of a read-only Git command in a clean environment, or None on a non-zero exit."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repository), *arguments], env=clean_environment(),
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=False,
+            timeout=MAX_GIT_COMMAND_SECONDS)
+    except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+        raise RuntimeError("rights source_revision cannot be checked") from error
+    return result.stdout if result.returncode == 0 else None
+
+
+RIGHTS_INVENTORY = Path("docs/rights-inventory.md")
+RIGHTS_REVISION = re.compile(r"[0-9a-f]{40}")
+RIGHTS_EXEMPT_PREFIX = "third_party/"
+
+
+def _rights_path_is_relative_posix(path: object) -> bool:
+    """Non-empty, not rooted, no `..` segment and no leading `-` (T-04-103: it becomes part of a Git argument)."""
+    return (isinstance(path, str) and path != "" and not path.startswith(("/", "-"))
+            and ".." not in path.split("/"))
+
+
+def rights_revision_errors(source_root: Path, repository: Path, head: str) -> list[str]:
+    """Every non-third_party rights row cites a commit that holds its recorded bytes (G4WR-04, T-04-103).
+
+    For a row whose path is not under `third_party/` (those cite an upstream pin), `path` must be a
+    relative POSIX path and `source_revision` must be 40 lowercase hex, both checked before any Git call,
+    that resolves to a commit, is an ancestor of `head`, and whose blob at `path` hashes to the recorded
+    `sha256`. That five-part predicate is the whole check; it does not require the last commit that
+    touched the file (merge commits make that fragile). The inventory is the single JSON block of
+    `docs/rights-inventory.md` under `source_root`.
+    """
+    text = (source_root / RIGHTS_INVENTORY).read_text(encoding="utf-8")
+    blocks = re.findall(r"```json\s*\n(.*?)\n```", text, re.DOTALL)
+    if len(blocks) != 1:
+        raise RuntimeError("rights inventory must contain one JSON record")
+    try:
+        items = json.loads(blocks[0])["items"]
+    except (ValueError, KeyError, TypeError) as error:
+        raise RuntimeError("rights inventory JSON is malformed") from error
+    errors: list[str] = []
+    for item in items:
+        path = item.get("path") if isinstance(item, dict) else None
+        if isinstance(path, str) and path.startswith(RIGHTS_EXEMPT_PREFIX):
+            continue
+        if not _rights_path_is_relative_posix(path):
+            errors.append(f"rights path {path} is not a relative POSIX path")
+            continue
+        revision = item.get("source_revision")
+        if not isinstance(revision, str) or RIGHTS_REVISION.fullmatch(revision) is None:
+            errors.append(f"rights source_revision for {path} is not 40 hex")
+            continue
+        label = f"rights source_revision {revision[:12]} for {path}"
+        if _git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}"]) != 0:
+            errors.append(f"{label} does not resolve")
+        elif _git_exit(repository, ["merge-base", "--is-ancestor", revision, head]) != 0:
+            errors.append(f"{label} is not an ancestor of the checked head")
+        else:
+            blob = _git_bytes(repository, ["cat-file", "blob", f"{revision}:{path}"])
+            if blob is None or hashlib.sha256(blob).hexdigest() != item.get("sha256"):
+                errors.append(f"{label} does not hold the recorded SHA-256")
+    return errors
+
+
 REVIEW_REVISION_FORMS = (
     re.compile(r"review \(04-\d{2}, ([0-9a-f]{12,40})\)"),
     re.compile(r"revision `([0-9a-f]{40})`"),
@@ -1410,7 +1475,9 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
 
     The review provenance of each closure-bearing disposition is ordered strictly after the review round
     that raised the finding and bound to a committed ancestor of `head` (T-04-38, G3WR-05); it proves
-    ordering only, not that a review ran at the cited commit. Without a Git repository and without tracked frontend evidence there is nothing to
+    ordering only, not that a review ran at the cited commit. Whenever a repository is available, every
+    non-third_party rights row must also cite a resolvable ancestor commit that holds its recorded
+    SHA-256 (`rights_revision_errors`, G4WR-04). Without a Git repository and without tracked frontend evidence there is nothing to
     bind to, so only the repository-free checks run; tracked evidence without a repository fails closed.
     """
     evidence = load_frontend_evidence(source_root, repository=repository, head=head)
@@ -1448,6 +1515,9 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
         provenance_problems = review_provenance_errors(source_root, provenance_repository, head)
         if provenance_problems:
             raise RuntimeError(provenance_problems[0])
+        rights_problems = rights_revision_errors(source_root, provenance_repository, head)
+        if rights_problems:
+            raise RuntimeError(rights_problems[0])
 
     task_rows = _markdown_table_rows(
         validation,

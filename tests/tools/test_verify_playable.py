@@ -825,7 +825,7 @@ class DocumentationCopies:
         reviewed = [line[4:].strip() for line in (ROOT / playable.REVIEW).read_text(encoding="utf-8").splitlines()
                     if line.startswith("  - ")]
         rounds = sorted(path.relative_to(ROOT) for path in (ROOT / playable.PHASE_DIRECTORY).glob("04-REVIEW-GAPS*.md"))
-        for path in (playable.SECURITY, playable.REVIEW, playable.DISPOSITION, Path("README.md"),
+        for path in (playable.SECURITY, playable.REVIEW, playable.DISPOSITION, Path("README.md"), playable.RIGHTS_INVENTORY,
                      *rounds, *(Path(item) for item in reviewed)):
             if (ROOT / path).is_file():
                 (source_root / path).parent.mkdir(parents=True, exist_ok=True)
