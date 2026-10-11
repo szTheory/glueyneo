@@ -372,11 +372,37 @@ def _path_prefixes(path: str) -> tuple[str, ...]:
     return tuple("/".join(parts[:index]) for index in range(1, len(parts) + 1))
 
 
+def _materialized_directories(root: Path) -> frozenset[str]:
+    """Real (non-symlink) directories under root, as repository-relative POSIX paths."""
+    root = root.resolve()
+    found: set[str] = set()
+    for current, directories, _files in os.walk(root, topdown=True, followlinks=False):
+        current_path = Path(current)
+        directories[:] = [name for name in directories if not (current_path / name).is_symlink()]
+        for name in directories:
+            found.add(_safe_repo_path((current_path / name).relative_to(root).as_posix()))
+    return frozenset(found)
+
+
+def _inventory_directories(rows: tuple[dict[str, Any], ...] | list[dict[str, Any]]) -> frozenset[str]:
+    found: set[str] = set()
+    for row in rows:
+        found |= _parent_paths(row["path"])
+    return frozenset(found)
+
+
 def verify_snapshot(snapshot: SourceSnapshot) -> tuple[tuple[dict[str, Any], ...], str]:
+    """Compare file/symlink rows and the directory set against the archive-time snapshot.
+
+    The directory set must equal the parent directories of the recorded rows, so an
+    added empty directory fails here at the lane that created it (04-52).
+    """
     rows = inventory_tree(snapshot.root)
     digest = inventory_digest(rows)
     if rows != snapshot.inventory or digest != snapshot.digest:
         raise SnapshotError("snapshot-inventory-mismatch", "materialized source inventory changed after archive creation")
+    if _materialized_directories(snapshot.root) != _inventory_directories(snapshot.inventory):
+        raise SnapshotError("snapshot-inventory-mismatch", "materialized source directory set changed after archive creation")
     return rows, digest
 
 

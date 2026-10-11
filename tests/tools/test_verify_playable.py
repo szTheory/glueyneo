@@ -1928,8 +1928,9 @@ class MainErrorPathTest(unittest.TestCase):
         # verifies its inventory after the lane. -I ignores PYTHONDONTWRITEBYTECODE, so a child that
         # imported private_paths wrote tools/__pycache__ into the snapshot (snapshot-inventory-mismatch).
         # main() also creates ROOT/build/playable-qualification before the patched mkdtemp; those empty
-        # directories are invisible to the file inventory but made the later ym2610-installed-linkages
-        # overlay fail with generated-output-path-conflict, so the child must not run under the source root.
+        # directories were invisible to the file inventory and made the later ym2610-installed-linkages
+        # overlay fail with generated-output-path-conflict; verify_snapshot now also detects added
+        # directories (04-52), and the child still must not run under the source root.
         with tempfile.TemporaryDirectory(prefix="playable-entry-tools-") as temporary:
             source = Path(temporary)
             tools = source / "tools"
