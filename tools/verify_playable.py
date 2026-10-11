@@ -1732,6 +1732,91 @@ def history_allowlist_stale(source_root: Path) -> list[str]:
     return sorted(stale)
 
 
+HISTORY_ALLOWLIST_SCOPE = "first-playable-game milestone branch pre-ship records"
+HISTORY_BASE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]*")
+
+
+def _allowlist_refusal(reason: str) -> RuntimeError:
+    return RuntimeError(f"history allowlist cannot be generated: {reason}")
+
+
+def history_allowlist_document(source_root: Path, repository: Path, head: str, base: str = "main") -> str:
+    """Deterministic `docs/history-allowlist.json` text for the rows introduced on this branch (G5WR-01, T-04-106).
+
+    M is `git merge-base <head> <base>`. Generation first runs the three history gates strictly (empty
+    allowlist) and refuses on any error or note, so only rows that verified against the checked head can
+    be listed and nothing can be generated on a squashed history, where listed rows are absent. A row is
+    listed only when its cited revision is not an ancestor of M (rows reachable from main stay strict),
+    with the per-record pin the gates compare. The text has no timestamp, host or absolute path.
+    """
+    if not isinstance(base, str) or (RIGHTS_REVISION.fullmatch(base) is None and HISTORY_BASE_NAME.fullmatch(base) is None):
+        raise _allowlist_refusal("base is not a revision or branch name")
+    merge_base = (_git_stdout(repository, ["merge-base", head, base]) or "").strip()
+    if RIGHTS_REVISION.fullmatch(merge_base) is None:
+        raise _allowlist_refusal(f"base {base} has no merge-base with the checked head")
+    notes: list[str] = []
+    try:
+        load_frontend_evidence(source_root, repository=repository, head=head,
+                               allowlist=HistoryAllowlist.EMPTY, unverifiable=notes)  # type: ignore[attr-defined]
+        problems = [*review_provenance_errors(source_root, repository, head,
+                                              allowlist=HistoryAllowlist.EMPTY, unverifiable=notes),  # type: ignore[attr-defined]
+                    *rights_revision_errors(source_root, repository, head,
+                                            allowlist=HistoryAllowlist.EMPTY, unverifiable=notes)]  # type: ignore[attr-defined]
+    except (RuntimeError, OSError, UnicodeError, ValueError) as error:
+        raise _allowlist_refusal(str(error)) from error
+    if problems or notes:
+        raise _allowlist_refusal((problems or notes)[0])
+
+    def introduced(revision: str) -> bool:
+        full = (_git_stdout(repository, ["rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}"]) or "").strip()
+        if RIGHTS_REVISION.fullmatch(full) is None:
+            raise _allowlist_refusal(f"revision {revision[:12]} does not resolve")
+        return _git_exit(repository, ["merge-base", "--is-ancestor", full, merge_base]) != 0
+
+    rows: set[tuple[str, str, str, str]] = set()
+    review_text = (source_root / REVIEW).read_text(encoding="utf-8")
+    reviewed = _reviewed_revision(review_text)
+    if introduced(reviewed):
+        rows.add(("reviewed_revision", "04-REVIEW.md", reviewed, _reviewed_revision_pin(reviewed)))
+    disposition = (source_root / DISPOSITION).read_text(encoding="utf-8")
+    for row in _markdown_table_rows(disposition, "| Finding | Severity | Disposition | Source |"):
+        finding_id, _severity, state, source = row
+        if state.strip().lower() == "open":
+            continue
+        for revision in {match for form in REVIEW_REVISION_FORMS for match in form.findall(source)}:
+            if introduced(revision):
+                rows.add(("review_citation", finding_id, revision, _disposition_row_pin(disposition, finding_id) or ""))
+    receipt_path = source_root / FRONTEND_EVIDENCE
+    if receipt_path.is_file():
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        if introduced(receipt["source_revision"]):
+            rows.add(("frontend_receipt", "source_revision", receipt["source_revision"], _canonical_digest(receipt)))
+    inventory = re.findall(r"```json\s*\n(.*?)\n```", (source_root / RIGHTS_INVENTORY).read_text(encoding="utf-8"), re.DOTALL)
+    for item in json.loads(inventory[0])["items"]:
+        if item["path"].startswith(RIGHTS_EXEMPT_PREFIX):
+            continue
+        if introduced(item["source_revision"]):
+            rows.add(("rights", item["path"], item["source_revision"], _canonical_digest(item)))
+    document = {
+        "schema": 1, "scope": HISTORY_ALLOWLIST_SCOPE, "base_revision": merge_base,
+        "rows": [{"kind": kind, "key": key, "revision": revision, "pin": pin}
+                 for kind, key, revision, pin in sorted(rows)],
+    }
+    return json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+
+
+def history_allowlist_is_current(source_root: Path, repository: Path, head: str, base: str = "main") -> bool:
+    """True only when the tracked allowlist file equals what `history_allowlist_document` produces now."""
+    path = source_root / HISTORY_ALLOWLIST
+    if not path.is_file():
+        return False
+    document = history_allowlist_document(source_root, repository, head, base)
+    try:
+        return path.read_bytes() == document.encode("utf-8")
+    except OSError:
+        return False
+
+
 def check_docs(source_root: Path, *, repository: Path | None = None, head: str = "HEAD") -> list[str]:
     """Check the integrator guide, the validation map and the review records against tracked evidence.
 
@@ -1915,7 +2000,43 @@ def main() -> int:
     parser.add_argument("--check-docs", action="store_true")
     parser.add_argument("--record-frontend-evidence", action="store_true",
                         help="write the public-safe summary of a passing receipt to the tracked Phase 04 evidence file")
+    parser.add_argument("--history-allowlist", choices=("write", "check"),
+                        help="write or freshness-check docs/history-allowlist.json for this milestone branch (G5WR-01)")
+    parser.add_argument("--base", default=None,
+                        help="revision or branch the allowlist excludes (default main); only with --history-allowlist")
     args = parser.parse_args()
+    if args.base is not None and args.history_allowlist is None:
+        parser.error("--base is only accepted with --history-allowlist")
+    if args.history_allowlist is not None:
+        if args.retroarch is not None or args.clean or args.check_docs or args.record_frontend_evidence:
+            parser.error("--history-allowlist cannot be combined with --retroarch, --clean, "
+                         "--check-docs or --record-frontend-evidence")
+        base = args.base if args.base is not None else "main"
+        try:
+            if args.history_allowlist == "write":
+                text = history_allowlist_document(ROOT, ROOT, "HEAD", base)
+                target = ROOT / HISTORY_ALLOWLIST
+                target.parent.mkdir(parents=True, exist_ok=True)
+                temporary_target = target.with_name(target.name + ".tmp")
+                temporary_target.write_text(text, encoding="utf-8")
+                temporary_target.replace(target)
+                print(f"Wrote {HISTORY_ALLOWLIST.as_posix()} ({len(json.loads(text)['rows'])} rows).")
+                return 0
+            if history_allowlist_is_current(ROOT, ROOT, "HEAD", base):
+                print(f"History allowlist is current ({len(load_history_allowlist(ROOT).rows)} rows).")
+                return 0
+            message = "history allowlist is stale or missing; run --history-allowlist write"
+            stale = history_allowlist_stale(ROOT) if (ROOT / HISTORY_ALLOWLIST).is_file() else []
+            if stale:
+                message += "; stale rows: " + ", ".join(stale)
+            emit_error("", message)
+            return 1
+        except (RuntimeError, OSError, UnicodeError, ValueError) as error:
+            emit_error("", error)
+            return 1
+        except Exception as error:  # Never let a traceback carry an unscanned path.
+            emit_error("", type(error).__name__)
+            return 1
     if args.record_frontend_evidence:
         prefix = "frontend evidence not recorded: "
         try:
