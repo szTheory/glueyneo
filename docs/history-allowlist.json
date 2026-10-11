@@ -382,56 +382,80 @@
     {
       "key": "G5IN-01",
       "kind": "review_citation",
-      "pin": "177b4df048ccc3b40b6bff4be4155ea0040a5ea77972508015f30f5b451de4b2",
+      "pin": "0c2b7294fb17708a50abde130ddc07744389914e44a3f064638e16960a3a3b70",
       "revision": "591d0f795498d928a5070eeba14c4a2153a8f1fa"
     },
     {
       "key": "G5WR-01",
       "kind": "review_citation",
-      "pin": "ceead95fe467a0c652fab2050a1482acde077e90ee6e3b0f08109dafac572199",
+      "pin": "2913a0f3c4fc2b01330a1f52be776ff5e0e8dae8be1b413ecbf1e7fa8299c308",
       "revision": "027e41777783bb90d2e7b0fee1fd07f6343e93ee"
     },
     {
       "key": "G5WR-01",
       "kind": "review_citation",
-      "pin": "ceead95fe467a0c652fab2050a1482acde077e90ee6e3b0f08109dafac572199",
+      "pin": "2913a0f3c4fc2b01330a1f52be776ff5e0e8dae8be1b413ecbf1e7fa8299c308",
       "revision": "02fe1c8073542fd999104961525b707ae107a9ec"
     },
     {
       "key": "G5WR-01",
       "kind": "review_citation",
-      "pin": "ceead95fe467a0c652fab2050a1482acde077e90ee6e3b0f08109dafac572199",
+      "pin": "2913a0f3c4fc2b01330a1f52be776ff5e0e8dae8be1b413ecbf1e7fa8299c308",
       "revision": "1a208248331f7137610e2b60864d6dcc1b79f4d2"
     },
     {
       "key": "G5WR-01",
       "kind": "review_citation",
-      "pin": "ceead95fe467a0c652fab2050a1482acde077e90ee6e3b0f08109dafac572199",
+      "pin": "2913a0f3c4fc2b01330a1f52be776ff5e0e8dae8be1b413ecbf1e7fa8299c308",
       "revision": "266675573ec2fd8e183b9fd4f069d940ae0eaee6"
     },
     {
       "key": "G5WR-01",
       "kind": "review_citation",
-      "pin": "ceead95fe467a0c652fab2050a1482acde077e90ee6e3b0f08109dafac572199",
+      "pin": "2913a0f3c4fc2b01330a1f52be776ff5e0e8dae8be1b413ecbf1e7fa8299c308",
       "revision": "37e9f0f640b5c0d1d6a76763dde4ed21c1968327"
     },
     {
       "key": "G5WR-01",
       "kind": "review_citation",
-      "pin": "ceead95fe467a0c652fab2050a1482acde077e90ee6e3b0f08109dafac572199",
+      "pin": "2913a0f3c4fc2b01330a1f52be776ff5e0e8dae8be1b413ecbf1e7fa8299c308",
       "revision": "9dc602c36f8f00d21d1cdd2e5e3dac4e8d0a8240"
     },
     {
       "key": "G5WR-01",
       "kind": "review_citation",
-      "pin": "ceead95fe467a0c652fab2050a1482acde077e90ee6e3b0f08109dafac572199",
+      "pin": "2913a0f3c4fc2b01330a1f52be776ff5e0e8dae8be1b413ecbf1e7fa8299c308",
       "revision": "d5f32933bcf610c5a92f181505b0086408e70d1c"
     },
     {
       "key": "G5WR-02",
       "kind": "review_citation",
-      "pin": "2c5055b07eddbf5aa4db4f1bd8933432fe8fb3046a99726f081289f0e299b9f7",
+      "pin": "12621149cde9a130c0a2b7037d6c0f9aedd019c3d762626ae70b5068334c0554",
       "revision": "591d0f795498d928a5070eeba14c4a2153a8f1fa"
+    },
+    {
+      "key": "G6WR-01",
+      "kind": "review_citation",
+      "pin": "2005e1a1be65bb6eb293eb0a95ec3fcd8ae0875b02149e2851451464c483489c",
+      "revision": "0a7ad9785f5abc783c9c480e5eb4df3461383e29"
+    },
+    {
+      "key": "G6WR-01",
+      "kind": "review_citation",
+      "pin": "2005e1a1be65bb6eb293eb0a95ec3fcd8ae0875b02149e2851451464c483489c",
+      "revision": "362d6d26e93d036f56cf7aaa43e07a74c2ed6338"
+    },
+    {
+      "key": "G6WR-02",
+      "kind": "review_citation",
+      "pin": "332483b54c515f0029cbcec8f895cb59fd966454832085b06a7b5d4a746ab256",
+      "revision": "4fddcaa5c7ea76674e528a204e10d157ca8f8b60"
+    },
+    {
+      "key": "G6WR-03",
+      "kind": "review_citation",
+      "pin": "e6052a334788c163b61e7cb8cd10f03f0db5a286a2840158b374764a1525cfd3",
+      "revision": "d155f24440aa52012dd9fcdee60d9677913c9436"
     },
     {
       "key": "GIN-01",

@@ -93,3 +93,9 @@ Not touched: `04-REVIEW*.md`, `04-REVIEW-DISPOSITION.md`, and the two unrelated
 `.planning/preparation` files. The fix report is not committed.
 
 _Fixer: Claude (gsd-code-fixer)_
+
+## Follow-up: G6WR-01 residual resolved as deferred
+
+The user asked for the recommended handling of the two open points, and this follow-up applies it:
+- **Self-attested pins after the squash:** deferred as an accepted, documented risk under the 2026-10-11 squash-tolerance decision. No signing scheme is added.
+- **CTest on squashed checkouts:** `qualification_history_allowlist` is now opt-in (`-DGLUEYNEO_PRE_SHIP_HISTORY_CHECK=ON`). CI's public-content job runs `--history-allowlist check --base <PR base>` on every pull request that changes `docs/history-allowlist.json`, from a full-history checkout.
