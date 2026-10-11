@@ -270,12 +270,20 @@ is printed as `unverifiable-history: <item>` before the pass line (none are
 expected on full history). On a tolerated frontend_receipt row the receipt-to-archived-snapshot content binding is not re-verified on squashed history; only the canonical receipt object digest is pinned.
 
 Evidence: `SquashMergeHistoryTest`, and the real-repository squash simulation
-(`build/playable-qualification/04-59-squash/`), which checks that a local
+(`build/playable-qualification/04-59-squash/` in round 7,
+`build/playable-qualification/04-63-squash/` in round 8), which checks that a local
 squashed clone and a fresh clone give byte-identical `--check-docs` output. Its
 suite arbiter accepts a clone-only failure only for a repository-relative
 ignored input under `build/` with a recorded provisioning command, after
 verifying the input and showing that adding only that input to a fresh copy of
 the squashed clone makes the test pass (a main-checkout pass is not evidence).
+The suite's documentation copies include the working-tree files of rights
+rows, so a tolerated row is checked against its working-tree digest exactly as
+in a checkout. No suite test checks out a live receipt revision, so the
+qualification suite passes in full on a squash-merged clone; the live receipt's
+committed-inventory binding stays pinned on full history by
+`test_live_receipt_binds_its_committed_inventory_on_full_history`, which skips
+with a recorded reason only when that revision is absent.
 The residual, stated honestly: a test that is both history-dependent and
 satisfied by supplying an ignored `build/` input cannot be distinguished
 mechanically, so the history-dependent or environmental label is
