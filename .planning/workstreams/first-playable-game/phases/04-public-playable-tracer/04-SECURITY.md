@@ -5,7 +5,7 @@ status: verified
 threats_open: 0
 asvs_level: 1
 created: "2026-10-07"
-updated: "2026-10-10"
+updated: "2026-10-11"
 ---
 
 # Phase 04 — Security
@@ -146,6 +146,8 @@ updated: "2026-10-10"
 | T-04-SC (04-54) | Tampering | npm/pip/cargo installs | high | mitigate | Planned scope, recorded before 04-54 runs: no package installs; planning-state changes only. Pending the headless security audit (T-04-48), which verifies the executed scope. Tool-scoped independent review (secure-phase R4b, 848149bbc7ea): REVIEW HALTED: containment-violation, recorded open (the session read a file outside the scratch tree, so no verdict is transcribed). Tool-scoped independent review (secure-phase R5c, 1ae574566d08): CLOSED Planning-state only; no manifest or install in the tree; tests/consumers/test_release_consumer.py:137 rejects fetch/download constructs | closed |
 | T-04-SC (04-55) | Tampering | npm/pip/cargo installs | high | mitigate | Executed scope (04-55, a3b7d2d..808edd7): no package installs; standard-library Python test and checker change, docs and rights-row refreshes only. Pending the headless security audit (T-04-48). Tool-scoped independent review (secure-phase R5c, 1ae574566d08): CLOSED The patch touches only docs/rights-inventory.md, docs/testing.md and tests/tools/check_security_register.py:77, with stdlib imports at :62-65, and tests/tools/test_check_security_register.py:259-284, with stdlib imports at :7-13; no new import | closed |
 | T-04-102 | Denial of service | `TABLE_END` over-continuation in tests/tools/check_security_register.py | low | mitigate | A line that GFM would treat as a table end but the checker reads as a row fails the gate as `malformed threat row` (fail closed, never an undercount); documented in docs/testing.md; the guard test pins the real block starts that still end a table. Pending the headless security audit (T-04-48). Tool-scoped independent review (secure-phase R5a, 1ae574566d08): CLOSED tests/tools/check_security_register.py:213-215 reads every line that is not blank and does not match TABLE_END as a row, and :259-260 fails it as malformed (fails closed); documented in docs/testing.md:119-128; guard test at test_check_security_register.py:279. | closed |
+| T-04-103 | Tampering | rights source_revision check in tools/verify_playable.py | medium | mitigate | `rights_revision_errors` fullmatches `source_revision` against 40 lowercase hex and requires `path` to be a relative POSIX path (non-empty, not rooted, no `..` segment, no leading `-`) before any Git call; Git runs with the clean environment and a timeout; a unit test asserts no unvalidated value reaches a Git argument (test_g4wr_04_malformed_revision_never_reaches_git, test_g4wr_04_malformed_path_never_reaches_git); pending the next headless security audit (T-04-48) | open |
+| T-04-SC (04-58) | Tampering | npm/pip/cargo installs | low | mitigate | No package installs and no non-standard-library import (executed scope 04-58, ffb8bf1..c3b39e7); low because no install path exists in this plan; pending the next headless security audit | open |
 
 ## Threat Flags
 
@@ -793,3 +795,18 @@ Outcome: 88 CLOSED (T-04-52/55/60 stay `accepted`, with their verdicts recorded 
 | Threats found | 88 |
 | Closed | 88 |
 | Open | 0 |
+
+## Gap-closure round 6 fix evidence (04-58) — not an audit verdict
+
+Evidence recorded by plan 04-58 (2026-10-11). Each red revision was re-run in a detached worktree and exited non-zero with an assertion-class `FAILED (` summary; the green selector then printed `OK` (build/playable-qualification/04-58-evidence.txt, ignored). An in-run diff-scoped review by a headless `claude -p` reviewer (not the executor) judged all seven round-4 findings FIXED and raised D58WR-01, D58WR-02 and D58IN-01..03 (repaired or recorded in the 04-58 SUMMARY). No contained independent review or security audit ran in this round, and no existing row is closed, accepted or reopened here.
+
+- G4WR-01: red 682b520537d2 / fix a9fbfd3b5b54, tests test_g4wr_01_*
+- G4WR-02: red fe3db246567e / fix 443f980963d8, tests test_g4wr_02_*
+- G4WR-03: red 682b520537d2 / fix a9fbfd3b5b54, tests test_g4wr_03_*
+- G4WR-04: red 8eae4fbacae0 / fix 84595e99406c, docs 23940d642ab1, tests test_g4wr_04_*
+- G4IN-01: red fe3db246567e / fix 443f980963d8, tests test_g4in_01_*
+- G4IN-02: red 682b520537d2 / fix a9fbfd3b5b54, tests test_g4in_02_*
+- G4IN-03: red fe3db246567e / fix 443f980963d8, tests test_g4in_03_*
+- Hardened existing mitigations (no Status, Severity or Disposition changed): T-04-54 (G4WR-01, G4WR-03: lane bytes kept and decoded once; the no-signal-after-reap invariant is unchanged and a closed pipe no longer skips the group signals, D58WR-02); T-04-62 and T-04-48 (G4WR-02, G4IN-01: exact `threats_open`/`status` spelling, ASCII digits, security-named candidate scan); T-04-53 (G4IN-02: leftover files reported apart from unrestored files); T-04-66 (G4IN-03: no second launch after a pid-record failure); T-04-11 (lane text still passes `redact` and the sink scans; replacement characters do not bypass them).
+- New rows added open for the next headless audit: T-04-103 (medium) and T-04-SC (04-58) (low); both are below `block_on` high, so `threats_open: 0` remains the blocking count.
+- Closed rows whose cited files changed this round, for the audit's freshness rule to re-judge: T-04-11, T-04-38, T-04-53 and T-04-54 (tools/verify_playable.py), T-04-48, T-04-51, T-04-62, T-04-63 and T-04-64 (tests/tools/check_security_register.py), T-04-66 (tests/libretro/retroarch_smoke.py). No status of these rows changed here.

@@ -117,7 +117,7 @@ The receipt and sanitized command logs are retained under ignored `build/playabl
 
 ## Review Finding Crosswalk
 
-Rebased on the 2026-10-10 review (34 current disposition records). The earlier rows are historical in git history at the 04-23 revision.
+Rebased on the 2026-10-10 review (60 current disposition records). The earlier rows are historical in git history at the 04-23 revision.
 
 | Review Finding | Severity | Existing Threat Scope | Disposition |
 |----------------|----------|-----------------------|-------------|
@@ -144,7 +144,7 @@ Rebased on the 2026-10-10 review (34 current disposition records). The earlier r
 | IN-03 | info | `tests/consumers/check_package.py` | fixed |
 | IN-04 | info | `tests/tools/test_private_paths.py`; `tests/tools/test_check_security_register.py`; `tests/tools/test_verify_playable.py` | fixed |
 | WR-10 | warning | T-04-38 | fixed |
-| WR-11 | warning | T-04-43 | open |
+| WR-11 | warning | T-04-43 | fixed |
 | GWR-01 | warning | T-04-48 / T-04-62 | fixed |
 | GWR-02 | warning | T-04-56 | fixed |
 | GWR-03 | warning | T-04-57 / T-04-63 / T-04-64 | fixed |
@@ -155,32 +155,32 @@ Rebased on the 2026-10-10 review (34 current disposition records). The earlier r
 | GIN-02 | info | T-04-45 | fixed |
 | GIN-03 | info | T-04-43 / T-04-62 | fixed |
 | GIN-04 | info | T-04-34 | deferred |
-| G2CR-01 | critical | T-04-61 | open |
-| G2CR-02 | critical | T-04-11 / `tools/verify_playable.py` | open |
-| G2WR-01 | warning | T-04-38 | open |
-| G2WR-02 | warning | T-04-67 / T-04-38 | open |
-| G2WR-03 | warning | T-04-48 | open |
-| G2WR-04 | warning | T-04-62 / T-04-64 / `tests/tools/check_security_register.py` | open |
-| G2WR-05 | warning | `tools/verify_playable.py` | open |
-| G2WR-06 | warning | T-04-66 / `tests/libretro/retroarch_smoke.py` | open |
-| G2IN-01 | info | T-04-62 | open |
-| G2IN-02 | info | T-04-54 | open |
-| G2IN-03 | info | T-04-11 | open |
-| G3WR-01 | warning | T-04-54 / `tools/verify_playable.py` | open |
-| G3WR-02 | warning | T-04-48 | open |
-| G3WR-03 | warning | T-04-66 / `tests/libretro/retroarch_smoke.py` | open |
-| G3WR-04 | warning | T-04-53 / `tools/verify_playable.py` | open |
-| G3WR-05 | warning | T-04-38 / `tools/verify_playable.py` | open |
-| G3IN-01 | info | T-04-61 | open |
-| G3IN-02 | info | T-04-66 / `tests/libretro/retroarch_smoke.py` | open |
-| G3IN-03 | info | T-04-62 / `tests/tools/check_security_register.py` | open |
-| G4WR-01 | warning | T-04-54 / `tools/verify_playable.py` | open |
-| G4WR-02 | warning | T-04-62 / `tests/tools/check_security_register.py` | open |
-| G4WR-03 | warning | T-04-54 / `tools/verify_playable.py` | open |
-| G4WR-04 | warning | `docs/rights-inventory.md` | open |
-| G4IN-01 | info | T-04-62 / `tests/tools/check_security_register.py` | open |
-| G4IN-02 | info | T-04-53 / `tools/verify_playable.py` | open |
-| G4IN-03 | info | T-04-66 / `tests/libretro/retroarch_smoke.py` | open |
+| G2CR-01 | critical | T-04-61 | fixed |
+| G2CR-02 | critical | T-04-11 / `tools/verify_playable.py` | fixed |
+| G2WR-01 | warning | T-04-38 | fixed |
+| G2WR-02 | warning | T-04-67 / T-04-38 | fixed |
+| G2WR-03 | warning | T-04-48 | fixed |
+| G2WR-04 | warning | T-04-62 / T-04-64 / `tests/tools/check_security_register.py` | fixed |
+| G2WR-05 | warning | `tools/verify_playable.py` | fixed |
+| G2WR-06 | warning | T-04-66 / `tests/libretro/retroarch_smoke.py` | fixed |
+| G2IN-01 | info | T-04-62 | fixed |
+| G2IN-02 | info | T-04-54 | fixed |
+| G2IN-03 | info | T-04-11 | fixed |
+| G3WR-01 | warning | T-04-54 / `tools/verify_playable.py` | fixed |
+| G3WR-02 | warning | T-04-48 | fixed |
+| G3WR-03 | warning | T-04-66 / `tests/libretro/retroarch_smoke.py` | fixed |
+| G3WR-04 | warning | T-04-53 / `tools/verify_playable.py` | fixed |
+| G3WR-05 | warning | T-04-38 / `tools/verify_playable.py` | fixed |
+| G3IN-01 | info | T-04-61 | fixed |
+| G3IN-02 | info | T-04-66 / `tests/libretro/retroarch_smoke.py` | fixed |
+| G3IN-03 | info | T-04-62 / `tests/tools/check_security_register.py` | fixed |
+| G4WR-01 | warning | T-04-54 / `tools/verify_playable.py` | fixed |
+| G4WR-02 | warning | T-04-62 / `tests/tools/check_security_register.py` | fixed |
+| G4WR-03 | warning | T-04-54 / `tools/verify_playable.py` | fixed |
+| G4WR-04 | warning | `docs/rights-inventory.md` | fixed |
+| G4IN-01 | info | T-04-62 / `tests/tools/check_security_register.py` | fixed |
+| G4IN-02 | info | T-04-53 / `tools/verify_playable.py` | fixed |
+| G4IN-03 | info | T-04-66 / `tests/libretro/retroarch_smoke.py` | fixed |
 
 ### Plan 04-20 Task 1 Current Evidence — 2026-10-08
 
