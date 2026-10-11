@@ -1392,6 +1392,29 @@ class LaunchWindowTest(unittest.TestCase):
             result = smoke.run_diagnostics(args)
         self.assertEqual(result["finding"], "diagnostic-pid-record-failed")
 
+    def test_g4in_03_pid_record_failure_skips_second_probe(self) -> None:
+        failed = {"survived_window": None, "diagnostic": {"stage": "pid-record"}}
+        ok = {"survived_window": True, "diagnostic": {"stage": "core-content-load"}}
+        args = mock.Mock(timeout=1.0, child_pid_file=None)
+        inputs = (Path("/app"), Path("/core"), Path("/fixture"), {"bundle_id": "org.example.RetroArch"})
+        with (
+            mock.patch.object(smoke, "validate_inputs", return_value=inputs),
+            mock.patch.object(smoke, "run_launch_probe", side_effect=[failed, ok]) as launch,
+        ):
+            result = smoke.run_diagnostics(args)
+        self.assertEqual(launch.call_count, 1)
+        self.assertEqual(result["probes"]["core_content"],
+                         {"probe": "core_content", "status": "not-run", "reason": "skipped-after-pid-record"})
+        self.assertEqual(result["finding"], "diagnostic-pid-record-failed")
+        # A normal first probe still runs the second.
+        with (
+            mock.patch.object(smoke, "validate_inputs", return_value=inputs),
+            mock.patch.object(smoke, "run_launch_probe", side_effect=[ok, ok]) as launch,
+        ):
+            result = smoke.run_diagnostics(args)
+        self.assertEqual(launch.call_count, 2)
+        self.assertEqual(result["finding"], "both-launch-probes-survived")
+
     def test_launch_window_does_not_use_a_signal_mask(self) -> None:
         source = Path(smoke.__file__).read_text(encoding="utf-8")
         calls = [line for line in source.splitlines()

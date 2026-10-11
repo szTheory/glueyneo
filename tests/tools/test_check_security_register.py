@@ -403,6 +403,24 @@ class PhaseScopeTest(unittest.TestCase):
         closed = register(0, ROWS[:1] + ROWS[3:], frontmatter_lines=("status: verified  # reviewed",))
         self.assertEqual(self.run_phases({"04-x": closed}, ("ws",))[0], 0)
 
+    def test_g4in_01_stray_register_names_fail(self) -> None:
+        phases = {"04-x": self.CLOSED}
+        for name in ("4-SECURITY.md", "SECURITY.md", "phase-04-security.md"):
+            for arguments in (("ws", "--require-closed"), ("ws", "--require-closed", "--phase", "04")):
+                with self.subTest(name=name, arguments=arguments):
+                    code, out, err = self.run_phases(phases, arguments, {f"04-x/{name}": register(1)})
+                    self.assertEqual(code, 1, out)
+                    self.assertIn(f"misnamed security register {name}", err)
+
+    def test_g4in_01_non_register_security_named_file_is_skipped(self) -> None:
+        phases = {"04-x": self.CLOSED}
+        for arguments in (("ws", "--require-closed"), ("ws", "--require-closed", "--phase", "04")):
+            with self.subTest(arguments=arguments):
+                code, out, err = self.run_phases(
+                    phases, arguments, {"04-x/notes-security.md": "# Notes\n\nNo threat table here.\n"})
+                self.assertEqual(code, 0, err)
+                self.assertIn("SKIP: notes-security.md is not a register name", out)
+
     def test_g2in_01_verified_status_is_case_insensitive(self) -> None:
         for status in ("status: Verified", "status: VERIFIED", 'status: "Verified"'):
             with self.subTest(status=status):
@@ -534,6 +552,35 @@ class FrontmatterKeyTest(SecurityRegisterTest):
         self.assertEqual(self.run_checker(self.doc("findings:", "  high: 0", "phase: \"04\"", "threats_open: 1")), 0)
         verified = register(0, ROWS[:1] + ROWS[3:], frontmatter_lines=("status: verified  # reviewed",))
         self.assertEqual(self.run_checker(verified), 0)
+
+
+    @staticmethod
+    def closed_doc(*front: str) -> str:
+        """A document whose register rows are closed, so a spelling the checker honors passes."""
+        body = register(0, ROWS[:1] + ROWS[3:]).split("---\n", 2)[2]
+        return "\n".join(("---", *front, "---")) + "\n" + body
+
+    def test_g4wr_02_threats_open_key_must_be_spelled_exactly(self) -> None:
+        for bad in ("Threats_Open: 0", '"THREATS_OPEN": 0', "'Threats_open': 0"):
+            with self.subTest(key=bad):
+                self.assert_fails(self.closed_doc(bad), "threats_open key must be spelled exactly")
+        for good in ('"threats_open": 0', "'threats_open': 0"):
+            with self.subTest(key=good):
+                self.assertEqual(self.run_checker(self.closed_doc(good)), 0)
+
+    def test_g4wr_02_threats_open_requires_ascii_digits(self) -> None:
+        for value in ("\u0663", "\uff13"):
+            with self.subTest(value=value):
+                self.assert_fails(self.closed_doc(f"threats_open: {value}"),
+                                  "threats_open must be a bare non-negative integer")
+
+    def test_g4wr_02_status_key_must_be_spelled_exactly(self) -> None:
+        self.assert_fails(self.closed_doc("threats_open: 0", "Status: verified"), "status key must be spelled exactly")
+        # The value stays case-insensitive (G2IN-01).
+        self.assertEqual(self.run_checker(self.closed_doc("threats_open: 0", "status: Verified")), 0)
+
+    def test_g4wr_02_duplicates_still_case_insensitive(self) -> None:
+        self.assert_fails(self.closed_doc("threats_open: 0", "Threats_Open: 0"), "duplicate frontmatter key threats_open")
 
 
 if __name__ == "__main__":
