@@ -22,6 +22,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
+import public_content  # noqa: E402
 import verify_playable as playable  # noqa: E402
 
 
@@ -2480,6 +2481,26 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
 
     NOTE = "allowlisted pre-ship row (first-playable-game branch)"
     DISPOSITION_HEADER = "| Finding | Severity | Disposition | Source |\n|---|---|---|---|\n"
+
+    def test_g5wr_01_documentation_copies_carry_rights_row_files(self) -> None:
+        """The helper models a checkout: every non-third_party rights row's working-tree file is copied (G5WR-01, C1)."""
+        items = public_content.load_rights_inventory(ROOT)["items"]
+        paths = [item["path"] for item in items if not item["path"].startswith("third_party/")]
+        self.assertTrue(paths, "the rights inventory has no non-third_party row")
+        with tempfile.TemporaryDirectory(prefix="playable-docs-rights-files-") as temporary:
+            source_root = Path(temporary)
+            self.copy_review_provenance(source_root)
+            for path in paths:
+                with self.subTest(path=path):
+                    self.assertTrue((source_root / path).is_file(), "rights-row file not copied")
+                    self.assertEqual((source_root / path).read_bytes(), (ROOT / path).read_bytes())
+        with tempfile.TemporaryDirectory(prefix="playable-docs-rights-sentinel-") as temporary:
+            source_root = Path(temporary)
+            target = source_root / paths[0]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(b"caller-placed sentinel\n")
+            self.copy_review_provenance(source_root)
+            self.assertEqual(target.read_bytes(), b"caller-placed sentinel\n")
 
     @staticmethod
     def git(cwd: Path, *arguments: str) -> str:
