@@ -255,9 +255,33 @@ findings:
     severity: info
     disposition: fixed
     title: "third_party/ rows skip the path-form check, and a non-list items raises a bare TypeError"
-open: 0
-total: 63
-recorded: 2026-10-11T19:34:24.000Z
+  - id: G6WR-01
+    severity: warning
+    disposition: open
+    title: "History allowlist is self-attested; the loader does not validate it against history"
+  - id: G6WR-02
+    severity: warning
+    disposition: fixed
+    title: "Duplicate allowlist rows are silently collapsed; last row wins"
+  - id: G6WR-03
+    severity: warning
+    disposition: fixed
+    title: "Rights allowlist branch reads `source_root / path` through symlinks and un-normalized paths"
+  - id: G6IN-01
+    severity: info
+    disposition: open
+    title: "Typing escapes around `HistoryAllowlist.EMPTY`"
+  - id: G6IN-02
+    severity: info
+    disposition: open
+    title: "`strip_comment` is not quote-aware"
+  - id: G6IN-03
+    severity: info
+    disposition: open
+    title: "`_drain` treats every `OSError` from `os.read` as EOF"
+open: 4
+total: 69
+recorded: 2026-10-11T23:00:00.000Z
 ---
 
 # Phase 04: Code Review Disposition
@@ -324,9 +348,15 @@ recorded: 2026-10-11T19:34:24.000Z
 | G4IN-01 | info | fixed | Reported by 04-REVIEW-GAPS-R4.md (310109e). Gap-closure fix (04-58) at revision `443f980963d89a8d48720e426878ff434cdada2d`: tests/tools/check_security_register.py `main` candidate scan; regression tests test_g4in_01_stray_register_names_fail, test_g4in_01_non_register_security_named_file_is_skipped, red commit fe3db246567e. In-run diff review (04-58, 443f980963d8): FIXED. |
 | G4IN-02 | info | fixed | Reported by 04-REVIEW-GAPS-R4.md (310109e). Gap-closure fix (04-58) at revision `a9fbfd3b5b54e56abae5e6bda21655adfe469cc7`: tools/verify_playable.py `write_frontend_records`; regression tests test_g4in_02_restore_succeeded_but_restore_file_remains, test_g4in_02_surviving_tmp_is_named, red commit 682b520537d2. In-run diff review (04-58, 443f980963d8): FIXED. |
 | G4IN-03 | info | fixed | Reported by 04-REVIEW-GAPS-R4.md (310109e). Gap-closure fix (04-58) at revision `443f980963d89a8d48720e426878ff434cdada2d`: tests/libretro/retroarch_smoke.py `run_diagnostics`; regression tests test_g4in_03_pid_record_failure_skips_second_probe, red commit fe3db246567e. In-run diff review (04-58, 443f980963d8): FIXED. |
-| G5WR-01 | warning | fixed | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Fix landed; independent verdict pending the diff-scoped /gsd-code-review, which confirms or reopens this row: per-row history allowlist (user decision 2026-10-11, scope tolerance; allowlist scope: pre-ship rows of the first-playable-game milestone branch, not reachable from git merge-base HEAD main) at revision `37e9f0f640b5c0d1d6a76763dde4ed21c1968327`, revision `1a208248331f7137610e2b60864d6dcc1b79f4d2`, generator revision `9dc602c36f8f00d21d1cdd2e5e3dac4e8d0a8240`, revision `266675573ec2fd8e183b9fd4f069d940ae0eaee6`; squash-only test repairs at revision `02fe1c8073542fd999104961525b707ae107a9ec`, revision `d5f32933bcf610c5a92f181505b0086408e70d1c`, revision `027e41777783bb90d2e7b0fee1fd07f6343e93ee`; squash simulation: full suite passes in the squashed clone (04-63; frozen-file run in 04-64). |
-| G5WR-02 | warning | fixed | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Fix landed; independent verdict pending the diff-scoped /gsd-code-review, which confirms or reopens this row: single lane.ready gate before the lane timeout at revision `591d0f795498d928a5070eeba14c4a2153a8f1fa`: tests/tools/test_verify_playable.py `wait_ready`; tests test_g5wr_02_*. |
-| G5IN-01 | info | fixed | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Fix landed; independent verdict pending the diff-scoped /gsd-code-review, which confirms or reopens this row: path form before the third_party/ exemption and items shape check at revision `591d0f795498d928a5070eeba14c4a2153a8f1fa`: `rights_revision_errors`; tests test_g5in_01_*. |
+| G5WR-01 | warning | fixed | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Confirmed fixed by 04-REVIEW-GAPS-R6.md (1f1d953); the residual trust gap is tracked as G6WR-01: per-row history allowlist (user decision 2026-10-11, scope tolerance; allowlist scope: pre-ship rows of the first-playable-game milestone branch, not reachable from git merge-base HEAD main) at revision `37e9f0f640b5c0d1d6a76763dde4ed21c1968327`, revision `1a208248331f7137610e2b60864d6dcc1b79f4d2`, generator revision `9dc602c36f8f00d21d1cdd2e5e3dac4e8d0a8240`, revision `266675573ec2fd8e183b9fd4f069d940ae0eaee6`; squash-only test repairs at revision `02fe1c8073542fd999104961525b707ae107a9ec`, revision `d5f32933bcf610c5a92f181505b0086408e70d1c`, revision `027e41777783bb90d2e7b0fee1fd07f6343e93ee`; squash simulation: full suite passes in the squashed clone (04-63; frozen-file run in 04-64). |
+| G5WR-02 | warning | fixed | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Confirmed fixed by 04-REVIEW-GAPS-R6.md (1f1d953): single lane.ready gate before the lane timeout at revision `591d0f795498d928a5070eeba14c4a2153a8f1fa`: tests/tools/test_verify_playable.py `wait_ready`; tests test_g5wr_02_*. |
+| G5IN-01 | info | fixed | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Confirmed fixed by 04-REVIEW-GAPS-R6.md (1f1d953); the residual is tracked as G6WR-03: path form before the third_party/ exemption and items shape check at revision `591d0f795498d928a5070eeba14c4a2153a8f1fa`: `rights_revision_errors`; tests test_g5in_01_*. |
+| G6WR-01 | warning | open | Reported by 04-REVIEW-GAPS-R6.md (1f1d953). Fixed in part; see 04-REVIEW-FIX-R6.md. At revision `362d6d26e93d036f56cf7aaa43e07a74c2ed6338`, the loader checks `base_revision` and resolvable rows against git, and revision `0a7ad9785f5abc783c9c480e5eb4df3461383e29` adds the CTest `qualification_history_allowlist`. Tests: test_g6wr_01_*. Still open, pending a user decision: rows whose revision does not resolve are still accepted on their self-attested pin (needed for the 2026-10-11 squash tolerance), and the CTest refuses on squashed or shallow checkouts. |
+| G6WR-02 | warning | fixed | Reported by 04-REVIEW-GAPS-R6.md (1f1d953). Fix landed; the independent verdict is pending the next diff-scoped /gsd-code-review, which will confirm or reopen this row. Fixed at revision `4fddcaa5c7ea76674e528a204e10d157ca8f8b60`: `load_history_allowlist` rejects repeated (kind, key, revision) rows as malformed. Test: test_g6wr_02_duplicate_rows_are_malformed. |
+| G6WR-03 | warning | fixed | Reported by 04-REVIEW-GAPS-R6.md (1f1d953). Fix landed; the independent verdict is pending the next diff-scoped /gsd-code-review, which will confirm or reopen this row. Fixed at revision `d155f24440aa52012dd9fcdee60d9677913c9436`: path form rejects empty and `.` segments and backslashes, and `_confined_file_bytes` reads only a non-symlink regular file under the source root. Tests: test_g6wr_03_*. |
+| G6IN-01 | info | open | Reported by 04-REVIEW-GAPS-R6.md (1f1d953). Not yet triaged; the info items were outside the --fix scope. |
+| G6IN-02 | info | open | Reported by 04-REVIEW-GAPS-R6.md (1f1d953). Not yet triaged; the info items were outside the --fix scope. |
+| G6IN-03 | info | open | Reported by 04-REVIEW-GAPS-R6.md (1f1d953). Not yet triaged; the info items were outside the --fix scope. |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
