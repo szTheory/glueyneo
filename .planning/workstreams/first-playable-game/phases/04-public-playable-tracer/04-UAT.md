@@ -1,18 +1,14 @@
 ---
-status: testing
+status: complete
 phase: 04-public-playable-tracer
 source: [04-01-SUMMARY.md, 04-02-SUMMARY.md, 04-03-SUMMARY.md, 04-04-SUMMARY.md, 04-05-SUMMARY.md, 04-06-SUMMARY.md, 04-07-SUMMARY.md, 04-08-SUMMARY.md, 04-09-SUMMARY.md, 04-10-SUMMARY.md, 04-11-SUMMARY.md, 04-12-SUMMARY.md, 04-13-SUMMARY.md, 04-14-SUMMARY.md, 04-15-SUMMARY.md, 04-16-SUMMARY.md, 04-17-SUMMARY.md, 04-18-SUMMARY.md, 04-19-SUMMARY.md, 04-20-SUMMARY.md, 04-21-SUMMARY.md, 04-22-SUMMARY.md, 04-VERIFICATION.md]
 started: 2026-10-10T11:38:03Z
-updated: 2026-10-10T20:52:48Z
+updated: 2026-10-11T11:38:10.840Z
 ---
 
 ## Current Test
 
-number: 35
-name: Headless security audit and focused re-review close the round-3 open rows (round 3 re-verification).
-expected: |
-  Audit closes or reopens the 9 open rows (T-04-11, T-04-38, T-04-48, T-04-61, T-04-67, T-04-SC 04-37..04-42); `check_security_register.py first-playable-game --require-closed --phase 04` exits 0; round-3 warnings G3WR-01..05 are fixed or dispositioned.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -230,19 +226,47 @@ coverage_id: 04-22 D1
 
 ### 35. Headless security audit and focused re-review close the round-3 open rows (round 3 re-verification).
 expected: Audit closes or reopens the 9 open rows (T-04-11, T-04-38, T-04-48, T-04-61, T-04-67, T-04-SC 04-37..04-42); `check_security_register.py first-playable-game --require-closed --phase 04` exits 0; round-3 warnings G3WR-01..05 are fixed or dispositioned.
-result: [pending]
-source: 04-VERIFICATION.md human_verification (round 3)
+result: issue
+reported: "Automated (agent-run, 2026-10-11, no user judgment): audit part passes. check_security_register.py first-playable-game --require-closed --phase 04 exits 0; 04-SECURITY.md threats_open 0, status verified (15904ce). Review part fails. 04-REVIEW-DISPOSITION.md still records all G3WR-01..05 and G3IN-01..03 as open. The focused re-review 04-REVIEW-GAPS-R4.md (310109e) judges G3WR-02..05 fixed but G3WR-01 only partially fixed; its residual is G4WR-01. R4 also raises G4WR-02..04 and G4IN-01..03, now recorded as open. tools/verify_playable.py --check-docs fails on an unrecorded review finding."
+severity: major
+source: 04-VERIFICATION.md human_verification (round 3); resolved by automated evidence per METHODOLOGY checkpoint pre-flight step 4
 why_human: Closure by design requires an independent headless gsd-security-auditor verdict (T-04-48); neither the executor nor the verifier may close rows by attestation.
 
 ## Summary
 
 total: 35
 passed: 34
-issues: 0
-pending: 1
+issues: 1
+pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-[none open — G-04-2 (shared-build link failure blocking the receipt) was found and fixed in this session; see Test 2 history]
+[earlier: none open — G-04-2 (shared-build link failure blocking the receipt) was found and fixed in this session; see Test 2 history]
+
+- gap_id: G-04-35
+  truth: "Round-3 review warnings are fixed or dispositioned in 04-REVIEW-DISPOSITION.md, and the round-4 re-review leaves no unrepaired in-scope Critical/Warning"
+  status: failed
+  reason: "Automated evidence: G3WR-01 is partially fixed (residual G4WR-01). G3 rows are untranscribed (still open although R4 verdicts exist). R4 raises G4WR-01..04 and G4IN-01..03."
+  severity: major
+  test: 35
+  root_cause: "See 04-REVIEW-GAPS-R4.md. G4WR-01: the G3WR-01 drain fix blanks or reorders earlier lane output when the post-kill tail is empty or lacks the earlier prefix. G4WR-02: register key case-folding and Unicode \\d accept spellings the GSD reader ignores. G4WR-03: strict UTF-8 lane decoding raises UnicodeDecodeError. G4WR-04: stale or nonexistent source_revision values in docs/rights-inventory.md. G4IN-01..03: stray-register silence, rollback wording, second probe after pid-record failure. Also: the R4 verdicts for G3WR-02..05 and G3IN-01/02 are not yet transcribed into the disposition record."
+  artifacts:
+    - path: "tools/verify_playable.py"
+      issue: "G4WR-01 drain (605-613), G4WR-03 lane decoding (633-638, 772-780), G4IN-02 rollback reporting"
+    - path: "tests/tools/check_security_register.py"
+      issue: "G4WR-02 key/digit normalization, G4IN-01 candidate glob"
+    - path: "docs/rights-inventory.md"
+      issue: "G4WR-04 source_revision provenance"
+    - path: "tests/libretro/retroarch_smoke.py"
+      issue: "G4IN-03 run_diagnostics continues after first probe pid-record failure"
+    - path: ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-REVIEW-DISPOSITION.md"
+      issue: "G3 rows untranscribed; G4 rows open"
+  missing:
+    - "Fix G4WR-01..04 with red/green regression tests"
+    - "Fix or defer-with-reason G4IN-01..03 (Info, agent disposition)"
+    - "Transcribe R4 verdicts into the disposition record and validation crosswalk with round-ordered provenance"
+    - "Focused review of the repair diff inside the same execute run (METHODOLOGY review-round convergence)"
+  debug_session: ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-REVIEW-GAPS-R4.md"
+
