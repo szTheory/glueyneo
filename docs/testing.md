@@ -254,15 +254,19 @@ local `main` branch, which can be arbitrarily stale (G7CR-02); run
 `git fetch origin` first, or the commands refuse because the base does not
 resolve.
 
-The allowlist is checked against git, not only against its own pins (G6WR-01).
-`base_revision` must be a commit of the repository and an ancestor of the checked
-head, and a row whose revision resolves must not be reachable from
-`base_revision`; a row failing either test is dropped to strict and `--check-docs`
-fails with the reason. A row whose revision does not resolve is accepted on its
-pin alone, because that is the squash tolerance itself. The pins are therefore
-self-attested after the squash, and only `--history-allowlist check` on the
-pre-ship branch verifies them; signing them would be a policy change and is not
-done. A repeated (kind, key, revision) row is malformed. The tolerated rights
+The in-tree anchoring of the allowlist is a consistency check, not a protection
+against forged rows (G6WR-01, corrected by G7WR-01). `base_revision` must be a
+commit of the repository and an ancestor of the checked head, and a row whose
+revision resolves must not be reachable from `base_revision`; otherwise
+`--check-docs` fails with the reason and the row is dropped to strict. Dropping
+cannot change a gate outcome: tolerance needs a history-absent revision, and a
+row reachable from an ancestor of the head is an ancestor itself, so it was
+already strict. A real but stale `base_revision` passes, and a row whose
+revision does not resolve is accepted on its pin alone, because that is the
+squash tolerance itself. Forged or invented rows are therefore caught only by
+the CI `--history-allowlist ci` step before merge, which regenerates the file
+from the pull request history; after the squash the pins are self-attested,
+and signing them would be a policy change and is not done. A repeated (kind, key, revision) row is malformed. The tolerated rights
 branch hashes only a normalized path that is a regular file (not a symlink) in
 the checked head's tree.
 CI runs `--history-allowlist ci --base <pull request base>` on every pull

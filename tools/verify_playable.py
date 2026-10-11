@@ -1490,6 +1490,8 @@ def history_allowlist_anchor_errors(allowlist: HistoryAllowlist, repository: Pat
     whose revision does not resolve cannot be checked (a squashed-away branch is the point of the
     tolerance, user decision 2026-10-11), so it is accepted on its pin alone. The pins themselves are
     self-attested; only a signature would change that, and that is a policy decision, not made here.
+    This is a consistency check: a dropped row is reachable from an ancestor of `head`, so it was
+    strict anyway, and forged rows are caught only by `--history-allowlist ci` in CI (G7WR-01).
     """
     if not allowlist.rows:
         return []
