@@ -2357,5 +2357,152 @@ class MainErrorPathTest(unittest.TestCase):
         self.assertEqual(caught.exception.code, 2)
 
 
+class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
+    """Per-row allowlisted tolerance of history-absent pre-ship rows after a squash merge (G5WR-01, T-04-104)."""
+
+    NOTE = "allowlisted pre-ship row (first-playable-game branch)"
+    DISPOSITION_HEADER = "| Finding | Severity | Disposition | Source |\n|---|---|---|---|\n"
+
+    @staticmethod
+    def git(cwd: Path, *arguments: str) -> str:
+        return subprocess.run(
+            ["git", "-C", str(cwd), "-c", "user.name=t", "-c", "user.email=t@example.invalid", *arguments],
+            check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL).stdout.strip()
+
+    @staticmethod
+    def sha(text: str) -> str:
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def canonical(value: object) -> str:
+        return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"),
+                                         ensure_ascii=False).encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def item(path: str, text: str, revision: str, license: str = "MIT") -> dict[str, str]:
+        return {"path": path, "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(), "kind": "test",
+                "license": license, "rights": "original", "source_revision": revision,
+                "provenance": "fixture", "notice": "none"}
+
+    def write_inventory(self, root: Path, items: list[dict[str, str]]) -> None:
+        (root / "docs").mkdir(exist_ok=True)
+        (root / playable.RIGHTS_INVENTORY).write_text(
+            "# Inventory\n\n```json\n" + json.dumps({"schema": 1, "items": items}) + "\n```\n", encoding="utf-8")
+
+    def write_review(self, root: Path, revision: str, body: str = "body\n") -> None:
+        (root / playable.REVIEW).parent.mkdir(parents=True, exist_ok=True)
+        (root / playable.REVIEW).write_text(
+            f"---\nphase: x\nreviewed_revision: {revision}\n---\n\n{body}", encoding="utf-8")
+
+    def write_disposition(self, root: Path, rows: list[tuple[str, str, str, str]]) -> None:
+        (root / playable.DISPOSITION).parent.mkdir(parents=True, exist_ok=True)
+        (root / playable.DISPOSITION).write_text(
+            self.DISPOSITION_HEADER + "".join(f"| {a} | {b} | {c} | {d} |\n" for a, b, c, d in rows), encoding="utf-8")
+
+    def allowlist(self, root: Path, rows: list[tuple[str, str, str]], base: str) -> None:
+        """Write docs/history-allowlist.json; every pin is computed here from the records under `root`."""
+        entries = []
+        for kind, key, revision in rows:
+            if kind == "reviewed_revision":
+                value = re.search(r"^reviewed_revision: (\S+)$", (root / playable.REVIEW).read_text(encoding="utf-8"),
+                                  re.MULTILINE).group(1)
+                pin = self.sha(f"reviewed_revision: {value}")
+            elif kind == "review_citation":
+                line = next(line.rstrip() for line in (root / playable.DISPOSITION).read_text(encoding="utf-8").splitlines()
+                            if line.startswith(f"| {key} |"))
+                pin = self.sha(line)
+            elif kind == "frontend_receipt":
+                pin = self.canonical(json.loads((root / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8")))
+            else:
+                text = (root / playable.RIGHTS_INVENTORY).read_text(encoding="utf-8")
+                items = json.loads(re.search(r"```json\s*\n(.*?)\n```", text, re.DOTALL).group(1))["items"]
+                pin = self.canonical(next(item for item in items if item["path"] == key))
+            entries.append({"kind": kind, "key": key, "revision": revision, "pin": pin})
+        (root / "docs").mkdir(exist_ok=True)
+        (root / "docs/history-allowlist.json").write_text(json.dumps({
+            "schema": 1, "scope": "first-playable-game milestone branch pre-ship records",
+            "base_revision": base, "rows": entries}, indent=1), encoding="utf-8")
+
+    def commit(self, repo: Path, message: str, *paths: str) -> str:
+        self.git(repo, "add", "--", *paths)
+        self.git(repo, "commit", "-q", "-m", message)
+        return self.git(repo, "rev-parse", "HEAD")
+
+    def squashed(self, base: Path):
+        """A feature branch (F1..F4) squash-merged into main, plus a single-branch clone without the branch objects."""
+        from types import SimpleNamespace
+        repo = base / "repo"
+        repo.mkdir()
+        self.git(repo, "init", "-q", "-b", "main")
+        (repo / "base.txt").write_text("base\n", encoding="utf-8")
+        main_base = self.commit(repo, "base", "base.txt")
+        self.git(repo, "checkout", "-q", "-b", "feature")
+        (repo / "tests").mkdir()
+        (repo / "tests/a.txt").write_text("one\n", encoding="utf-8")
+        gaps = repo / playable.PHASE_DIRECTORY / "04-REVIEW-GAPS.md"
+        gaps.parent.mkdir(parents=True)
+        gaps.write_text("gaps\n", encoding="utf-8")
+        f1 = self.commit(repo, "f1", "tests/a.txt", gaps.relative_to(repo).as_posix())
+        (repo / "tests/a.txt").write_text("two\n", encoding="utf-8")
+        f2 = self.commit(repo, "f2", "tests/a.txt")
+        self.write_inventory(repo, [self.item("tests/a.txt", "two\n", f2)])
+        self.write_review(repo, f1)
+        self.write_disposition(repo, [("CR-01", "critical", "fixed", f"revision `{f2}`"),
+                                      ("GWR-01", "warning", "fixed", f"revision `{f2}`")])
+        f3 = self.commit(repo, "f3", playable.RIGHTS_INVENTORY.as_posix(), playable.REVIEW.as_posix(),
+                         playable.DISPOSITION.as_posix())
+        self.allowlist(repo, [("reviewed_revision", "04-REVIEW.md", f1), ("review_citation", "CR-01", f2),
+                              ("review_citation", "GWR-01", f2), ("rights", "tests/a.txt", f2)], main_base)
+        f4 = self.commit(repo, "f4", "docs/history-allowlist.json")
+        self.git(repo, "checkout", "-q", "main")
+        self.git(repo, "merge", "--squash", "feature")
+        self.git(repo, "commit", "-q", "-m", "squash")
+        clone = base / "clone"
+        self.git(base, "clone", "-q", "--no-local", "--single-branch", "--branch", "main", str(repo), str(clone))
+        return SimpleNamespace(repo=repo, clone=clone, B=main_base, F1=f1, F2=f2, F3=f3, F4=f4)
+
+    def fixture(self) -> "SimpleNamespace":
+        temporary = tempfile.TemporaryDirectory(prefix="playable-squash-")
+        self.addCleanup(temporary.cleanup)
+        return self.squashed(Path(temporary.name))
+
+    def gate(self, function_name: str, root: Path, *extra: object) -> tuple[list[str], list[str]]:
+        function = getattr(playable, function_name, None)
+        self.assertIsNotNone(function, f"{function_name} is missing")
+        notes: list[str] = []
+        try:
+            return function(root, root, "HEAD", unverifiable=notes), notes
+        except Exception as error:  # noqa: BLE001 - red must fail on an assertion, not on an exception
+            self.fail(f"uncaught {type(error).__name__}")
+
+    def test_g5wr_01_rights_row_tolerated_after_squash(self) -> None:
+        fx = self.fixture()
+        resolves = subprocess.run(["git", "-C", str(fx.repo), "rev-parse", "--verify", "--quiet", f"{fx.F2}^{{commit}}"],
+                                  stdout=subprocess.DEVNULL, check=False).returncode
+        self.assertEqual(resolves, 0, "the local squash must still hold the branch objects")
+        absent = subprocess.run(["git", "-C", str(fx.clone), "rev-parse", "--verify", "--quiet", f"{fx.F2}^{{commit}}"],
+                                stdout=subprocess.DEVNULL, check=False).returncode
+        self.assertNotEqual(absent, 0, "the single-branch clone must not hold the branch objects")
+        results = []
+        for root in (fx.repo, fx.clone):
+            errors, notes = self.gate("rights_revision_errors", root)
+            self.assertEqual(errors, [])
+            self.assertEqual(len(notes), 1, notes)
+            for expected in ("tests/a.txt", self.NOTE, fx.F2[:12]):
+                self.assertIn(expected, notes[0])
+            results.append((errors, notes))
+        self.assertEqual(results[0], results[1])
+
+    def test_g5wr_01_cli_prints_one_line_per_tolerated_row(self) -> None:
+        with mock.patch.object(playable, "check_docs", return_value=["note one", "note two"]), \
+                mock.patch.object(sys, "argv", ["verify_playable.py", "--check-docs"]), \
+                mock.patch("sys.stdout", new_callable=io.StringIO) as stdout, \
+                mock.patch("sys.stderr", new_callable=io.StringIO):
+            status = playable.main()
+        self.assertEqual(status, 0)
+        self.assertEqual(stdout.getvalue(), "unverifiable-history: note one\nunverifiable-history: note two\n"
+                         "Phase 04 documentation gate passed.\n")
+
+
 if __name__ == "__main__":
     unittest.main()
