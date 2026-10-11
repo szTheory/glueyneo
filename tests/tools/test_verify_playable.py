@@ -3188,6 +3188,32 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         self.assertEqual(playable.history_allowlist_anchor_errors(
             playable.load_history_allowlist(fx.repo), fx.repo, "HEAD"), [])
 
+    def test_g6wr_03_symlinked_rights_file_is_not_hashed(self) -> None:
+        fx = self.fixture()
+        outside = fx.repo.parent / "outside.txt"
+        outside.write_text("two\n", encoding="utf-8")
+        target = fx.repo / "tests/a.txt"
+        target.unlink()
+        target.symlink_to(outside)
+        errors, notes = self.gate("rights_revision_errors", fx.repo)
+        self.assertEqual(notes, [])
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("working-tree file is missing", errors[0])
+
+    def test_g6wr_03_symlinked_directory_and_unnormalized_paths_are_rejected(self) -> None:
+        fx = self.fixture()
+        real = fx.repo / "tests"
+        moved = fx.repo.parent / "elsewhere"
+        real.rename(moved)
+        real.symlink_to(moved)
+        errors, notes = self.gate("rights_revision_errors", fx.repo)
+        self.assertEqual(notes, [])
+        self.assertEqual(len(errors), 1, errors)
+        for path in ("tests/./a.txt", "tests//a.txt", "tests/a.txt/", "tests\\a.txt"):
+            with self.subTest(path):
+                self.assertFalse(playable._rights_path_is_relative_posix(path))
+        self.assertTrue(playable._rights_path_is_relative_posix("tests/a.txt"))
+
 
 if __name__ == "__main__":
     unittest.main()

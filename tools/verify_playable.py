@@ -1553,9 +1553,29 @@ def _note_once(notes: list[str] | None, note: str) -> None:
 
 
 def _rights_path_is_relative_posix(path: object) -> bool:
-    """Non-empty, not rooted, no `..` segment and no leading `-` (T-04-103: it becomes part of a Git argument)."""
-    return (isinstance(path, str) and path != "" and not path.startswith(("/", "-"))
-            and ".." not in path.split("/"))
+    """Normalized relative POSIX path: not rooted, no leading `-`, and no empty, `.` or `..` segment (T-04-103, G6WR-03)."""
+    return (isinstance(path, str) and path != "" and not path.startswith(("/", "-")) and "\\" not in path
+            and all(segment not in ("", ".", "..") for segment in path.split("/")))
+
+
+def _confined_file_bytes(source_root: Path, path: str) -> bytes | None:
+    """Bytes of `source_root/path` only when every component is a real entry and the file is regular (G6WR-03).
+
+    A symlink anywhere along the path, a non-regular file, or a resolved path outside the source root
+    yields None, so the working-tree branch cannot hash bytes the strict `git cat-file` branch would not.
+    """
+    root = source_root.resolve()
+    current = source_root
+    try:
+        for segment in path.split("/"):
+            current = current / segment
+            if current.is_symlink():
+                return None
+        if not current.is_file() or not current.resolve().is_relative_to(root):
+            return None
+        return current.read_bytes()
+    except OSError:
+        return None
 
 
 def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
@@ -1582,6 +1602,7 @@ def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
     """
     if allowlist is None:
         allowlist = load_history_allowlist(source_root)
+    allowlist = anchored_history_allowlist(allowlist, repository, head)
     text = (source_root / RIGHTS_INVENTORY).read_text(encoding="utf-8")
     blocks = re.findall(r"```json\s*\n(.*?)\n```", text, re.DOTALL)
     if len(blocks) != 1:
@@ -1602,7 +1623,6 @@ def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
         if path.startswith(RIGHTS_EXEMPT_PREFIX):
             continue
         revision = item.get("source_revision")
-    allowlist = anchored_history_allowlist(allowlist, repository, head)
         if not isinstance(revision, str) or RIGHTS_REVISION.fullmatch(revision) is None:
             errors.append(f"rights source_revision for {path} is not 40 hex")
             continue
@@ -1615,10 +1635,8 @@ def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
         elif relation == "absent" and allowlist.covers("rights", path, revision, _canonical_digest(item)):
             unverifiable_label = (f"{label} is unverifiable-history "
                                   "(allowlisted pre-ship row, first-playable-game branch)")
-            try:
-                held = hashlib.sha256((source_root / path).read_bytes()).hexdigest()
-            except OSError:
-                held = None
+            content = _confined_file_bytes(source_root, path)
+            held = hashlib.sha256(content).hexdigest() if content is not None else None
             if held is None:
                 errors.append(f"{unverifiable_label} and the working-tree file is missing")
             elif held != item.get("sha256"):
@@ -1691,6 +1709,7 @@ def review_provenance_errors(source_root: Path, repository: Path, head: str, *,
     """
     if allowlist is None:
         allowlist = load_history_allowlist(source_root)
+    allowlist = anchored_history_allowlist(allowlist, repository, head)
     reviewed = _reviewed_revision((source_root / REVIEW).read_text(encoding="utf-8"))
     anchor_unverifiable = False
     relation = _revision_relation(repository, reviewed, head)
@@ -1709,7 +1728,6 @@ def review_provenance_errors(source_root: Path, repository: Path, head: str, *,
             continue
         finding_id, _severity, state, source = row
         if state.strip().lower() == "open":
-    allowlist = anchored_history_allowlist(allowlist, repository, head)
             continue
         revisions = [match for form in REVIEW_REVISION_FORMS for match in form.findall(source)]
         if not revisions:
@@ -1922,6 +1940,9 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
     if provenance_repository is None and (source_root / ".git").exists():
         provenance_repository = source_root
     if provenance_repository is not None:
+        anchor_problems = history_allowlist_anchor_errors(allowlist, provenance_repository, head)
+        if anchor_problems:
+            raise RuntimeError(anchor_problems[0])
         provenance_problems = review_provenance_errors(source_root, provenance_repository, head,
                                                        allowlist=allowlist, unverifiable=notes)
         if provenance_problems:
@@ -1940,9 +1961,6 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
         if len(row) == 10 and row[0] == "04-15 T2" and row[1] == "04-15"
     ]
     if len(frontend_rows) != 1:
-        anchor_problems = history_allowlist_anchor_errors(allowlist, provenance_repository, head)
-        if anchor_problems:
-            raise RuntimeError(anchor_problems[0])
         raise RuntimeError("HOST-02 and frontend QUAL-03 must remain Pending/unknown in the current validation map")
     requirement_ids = {item.strip() for item in frontend_rows[0][3].split(",")}
     frontend_status = frontend_rows[0][9]
