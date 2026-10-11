@@ -448,14 +448,86 @@
     {
       "key": "G6WR-02",
       "kind": "review_citation",
-      "pin": "332483b54c515f0029cbcec8f895cb59fd966454832085b06a7b5d4a746ab256",
+      "pin": "390cc5189fe99bcea845f954bdfa356f6309fda2a6a7edebd29f53d226725bc3",
       "revision": "4fddcaa5c7ea76674e528a204e10d157ca8f8b60"
     },
     {
       "key": "G6WR-03",
       "kind": "review_citation",
-      "pin": "e6052a334788c163b61e7cb8cd10f03f0db5a286a2840158b374764a1525cfd3",
+      "pin": "ba1f6944e7b1994174005839917fa0abfee00485fc1d9651a0d2c886ec0647b3",
       "revision": "d155f24440aa52012dd9fcdee60d9677913c9436"
+    },
+    {
+      "key": "G7CR-01",
+      "kind": "review_citation",
+      "pin": "a5c2336fc6a9f9329f53b13e86514687f1c9116941d4310fea8523d4cac5f80d",
+      "revision": "47ef5d070a57e6d1e57bed045fba936088ee3acf"
+    },
+    {
+      "key": "G7CR-01",
+      "kind": "review_citation",
+      "pin": "a5c2336fc6a9f9329f53b13e86514687f1c9116941d4310fea8523d4cac5f80d",
+      "revision": "484a136a9a0635897cb309ba6b2a63f4665f576e"
+    },
+    {
+      "key": "G7CR-01",
+      "kind": "review_citation",
+      "pin": "a5c2336fc6a9f9329f53b13e86514687f1c9116941d4310fea8523d4cac5f80d",
+      "revision": "7a7eba21df317ee04db9c5d7c8f0355b504568ee"
+    },
+    {
+      "key": "G7CR-01",
+      "kind": "review_citation",
+      "pin": "a5c2336fc6a9f9329f53b13e86514687f1c9116941d4310fea8523d4cac5f80d",
+      "revision": "a5d1c4681d80732851c2f8df168c515c5caa8334"
+    },
+    {
+      "key": "G7CR-02",
+      "kind": "review_citation",
+      "pin": "45072b92eac08ecf8a48dc422f5b9a39672d9a1cd2d57ad0f29e271ad408f626",
+      "revision": "57b6b0dae3d687ca9e0333f3c68693ab933f8789"
+    },
+    {
+      "key": "G7CR-02",
+      "kind": "review_citation",
+      "pin": "45072b92eac08ecf8a48dc422f5b9a39672d9a1cd2d57ad0f29e271ad408f626",
+      "revision": "a5d1c4681d80732851c2f8df168c515c5caa8334"
+    },
+    {
+      "key": "G7IN-01",
+      "kind": "review_citation",
+      "pin": "940bc0699ee650c4c207db955691fda459420ce1950968267a05848fda14b7c8",
+      "revision": "2cee0e2bcb727a5d0ff8aa0f03038b0248aac8cf"
+    },
+    {
+      "key": "G7IN-01",
+      "kind": "review_citation",
+      "pin": "940bc0699ee650c4c207db955691fda459420ce1950968267a05848fda14b7c8",
+      "revision": "e3b2ae8f3eaafa3b04da13d56b77d1407e72c0f0"
+    },
+    {
+      "key": "G7WR-01",
+      "kind": "review_citation",
+      "pin": "da81f686e9d286464ec9eedb440ee41fc84fbdc895e6afce620a766332cf57a3",
+      "revision": "484a136a9a0635897cb309ba6b2a63f4665f576e"
+    },
+    {
+      "key": "G7WR-01",
+      "kind": "review_citation",
+      "pin": "da81f686e9d286464ec9eedb440ee41fc84fbdc895e6afce620a766332cf57a3",
+      "revision": "f7bcb7aac22dda599c80b6bddd3ee35e695ed01c"
+    },
+    {
+      "key": "G7WR-02",
+      "kind": "review_citation",
+      "pin": "701f3cf085d5a94e8a2764fc3f7243b53fe850d8ce13a71334cdd575cf7b01ab",
+      "revision": "1820de1958e16b0011327f2ecf1205f8e4b191a7"
+    },
+    {
+      "key": "G7WR-03",
+      "kind": "review_citation",
+      "pin": "a5031af1a2115adae55d6240c9a5335e13d091b9fcc9616959900b38a85e0590",
+      "revision": "c6155f0071cb32612a82a5d55419676ca90fda64"
     },
     {
       "key": "GIN-01",

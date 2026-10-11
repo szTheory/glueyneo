@@ -279,8 +279,32 @@ findings:
     severity: info
     disposition: open
     title: "`_drain` treats every `OSError` from `os.read` as EOF"
+  - id: G7CR-01
+    severity: critical
+    disposition: fixed
+    title: "The fix commits made the `tests/tools/test_verify_playable.py` rights row stale, which breaks CI public-content now and `--check-docs` after the squash"
+  - id: G7CR-02
+    severity: critical
+    disposition: fixed
+    title: "The committed allowlist was generated against a stale local `main`, so the new CI step fails on this PR and 12 rows cite revisions already on main"
+  - id: G7WR-01
+    severity: warning
+    disposition: fixed
+    title: "The in-tree anchoring cannot change any gate outcome; docs/testing.md overstates it"
+  - id: G7WR-02
+    severity: warning
+    disposition: fixed
+    title: "The CI step runs only when the allowlist file changes, so a stale allowlist can merge"
+  - id: G7WR-03
+    severity: warning
+    disposition: fixed
+    title: "The tolerated rights branch still hashes working-tree bytes, not committed bytes (G6WR-03 partly open)"
+  - id: G7IN-01
+    severity: info
+    disposition: fixed
+    title: "`--check-docs` on a shallow clone now fails with a misleading message"
 open: 3
-total: 69
+total: 75
 recorded: 2026-10-11T23:00:00.000Z
 ---
 
@@ -352,11 +376,17 @@ recorded: 2026-10-11T23:00:00.000Z
 | G5WR-02 | warning | fixed | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Confirmed fixed by 04-REVIEW-GAPS-R6.md (1f1d953): single lane.ready gate before the lane timeout at revision `591d0f795498d928a5070eeba14c4a2153a8f1fa`: tests/tools/test_verify_playable.py `wait_ready`; tests test_g5wr_02_*. |
 | G5IN-01 | info | fixed | Reported by 04-REVIEW-GAPS-R5.md (d21f71d). Confirmed fixed by 04-REVIEW-GAPS-R6.md (1f1d953); the residual is tracked as G6WR-03: path form before the third_party/ exemption and items shape check at revision `591d0f795498d928a5070eeba14c4a2153a8f1fa`: `rights_revision_errors`; tests test_g5in_01_*. |
 | G6WR-01 | warning | deferred | Reported by 04-REVIEW-GAPS-R6.md (1f1d953). Fixed in part; see 04-REVIEW-FIX-R6.md. At revision `362d6d26e93d036f56cf7aaa43e07a74c2ed6338`, the loader checks `base_revision` and resolvable rows against git, and revision `0a7ad9785f5abc783c9c480e5eb4df3461383e29` adds the CTest `qualification_history_allowlist`. Tests: test_g6wr_01_*. Deferred residual (accepted risk under the 2026-10-11 squash-tolerance decision, 2026-10-11): after the squash, rows whose revision does not resolve are still accepted on their self-attested pin. No signing scheme is added because its cost outweighs the fault value. Mitigations: CI verifies the allowlist against the pull request history on every PR that changes it, which rejects any post-squash edit, and the local CTest is opt-in via GLUEYNEO_PRE_SHIP_HISTORY_CHECK so a squashed main stays green (docs/testing.md). |
-| G6WR-02 | warning | fixed | Reported by 04-REVIEW-GAPS-R6.md (1f1d953). Fix landed; the independent verdict is pending the next diff-scoped /gsd-code-review, which will confirm or reopen this row. Fixed at revision `4fddcaa5c7ea76674e528a204e10d157ca8f8b60`: `load_history_allowlist` rejects repeated (kind, key, revision) rows as malformed. Test: test_g6wr_02_duplicate_rows_are_malformed. |
-| G6WR-03 | warning | fixed | Reported by 04-REVIEW-GAPS-R6.md (1f1d953). Fix landed; the independent verdict is pending the next diff-scoped /gsd-code-review, which will confirm or reopen this row. Fixed at revision `d155f24440aa52012dd9fcdee60d9677913c9436`: path form rejects empty and `.` segments and backslashes, and `_confined_file_bytes` reads only a non-symlink regular file under the source root. Tests: test_g6wr_03_*. |
+| G6WR-02 | warning | fixed | Reported by 04-REVIEW-GAPS-R6.md (1f1d953). Confirmed fixed by 04-REVIEW-GAPS-R7.md (c6510e6). Fixed at revision `4fddcaa5c7ea76674e528a204e10d157ca8f8b60`: `load_history_allowlist` rejects repeated (kind, key, revision) rows as malformed. Test: test_g6wr_02_duplicate_rows_are_malformed. |
+| G6WR-03 | warning | fixed | Reported by 04-REVIEW-GAPS-R6.md (1f1d953). Confirmed fixed for symlinks and unnormalized paths by 04-REVIEW-GAPS-R7.md (c6510e6); the residual (working-tree bytes) is tracked as G7WR-03. Fixed at revision `d155f24440aa52012dd9fcdee60d9677913c9436`: path form rejects empty and `.` segments and backslashes, and `_confined_file_bytes` reads only a non-symlink regular file under the source root. Tests: test_g6wr_03_*. |
 | G6IN-01 | info | open | Reported by 04-REVIEW-GAPS-R6.md (1f1d953). Not yet triaged; the info items were outside the --fix scope. |
 | G6IN-02 | info | open | Reported by 04-REVIEW-GAPS-R6.md (1f1d953). Not yet triaged; the info items were outside the --fix scope. |
 | G6IN-03 | info | open | Reported by 04-REVIEW-GAPS-R6.md (1f1d953). Not yet triaged; the info items were outside the --fix scope. |
+| G7CR-01 | critical | fixed | Reported by 04-REVIEW-GAPS-R7.md (c6510e6). Fix landed; the independent verdict is pending the next diff-scoped /gsd-code-review, which will confirm or reopen this row. See 04-REVIEW-FIX-R7.md. At revision `7a7eba21df317ee04db9c5d7c8f0355b504568ee`, `history_allowlist_document` refuses to list a rights row whose file at the checked head does not hold the recorded SHA-256 (the post-squash predicate), so `check`, the CTest and the CI step catch this class. At revision `47ef5d070a57e6d1e57bed045fba936088ee3acf` (after revision `a5d1c4681d80732851c2f8df168c515c5caa8334`), the tests/tools/test_verify_playable.py rights row records the HEAD bytes at revision `484a136a9a0635897cb309ba6b2a63f4665f576e`. Test: test_g7cr_01_generator_refuses_rights_row_stale_at_head. |
+| G7CR-02 | critical | fixed | Reported by 04-REVIEW-GAPS-R7.md (c6510e6). Fix landed; the independent verdict is pending the next diff-scoped /gsd-code-review, which will confirm or reopen this row. At revision `57b6b0dae3d687ca9e0333f3c68693ab933f8789`, `--base` defaults to `origin/main` (HISTORY_DEFAULT_BASE) and refuses when it does not resolve; the opt-in CTest passes GLUEYNEO_HISTORY_BASE. At revision `a5d1c4681d80732851c2f8df168c515c5caa8334`, docs/history-allowlist.json is regenerated against origin/main (base_revision 4b2120d57f48, 133 rows; the 12 rows reachable from main are gone), a correction of the base, not a regeneration to green. Test: test_g7cr_02_default_base_is_the_upstream_main_ref. |
+| G7WR-01 | warning | fixed | Reported by 04-REVIEW-GAPS-R7.md (c6510e6). Fix landed; the independent verdict is pending the next diff-scoped /gsd-code-review, which will confirm or reopen this row. At revision `f7bcb7aac22dda599c80b6bddd3ee35e695ed01c`, docs/testing.md and the `history_allowlist_anchor_errors` docstring state that the in-tree anchoring is a consistency check that cannot change a gate outcome, and that forged or invented rows are caught only by the CI `--history-allowlist ci` step before merge. The code path is unchanged; at revision `484a136a9a0635897cb309ba6b2a63f4665f576e`, test_t_04_38_unresolvable_reviewed_revision_fails no longer copies the live allowlist, whose anchor error had preempted the gate under test since G6WR-01. |
+| G7WR-02 | warning | fixed | Reported by 04-REVIEW-GAPS-R7.md (c6510e6). Fix landed; the independent verdict is pending the next diff-scoped /gsd-code-review, which will confirm or reopen this row. At revision `1820de1958e16b0011327f2ecf1205f8e4b191a7`, the CI step runs `--history-allowlist ci --base <PR base>` on every pull request; the tool runs the full check whenever the allowlist differs from the base or any listed revision is an ancestor of the head (every pre-ship pull request). A history-independent staleness gate was not added, because a legitimate post-squash rights refresh voids a listed row and would deadlock main (docs/testing.md). Tests: test_g7wr_02_*. |
+| G7WR-03 | warning | fixed | Reported by 04-REVIEW-GAPS-R7.md (c6510e6). Fix landed; the independent verdict is pending the next diff-scoped /gsd-code-review, which will confirm or reopen this row. At revision `c6155f0071cb32612a82a5d55419676ca90fda64`, `_head_blob` reads the regular-file entry at the checked head with `git ls-tree` and `git cat-file`, replacing the working-tree read, so dirty, untracked, ignored or hard-linked content and committed symlinks cannot pass a tolerated row. Test: test_g7wr_03_tolerated_rights_row_ignores_working_tree_bytes. |
+| G7IN-01 | info | fixed | Reported by 04-REVIEW-GAPS-R7.md (c6510e6). Fix landed; the independent verdict is pending the next diff-scoped /gsd-code-review, which will confirm or reopen this row. At revision `2cee0e2bcb727a5d0ff8aa0f03038b0248aac8cf`, `check_docs` reports a base_revision missing from the repository before the frontend gate (narrowed at revision `e3b2ae8f3eaafa3b04da13d56b77d1407e72c0f0` so other anchor errors keep their place), and docs/testing.md says `--check-docs` needs the history back to base_revision. Test: test_g7in_01_check_docs_reports_unanchored_allowlist_first. |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
