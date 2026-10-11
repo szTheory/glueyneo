@@ -776,6 +776,44 @@ class ProcessGroupTest(unittest.TestCase):
         for option in ("text", "universal_newlines", "encoding", "errors"):
             self.assertFalse(popen.call_args.kwargs.get(option), f"lane Popen sets {option}")
 
+    def test_d58wr_02_lane_closing_its_pipe_is_still_terminated_on_timeout(self) -> None:
+        program = (
+            "import os, time\n"
+            "open('lane.pid', 'w').write(str(os.getpid()))\n"
+            "print('EARLY-CLOSED', flush=True)\n"
+            "os.close(1)\n"
+            "os.close(2)\n"
+            "time.sleep(60)\n"
+        )
+        with tempfile.TemporaryDirectory(prefix="lane-d58wr02-") as temporary:
+            work = Path(temporary)
+            runner = self.make_runner(work)
+            try:
+                with (
+                    mock.patch.object(playable, "verify_snapshot"),
+                    mock.patch.object(playable, "LANE_GRACE_SECONDS", 1),
+                    mock.patch.object(playable, "LANE_AFTER_KILL_SECONDS", 1, create=True),
+                ):
+                    result = runner.command("closed-lane", [sys.executable, "-c", program],
+                                            timeout=2, allow_failure=True)
+            except Exception as error:  # noqa: BLE001 - a red run must fail on the assertion, not on an exception
+                self.fail(f"uncaught {type(error).__name__}")
+            log = (work / "closed-lane.log").read_text(encoding="utf-8")
+            pid = int((work / "lane.pid").read_text(encoding="utf-8"))
+            self.addCleanup(lambda: self.kill_quietly(pid))
+            deadline = time.monotonic() + 10
+            alive = True
+            while alive and time.monotonic() < deadline:
+                try:
+                    os.kill(pid, 0)
+                    time.sleep(0.1)
+                except ProcessLookupError:
+                    alive = False
+        self.assertFalse(alive, f"the lane survived its timeout: pid {pid}")
+        self.assertEqual(result.returncode, -1)
+        self.assertIn("TimeoutExpired", log)
+        self.assertEqual(log.split("\n", 1)[1].count("EARLY-CLOSED"), 1, log)
+
     @staticmethod
     def kill_quietly(pid: int) -> None:
         try:
@@ -1908,6 +1946,39 @@ class AtomicRecordTest(DocumentationCopies, unittest.TestCase):
             self.assertIn(attempts[0], str(raised))
             self.assertNotIn(temporary, str(raised))
             self.assertRegex(str(raised.__cause__), "injected replace failure")
+
+    def test_d58in_01_interrupt_is_not_replaced_by_a_runtime_error(self) -> None:
+        real_replace = os.replace
+        real_unlink = Path.unlink
+        with tempfile.TemporaryDirectory(prefix="playable-d58in01-") as temporary:
+            source_root = Path(temporary)
+            summary = self.copy_documentation_with_evidence(source_root)
+            calls: list[str] = []
+
+            def replace(source: object, destination: object) -> None:
+                calls.append(Path(destination).name)  # type: ignore[arg-type]
+                if len(calls) == 2:
+                    raise KeyboardInterrupt()
+                real_replace(source, destination)  # type: ignore[arg-type]
+
+            def unlink(self_path: Path, missing_ok: bool = False) -> None:
+                if self_path.name.endswith(".restore"):
+                    raise PermissionError("injected restore cleanup failure")
+                real_unlink(self_path, missing_ok=missing_ok)
+
+            with mock.patch.object(playable.os, "replace", side_effect=replace), \
+                    mock.patch.object(Path, "unlink", unlink), \
+                    mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+                try:
+                    playable.write_frontend_records(source_root, self.changed_summary(summary))
+                except KeyboardInterrupt:
+                    pass
+                except BaseException as error:  # noqa: BLE001 - report as an assertion, not an error
+                    self.fail(f"the interrupt was replaced by {type(error).__name__}")
+                else:
+                    self.fail("no exception was raised")
+            self.assertIn("could not remove", stderr.getvalue())
+            self.assertNotIn(temporary, stderr.getvalue())
 
     def test_guide_status_block_is_written_last(self) -> None:
         real_replace = os.replace
