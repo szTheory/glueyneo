@@ -1516,14 +1516,42 @@ def history_allowlist_anchor_errors(allowlist: HistoryAllowlist, repository: Pat
         return [HISTORY_ALLOWLIST_BASE_MISSING]
     if _git_exit(repository, ["merge-base", "--is-ancestor", base, head]) != 0:
         return ["history allowlist base_revision is not an ancestor of the checked head"]
-    errors: list[str] = []
-    for kind, key, revision in sorted(allowlist.rows):
-        full = (_git_stdout(repository, ["rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}"]) or "").strip()
-        if RIGHTS_REVISION.fullmatch(full) is not None and _git_exit(
-                repository, ["merge-base", "--is-ancestor", full, base]) == 0:
-            errors.append(f"history allowlist row {kind} {key} cites revision {revision[:12]} "
-                          "reachable from base_revision")
-    return errors
+    reachable = _rows_reachable_from(allowlist, repository, base)
+    return [f"history allowlist row {kind} {key} cites revision {revision[:12]} reachable from base_revision"
+            for kind, key, revision in sorted(allowlist.rows) if (kind, key, revision) in reachable]
+
+
+def _rows_reachable_from(allowlist: HistoryAllowlist, repository: Path, base: str) -> set[tuple[str, str, str]]:
+    """Rows whose revision resolves to a commit reachable from `base` (`merge-base --is-ancestor`, inclusive).
+
+    One `rev-list` and one `cat-file --batch-check` for the whole allowlist instead of two Git processes per
+    row, which made each `check_docs` spawn over two thousand of them as the branch history grew.
+    """
+    rows = sorted(allowlist.rows)
+    if not rows:
+        return set()
+    ancestors = set((_git_stdout(repository, ["rev-list", base]) or "").split())
+    if not ancestors:
+        raise RuntimeError("review provenance revision cannot be checked")
+    if any("\n" in revision or "\r" in revision for _kind, _key, revision in rows):
+        raise RuntimeError("history allowlist row revision is malformed")
+    query = "".join(f"{revision}^{{commit}}\n" for _kind, _key, revision in rows).encode()
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repository), "cat-file", "--batch-check=%(objectname) %(objecttype)"],
+            input=query, env=clean_environment(), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            check=False, timeout=MAX_GIT_COMMAND_SECONDS)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise RuntimeError("review provenance revision cannot be checked") from error
+    answers = result.stdout.decode("utf-8", "replace").splitlines()
+    if result.returncode != 0 or len(answers) != len(rows):
+        raise RuntimeError("review provenance revision cannot be checked")
+    reachable: set[tuple[str, str, str]] = set()
+    for row, answer in zip(rows, answers):
+        parts = answer.split()
+        if len(parts) == 2 and parts[1] == "commit" and RIGHTS_REVISION.fullmatch(parts[0]) and parts[0] in ancestors:
+            reachable.add(row)
+    return reachable
 
 
 def anchored_history_allowlist(allowlist: HistoryAllowlist, repository: Path, head: str) -> HistoryAllowlist:
@@ -1535,12 +1563,9 @@ def anchored_history_allowlist(allowlist: HistoryAllowlist, repository: Path, he
             or _git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{base}^{{commit}}"]) != 0
             or _git_exit(repository, ["merge-base", "--is-ancestor", base, head]) != 0):
         return HistoryAllowlist(rows={}, base_revision=base)
-    kept: dict[tuple[str, str, str], str] = {}
-    for triple, pin in allowlist.rows.items():
-        single = HistoryAllowlist(rows={triple: pin}, base_revision=base)
-        if not history_allowlist_anchor_errors(single, repository, head):
-            kept[triple] = pin
-    return HistoryAllowlist(rows=kept, base_revision=base)
+    reachable = _rows_reachable_from(allowlist, repository, base)
+    return HistoryAllowlist(rows={triple: pin for triple, pin in allowlist.rows.items() if triple not in reachable},
+                            base_revision=base)
 
 
 def _relation_of_commit(repository: Path, commit: str, head: str) -> str:

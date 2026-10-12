@@ -3294,6 +3294,24 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         self.assertEqual(playable.history_allowlist_anchor_errors(
             playable.load_history_allowlist(fx.repo), fx.repo, "HEAD"), [])
 
+    def test_batched_reachability_equals_per_row_merge_base(self) -> None:
+        """The one-pass reachability check agrees with `merge-base --is-ancestor` per row, including bad revisions."""
+        fx = self.on_feature()
+        rows = {triple: "pin" for triple in self.all_rows(fx)}
+        for odd in ("e" * 40, fx.F1[:7], "not-a-revision"):
+            rows[("reviewed_revision", "odd-" + odd, odd)] = "pin"
+        for base in (fx.B, fx.F2):
+            allowlist = playable.HistoryAllowlist(rows=rows, base_revision=base)
+            expected = set()
+            for triple in rows:
+                full = subprocess.run(["git", "-C", str(fx.repo), "rev-parse", "--verify", "--quiet",
+                                       triple[2] + "^{commit}"], capture_output=True, text=True).stdout.strip()
+                if full and subprocess.run(["git", "-C", str(fx.repo), "merge-base", "--is-ancestor", full, base],
+                                           capture_output=True).returncode == 0:
+                    expected.add(triple)
+            with self.subTest(base=base[:12]):
+                self.assertEqual(playable._rows_reachable_from(allowlist, fx.repo, base), expected)
+
     def test_g6wr_03_symlinked_rights_file_is_not_hashed(self) -> None:
         fx = self.fixture()
         outside = fx.repo.parent / "outside.txt"
