@@ -87,7 +87,7 @@ gaps:
       - "A current bounded selected run that reaches that predicate before its documented limit."
   - truth: "The current shared checkout contains and can verify the exact-SHA hosted MVS receipt route for its own public-safe source revision."
     status: partial
-    reason: "The exact hosted receipt is recorded for candidate e80672845fc60d94d8a44eab416377534c9a99f1, not shared HEAD 46dbab8aa7595f44fcb39fad6f8fbd20b8d5f13a. The receipt checker and its test are absent from this checkout; the current shared-branch history scan also fails its public-content gate. Do not reuse the candidate receipt as proof for shared HEAD."
+    reason: "The exact hosted receipt is recorded for candidate e80672845fc60d94d8a44eab416377534c9a99f1, not shared HEAD 35af41d518257a77122fd8c997aa51560192a923. The receipt checker and its test are absent from this checkout; the current shared-branch history scan also fails its public-content gate. Do not reuse the candidate receipt as proof for shared HEAD."
     artifacts:
       - path: "tools/verify_hosted_mvs.py"
         issue: "Absent from the shared checkout; present only in PR #2 candidate evidence."
@@ -118,7 +118,7 @@ advisory: []
 | 2 | The selected unmodified game and BIOS archives load through the documented pinned RetroArch/import path. | UNCERTAIN (partial) | The selected ZIP importer, normalized GNMV path, adapter loader, and actual-app runner exist. This pass exercised synthetic inputs only; actual selected-media RetroArch behavior remains unknown/manual-only and its prerequisite is unmet. |
 | 3 | Missing, incompatible, unsupported, malformed, and limit failures are distinct and rejected loads recover safely. | UNCERTAIN (partial) | Seven current MVS CTests and the matrix cover synthetic parsing, error, limit, and recovery behavior. Selected-pair compatibility and the complete user-visible selected-media flow remain unqualified. |
 | 4 | The selected guest reaches the attract/start path through owned CPU and required MVS behavior, backed by source-qualified regressions and without fabricated behavior. | FAILED — BLOCKER | The latest accepted bounded selected run ended with guest_instruction_budget_exhausted and no checkpoint. The qualifier code exposes no accepted predicate. No synthetic sentinel or device-state counter is substituted for the selected-title result. |
-| 5 | The exact public-safe hosted source revision has an eligible seven-test MVS receipt, with matching source/output identity and aggregate. | UNCERTAIN for shared HEAD; candidate-only pass | PR #2 candidate SHA e80672845fc60d94d8a44eab416377534c9a99f1 has a recorded passing hosted run 38001400110 with seven named MVS tests, a positive denominator, matching digests, and a passing aggregate. The candidate public-content/history scan recorded zero findings and 42 rights rows. PR #2 remains open and REVIEW_REQUIRED/BLOCKED. Shared HEAD is 46dbab8aa7595f44fcb39fad6f8fbd20b8d5f13a, not that candidate; its public-content/history scan fails and its tree lacks the receipt checker. The shared-checkout run is not qualified by the candidate receipt. |
+| 5 | The exact public-safe hosted source revision has an eligible seven-test MVS receipt, with matching source/output identity and aggregate. | UNCERTAIN for shared HEAD; candidate-only pass | PR #2 candidate SHA e80672845fc60d94d8a44eab416377534c9a99f1 has a recorded passing hosted run 38001400110 with seven named MVS tests, a positive denominator, matching digests, and a passing aggregate. The candidate public-content/history scan recorded zero findings and 42 rights rows. PR #2 remains open and REVIEW_REQUIRED/BLOCKED. Shared HEAD is 35af41d518257a77122fd8c997aa51560192a923, not that candidate; its public-content/history scan fails and its tree lacks the receipt checker. The shared-checkout run is not qualified by the candidate receipt. |
 
 **Score:** 1/5 must-haves verified.
 
@@ -157,9 +157,9 @@ advisory: []
 
 | Behavior | Command | Result | Status |
 |---|---|---|---|
-| Public MVS importer, contract, recovery, synthetic guest and callback regressions | ctest --preset sdk-debug -R '^mvs_' --output-on-failure --no-tests=error | 7/7 passed on shared HEAD 46dbab8aa7595f44fcb39fad6f8fbd20b8d5f13a | PASS; synthetic scope |
+| Public MVS importer, contract, recovery, synthetic guest and callback regressions | ctest --preset sdk-debug -R '^mvs_' --output-on-failure --no-tests=error | 7/7 passed on shared HEAD 35af41d518257a77122fd8c997aa51560192a923 | PASS; synthetic scope |
 | Matrix receipt construction and negative controls | python3 tests/sdk/test_matrix_evidence.py | Passed on shared HEAD | PASS |
-| Current local SDK matrix | python3 tools/verify_sdk.py --suite matrix | 1,440 assertions; 43 cases; 10 lane executions; MVS lane 7/7; source revision 46dbab8aa7595f44fcb39fad6f8fbd20b8d5f13a | PASS; local evidence only |
+| Current local SDK matrix | python3 tools/verify_sdk.py --suite matrix | 1,440 assertions; 43 cases; 10 lane executions; MVS lane 7/7; source revision 35af41d518257a77122fd8c997aa51560192a923 | PASS; local evidence only |
 | GUI-free selected-bundle validation and diagnostics | python3 tests/libretro/test_retroarch_smoke.py -v | 31/31 passed; no app launched | PASS; structural scope only |
 | Selected guest attract/start | Latest accepted bounded local qualification recorded in 05-VALIDATION.md | guest_instruction_budget_exhausted at the documented 256-chunk cap; no accepted checkpoint | FAILED for GAME-02; this pass did not inspect private media or repeat the unchanged run |
 | Shared-checkout public-content/history safety | python3 tools/public_content.py --root . --history-revision HEAD | Exit 1; findings include personal-path history; finding paths are intentionally omitted | FAIL; shared checkout must not be published |

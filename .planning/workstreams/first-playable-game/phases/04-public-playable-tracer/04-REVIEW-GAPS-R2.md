@@ -2,7 +2,7 @@
 phase: 04-public-playable-tracer
 reviewed: 2026-10-10T00:00:00Z
 depth: standard
-diff_base: 2f08a40
+diff_base: eeeffaf
 files_reviewed: 18
 files_reviewed_list:
   - CMakeLists.txt
@@ -34,7 +34,7 @@ status: issues_found
 # Phase 04: Gap-Closure Re-Review R2 (04-32..04-36)
 
 **Reviewed:** 2026-10-10
-**Depth:** standard (changes since 2f08a40, with surrounding code)
+**Depth:** standard (changes since eeeffaf, with surrounding code)
 **Files Reviewed:** 18
 **Status:** issues_found
 
@@ -109,7 +109,7 @@ Also route lines 1507 and 1511 through `_public_reason` instead of bare `redact`
 ### G2WR-03: Transcription gate pins the review by string prefix with an unvalidated revision
 
 **File:** `tools/independent_review.py:420`
-**Issue:** `lines[0].startswith(f"Reviewed revision: {args.revision}")` accepts any line that merely begins with the argument. A short or abbreviated `--revision` (for example `bd74482`) matches a review pinned to a different commit that shares the prefix, and an empty `--revision ""` matches any `Reviewed revision: ` line. `--revision` is never checked as hex, never resolved, and never compared with the scratch tree's identity, so "pinned to the revision" is a weaker claim than the failure message states.
+**Issue:** `lines[0].startswith(f"Reviewed revision: {args.revision}")` accepts any line that merely begins with the argument. A short or abbreviated `--revision` (for example `323fa14`) matches a review pinned to a different commit that shares the prefix, and an empty `--revision ""` matches any `Reviewed revision: ` line. `--revision` is never checked as hex, never resolved, and never compared with the scratch tree's identity, so "pinned to the revision" is a weaker claim than the failure message states.
 **Fix:** Require `^[0-9a-f]{40}$` for `--revision` (usage error otherwise) and compare the whole token: `lines[0].split()[2:3] == [args.revision]` after `Reviewed revision:`.
 
 ### G2WR-04: Milestone-wide register gate skips decimal phases that `--phase` accepts

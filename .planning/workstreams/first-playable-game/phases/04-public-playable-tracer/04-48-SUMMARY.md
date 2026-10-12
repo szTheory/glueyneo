@@ -15,8 +15,8 @@ actuals:
   tokens: 9000
   tasks: 3
   commits: 5
-plan_head_before: 48e0c52410ef1f1a03d05ffef2cfd3ce5401d7a9
-plan_head_after: f14f29e4d57aff1b72fe9e2428d23d87be8b72cb
+plan_head_before: 9699f1a262c1a01ef2a0f007a8f9d4fcdf36afcf
+plan_head_after: aae8a200be677d8ebfbc06ceab480bc832366ac2
 tech-stack:
   added: []
   patterns: ["split launch and pid-record failure handling inside one launch_window"]
@@ -57,9 +57,9 @@ coverage:
 
 | ID | RED (test) | GREEN/docs |
 |----|-----------|-----------|
-| G3WR-03 | `2ecb47c` | `96a413c` |
-| G3IN-02 | `35b5487` | `4ca3218` |
-| Docs | - | `f14f29e` |
+| G3WR-03 | `0ff9072` | `fa55fc2` |
+| G3IN-02 | `eb3beee` | `3093ff8` |
+| Docs | - | `aae8a20` |
 
 Red runs: `FAILED (failures=3)` (g3wr_03) and `FAILED (failures=2)` (g3in_02), no `errors=` count (build/playable-qualification/04-48-red-*.txt, ignored).
 

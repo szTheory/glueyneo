@@ -5,7 +5,7 @@ subsystem: planning
 tags: [routing, roadmap, state, audit-route]
 requires:
   - phase: 04-public-playable-tracer
-    provides: 04-53 fresh frontend receipt at 5a40e93147bf; 04-49 and 04-52 red/green evidence
+    provides: 04-53 fresh frontend receipt at 09e43f0c4ea0; 04-49 and 04-52 red/green evidence
 provides:
   - Computed `audit` route recorded in ROADMAP.md and STATE.md
 affects: [05]
@@ -13,8 +13,8 @@ actuals:
   tokens: 6000
   tasks: 2
   commits: 1
-plan_head_before: 3d6567f
-plan_head_after: bfcb412
+plan_head_before: 23cec9d
+plan_head_after: de55fe4
 tech-stack:
   added: []
   patterns: [mechanical route derivation from evidence before editing planning state]
@@ -40,12 +40,12 @@ status: complete
 Task 1 (read-only, no tracked file edited) wrote `build/playable-qualification/04-54-route.txt` with line 1 `audit` and the three probe outcomes:
 
 - docs probe: `round-4 contracts ok`
-- freshness probe: `receipt fresh 5a40e93147bf`
+- freshness probe: `receipt fresh 09e43f0c4ea0`
 - requirement probe: `requirement evidence ok`
 
 `04-53-branch.txt` is absent, and the route-consistency check printed `route derived audit`. Context-only facts: `threats_open` is 15, and `check_security_register.py first-playable-game --require-closed --phase 04` exits 1 (expected before the audit).
 
-Task 2 (commit bfcb412) updated ROADMAP.md with scoped edits and STATE.md:
+Task 2 (commit de55fe4) updated ROADMAP.md with scoped edits and STATE.md:
 
 - ROADMAP: Status line, Phase 5 `Depends on` and `Execution Order` carry round-4 facts and cite the 04-53 receipt revision. 04-54 is ticked and 04-51 stays superseded and unticked. The Plans line and progress row read `53/53`, and the status is In Progress.
 - STATE: one `Phase 04:` clause in `Next GSD work`, one `04-43..04-54 outcome` Blockers line, and four Decisions entries. The Phase 05 `--gaps-only` route is kept and frontmatter is untouched.
@@ -54,15 +54,15 @@ Task 2 (commit bfcb412) updated ROADMAP.md with scoped edits and STATE.md:
 ## Round-4 facts recorded
 
 - Fixes for T-04-11, T-04-48, T-04-62 and G3WR-01..05/G3IN-01..03 were delivered test-first.
-- The 04-50 halt (`snapshot-inventory-mismatch`) was debugged (59c53b3, 8face2a, 2bbaff3).
+- The 04-50 halt (`snapshot-inventory-mismatch`) was debugged (2f5e771, 157b49d, 9ca1fbe).
 - 04-52 added the snapshot directory-set guard.
 - All rows stay open pending the headless audit.
-- Pinned RetroArch 1.22.2 was re-qualified at 5a40e93147bf (04-53).
+- Pinned RetroArch 1.22.2 was re-qualified at 09e43f0c4ea0 (04-53).
 - 04-53 deviation: its first launch-script attempt failed at the zsh level (exit 127, no such file) before `verify_playable.py` or RetroArch started. Those files are preserved under `build/playable-qualification/04-53-aborted-shell-typo/`, and the single real `--clean` invocation is the one in `04-53-invocations.txt`.
 
 ## Deviations from Plan
 
-None - plan executed exactly as written. Task 1 changed no tracked file, so it has no commit of its own (the plan specifies none). The orchestrator rebased 04-52's `depends_on` from 04-50 to 04-49 in 2f01cc3 before this plan ran.
+None - plan executed exactly as written. Task 1 changed no tracked file, so it has no commit of its own (the plan specifies none). The orchestrator rebased 04-52's `depends_on` from 04-50 to 04-49 in 7cea719 before this plan ran.
 
 ## Known Stubs
 
@@ -78,4 +78,4 @@ Phase 04 is not complete; it stays In Progress and nothing is closed. Next, the 
 
 ## Self-Check: PASSED
 
-bfcb412 is an ancestor of HEAD, and ROADMAP.md, STATE.md and 04-54-route.txt exist.
+de55fe4 is an ancestor of HEAD, and ROADMAP.md, STATE.md and 04-54-route.txt exist.

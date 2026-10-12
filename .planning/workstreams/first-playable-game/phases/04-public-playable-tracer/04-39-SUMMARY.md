@@ -12,8 +12,8 @@ provides:
 affects: [04-40, 04-41]
 status: complete
 commits: 4
-plan_head_before: 05624124d7e117d9dcb7a2e19168618f9557b7da
-plan_head_after: 51ce2ebfed6458e7653eb9018e0adb9da186a6a5
+plan_head_before: 0002cd6e73aa05ecd2dce3419ae5ca288d8cd585
+plan_head_after: 013cd58cacaa9767948ddd6f269a901e5ce127d0
 actuals:
   tokens: 6000
   tasks: 2
@@ -38,8 +38,8 @@ completed: 2026-10-10
 **`write_frontend_records` now rolls back first-time and partially-restorable writes (`evidence rollback incomplete: <base names>`), and a timed-out lane is drained via select/os.read during grace so its tail is kept without reaping before SIGKILL.**
 
 ## Task Commits (red/green pairs)
-1. Task 1 (G2WR-05): RED `1da60a5` (test) -> GREEN `3742976` (fix)
-2. Task 2 (G2IN-02): RED `938daf9` (test) -> GREEN `51ce2eb` (fix)
+1. Task 1 (G2WR-05): RED `3d643d2` (test) -> GREEN `15df7bc` (fix)
+2. Task 2 (G2IN-02): RED `bdb99fb` (test) -> GREEN `013cd58` (fix)
 
 ## RED evidence
 - Task 1: `-k g2wr_05` gave 1 failure + 3 errors across the 3 target tests (FileNotFoundError from `originals` read on an absent evidence file; raw OSError escaping the failed restore instead of RuntimeError). Semantic assessment: each failed on the planned behavior.

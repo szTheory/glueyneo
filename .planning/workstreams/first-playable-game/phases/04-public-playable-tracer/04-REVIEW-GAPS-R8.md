@@ -2,8 +2,8 @@
 phase: 04-public-playable-tracer
 reviewed: 2026-10-11T00:00:00Z
 depth: standard
-diff_base: c6510e6ee0da8617b7bcf3b6bb218c194a001cf6
-reviewed_head: c1018d9cc9b8076a2ca0a84252c866ec3e8a8616
+diff_base: bb0f4eb8452488e28f1c2f1ed469e21e83c359bf
+reviewed_head: d638d3ef086e957af7d40b2e64767af7e5c492d4
 files_reviewed: 7
 files_reviewed_list:
   - .github/workflows/ci.yml
@@ -30,7 +30,7 @@ status: issues_found
 
 ## Summary
 
-This round reviews `git diff c6510e6..c1018d9` over the seven listed files: the round-7 fix commits 57b6b0d..47ef5d0 and the records commit c1018d9. All six round-7 findings are closed. I found no new blocker or warning. One info item: the documented reason for the G7WR-02 deviation is wrong, although the deviation itself is sound.
+This round reviews `git diff bb0f4eb..d638d3e` over the seven listed files: the round-7 fix commits 6103b9e..91f51ac and the records commit d638d3e. All six round-7 findings are closed. I found no new blocker or warning. One info item: the documented reason for the G7WR-02 deviation is wrong, although the deviation itself is sound.
 
 What I ran (no tracked file was changed, RetroArch was not run):
 
@@ -40,7 +40,7 @@ What I ran (no tracked file was changed, RetroArch was not run):
 | `python3 tools/verify_playable.py --check-docs` | passes |
 | `--history-allowlist check --base origin/main` | current (145 rows) |
 | `--history-allowlist ci --base origin/main` | applies ("differs from origin/main"), then current (145 rows), exit 0 |
-| Rights digests: all 46 rows in `docs/rights-inventory.md` against `git show HEAD:<path>` | 46 of 46 match. The `tests/tools/test_verify_playable.py` row (`2d5fdf58...`, source 484a136) is also the last commit that touched the file. |
+| Rights digests: all 46 rows in `docs/rights-inventory.md` against `git show HEAD:<path>` | 46 of 46 match. The `tests/tools/test_verify_playable.py` row (`2d5fdf58...`, source e71e283) is also the last commit that touched the file. |
 | Squash simulation (HEAD tree committed onto 4b2120d in a scratch clone) | `--check-docs` passes. `ci --base <squash commit>` on a later commit prints "does not apply" and exits 0. `ci --base 4b2120d` on the squash commit itself applies and refuses, as designed. |
 | Post-squash rights refresh (edit a listed file) | Without an inventory refresh: fails with "file at the checked head does not hold the recorded SHA-256". With a refreshed row citing the new main commit: `--check-docs` passes. |
 

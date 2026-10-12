@@ -13,8 +13,8 @@ provides:
 affects: [04-VERIFICATION gap 4, QUAL-03, T-04-48, T-04-51]
 status: complete
 commits: 5
-plan_head_before: be8e0d8e05da0a74a1d92306c0c5b977bc87f36b
-plan_head_after: 6fad089f1b7d0bf5b68b121568dd7904e7419ae7
+plan_head_before: 522586ed11c068a5688d6ab3c2d07fdca82e47cb
+plan_head_after: 16fad568150a43147b328cca12cbf42ce01d4604
 actuals:
   tokens: 9000
   tasks: 2
@@ -43,13 +43,13 @@ Strict security register gate: frontmatter-only exact-one `threats_open`, rows c
 
 | Task | Commit | Notes |
 | ---- | ------ | ----- |
-| 1 RED | fdf46ba | `test(04-25): add failing multi-table register mutations` |
-| 1 GREEN | 0dfa733 | `fix(04-25): count rows from every security register table (CR-06)` |
-| 2 RED | 4bc8c4b | `test(04-25): add failing frontmatter, cell and closure-mode mutations` |
-| 2 GREEN | 6e0d3ca | `fix(04-25): strict frontmatter, cells and closure mode for the register gate (CR-06)` (includes docs/testing.md section) |
-| 2 rights | 6fad089 | `docs(04-25): refresh rights inventory for changed test sources` |
+| 1 RED | 8d13ba1 | `test(04-25): add failing multi-table register mutations` |
+| 1 GREEN | e6e497b | `fix(04-25): count rows from every security register table (CR-06)` |
+| 2 RED | a9df7cf | `test(04-25): add failing frontmatter, cell and closure-mode mutations` |
+| 2 GREEN | 2ce9538 | `fix(04-25): strict frontmatter, cells and closure mode for the register gate (CR-06)` (includes docs/testing.md section) |
+| 2 rights | 16fad56 | `docs(04-25): refresh rights inventory for changed test sources` |
 
-FIRST_TEST_SHA=fdf46ba, LAST_FIX_SHA=6e0d3ca. `git diff --name-only fdf46ba^..6e0d3ca` lists no `*-SECURITY.md` file.
+FIRST_TEST_SHA=8d13ba1, LAST_FIX_SHA=2ce9538. `git diff --name-only 8d13ba1^..2ce9538` lists no `*-SECURITY.md` file.
 
 ## Red runs (observed before the parser change)
 
@@ -82,4 +82,4 @@ None. T-04-51 (workstream glob) is mitigated by the name regex check before glob
 
 ## Self-Check: PASSED
 
-Modified files exist; commits fdf46ba, 0dfa733, 4bc8c4b, 6e0d3ca, 6fad089 are ancestors of HEAD.
+Modified files exist; commits 8d13ba1, e6e497b, a9df7cf, 2ce9538, 16fad56 are ancestors of HEAD.

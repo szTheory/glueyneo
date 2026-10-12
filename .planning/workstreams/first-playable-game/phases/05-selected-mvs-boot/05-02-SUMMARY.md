@@ -67,8 +67,8 @@ duration: 617min
 completed: 2026-10-09
 status: complete
 commits: 8
-plan_head_before: bb7276c855f1965faa62fad5c2711b3948be4230
-plan_head_after: 856a3e355d1996ba867f6cf45d0997e36863aae3
+plan_head_before: 85a5e47914a214876ef9dfb89c3b79a2f7131953
+plan_head_after: 916cb9f7251acc0ea5d9892aa2ff14bdcaaf6c95
 ---
 
 # Phase 05 Plan 02: Selected MVS Source Mapping and CI Summary
@@ -88,14 +88,14 @@ plan_head_after: 856a3e355d1996ba867f6cf45d0997e36863aae3
 - Added an explicit selected-source importer path for separate game and BIOS ZIPs. It validates pinned public source member names, sizes, CRCs, and SHA-1 identities before mapping the six normalized MVS roles and atomically publishing GNMV output. The canonical six-role import path remains available.
 - Added synthetic split archive coverage for region byte vectors, native guest sentinel execution, malformed/ambiguous inputs, wrong identities, resource bounds, and failed output publication. The test identity seam is compiled only for the test importer.
 - Added local-only pair selection and a sanitized ignored report. The current local run reported `no_supported_role_bundle_archive`; no selected media reached the native runner, and no local identity was emitted.
-- Added an exact named seven-test MVS matrix lane and expanded relevant-source hashing. Current lane evidence passed on revision `492f51f30ae43f33af431c978af91991b1240e0e` with relevant-source digest `105deb95d946a075ef1586553271579f3983b4e3533062a72a108fb1bf9c8b82`.
+- Added an exact named seven-test MVS matrix lane and expanded relevant-source hashing. Current lane evidence passed on revision `7e92926ea291b6663d60bc2a5f152bc89b281e88` with relevant-source digest `105deb95d946a075ef1586553271579f3983b4e3533062a72a108fb1bf9c8b82`.
 - Updated the phase validation map and independent review. The review found no remaining actionable issues after the local report temporary-file race was fixed.
 
 ## Task Commits
 
-1. **Task 1: split game and BIOS archive tracer** — `d6c47cc` (RED tests), `b40116c` (GREEN implementation).
-2. **Task 2: exact MVS matrix evidence lane** — `2b79e96` (RED tests), `d005716` (GREEN implementation), `3d8e6b9` (fix duplicate source identity), `492f51f` (sanitizer-compatible synthetic importer build).
-3. **Task 3: verification and independent review** — `b8c5ac9` (unique atomic local report file), `856a3e3` (validation and review docs).
+1. **Task 1: split game and BIOS archive tracer** — `9e667f4` (RED tests), `13e2d63` (GREEN implementation).
+2. **Task 2: exact MVS matrix evidence lane** — `f274572` (RED tests), `0888f46` (GREEN implementation), `5affd8b` (fix duplicate source identity), `7e92926` (sanitizer-compatible synthetic importer build).
+3. **Task 3: verification and independent review** — `4b32e79` (unique atomic local report file), `916cb9f` (validation and review docs).
 
 ## Verification
 
@@ -107,10 +107,10 @@ plan_head_after: 856a3e355d1996ba867f6cf45d0997e36863aae3
 
 ## TDD Gate Compliance
 
-- **Task 1 RED:** `mvs_import_contract` selected-source regression failed before implementation because the importer did not accept `--selected`; `gsd_run check tdd-red-evidence` returned `RED_EVIDENCE_OK` after report and assertion review. RED commit: `d6c47cc`.
-- **Task 1 GREEN:** production mapping and local wrapper implemented; focused importer/native guest tests and the full Debug suite passed. GREEN commit: `b40116c`.
-- **Task 2 RED:** the named MVS matrix inventory test failed before implementation because `CTEST_CASES` omitted `mvs`; `gsd_run check tdd-red-evidence` returned `RED_EVIDENCE_OK` after semantic review. RED commit: `2b79e96`.
-- **Task 2 GREEN:** MVS collection, validation, and source identity were implemented; the focused evidence tests and full local matrix passed. GREEN commit: `d005716`.
+- **Task 1 RED:** `mvs_import_contract` selected-source regression failed before implementation because the importer did not accept `--selected`; `gsd_run check tdd-red-evidence` returned `RED_EVIDENCE_OK` after report and assertion review. RED commit: `9e667f4`.
+- **Task 1 GREEN:** production mapping and local wrapper implemented; focused importer/native guest tests and the full Debug suite passed. GREEN commit: `13e2d63`.
+- **Task 2 RED:** the named MVS matrix inventory test failed before implementation because `CTEST_CASES` omitted `mvs`; `gsd_run check tdd-red-evidence` returned `RED_EVIDENCE_OK` after semantic review. RED commit: `f274572`.
+- **Task 2 GREEN:** MVS collection, validation, and source identity were implemented; the focused evidence tests and full local matrix passed. GREEN commit: `0888f46`.
 - **REFACTOR:** no separate refactor commit was needed.
 
 ## Deviations from Plan
@@ -122,14 +122,14 @@ plan_head_after: 856a3e355d1996ba867f6cf45d0997e36863aae3
 - **Issue:** A fixed `.json.tmp` path could collide across concurrent runs or follow a preexisting symlink.
 - **Fix:** Use a unique exclusive temporary file in the ignored report directory, atomically replace the destination, and remove the temporary file on failure.
 - **Files modified:** `tools/mvs/qualify_local_boot.py`
-- **Commit:** `b8c5ac9`
+- **Commit:** `4b32e79`
 
 **2. [Rule 1 - Bug] Removed duplicate public header from matrix source inventory**
 - **Found during:** Task 3 matrix verification
 - **Issue:** A duplicate path caused the verifier's unique-and-sorted identity validation to fail closed.
 - **Fix:** Keep the public header once in the canonical relevant-source inventory.
 - **Files modified:** `tools/sdk_evidence.py`
-- **Commit:** `3d8e6b9`
+- **Commit:** `5affd8b`
 
 ## Deferred Issues
 

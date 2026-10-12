@@ -2,7 +2,7 @@
 phase: 04-public-playable-tracer
 reviewed: 2026-10-10T00:00:00Z
 depth: standard
-diff_base: 7e6512c
+diff_base: b0a1487
 files_reviewed: 11
 files_reviewed_list:
   - docs/first-playable-build.md
@@ -27,13 +27,13 @@ status: issues_found
 # Phase 04: Gap-Closure Re-Review R3 (04-37..04-42)
 
 **Reviewed:** 2026-10-10
-**Depth:** standard (changes since 7e6512c, with surrounding code)
+**Depth:** standard (changes since b0a1487, with surrounding code)
 **Files Reviewed:** 11
 **Status:** issues_found
 
 ## Summary
 
-Round 3 closes the two R2 criticals correctly. Independent_review.py and verify_playable.py unit suites pass (66, 24 and 84 tests in the independent-review, security-register and verify-playable modules). Every SHA-256 in `docs/rights-inventory.md` matches the working tree, and each `source_revision` equals the last commit touching that file. No receipt-bound path changed after the 2c449bd re-qualification (only planning files and docs), so the "complete at `2c449bdfec18`" status line is consistent with the receipt-currency rule it documents.
+Round 3 closes the two R2 criticals correctly. Independent_review.py and verify_playable.py unit suites pass (66, 24 and 84 tests in the independent-review, security-register and verify-playable modules). Every SHA-256 in `docs/rights-inventory.md` matches the working tree, and each `source_revision` equals the last commit touching that file. No receipt-bound path changed after the 3d90990 re-qualification (only planning files and docs), so the "complete at `3d90990e5cd0`" status line is consistent with the receipt-currency rule it documents.
 
 No critical issues remain. Five warnings: one new regression the drain change introduced (confirmed by reproduction), one forward-compatibility gap that blocks the next round's own gate, the known probe-path mislabel, an incomplete rollback guarantee, and a provenance window whose claim is stronger than what it proves.
 
@@ -102,7 +102,7 @@ Add a test where `Path.unlink` raises for the `.restore` name and assert the oth
 ### G3WR-05: Provenance window is anchored to the original review, so it cannot order dispositions of later gap-round findings
 
 **File:** `tools/verify_playable.py:1262-1299`, `docs/testing.md` "Review provenance"
-**Issue:** `reviewed_revision` is read from 04-REVIEW.md (82a7579...). Every disposition for a finding raised by a later review (GWR/GIN, G2*, G3*) trivially passes the "descends from reviewed_revision" test with any commit made after that early revision. The docstring says the gate proves "a cited verdict postdates the review it answers", but for a gap-round finding the review it answers is the gap review, which the gate never reads. A closure for G2CR-01 that cites a commit from before R2 existed passes. Equality is also accepted, so a row can cite the review commit itself. The docs do state that freshness comes from the changed-path rule, which limits the damage, but the sentence "postdates the review it answers" is still an overclaim for these rows.
+**Issue:** `reviewed_revision` is read from 04-REVIEW.md (867f317...). Every disposition for a finding raised by a later review (GWR/GIN, G2*, G3*) trivially passes the "descends from reviewed_revision" test with any commit made after that early revision. The docstring says the gate proves "a cited verdict postdates the review it answers", but for a gap-round finding the review it answers is the gap review, which the gate never reads. A closure for G2CR-01 that cites a commit from before R2 existed passes. Equality is also accepted, so a row can cite the review commit itself. The docs do state that freshness comes from the changed-path rule, which limits the damage, but the sentence "postdates the review it answers" is still an overclaim for these rows.
 **Fix:** Either narrow the wording (state the window is relative to the original 04-REVIEW.md only), or have each gap review carry its own `reviewed_revision` and bind a finding to the review that raised it (for example per-round frontmatter, with the disposition row naming the round). At minimum require strict descent (`revision != reviewed`) for closure-bearing rows.
 
 ## Info

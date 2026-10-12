@@ -22,7 +22,7 @@ All verification ran in the main checkout (`workflow.use_worktrees: false`).
 
 ### G8IN-01: The recorded reason for not adding a post-squash stale gate is wrong
 
-**Commit:** bd48475
+**Commit:** 065cdee
 **Files:** `docs/testing.md`, `tools/verify_playable.py` (docstring only)
 **Fix:**
 - `docs/testing.md` ("History gates after a squash merge"): the false claim is gone. It said a legitimate post-squash rights refresh "voids a listed row" and that failing on it would leave "no way to proceed". The text now uses the review's wording: an unrefreshed edit to a listed rights file already fails the tolerated branch's digest check, a refreshed row cites a main commit and is evaluated strictly, and an orphaned allowlist row is inert. The allowlist cannot be edited after the squash because `ci` mode refuses on squashed history, so a gate that failed on orphaned rows could never be satisfied.
@@ -37,9 +37,9 @@ All verification ran in the main checkout (`workflow.use_worktrees: false`).
 | Check | Result |
 |---|---|
 | `python3 -c "import ast; ..."` on `tools/verify_playable.py` | parses |
-| `python3 tests/tools/test_verify_playable.py` (the CTest runner) | Ran 167 tests (about 148 s): FAILED (failures=8, errors=5). Every failure and error is `review findings have no disposition record: G8IN-01`, either raised directly or as the first `check_docs` error hiding the error a test expects. These tests run `check_docs` against the live records. The cause is the R8 review file committed at eec37f1, not this fix, which changes only prose and a docstring. They should pass once the orchestrator records the G8IN-01 disposition. Affected tests: ConsumerInputTest (4), EvidenceBindingTest (1), GuideClaimTest (1), ReviewProvenanceTest (2, including the t_04_38 subtests), CrosswalkProvenanceTest (2), RightsRevisionTest (1). |
+| `python3 tests/tools/test_verify_playable.py` (the CTest runner) | Ran 167 tests (about 148 s): FAILED (failures=8, errors=5). Every failure and error is `review findings have no disposition record: G8IN-01`, either raised directly or as the first `check_docs` error hiding the error a test expects. These tests run `check_docs` against the live records. The cause is the R8 review file committed at 1664be2, not this fix, which changes only prose and a docstring. They should pass once the orchestrator records the G8IN-01 disposition. Affected tests: ConsumerInputTest (4), EvidenceBindingTest (1), GuideClaimTest (1), ReviewProvenanceTest (2, including the t_04_38 subtests), CrosswalkProvenanceTest (2), RightsRevisionTest (1). |
 | `python3 tools/verify_playable.py --check-docs` | exit 1: `review findings have no disposition record: G8IN-01`. This is expected until the orchestrator records the disposition. There were no other errors. |
-| `python3 tools/verify_playable.py --history-allowlist check --base origin/main` | `History allowlist is current (145 rows).` exit 0, at committed HEAD bd48475 before any disposition edits |
+| `python3 tools/verify_playable.py --history-allowlist check --base origin/main` | `History allowlist is current (145 rows).` exit 0, at committed HEAD 065cdee before any disposition edits |
 
 Not touched: the two `.planning/preparation` files, `04-REVIEW-DISPOSITION.md`, `04-VALIDATION.md` and `docs/history-allowlist.json`. No push. RetroArch was not launched. This report is uncommitted.
 
@@ -51,4 +51,4 @@ _Iteration: 1_
 
 ## Orchestrator follow-up
 
-The G8IN-01 disposition and crosswalk rows were recorded after this fix, along with the six G7 rows moved to "Confirmed fixed by 04-REVIEW-GAPS-R8.md (eec37f1)". The G7WR-02 Source cell now gives the corrected reason. The allowlist was regenerated against these records with `--history-allowlist write --base origin/main` (146 rows, base 4b2120d57f48). The gate results after that commit are listed in the commit that adds this report.
+The G8IN-01 disposition and crosswalk rows were recorded after this fix, along with the six G7 rows moved to "Confirmed fixed by 04-REVIEW-GAPS-R8.md (1664be2)". The G7WR-02 Source cell now gives the corrected reason. The allowlist was regenerated against these records with `--history-allowlist write --base origin/main` (146 rows, base 4b2120d57f48). The gate results after that commit are listed in the commit that adds this report.

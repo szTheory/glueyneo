@@ -40,8 +40,8 @@ actuals:
   tasks: 3
   commits: 5
 commits: 5
-plan_head_before: 3f1ae321d96c61f3336e1772bd518f4ccb87f873
-plan_head_after: 64c10656822f56691fc2d78fe8856257a39709b5
+plan_head_before: 171384704ac6a7ba57f959ec15603e9449b915cd
+plan_head_after: 3de6caa5f2002fb6b51436c425f80f8c86842750
 requirements-completed: [TRAC-01, TRAC-02, TRAC-03, API-05]
 coverage:
   - id: D1
@@ -97,14 +97,14 @@ status: complete
 
 ## Task Commits
 
-1. **Task 1: Execute one original input-controlled guest frame end to end** — `da3f680` (`feat`)
-2. **Task 2: Complete bounded frame, video and silent-audio contracts** — `31c443c` (`feat`)
-3. **Task 3: Prove fixed trace and wrong-input control** — `1b01d61` (`test`)
+1. **Task 1: Execute one original input-controlled guest frame end to end** — `ca25ed4` (`feat`)
+2. **Task 2: Complete bounded frame, video and silent-audio contracts** — `02006da` (`feat`)
+3. **Task 3: Prove fixed trace and wrong-input control** — `eeaa604` (`test`)
 
 Additional corrective and regression commits:
 
-- `3729703` — distinguished the public profile from the diagnostic profile's unsupported-value probe and added `gn_advance_frame` to the shared export contract.
-- `64c1065` — proved fixture source bytes are owned after load and malformed envelope rejection preserves the current image.
+- `cd6b969` — distinguished the public profile from the diagnostic profile's unsupported-value probe and added `gn_advance_frame` to the shared export contract.
+- `3de6caa` — proved fixture source bytes are owned after load and malformed envelope rejection preserves the current image.
 
 ## Files Created/Modified
 
@@ -140,7 +140,7 @@ Additional corrective and regression commits:
 - **Fix:** Assigned the public fixture profile the tagged value `0x50554246` and preserved the existing status strings.
 - **Files modified:** `include/glueyneo/glueyneo.h`, `src/instance.c`
 - **Verification:** `sdk_media` and `sdk_mutation_media` passed.
-- **Committed in:** `3729703`
+- **Committed in:** `cd6b969`
 
 **2. [Rule 2 - Missing critical functionality] Registered the new public symbol in shared-consumer checks**
 - **Found during:** Full SDK regression after Task 3
@@ -148,7 +148,7 @@ Additional corrective and regression commits:
 - **Fix:** Added the frame function to the exact export contract and updated its Windows parser fixture.
 - **Files modified:** `tests/consumers/check_package.py`, `tests/consumers/test_exports.py`
 - **Verification:** Static/shared package build and consumer tests passed; all 12 export tests passed.
-- **Committed in:** `3729703`
+- **Committed in:** `cd6b969`
 
 **3. [Rule 2 - Missing critical functionality] Added explicit public-content ownership and rejection regressions**
 - **Found during:** Final acceptance review
@@ -156,7 +156,7 @@ Additional corrective and regression commits:
 - **Fix:** Overwrote source bytes after successful load and verified execution still worked; rejected a modified envelope version while retaining the live image.
 - **Files modified:** `tests/fixture/test_public_guest.c`
 - **Verification:** The full `public_guest_*` CTest selection passed.
-- **Committed in:** `64c1065`
+- **Committed in:** `3de6caa`
 
 **Total deviations:** 3 auto-fixed (one Rule 1 bug, two Rule 2 completeness fixes). They close direct profile, ABI, and threat-model evidence gaps.
 
@@ -175,7 +175,7 @@ Plan 04-01 is complete and supplies the public guest artifact and native consume
 ## Self-Check: PASSED
 
 - Summary and deferred-items files exist.
-- All five task commits are ancestors of the current plan head (`64c1065`).
+- All five task commits are ancestors of the current plan head (`3de6caa`).
 - The measured plan commit count is five, matching the recorded task/fix commits.
 
 ---

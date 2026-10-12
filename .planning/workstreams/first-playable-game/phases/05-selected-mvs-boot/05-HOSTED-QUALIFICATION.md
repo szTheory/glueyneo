@@ -27,7 +27,7 @@ this file. It describes an earlier candidate, not PR #2.
 - `python3 tools/verify_sdk.py --suite matrix --output build/sdk-debug/verify-sdk/phase05-public-candidate.json`
   failed before the MVS lane with `manifest source identity mismatch:
   tests/sdk/ORACLE.md`. The diagnostic fixture manifest still pins the earlier
-  oracle document bytes; the current document was changed in commit `563437e`
+  oracle document bytes; the current document was changed in commit `6dee725`
   during Plan 05-03. The source identity cannot be refreshed as a routine
   qualification fix because that oracle update changed timing claims and needs
   its own reviewed reconciliation with the fixture expectations. No golden was

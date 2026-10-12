@@ -58,8 +58,8 @@ duration: 7 min
 completed: 2026-10-08
 status: complete
 commits: 7
-plan_head_before: 8755ca0e2e3bb71d30949e45622a198da67ce1ff
-plan_head_after: e7aa2552318923a2c456a38411d612086238cddb
+plan_head_before: 4b4f1a5cb7e038ed020a65ad4a0698f2b76a8283
+plan_head_after: 3e2d93db5bb1f3eae0e67e508f2a0ad2e8f3a9a1
 ---
 
 # Phase 04 Plan 10: Qualification Boundary Repairs Summary
@@ -89,13 +89,13 @@ plan_head_after: e7aa2552318923a2c456a38411d612086238cddb
 
 ## Task Commits
 
-1. **Task 1 RED:** `93c7bef` — add path redaction regressions
-2. **Task 1 GREEN:** `eff633a` — sanitize retained diagnostics
-3. **Task 2 RED:** `6543a98` — reject unpinned frontend fixtures
-4. **Task 2 GREEN:** `3b77034` — pin direct smoke fixture digest
-5. **Task 3 RED:** `1332df0` — reject unsafe frontend quit targets
-6. **Task 3 GREEN:** `2fed3e8` — constrain frontend quit identity
-7. **Task 3 cleanup:** `e7aa255` — clarify mock executable fixtures
+1. **Task 1 RED:** `736fa58` — add path redaction regressions
+2. **Task 1 GREEN:** `8ac30fb` — sanitize retained diagnostics
+3. **Task 2 RED:** `e8cb07d` — reject unpinned frontend fixtures
+4. **Task 2 GREEN:** `aadcd17` — pin direct smoke fixture digest
+5. **Task 3 RED:** `cb64aaf` — reject unsafe frontend quit targets
+6. **Task 3 GREEN:** `e26cbfb` — constrain frontend quit identity
+7. **Task 3 cleanup:** `3e2d93d` — clarify mock executable fixtures
 
 ## Files Created/Modified
 

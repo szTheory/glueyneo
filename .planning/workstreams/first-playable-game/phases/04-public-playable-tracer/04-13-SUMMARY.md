@@ -15,8 +15,8 @@ actuals:
   tasks: 2
   commits: 6
 commits: 6
-plan_head_before: f4c3707c03b23324998f6667fbcfcba08fa50d5e
-plan_head_after: 73398f64e7895265a0abf7146d0b007d6fcc5c85
+plan_head_before: 0768ca087572722e5710f951fe0f5eb735409658
+plan_head_after: ed5fb1e65d170758172d7f5330755564da786767
 tech-stack:
   added: []
   patterns: [Validate escaped JSON string boundaries before preserving diagnostic suffixes, Derive evidence consistency from current records and retained dispositions]
@@ -68,25 +68,25 @@ status: complete
 - The validation-map mutation controls explicitly reject both inconsistent open and total counts.
 - `ctest --preset owned-debug --output-on-failure`: 47/47 passed.
 - `git diff --check`: passed.
-- Tested implementation revision before summary: `4e07de478532d07ed29c267e770d8a29607599ce`.
+- Tested implementation revision before summary: `37a7a78d6f702981ed3810bcf4f39ce3c54deb8f`.
 
 ## TDD Gate Compliance
 
 | Task | RED evidence | RED commit | GREEN implementation and commit |
 |------|--------------|------------|----------------------------------|
-| 1 | Tools and frontend target assertions failed because `tail.rom` and apostrophe path suffixes survived; both records returned `RED_EVIDENCE_OK`, with semantic inspection confirming the intended disclosure | `619c4de` | Escape-aware sanitizers; `1aab865` |
-| 2 | Reconciled fixture failed at the hardcoded current review ID assertion; classifier returned `RED_EVIDENCE_OK` and confirmed the named target ran | `dec0068` | Record-derived reconciliation checker and updated current evidence records; `4e07de4` |
+| 1 | Tools and frontend target assertions failed because `tail.rom` and apostrophe path suffixes survived; both records returned `RED_EVIDENCE_OK`, with semantic inspection confirming the intended disclosure | `c119534` | Escape-aware sanitizers; `fa6c23b` |
+| 2 | Reconciled fixture failed at the hardcoded current review ID assertion; classifier returned `RED_EVIDENCE_OK` and confirmed the named target ran | `6b216d3` | Record-derived reconciliation checker and updated current evidence records; `37a7a78` |
 
 No REFACTOR commit was needed. The final focused suites passed after the GREEN changes.
 
 ## Task Commits
 
-1. **Task 1 RED:** `619c4de` — `test(04-13): add quoted private path regression controls`
-2. **Task 1 GREEN:** `1aab865` — `fix(04-13): redact quoted path suffixes safely`
-3. **Task 2 RED:** `dec0068` — `test(04-13): add review reconciliation controls`
-4. **Task 2 GREEN:** `4e07de4` — `feat(04-13): reconcile phase review evidence`
-5. **Task 2 test control:** `73398f6` — `test(04-13): cover disposition total mismatch`
-6. **Earlier metadata commit in the measured plan range:** `c3d9936` — `docs(04-13): complete public playable tracer plan`
+1. **Task 1 RED:** `c119534` — `test(04-13): add quoted private path regression controls`
+2. **Task 1 GREEN:** `fa6c23b` — `fix(04-13): redact quoted path suffixes safely`
+3. **Task 2 RED:** `6b216d3` — `test(04-13): add review reconciliation controls`
+4. **Task 2 GREEN:** `37a7a78` — `feat(04-13): reconcile phase review evidence`
+5. **Task 2 test control:** `ed5fb1e` — `test(04-13): cover disposition total mismatch`
+6. **Earlier metadata commit in the measured plan range:** `490af33` — `docs(04-13): complete public playable tracer plan`
 
 ## Claim Boundary and Remaining Work
 

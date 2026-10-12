@@ -14,8 +14,8 @@ actuals:
   tokens: 5000
   tasks: 2
   commits: 3
-plan_head_before: bc62ef9e33c35868d8b7cf848d0b4df7c368bd5e
-plan_head_after: 7f5e222862e744e8eaf97207a72e6b6b8dabf1c8
+plan_head_before: 9c5c225ea2b905c4e63952bb8f880b47a893e5ab
+plan_head_after: d7486e7a4647f4bcfcaa16f9150c861d8d87e044
 tech-stack:
   added: []
   patterns: ["every restore and cleanup attempted; failures aggregated by base name", "earlier output once, drained chunks, then communicate tail"]
@@ -72,9 +72,9 @@ status: complete
 
 ## Task Commits
 
-1. **Task 1 RED: reproduce G3WR-04 and G3WR-01** - `5a4e721` (test)
-2. **Task 1 GREEN: fix both** - `eebcdde` (fix)
-3. **Task 2: docs** - `7f5e222` (docs)
+1. **Task 1 RED: reproduce G3WR-04 and G3WR-01** - `aeae3a7` (test)
+2. **Task 1 GREEN: fix both** - `930be6b` (fix)
+3. **Task 2: docs** - `d7486e7` (docs)
 
 Red failure class line: `FAILED (failures=3)` (no `errors=`); red run at build/playable-qualification/04-45-red-g3wr.txt names `test_g3wr_04_restore_unlink_failure_does_not_abort_rollback`, `test_g3wr_04_temporary_unlink_failure_does_not_mask_the_result` and `test_g3wr_01_timed_out_lane_output_is_single_copy_in_order` as `FAIL:`. `test_g3wr_01_no_earlier_output` is a guard that already passes at base.
 

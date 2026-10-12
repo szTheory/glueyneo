@@ -25,7 +25,7 @@ and pass after it.
 
 ### G6WR-02: Duplicate allowlist rows
 
-**Commit:** 4fddcaa
+**Commit:** 49dcb76
 **Files:** `tools/verify_playable.py`, `tests/tools/test_verify_playable.py`
 **Fix:** `load_history_allowlist` raises "history allowlist is malformed" when a
 (kind, key, revision) triple repeats, instead of letting the last row win.
@@ -33,7 +33,7 @@ and pass after it.
 
 ### G6WR-01: History allowlist is self-attested (fixed in part)
 
-**Commits:** 362d6d2 (verification and tests), 0a7ad97 (CTest wiring and docs)
+**Commits:** 6a7f287 (verification and tests), e2845e6 (CTest wiring and docs)
 **Files:** `tools/verify_playable.py`, `tests/tools/test_verify_playable.py`, `CMakeLists.txt`, `docs/testing.md`
 **Fix:**
 - New `history_allowlist_anchor_errors` validates the allowlist against git.
@@ -63,7 +63,7 @@ non-ancestor base) and `test_g6wr_01_row_reachable_from_base_is_rejected`.
 
 ### G6WR-03: Rights tolerated branch reads through symlinks
 
-**Commit:** d155f24
+**Commit:** 6ed5293
 **Files:** `tools/verify_playable.py`, `tests/tools/test_verify_playable.py`
 **Fix:**
 - `_rights_path_is_relative_posix` also rejects empty and `.` segments and
@@ -85,7 +85,7 @@ non-ancestor base) and `test_g6wr_01_row_reachable_from_base_is_rejected`.
 - `python3 tools/verify_playable.py --check-docs`: only the expected failure,
   "review findings have no disposition record: G6IN-01, G6IN-02, G6IN-03, G6WR-01, G6WR-02, G6WR-03".
 - Full `python3 tests/tools/test_verify_playable.py`: 161 tests in about 96 s, 8
-  failures and 5 errors. The same 13 fail on baseline 1f1d953 in a scratch worktree
+  failures and 5 errors. The same 13 fail on baseline d46e6e1 in a scratch worktree
   (identical failure list). They come from the missing G6 disposition record that
   `check_docs` reports. They are not caused by these fixes.
 

@@ -2,8 +2,8 @@
 phase: 04-public-playable-tracer
 reviewed: 2026-10-11T00:00:00Z
 depth: standard
-diff_base: 8c20410b0f1c4d0612e7fa5c64d75115d47c2224
-reviewed_head: bdfdc1d6105517c5fad9be08c9657452c55b5050
+diff_base: 97fbbdaa75120c27845b24679c3948e6206ec42f
+reviewed_head: 983533dacf8488c36dbf14a6f212d03f7eaef031
 files_reviewed: 10
 files_reviewed_list:
   - docs/first-playable-build.md
@@ -33,7 +33,7 @@ status: issues_found
 
 ## Summary
 
-Incremental review of `8c20410..bdfdc1d` for the ten listed files. The diff adds the history allowlist and its gates, the rights `source_revision` gate, the lane-output drain and decode, the evidence-write rollback, the frontmatter and table parser in the security register checker, and the PID-record handling in the RetroArch smoke harness.
+Incremental review of `97fbbda..983533d` for the ten listed files. The diff adds the history allowlist and its gates, the rights `source_revision` gate, the lane-output drain and decode, the evidence-write rollback, the frontmatter and table parser in the security register checker, and the PID-record handling in the RetroArch smoke harness.
 
 RetroArch was not run. These checks passed on the current tree:
 
@@ -45,7 +45,7 @@ RetroArch was not run. These checks passed on the current tree:
 
 I did not re-run the 1684-line `test_verify_playable.py` suite to completion. I found no blockers. The remaining defects are in the trust model of the new allowlist and in small robustness gaps.
 
-**Scope.** This is a diff-scoped round: `git diff 8c20410..bdfdc1d` over the ten listed files, plus the code those changes call. Finding IDs use the `G6` prefix and the round file is `04-REVIEW-GAPS-R6.md`; `04-REVIEW.md` and `04-REVIEW-DISPOSITION.md` are not changed by this round.
+**Scope.** This is a diff-scoped round: `git diff 97fbbda..983533d` over the ten listed files, plus the code those changes call. Finding IDs use the `G6` prefix and the round file is `04-REVIEW-GAPS-R6.md`; `04-REVIEW.md` and `04-REVIEW-DISPOSITION.md` are not changed by this round.
 
 **Earlier findings.** `tools/private_paths.py`, `tests/consumers/check_package.py`, `CMakeLists.txt`, the manifest and `tests/tools/test_private_paths.py` are not in this scope, so I make no claim about CR-01 to CR-09 from the previous report as they apply there. Within these files:
 

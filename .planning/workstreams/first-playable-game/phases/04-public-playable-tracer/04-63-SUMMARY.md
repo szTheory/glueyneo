@@ -22,8 +22,8 @@ key-decisions:
 requirements-completed: [QUAL-03]
 status: complete
 commits: 7
-plan_head_before: 4bb76b3241977859920ac2f5acf70f7c0b935cd3
-plan_head_after: c0bfda9333f01a909ea2a04bdbcf4555526e3c53
+plan_head_before: 7daa2d867dcbf4374bd293a81d5f16340c983d72
+plan_head_after: 7e2470631ae91d933326cb8fe1f2ade2549f9f3c
 actuals:
   tokens: 14000
   tasks: 3
@@ -37,16 +37,16 @@ The six tests that failed only in a squash-merged clone (04-60 halt `scope-split
 
 ## Revisions
 
-- START: `4bb76b3241977859920ac2f5acf70f7c0b935cd3`
-- RED `e8f5a981ad64` (test), FIX `02fe1c807354` (C1 helper), rights refresh `e82f80ab7aaf`, C2 `d5f3293`, C3 `027e417`, docs `8c622e2`, rights refresh `c0bfda9`.
+- START: `7daa2d867dcbf4374bd293a81d5f16340c983d72`
+- RED `063a23c24f2e` (test), FIX `2481154c0b8e` (C1 helper), rights refresh `506b89c328cd`, C2 `019e25d`, C3 `0031bb0`, docs `1dcb6aa`, rights refresh `7e24706`.
 - No orchestrator-edits commit was needed (tree was clean at start); no stale `04-63-*` records existed.
 
 ## Evidence lines (`build/playable-qualification/04-63-evidence.txt`)
 
 ```
-G5WR-01-doc-copies red e8f5a981ad64 exit 1 green 02fe1c807354 ok
-G5WR-01-squash-suite red 4bb76b324197 failures 6 green c0bfda9333f0 ok tests 156
-C2-live-binding main ok squashed skipped: live receipt revision 4e6a40e66e9e absent from history (squashed checkout); binding is pinned on full history
+G5WR-01-doc-copies red 063a23c24f2e exit 1 green 2481154c0b8e ok
+G5WR-01-squash-suite red 7daa2d867dcb failures 6 green 7e2470631ae9 ok tests 156
+C2-live-binding main ok squashed skipped: live receipt revision cdfbc99bafe7 absent from history (squashed checkout); binding is pinned on full history
 ```
 
 ## Red squash run at START (run 1, GEN=1)
@@ -68,7 +68,7 @@ Ran 154 tests, `FAILED (failures=1, errors=5)`; the set equals the six 04-60 fai
 |-----|----------|-----------|-------|--------|
 | 1 | START | exit 0 | exit 1 | 6 failures (above) |
 | 2 | after C1 FIX + refresh | exit 0 | exit 1 | 2 errors: C2 test and test_explicit_repository_binds_the_copied_evidence (C3) |
-| 3 | HEAD `c0bfda9` | exit 0 | exit 0 | Ran 156, `OK (skipped=1)` (the full-history sibling, history-absent reason) |
+| 3 | HEAD `7e24706` | exit 0 | exit 0 | Ran 156, `OK (skipped=1)` (the full-history sibling, history-absent reason) |
 
 Run 3 checks: SIM-CHECK `squash check-docs ok 132 tolerated of 132 rows`; the five C1 tests each `Ran 1 test` / `OK` by name in the squashed clone; SUITE-CHECK `squash suite ok 0 causally verified environmental: []`; LOCAL-SQUASH `local squash matches fresh clone`. No environmental entries or provisioning.
 
@@ -84,7 +84,7 @@ Run 3 checks: SIM-CHECK `squash check-docs ok 132 tolerated of 132 rows`; the fi
 **1. [Rule 1 - Bug] Third history dependency (C3) in test_explicit_repository_binds_the_copied_evidence**
 - **Found during:** Task 2 (green run 2)
 - **Issue:** After the C1 fix this test still errored in the squashed clone because it resolves `rev-parse <live receipt revision>^`, and a later assertion needs the live revision in history. The plan attributed it to C1 only.
-- **Fix:** equivalent fixture refactor with identical asserted messages (see above), committed on its own (`027e417`), as the plan's rule for an extra failure allows. Only one repair batch was needed; run 3 was green.
+- **Fix:** equivalent fixture refactor with identical asserted messages (see above), committed on its own (`0031bb0`), as the plan's rule for an extra failure allows. Only one repair batch was needed; run 3 was green.
 - **Files modified:** tests/tools/test_verify_playable.py
 
 **Total deviations:** 1 auto-fixed (Rule 1). **Impact:** none on scope; no gate, allowlist or record touched.
@@ -101,7 +101,7 @@ None.
 
 ## TDD Gate Compliance
 
-RED `test(04-63)` precedes FIX `fix(04-63)`; RED-PROOF exit 1 at `e8f5a981ad64`, green at `02fe1c807354`.
+RED `test(04-63)` precedes FIX `fix(04-63)`; RED-PROOF exit 1 at `063a23c24f2e`, green at `2481154c0b8e`.
 
 ## Next step
 

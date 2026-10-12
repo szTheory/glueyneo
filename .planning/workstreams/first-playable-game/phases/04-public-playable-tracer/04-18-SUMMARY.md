@@ -49,8 +49,8 @@ metrics:
   tasks: 3
   files: 4
   commits: 3
-  plan_head_before: 48a25b5f74126e839eaa49dbf1de8e68685fd491
-  plan_head_after: d9a896d45f8a6954a1ce2bc324d8a8d2fefcae19
+  plan_head_before: 15c147536aedc18409a00a2072d7013933ea22c0
+  plan_head_after: 065d59f152a774e3b3df9e8859f1f09037f1ee1f
 status: complete
 actuals:
   tokens: 6128.5
@@ -79,9 +79,9 @@ actuals:
 
 ## Task Commits
 
-1. **Task 1: Make the direct current-evidence gate accept truthful blocked records** — `97c2520` (fix)
-2. **Task 2: Align all twelve evidence-map mutations with the current review and report** — `1499291` (test)
-3. **Task 3: Reject alternate affirmative frontend load claims in the docs gate** — `d9a896d` (fix)
+1. **Task 1: Make the direct current-evidence gate accept truthful blocked records** — `ec688ef` (fix)
+2. **Task 2: Align all twelve evidence-map mutations with the current review and report** — `317473d` (test)
+3. **Task 3: Reject alternate affirmative frontend load claims in the docs gate** — `065d59f` (fix)
 
 **Plan metadata:** the summary/state/roadmap metadata commit is reported with plan completion.
 
@@ -125,4 +125,4 @@ Plan 04-18 is complete. Phase 04 itself remains incomplete: the four reserved hi
 ## Self-Check: PASSED
 
 - Summary file exists at the expected phase path.
-- Task commits `97c2520`, `1499291`, and `d9a896d` are ancestors of HEAD.
+- Task commits `ec688ef`, `317473d`, and `065d59f` are ancestors of HEAD.

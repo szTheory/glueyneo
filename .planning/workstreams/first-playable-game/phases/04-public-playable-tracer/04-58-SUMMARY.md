@@ -6,21 +6,21 @@ tags: [gap-closure, rights-provenance, lane-output, security-register, retroarch
 
 requires:
   - phase: 04-public-playable-tracer
-    provides: 04-55 register table-end fix and the 04-53 receipt at 5a40e93147bf
+    provides: 04-55 register table-end fix and the 04-53 receipt at 09e43f0c4ea0
 provides:
   - G4WR-01..04 and G4IN-01..03 repaired test-first with red/green evidence
   - recurring rights source_revision check (rights_revision_errors) wired into --check-docs and the qualification_runner CTest
   - independent in-run review of the repair diff (all seven FIXED; D58 findings repaired)
   - R3/R4 verdicts transcribed (60 records, none open)
-  - pinned RetroArch re-qualified once at 4e6a40e66e9e and bound
+  - pinned RetroArch re-qualified once at cdfbc99bafe7 and bound
 affects: [04-verification, code-review-04, verify-work-04, phase-05]
 
 actuals:
   tokens: 42254
   tasks: 5
   commits: 16
-plan_head_before: ffb8bf13b068f872a579bd1b532996774c674cf8
-plan_head_after: 82b91053229313304f4df1d1d1be824f957ddd55
+plan_head_before: b6977421e5c6a6abc4b8cc749ac1a4ef2fa89bca
+plan_head_after: f128facafebc705bae4fd33071e07639d6444198
 
 tech-stack:
   added: []
@@ -100,7 +100,7 @@ coverage:
     human_judgment: true
     rationale: "The review verdicts are model judgments; the formal diff-scoped /gsd-code-review and /gsd-verify-work 04 own acceptance."
   - id: D6
-    description: "Pinned RetroArch 1.22.2 re-qualified once at 4e6a40e66e9e: status pass, retroarch_status pass, frontend_unloaded true, all 17 lanes pass, one sampled instance"
+    description: "Pinned RetroArch 1.22.2 re-qualified once at cdfbc99bafe7: status pass, retroarch_status pass, frontend_unloaded true, all 17 lanes pass, one sampled instance"
     requirement: "HOST-02"
     verification:
       - kind: e2e
@@ -115,7 +115,7 @@ status: complete
 
 # Phase 04 Plan 58: G-04-35 gap closure Summary
 
-**Byte-level lane decoding, exact register declarations and a recurring rights `source_revision` check, with an independent in-run review, R3/R4 verdict transcription and a single pinned-RetroArch re-qualification at 4e6a40e66e9e.**
+**Byte-level lane decoding, exact register declarations and a recurring rights `source_revision` check, with an independent in-run review, R3/R4 verdict transcription and a single pinned-RetroArch re-qualification at cdfbc99bafe7.**
 
 ## Performance
 
@@ -136,26 +136,26 @@ status: complete
 
 ## Task Commits
 
-START = `ffb8bf13b068f872a579bd1b532996774c674cf8`.
+START = `b6977421e5c6a6abc4b8cc749ac1a4ef2fa89bca`.
 
-1. **Task 1 (tracer, G4WR-04)** - RED `8eae4fbacae0`, FIX `84595e99406c`, DOCS `23940d642ab1`.
-2. **Task 2 (G4WR-01, G4WR-03, G4IN-02)** - RED `682b520537d2`, FIX `a9fbfd3b5b54` (docs in the FIX commit).
-3. **Task 3 (G4WR-02, G4IN-01, G4IN-03)** - RED `fe3db246567e`, FIX `443f980963d8` (docs in the FIX commit).
-4. **Task 4 (review, repairs, rights, transcription)** - D58 RED `71f9b5a8`, FIX `8b71292f` (D58WR-02, D58IN-01), rights refresh `f2fb1b19` (D58WR-01), FIX `10ce0ae6` (D58IN-03), rights refresh `c3b39e79`, records `5cebafc3`.
-5. **Task 5 (re-qualification, status text)** - STATE start commit `4e6a40e6` (QUALIFIED_REV), receipt `f8b0c977`, status text `82b91053`.
+1. **Task 1 (tracer, G4WR-04)** - RED `409fe9f705f0`, FIX `9a0d02b7c7de`, DOCS `dc3549303b06`.
+2. **Task 2 (G4WR-01, G4WR-03, G4IN-02)** - RED `c84609fda108`, FIX `f783c73668b2` (docs in the FIX commit).
+3. **Task 3 (G4WR-02, G4IN-01, G4IN-03)** - RED `138a8676471f`, FIX `856592e5ae89` (docs in the FIX commit).
+4. **Task 4 (review, repairs, rights, transcription)** - D58 RED `a8705366`, FIX `7501de51` (D58WR-02, D58IN-01), rights refresh `8db07862` (D58WR-01), FIX `1f513e33` (D58IN-03), rights refresh `3ca62dba`, records `53fff627`.
+5. **Task 5 (re-qualification, status text)** - STATE start commit `cdfbc99b` (QUALIFIED_REV), receipt `a5624f86`, status text `f128faca`.
 
 **Plan metadata:** this SUMMARY commit follows (`docs(04-58): complete G-04-35 gap-closure plan`).
 
 ## Red/green evidence (build/playable-qualification/04-58-evidence.txt)
 
 ```
-G4WR-04 red 8eae4fbacae0 exit 1 green 23940d642ab1 ok
-G4WR-01 red 682b520537d2 exit 1 green a9fbfd3b5b54 ok
-G4WR-03 red 682b520537d2 exit 1 green a9fbfd3b5b54 ok
-G4IN-02 red 682b520537d2 exit 1 green a9fbfd3b5b54 ok
-G4WR-02 red fe3db246567e exit 1 green 443f980963d8 ok
-G4IN-01 red fe3db246567e exit 1 green 443f980963d8 ok
-G4IN-03 red fe3db246567e exit 1 green 443f980963d8 ok
+G4WR-04 red 409fe9f705f0 exit 1 green dc3549303b06 ok
+G4WR-01 red c84609fda108 exit 1 green f783c73668b2 ok
+G4WR-03 red c84609fda108 exit 1 green f783c73668b2 ok
+G4IN-02 red c84609fda108 exit 1 green f783c73668b2 ok
+G4WR-02 red 138a8676471f exit 1 green 856592e5ae89 ok
+G4IN-01 red 138a8676471f exit 1 green 856592e5ae89 ok
+G4IN-03 red 138a8676471f exit 1 green 856592e5ae89 ok
 ```
 
 Each red run was a detached worktree at the RED commit (exit 1, `FAILED (`), then `OK` in the main checkout. The G4WR-04 real-repository test is red at its FIX commit by design and green at the DOCS commit.
@@ -163,10 +163,10 @@ Each red run was a detached worktree at the RED commit (exit 1, `FAILED (`), the
 ## Independent in-run review
 
 - Route (identical lines 1-4 of build/playable-qualification/04-58-diff-review.md, ignored): `Reviewer route: headless claude -p identity claude -p --tools Read,Grep,Glob < 04-58-review-prompt.txt > 04-58-review-raw.txt model unknown` (the runtime had no subagent tool, so the plan's headless route was used). The reviewer had read-only tools and read the diff from an ignored file.
-- Block 1: reviewed revision `443f980963d89a8d48720e426878ff434cdada2d`, prompt sha256 `9d1a2057134c5b6293cf4ee17f686c072f20b27fba590bb66255bcc90fc09b5c`, raw output sha256 `c67908b8c1bc0366345e3582e65b4d33ecc32ea459011afe665851b9de06acca`. Verdicts: `VERDICT G4WR-01..04 FIXED`, `VERDICT G4IN-01..03 FIXED`.
+- Block 1: reviewed revision `856592e5ae89c9ec2a56c6651c59ffacc778e836`, prompt sha256 `9d1a2057134c5b6293cf4ee17f686c072f20b27fba590bb66255bcc90fc09b5c`, raw output sha256 `c67908b8c1bc0366345e3582e65b4d33ecc32ea459011afe665851b9de06acca`. Verdicts: `VERDICT G4WR-01..04 FIXED`, `VERDICT G4IN-01..03 FIXED`.
 - It raised D58WR-01 (five stale rights digests at HEAD), D58WR-02 (a lane that closed its pipe was never signalled on timeout, and the new ValueError catch hid it), D58IN-01 (rollback replaced an interrupt with a RuntimeError).
-- Block 2 (re-check, reviewed revision `f2fb1b19b571ac492fcba94585d91a04f22b6043`, `-2` digests recorded in the file): `VERDICT D58WR-01 FIXED`, `VERDICT D58WR-02 FIXED`, `VERDICT D58IN-01 FIXED`; it raised D58IN-02 and D58IN-03.
-- Handling: D58WR-02 and D58IN-01 repaired test-first (`71f9b5a8` then `8b71292f`); D58WR-01 repaired by the rights refresh `f2fb1b19` (the public-content gate failed with `rights-digest` before and passed after); D58IN-03 fixed in `10ce0ae6` (named in its subject) with the follow-up refresh `c3b39e79`. D58IN-02 deferred: a working-tree digest comparison inside `rights_revision_errors` would extend the five-part predicate that the docs define as the whole check; `public_content.validate_repository_inventory` already enforces the digest and the refresh is the final step of each round. It is recorded in the STATE `### Backlog` subsection for the diff-scoped review to re-raise.
+- Block 2 (re-check, reviewed revision `8db07862dfda6839e769ca15f5257165a66280ea`, `-2` digests recorded in the file): `VERDICT D58WR-01 FIXED`, `VERDICT D58WR-02 FIXED`, `VERDICT D58IN-01 FIXED`; it raised D58IN-02 and D58IN-03.
+- Handling: D58WR-02 and D58IN-01 repaired test-first (`a8705366` then `7501de51`); D58WR-01 repaired by the rights refresh `8db07862` (the public-content gate failed with `rights-digest` before and passed after); D58IN-03 fixed in `1f513e33` (named in its subject) with the follow-up refresh `3ca62dba`. D58IN-02 deferred: a working-tree digest comparison inside `rights_revision_errors` would extend the five-part predicate that the docs define as the whole check; `public_content.validate_repository_inventory` already enforces the digest and the refresh is the final step of each round. It is recorded in the STATE `### Backlog` subsection for the diff-scoped review to re-raise.
 
 ## Dispositions and register
 
@@ -175,10 +175,10 @@ Each red run was a detached worktree at the RED commit (exit 1, `FAILED (`), the
 
 ## Re-qualification record
 
-- QUALIFIED_REV `4e6a40e66e9e4769d848ee7d1d91071e08d1bd20`; receipt-bound diff since 5a40e93147bf: tests/libretro/retroarch_smoke.py, tests/libretro/test_retroarch_smoke.py, tools/verify_playable.py.
+- QUALIFIED_REV `cdfbc99bafe7a92c87fea9cf9bec6a7f4de1f747`; receipt-bound diff since 09e43f0c4ea0: tests/libretro/retroarch_smoke.py, tests/libretro/test_retroarch_smoke.py, tools/verify_playable.py.
 - Pre-flight: clean tracked tree, `validate_repository_inventory()` ok, all 14 test/fix/docs(04-58) commits ancestors, no leftover RetroArch (`pgrep -x RetroArch` exit 1).
 - One invocation in the default command sandbox, no escalation: `python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean --check-docs`, exit 0, sampled maximum 1 instance, post-flight `pgrep -x RetroArch` exit 1. Receipt checks: status pass, retroarch_smoke pass, documentation pass, `identity.source_revision` equals QUALIFIED_REV and is newer than the launch marker, executable SHA-256 `ed90b54434a2899de0ddbfed59f335255fb462c8691bd970a1a761ebb5656d65`, all 17 lanes pass.
-- Bound: `--record-frontend-evidence`, committed as `f8b0c977`; non-clean `--check-docs` prints `Phase 04 documentation gate passed.`; freshness (`receipt fresh 4e6a40e66e9e`), bound-receipt status (`status` pass, `retroarch_status` pass, `frontend_unloaded` true, every lane pass) and requirement-lane probes pass. Run files: build/playable-qualification/04-58-* (ignored).
+- Bound: `--record-frontend-evidence`, committed as `a5624f86`; non-clean `--check-docs` prints `Phase 04 documentation gate passed.`; freshness (`receipt fresh cdfbc99bafe7`), bound-receipt status (`status` pass, `retroarch_status` pass, `frontend_unloaded` true, every lane pass) and requirement-lane probes pass. Run files: build/playable-qualification/04-58-* (ignored).
 
 ## Closeout checks
 
@@ -192,7 +192,7 @@ Each red run was a detached worktree at the RED commit (exit 1, `FAILED (`), the
 **1. [Rule 3 - Blocking] Committed the orchestrator's pending STATE.md change before the qualification pre-flight**
 - **Found during:** Task 5 pre-flight (the clean-tracked-tree gate)
 - **Issue:** STATE.md carried the orchestrator's uncommitted execution-start edit, which the gate (only `.planning/preparation` excluded) treats as dirty.
-- **Fix:** committed it alone (`4e6a40e6`, `docs(04-58): record Phase 04 execution start in STATE`); that commit is QUALIFIED_REV. STATE.md is not receipt-bound.
+- **Fix:** committed it alone (`cdfbc99b`, `docs(04-58): record Phase 04 execution start in STATE`); that commit is QUALIFIED_REV. STATE.md is not receipt-bound.
 
 **2. [Rule 1 - Bug, review-raised] D58WR-02, D58IN-01, D58IN-03 repaired; D58WR-01 repaired by the planned rights refresh**
 - **Found during:** Task 4 in-run review. See the review section for commits.
@@ -232,7 +232,7 @@ Phase 04 is not complete: all 58 plans have summaries except the superseded 04-5
 
 ## Self-Check: PASSED
 
-All 13 key files exist; all recorded commits (`8eae4fba`, `84595e99`, `23940d64`, `682b5205`, `a9fbfd3b`, `fe3db246`, `443f9809`, `71f9b5a8`, `8b71292f`, `f2fb1b19`, `10ce0ae6`, `c3b39e79`, `5cebafc3`, `4e6a40e6`, `f8b0c977`, `82b91053`) are ancestors of HEAD; the evaluation-scope resolver lists the 04-58 commits.
+All 13 key files exist; all recorded commits (`409fe9f7`, `9a0d02b7`, `dc354930`, `c84609fd`, `f783c736`, `138a8676`, `856592e5`, `a8705366`, `7501de51`, `8db07862`, `1f513e33`, `3ca62dba`, `53fff627`, `cdfbc99b`, `a5624f86`, `f128faca`) are ancestors of HEAD; the evaluation-scope resolver lists the 04-58 commits.
 
 ---
 *Phase: 04-public-playable-tracer*

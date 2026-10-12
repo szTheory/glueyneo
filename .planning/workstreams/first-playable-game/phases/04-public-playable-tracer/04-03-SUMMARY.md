@@ -16,8 +16,8 @@ actuals:
   tasks: 2
   commits: 2
 commits: 2
-plan_head_before: 0216c4f1d4fd3a0854221cbf0ec926ba2df98be1
-plan_head_after: 3c88019acc9b8ce3ed37b3bbfff8fd6a9531d949
+plan_head_before: ce9ecf9d1ade200871f82251b9af98474abeb1fc
+plan_head_after: 4c55ac2e9b764a2b9f8251c61f6f450e29fe3569
 tech-stack:
   added: [Python standard library]
   patterns: [separate fixture rights manifest, digest-bound regeneration, explicit oracle limits]
@@ -86,8 +86,8 @@ status: complete
 
 ## Task Commits
 
-1. **Task 1: Audit source, output and oracle ancestry** — `e6547a1` (`docs`)
-2. **Task 2: Check deterministic rebuild and single output producer** — `3c88019` (`test`)
+1. **Task 1: Audit source, output and oracle ancestry** — `b096b98` (`docs`)
+2. **Task 2: Check deterministic rebuild and single output producer** — `4c55ac2` (`test`)
 
 ## Files Created/Modified
 
@@ -114,7 +114,7 @@ status: complete
 - **Fix:** Added exact path, SHA-256, provenance, immutable source revision, and MIT notice records for the two Libretro files and corrected the oracle row to the current digest.
 - **Files modified:** `docs/rights-inventory.md`
 - **Verification:** `public_content.validate_repository_inventory()` passed with 28 exact inventory items.
-- **Committed in:** `e6547a1`
+- **Committed in:** `b096b98`
 
 **Total deviations:** 1 auto-fixed (Rule 2).
 **Impact on plan:** These corrections were necessary for the required rights audit to pass against the current tracked public fixture/test set.
@@ -138,8 +138,8 @@ Plan 04-03 is complete and the public fixture provenance gate is reproducible. P
 ## Self-Check: PASSED
 
 - The summary exists at the required workstream phase path.
-- Task commits `e6547a1` and `3c88019` are ancestors of the current plan head.
-- The persisted plan ledger measures 2 commits from `0216c4f` through `3c88019`, matching the frontmatter.
+- Task commits `b096b98` and `4c55ac2` are ancestors of the current plan head.
+- The persisted plan ledger measures 2 commits from `ce9ecf9` through `4c55ac2`, matching the frontmatter.
 
 ---
 *Phase: 04-public-playable-tracer*

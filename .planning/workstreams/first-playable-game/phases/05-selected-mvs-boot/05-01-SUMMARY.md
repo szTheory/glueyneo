@@ -65,8 +65,8 @@ duration: 20min
 completed: 2026-10-09
 status: complete
 commits: 3
-plan_head_before: f3e676bf1985d030480d61bf0e46ff73234e0db0
-plan_head_after: 80e349fdc29fad305bb720322aa7ad9a393c4f43
+plan_head_before: 9fc03e37eaf87abdb988a84daad5d518c7473cc0
+plan_head_after: 975f0d7bded5c1e6c44c548a5e12e85c1bb5cad9
 ---
 
 # Phase 05 Plan 01: Selected MVS Media and Boot Summary
@@ -91,9 +91,9 @@ plan_head_after: 80e349fdc29fad305bb720322aa7ad9a393c4f43
 
 ## Task Commits
 
-1. **Task 1: Trace one synthetic MVS bundle from ZIP import through guest execution** — `1a065c4` (`feat`)
-2. **Task 2: Close importer, profile, callback, and recovery boundaries** — `7161172` (`feat`)
-3. **Task 3: Implement evidence-led title boot dependencies and close the phase evidence map** — `80e349f` (`feat`)
+1. **Task 1: Trace one synthetic MVS bundle from ZIP import through guest execution** — `ca040e9` (`feat`)
+2. **Task 2: Close importer, profile, callback, and recovery boundaries** — `a141dbb` (`feat`)
+3. **Task 3: Implement evidence-led title boot dependencies and close the phase evidence map** — `975f0d7` (`feat`)
 
 **Plan metadata:** GSD advanced the current pointer and updated roadmap counts; state-position output needs reconciliation because a Phase 04 milestone lock remained active.
 
@@ -123,7 +123,7 @@ plan_head_after: 80e349fdc29fad305bb720322aa7ad9a393c4f43
 - **Fix:** Validate the complete local name-plus-extra span first and add an oversized local-extra mutation regression.
 - **Files modified:** `tools/mvs/mvs_import.c`, `tests/mvs/test_mvs_qualification.py`
 - **Verification:** Debug and ASan/UBSan importer mutation suites passed.
-- **Committed in:** `7161172` / follow-up regression in `80e349f`
+- **Committed in:** `a141dbb` / follow-up regression in `975f0d7`
 
 **2. [Rule 1 - Bug] Validate complete EOCD candidates and normalize the importer transform**
 - **Found during:** Task 2 independent review
@@ -131,7 +131,7 @@ plan_head_after: 80e349fdc29fad305bb720322aa7ad9a393c4f43
 - **Fix:** Parse every end-of-file candidate fully and accept exactly one valid directory; normalize program word lanes after CRC verification and test the resulting bus-order bytes through the native API.
 - **Files modified:** `tools/mvs/mvs_import.c`, `tests/mvs/test_mvs.c`, `tests/mvs/test_mvs_qualification.py`
 - **Verification:** Decoy EOCD regression, MVS tests, and independent re-review passed.
-- **Committed in:** `80e349f`
+- **Committed in:** `975f0d7`
 
 **3. [Rule 3 - Blocking] Update installed-package self-check for the private zlib source and additive exports**
 - **Found during:** Full CTest
@@ -139,7 +139,7 @@ plan_head_after: 80e349fdc29fad305bb720322aa7ad9a393c4f43
 - **Fix:** Stage the zlib source in the offline documentation-build fixture and update the public shared export allowlist.
 - **Files modified:** `tests/consumers/check_package.py`
 - **Verification:** Full static/shared build, consumer, and docs CTests passed.
-- **Committed in:** `80e349f`
+- **Committed in:** `975f0d7`
 
 **Total deviations:** 3 auto-fixed (2 Rule 1, 1 Rule 3). All were required for parser safety or verification correctness.
 
@@ -160,7 +160,7 @@ The structural media contract, ZIP32 parser, synthetic guest tracer, native reco
 
 ## Self-Check: PASSED
 
-All listed implementation/evidence files exist, and task commits `1a065c4`, `7161172`, and `80e349f` are ancestors of the current plan head.
+All listed implementation/evidence files exist, and task commits `ca040e9`, `a141dbb`, and `975f0d7` are ancestors of the current plan head.
 
 ---
 *Phase: 05-selected-mvs-boot*

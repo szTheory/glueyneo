@@ -63,8 +63,8 @@ metrics:
   duration: 11min
   completed: 2026-10-08
   status: complete
-  plan_head_before: 57436a0a602058f3a28c75eadf52fa2853bdd12f
-  plan_head_after: a87abde033ce72b95b36969ac5c1ae9587c82226
+  plan_head_before: 1e9eae9bb58a79238e0542c0142241e928f04ced
+  plan_head_after: 5ae25b71d6d84563b306bedc6cdee9b766aeaa8c
   commits: 3
 ---
 
@@ -84,14 +84,14 @@ metrics:
 
 - Bound WR-01 and WR-02 to concrete revision-scoped review evidence and restored the current review/disposition/validation crosswalk.
 - Replaced the stale fixed qualification denominator with a live comparison against `run_suite()`; mutation tests preserve the actual current report and reject a copied 23/23 result against the observed 25-test suite.
-- Obtained independent review of `tests/libretro/retroarch_smoke.py` and its test source at `870848e553aca6e43f6fec8ae0acefac87270f5b`. The 27-test suite and five newline/quote/apostrophe/space/private-root-suffix counterexamples showed no tested sanitizer leak; no GUI was launched.
+- Obtained independent review of `tests/libretro/retroarch_smoke.py` and its test source at `95e4fa09e5eacdc995bff7fc120722ff1bebd331`. The 27-test suite and five newline/quote/apostrophe/space/private-root-suffix counterexamples showed no tested sanitizer leak; no GUI was launched.
 - Marked WR-02 fixed from the independent current-revision evidence. WR-01, WR-06/T-04-34, four directed high/open threats, and the actual frontend unknown remain open.
 
 ## Task Commits
 
-1. **Task 1: Reconcile current review provenance and live denominator** - `870848e` (fix)
-2. **Task 2: Independently review the frontend diagnostic sanitizer** - `87f8d4c` (docs)
-3. **Task 3: Reconcile review dispositions and current evidence** - `a87abde` (docs)
+1. **Task 1: Reconcile current review provenance and live denominator** - `95e4fa0` (fix)
+2. **Task 2: Independently review the frontend diagnostic sanitizer** - `ae86cba` (docs)
+3. **Task 3: Reconcile review dispositions and current evidence** - `5ae25b7` (docs)
 
 **Plan metadata:** pending final metadata commit.
 
@@ -113,7 +113,7 @@ metrics:
 
 ### Execution bookkeeping
 
-The sandbox rejected writes under `.git` (`operation not permitted`), so the plan-head ledger was kept in `/private/tmp` using the exact first-task commit parent as its base. The measured range is 3 commits from `57436a0a602058f3a28c75eadf52fa2853bdd12f` through `a87abde033ce72b95b36969ac5c1ae9587c82226`.
+The sandbox rejected writes under `.git` (`operation not permitted`), so the plan-head ledger was kept in `/private/tmp` using the exact first-task commit parent as its base. The measured range is 3 commits from `1e9eae9bb58a79238e0542c0142241e928f04ced` through `5ae25b71d6d84563b306bedc6cdee9b766aeaa8c`.
 
 No implementation scope deviation. No sanitizer defect was reproduced, so the read-only frontend source was not changed.
 
@@ -136,4 +136,4 @@ Plan 04-20 is complete. Phase 04 remains blocked by WR-01, WR-06/T-04-34, the fo
 ## Self-Check: PASSED
 
 - Summary file exists at the expected workstream path.
-- Task commits `870848e`, `87f8d4c`, and `a87abde` are ancestors of the current plan revision.
+- Task commits `95e4fa0`, `ae86cba`, and `5ae25b7` are ancestors of the current plan revision.

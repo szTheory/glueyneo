@@ -21,8 +21,8 @@ key-decisions:
   - "Halt carried: no RetroArch launch, no allowlist freeze or generation, REQUIREMENTS.md and ROADMAP.md status text untouched"
 status: complete
 commits: 2
-plan_head_before: 6b32752
-plan_head_after: 6ec5c97afacbb8c05205665c57cbee7153a610e6
+plan_head_before: 6eb06a4
+plan_head_after: 0684745419fbfdf5a5951a5eb8ab2b7be41dbf8f
 actuals:
   tokens: 20000
   tasks: 3
@@ -34,28 +34,28 @@ completed: 2026-10-11
 
 The records now carry the round-7 fix evidence and the new security rows, and the carried `review-halt` / `scope-split-needed: 6` is routed to gap planning. RetroArch was not launched and no allowlist was generated.
 
-`commits:` is counted from HEAD at execution start (6b32752), because no persisted ledger existed for this plan.
+`commits:` is counted from HEAD at execution start (6eb06a4), because no persisted ledger existed for this plan.
 
 ## Halt path taken
 
 `build/playable-qualification/04-59-branch.txt` held `review-halt` / `scope-split-needed: 6` (recorded by 04-60, carried by 04-61). Per Task 1 step 0, Task 2 step 0 and step 4, and Task 3 step 3:
 
 - Pre-flight: skipped by the halt precondition. The tree held only the two `.planning/preparation` entries.
-- No RetroArch launch: `04-59-invocations.txt` does not exist, `pgrep -x RetroArch` exits 1, the receipt is unchanged at `4e6a40e66e9e`.
+- No RetroArch launch: `04-59-invocations.txt` does not exist, `pgrep -x RetroArch` exits 1, the receipt is unchanged at `cdfbc99bafe7`.
 - No allowlist: `docs/history-allowlist.json` is absent and no freeze or final squash simulation ran.
 
 ## Commits
 
-- `24a3672` docs(04-62): record round-7 fix evidence and security rows (G5 open pending review)
-- `6ec5c97` docs(04-62): record round-7 review-halt (scope-split-needed: 6) in STATE
+- `f8918d0` docs(04-62): record round-7 fix evidence and security rows (G5 open pending review)
+- `0684745` docs(04-62): record round-7 review-halt (scope-split-needed: 6) in STATE
 
 No rights row was stale (all 41 non-third_party rows match their HEAD blobs), so no rights refresh commit was made.
 
 ## Transcribed fix evidence (all three rows `open`, `open: 3`, `total: 63`, crosswalk preface `(63 current disposition records)`)
 
-- G5WR-01: `Fix incomplete: scope-split-needed: 6 ...; pending /gsd-plan-phase 04 --gaps`, with partial landing at 04-59 fixes `37e9f0f6...`, `1a208248...` and 04-60 fixes `9dc602c3...`, `26667557...` (full 40-hex in the record) and the 2026-10-11 user decision and milestone-branch scope.
-- G5WR-02: `Fix landed, pending the diff-scoped /gsd-code-review` at `591d0f795498...` (04-61).
-- G5IN-01: same, at `591d0f795498...` (04-61).
+- G5WR-01: `Fix incomplete: scope-split-needed: 6 ...; pending /gsd-plan-phase 04 --gaps`, with partial landing at 04-59 fixes `7ad8eef0...`, `ad430682...` and 04-60 fixes `c43b9bbe...`, `18d86ded...` (full 40-hex in the record) and the 2026-10-11 user decision and milestone-branch scope.
+- G5WR-02: `Fix landed, pending the diff-scoped /gsd-code-review` at `a10c8c8ae2b7...` (04-61).
+- G5IN-01: same, at `a10c8c8ae2b7...` (04-61).
 
 ## Security register
 
@@ -88,4 +88,4 @@ Phase 04 is not complete; plan 04-62 is complete as a halt closeout. Next concre
 
 ## Self-Check: PASSED
 
-Commits 24a3672 and 6ec5c97 are ancestors of HEAD; the four modified records exist.
+Commits f8918d0 and 0684745 are ancestors of HEAD; the four modified records exist.

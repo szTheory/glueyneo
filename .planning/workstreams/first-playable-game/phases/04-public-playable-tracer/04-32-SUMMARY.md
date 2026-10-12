@@ -36,8 +36,8 @@ status: complete
 duration: 6 min
 completed: 2026-10-10
 commits: 6
-plan_head_before: 3a8af0e46d3c3dcae36dbdb7ef6a21fdc3d3ee31
-plan_head_after: 098a4210fb65fdc4cc1fc944301cba9bee409e72
+plan_head_before: 912a89e067e6379e2ccb8d0b312d2f98b7e501cb
+plan_head_after: d2b3951eb5b0c43a1ebbcbec25cc11941eaa7477
 actuals:
   tokens: 17000
   tasks: 3
@@ -75,10 +75,10 @@ coverage:
 
 ## TDD commit pairs
 
-- Task 1 (tracer, tdd): RED `139bb8d` test(04-32) (54 tests, ERROR from skeleton NotImplementedError, target tests exercised); GREEN `2e45a85` feat(04-32) (54 tests OK, CTest registered). Tracer verified end-to-end (unit suite, CTest, boundary probe printed `boundary ok`) before Task 2.
-- Task 2 (tdd): RED `2d55ad8` test(04-32) (11 failures incl. the Sev/State mutation returning code 0 before the fix); GREEN `9c9802a` fix(04-32).
-- Task 3: `42a23cf` docs(04-32) rights inventory; rows bound (`rights rows bound 3`), item count assertion 45 to 46 because exactly one row was added (`tests/tools/test_independent_review.py`); this is the true inventory size, not a relaxed expectation.
-- Plan start revision (diff baseline): `3a8af0e46d3c3dcae36dbdb7ef6a21fdc3d3ee31`. The 04-SECURITY.md diff from it shows exactly 2 table-row lines (old and new audit header).
+- Task 1 (tracer, tdd): RED `da77dc7` test(04-32) (54 tests, ERROR from skeleton NotImplementedError, target tests exercised); GREEN `8baeabe` feat(04-32) (54 tests OK, CTest registered). Tracer verified end-to-end (unit suite, CTest, boundary probe printed `boundary ok`) before Task 2.
+- Task 2 (tdd): RED `f45e016` test(04-32) (11 failures incl. the Sev/State mutation returning code 0 before the fix); GREEN `ed5182f` fix(04-32).
+- Task 3: `e7cff64` docs(04-32) rights inventory; rows bound (`rights rows bound 3`), item count assertion 45 to 46 because exactly one row was added (`tests/tools/test_independent_review.py`); this is the true inventory size, not a relaxed expectation.
+- Plan start revision (diff baseline): `912a89e067e6379e2ccb8d0b312d2f98b7e501cb`. The 04-SECURITY.md diff from it shows exactly 2 table-row lines (old and new audit header).
 
 ## Verification
 
@@ -93,13 +93,13 @@ coverage:
 - **Found during:** plan-level full CTest
 - **Issue:** `owned_cpu_inventory_check` failed `stale source manifest record: CMakeLists.txt` because Task 1/2 changed CMakeLists.txt (same as 04-29).
 - **Fix:** updated only the CMakeLists.txt sha256 in `experiments/owned_cpu/source-manifest.json`.
-- **Commit:** 098a421
+- **Commit:** d2b3951
 
 **2. [Rule 3 - Blocking] CMake FATAL_ERROR message split across two string arguments**
 - **Found during:** Task 2 verify
 - **Issue:** CMake word-wraps a long message so `names no .planning/workstreams directory` landed on two lines and the plan's grep failed.
 - **Fix:** an explicit line break after the variable assignment keeps the phrase intact; wording is otherwise as planned.
-- **Commit:** 9c9802a
+- **Commit:** ed5182f
 
 **3. RED skeleton.** The RED commit for Task 1 includes a skeleton `tools/independent_review.py` whose functions raise NotImplementedError, so the tests fail on target behavior rather than on an import error (an import failure is INVALID_RED).
 
@@ -118,4 +118,4 @@ None. New surface (review tool CLI) is covered by T-04-61 and T-04-65 in the pla
 ## Self-Check: PASSED
 
 - Files found: tools/independent_review.py, tests/tools/test_independent_review.py.
-- Commits 139bb8d, 2e45a85, 2d55ad8, 9c9802a, 42a23cf, 098a421 are ancestors of HEAD.
+- Commits da77dc7, 8baeabe, f45e016, ed5182f, e7cff64, d2b3951 are ancestors of HEAD.

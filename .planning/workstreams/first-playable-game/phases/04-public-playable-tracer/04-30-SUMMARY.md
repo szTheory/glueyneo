@@ -15,8 +15,8 @@ provides:
 affects: [04-31 review disposition for WR-06, IN-02, IN-03, T-04-58, T-04-59, T-04-60]
 status: complete
 commits: 6
-plan_head_before: 5d2160f5693ec2d67bc10dbb6532ee881483fe24
-plan_head_after: 5b683b28a2167a0fe41fa2646cf8bd9ade09afff
+plan_head_before: 5343e25d43489daee60acf71bfa6d312dfd52a22
+plan_head_after: d92686291f889a86f91a49ceaf3a7a2b7ea548fa
 actuals:
   tokens: 30000
   tasks: 3
@@ -51,10 +51,10 @@ Generic CI account names and repository-relative inventory paths now pass the re
 
 | Task | Commits | Result |
 | ---- | ------- | ------ |
-| 1 (tracer) WR-06 | 625db2c (red), 7dd9163 (fix) | `ServiceAccountTest` plus inventory-path cases; `SERVICE_ACCOUNT_NAMES`; docs "Private-path scan limits" |
-| 2 IN-02, IN-03 | 6989afd (red), 161bfdd (fix) | `IdentityCheckTest`, `tests/consumers/test_check_package.py`, `qualification_check_package` |
-| 3 rights inventory | 4d8a4d2 | new row for `test_check_package.py`, refreshed 3 rows, count 44 to 45 |
-| (manifest refresh) | 5b683b2 | `CMakeLists.txt` digest in `experiments/owned_cpu/source-manifest.json` |
+| 1 (tracer) WR-06 | 3e14a0e (red), a08641a (fix) | `ServiceAccountTest` plus inventory-path cases; `SERVICE_ACCOUNT_NAMES`; docs "Private-path scan limits" |
+| 2 IN-02, IN-03 | be62392 (red), d17ec0a (fix) | `IdentityCheckTest`, `tests/consumers/test_check_package.py`, `qualification_check_package` |
+| 3 rights inventory | 2f3c9aa | new row for `test_check_package.py`, refreshed 3 rows, count 44 to 45 |
+| (manifest refresh) | d926862 | `CMakeLists.txt` digest in `experiments/owned_cpu/source-manifest.json` |
 
 ## Red runs
 
@@ -73,14 +73,14 @@ Task 2 (`python3 tests/consumers/test_check_package.py` before the fix): `FAILED
 - Found during: Task 1 red run.
 - Issue: `scan_public_value` scans `json.dumps(value)`; the `": "` punctuation before a value counts as a path start, so a value beginning `tmp/` matched the generic `/tmp/` root. This was the actual cause of the WR-06 inventory-path failure.
 - Fix: the serialization scan checks specific roots and the username only; generic roots are checked per decoded string and key. Non-JSON leaves (stringified by `default=str`) are now scanned as strings so they stay covered.
-- Files: `tools/private_paths.py`. Commit: 7dd9163.
+- Files: `tools/private_paths.py`. Commit: a08641a.
 
 **2. [Rule 1 - Bug] macOS allowlist rejected the core's own install name**
 - Found during: Task 2 verification against the built core. `otool -L` lists `@rpath/glueyneo_libretro.dylib` first.
-- Fix: dependencies whose basename equals the core's own name are exempt; added `test_own_install_name_line_is_not_a_dependency` (added with the fix, not observed red) and verified `check_core_self_contained` on the real built core. Commit: 161bfdd.
+- Fix: dependencies whose basename equals the core's own name are exempt; added `test_own_install_name_line_is_not_a_dependency` (added with the fix, not observed red) and verified `check_core_self_contained` on the real built core. Commit: d17ec0a.
 
 **3. [Rule 3 - Blocking] Source manifest digest stale after the CMakeLists.txt edit**
-- `owned_cpu_inventory_check` failed; refreshed the digest as in 8d9bea5. Commit: 5b683b2.
+- `owned_cpu_inventory_check` failed; refreshed the digest as in 34af25e. Commit: d926862.
 
 Task 3 changed the inventory count assertion in `test_repository_inventory_matches_recorded_fixture_and_dependency_bytes` from 44 to 45 (one new row).
 
@@ -105,4 +105,4 @@ None.
 
 ## Self-Check: PASSED
 
-Commits 625db2c, 7dd9163, 6989afd, 161bfdd, 4d8a4d2, 5b683b2 present; `tests/consumers/test_check_package.py` exists.
+Commits 3e14a0e, a08641a, be62392, d17ec0a, 2f3c9aa, d926862 present; `tests/consumers/test_check_package.py` exists.

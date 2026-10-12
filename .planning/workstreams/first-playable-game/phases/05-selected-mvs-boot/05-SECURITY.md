@@ -67,7 +67,7 @@ No accepted risks.
 
 | Audit Date | Threats Total | Closed | Open | Run By |
 |---|---:|---:|---:|---|
-| 2026-10-09 | 30 plan entries | 21 | 9 blocking high | gsd-security-auditor at `f9e02f94d664c3f8170f4dc7ae8aa30bc24c13f6` |
+| 2026-10-09 | 30 plan entries | 21 | 9 blocking high | gsd-security-auditor at `9666b049ee4af65158e12421b5a25563b696e945` |
 
 The hosted PR #2 receipt is for candidate SHA `e80672845fc60d94d8a44eab416377534c9a99f1` (run `38001400110`); it is not mitigation evidence for this audited checkout. That PR remains open with `REVIEW_REQUIRED`. The selected guest has not reached a sourced attract/start predicate. See `05-VALIDATION.md` and `05-HOSTED-QUALIFICATION.md` for evidence boundaries.
 

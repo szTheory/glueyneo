@@ -57,8 +57,8 @@ coverage:
 duration: "13m 33s"
 completed: 2026-10-07
 status: complete
-plan_head_before: 757482bd192bcedf294a94493881fcbaa5ec3343
-plan_head_after: 96d9d8445a2a82506d0145aedabb08a7215897ca
+plan_head_before: 52d62c464113d68d97bfdded30e22b7292063493
+plan_head_after: d9400b6152a1c08ed3a98f6f8c023e6283f36ca7
 commits: 4
 ---
 
@@ -85,10 +85,10 @@ commits: 4
 
 Each task was committed atomically. Task 3 used a TDD RED/GREEN pair.
 
-1. **Task 1: Pin and inventory the Z80 candidate** — `e1e4727` (`chore`)
-2. **Task 2: Build private Z80 tick and bus adapter** — `bfa8b79` (`feat`)
-3. **Task 3 RED: Prove selected-workload admission** — `ac89b79` (`test`)
-4. **Task 3 GREEN: Fix failure-latch restore and complete admission evidence** — `96d9d84` (`fix`)
+1. **Task 1: Pin and inventory the Z80 candidate** — `21c6241` (`chore`)
+2. **Task 2: Build private Z80 tick and bus adapter** — `10bf875` (`feat`)
+3. **Task 3 RED: Prove selected-workload admission** — `85ec950` (`test`)
+4. **Task 3 GREEN: Fix failure-latch restore and complete admission evidence** — `d9400b6` (`fix`)
 
 The task commits span four commits from `plan_head_before` through `plan_head_after` as measured in the frontmatter. The final planning metadata commit is recorded separately by GSD.
 
@@ -120,7 +120,7 @@ The task commits span four commits from `plan_head_before` through `plan_head_af
 - **Fix:** Restore now returns `Z80_CANDIDATE_BUS_FAILURE` while the latch is set; reset clears the latch and resets the cycle counter.
 - **Files modified:** `src/chips/z80_candidate.c`, `tests/chips/test_z80.c`.
 - **Verification:** The RED target failed specifically on expected status 4 versus actual 0; GSD returned `RED_EVIDENCE_OK`. The GREEN probe, focused debug CTest, ASan/UBSan, and TSan all pass.
-- **Committed in:** `96d9d84`.
+- **Committed in:** `d9400b6`.
 
 **2. [Rule 2 - Missing Critical] Resolve the plan's tick-overflow boundary probe**
 
@@ -129,7 +129,7 @@ The task commits span four commits from `plan_head_before` through `plan_head_af
 - **Fix:** Added a restored-maximum counter case proving `CYCLE_LIMIT` returns before CPU tick or bus activity.
 - **Files modified:** `tests/chips/test_z80.c`.
 - **Verification:** The case passes in debug, ASan/UBSan, and TSan suites.
-- **Committed in:** `96d9d84`.
+- **Committed in:** `d9400b6`.
 
 **Total deviations:** 2 auto-fixed (1 bug, 1 missing critical boundary check).
 **Impact on plan:** Both changes close adapter failure/overflow correctness gaps in the planned admission scope.
@@ -153,7 +153,7 @@ Plan 04-04 is complete; Phase 04 is not complete. Plans 04-05 and 04-06 remain. 
 
 ## Self-Check: PASSED
 
-All eight required implementation/report files exist, and task commits `e1e4727`, `bfa8b79`, `ac89b79`, and `96d9d84` are ancestors of the current plan head.
+All eight required implementation/report files exist, and task commits `21c6241`, `10bf875`, `85ec950`, and `d9400b6` are ancestors of the current plan head.
 
 ---
 *Phase: 04-public-playable-tracer*

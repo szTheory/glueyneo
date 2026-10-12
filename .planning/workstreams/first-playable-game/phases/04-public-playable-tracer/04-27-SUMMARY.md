@@ -14,8 +14,8 @@ provides:
 affects: [04-VERIFICATION gap 3, HOST-02, QUAL-03, T-04-34, T-04-45, T-04-53]
 status: complete
 commits: 5
-plan_head_before: cacd7fdf0cfc0f0b5b4ddf8aeee7008118f3f5d8
-plan_head_after: 682e7c270ee28104952ac3333e6812af47931137
+plan_head_before: d1103b08a1c06f05bd4fec3a90141d49fad24c7e
+plan_head_after: 8a19bb61bcca069132aeccc94b29206e0981bd43
 actuals:
   tokens: 22000
   tasks: 2
@@ -42,13 +42,13 @@ The documentation gate now rejects status claims and private roots outside the g
 
 ## Tasks
 
-1. Tracer: `GuideClaimTest` (4 tests), `guide_claims_outside_block`, `PINNED_REVISIONS`, full-guide private-path scan in `check_docs`, and guide rewrite. Commits a684c2a (red), 5aa114a (fix).
-2. `AtomicRecordTest` (3 tests) and the rewritten `write_frontend_records`. Commits 9575b3e (red), 959bab6 (fix), 682e7c2 (rights inventory row for `tests/tools/test_verify_playable.py`, source_revision 9575b3e, the last commit that changed it).
+1. Tracer: `GuideClaimTest` (4 tests), `guide_claims_outside_block`, `PINNED_REVISIONS`, full-guide private-path scan in `check_docs`, and guide rewrite. Commits b032659 (red), 9ec6687 (fix).
+2. `AtomicRecordTest` (3 tests) and the rewritten `write_frontend_records`. Commits 25c3d97 (red), 5b6751f (fix), 8a19bb6 (rights inventory row for `tests/tools/test_verify_playable.py`, source_revision 25c3d97, the last commit that changed it).
 
 ## Red runs (failing before the fix)
 
-- GuideClaimTest at a684c2a: `FAILED (failures=6, errors=1)` - five appended claims and the U+2215 private path did not raise `RuntimeError`; `test_live_guide_has_no_outside_block_claims` errored because `guide_claims_outside_block` did not exist.
-- AtomicRecordTest at 9575b3e: `FAILED (failures=2)` - `test_missing_validation_row_leaves_all_three_files_unchanged` and `test_private_root_in_generated_block_leaves_all_three_files_unchanged` observed the old writer mutating files before failing.
+- GuideClaimTest at b032659: `FAILED (failures=6, errors=1)` - five appended claims and the U+2215 private path did not raise `RuntimeError`; `test_live_guide_has_no_outside_block_claims` errored because `guide_claims_outside_block` did not exist.
+- AtomicRecordTest at 25c3d97: `FAILED (failures=2)` - `test_missing_validation_row_leaves_all_three_files_unchanged` and `test_private_root_in_generated_block_leaves_all_three_files_unchanged` observed the old writer mutating files before failing.
 
 ## Verification
 
@@ -65,7 +65,7 @@ The documentation gate now rejects status claims and private roots outside the g
 - **Issue:** the first draft of the new rules paragraph spelled out the three rejected words, so the guide failed its own gate.
 - **Fix:** the paragraph now refers to "the capitalized completion and qualification status words listed in `tools/verify_playable.py`".
 - **Files modified:** docs/first-playable-build.md
-- **Commit:** 5aa114a
+- **Commit:** 9ec6687
 
 **Total deviations:** 1 auto-fixed. **Impact:** none on scope.
 

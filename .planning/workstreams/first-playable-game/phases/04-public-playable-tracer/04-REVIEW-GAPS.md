@@ -39,7 +39,7 @@ status: issues_found
 
 ## Summary
 
-This is the incremental re-review of the gap-closure changes (plans 04-24..04-31) since diff_base `20dea9db5beb01df265d33fda6a44bfa37571a8e`. It is separate from `04-REVIEW.md`, which stays as provenance for the crosswalk gate. Finding IDs use GCR/GWR/GIN so they cannot collide with CR/WR/IN.
+This is the incremental re-review of the gap-closure changes (plans 04-24..04-31) since diff_base `a7511aaf308e374fe108ad8f9b84d0391b4cbee0`. It is separate from `04-REVIEW.md`, which stays as provenance for the crosswalk gate. Finding IDs use GCR/GWR/GIN so they cannot collide with CR/WR/IN.
 
 RetroArch was not launched. I ran the pure-Python suites (`test_private_paths`, `test_check_runtime_storage`, `test_check_security_register`, `test_check_package`, `test_public_content`), `verify_playable.py --check-docs`, and the security-register gate. All passed.
 

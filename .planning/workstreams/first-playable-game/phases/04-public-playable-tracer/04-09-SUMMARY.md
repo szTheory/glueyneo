@@ -18,8 +18,8 @@ actuals:
   tasks: 1
   commits: 1
 commits: 1
-plan_head_before: 83dbe027e3f5f7d4a500e2f9a2bd2bac673cb97c
-plan_head_after: 3ce98fc5ce18bfeaf081f2b59d19e4b866145c58
+plan_head_before: 85bed436099f92e43440fd572e33fb665578dc4c
+plan_head_after: 02544d01b8077b7a3ea85fec69c354fcddfaa31a
 tech-stack:
   added: []
   patterns: [installed coverage classifier, explicit human-needed evidence routing]
@@ -65,7 +65,7 @@ status: complete
 
 ## Task Commits
 
-1. **Task 1: Normalize the unresolved HOST coverage row** — `3ce98fc` (fix)
+1. **Task 1: Normalize the unresolved HOST coverage row** — `02544d0` (fix)
 
 ## Files Created/Modified
 

@@ -21,8 +21,8 @@ key-decisions:
 requirements-completed: [TRAC-01, TRAC-02, TRAC-03, HOST-02, API-05, SND-01, SND-02, QUAL-03]
 status: complete
 commits: 2
-plan_head_before: 0d9612130092e379186df63dddc7870d43b2ae58
-plan_head_after: 7c5d54d11670048385508a6d3a4047c6d7443ad7
+plan_head_before: 45952598202aa22dfaec0ca6291552e7a6f4720d
+plan_head_after: 8e443e85972987e03b5362e938102a62e8fd212f
 actuals:
   tokens: 60000
   tasks: 2
@@ -35,15 +35,15 @@ A clean pinned-RetroArch qualification passed at the post-04-33 revision, and a 
 
 Note: `requirements-completed` copies the plan's requirement list verbatim; per orchestrator instruction REQUIREMENTS.md was not edited and 04-36 owns final requirement status.
 
-## Task 1: Re-qualification (commit 05923ae)
+## Task 1: Re-qualification (commit 4971f42)
 
-- QUALIFIED_REV: `0d9612130092` (post-04-33; its `docs(04-33)` rights-inventory commit is an ancestor).
+- QUALIFIED_REV: `45952598202a` (post-04-33; its `docs(04-33)` rights-inventory commit is an ancestor).
 - `--clean --check-docs` passed every lane; `retroarch_smoke` pass. Executable SHA-256 `ed90b54434a2899de0ddbfed59f335255fb462c8691bd970a1a761ebb5656d65`.
 - `pgrep -x RetroArch`: exit 1 before and after; 1-second sampled maximum 1. Default command sandbox, no escalation requested.
 - `--record-frontend-evidence` regenerated the receipt summary, guide block and 04-15 T2 row; committed (three files only); post-commit non-clean `--check-docs` printed `Phase 04 documentation gate passed.`
 - `grep -c "Complete at ..."` gave 1; private-path grep on the receipt gave 0.
 
-## Task 2: Contained review (commit 7c5d54d)
+## Task 2: Contained review (commit 8e443e8)
 
 - Claude Code 2.1.296; init tools Glob, Grep, Read; model claude-opus-5-5; cwd scratch directory (redacted), `cwd_matches_scratch: true`; `permission_denials: []`; tool calls Read 16, Grep 16, Glob 2. `preflight` printed `scratch-ok`; `gate` printed `contained`. No sandbox escalation.
 - Branch file absent (review completed). Scratch directory removed.
@@ -66,4 +66,4 @@ None.
 
 ## Self-Check: PASSED
 
-Commits 05923ae and 7c5d54d are ancestors of HEAD; edited files exist; `pgrep -x RetroArch` exits 1.
+Commits 4971f42 and 8e443e8 are ancestors of HEAD; edited files exist; `pgrep -x RetroArch` exits 1.

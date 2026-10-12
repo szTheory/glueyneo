@@ -66,8 +66,8 @@ metrics:
   completed: 2026-10-09
 status: halted
 commits: 6
-plan_head_before: c1f26c23a5cf387ad50516ddcfc26c7ad36818db
-plan_head_after: 06cba8125a1b0796446f90ea734232cdc7f18f5b
+plan_head_before: 7737fa288506400f68f242eff94c1b4b6e5bf100
+plan_head_after: de9bac67ca376a1ce7cc27a87757bf588d14f27e
 ---
 
 # Phase 05 Plan 03: Selected Guest Boot Summary
@@ -91,11 +91,11 @@ plan_head_after: 06cba8125a1b0796446f90ea734232cdc7f18f5b
 
 ## Task Commits
 
-1. **Task 2: Fail local qualification unless attract/start is reached** — `64ef2b2` (`fix`)
-2. **Task 3: Validate selected MVS content in frontend smoke** — `5fe91d0` (`feat`)
-3. **Task 1 (partial): Implement trace-demanded MC68000/MVS behavior and rights-clear vectors** — `563437e` (`fix`)
-4. **Task 2 follow-up: Add sanitized bounded run profiling and spoof-resistant result handling** — `a7c54ba` (`fix`)
-5. **Task 3/evidence follow-up: Reconcile review and validation artifacts** — `8c22e75`, `06cba81` (`docs`)
+1. **Task 2: Fail local qualification unless attract/start is reached** — `fd248df` (`fix`)
+2. **Task 3: Validate selected MVS content in frontend smoke** — `d102681` (`feat`)
+3. **Task 1 (partial): Implement trace-demanded MC68000/MVS behavior and rights-clear vectors** — `6dee725` (`fix`)
+4. **Task 2 follow-up: Add sanitized bounded run profiling and spoof-resistant result handling** — `40e126f` (`fix`)
+5. **Task 3/evidence follow-up: Reconcile review and validation artifacts** — `be23a97`, `de9bac6` (`docs`)
 
 The plan is intentionally halted with all three tasks incomplete: Task 1 did not reach its selected attract/start done condition, and Tasks 2 and 3 lack the acceptance evidence for that checkpoint and the exact-revision hosted receipt.
 
@@ -106,7 +106,7 @@ The plan is intentionally halted with all three tasks incomplete: Task 1 did not
 - `cmake --build --preset sdk-asan-ubsan --target mvs_qualify mvs_test mvs_importer mvs_import_fuzz && ctest --test-dir build/sdk-asan-ubsan -R '^mvs_' --output-on-failure --no-tests=error` — passed, 7/7.
 - `cmake --preset sdk-asan-ubsan && cmake --build --preset sdk-asan-ubsan && ctest --preset sdk-asan-ubsan -R '^mvs_' --output-on-failure --no-tests=error` — blocked during the full build by the inherited Unity static-library sanitizer-runtime link failure in the unrelated YM2610 admission target. The focused MVS sanitizer targets and tests pass.
 - `python3 tools/mvs/qualify_local_boot.py --input-root local/roms --report local/qualification/phase05.json` — the current run imports and executes the selected guest through 256 chunks (256,000,794 cycles; 32,255,007 instructions), then exits 1 with `guest_instruction_budget_exhausted`. The ignored, sanitized profile reports 140 state-stable chunks, 20 output/latch transition chunks, 97 video-state transition chunks, 17 bank-transition chunks, 6,472,496 watchdog pets, zero resets, and no repeated final chunk-boundary suffix. This activity is not an attract/start predicate.
-- `python3 tools/verify_sdk.py --suite matrix` — local suite passed on the earlier source revision `5fe91d0c489c6fa2ad5cce6c10f845557ecdae47`; `python3 tests/sdk/test_matrix_evidence.py` passed. This is not hosted G-05-5 evidence.
+- `python3 tools/verify_sdk.py --suite matrix` — local suite passed on the earlier source revision `d1026816a94628ba473841e11aa2855424a7dc11`; `python3 tests/sdk/test_matrix_evidence.py` passed. This is not hosted G-05-5 evidence.
 - No safe exact-current-revision hosted route was available: the branch contains substantial unrelated history, and publishing it would expose that delta. No PR was opened, no protected branch was modified, and no hosted receipt is claimed.
 - The actual RetroArch smoke was not launched because the selected native guest did not reach attract/start. No Phase 04 RetroArch observation was reused.
 - `git diff --check` — passed.
@@ -124,14 +124,14 @@ The smoke-runner change received independent review. The reviewer found an input
 - **Issue:** The wrapper returned success for a generic unsupported-bundle result, which could make an unqualified run appear successful to automation.
 - **Fix:** The report is still written safely, but the command returns success only for `attract_start` with `guest_executed: true`.
 - **Files modified:** `tools/mvs/qualify_local_boot.py`
-- **Commit:** `64ef2b2`
+- **Commit:** `fd248df`
 
 **2. [Rule 2 - Security] Bound selected-bundle reads across file-size changes**
 - **Found during:** Task 3 independent review
 - **Issue:** A GNMV file could grow after the size check and trigger an allocation beyond the planned input limit.
 - **Fix:** Read at most one byte beyond the 64 MiB cap and reject before parsing or launch; add a sparse oversized-input regression.
 - **Files modified:** `tests/libretro/retroarch_smoke.py`, `tests/libretro/test_retroarch_smoke.py`
-- **Commit:** `5fe91d0`
+- **Commit:** `d102681`
 
 ## Blockers
 
@@ -154,4 +154,4 @@ Plan 05-03 is **halted**, and Phase 05 remains **incomplete**. The latest select
 
 ## Self-Check: PASSED
 
-The summary exists, and all six plan commits (`64ef2b2`, `5fe91d0`, `8c22e75`, `563437e`, `a7c54ba`, `06cba81`) are ancestors of the current HEAD. The plan ledger measures six task/evidence commits before this summary commit.
+The summary exists, and all six plan commits (`fd248df`, `d102681`, `be23a97`, `6dee725`, `40e126f`, `de9bac6`) are ancestors of the current HEAD. The plan ledger measures six task/evidence commits before this summary commit.

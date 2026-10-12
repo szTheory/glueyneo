@@ -14,8 +14,8 @@ actuals:
   tokens: 13200
   tasks: 2
   commits: 1
-plan_head_before: e2c12d3dda0021d7e63cf3fcd9e7c6451a9f3411
-plan_head_after: 49dce286f472291329395d872ba791ca26850440
+plan_head_before: 83ab961cbfda464dc29e33d419f457ba94408ac1
+plan_head_after: ef0f5a9b4d0976d610a8bf9f77f1c2ef73a1cb30
 tech-stack:
   added: []
   patterns: [evidence-only register edits, planned-scope SC rows]
@@ -48,17 +48,17 @@ status: complete
 - Task 1 evidence (`build/playable-qualification/04-49-evidence.txt`, ignored), all `ok`, no `errors=` count, no `04-49-red-` worktree left:
 
 ```
-T-04-48 red 6878cb32f1c9 exit 1 failures 24 errors 0 green 4dbf9df7856c ok
-T-04-62 red b826114f6309 exit 1 failures 12 errors 0 green 17e35704421b ok
-G3IN-03 red b826114f6309 exit 1 failures 4 errors 0 green 17e35704421b ok
-T-04-11 red d03f46fb6a1d exit 1 failures 5 errors 0 green f63691b13bba ok
-G3WR-04 red 5a4e721e85b9 exit 1 failures 2 errors 0 green eebcddedfaa3 ok
-G3WR-01 red 5a4e721e85b9 exit 1 failures 1 errors 0 green eebcddedfaa3 ok
-G3WR-05 red 48bf6e946d79 exit 1 failures 6 errors 0 green df7b94065082 ok
-G3WR-02 red e1c3ddc9e7ff exit 1 failures 2 errors 0 green fe04de2e9c56 ok
-G3IN-01 red e1c3ddc9e7ff exit 1 failures 1 errors 0 green fe04de2e9c56 ok
-G3WR-03 red 2ecb47cc5ee9 exit 1 failures 3 errors 0 green 96a413ca6b6e ok
-G3IN-02 red 35b5487188c5 exit 1 failures 2 errors 0 green 4ca3218e4ce1 ok
+T-04-48 red 34b4f875e067 exit 1 failures 24 errors 0 green e3a557dd9b4d ok
+T-04-62 red 01ebd5250a0b exit 1 failures 12 errors 0 green 2587c6ea4704 ok
+G3IN-03 red 01ebd5250a0b exit 1 failures 4 errors 0 green 2587c6ea4704 ok
+T-04-11 red f4961f3b9387 exit 1 failures 5 errors 0 green 90653636aaff ok
+G3WR-04 red aeae3a79f266 exit 1 failures 2 errors 0 green 930be6b489dd ok
+G3WR-01 red aeae3a79f266 exit 1 failures 1 errors 0 green 930be6b489dd ok
+G3WR-05 red 56b0deda61da exit 1 failures 6 errors 0 green 492ec02dd46b ok
+G3WR-02 red d5a41a4f0b9f exit 1 failures 2 errors 0 green c44cb0bd7ff4 ok
+G3IN-01 red d5a41a4f0b9f exit 1 failures 1 errors 0 green c44cb0bd7ff4 ok
+G3WR-03 red 0ff907200c7a exit 1 failures 3 errors 0 green fa55fc2ffdb9 ok
+G3IN-02 red eb3beeee97bd exit 1 failures 2 errors 0 green 3093ff80037d ok
 ```
 
 - No FAILED evidence line exists, so 04-51 has nothing to route from this plan's evidence. Some new tests passed at red by design (see the 04-44..04-48 summaries); the red criterion was `FAILED (failures=k)` with no `errors=`.
@@ -73,13 +73,13 @@ G3IN-02 red 35b5487188c5 exit 1 failures 2 errors 0 green 4ca3218e4ce1 ok
 - `python3 tests/tools/check_security_register.py first-playable-game` exit 0 (`blocking open: 04-SECURITY.md=12`).
 - `... --require-closed --phase 04` exit 1: `FAIL: 04-SECURITY.md: 12 blocking open threats` (expected pre-audit state, recorded, not repaired).
 - `python3 tools/verify_playable.py --check-docs` printed `Phase 04 documentation gate passed.`
-- Pre-existing Severity/Disposition/Status cells identical to base `7fe360c8` (108 rows compared); audit-trail row count 10 before and after; added-line grep for receipt citations and personal paths: 0; planned-scope rows: 2.
+- Pre-existing Severity/Disposition/Status cells identical to base `2d01d3fb` (108 rows compared); audit-trail row count 10 before and after; added-line grep for receipt citations and personal paths: 0; planned-scope rows: 2.
 - `pgrep -x RetroArch` exited 1 before and after; no frontend was launched.
 
 ## Task Commits
 
 1. **Task 1 (tracer):** no commit (ignored evidence only; HEAD and tracked status unchanged).
-2. **Task 2:** `49dce286f472291329395d872ba791ca26850440` (docs)
+2. **Task 2:** `ef0f5a9b4d0976d610a8bf9f77f1c2ef73a1cb30` (docs)
 
 ## Deviations from Plan
 
@@ -110,4 +110,4 @@ Ready for 04-50 (rights inventory refresh and the single pinned RetroArch re-qua
 
 ## Self-Check: PASSED
 
-- Commit 49dce28 is an ancestor of HEAD; the three modified record files exist.
+- Commit ef0f5a9 is an ancestor of HEAD; the three modified record files exist.

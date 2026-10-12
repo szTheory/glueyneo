@@ -13,8 +13,8 @@ provides:
 affects: [04-VERIFICATION gap 1, QUAL-03, HOST-02]
 status: complete
 commits: 7
-plan_head_before: fc7d5569d5b9fa1cc1d4f06cd0a16ff21a31a591
-plan_head_after: f36e04018d822c49f105e934ebdf3722bcf0ed84
+plan_head_before: 3da6f8ab8cde982850497448c83d26184ffea53c
+plan_head_after: 79cc4699a9610d30cfd8e1d44b61b34e651926b7
 actuals:
   tokens: 9700
   tasks: 3
@@ -46,27 +46,27 @@ Private-path redaction and scanning now use one canonical form (escape decode, b
 
 | Task | Commit | Notes |
 | ---- | ------ | ----- |
-| 1 red | a0b2b9e | test: CanonicalRootTest |
-| 1 | 2784e1c | fix: canonicalize (CR-01) |
-| 2 red | 6be79c3 | test: BypassMatrixTest and sink cases |
-| 2 | f556d36 | fix: scan_public_value at every sink (CR-02) |
-| 3 red | 380efd3 | test: MainErrorPathTest, smoke catch-all |
-| 3 | b47eaad | fix: lanes guard, emit_error, smoke catch-all (CR-08, CR-09) |
-| 3 rights | f36e040 | docs: rights inventory rows for the three changed test candidates |
+| 1 red | 9a032ed | test: CanonicalRootTest |
+| 1 | 0d756e2 | fix: canonicalize (CR-01) |
+| 2 red | 557ad16 | test: BypassMatrixTest and sink cases |
+| 2 | a975d39 | fix: scan_public_value at every sink (CR-02) |
+| 3 red | 8350b70 | test: MainErrorPathTest, smoke catch-all |
+| 3 | 289c67c | fix: lanes guard, emit_error, smoke catch-all (CR-08, CR-09) |
+| 3 rights | 79cc469 | docs: rights inventory rows for the three changed test candidates |
 
-First 04-24 commit: a0b2b9e.
+First 04-24 commit: 9a032ed.
 
 ## Red runs (before each fix)
 
 - Task 1, Tests A-C (`python3 tests/tools/test_private_paths.py`): `Ran 11 tests ... FAILED (failures=4)` (division-slash redact, json-escaped scan, receipt sink key and value).
-- Task 2: `Ran 19 tests ... FAILED (errors=4)` for `scan_public_value` (missing function). The BypassMatrixTest cases already passed on the Task 1 canonical module, so their red evidence is an oracle run of the same class against the pre-fix `private_paths.py` (a0b2b9e): `FAILED (failures=38)` across 4 tests, including `docs/tmp/notes` being wrongly cut.
+- Task 2: `Ran 19 tests ... FAILED (errors=4)` for `scan_public_value` (missing function). The BypassMatrixTest cases already passed on the Task 1 canonical module, so their red evidence is an oracle run of the same class against the pre-fix `private_paths.py` (9a032ed): `FAILED (failures=38)` across 4 tests, including `docs/tmp/notes` being wrongly cut.
 - Task 3: `test_verify_playable.py` `FAILED (failures=1, errors=4)` (AttributeError on `runner.lanes`, raw OSError/UnicodeDecodeError, raw path in stderr); smoke catch-all `struct.error` escaped `main()` (error in test_private_paths.py).
 
 Final: test_private_paths 20 OK, test_verify_playable 32 OK, test_retroarch_smoke 35 OK, `--check-docs` passes, `ctest --preset owned-debug -L qualification-tools` 5/5 pass.
 
 ## Rights inventory
 
-Rows for tests/tools/test_private_paths.py and tests/tools/test_verify_playable.py cite 380efd3 (full SHA in the inventory) and tests/libretro/retroarch_smoke.py cites b47eaad; the verify script printed `passed: True` and `rights rows bound 3`. The fix commits before f36e040 fail the CI rights gate by design; the final commit passes.
+Rows for tests/tools/test_private_paths.py and tests/tools/test_verify_playable.py cite 8350b70 (full SHA in the inventory) and tests/libretro/retroarch_smoke.py cites 289c67c; the verify script printed `passed: True` and `rights rows bound 3`. The fix commits before 79cc469 fail the CI rights gate by design; the final commit passes.
 
 ## Deviations from Plan
 
@@ -80,4 +80,4 @@ No auth gates. Known stubs: none. Threat flags: none.
 
 ## Self-Check: PASSED
 
-Files exist (tools/private_paths.py, tools/verify_playable.py, tests, docs/rights-inventory.md); commits a0b2b9e, 2784e1c, 6be79c3, f556d36, 380efd3, b47eaad, f36e040 are ancestors of HEAD.
+Files exist (tools/private_paths.py, tools/verify_playable.py, tests, docs/rights-inventory.md); commits 9a032ed, 0d756e2, 557ad16, a975d39, 8350b70, 289c67c, 79cc469 are ancestors of HEAD.

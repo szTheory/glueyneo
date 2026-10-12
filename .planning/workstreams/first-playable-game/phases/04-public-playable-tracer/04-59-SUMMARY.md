@@ -26,8 +26,8 @@ key-decisions:
   - "Ancestor and descendant revisions and unlisted or edited rows stay strict; stale allowlist rows are reported, not a check_docs failure"
 status: complete
 commits: 5
-plan_head_before: cfdf4a07a28a651abcf2af72761a69846bbd7d22
-plan_head_after: dfba807067e8631eb2953a5d708e93fc0e916a02
+plan_head_before: 1bc2f01ddbd59967815c129f713ebef9ab3b54ae
+plan_head_after: e43afd18e244ec9a12df56ef2a82af900530020f
 actuals:
   tokens: 60000
   tasks: 3
@@ -41,13 +41,13 @@ Per-row allowlist tolerance (pinned per record, digest-bound) lets pre-ship rows
 
 ## Commits
 
-- START (diff base for the next `/gsd-code-review`): `cfdf4a07a28a651abcf2af72761a69846bbd7d22`
-- RED 1: `f3f80ca` test(04-59) rights row and CLI line
-- FIX 1: `37e9f0f` fix(04-59) allowlist loader, pins, rights tolerance, check_docs notes, CLI lines
-- RED 2: `71f937b` test(04-59) review, receipt and adversarial cases
-- FIX 2: `1a20824` fix(04-59) review and frontend gates, `history_allowlist_stale`, DocumentationCopies copies the allowlist
-- DOCS: `dfba807` docs(04-59) rights inventory refresh (only `tests/tools/test_verify_playable.py` changed)
-- Evidence line: `G5WR-01 red f3f80ca43d2c exit 1 green 1a208248331f ok`
+- START (diff base for the next `/gsd-code-review`): `1bc2f01ddbd59967815c129f713ebef9ab3b54ae`
+- RED 1: `f4e4fdd` test(04-59) rights row and CLI line
+- FIX 1: `7ad8eef` fix(04-59) allowlist loader, pins, rights tolerance, check_docs notes, CLI lines
+- RED 2: `7570673` test(04-59) review, receipt and adversarial cases
+- FIX 2: `ad43068` fix(04-59) review and frontend gates, `history_allowlist_stale`, DocumentationCopies copies the allowlist
+- DOCS: `e43afd1` docs(04-59) rights inventory refresh (only `tests/tools/test_verify_playable.py` changed)
+- Evidence line: `G5WR-01 red f4e4fdd8202a exit 1 green ad43068224e9 ok`
 
 ## Decision and constraints
 

@@ -16,8 +16,8 @@ actuals:
   tasks: 0
   commits: 0
 commits: 0
-plan_head_before: 1323258ee4d2fa10aff7fc981c329fb4a67126ff
-plan_head_after: 1323258ee4d2fa10aff7fc981c329fb4a67126ff
+plan_head_before: f1b5927d64bdf99af3902156c319d85eb38c6434
+plan_head_after: f1b5927d64bdf99af3902156c319d85eb38c6434
 tech-stack:
   added: []
   patterns: [hosted evidence remains bound to an exact public-safe source SHA]
@@ -77,7 +77,7 @@ status: halted
 ## Verification
 
 - `python3 tests/sdk/test_matrix_evidence.py` — passed on the candidate.
-- `python3 tools/verify_sdk.py --suite matrix --output build/sdk-debug/verify-sdk/phase05-public-candidate.json` — failed before reaching the MVS lane: `manifest source identity mismatch: tests/sdk/ORACLE.md`. The current oracle document changed in commit `563437e`, while the diagnostic manifest pins earlier bytes. No manifest identity or expected-output golden was updated.
+- `python3 tools/verify_sdk.py --suite matrix --output build/sdk-debug/verify-sdk/phase05-public-candidate.json` — failed before reaching the MVS lane: `manifest source identity mismatch: tests/sdk/ORACLE.md`. The current oracle document changed in commit `6dee725`, while the diagnostic manifest pins earlier bytes. No manifest identity or expected-output golden was updated.
 - `python3 tools/public_content.py --root . --history-revision HEAD --json build/verify-sdk/public-candidate-content.json` — failed with `rights-path-set`; the rights inventory omits 13 test paths listed in the blocker record.
 - Candidate author identity check — passed for both candidate commits using `szTheory <szTheory@users.noreply.github.com>`.
 - No hosted workflow was triggered. No PR/main event, downloaded artifact, hosted runner identity, positive hosted denominator, or passing aggregate was verified.

@@ -13,8 +13,8 @@ provides:
 affects: [04-41, 04-42]
 status: complete
 commits: 1
-plan_head_before: 798b089816ab8f04975687553d1238bf2abedba3
-plan_head_after: c65d7af1a779ddba536cde0b9b86a4c4f528fc28
+plan_head_before: 1642f49dfabbe243299940d0f4edeecd6db26eba
+plan_head_after: 5ec5ac8819fad9199af25cef9bc43f28653f79d3
 actuals:
   tokens: 9000
   tasks: 2
@@ -43,9 +43,9 @@ completed: 2026-10-10
 ## Evidence lines (ignored build/playable-qualification/04-40-evidence.txt)
 
 ```
-T-04-61 red c232c640b5b7 exit 1 green 05a21b0b2494 ok
-T-04-11 red 0adeacbfbdbb exit 1 green 756c2422c0b6 ok
-T-04-38 red 858aedf09af4 exit 1 green 8c20410b0f1c ok
+T-04-61 red fae6a45ca538 exit 1 green 3c5255e286b3 ok
+T-04-11 red 4e1f2fffe34b exit 1 green 8446d8d16705 ok
+T-04-38 red 1a33f9e1c894 exit 1 green 97fbbdaa7512 ok
 ```
 
 No FAILED evidence line exists, so 04-42 has no fix-not-demonstrated routing. HEAD suites (ignored 04-40-suite-counts.txt): test_independent_review 66 OK, test_verify_playable 84 OK, test_check_security_register 24 OK, test_retroarch_smoke 71 OK, ctest owned-debug 63 OK. No `04-40-red-` worktree remains; Task 1 changed no tracked file.
@@ -56,12 +56,12 @@ No FAILED evidence line exists, so 04-42 has no fix-not-demonstrated routing. HE
 - CLOSURE `--require-closed --phase 04`: exit 1, `FAIL: 04-SECURITY.md: 9 blocking open threats` (expected pre-audit state, recorded not repaired).
 - UNSCOPED `--require-closed`: exit 1, FAIL 04-SECURITY.md 9 blocking and FAIL 05-SECURITY.md 9 blocking (Phase 05 untouched).
 - `verify_playable.py --check-docs`: `Phase 04 documentation gate passed.`
-- Record probe: `evidence recorded, rows open, threats_open 9`. Base comparison at 2192eb9: Severity and Disposition unchanged for every row; Status unchanged except T-04-48 (closed to open). Audit-trail rows 9 before and after. No added line cites the frontend receipt; no personal path added.
+- Record probe: `evidence recorded, rows open, threats_open 9`. Base comparison at ec05e13: Severity and Disposition unchanged for every row; Status unchanged except T-04-48 (closed to open). Audit-trail rows 9 before and after. No added line cites the frontend receipt; no personal path added.
 
 ## Task Commits
 
 1. Task 1 (re-proof, no commit by design): ignored evidence files only.
-2. Task 2: `c65d7af1a779ddba536cde0b9b86a4c4f528fc28` (docs) - register, ledger, crosswalk.
+2. Task 2: `5ec5ac8819fad9199af25cef9bc43f28653f79d3` (docs) - register, ledger, crosswalk.
 
 ## Deviations from Plan
 
@@ -77,4 +77,4 @@ None.
 
 ## Self-Check: PASSED
 
-Modified records exist; commit c65d7af is an ancestor of HEAD; ledger count measured 1.
+Modified records exist; commit 5ec5ac8 is an ancestor of HEAD; ledger count measured 1.

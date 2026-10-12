@@ -53,8 +53,8 @@ metrics:
   completed: 2026-10-08
   status: complete
   commits: 3
-  plan_head_before: 225de30eeb4d8e18796b1358b852d6bed430a4ec
-  plan_head_after: cf5cb66df0665f97a00e839eedce56fcf853762b
+  plan_head_before: 8a48940be470076feba4702b6a4dad469ee42a26
+  plan_head_after: 86bdda876d12f0958b78b70deb1b5560e6812c6e
 ---
 
 # Phase 04 Plan 11: Archive-Bound Receipt Validation Summary
@@ -84,9 +84,9 @@ metrics:
 
 ## Task Commits
 
-1. **Task 1 RED: Add forged receipt-row regressions** — `e02ef71` (`test`)
-2. **Task 1 GREEN: Bind receipt rows to archive bytes** — `a2ea677` (`feat`)
-3. **Task 2: Map focused security regressions** — `cf5cb66` (`docs`)
+1. **Task 1 RED: Add forged receipt-row regressions** — `d6f6e15` (`test`)
+2. **Task 1 GREEN: Bind receipt rows to archive bytes** — `4765707` (`feat`)
+3. **Task 2: Map focused security regressions** — `86bdda8` (`docs`)
 
 ## Files Created/Modified
 
@@ -123,6 +123,6 @@ Plan 04-11 is complete, and all eleven Phase 04 plans have execution summaries. 
 ## Self-Check: PASSED
 
 - All five declared plan artifacts and this summary exist.
-- Task commits `e02ef71`, `a2ea677`, and `cf5cb66` are ancestors of the current plan head.
+- Task commits `d6f6e15`, `4765707`, and `86bdda8` are ancestors of the current plan head.
 - The focused tools suite passes 17 tests; the map checker passes after rerunning tools (17) and libretro smoke (24) suites.
 - The security register remains blocked with six findings open, and actual frontend HOST-02/QUAL-03 evidence remains unknown.

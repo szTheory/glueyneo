@@ -18,8 +18,8 @@ actuals:
   tasks: 3
   commits: 5
 commits: 5
-plan_head_before: 4138f18cccf47d298adbdb5a831598828eac518f
-plan_head_after: 2647a987d64ddf22af175f3a4184613012a70964
+plan_head_before: eef4d92a7c7090cb500c8ad57aa4adb7b555a5f4
+plan_head_after: af70ec720e9d4e947461842c30ddace811aa0126
 
 tech-stack:
   added: [pinned ymfm YM2610 source closure, private C++14 candidate target]
@@ -93,15 +93,15 @@ status: complete
 - Vendored the smallest compiled YM2610 closure from immutable upstream revision `81aec25ccbb98f4873a255f7551ac4dadac59b4a`; all nine source files and the BSD-3-Clause license are hash-checked and the notice inventories per-instance state, callbacks, timer/sample assumptions, failure paths, and serialization limits.
 - Added a private C API over a target-scoped C++14 candidate. It copies callbacks, checks external address bounds, rejects reentry, catches C++ exceptions, latches callback errors until reset, bounds each clock step and output capacity, and emits three-channel chip-native samples at the documented 16-clock cadence.
 - Passed five direct C17 behavior tests and the same five tests from actual installed static and shared C consumers. The report records 256 generated frames, 128 nonzero channel values, and sample fingerprint `fnv1a64:e456cbb957de9a25`.
-- Passed all nine SND-02 gates. The ignored report is `build/ym2610-admission/ym2610-admission.json`, SHA-256 `aebe1389c45758afd07e8e126c912cede7eef14d1852b8fce3b590012cf2d762`, generated against Glueyneo revision `2647a987d64ddf22af175f3a4184613012a70964` on AppleClang 21.0.0.21000101, macOS 26.6.2 arm64. Shared-library inspection found exactly the eight intended C symbols, no exported ymfm C++ names, and the expected `libc++.1.dylib` dependency. The static C target supplied `-lc++` through its imported CMake interface.
+- Passed all nine SND-02 gates. The ignored report is `build/ym2610-admission/ym2610-admission.json`, SHA-256 `aebe1389c45758afd07e8e126c912cede7eef14d1852b8fce3b590012cf2d762`, generated against Glueyneo revision `af70ec720e9d4e947461842c30ddace811aa0126` on AppleClang 21.0.0.21000101, macOS 26.6.2 arm64. Shared-library inspection found exactly the eight intended C symbols, no exported ymfm C++ names, and the expected `libc++.1.dylib` dependency. The static C target supplied `-lc++` through its imported CMake interface.
 
 ## Task Commits
 
-1. **Task 1: Pin YM2610 source closure and inventory license and state** — `f98c771` (`feat`)
-2. **Task 2 RED: Add failing YM2610 candidate contract** — `1decc77` (`test`)
-3. **Task 2 GREEN: Add deterministic YM2610 C shim** — `3214ac5` (`feat`)
-4. **Task 3 correction: Bound external callbacks and reject reentry** — `34e2a34` (`fix`)
-5. **Task 3: Verify installed static and shared C consumers** — `2647a98` (`test`)
+1. **Task 1: Pin YM2610 source closure and inventory license and state** — `5d9d87a` (`feat`)
+2. **Task 2 RED: Add failing YM2610 candidate contract** — `8705ed3` (`test`)
+3. **Task 2 GREEN: Add deterministic YM2610 C shim** — `600ba4e` (`feat`)
+4. **Task 3 correction: Bound external callbacks and reject reentry** — `834c069` (`fix`)
+5. **Task 3: Verify installed static and shared C consumers** — `af70ec7` (`test`)
 
 The TDD RED record is `build/ym2610-admission/tdd-red.json`. The named create-instance TAP assertion failed as intended against the temporary stub; `gsd check tdd-red-evidence` returned `RED_EVIDENCE_OK`. The same TAP assertion passed after the implementation.
 
@@ -128,7 +128,7 @@ The TDD RED record is `build/ym2610-admission/tdd-red.json`. The named create-in
 - **Issue:** The first shim version forwarded YMFM external accesses without checking per-class address lengths and did not reject nested calls from callbacks.
 - **Fix:** Copy callback tables and sizes into the instance, reject out-of-range ADPCM-A/ADPCM-B/I/O accesses before invocation, and latch nested API calls as callback failure.
 - **Files modified:** `src/chips/ym2610_candidate.h`, `src/chips/ym2610_candidate.cpp`, `tests/chips/test_ym2610.c`, `third_party/ymfm/NOTICE.md`
-- **Commit:** `34e2a34`
+- **Commit:** `834c069`
 - **Verification:** direct admission test plus installed static/shared C consumers pass.
 
 ## Issues Encountered

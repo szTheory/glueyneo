@@ -17,8 +17,8 @@ actuals:
   tasks: 3
   commits: 4
 commits: 4
-plan_head_before: 96cb7fb91e65be0fce77b7e402067d9d27b8ec8a
-plan_head_after: 3072f2097cf586315228cc9f1e5f2b9bc8f2baea
+plan_head_before: 80c0cddab7ccb320ce4bb516035c4f38ad8bf9ee
+plan_head_after: 290c09f5304c67e08e6480f72f5a8880e45815f7
 tech-stack:
   added: []
   patterns: [exact JSON numeric types, conservative diagnostic path spans, CMake object-target classification]
@@ -121,10 +121,10 @@ completed: 2026-10-08
 
 ## Task Commits
 
-1. Task 1 RED — `cf65bab`: reproduce boolean receipt and private path suffix failures.
-2. Task 1 GREEN — `33bef8c`: reject boolean fields and redact ambiguous path tails.
-3. Task 2 — `417e365`: align validation map with current blocked audit.
-4. Task 3 — `3072f20`: refresh owned CPU identity and scope compile evidence.
+1. Task 1 RED — `c438a17`: reproduce boolean receipt and private path suffix failures.
+2. Task 1 GREEN — `d45db8c`: reject boolean fields and redact ambiguous path tails.
+3. Task 2 — `e79104a`: align validation map with current blocked audit.
+4. Task 3 — `290c09f`: refresh owned CPU identity and scope compile evidence.
 
 ## Automated Evidence
 
@@ -163,4 +163,4 @@ HOST-02 and actual frontend QUAL-03 remain unknown. Preserve the observation req
 
 ## Self-Check: PASSED
 
-All 12 task artifacts and this summary exist; cf65bab, 33bef8c, 417e365 and 3072f20 are ancestors of the current plan head. Observed test results and public fixture identity match the claims above. Security/review records are unchanged and actual frontend acceptance remains unknown.
+All 12 task artifacts and this summary exist; c438a17, d45db8c, e79104a and 290c09f are ancestors of the current plan head. Observed test results and public fixture identity match the claims above. Security/review records are unchanged and actual frontend acceptance remains unknown.

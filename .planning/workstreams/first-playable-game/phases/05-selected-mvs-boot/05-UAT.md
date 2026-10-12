@@ -19,8 +19,8 @@ source: automated
 coverage_id: D1
 requirement: MEDIA-02
 evidence: |
-  Current checkout d65dc2c: `ctest --preset sdk-debug -R '^(mvs_synthetic_trace|mvs_media_contract)$' --output-on-failure --no-tests=error` passed 2/2.
-  Rechecked at current checkout 2b22c25: the seven-test `^mvs_` CTest lane passed 7/7; `mvs_media_contract` passed. This still establishes only the normalized contract, not selected private media.
+  Current checkout a236986: `ctest --preset sdk-debug -R '^(mvs_synthetic_trace|mvs_media_contract)$' --output-on-failure --no-tests=error` passed 2/2.
+  Rechecked at current checkout 103a1e0: the seven-test `^mvs_` CTest lane passed 7/7; `mvs_media_contract` passed. This still establishes only the normalized contract, not selected private media.
 scope: Automated contract and synthetic integration coverage; no selected commercial media claim.
 
 ### 2. Normalize ZIP32 role archives and run the synthetic guest sentinel
@@ -29,8 +29,8 @@ result: pass
 source: automated
 coverage_id: D2
 evidence: |
-  Current checkout d65dc2c: `ctest --preset sdk-debug -R '^(mvs_import_contract|mvs_import_mutation|mvs_boot_checkpoint|mvs_import_fuzz_corpus)$' --output-on-failure --no-tests=error` passed 4/4.
-  Rechecked at current checkout 2b22c25: the seven-test `^mvs_` CTest lane passed 7/7, including importer, mutation, checkpoint, and fuzz-corpus cases; `python3 tools/verify_sdk.py --suite matrix` passed 1,440 assertions across 43 cases and 10 lanes.
+  Current checkout a236986: `ctest --preset sdk-debug -R '^(mvs_import_contract|mvs_import_mutation|mvs_boot_checkpoint|mvs_import_fuzz_corpus)$' --output-on-failure --no-tests=error` passed 4/4.
+  Rechecked at current checkout 103a1e0: the seven-test `^mvs_` CTest lane passed 7/7, including importer, mutation, checkpoint, and fuzz-corpus cases; `python3 tools/verify_sdk.py --suite matrix` passed 1,440 assertions across 43 cases and 10 lanes.
 scope: Synthetic importer, mutation, guest checkpoint, and bounded fuzz-corpus tests; not selected title compatibility.
 
 ### 3. Import selected game and BIOS and reach guest execution
@@ -48,14 +48,14 @@ result: blocked
 blocked_by: other
 reason: "Plan 05-06 could not establish a sourced selected-guest checkpoint, and the pinned-app launch preconditions did not materially change. No selected-media app launch was attempted; actual RetroArch behavior remains unknown/manual-only."
 automated_subcheck: |
-  Current checkout 2b22c25: `python3 tests/libretro/test_retroarch_smoke.py -v` passed 31/31 structural and privacy tests. These do not exercise the pinned RetroArch app with selected media.
+  Current checkout 103a1e0: `python3 tests/libretro/test_retroarch_smoke.py -v` passed 31/31 structural and privacy tests. These do not exercise the pinned RetroArch app with selected media.
 
 ### 5. Run the public MVS regression suite in current-revision CI
 expected: The existing pull-request/main CI evidence matrix runs the public MVS region, importer, callback, guest-checkpoint, and bounded fuzz-corpus tests with a positive named-test denominator.
 historical_reported: "The shared verify_sdk CI evidence inventory selects sdk-labeled CTest cases and omits the MVS-labeled tests, so Phase 05 regressions are not part of current CI receipts."
 evidence: |
-  Historical evidence at checkout d65dc2c showed the collector omitted MVS-labeled CTests; Plan 05-02 repaired that local evidence-lane defect.
-  Plan 05-06's public-safe PR #2 candidate `e80672845fc60d94d8a44eab416377534c9a99f1` passed hosted run `38001400110`: all seven named MVS tests, positive denominator, matching source/output digests, and the aggregate passed. Local current checkout 2b22c25 also passed the SDK matrix (1,440 assertions, 43 cases, 10 lanes). PR #2 remains unmerged pending its required approving review; this receipt does not qualify selected boot or frontend behavior.
+  Historical evidence at checkout a236986 showed the collector omitted MVS-labeled CTests; Plan 05-02 repaired that local evidence-lane defect.
+  Plan 05-06's public-safe PR #2 candidate `e80672845fc60d94d8a44eab416377534c9a99f1` passed hosted run `38001400110`: all seven named MVS tests, positive denominator, matching source/output digests, and the aggregate passed. Local current checkout 103a1e0 also passed the SDK matrix (1,440 assertions, 43 cases, 10 lanes). PR #2 remains unmerged pending its required approving review; this receipt does not qualify selected boot or frontend behavior.
 result: pass
 source: automated
 resolution: |

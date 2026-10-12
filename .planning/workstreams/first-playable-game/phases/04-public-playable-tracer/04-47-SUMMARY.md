@@ -15,8 +15,8 @@ actuals:
   tokens: 6000
   tasks: 2
   commits: 3
-plan_head_before: a39198529bfcff668e4fa13733560c60b347a897
-plan_head_after: ce1c18734d67ddc82758067a031625fd639e69f9
+plan_head_before: e2a2af8cbd139609cdabf47ed1a93b219121725b
+plan_head_after: 7ee9ae3c6fad8ec5bff18360663197fc1e896dc6
 tech-stack:
   added: []
   patterns: ["one generalized alternation for every review round, enforced on the prompt ID list"]
@@ -55,9 +55,9 @@ coverage:
 
 ## Task Commits
 
-1. **Task 1 RED:** `e1c3ddc` (test) - `test(04-47): reproduce G3WR-02 G3 IDs and G3IN-01 top-level dollar patterns`
-2. **Task 1 GREEN:** `fe04de2` (fix) - generalized ID_PATTERN, malformed-ID ValueError, leading-`$` refusal
-3. **Task 2:** `ce1c187` (docs) - docs/testing.md review-tool containment bullet
+1. **Task 1 RED:** `d5a41a4` (test) - `test(04-47): reproduce G3WR-02 G3 IDs and G3IN-01 top-level dollar patterns`
+2. **Task 1 GREEN:** `c44cb0b` (fix) - generalized ID_PATTERN, malformed-ID ValueError, leading-`$` refusal
+3. **Task 2:** `7ee9ae3` (docs) - docs/testing.md review-tool containment bullet
 
 Red failure class line (build/playable-qualification/04-47-red-g3wr_02.txt): `FAILED (failures=3)` with no `errors=` count; `FAIL:` lines include `test_g3wr_02_review_ids_rejects_malformed_ids` and `test_g3in_01_leading_dollar_is_not_contained`.
 

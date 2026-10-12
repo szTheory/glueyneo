@@ -16,8 +16,8 @@ actuals:
   tokens: 9000
   tasks: 3
   commits: 12
-plan_head_before: cd2b0d846085cdc3b55a66442e909c8d2b47598a
-plan_head_after: a84bbc6393002970a545f7f0c9eddce2fe41f8cb
+plan_head_before: d1b29f0ba9b1acdf4a89c3005fd8b6b6d9acd81e
+plan_head_after: 3beee0e51072ec3d394fd943c28ca80faae7a9be
 commits: 12
 
 tech-stack:
@@ -99,17 +99,17 @@ None. `04-34-branch.txt` is absent, so the full repair path ran.
 
 | ID | Group | Outcome | Test commit | Fix commit |
 |----|-------|---------|-------------|------------|
-| T-04-11 | runner | repaired | 722127e | 0e8088e |
-| T-04-15 | runner | repaired | 722127e | 0e8088e |
-| T-04-18 | runner | repaired | 722127e | 0e8088e |
-| T-04-20 | runner | repaired | 722127e | 0e8088e |
-| T-04-67 | runner | repaired | 20298ab | e069895 |
-| WR-11 | runner | repaired | 20298ab | e069895 |
-| T-04-56 | gates | repaired | c305352 | 6c96250 |
-| WR-08 | gates | repaired | c305352 | 6c96250 |
-| T-04-62 | gates | repaired | d1cc1a8 | 499d9ea |
-| T-04-61 | gates | repaired | d1cc1a8 | 5f946d0 |
-| T-04-65 | gates | repaired | d1cc1a8 | 5f946d0 |
+| T-04-11 | runner | repaired | 0b5bcd0 | 35d52e8 |
+| T-04-15 | runner | repaired | 0b5bcd0 | 35d52e8 |
+| T-04-18 | runner | repaired | 0b5bcd0 | 35d52e8 |
+| T-04-20 | runner | repaired | 0b5bcd0 | 35d52e8 |
+| T-04-67 | runner | repaired | 89292b7 | 73c919c |
+| WR-11 | runner | repaired | 89292b7 | 73c919c |
+| T-04-56 | gates | repaired | 10b1375 | 1ee3be9 |
+| WR-08 | gates | repaired | 10b1375 | 1ee3be9 |
+| T-04-62 | gates | repaired | cc7d5a1 | 79356f0 |
+| T-04-61 | gates | repaired | cc7d5a1 | d917098 |
+| T-04-65 | gates | repaired | cc7d5a1 | d917098 |
 
 Repaired IDs for 04-36 "Repair to verify": all eleven. No ID is `unrepaired`; there are no open outside-bounds items. `04-33-writable-findings.txt` is empty, so no T-04-56/GWR-02 C-source routing applies. Statuses of every threat, finding and crosswalk row are unchanged; 04-36 owns closure.
 
@@ -130,13 +130,13 @@ Each reproducing test was observed failing for the cited reason before its fix (
 - **Issue:** `CrosswalkProvenanceTest.test_rows_must_equal_the_disposition_record` "state differs" set CR-01 to `fixed`, but 04-34 had already made the live row `fixed`, so the mutation asserted "did not change the crosswalk". Failing at the plan start revision, independent of this plan's fixes, and the plan's verify requires the suite green.
 - **Fix:** the mutation now toggles away from the live state (`fixed` to `open`, otherwise to `fixed`). The expectation and error regex are unchanged and the mutation is stronger, not weaker.
 - **Files modified:** tests/tools/test_verify_playable.py
-- **Committed in:** 6125afe
+- **Committed in:** 3633eb9
 
 **2. [Rule 1 - Bug] T-04-65 shape test passed review-only arguments to `gate`**
 - **Found during:** Task 2 (GREEN run)
 - **Issue:** the new test invoked `gate` with `--review` and `--prompt`, which `gate` rejects.
 - **Fix:** invoke `gate` with its own arguments; re-verified the test still fails against the pre-fix tool.
-- **Committed in:** 5f946d0 (with the fix)
+- **Committed in:** d917098 (with the fix)
 
 **Total deviations:** 2 auto-fixed (1 blocking, 1 bug). **Impact:** none on scope; both inside the file bound.
 

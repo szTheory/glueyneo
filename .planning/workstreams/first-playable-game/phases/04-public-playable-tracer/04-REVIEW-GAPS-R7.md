@@ -2,8 +2,8 @@
 phase: 04-public-playable-tracer
 reviewed: 2026-10-11T00:00:00Z
 depth: standard
-diff_base: 1f1d953e6c00335fc336bebac4d14f5c8e27553e
-reviewed_head: f443a0356627f9e6061a0b49c55682c4063f11d9
+diff_base: d46e6e132c95205d7a92a54e70aa24f4b07d0d47
+reviewed_head: 826d6eb157547f14b8ffe0eec9a8fa95d05be62a
 files_reviewed: 6
 files_reviewed_list:
   - .github/workflows/ci.yml
@@ -29,7 +29,7 @@ status: issues_found
 
 ## Summary
 
-This round reviews `git diff 1f1d953..f443a03` over the six listed files. Those commits are the round-6 fixes: duplicate-row rejection, history anchoring of the allowlist, the opt-in CTest, the PR-time CI step, and the confined working-tree read for tolerated rights rows.
+This round reviews `git diff d46e6e1..826d6eb` over the six listed files. Those commits are the round-6 fixes: duplicate-row rejection, history anchoring of the allowlist, the opt-in CTest, the PR-time CI step, and the confined working-tree read for tolerated rights rows.
 
 G6WR-02 is closed. G6WR-03 is closed for symlinks and unnormalized paths, but it still hashes uncommitted bytes. G6WR-01 is closed only through the CI step. The in-tree anchoring adds no protection against forged rows.
 
@@ -46,7 +46,7 @@ What I ran (RetroArch was not run, and no tracked file was modified):
 | `-k g6wr -k g5wr` subset | 33 tests OK |
 | `tools/verify_playable.py --check-docs` (full checkout) | passes |
 | `tools/verify_playable.py --history-allowlist check --base origin/main` | **stale** (see G7CR-02) |
-| `tools/public_content.py --root .` and `tools/verify_sdk.py --suite public-content` | **fail**, `rights-digest` (see G7CR-01). At 1f1d953 the rights section passed. |
+| `tools/public_content.py --root .` and `tools/verify_sdk.py --suite public-content` | **fail**, `rights-digest` (see G7CR-01). At d46e6e1 the rights section passed. |
 | Simulated squash: `commit-tree HEAD^{tree} -p <remote main>` in a scratch clone, then `--check-docs` | **fail** on the rights row for `tests/tools/test_verify_playable.py` (G7CR-01) |
 | Depth-1 clone of HEAD, then `--check-docs` | fails with `frontend evidence revision cannot be checked` (G7IN-01) |
 
@@ -70,12 +70,12 @@ None provided.
 
 **File:** `tests/tools/test_verify_playable.py:3144-3215` (the edit). Also `docs/rights-inventory.md:90` (not updated), and `tools/verify_playable.py:1636-1645`, `:1815-1877` (no guard).
 
-**Issue:** This round added about 73 lines to `tests/tools/test_verify_playable.py`. The file's rights row still says `source_revision 027e41777783…` with `sha256 bad5bc34d0a8…`. That digest matches the bytes at 1f1d953 but not at HEAD (HEAD hashes to `05d6997f1aa3…`). Because `tests/tools/test_verify_playable.py` is a rights candidate for `tools/public_content.py`, two things break:
+**Issue:** This round added about 73 lines to `tests/tools/test_verify_playable.py`. The file's rights row still says `source_revision 0031bb09410d…` with `sha256 bad5bc34d0a8…`. That digest matches the bytes at d46e6e1 but not at HEAD (HEAD hashes to `05d6997f1aa3…`). Because `tests/tools/test_verify_playable.py` is a rights candidate for `tools/public_content.py`, two things break:
 
-- **CI now.** `tools/public_content.py --root .`, and therefore `tools/verify_sdk.py --suite public-content` (the first step of the `public-content` job, `ci.yml:140-141`), fails with `rights-digest: shipped item bytes differ from the rights inventory`. At 1f1d953 the rights section passed. The PR's required public-content job fails before it reaches the new allowlist step.
-- **Main after the squash.** The row is allowlisted (027e417 is a branch-only commit), so after the squash it takes the tolerated branch. That branch compares the working-tree digest with the recorded `sha256`, and they differ. A simulated squash (tree of HEAD committed onto the remote main tip) fails `--check-docs` with `rights source_revision 027e41777783 for tests/tools/test_verify_playable.py is unverifiable-history … and the working-tree file does not hold the recorded SHA-256`. After the squash, the allowlist cannot be regenerated, because `write` refuses on squashed history. Main would then be stuck failing the gate.
+- **CI now.** `tools/public_content.py --root .`, and therefore `tools/verify_sdk.py --suite public-content` (the first step of the `public-content` job, `ci.yml:140-141`), fails with `rights-digest: shipped item bytes differ from the rights inventory`. At d46e6e1 the rights section passed. The PR's required public-content job fails before it reaches the new allowlist step.
+- **Main after the squash.** The row is allowlisted (0031bb0 is a branch-only commit), so after the squash it takes the tolerated branch. That branch compares the working-tree digest with the recorded `sha256`, and they differ. A simulated squash (tree of HEAD committed onto the remote main tip) fails `--check-docs` with `rights source_revision 0031bb09410d for tests/tools/test_verify_playable.py is unverifiable-history … and the working-tree file does not hold the recorded SHA-256`. After the squash, the allowlist cannot be regenerated, because `write` refuses on squashed history. Main would then be stuck failing the gate.
 
-Neither `--history-allowlist check` (in the CTest or the CI step) nor the generator catches this. On full history the strict branch reads the blob at 027e417, which still matches. The only safeguard is the manual "squash simulation" in `docs/testing.md:272-277`, which is not automated.
+Neither `--history-allowlist check` (in the CTest or the CI step) nor the generator catches this. On full history the strict branch reads the blob at 0031bb0, which still matches. The only safeguard is the manual "squash simulation" in `docs/testing.md:272-277`, which is not automated.
 
 **Fix:**
 1. Update the row to the bytes now in HEAD: set `sha256` to the HEAD digest, and set `source_revision` to a commit that holds those bytes (the last commit that touches the file). Then regenerate the allowlist with the correct base (G7CR-02).

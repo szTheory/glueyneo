@@ -30,8 +30,8 @@ decisions:
 metrics:
   duration: 20h 15m
   completed: 2026-10-09
-  plan_head_before: 2f9bf85d633709d99082070995a67610278ae27e
-  plan_head_after: 183c489750d7974a09b11dadef876756b01b6210
+  plan_head_before: 304199e4398cc48755705f272d60e8434693c252
+  plan_head_after: d8a996f973da2c81931facd78066c1f2bb7a7866
   commits: 1
 status: halted
 actuals:
@@ -52,7 +52,7 @@ coverage:
         ref: "python3 tools/verify_sdk.py --suite matrix"
         status: pass
       - kind: integration
-        ref: "Shared checkout HEAD 8d4f4f471d33101361406f6700c46d9a66b64d89: python3 tools/public_content.py --root . --history-revision HEAD; failed because local branch history contains personal-path findings. This checkout is not publishable."
+        ref: "Shared checkout HEAD c2a46f1e6735fc2dfe6432a628b47437c2ca3ef6: python3 tools/public_content.py --root . --history-revision HEAD; failed because local branch history contains personal-path findings. This checkout is not publishable."
         status: fail
     human_judgment: false
   - id: D2
@@ -90,7 +90,7 @@ coverage:
 
 ## Accomplishments
 
-- Task 1 completed in shared commit `183c489`: corrected the diagnostic cycle contract and source identity, added affirmative exact-byte rights rows for the 13 omitted public test paths, and narrowly dispositioned the two upstream zlib attribution blobs while preserving notices. Local source identity, public-content, focused checks, and the complete SDK matrix passed.
+- Task 1 completed in shared commit `d8a996f`: corrected the diagnostic cycle contract and source identity, added affirmative exact-byte rights rows for the 13 omitted public test paths, and narrowly dispositioned the two upstream zlib attribution blobs while preserving notices. Local source identity, public-content, focused checks, and the complete SDK matrix passed.
 - Task 2 reviewed available source and prior validation evidence but found no independently observed selected configuration or sourced guest-written attract/start predicate. The existing 256-chunk run exhausted its instruction budget without a checkpoint. No new selected run, behavior change, raised bound, or guessed predicate was made. This is the plan's intended narrow stop; GAME-02 and selected compatibility remain open.
 - Task 3 produced public-safe PR #2 at `e80672845fc60d94d8a44eab416377534c9a99f1`. The candidate emits a path-free MVS lane receipt alongside the canonical output and the hosted CI policy job validates both artifacts against the exact event, current source identity, and aggregate. Independent review passed the exact candidate SHA.
 - Hosted run `38001400110` passed all six matrix lanes, public-content, and `ci-policy`. Artifacts from that same run passed `tools/verify_hosted_mvs.py` with all seven named MVS CTests, a positive denominator, matching source/output digests, and a passing aggregate. Local matrix results are documented separately from hosted evidence.
@@ -120,7 +120,7 @@ coverage:
 ## Current shared checkout refresh — 2026-10-09
 
 - The local evidence matrix and SDK matrix pass on shared checkout HEAD
-  `8d4f4f471d33101361406f6700c46d9a66b64d89`.
+  `c2a46f1e6735fc2dfe6432a628b47437c2ca3ef6`.
 - A fresh `python3 tools/public_content.py --root . --history-revision HEAD`
   scan fails because local branch history contains personal-path findings.
   The finding details are intentionally not copied into this planning record;
@@ -148,7 +148,7 @@ coverage:
 ## Self-Check: PASSED
 
 - Summary file exists at the planned path.
-- Task 1 commit `183c489` exists in the shared project history.
+- Task 1 commit `d8a996f` exists in the shared project history.
 - Task 3 candidate review, hosted run, and downloaded receipt correspond to exact SHA `e80672845fc60d94d8a44eab416377534c9a99f1`.
 
 ## Post-verification continuity — 2026-10-10

@@ -21,7 +21,7 @@ and_gate: "No for test omission: fixed collector inventory alone excludes the te
 ## Symptoms
 
 expected: Existing PR/main current-SHA evidence includes the MVS region, importer, callback, guest-checkpoint, and bounded fuzz-corpus CTests with exact names and positive counts.
-actual: At checkout d65dc2c, tools/verify_sdk.py defines no MVS CTest lane and its matrix suite enumerates SDK labels. CMake registers Phase 05 tests under mvs, and local CTests pass.
+actual: At checkout a236986, tools/verify_sdk.py defines no MVS CTest lane and its matrix suite enumerates SDK labels. CMake registers Phase 05 tests under mvs, and local CTests pass.
 errors: No failing command; CI parity and evidence coverage are absent.
 reproduction: Test 5 in .planning/workstreams/first-playable-game/phases/05-selected-mvs-boot/05-UAT.md.
 started: Phase 05 implementation.

@@ -2,7 +2,7 @@
 phase: 04-public-playable-tracer
 reviewed: 2026-10-11T00:00:00Z
 depth: standard
-diff_base: f675d7c
+diff_base: 77d5159
 files_reviewed: 11
 files_reviewed_list:
   - docs/first-playable-build.md
@@ -27,13 +27,13 @@ status: issues_found
 # Phase 04: Gap-Closure Re-Review R4 (04-43..04-55)
 
 **Reviewed:** 2026-10-11
-**Depth:** standard (changes since f675d7c, with surrounding code)
+**Depth:** standard (changes since 77d5159, with surrounding code)
 **Files Reviewed:** 11
 **Status:** issues_found
 
 ## Summary
 
-Round 4 reviews plans 04-43..04-55: the lane-output, rollback, per-round provenance, ID-pattern, probe pid-record, snapshot directory-set, setup/entry guard and security-register frontmatter/table work. The four unit suites pass as run here (independent_review 70, check_security_register 59, verify_playable 105, retroarch_smoke 77 tests), and `python3 tools/verify_playable.py --check-docs` passes. The receipt status line (`5a40e93147bf`) is consistent with the currency rule: nothing under `src/`, `include/`, `third_party/`, `tests/fixture/`, `tests/libretro/` or the two listed tool files changed after that revision, only `tests/tools/` and docs.
+Round 4 reviews plans 04-43..04-55: the lane-output, rollback, per-round provenance, ID-pattern, probe pid-record, snapshot directory-set, setup/entry guard and security-register frontmatter/table work. The four unit suites pass as run here (independent_review 70, check_security_register 59, verify_playable 105, retroarch_smoke 77 tests), and `python3 tools/verify_playable.py --check-docs` passes. The receipt status line (`09e43f0c4ea0`) is consistent with the currency rule: nothing under `src/`, `include/`, `third_party/`, `tests/fixture/`, `tests/libretro/` or the two listed tool files changed after that revision, only `tests/tools/` and docs.
 
 No critical issues. The R3 fixes hold for the cases their tests exercise, but one of them (G3WR-01) introduced a new output-loss path that I reproduced against the real function, and the register checker's new key normalization accepts spellings that the downstream GSD reader does not read as `threats_open`. Two older provenance gaps surfaced while re-deriving R3's claim about the rights inventory.
 
@@ -78,7 +78,7 @@ Also, `drained` is decoded without newline translation, so CRLF output written d
 ### G4WR-04: R3's rights-inventory claim does not hold; one `source_revision` does not resolve and four are stale
 
 **File:** `docs/rights-inventory.md` (rows for `tests/fixture/check_fixture.py`, `fixtures/diagnostic/manifest.json`, `tests/fixture/ORACLE.md`, `tests/fixture/rights-manifest.json`, `tests/sdk/ORACLE.md`)
-**Issue:** R3 stated that each `source_revision` equals the last commit touching the file. Re-derived from `git log -1 -- <path>` it is true only for 21 of the 46 rows (all 8 rows edited in this range are correct, and every SHA-256 matches the working tree). The remaining 25 rows differ from the last-touching commit; most are harmless (content at the cited commit equals HEAD, or the value is an upstream Unity pin). But: (a) `tests/fixture/check_fixture.py` cites `e6547a1e671a2a615315487bc5d95d5bfe442d70`, which does not exist in the repository (the real commit starting `e6547a1` is `e6547a11dbb631ca...`); the 33 trailing digits are wrong, so the provenance cannot be followed. (b) Four rows cite a commit whose version of the file differs from HEAD although the recorded SHA-256 is the HEAD digest, so the revision/digest pair is internally inconsistent. The document does not define what `source_revision` means, so nothing catches this.
+**Issue:** R3 stated that each `source_revision` equals the last commit touching the file. Re-derived from `git log -1 -- <path>` it is true only for 21 of the 46 rows (all 8 rows edited in this range are correct, and every SHA-256 matches the working tree). The remaining 25 rows differ from the last-touching commit; most are harmless (content at the cited commit equals HEAD, or the value is an upstream Unity pin). But: (a) `tests/fixture/check_fixture.py` cites `e6547a1e671a2a615315487bc5d95d5bfe442d70`, which does not exist in the repository (the real commit starting `b096b98` is `b096b985c1b278ff...`); the 33 trailing digits are wrong, so the provenance cannot be followed. (b) Four rows cite a commit whose version of the file differs from HEAD although the recorded SHA-256 is the HEAD digest, so the revision/digest pair is internally inconsistent. The document does not define what `source_revision` means, so nothing catches this.
 **Fix:** Define the field in the document (for third-party rows the upstream pin, for original files the last commit that changed the file), correct the unresolvable value, refresh the four stale rows, and add a check in `tests/tools/test_private_paths.py` or the rights check that every non-third-party `source_revision` resolves with `git cat-file -e`.
 
 ## Info

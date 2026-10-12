@@ -15,8 +15,8 @@ provides:
 affects: [04-VERIFICATION gap 5, HOST-02, QUAL-03, T-04-47, T-04-54, T-04-18]
 status: complete
 commits: 7
-plan_head_before: d31fa7edddc2a062d47cabf3ffca1d02a19fd9e1
-plan_head_after: 28e33de3bfa9f9dfd29841ed5d8cc92a4c656300
+plan_head_before: d06b96e28f51534d85e4e096e647d36439b4b9d3
+plan_head_after: 269cdae12e238a079486a44892b81b1e62b7f86b
 actuals:
   tokens: 45000
   tasks: 3
@@ -48,9 +48,9 @@ The pinned RetroArch launch no longer stacks, orphans or addresses foreign insta
 
 | Task | Commits | Result |
 | ---- | ------- | ------ |
-| 1 Tracer: refuse to stack, quit own PID | 9d7c3c1 (red), a8c8ad1 | `running_retroarch_pids`, `refuse_stacked_launch` at both launch sites, quit gated on `== {process.pid}` |
-| 2 No orphan on outer timeout | bd43ca5 (red), 8a5b4d3 | signal handler + `kill_launched_group`, `--child-pid-file`, `Runner.command` own session + SIGTERM/grace/SIGKILL, `run_frontend_smoke_lane` |
-| 3 Captures, decode, docs, rights | 8aa1ef3 (red), c708dc8, 28e33de | IEND + two-sample stability, bounded `decompressobj`, `video` stage wrapping, size check before read, guide paragraph, three rights rows |
+| 1 Tracer: refuse to stack, quit own PID | 297f1b1 (red), ac4cb54 | `running_retroarch_pids`, `refuse_stacked_launch` at both launch sites, quit gated on `== {process.pid}` |
+| 2 No orphan on outer timeout | 6ec63f6 (red), 9aef197 | signal handler + `kill_launched_group`, `--child-pid-file`, `Runner.command` own session + SIGTERM/grace/SIGKILL, `run_frontend_smoke_lane` |
+| 3 Captures, decode, docs, rights | 23b412c (red), 93e1282, 269cdae | IEND + two-sample stability, bounded `decompressobj`, `video` stage wrapping, size check before read, guide paragraph, three rights rows |
 
 ## Red runs (observed failing before the fix)
 

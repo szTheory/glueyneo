@@ -14,8 +14,8 @@ provides:
 affects: [04-40, 04-41, 04-42]
 status: complete
 commits: 6
-plan_head_before: 7e6512c125bd10cc9a782e3e49ae5efb289e5694
-plan_head_after: 95236847c2ea2af14cda24c4fbfca4875f9907ed
+plan_head_before: b0a1487fdbbb2900f7b962820637c6e0076d6f4c
+plan_head_after: f866fa49277abffad5ab2b811fc2d5d57934730f
 actuals:
   tokens: 5800
   tasks: 3
@@ -68,9 +68,9 @@ Duration: about 25 min (start 2026-10-10 ~19:58Z, end 20:24Z). 3 tasks, 6 files.
 
 | ID | RED commit | GREEN commit | RED failure count |
 |----|-----------|--------------|-------------------|
-| T-04-61 (G2CR-01), G2WR-03, G2 finding IDs | c232c64 | 05a21b0 | 7 test methods failing, 18 failures with subtests (6 of the 7 new tests in this task failed on the intended assertion; the scratch-relative-stays-contained assertions already held) |
-| G2WR-04, G2IN-01 | a8167a9 | fbb9438 | 3 test methods failing, 5 failures with subtests (non-register-names test fails on the decimal half) |
-| G2WR-06 | a863c5d | 9523684 | 2 of 3 failing (signal-survives-raising-body errors with the raw OSError; pid-record reports `launch`); the unchanged-propagation test is a guard and passed |
+| T-04-61 (G2CR-01), G2WR-03, G2 finding IDs | fae6a45 | 3c5255e | 7 test methods failing, 18 failures with subtests (6 of the 7 new tests in this task failed on the intended assertion; the scratch-relative-stays-contained assertions already held) |
+| G2WR-04, G2IN-01 | 71a777c | c33c7c0 | 3 test methods failing, 5 failures with subtests (non-register-names test fails on the decimal half) |
+| G2WR-06 | 89fe19c | f866fa4 | 2 of 3 failing (signal-survives-raising-body errors with the raw OSError; pid-record reports `launch`); the unchanged-propagation test is a guard and passed |
 
 ## Task outcomes
 
@@ -103,4 +103,4 @@ None. No new network, auth or trust-boundary surface; all changes tighten existi
 
 ## Self-Check: PASSED
 
-All six modified files exist; commits c232c64, 05a21b0, a8167a9, fbb9438, a863c5d, 9523684 are ancestors of HEAD; `git rev-list --count` from the ledger base measured 6.
+All six modified files exist; commits fae6a45, 3c5255e, 71a777c, c33c7c0, 89fe19c, f866fa4 are ancestors of HEAD; `git rev-list --count` from the ledger base measured 6.

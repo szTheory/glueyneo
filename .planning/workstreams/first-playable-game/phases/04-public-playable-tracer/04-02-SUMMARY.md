@@ -34,8 +34,8 @@ actuals:
   tasks: 2
   commits: 5
 commits: 5
-plan_head_before: 5016f0a4e15ef3fc83b3efe196e23f20a32f5fdb
-plan_head_after: c86082da2816226b40ae8c5fa99c748a3be2b818
+plan_head_before: 4640e6057fe664ab5291b06c0a7753a09aae66b4
+plan_head_after: 0689cec7dd2141ba79c554f53aaee6918e30c7db
 requirements-completed: [TRAC-01, TRAC-02, TRAC-03, API-05]
 coverage:
   - id: P04-02-CALLBACK
@@ -104,14 +104,14 @@ status: complete
 - **Fix:** Added `third_party/libretro` to the package-check source staging list.
 - **Files modified:** `tests/consumers/check_package.py`
 - **Verification:** `sdk_package_docs_static` and `sdk_package_docs_shared` both passed after the fix.
-- **Commit:** `a16ba0c`
+- **Commit:** `9c62686`
 
 **2. [Rule 2 - Missing security mitigation] Kept RetroArch control local**
 - **Found during:** Task 2 runner review
 - **Issue:** The initially selected UDP command interface in pinned RetroArch 1.22.2 has no loopback bind option and can listen on all interfaces.
 - **Fix:** Replaced UDP commands with local keyboard input and frontend screenshots; the runner does not enable the network command interface.
 - **Files modified:** `tests/libretro/retroarch_smoke.py`
-- **Commit:** `6d179b4`
+- **Commit:** `3d546ad`
 
 **3. [Rule 2 - Missing critical boundary coverage] Verified malformed-load cleanup**
 - **Found during:** Final acceptance review
@@ -119,7 +119,7 @@ status: complete
 - **Fix:** Added unsupported-version and invalid-fixture-body cases, then verified valid content loads after each rejected attempt.
 - **Files modified:** `tests/libretro/callback_harness.c`
 - **Verification:** `libretro_callback` passed with all malformed-load and cleanup assertions.
-- **Commit:** `c86082d`
+- **Commit:** `0689cec`
 
 ## Deferred Issues
 
@@ -135,8 +135,8 @@ status: complete
 ## Self-Check: PASSED
 
 - Adapter, vendored header and notice, callback harness, runner, and package-copy update exist.
-- Task commits `996a696`, `3245de3`, `a16ba0c`, `6d179b4`, and `c86082d` are ancestors of the measured plan head `c86082d`.
-- Five plan commits were measured from ledger base `5016f0a4e15ef3fc83b3efe196e23f20a32f5fdb` through `c86082da2816226b40ae8c5fa99c748a3be2b818`.
+- Task commits `f4711c1`, `e1c0474`, `9c62686`, `3d546ad`, and `0689cec` are ancestors of the measured plan head `0689cec`.
+- Five plan commits were measured from ledger base `4640e6057fe664ab5291b06c0a7753a09aae66b4` through `0689cec7dd2141ba79c554f53aaee6918e30c7db`.
 - HOST-02 remains pending; this plan does not claim actual RetroArch qualification.
 
 ---

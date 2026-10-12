@@ -27,8 +27,8 @@ key-decisions:
 requirements-completed: [TRAC-01, TRAC-02, TRAC-03, HOST-02, API-05, SND-01, SND-02, QUAL-03]
 status: complete
 commits: 4
-plan_head_before: ad6981543b34ed40898a7f60f7c69034365b4069
-plan_head_after: e8d40032d028ee5b83ddc0e85589d8fc12fb77ea
+plan_head_before: 6a15c34aa79bf473c50a700f26c6e2150dd20d90
+plan_head_after: e3a3a62d38289a5ca19f7557290b453c634980fe
 actuals:
   tokens: 30000
   tasks: 3
@@ -38,7 +38,7 @@ completed: 2026-10-11
 
 # Phase 04 Plan 64: Re-qualification, G5 disposition and allowlist freeze Summary
 
-Pinned RetroArch 1.22.2 was re-qualified exactly once at ad6981543b34, the three G5 rows were recorded `fixed` pending the independent review, and the pre-ship history allowlist (141 rows) was frozen and proven on a squash-simulated clone with the committed file. The eight requirement IDs are restored evidence, not new delivery. The `commits: 4` count excludes this SUMMARY commit.
+Pinned RetroArch 1.22.2 was re-qualified exactly once at 6a15c34aa79b, the three G5 rows were recorded `fixed` pending the independent review, and the pre-ship history allowlist (141 rows) was frozen and proven on a squash-simulated clone with the committed file. The eight requirement IDs are restored evidence, not new delivery. The `commits: 4` count excludes this SUMMARY commit.
 
 ## Outcome
 
@@ -46,15 +46,15 @@ Complete on the pass path. No halt marker (`04-63-branch.txt` absent), no probe-
 
 ## Pre-flight
 
-`git status --porcelain --untracked-files=all` (excluding `.planning/preparation`) printed nothing, so there were no orchestrator edits to commit and no pre-flight commit. RUN_START `ad6981543b34ed40898a7f60f7c69034365b4069` is in `04-64-start-rev.txt`. Step 0 stale reset found nothing to delete. Receipt-bound diff since 4e6a40e66e9e: `tools/verify_playable.py` only. Every `fix(04-59)`..`fix(04-61)` and `fix(04-63)` commit is an ancestor of the qualified revision.
+`git status --porcelain --untracked-files=all` (excluding `.planning/preparation`) printed nothing, so there were no orchestrator edits to commit and no pre-flight commit. RUN_START `6a15c34aa79bf473c50a700f26c6e2150dd20d90` is in `04-64-start-rev.txt`. Step 0 stale reset found nothing to delete. Receipt-bound diff since cdfbc99bafe7: `tools/verify_playable.py` only. Every `fix(04-59)`..`fix(04-61)` and `fix(04-63)` commit is an ancestor of the qualified revision.
 
 ## Receipt (Task 1)
 
-- QUALIFIED_REV `ad6981543b34ed40898a7f60f7c69034365b4069`; one invocation (`--retroarch /Applications/RetroArch.app --clean --check-docs`), runner exit 0, sampled max instances 1, `pgrep -x RetroArch` exit 1 before and after.
+- QUALIFIED_REV `6a15c34aa79bf473c50a700f26c6e2150dd20d90`; one invocation (`--retroarch /Applications/RetroArch.app --clean --check-docs`), runner exit 0, sampled max instances 1, `pgrep -x RetroArch` exit 1 before and after.
 - Receipt: `status` pass, `retroarch_status` pass, `frontend_unloaded` true, 17 lanes all pass, executable SHA-256 `ed90b54434a2899de0ddbfed59f335255fb462c8691bd970a1a761ebb5656d65`.
-- Commit `8880413 test(04-64): re-qualify pinned RetroArch at ad6981543b34`; non-clean `--check-docs`, freshness (`receipt fresh ad6981543b34 single instance`), status and lane probes passed. No code or test path changed after the receipt.
+- Commit `72333e5 test(04-64): re-qualify pinned RetroArch at 6a15c34aa79b`; non-clean `--check-docs`, freshness (`receipt fresh 6a15c34aa79b single instance`), status and lane probes passed. No code or test path changed after the receipt.
 
-## Requirement-to-lane map (receipt at ad6981543b34, all lanes pass)
+## Requirement-to-lane map (receipt at 6a15c34aa79b, all lanes pass)
 
 | Requirement | Evidencing lanes and fields |
 |-------------|-----------------------------|
@@ -72,12 +72,12 @@ The map shows which lane evidences each requirement; it adds no claim beyond the
 ## Disposition (Task 2)
 
 - RIGHTS-REFRESH changed nothing (no stale row); `validate_repository_inventory` prints `inventory ok`.
-- Commit `90d522b docs(04-64): record G5 fixes as fixed pending the diff-scoped review`: G5WR-01, G5WR-02 and G5IN-01 are `fixed` in the frontmatter, table and 04-VALIDATION.md crosswalk. Each Source keeps `Reported by 04-REVIEW-GAPS-R5.md (d21f71d).` and carries `Fix landed; independent verdict pending the diff-scoped /gsd-code-review, which confirms or reopens this row` with backticked 40-hex revisions (G5WR-01: 37e9f0f6, 1a208248, 9dc602c3, 26667557, 02fe1c80, d5f32933, 027e4177; G5WR-02 and G5IN-01: 591d0f79). `open: 0`, `total: 63`, crosswalk preface `(63 current disposition records)`.
-- Commit `1d9e77f docs(04-64): describe the frozen pre-ship history allowlist` rewrites the `Plan 04-62 leaves` sentence in docs/testing.md.
+- Commit `45a8952 docs(04-64): record G5 fixes as fixed pending the diff-scoped review`: G5WR-01, G5WR-02 and G5IN-01 are `fixed` in the frontmatter, table and 04-VALIDATION.md crosswalk. Each Source keeps `Reported by 04-REVIEW-GAPS-R5.md (9f88c4c).` and carries `Fix landed; independent verdict pending the diff-scoped /gsd-code-review, which confirms or reopens this row` with backticked 40-hex revisions (G5WR-01: 7ad8eef0, ad430682, c43b9bbe, 18d86ded, 2481154c, 019e25d5, 0031bb09; G5WR-02 and G5IN-01: a10c8c8a). `open: 0`, `total: 63`, crosswalk preface `(63 current disposition records)`.
+- Commit `0ee6e2a docs(04-64): describe the frozen pre-ship history allowlist` rewrites the `Plan 04-62 leaves` sentence in docs/testing.md.
 
 ## Freeze and simulation
 
-- Freeze commit `e8d40032d028ee5b83ddc0e85589d8fc12fb77ea` (`docs(04-64): freeze Phase 04 pre-ship history allowlist`, docs/history-allowlist.json only, 141 rows); SHA in `04-63-freeze-rev.txt`.
+- Freeze commit `e3a3a62d38289a5ca19f7557290b453c634980fe` (`docs(04-64): freeze Phase 04 pre-ship history allowlist`, docs/history-allowlist.json only, 141 rows); SHA in `04-63-freeze-rev.txt`.
 - `--history-allowlist check`: `History allowlist is current (141 rows).` at the freeze and again at plan end; branch `--check-docs` prints no `unverifiable-history:` line.
 - SQUASH-SIM GEN=0 at the freeze: `final squash simulation ok 141 tolerated of 141 rows; clone suite ran 156`; SUITE-CHECK `squash suite ok 0 causally verified environmental: []` (suite `OK (skipped=1)`, the recorded full-history-only sibling skip from 04-63); no environmental entries.
 - REHEARSAL: `full-history rehearsal ok` (`--check-docs` passes with no tolerated-row line; suite 156 tests OK). LATER-BRANCH: `later branch ok` (unlisted row fails with exactly `rights source_revision <12> for tests/later_probe.txt does not resolve`; clone back on clean `sim-main`).

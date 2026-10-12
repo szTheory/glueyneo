@@ -13,8 +13,8 @@ provides:
 affects: [04-39, 04-40, 04-41, 04-42]
 status: complete
 commits: 4
-plan_head_before: 38dcce6ab2dfcd88d95c9e9ea13ac10027fd8f3c
-plan_head_after: 8c20410b0f1c4d0612e7fa5c64d75115d47c2224
+plan_head_before: c589712ece4dc88aed40447648fc198e9016a0cb
+plan_head_after: 97fbbdaa75120c27845b24679c3948e6206ec42f
 actuals:
   tokens: 9000
   tasks: 2
@@ -44,19 +44,19 @@ completed: 2026-10-10
 - `main()` post-build section wrapped in one outer `except Exception`: prints `receipt: receipt-error: <Type>`, writes a minimal fail receipt, falls back to `receipt: receipt-write-failed`, returns 1.
 - Both build-failure handlers use `_public_reason` (G2IN-03).
 - `_reviewed_revision` (exactly one 40-hex lowercase value, quotes allowed), `_frontmatter_keys` with quote/padding-normalized duplicate detection, and a window check in `review_provenance_errors`. Docstring states ordering-only limit.
-- `04-REVIEW.md` gained `reviewed_revision: 82a75795e24c5fd62ff79bd0af564d16fb9fe0da`.
+- `04-REVIEW.md` gained `reviewed_revision: 867f31775c6daebd06b4fa53e06679e753b57e79`.
 
 ## Task Commits (red/green pairs)
-1. Task 1 (T-04-11, G2CR-02, G2IN-03): RED `0adeacb` (test) -> GREEN `756c242` (fix)
-2. Task 2 (T-04-38, T-04-67, WR-11, G2WR-01, G2WR-02): RED `858aedf` (test) -> GREEN `8c20410` (fix)
+1. Task 1 (T-04-11, G2CR-02, G2IN-03): RED `4e1f2ff` (test) -> GREEN `8446d8d` (fix)
+2. Task 2 (T-04-38, T-04-67, WR-11, G2WR-01, G2WR-02): RED `1a33f9e` (test) -> GREEN `97fbbda` (fix)
 
 RED evidence: Task 1 RED run had 1 failure + 5 errors across the 4 target tests (raw PermissionError/KeyError/OSError tracebacks escaping `main()`; G2IN-03 assertion that `_public_reason` was called failed). Task 2 RED run had 12 errors (`_reviewed_revision` missing) + 3 failures (no window check). Semantic assessment: every target failed on the planned behavior, not on setup. The `OSError(2, ...)` subtest is reported as `FileNotFoundError` (Python maps errno 2), and the test uses the actual type name.
 
 ## 04-REVIEW.md revision checks
-- `git rev-parse 82a7579^{commit}` = `82a75795e24c5fd62ff79bd0af564d16fb9fe0da` (matches).
-- Report Summary scope sentence: "ea63b03 through 82a7579" (line 37).
-- `git diff --quiet 82a7579 f80f82f69cb4e8254fdd3be020a4c429f9955d0b -- . ':(exclude).planning'` exit 0 (no code change).
-- Step 4: `0d9612130092` and `bd74482e0050` both descend from 82a7579 (`merge-base --is-ancestor` exit 0).
+- `git rev-parse 867f317^{commit}` = `867f31775c6daebd06b4fa53e06679e753b57e79` (matches).
+- Report Summary scope sentence: "32293f7 through 867f317" (line 37).
+- `git diff --quiet 867f317 533c0ac8b42360309097f967835f7d409fcc9220 -- . ':(exclude).planning'` exit 0 (no code change).
+- Step 4: `45952598202a` and `323fa1453329` both descend from 867f317 (`merge-base --is-ancestor` exit 0).
 
 ## Deviations from Plan
 - Fixture edit (as the plan allowed): `ReviewProvenanceTest.errors` now writes a fixture 04-REVIEW.md with `reviewed_revision` = first commit so pre-existing cases stay in-window; no existing test was loosened or deleted. Added `import contextlib` and a `receipt_run` helper to `MainErrorPathTest`.

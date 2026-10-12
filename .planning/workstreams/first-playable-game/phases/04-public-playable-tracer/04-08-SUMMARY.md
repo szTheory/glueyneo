@@ -61,7 +61,7 @@ coverage:
     requirement: QUAL-03
     verification:
       - kind: integration
-        ref: "build/playable-qualification/receipt.json; source snapshot 5e2b3799c981d1987404c65138a69fc09b20613d"
+        ref: "build/playable-qualification/receipt.json; source snapshot bb71ef1c832c6aec9f0e1c377df0f00f9b835336"
         status: unknown
     human_judgment: true
     rationale: "The receipt binds the exact source and successful native build/install/consumer lanes, but its overall status is fail because the actual frontend lane is unknown. The clean install/load claim remains incomplete until that frontend evidence exists."
@@ -106,17 +106,17 @@ status: complete
 - Captured the pinned RetroArch 1.22.2 run as `unknown` at `first-screenshot`, return code `-6`, with no survival before screenshot and a bounded `EXC_CRASH SIGABRT / SIGNAL 6 Abort trap: 6` reason. The installed-core/content and no-content launches both abort before a screenshot; neither result is HOST-02 acceptance.
 - Documented the observed boundary and retained the exact pinned app, fixture, core, and environment identities. The LaunchServices probe returned `kLSNoExecutableErr`; unified-log inspection was unavailable in the sandbox. The external precondition remains a functioning interactive macOS app launch context. The evidence does not establish a core or fixture defect.
 - Added an installed-consumer regression after the first qualification exposed that the check passed `public-playable.bin` while its assertions compare the generated `diagnostic-original-a.bin`. The corrected static and shared consumer checks pass with the matching fixture.
-- Ran the final clean qualification once after the fix. Its receipt binds commit `5e2b3799c981d1987404c65138a69fc09b20613d`, source inventory digest `d6b668e38b77cb65a4bb1b79988792845feebebfbb6404db688461b0827856bf`, and fixture SHA-256 `59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0`. Static/shared builds and installs, both installed consumers, all 34 CTests, candidate gates, and docs checks passed. The command exits nonzero only because the actual pinned frontend gate is unknown.
+- Ran the final clean qualification once after the fix. Its receipt binds commit `bb71ef1c832c6aec9f0e1c377df0f00f9b835336`, source inventory digest `d6b668e38b77cb65a4bb1b79988792845feebebfbb6404db688461b0827856bf`, and fixture SHA-256 `59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0`. Static/shared builds and installs, both installed consumers, all 34 CTests, candidate gates, and docs checks passed. The command exits nonzero only because the actual pinned frontend gate is unknown.
 
 ## Task Commits
 
-1. **Task 1: Diagnose the pinned app's exit before its first screenshot** — `6453aed` (test), `bc7f635` (feat), `07b34bb` (diagnostic hardening).
-2. **Task 2: Run the installed core in pinned RetroArch and regenerate qualification evidence** — `8f033c6` (docs), `7389979` (consumer regression), `5e2b379` (fix and final committed source snapshot).
+1. **Task 1: Diagnose the pinned app's exit before its first screenshot** — `8a2b8f7` (test), `7e953de` (feat), `ded73c8` (diagnostic hardening).
+2. **Task 2: Run the installed core in pinned RetroArch and regenerate qualification evidence** — `89805ab` (docs), `4d2a83d` (consumer regression), `bb71ef1` (fix and final committed source snapshot).
 
 ## TDD Gate Compliance
 
 - Task 1's initial failing tests covered diagnostic stage/exit/survival, fresh screenshot state, launch comparison, crash parsing, and redaction. The GSD red-evidence check classified target `test_failure_diagnostic_preserves_stage_exit_and_survival` as `RED_EVIDENCE_OK`; the implemented suite then passed.
-- The first full qualification exposed a separate installed-consumer fixture mismatch. Regression `test_installed_consumer_check_uses_original_diagnostic_fixture` failed against the wrong `public-playable.bin` path and was classified `RED_EVIDENCE_OK`; commit `5e2b379` corrected the input, and the matching installed-consumer command and final receipt passed that lane.
+- The first full qualification exposed a separate installed-consumer fixture mismatch. Regression `test_installed_consumer_check_uses_original_diagnostic_fixture` failed against the wrong `public-playable.bin` path and was classified `RED_EVIDENCE_OK`; commit `bb71ef1` corrected the input, and the matching installed-consumer command and final receipt passed that lane.
 - The first failed receipt remains local and ignored as diagnostic provenance. The final corrected clean qualification was run once from the committed snapshot.
 
 ## Files Modified

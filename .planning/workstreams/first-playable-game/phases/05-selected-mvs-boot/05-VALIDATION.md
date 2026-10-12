@@ -67,7 +67,7 @@ rows.
 
 - `cmake --preset sdk-debug && cmake --build --preset sdk-debug && ctest --preset sdk-debug --output-on-failure --no-tests=error` — passed, 41/41. The exact MVS label contains seven named tests.
 - `cmake --preset sdk-asan-ubsan && cmake --build build/sdk-asan-ubsan --target mvs_qualify mvs_test mvs_importer mvs_import_fuzz && ctest --test-dir build/sdk-asan-ubsan -L mvs --output-on-failure --no-tests=error` — passed, 7/7 with AddressSanitizer and UndefinedBehaviorSanitizer. The full sanitizer preset build also attempted unrelated package-consumer targets and stopped because the Unity static archive's sanitizer runtime symbols were not linked into a consumer executable; those unrelated targets were excluded from the focused MVS build.
-- `python3 tools/verify_sdk.py --suite matrix` — passed locally. The focused MVS matrix lane recorded seven exact tests (`mvs_boot_checkpoint`, `mvs_callback_contract`, `mvs_import_contract`, `mvs_import_fuzz_corpus`, `mvs_import_mutation`, `mvs_media_contract`, `mvs_synthetic_trace`) on source revision `492f51f30ae43f33af431c978af91991b1240e0e`; relevant-source SHA-256 `105deb95d946a075ef1586553271579f3983b4e3533062a72a108fb1bf9c8b82`; CTest output SHA-256 `b0f6b89a753b2e11731255bed11cd7db3a31c0a32ad824b3622ef1820ca34218`. The local hosted-platform lane is `unknown` because this machine is not a GitHub-hosted runner; this is not hosted CI evidence.
+- `python3 tools/verify_sdk.py --suite matrix` — passed locally. The focused MVS matrix lane recorded seven exact tests (`mvs_boot_checkpoint`, `mvs_callback_contract`, `mvs_import_contract`, `mvs_import_fuzz_corpus`, `mvs_import_mutation`, `mvs_media_contract`, `mvs_synthetic_trace`) on source revision `7e92926ea291b6663d60bc2a5f152bc89b281e88`; relevant-source SHA-256 `105deb95d946a075ef1586553271579f3983b4e3533062a72a108fb1bf9c8b82`; CTest output SHA-256 `b0f6b89a753b2e11731255bed11cd7db3a31c0a32ad824b3622ef1820ca34218`. The local hosted-platform lane is `unknown` because this machine is not a GitHub-hosted runner; this is not hosted CI evidence.
 - `python3 tests/sdk/test_matrix_evidence.py` — passed, including omission, zero/renamed inventory, failed outcome, and stale-source controls.
 - `python3 tools/mvs/qualify_local_boot.py` — completed with `no_supported_role_bundle_archive`; no supported private game/BIOS pair was present. Its ignored report records no private identity. This does not establish selected-game compatibility or direct boot behavior.
 - `python3 -m py_compile tools/mvs/qualify_local_boot.py tests/mvs/test_mvs_qualification.py` — passed.
@@ -283,7 +283,7 @@ supervisor stack/vector behavior, 62 cycles, and no operand write.
 
 ## Plan 05-06 execution evidence — 2026-10-09
 
-- Task 1 is complete in shared commit `183c489`. The diagnostic oracle wording
+- Task 1 is complete in shared commit `d8a996f`. The diagnostic oracle wording
   and fixture source identity now agree with the reviewed reset-cycle contract;
   all 13 omitted public test paths have affirmative exact-byte rights rows,
   and the two pinned upstream zlib attribution blobs have narrow history
@@ -315,7 +315,7 @@ supervisor stack/vector behavior, 62 cycles, and no operand write.
 
 ### Current shared checkout refresh — 2026-10-09
 
-- On shared checkout HEAD `8d4f4f471d33101361406f6700c46d9a66b64d89`,
+- On shared checkout HEAD `c2a46f1e6735fc2dfe6432a628b47437c2ca3ef6`,
   `python3 tests/sdk/test_matrix_evidence.py` and
   `python3 tools/verify_sdk.py --suite matrix` pass (1,440 assertions, 43
   cases, 10 lanes).
@@ -343,14 +343,14 @@ supervisor stack/vector behavior, 62 cycles, and no operand write.
 
 | Task / requirement | Test type | Candidate command and artifact | Result and scope |
 |---|---|---|---|
-| 05-06 Task 3 / G-05-5 — reject malformed or mismatched hosted MVS receipts | Unit (receipt validator) | `python3 tests/sdk/test_hosted_mvs_receipt.py` (`tools/verify_hosted_mvs.py`) | Passed 11 tests on candidate `e80672845fc60d94d8a44eab416377534c9a99f1`; validates event eligibility and SHA, lane/test inventory, positive denominator, source/output digests, and aggregate. The test and checker were absent from shared checkout HEAD `f9e02f94d664c3f8170f4dc7ae8aa30bc24c13f6` and remain absent from current shared checkout HEAD `8d4f4f471d33101361406f6700c46d9a66b64d89`, so this command is candidate evidence and is not runnable or asserted as a HEAD test. |
+| 05-06 Task 3 / G-05-5 — reject malformed or mismatched hosted MVS receipts | Unit (receipt validator) | `python3 tests/sdk/test_hosted_mvs_receipt.py` (`tools/verify_hosted_mvs.py`) | Passed 11 tests on candidate `e80672845fc60d94d8a44eab416377534c9a99f1`; validates event eligibility and SHA, lane/test inventory, positive denominator, source/output digests, and aggregate. The test and checker were absent from shared checkout HEAD `9666b049ee4af65158e12421b5a25563b696e945` and remain absent from current shared checkout HEAD `c2a46f1e6735fc2dfe6432a628b47437c2ca3ef6`, so this command is candidate evidence and is not runnable or asserted as a HEAD test. |
 | 05-06 Task 3 / G-05-5 — hosted MVS lane and aggregate | Hosted CI receipt | Run `38001400110`, PR event for candidate SHA `e80672845fc60d94d8a44eab416377534c9a99f1`; artifacts accepted by `tools/verify_hosted_mvs.py` on that candidate | Passed for the exact candidate: seven named MVS CTests, positive denominator, matching source/output digests, and passing aggregate. This does not qualify shared checkout HEAD, selected-game boot, merge, release, or frontend behavior. |
 | 05-06 Task 2 / G-05-3, GAME-02 | Manual/source evidence gate | No executable selected-game predicate command is justified yet | Open/unknown. Required before running the bounded private qualification: an independently observed selected configuration and an independently sourced guest-written attract/start predicate with source-flow evidence and oracle ancestry. Without those, do not invent a predicate or interpret coarse device-state activity as acceptance. |
 | Selected-media RetroArch flow / MEDIA-03 frontend observation | Manual | No command; launch preconditions did not materially change | Unknown/manual-only. Required evidence is direct observation in the functioning pinned RetroArch setup of selected-media import/load, stable presentation, input response, unload, and normal exit. Existing synthetic callback tests do not establish this flow. |
 
 The candidate's 11-test receipt-validator command and hosted artifacts are
 recorded from Plan 05-06's candidate history. They must not be presented as
-tests of `f9e02f94d664c3f8170f4dc7ae8aa30bc24c13f6`; the checker and test are
+tests of `9666b049ee4af65158e12421b5a25563b696e945`; the checker and test are
 absent from that shared checkout. G-05-5 is resolved only for the stated
 candidate evidence. The selected guest compatibility/checkpoint requirement
 and the actual frontend flow remain open/unknown.

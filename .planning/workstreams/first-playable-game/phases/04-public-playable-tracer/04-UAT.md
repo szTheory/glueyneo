@@ -16,7 +16,7 @@ updated: 2026-10-11T11:38:10.840Z
 expected: The direct smoke run opens pinned RetroArch 1.22.2 with the public fixture, shows the white guest marker, keeps it still with no input, moves it right on RIGHT without the LEFT control repeating that, unloads the content, quits normally, and leaves no RetroArch process.
 result: pass
 source: automated
-evidence: \"Clean committed-snapshot receipt at 706516b5a60c (2026-10-10, agent-run): retroarch_smoke pass; marker [16,16] -> [47,16] on RIGHT; no-input frames stable; LEFT control did not move the marker; frontend_unloaded true; application quit path; no RetroArch left running. Summary tracked in 04-FRONTEND-RECEIPT.json. The user independently saw the window show a white square near the top left that moved right.\"
+evidence: \"Clean committed-snapshot receipt at 5e6a3b8f50d3 (2026-10-10, agent-run): retroarch_smoke pass; marker [16,16] -> [47,16] on RIGHT; no-input frames stable; LEFT control did not move the marker; frontend_unloaded true; application quit path; no RetroArch left running. Summary tracked in 04-FRONTEND-RECEIPT.json. The user independently saw the window show a white square near the top left that moved right.\"
 coverage_id: 04-02 P04-02-HOST; 04-06 D3; 04-08 D1; 04-09 P04-09-HOST-ROUTING; 04-12 P04-12-HOST; 04-18 D2; 04-19 D2; 04-21 D2
 note: A direct smoke run is observation evidence only; it is not the committed-snapshot receipt (Test 2).
 
@@ -24,15 +24,15 @@ note: A direct smoke run is observation evidence only; it is not the committed-s
 expected: `python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean` builds a fresh archive of HEAD, passes every native, consumer and candidate lane, runs the pinned frontend lane, and writes a receipt with overall status pass and frontend status pass.
 result: pass
 source: automated
-evidence: \"Rerun at 706516b5a60c after two in-session fixes passed every lane (status pass, retroarch_status pass).\"
-history: \"First run at ea63b03 failed: Agent run at HEAD ea63b03 (2026-10-10): status fail, reason 'shared-build failed'; retroarch_status unknown, so the frontend lane never ran. A reproduction from `git archive HEAD` with BUILD_SHARED_LIBS=ON fails to link mvs_qualify: undefined symbol _gn_private_mvs_fetch_trace (hidden in libglueyneo.dylib). Fixed in e2d09a0 (mvs_qualify links a static production runtime; configure-time guard rejects private-header executables linking the public library). Second run then failed to open the installed shared core, which needed @rpath/libglueyneo.dylib with no rpath; fixed in 706516b (self-contained core in every build mode; package build check rejects a core depending on a Glueyneo library).\"
+evidence: \"Rerun at 5e6a3b8f50d3 after two in-session fixes passed every lane (status pass, retroarch_status pass).\"
+history: \"First run at 32293f7 failed: Agent run at HEAD 32293f7 (2026-10-10): status fail, reason 'shared-build failed'; retroarch_status unknown, so the frontend lane never ran. A reproduction from `git archive HEAD` with BUILD_SHARED_LIBS=ON fails to link mvs_qualify: undefined symbol _gn_private_mvs_fetch_trace (hidden in libglueyneo.dylib). Fixed in bb223d1 (mvs_qualify links a static production runtime; configure-time guard rejects private-header executables linking the public library). Second run then failed to open the installed shared core, which needed @rpath/libglueyneo.dylib with no rpath; fixed in 5e6a3b8 (self-contained core in every build mode; package build check rejects a core depending on a Glueyneo library).\"
 coverage_id: 04-08 D2; 04-15 D1; 04-15 D2; 04-19 D3; 04-21 D3
 
 ### 3. Status records follow the frontend evidence
 expected: After a passing committed-snapshot receipt exists, REQUIREMENTS.md, 04-VALIDATION.md, docs/first-playable-build.md and the `--check-docs` gate all agree on the HOST-02 and frontend QUAL-03 status. Until that receipt exists, they keep it Pending/unknown and the docs gate rejects any affirmative frontend claim.
 result: pass
 source: automated
-evidence: \"e5e3aac: --check-docs accepts Complete HOST-02/QUAL-03 only with a valid tracked receipt summary for a committed ancestor; test_verify_playable.py 31/31 including positive, invalid-summary and row-mismatch mutations. REQUIREMENTS.md, 04-VALIDATION.md, the build guide and STATE.md updated.\"
+evidence: \"758ed8b: --check-docs accepts Complete HOST-02/QUAL-03 only with a valid tracked receipt summary for a committed ancestor; test_verify_playable.py 31/31 including positive, invalid-summary and row-mismatch mutations. REQUIREMENTS.md, 04-VALIDATION.md, the build guide and STATE.md updated.\"
 coverage_id: 04-17 D1; 04-19 D1; 04-22 D2
 
 ### 4. Open security and review findings have your disposition
@@ -40,7 +40,7 @@ expected: You have decided how to handle the four high/open disclosure threats (
 result: pass
 source: delegated-decision
 reported: "so yeah i want u to fan out figure it out and auto decide"
-evidence: "Four independent analyses (adversarial security audit, claim-gate analysis, provenance cost analysis, primary-source research) agreed. T-04-11/15/18/20 closed by exact-root redaction plus fail-closed public-sink scans (c75f577, tests/tools/test_private_paths.py); retained run-directory logs accepted as medium T-04-44 with invalidation triggers; T-04-34 closed by bound receipt evidence (cc73f94); T-04-38/43 closed with the retired evidence-map checker; WR-01/06/08/09 fixed or superseded. 04-SECURITY.md threats_open 0, status verified, enforced by CTest planning_security_register."
+evidence: "Four independent analyses (adversarial security audit, claim-gate analysis, provenance cost analysis, primary-source research) agreed. T-04-11/15/18/20 closed by exact-root redaction plus fail-closed public-sink scans (54e3543, tests/tools/test_private_paths.py); retained run-directory logs accepted as medium T-04-44 with invalidation triggers; T-04-34 closed by bound receipt evidence (d6fcfe2); T-04-38/43 closed with the retired evidence-map checker; WR-01/06/08/09 fixed or superseded. 04-SECURITY.md threats_open 0, status verified, enforced by CTest planning_security_register."
 coverage_id: 04-16 D1; 04-16 D2; 04-17 D2; 04-20 D1; 04-20 D2
 
 ### 5. Phase closeout batching rule
@@ -227,7 +227,7 @@ coverage_id: 04-22 D1
 ### 35. Headless security audit and focused re-review close the round-3 open rows (round 3 re-verification).
 expected: Audit closes or reopens the 9 open rows (T-04-11, T-04-38, T-04-48, T-04-61, T-04-67, T-04-SC 04-37..04-42); `check_security_register.py first-playable-game --require-closed --phase 04` exits 0; round-3 warnings G3WR-01..05 are fixed or dispositioned.
 result: issue
-reported: "Automated (agent-run, 2026-10-11, no user judgment): audit part passes. check_security_register.py first-playable-game --require-closed --phase 04 exits 0; 04-SECURITY.md threats_open 0, status verified (15904ce). Review part fails. 04-REVIEW-DISPOSITION.md still records all G3WR-01..05 and G3IN-01..03 as open. The focused re-review 04-REVIEW-GAPS-R4.md (310109e) judges G3WR-02..05 fixed but G3WR-01 only partially fixed; its residual is G4WR-01. R4 also raises G4WR-02..04 and G4IN-01..03, now recorded as open. tools/verify_playable.py --check-docs fails on an unrecorded review finding."
+reported: "Automated (agent-run, 2026-10-11, no user judgment): audit part passes. check_security_register.py first-playable-game --require-closed --phase 04 exits 0; 04-SECURITY.md threats_open 0, status verified (a433f86). Review part fails. 04-REVIEW-DISPOSITION.md still records all G3WR-01..05 and G3IN-01..03 as open. The focused re-review 04-REVIEW-GAPS-R4.md (58a3ba8) judges G3WR-02..05 fixed but G3WR-01 only partially fixed; its residual is G4WR-01. R4 also raises G4WR-02..04 and G4IN-01..03, now recorded as open. tools/verify_playable.py --check-docs fails on an unrecorded review finding."
 severity: major
 source: 04-VERIFICATION.md human_verification (round 3); resolved by automated evidence per METHODOLOGY checkpoint pre-flight step 4
 why_human: Closure by design requires an independent headless gsd-security-auditor verdict (T-04-48); neither the executor nor the verifier may close rows by attestation.

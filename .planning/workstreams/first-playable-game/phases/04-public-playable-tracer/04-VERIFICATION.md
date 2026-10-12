@@ -135,7 +135,7 @@ re_verification:
     - "G-04-35: G4WR-01..04 and G4IN-01..03 repaired by 04-58 (R5 re-derived each as FIXED; test_verify_playable 125 OK, test_check_security_register 65 OK, test_retroarch_smoke 78 OK re-run/observed here)"
     - "R3/R4 verdicts transcribed; 04-REVIEW-DISPOSITION.md total 60 with the 57 prior rows fixed; --check-docs passes"
     - "Planning traceability text now states threats_open 0 and the 04-58 repair (REQUIREMENTS.md lines 4 and 102 checked)"
-    - "Pinned RetroArch re-qualified once at 4e6a40e66e9e; no receipt-bound path changed since (git diff 4e6a40e HEAD over receipt-bound paths is empty)"
+    - "Pinned RetroArch re-qualified once at cdfbc99bafe7; no receipt-bound path changed since (git diff cdfbc99 HEAD over receipt-bound paths is empty)"
   gaps_remaining:
     - "G5WR-01 (Warning, gate-breaking, introduced by the 04-58 repair): rights_revision_errors fails on main after a squash merge"
   regressions:
@@ -143,7 +143,7 @@ re_verification:
 gaps:
   - truth: "The rights provenance gate added for G4WR-04 keeps passing on main after the milestone ships (METHODOLOGY: Criticals, repair regressions and gate-weakening Warnings block; this one breaks a CI gate)"
     status: failed
-    reason: "G5WR-01, re-verified here. rights_revision_errors (tools/verify_playable.py:1401-1440) requires every non-third_party source_revision to resolve and be an ancestor of the checked head; it runs inside check_docs (line 1568) and the qualification_runner CTest. Probe at HEAD 7ffb305: 41 non-third_party rows, 0 cite a commit that is an ancestor of main (main is a single commit, 2e5d884). Orchestrator verified allow_squash_merge true, merge commits and rebase merges disabled. After a squash merge of this branch, main HEAD is a new commit and a fresh clone does not fetch the branch commits, so --check-docs and qualification_runner fail on main, and no refresh can repair it because a row cannot cite the commit that contains its own refresh. The pre-existing review_provenance_errors shares the ancestry rule (R5), so a fix should cover both."
+    reason: "G5WR-01, re-verified here. rights_revision_errors (tools/verify_playable.py:1401-1440) requires every non-third_party source_revision to resolve and be an ancestor of the checked head; it runs inside check_docs (line 1568) and the qualification_runner CTest. Probe at HEAD 1bc70f4: 41 non-third_party rows, 0 cite a commit that is an ancestor of main (main is a single commit, 2e5d884). Orchestrator verified allow_squash_merge true, merge commits and rebase merges disabled. After a squash merge of this branch, main HEAD is a new commit and a fresh clone does not fetch the branch commits, so --check-docs and qualification_runner fail on main, and no refresh can repair it because a row cannot cite the commit that contains its own refresh. The pre-existing review_provenance_errors shares the ancestry rule (R5), so a fix should cover both."
     classification: "(1) actionable in-scope repository change; one choice is a user decision (merge strategy vs tooling), recommended default is the tooling change"
     artifacts:
       - path: "tools/verify_playable.py"
@@ -169,9 +169,9 @@ deferred: []
 # Phase 04: Public Playable Tracer Verification Report (round 5 re-verification)
 
 **Phase Goal:** A maintainer can rebuild and run an original guest with visible, input-driven behavior through the ordinary native API and an actual pinned RetroArch build, while resolving the selected sound candidates' admission gates before full integration.
-**Verified:** 2026-10-11 at HEAD `7ffb305` (receipt qualified at `4e6a40e66e9e`, ancestor of HEAD).
+**Verified:** 2026-10-11 at HEAD `1bc70f4` (receipt qualified at `cdfbc99bafe7`, ancestor of HEAD).
 **Status:** gaps_found
-**Re-verification:** Yes -- after gap plan 04-58 (supersedes the stale report at 7a2b454) and the round-5 diff-scoped review (d21f71d, dispositions 7ffb305).
+**Re-verification:** Yes -- after gap plan 04-58 (supersedes the stale report at b0b3fc9) and the round-5 diff-scoped review (9f88c4c, dispositions 1bc70f4).
 
 ## Goal Achievement
 
@@ -180,14 +180,14 @@ deferred: []
 | # | Truth | Status | Evidence |
 |---|---|---|---|
 | 1 | Rebuild the rights-audited fixture from tracked source, run it through a C consumer, see a guest-produced software frame with checked dimensions/format/pitch/bounds. | VERIFIED | `cmake --build --preset owned-debug` then `ctest --preset owned-debug -j4` here: 100% tests passed out of 63 (63 listed by `-N`). |
-| 2 | Bounded frame API with explicit input, owned buffers, timing, counts, actionable errors; correct input changes output, wrong-input control fails. | VERIFIED | Named native/SDK tests in the 63/63 run; `git diff 4e6a40e HEAD` over src/, include/, third_party/, tests/fixture/, tests/libretro/, tools/verify_playable.py, tools/private_paths.py, CMake files is empty. |
-| 3 | Load, run, control and unload the fixture in an actual pinned macOS RetroArch with software video and frontend-owned pacing. | VERIFIED (recorded receipt) | 04-FRONTEND-RECEIPT.json read here: source_revision 4e6a40e66e9e, status pass, retroarch_status pass, frontend_unloaded true, 17/17 lanes pass; committed after the guarded clean qualification. RetroArch was not launched by this verifier (`pgrep -x RetroArch` exit 1 before and after). |
+| 2 | Bounded frame API with explicit input, owned buffers, timing, counts, actionable errors; correct input changes output, wrong-input control fails. | VERIFIED | Named native/SDK tests in the 63/63 run; `git diff cdfbc99 HEAD` over src/, include/, third_party/, tests/fixture/, tests/libretro/, tools/verify_playable.py, tools/private_paths.py, CMake files is empty. |
+| 3 | Load, run, control and unload the fixture in an actual pinned macOS RetroArch with software video and frontend-owned pacing. | VERIFIED (recorded receipt) | 04-FRONTEND-RECEIPT.json read here: source_revision cdfbc99bafe7, status pass, retroarch_status pass, frontend_unloaded true, 17/17 lanes pass; committed after the guarded clean qualification. RetroArch was not launched by this verifier (`pgrep -x RetroArch` exit 1 before and after). |
 | 4 | Passing admission evidence for pinned Z80 and private-interface ymfm YM2610 candidates. | VERIFIED (bounded workloads) | z80-admission, z80-mutation, ym2610-admission inside 63/63; scope stays the bounded synthetic workloads. |
 | 5 | Clean-tree build/install/load procedure with exact identities and untested configurations stated. | VERIFIED | `python3 tools/verify_playable.py --check-docs` prints `Phase 04 documentation gate passed.` (re-run here). |
 
 **Score:** 5/5 roadmap truths verified. Plan 04-58 truth "rights gate cannot recur silently" is VERIFIED as written but the gate it added is itself broken for the post-merge state (gap 1).
 
-### Gate Results (re-run here at HEAD 7ffb305)
+### Gate Results (re-run here at HEAD 1bc70f4)
 
 | Check | Result |
 |---|---|
@@ -207,9 +207,9 @@ deferred: []
 | Fixture -> `gn_load` -> frame pixels | VERIFIED | native tests in 63/63 |
 | Libretro adapter -> native frame -> video callback | VERIFIED | adapter tests plus receipt |
 | Pinned Z80 / ymfm -> private adapters -> installed consumers | VERIFIED (bounded) | admission tests |
-| Receipt -> committed revision | WIRED | receipt 4e6a40e66e9e; docs gate passes |
+| Receipt -> committed revision | WIRED | receipt cdfbc99bafe7; docs gate passes |
 | Security register -> closure gate | WIRED | verified, threats_open 0, gate exits 0 |
-| Review findings -> disposition record | WIRED | 04-REVIEW-DISPOSITION.md total 60; G5WR-01, G5WR-02, G5IN-01 recorded `open` at 7ffb305 |
+| Review findings -> disposition record | WIRED | 04-REVIEW-DISPOSITION.md total 60; G5WR-01, G5WR-02, G5IN-01 recorded `open` at 1bc70f4 |
 | Rights source_revision -> `rights_revision_errors` -> `check_docs` | WIRED but PARTIAL | enforced (tools/verify_playable.py:1568) and correct on this branch; breaks after squash merge (G5WR-01) |
 | Lane byte collection / single decode (G4WR-01/03) | VERIFIED | R5 re-derived FIXED; lane Popen byte mode test passes |
 | Register exact spelling / ASCII digits (G4WR-02, G4IN-01) | VERIFIED | R5 FIXED; real gates pass |
@@ -224,7 +224,7 @@ deferred: []
 | API-05 | SATISFIED; acceptance blocked | public header, src/instance.c, sdk-run |
 | SND-01 | SATISFIED (bounded); acceptance blocked | z80-admission, z80-mutation |
 | SND-02 | SATISFIED (bounded); acceptance blocked | ym2610-admission, static/shared consumers |
-| HOST-02 | SATISFIED on recorded receipt; acceptance blocked | receipt 4e6a40e66e9e |
+| HOST-02 | SATISFIED on recorded receipt; acceptance blocked | receipt cdfbc99bafe7 |
 | QUAL-03 | SATISFIED on recorded receipt; acceptance blocked | `--check-docs` passes |
 
 REQUIREMENTS.md traceability rows (lines 108-126) keep `Gaps Found` for all eight, matching this verdict.
@@ -258,14 +258,14 @@ _Verifier: Claude (gsd-verifier)_
 
 ---
 
-# Prior verification history (round 4, HEAD 7a2b454, superseded)
+# Prior verification history (round 4, HEAD b0b3fc9, superseded)
 
 # Prior verification history
 
 # Phase 04: Verification Report (round 3 re-verification) -- retained as history
 
 **Phase Goal:** A maintainer can rebuild and run an original guest with visible, input-driven behavior through the ordinary native API and an actual pinned RetroArch build, while resolving the selected sound candidates' admission gates before full integration.
-**Verified:** 2026-10-10 at HEAD `f675d7c` (receipt qualified at `2c449bdfec18`).
+**Verified:** 2026-10-10 at HEAD `77d5159` (receipt qualified at `3d90990e5cd0`).
 **Status:** human_needed
 **Re-verification:** Yes -- after gap-closure plans 04-37..04-42.
 
@@ -277,7 +277,7 @@ _Verifier: Claude (gsd-verifier)_
 |---|---|---|---|
 | 1 | Rebuild the rights-audited fixture from tracked source, run it through a C consumer, see a guest-produced software frame with checked dimensions/format/pitch/bounds. | VERIFIED | `ctest --preset owned-debug` re-run here: 100% passed out of 63. |
 | 2 | Bounded frame API with explicit input, owned buffers, timing, counts, actionable errors; correct input changes output, wrong-input control fails. | VERIFIED | Named native tests in the same 63/63 run; no source under src/ or include/ changed in round 3. |
-| 3 | Load, run, control and unload the fixture in an actual pinned macOS RetroArch with software video and frontend-owned pacing. | VERIFIED (recorded receipt) | Tracked `04-FRONTEND-RECEIPT.json`: source_revision `2c449bdfec18...`, status pass. RetroArch was not launched here (`pgrep -x RetroArch` = 0 before and after). Changes since 2c449bd touch only docs/first-playable-build.md and docs/testing.md. |
+| 3 | Load, run, control and unload the fixture in an actual pinned macOS RetroArch with software video and frontend-owned pacing. | VERIFIED (recorded receipt) | Tracked `04-FRONTEND-RECEIPT.json`: source_revision `3d90990e5cd0...`, status pass. RetroArch was not launched here (`pgrep -x RetroArch` = 0 before and after). Changes since 3d90990 touch only docs/first-playable-build.md and docs/testing.md. |
 | 4 | Passing admission evidence for pinned Z80 and private-interface ymfm YM2610 candidates. | VERIFIED (bounded workloads) | z80-admission, z80-mutation, ym2610-admission pass inside 63/63; scope remains the bounded synthetic workloads. |
 | 5 | Clean-tree build/install/load procedure with exact identities and untested configurations stated. | VERIFIED | `python3 tools/verify_playable.py --check-docs` passes; guide bound to the receipt. |
 
@@ -302,7 +302,7 @@ _Verifier: Claude (gsd-verifier)_
 | Fixture -> `gn_load` -> frame pixels | VERIFIED | native tests in 63/63 |
 | Libretro adapter -> native frame -> video callback | VERIFIED | adapter tests plus receipt |
 | Pinned Z80 / ymfm -> private adapters -> installed consumers | VERIFIED (bounded) | admission tests |
-| Receipt -> committed revision | WIRED | `2c449bdfec18` receipt; docs gate passes |
+| Receipt -> committed revision | WIRED | `3d90990e5cd0` receipt; docs gate passes |
 | Diagnostics -> canonical scan -> sinks | WIRED | receipt-error token; T-04-11 fix evidence recorded, row still open pending audit |
 | Independent-review containment gate | WIRED | four R2 bypasses now refused; row T-04-61 open pending audit |
 | Review-provenance binding | PARTIAL (documented) | ordering window only; G3WR-05 notes it is anchored to the original review. Docs state the narrower claim. |
@@ -322,7 +322,7 @@ No `probe-*.sh` declared. Full CTest run (63/63). Containment probe run directly
 | API-05 | SATISFIED; acceptance pending audit | public header, `src/instance.c` |
 | SND-01 | SATISFIED (bounded); acceptance pending audit | Z80 admission/mutation tests |
 | SND-02 | SATISFIED (bounded); acceptance pending audit | ymfm lanes |
-| HOST-02 | SATISFIED on recorded receipt; acceptance pending audit | receipt `2c449bdfec18` |
+| HOST-02 | SATISFIED on recorded receipt; acceptance pending audit | receipt `3d90990e5cd0` |
 | QUAL-03 | SATISFIED on recorded receipt; acceptance pending audit | `--check-docs` passes |
 
 REQUIREMENTS.md traceability keeps `Gaps Found` for all eight; leave until the audit closes the register.
@@ -346,12 +346,12 @@ _Verifier: Claude (gsd-verifier)_
 
 ---
 
-# Prior verification (round 2, HEAD dd10b8d767ed, status gaps_found) -- retained as history
+# Prior verification (round 2, HEAD e7f6b2b4647f, status gaps_found) -- retained as history
 
 # Phase 04: Public Playable Tracer Verification Report
 
 **Phase Goal:** A maintainer can rebuild and run an original guest with visible, input-driven behavior through the ordinary native API and an actual pinned RetroArch build, while resolving the selected sound candidates' admission gates before full integration.
-**Verified:** 2026-10-10 at HEAD `dd10b8d767ed` (receipt qualified at `bd74482e0050`).
+**Verified:** 2026-10-10 at HEAD `e7f6b2b4647f` (receipt qualified at `323fa1453329`).
 **Status:** gaps_found
 **Re-verification:** Yes -- after gap-closure plans 04-32..04-36.
 
@@ -363,7 +363,7 @@ _Verifier: Claude (gsd-verifier)_
 |---|---|---|---|
 | 1 | Rebuild the rights-audited fixture from tracked source, run it through a C consumer, see a guest-produced software frame with checked dimensions/format/pitch/bounds. | VERIFIED | Tracked fixture sources exist; `ctest --preset owned-debug` re-run here: 100% passed, 63/63. |
 | 2 | Bounded frame API with explicit input, owned buffers, timing, counts, actionable errors; correct input changes output, wrong-input control fails. | VERIFIED | `include/glueyneo/glueyneo.h`, `src/instance.c`, named native tests inside the passing 63/63 CTest run. |
-| 3 | Load, run, control and unload the fixture in an actual pinned macOS RetroArch with software video, documented mapping, frontend-owned pacing. | VERIFIED (recorded receipt) | `04-FRONTEND-RECEIPT.json` source_revision `bd74482e0050`, status pass (read here); `--check-docs` passes (re-run). RetroArch was not launched by this verifier (`pgrep -x RetroArch` = 0), so the receipt is recorded evidence only. |
+| 3 | Load, run, control and unload the fixture in an actual pinned macOS RetroArch with software video, documented mapping, frontend-owned pacing. | VERIFIED (recorded receipt) | `04-FRONTEND-RECEIPT.json` source_revision `323fa1453329`, status pass (read here); `--check-docs` passes (re-run). RetroArch was not launched by this verifier (`pgrep -x RetroArch` = 0), so the receipt is recorded evidence only. |
 | 4 | Passing admission evidence for pinned Z80 and private-interface ymfm YM2610 candidates. | VERIFIED (bounded workloads) | CTest z80-admission, z80-mutation, ym2610-admission pass; scope stays the bounded synthetic workloads. |
 | 5 | Clean-tree build/install/load procedure with exact identities and untested configurations stated. | VERIFIED | `docs/first-playable-build.md` generated block bound to receipt; `--check-docs` passes. |
 
@@ -407,7 +407,7 @@ No `probe-*.sh` declared; skipped. Full CTest run once (63/63). RetroArch not la
 | API-05 | SATISFIED; acceptance withheld | public header, `src/instance.c` |
 | SND-01 | SATISFIED (bounded); acceptance withheld | Z80 admission/mutation tests |
 | SND-02 | SATISFIED (bounded); acceptance withheld | ymfm lanes |
-| HOST-02 | SATISFIED on recorded receipt; acceptance withheld | receipt `bd74482e0050` |
+| HOST-02 | SATISFIED on recorded receipt; acceptance withheld | receipt `323fa1453329` |
 | QUAL-03 | SATISFIED on recorded receipt; acceptance withheld | `--check-docs` passes |
 
 REQUIREMENTS.md traceability rows remain `Gaps Found` for all eight, consistent with this verdict.

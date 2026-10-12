@@ -39,8 +39,8 @@ metrics:
   completed: 2026-10-09
   status: complete
   commits: 3
-  plan_head_before: b03448bbca60ddeaea4c63f16d514498720a4d04
-  plan_head_after: f1c8a1de5f25224b83da6ec9e4bc40bf51a249ae
+  plan_head_before: c76c850e357d8336aeb528c42d2a6b5151178301
+  plan_head_after: ad5a8a25dc8001b61ea601bbf6a5b53f49d22ae6
 requirements-completed: []
 coverage:
   - id: D1
@@ -96,14 +96,14 @@ status: complete
 
 - Reconciled the evidence-map checker with the 59-row register: four directed high/open blockers, T-04-34 and T-04-38 medium/open, with no threat closure.
 - Bound WR-01 to its historical review source and made current review provenance require the full reviewed revision, exact five-path list, and byte-identical source content.
-- Added mutation coverage for the control-success and reverse-order guest-pixel claims; the independent review confirmed the fixes on frozen code commit `a53a70991402a1cb4e61b2707b017a5f9f924fbd`.
+- Added mutation coverage for the control-success and reverse-order guest-pixel claims; the independent review confirmed the fixes on frozen code commit `f37c9548e846898f4fd17326359fef4ab46ff005`.
 - Updated review, disposition, and validation records with current suite results and explicit manual-only frontend limits.
 
 ## Task Commits
 
-1. **Task 1: Reconcile the security evidence path and test WR-01 provenance enforcement** — `5faa5f3` (`fix`)
-2. **Task 2: Reject WR-08 and guide paraphrases without weakening unknown frontend status; freeze current review gates** — `a53a709` (`fix`)
-3. **Task 3: Independently review current changes and reconcile evidence without closing directed gates** — `f1c8a1d` (`test`); final disposition/validation records are included in the plan metadata commit.
+1. **Task 1: Reconcile the security evidence path and test WR-01 provenance enforcement** — `9db7838` (`fix`)
+2. **Task 2: Reject WR-08 and guide paraphrases without weakening unknown frontend status; freeze current review gates** — `f37c954` (`fix`)
+3. **Task 3: Independently review current changes and reconcile evidence without closing directed gates** — `ad5a8a2` (`test`); final disposition/validation records are included in the plan metadata commit.
 
 **Plan metadata:** `docs(04-21): complete evidence gate and review reconciliation plan` (the executor reports its commit hash).
 
@@ -123,11 +123,11 @@ status: complete
 - `python3 tests/tools/check_phase04_validation_map.py` — passed after current review/disposition/validation updates; fresh qualification and frontend counts were 27/27 each.
 - `git diff --check` — passed after removing Markdown hard-break trailing spaces.
 
-The final independent reviewer checked exact frozen revision `f1c8a1de5f25224b83da6ec9e4bc40bf51a249ae` and all five required paths, including `tests/libretro/retroarch_smoke.py`. No new actionable finding was reported. An earlier review pass exposed the two remaining paraphrase cases; targeted RED evidence is retained in ignored `.planning/tmp/04-21-control-red.json` and `.planning/tmp/04-21-pixels-red.json`, and their GREEN fixes were committed before final review. The final review also confirmed the mutation fixture reads the live validation denominator instead of synthesizing one.
+The final independent reviewer checked exact frozen revision `ad5a8a25dc8001b61ea601bbf6a5b53f49d22ae6` and all five required paths, including `tests/libretro/retroarch_smoke.py`. No new actionable finding was reported. An earlier review pass exposed the two remaining paraphrase cases; targeted RED evidence is retained in ignored `.planning/tmp/04-21-control-red.json` and `.planning/tmp/04-21-pixels-red.json`, and their GREEN fixes were committed before final review. The final review also confirmed the mutation fixture reads the live validation denominator instead of synthesizing one.
 
 ## Decisions Made
 
-- WR-01 remains open and retains historical source `04-REVIEW.md` at `87f8d4c`, reviewed revision `870848e553aca6e43f6fec8ae0acefac87270f5b`, timestamp `2026-10-08T23:46:34Z`.
+- WR-01 remains open and retains historical source `04-REVIEW.md` at `ae86cba`, reviewed revision `95e4fa09e5eacdc995bff7fc120722ff1bebd331`, timestamp `2026-10-08T23:46:34Z`.
 - The tested WR-06 and WR-08 counterexamples are rejected, while both historical findings remain open for separate disposition. T-04-34 and T-04-38 remain medium/open as directed; the four high/open threats remain unchanged.
 - HOST-02 and frontend QUAL-03 remain manual-only and Pending/unknown. No RetroArch process or GUI was launched.
 
@@ -139,7 +139,7 @@ The final independent reviewer checked exact frozen revision `f1c8a1de5f25224b83
 - **Fix:** Added targeted mutation tests and bounded claim patterns; froze a new revision and repeated the independent review.
 - **Files modified:** `tests/tools/check_phase04_validation_map.py`, `tests/tools/test_check_phase04_validation_map.py`, `tools/verify_playable.py`, `tests/tools/test_verify_playable.py`.
 - **Verification:** Final independent review and all focused gates passed on the final code revision.
-- **Committed in:** `a53a709`.
+- **Committed in:** `f37c954`.
 
 **Total deviations:** 1 auto-fixed bug.  
 **Impact on plan:** The extra correction was necessary to meet the planned fail-closed claim behavior; it did not change actual frontend or security status.
@@ -158,7 +158,7 @@ The repository evidence repair is complete. Phase 04 itself remains incomplete: 
 
 ## Self-Check: PASSED
 
-The summary exists, and task commits `5faa5f3`, `a53a709`, and `f1c8a1d` are ancestors of the current plan head. The direct evidence-map checker, docs gate, and `git diff --check` pass after the final review/disposition/validation updates.
+The summary exists, and task commits `9db7838`, `f37c954`, and `ad5a8a2` are ancestors of the current plan head. The direct evidence-map checker, docs gate, and `git diff --check` pass after the final review/disposition/validation updates.
 
 ---
 *Phase: 04-public-playable-tracer*

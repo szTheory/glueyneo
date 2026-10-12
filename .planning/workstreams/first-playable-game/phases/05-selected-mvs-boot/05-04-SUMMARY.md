@@ -16,8 +16,8 @@ actuals:
   tasks: 3
   commits: 2
 commits: 2
-plan_head_before: dc4556b8af7b970945bb00fdb7d745fca433310c
-plan_head_after: 4391684b6ed3f3b62a538832a530a2c6f5b2fe16
+plan_head_before: 1bd7480001614b79e39eb810ccaa0631aeb89a57
+plan_head_after: c5539efd677f56c630f2c932a7a9df24110e9e13
 tech-stack:
   added: []
   patterns: [source-and-observation evidence gates checkpoint claims; private selected-run details stay ignored]
@@ -77,10 +77,10 @@ status: complete
 
 ## Task Commits
 
-1. **Tasks 1–2: Record source/observation gate and bounded selected-run evidence** — `d042248` (docs)
-2. **Task 3: Record checkpoint review disposition** — `4391684` (docs)
+1. **Tasks 1–2: Record source/observation gate and bounded selected-run evidence** — `0cb2285` (docs)
+2. **Task 3: Record checkpoint review disposition** — `c5539ef` (docs)
 
-The plan commit ledger measures 2 commits from `dc4556b8af7b970945bb00fdb7d745fca433310c` through `4391684b6ed3f3b62a538832a530a2c6f5b2fe16`.
+The plan commit ledger measures 2 commits from `1bd7480001614b79e39eb810ccaa0631aeb89a57` through `c5539efd677f56c630f2c932a7a9df24110e9e13`.
 
 ## Files Created/Modified
 
@@ -123,4 +123,4 @@ Plan 05-04 is complete as a bounded blocker investigation; Phase 05 remains inco
 
 ## Self-Check: PASSED
 
-The summary file exists, and task commits `d042248` and `4391684` are ancestors of the current HEAD. The measured plan delta is 2 commits from `dc4556b8af7b970945bb00fdb7d745fca433310c` through `4391684b6ed3f3b62a538832a530a2c6f5b2fe16`.
+The summary file exists, and task commits `0cb2285` and `c5539ef` are ancestors of the current HEAD. The measured plan delta is 2 commits from `1bd7480001614b79e39eb810ccaa0631aeb89a57` through `c5539efd677f56c630f2c932a7a9df24110e9e13`.

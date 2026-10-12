@@ -14,7 +14,7 @@ actuals:
   tokens: 3872
   tasks: 2
   commits: 2
-plan_head_before: bd96c50a60eeee05ee3a3ccf6accaf0d05825b98
+plan_head_before: 996863f052b23e013b83d8c9d00c14b26545a8ce
 plan_head_after: 162931d315932297ef5f73661bd690a131e801a8
 commits: 2
 tech-stack:
@@ -80,8 +80,8 @@ status: complete
 
 ## Task Commits
 
-1. **Task 1: Observe the pinned RetroArch fixture path in a changed functioning launch context** — `99595bb` (docs)
-2. **Task 2: Reconcile frontend requirement status to actual observations** — `162931d` (docs)
+1. **Task 1: Observe the pinned RetroArch fixture path in a changed functioning launch context** — `05792e5` (docs)
+2. **Task 2: Reconcile frontend requirement status to actual observations** — `e518707` (docs)
 
 ## Files Created/Modified
 
@@ -118,7 +118,7 @@ Plan 04-15 is complete as an evidence-preservation plan, but Phase 04 is not com
 ## Self-Check: PASSED
 
 - Summary and all three modified artifacts exist.
-- Task commits `99595bb` and `162931d` are ancestors of the current HEAD.
+- Task commits `05792e5` and `e518707` are ancestors of the current HEAD.
 - `gsd_run check evaluation-scope --plan 04-15 --commits-only --raw` resolved both task commits with no missing or out-of-scope files.
 - The focused smoke suite passed 26/26, and the task's observation-derived checkbox/traceability predicate passed with HOST-02 and QUAL-03 Pending.
 - T-04-11, T-04-15, T-04-18 and T-04-20 remain high/open.

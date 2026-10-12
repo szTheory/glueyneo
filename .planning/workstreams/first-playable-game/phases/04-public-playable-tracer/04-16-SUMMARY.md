@@ -14,8 +14,8 @@ actuals:
   tokens: 10477
   tasks: 2
   commits: 4
-plan_head_before: eef40c9b41cf520dfccfb7cd1be231d7038f14ad
-plan_head_after: 64f6004
+plan_head_before: ec909a1535f65bbbd6c2c02102fa6b3831406f8c
+plan_head_after: 45e0db6
 commits: 4
 tech-stack:
   added: []
@@ -92,10 +92,10 @@ status: complete
 
 ## Task Commits
 
-1. **Task 1 RED: newline-path diagnostic regressions** — `6f9964a` (test)
-2. **Task 1 GREEN: redact complete diagnostic values** — `d48f0b2` (fix)
-3. **Task 2 RED: controlled review and Pending/unknown gate tests** — `1b37177` (test)
-4. **Task 2 GREEN: exact controlled-state evidence gates** — `64f6004` (fix)
+1. **Task 1 RED: newline-path diagnostic regressions** — `f6a987a` (test)
+2. **Task 1 GREEN: redact complete diagnostic values** — `aff3c73` (fix)
+3. **Task 2 RED: controlled review and Pending/unknown gate tests** — `9eaf6b6` (test)
+4. **Task 2 GREEN: exact controlled-state evidence gates** — `45e0db6` (fix)
 
 ## Files Created/Modified
 

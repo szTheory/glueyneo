@@ -29,8 +29,8 @@ metrics:
   completed: 2026-10-07
   status: complete
   commits: 2
-  plan_head_before: 9c11b24931ed7260c4a1e30129e10b79ea26a651
-  plan_head_after: b8aa65f4012acf8cba594bbbb1784f6761f5ca22
+  plan_head_before: 3f5a54c2e49697adaba8037e0b318266a70a4674
+  plan_head_after: f808391833f59fdac5d53280e9b07b95ea406018
 actuals:
   tokens: 9949
   tasks: 2
@@ -100,8 +100,8 @@ coverage:
 
 ## Task Commits
 
-1. **Task 1: Verify clean native/Libretro install and real consumers** — `290e218` (`feat`)
-2. **Task 2: Publish exact macOS build/load instructions and final validation map** — `b8aa65f` (`docs`)
+1. **Task 1: Verify clean native/Libretro install and real consumers** — `12ed41c` (`feat`)
+2. **Task 2: Publish exact macOS build/load instructions and final validation map** — `f808391` (`docs`)
 
 ## Files Created/Modified
 
@@ -128,7 +128,7 @@ coverage:
 - **Fix:** Added an install rule under `${CMAKE_INSTALL_LIBDIR}/libretro` and made the runner use the installed core.
 - **Files modified:** `CMakeLists.txt`, `tools/verify_playable.py`, `tests/consumers/test_playable_install.py`
 - **Verification:** Fresh static/shared installs contain the core; native consumers pass. The actual RetroArch run reached the pinned app and then exited before screenshot.
-- **Committed in:** `290e218`
+- **Committed in:** `12ed41c`
 
 **2. [Rule 3 - Blocking] Update stale README planning links that failed clean package checks**
 - **Found during:** Task 1
@@ -136,7 +136,7 @@ coverage:
 - **Fix:** Pointed the README links at the current workstream verification/state/requirements/roadmap files.
 - **Files modified:** `README.md`
 - **Verification:** The complete clean CTest suite passed 34/34 after the link fix.
-- **Committed in:** `290e218`
+- **Committed in:** `12ed41c`
 
 **Total deviations:** 2 auto-fixed (one Rule 2, one Rule 3). Both were required for the clean install and full-suite workflow.
 
@@ -162,7 +162,7 @@ Plan 04-06 is complete; Phase 04 is not accepted because HOST-02 remains unknown
 ## Self-Check: PASSED
 
 - Created artifacts exist: `tools/verify_playable.py`, `tests/consumers/test_playable_install.py`, `docs/first-playable-build.md`, and `04-VALIDATION.md`.
-- Task commits `290e218` and `b8aa65f` are ancestors of HEAD.
+- Task commits `12ed41c` and `f808391` are ancestors of HEAD.
 - No stub or placeholder patterns were found in the files created or modified for this plan.
 
 ---

@@ -14,8 +14,8 @@ actuals:
   tokens: 6000
   tasks: 2
   commits: 3
-plan_head_before: 6e319c616579abbc60b9360993b63082f6337437
-plan_head_after: ac1c808
+plan_head_before: 0e8f7af44a782b2e648130039c3274b18d219e29
+plan_head_after: c64060e
 tech-stack:
   added: []
   patterns: ["typed sanitized error tokens through emit_error; entry guard wraps main"]
@@ -57,9 +57,9 @@ status: complete
 
 ## Task Commits
 
-1. Task 1 RED: `d03f46f` (test) - 6 new `test_t_04_11_*`; red summary `FAILED (failures=5)`, no `errors=`; the argparse pass-through test passes at base by design (regression guard).
-2. Task 1 GREEN: `f63691b` (fix)
-3. Task 2: `ac1c808` (docs)
+1. Task 1 RED: `f4961f3` (test) - 6 new `test_t_04_11_*`; red summary `FAILED (failures=5)`, no `errors=`; the argparse pass-through test passes at base by design (regression guard).
+2. Task 1 GREEN: `9065363` (fix)
+3. Task 2: `c64060e` (docs)
 
 New tests: output_mkdir_error_is_a_typed_token, mkdtemp_error_writes_a_setup_fail_receipt, setup_error_with_failed_receipt_write, entry_maps_uncaught_errors_without_traceback, entry_maps_interrupt_to_130, argparse_exit_passes_through.
 

@@ -103,15 +103,15 @@ status: complete
 ## Accomplishments
 
 - The evidence-map checker now requires the exact approved five-file review scope, a single valid revision, and source bytes matching that revision. Mutation tests cover duplicate and malformed identity fields and assert the intended rejection for each negative case.
-- The live evidence set now reconciles four directed high/open threats and three medium/open threats without accepting or closing any risk. The independent review at `007f331b1507331382826e779218d39a5f31fab4` is clean with zero findings; mutation tests pass 24/24, qualification tests 27/27, GUI-free frontend contract tests 27/27, the documentation gate passes, and the direct evidence-map checker passes.
+- The live evidence set now reconciles four directed high/open threats and three medium/open threats without accepting or closing any risk. The independent review at `0ba10976a0988efff48d0dc88a28abd056186f16` is clean with zero findings; mutation tests pass 24/24, qualification tests 27/27, GUI-free frontend contract tests 27/27, the documentation gate passes, and the direct evidence-map checker passes.
 - `.planning/METHODOLOGY.md` now directs future work to finish the relevant phase audits before planning, combine actionable repository findings into one bounded gap plan, reserve review and targeted repair inside it, and execute all waves in one `$gsd-execute-phase --gaps-only` run. If only external or user-directed blockers remain, keep them open and stop gap planning.
 - The fresh whole-phase report remains `gaps_found`. HOST-02 is Pending/unknown, frontend QUAL-03 is partial/needs-human, and actual pinned RetroArch behavior remains unobserved and manual-only. Phase 04 is not complete.
 
 ## Task Commits
 
-- `1781f47` — reconcile the live evidence and security gates.
-- `2c67ae7` — harden exact source identity checks.
-- `007f331` — validate review identity and target-specific mutation coverage.
+- `5721235` — reconcile the live evidence and security gates.
+- `1f73784` — harden exact source identity checks.
+- `0ba1097` — validate review identity and target-specific mutation coverage.
 
 The plan-summary closeout is committed immediately after the three implementation commits; its commit is visible in repository history.
 

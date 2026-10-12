@@ -26,8 +26,8 @@ key-decisions:
   - "More than 5 history-dependent suite failures: halt with scope-split-needed, repair nothing"
 status: complete
 commits: 6
-plan_head_before: 08b54777292bd2a46f2eff4fc067a7af0c1c9400
-plan_head_after: 7f6a63a7c9f4417e932ea6549e1965450e9ea013
+plan_head_before: 05db28145dacf29142695a580d954d2d20bf0cea
+plan_head_after: a2a96417c67346714e51c726a10a912a6db34b0a
 actuals:
   tokens: 55000
   tasks: 3
@@ -41,14 +41,14 @@ The deterministic, merge-base-scoped allowlist generator and freshness check exi
 
 ## Commits
 
-- START (diff base for the next `/gsd-code-review`, 04-59..04-62 base is 04-59's START `cfdf4a07a28a651abcf2af72761a69846bbd7d22`; this plan's base): `08b54777292bd2a46f2eff4fc067a7af0c1c9400`
-- RED 1: `1ebc1be` test(04-60) generator, freshness and CLI cases (8 tests; fixture helper gained an optional base-row variant, no assertion changed)
-- FIX 1: `9dc602c` fix(04-60) `history_allowlist_document`, `history_allowlist_is_current`, CLI
-- DOCS 1: `2b20ab7` rights inventory refresh (needed before the simulation, see Deviations)
-- RED 2: `2b4c011` test(04-60) one note per listed revision form
-- FIX 2: `2666755` fix(04-60) review notes carry the revision as written
-- DOCS 2: `7f6a63a` rights inventory refresh after the note fix
-- Evidence line: `G5WR-01-allowlist-generator red 1ebc1be642f4 exit 1 green 9dc602c36f8f ok` (red: 7 failures, 1 error; green: 8 OK)
+- START (diff base for the next `/gsd-code-review`, 04-59..04-62 base is 04-59's START `1bc2f01ddbd59967815c129f713ebef9ab3b54ae`; this plan's base): `05db28145dacf29142695a580d954d2d20bf0cea`
+- RED 1: `236e6f2` test(04-60) generator, freshness and CLI cases (8 tests; fixture helper gained an optional base-row variant, no assertion changed)
+- FIX 1: `c43b9bb` fix(04-60) `history_allowlist_document`, `history_allowlist_is_current`, CLI
+- DOCS 1: `29f3f9b` rights inventory refresh (needed before the simulation, see Deviations)
+- RED 2: `d5a3b23` test(04-60) one note per listed revision form
+- FIX 2: `18d86de` fix(04-60) review notes carry the revision as written
+- DOCS 2: `a2a9641` rights inventory refresh after the note fix
+- Evidence line: `G5WR-01-allowlist-generator red 236e6f270a0d exit 1 green c43b9bbe94f5 ok` (red: 7 failures, 1 error; green: 8 OK)
 
 ## Generator behavior
 
@@ -90,7 +90,7 @@ Five of the six share one apparent cause (the documentation-copy helper does not
 - **Issue:** Task 3 schedules the rights refresh last, but the clone's `--check-docs` compares the tolerated row's working-tree digest and the test file had changed, so it failed.
 - **Fix:** ran the refresh (digest and last-touching revision of the one changed row) and committed it alone before the simulation, and again after FIX 2.
 - **Files modified:** docs/rights-inventory.md
-- **Commits:** `2b20ab7`, `7f6a63a`
+- **Commits:** `29f3f9b`, `a2a9641`
 
 **2. [Rule 1 - Bug] Duplicate notes hid allowlist rows**
 - **Found during:** Task 1 SIM-CHECK (129 vs 132)

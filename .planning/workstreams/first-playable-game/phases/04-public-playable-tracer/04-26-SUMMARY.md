@@ -15,8 +15,8 @@ provides:
 affects: [04-VERIFICATION gaps 2 and 3, HOST-02, QUAL-03, T-04-46, T-04-38, T-04-43]
 status: complete
 commits: 5
-plan_head_before: fe53ff0f422ce64b18585ea5157200e65dea79d0
-plan_head_after: 4baee27084fe8a25de59766eb11439d21385f042
+plan_head_before: 19c4781754d4970ac1ff0bca3f5d068200adb40c
+plan_head_after: a130510dc0df189043514b6ccb60614b3d77f4b6
 actuals:
   tokens: 20000
   tasks: 2
@@ -45,11 +45,11 @@ requirements-completed: []
 
 | Task | Commit | Notes |
 | ---- | ------ | ----- |
-| 1 RED | 33cb301 | `test(04-26): add failing evidence-binding regressions` |
-| 1 GREEN | ae74669 | `fix(04-26): bind frontend evidence in every check_docs path (CR-03, WR-02, WR-09)` |
-| 2 RED | 957a7fb | `test(04-26): add failing crosswalk provenance regressions` (includes the SECURITY/REVIEW/DISPOSITION/PHASE_DIRECTORY constants the tests import) |
-| 2 GREEN | ddb891d | `fix(04-26): bind review crosswalk to dispositions, register and reviewed files (CR-05)` (includes the 04-VALIDATION.md crosswalk rewrite) |
-| 2 rights | 4baee27 | `docs(04-26): refresh rights inventory for changed test sources` |
+| 1 RED | 4df8b0b | `test(04-26): add failing evidence-binding regressions` |
+| 1 GREEN | 3782930 | `fix(04-26): bind frontend evidence in every check_docs path (CR-03, WR-02, WR-09)` |
+| 2 RED | d75ef7e | `test(04-26): add failing crosswalk provenance regressions` (includes the SECURITY/REVIEW/DISPOSITION/PHASE_DIRECTORY constants the tests import) |
+| 2 GREEN | 5bc7a62 | `fix(04-26): bind review crosswalk to dispositions, register and reviewed files (CR-05)` (includes the 04-VALIDATION.md crosswalk rewrite) |
+| 2 rights | a130510 | `docs(04-26): refresh rights inventory for changed test sources` |
 
 04-VALIDATION.md changed only inside the crosswalk section (hunks at old lines 111 and 114, between the `## Review Finding Crosswalk` heading and the next `###`).
 
@@ -71,7 +71,7 @@ Green: 38 tests OK (baseline 32, plus 6 new test methods and 6 new WR-02 subtest
 - `python3 tools/verify_playable.py --check-docs`: `Phase 04 documentation gate passed.`
 - Binding fail-closed snippet: `binding fail-closed ok`. Crosswalk snippet: `crosswalk ok 24`.
 - `ctest --preset owned-debug -L qualification-tools`: 5/5 passed.
-- Rights inventory: `validate_repository_inventory()` passes; `rights rows bound 1`; the row records SHA-256 `f7d4d6b2...2560` and `source_revision` 957a7fb (the last commit that changed the test file).
+- Rights inventory: `validate_repository_inventory()` passes; `rights rows bound 1`; the row records SHA-256 `f7d4d6b2...2560` and `source_revision` d75ef7e (the last commit that changed the test file).
 - Grep criteria: `if (source_root / ".git").exists():` count 0; `repository=ROOT, head=snapshot.commit` count 1; `EXPECTED_INPUT_MAPPING` count 2.
 
 ## Deviations from Plan
@@ -80,7 +80,7 @@ Green: 38 tests OK (baseline 32, plus 6 new test methods and 6 new WR-02 subtest
 - **Found during:** Task 2 tests.
 - **Issue:** The new classes needed the same temp-root copy helpers as `ConsumerInputTest`, now also copying the register, review, disposition and every reviewed file.
 - **Fix:** Moved the helpers into a `DocumentationCopies` mixin used by `ConsumerInputTest`, `EvidenceBindingTest` and `CrosswalkProvenanceTest`.
-- **Files modified:** tests/tools/test_verify_playable.py. **Commit:** 957a7fb.
+- **Files modified:** tests/tools/test_verify_playable.py. **Commit:** d75ef7e.
 
 **2. Red ordering for Task 2.** The tests mutate rows that exist only in the rewritten crosswalk, so the rewrite was present in the working tree (not committed) during the red run to make the red meaningful. The committed order is still test commit, then fix plus rewrite commit.
 
@@ -92,4 +92,4 @@ None.
 
 ## Self-Check: PASSED
 
-Commits 33cb301, ae74669, 957a7fb, ddb891d and 4baee27 exist on the branch; modified files exist; 04-REVIEW.md, 04-REVIEW-DISPOSITION.md, 04-SECURITY.md, 04-VERIFICATION.md, 04-UAT.md and 04-FRONTEND-RECEIPT.json were not edited.
+Commits 4df8b0b, 3782930, d75ef7e, 5bc7a62 and a130510 exist on the branch; modified files exist; 04-REVIEW.md, 04-REVIEW-DISPOSITION.md, 04-SECURITY.md, 04-VERIFICATION.md, 04-UAT.md and 04-FRONTEND-RECEIPT.json were not edited.

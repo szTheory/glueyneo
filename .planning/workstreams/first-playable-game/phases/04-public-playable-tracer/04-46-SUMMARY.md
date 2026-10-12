@@ -15,8 +15,8 @@ actuals:
   tokens: 9000
   tasks: 2
   commits: 3
-plan_head_before: 2b71a917b313cc3b9e1be315698d32bf1e1d1b77
-plan_head_after: 2e1b4bb03aa13514c8b8303255d1e016cd81ddfd
+plan_head_before: bcb78f801da335f02b0e96f3e4b3dbc6c138dd7d
+plan_head_after: 5af854e5150515af33e5b17175a24657a718d8ba
 tech-stack:
   added: []
   patterns: ["gap-round anchor = earliest commit adding the round's review file at the checked head"]
@@ -66,9 +66,9 @@ coverage:
 
 ## Task Commits
 
-1. **Task 1 RED:** `48bf6e9` (test) - `test_g3wr_05_*` regressions (7 tests)
-2. **Task 1 GREEN:** `df7b940` (fix) - per-round anchors with strict descent
-3. **Task 2:** `2e1b4bb` (docs) - per-round review provenance documentation
+1. **Task 1 RED:** `56b0ded` (test) - `test_g3wr_05_*` regressions (7 tests)
+2. **Task 1 GREEN:** `492ec02` (fix) - per-round anchors with strict descent
+3. **Task 2:** `5af854e` (docs) - per-round review provenance documentation
 
 Red failure class line (build/playable-qualification/04-46-red-g3wr_05.txt): `FAILED (failures=6)` with no `errors=` count (the seventh test, open rows need no citation, passes by design).
 

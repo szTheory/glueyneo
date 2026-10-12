@@ -88,8 +88,8 @@ status: complete
 
 ## Task Commits
 
-1. **Task 1: Bind one real fixture build and receipt to a complete Git snapshot** — `250a645` (test), `ad635df` (feat)
-2. **Task 2: Apply snapshot identity to every qualification lane and explain the receipt** — `a8c7286` (test), `36df674` (feat)
+1. **Task 1: Bind one real fixture build and receipt to a complete Git snapshot** — `8b6082c` (test), `a08de2b` (feat)
+2. **Task 2: Apply snapshot identity to every qualification lane and explain the receipt** — `b8a2baa` (test), `639f68e` (feat)
 
 ## Files Modified
 
@@ -124,7 +124,7 @@ Plan 04-07 is complete. Phase 04 remains unverified: Plan 04-08 must diagnose th
 
 - All 10 focused snapshot tests pass, including an actual isolated CMake build of the public fixture.
 - Python compilation, `git diff --check`, and the qualification documentation contract check pass.
-- Task commits `250a645`, `ad635df`, `a8c7286`, and `36df674` are ancestors of HEAD.
+- Task commits `8b6082c`, `a08de2b`, `b8a2baa`, and `639f68e` are ancestors of HEAD.
 - No plan or phase completion status was advanced by this summary.
 
 ---

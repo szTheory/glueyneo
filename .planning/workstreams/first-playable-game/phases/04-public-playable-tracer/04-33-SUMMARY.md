@@ -37,8 +37,8 @@ status: complete
 duration: 13 min
 completed: 2026-10-10
 commits: 9
-plan_head_before: cd6f8ed23c990026718a884b54d19701c2a03ef3
-plan_head_after: bf4c96540a8d7a0bef2de46cbb04951a34e5795b
+plan_head_before: 12044f983bae9b0f3ea2a5ad54c940ee043bce1c
+plan_head_after: 907a11c56574570baecf3722fd411cf0828ff090
 actuals:
   tokens: 20500
   tasks: 4
@@ -88,11 +88,11 @@ coverage:
 
 ## TDD commit pairs
 
-- Task 1 (tracer): RED `e583f8e` (6 failing target-behavior tests plus 9 launch-window and sweep errors), GREEN `416e5bc`. Tracer verified end-to-end (both suites green) before the later tasks.
-- Task 2: RED `0084732` (11 errors, 4 failures), GREEN `d85d59a`.
-- Task 3: RED `9d89901` (3 failures, 2 errors), GREEN `336007c`.
-- Task 4: RED `3dcbf6e` (6 failures, 1 error), GREEN `9ba8694`, rights refresh `bf4c965`.
-- Plan start revision (diff baseline): `cd6f8ed23c990026718a884b54d19701c2a03ef3`. `git diff` of `tools/private_paths.py` against it touches only `scan_public_value`.
+- Task 1 (tracer): RED `2fb083c` (6 failing target-behavior tests plus 9 launch-window and sweep errors), GREEN `a591132`. Tracer verified end-to-end (both suites green) before the later tasks.
+- Task 2: RED `f212b4a` (11 errors, 4 failures), GREEN `688ffdf`.
+- Task 3: RED `7bc7d10` (3 failures, 2 errors), GREEN `1764956`.
+- Task 4: RED `0966cf9` (6 failures, 1 error), GREEN `a5d2400`, rights refresh `907a11c`.
+- Plan start revision (diff baseline): `12044f983bae9b0f3ea2a5ad54c940ee043bce1c`. `git diff` of `tools/private_paths.py` against it touches only `scan_public_value`.
 
 ## Counts
 
@@ -111,13 +111,13 @@ coverage:
 - **Issue:** `test_survivor_recorded_as_our_own_child_gets_one_group_sigterm` asserted `assert_called_once_with(8, SIGTERM)`, which contradicts the planned SIGKILL escalation of a survivor that stays listed.
 - **Fix:** it now asserts the first call is SIGTERM; the new escalation, exit-after-SIGTERM and still-running tests pin the rest. The `run_lane` helper gained a `later` listing sequence and a `gone_after_sigkill` switch.
 - **Files modified:** tests/tools/test_verify_playable.py
-- **Commit:** e583f8e / 416e5bc
+- **Commit:** 2fb083c / a591132
 
 **2. [Rule 2 - Missing critical] Provenance gate skipped only with no repository and no tracked evidence**
 - **Found during:** Task 2
 - **Issue:** existing documentation-copy tests run `check_docs` without a repository or evidence; failing there would break unrelated placeholder assertions, while weakening the evidence-bound path is forbidden.
 - **Fix:** `review_provenance_errors` runs whenever a repository is explicit or `source_root/.git` exists; tracked evidence without a repository still fails closed in `load_frontend_evidence`. Documented in the `check_docs` docstring.
-- **Commit:** d85d59a
+- **Commit:** 688ffdf
 
 **3. [Note] `_git_exit` helper instead of `_git`**
 - The plan named `_git`, which raises one error for both non-zero exit codes and cannot distinguish an unresolvable revision from a non-ancestor, so a small exit-code helper was added with the same clean environment and timeout.
@@ -137,4 +137,4 @@ None. The new surfaces (group signalling, launch window) are covered by T-04-66 
 ## Self-Check: PASSED
 
 - Files found: tools/verify_playable.py, tests/libretro/retroarch_smoke.py, tools/private_paths.py, tests/tools/check_runtime_storage.py, docs/testing.md, docs/rights-inventory.md.
-- Commits e583f8e, 416e5bc, 0084732, d85d59a, 9d89901, 336007c, 3dcbf6e, 9ba8694, bf4c965 are ancestors of HEAD.
+- Commits 2fb083c, a591132, f212b4a, 688ffdf, 7bc7d10, 1764956, 0966cf9, a5d2400, 907a11c are ancestors of HEAD.

@@ -15,8 +15,8 @@ provides:
 affects: [04-31 review disposition for WR-07, WR-08, HOST-02, QUAL-03, T-04-56, T-04-57, T-04-48]
 status: complete
 commits: 6
-plan_head_before: add33847a9d7fb1fa21d439b224d34dee6234ba0
-plan_head_after: 8d9bea526451a7f28cec41febc997049bd2d9302
+plan_head_before: b9f6e738e4463cb73c50a72f6eebc68b89cea402
+plan_head_after: 34af25e783da90d83e25c56268350b0d5e10ac33
 actuals:
   tokens: 40000
   tasks: 3
@@ -48,9 +48,9 @@ requirements-completed: []
 
 ## Tasks
 
-1. Tracer (c3b8d97 red, 97c740d fix): `check_runtime_storage.py` with `writable_symbols(output, platform)` and a CLI; `runtime_writable_storage` and `runtime_writable_storage_audit` CTests (label `qualification-tools`, skip code 77); documented guard limits; `GLUEYNEO_PLANNING_WORKSTREAM` cache variable gating `planning_security_register` with a `message(STATUS ...)` explaining the skip; docs/testing.md sections.
-2. WR-07 (9768d83 red, 7d243ca fix): `block_on(root, workstream)` reads the workstream `config.json` first, then `.planning/config.json`; unreadable files and unknown severities fail with `FAIL:` at both levels.
-3. Rights inventory (63d7d93): new rows for the audit script and its tests, refreshed rows for the register-gate files, item count assertion 41 -> 44.
+1. Tracer (50b353a red, 88e1603 fix): `check_runtime_storage.py` with `writable_symbols(output, platform)` and a CLI; `runtime_writable_storage` and `runtime_writable_storage_audit` CTests (label `qualification-tools`, skip code 77); documented guard limits; `GLUEYNEO_PLANNING_WORKSTREAM` cache variable gating `planning_security_register` with a `message(STATUS ...)` explaining the skip; docs/testing.md sections.
+2. WR-07 (6c176b8 red, 7f903eb fix): `block_on(root, workstream)` reads the workstream `config.json` first, then `.planning/config.json`; unreadable files and unknown severities fail with `FAIL:` at both levels.
+3. Rights inventory (0849335): new rows for the audit script and its tests, refreshed rows for the register-gate files, item count assertion 41 -> 44.
 
 ## Red runs (failing-first evidence)
 
@@ -71,17 +71,17 @@ requirements-completed: []
 - **Found during:** full CTest after Task 3
 - **Issue:** `owned_cpu_inventory_check` failed `stale source manifest record: CMakeLists.txt` because Task 1 changed CMakeLists.txt.
 - **Fix:** updated the CMakeLists.txt sha256 in `experiments/owned_cpu/source-manifest.json`; no other record changed.
-- **Commit:** 8d9bea5
+- **Commit:** 34af25e
 
-**2. Inventory count baseline change (intentional).** `test_repository_inventory_matches_recorded_fixture_and_dependency_bytes` was asserting 41 while the inventory had 42 (one row from 9188752); this plan added two rows, so the assertion is now 44. This is the true inventory size, not a relaxed expectation.
+**2. Inventory count baseline change (intentional).** `test_repository_inventory_matches_recorded_fixture_and_dependency_bytes` was asserting 41 while the inventory had 42 (one row from f026401); this plan added two rows, so the assertion is now 44. This is the true inventory size, not a relaxed expectation.
 
 ## Residuals and notes
 
 - WR-08: the configure-time guard remains heuristic (direct .c/.cpp sources, top-level targets, no generator-expression links, static builds only). Expected 04-31 disposition `deferred` with this rationale in the Source cell, only if the contained reviewer confirms; otherwise `open`.
 - The untracked `.planning/workstreams/first-playable-game/config.json` (user file) was not touched or committed; the new precedence reads it when present, and it did not change the register result.
-- The Task 3 intermediate commits (c3b8d97 through 7d243ca) fail the CI rights gate by design; the final commit passes.
+- The Task 3 intermediate commits (50b353a through 7f903eb) fail the CI rights gate by design; the final commit passes.
 - No stubs, no new network/auth/file surface beyond planned items.
 
 ## Self-Check: PASSED
 
-All created files exist and commits c3b8d97, 97c740d, 9768d83, 7d243ca, 63d7d93, 8d9bea5 are ancestors of HEAD.
+All created files exist and commits 50b353a, 88e1603, 6c176b8, 7f903eb, 0849335, 34af25e are ancestors of HEAD.

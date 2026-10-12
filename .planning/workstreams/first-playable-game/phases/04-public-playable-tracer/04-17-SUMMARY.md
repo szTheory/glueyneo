@@ -15,8 +15,8 @@ actuals:
   tokens: 4001
   tasks: 2
   commits: 4
-plan_head_before: 06776fe762f857de6b4464e86058dcba5be1e4fa
-plan_head_after: 13bceda3d9889b97a762cdf9300a8c750aa7e513
+plan_head_before: 73e6c3f882689c3fb6821c3d5780e767bf1f62a9
+plan_head_after: 72219907e53c62128d4bc141d01ce01f07479d08
 commits: 4
 tech-stack:
   added: []
@@ -85,10 +85,10 @@ status: complete
 
 ## Task Commits
 
-1. **Task 1 RED: reject mixed Pending/unknown and frontend closure claims** — `0ee1722` (test)
-2. **Task 1 GREEN: reject contradictory frontend closure claims** — `364c319` (fix)
-3. **Task 2 tests: cover WR-06 evidence reconciliation** — `6ad8f61` (test)
-4. **Task 2: reconcile WR-06 evidence map** — `13bceda` (fix)
+1. **Task 1 RED: reject mixed Pending/unknown and frontend closure claims** — `924774e` (test)
+2. **Task 1 GREEN: reject contradictory frontend closure claims** — `c6c4e7d` (fix)
+3. **Task 2 tests: cover WR-06 evidence reconciliation** — `36a11f8` (test)
+4. **Task 2: reconcile WR-06 evidence map** — `7221990` (fix)
 
 ## Files Created/Modified
 

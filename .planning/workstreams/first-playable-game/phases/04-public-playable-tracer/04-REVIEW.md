@@ -2,7 +2,7 @@
 phase: 04-public-playable-tracer
 reviewed: 2026-10-10T00:00:00Z
 depth: standard
-reviewed_revision: 82a75795e24c5fd62ff79bd0af564d16fb9fe0da
+reviewed_revision: 867f31775c6daebd06b4fa53e06679e753b57e79
 files_reviewed: 13
 files_reviewed_list:
   - CMakeLists.txt
@@ -35,7 +35,7 @@ status: issues_found
 
 ## Summary
 
-Scope: Phase 04's own commits since the prior review (ea63b03 through 82a7579). Phase 05 hunks in `CMakeLists.txt` and the manifest were excluded. RetroArch was not run.
+Scope: Phase 04's own commits since the prior review (32293f7 through 867f317). Phase 05 hunks in `CMakeLists.txt` and the manifest were excluded. RetroArch was not run.
 
 All six defects from the independent security review and Nyquist audit were re-derived from source. Each was reproduced with a small Python probe or confirmed by reading the code, and all six are confirmed (CR-01, CR-03, CR-04, CR-05, CR-06, CR-07). Three further blockers surfaced:
 
@@ -100,11 +100,11 @@ Secondary: the `git merge-base` subprocess (713) uses the caller's full environm
 
 **File:** `tools/verify_playable.py:766-782`
 **Issue:** The guide is checked only for (a) exactly one status block equal to the generated text and (b) a handful of trivial substrings (`"unsupported"`, `"unknown"`, `"RetroArch"`, `"macOS"`, ...). Anything else may say anything. The current guide already contradicts the evidence and the gate passes:
-- Prose: "the clean committed-snapshot receipt at `706516b5a60c` passed every lane".
-- Block and evidence: `aaf3f093ab0f`.
+- Prose: "the clean committed-snapshot receipt at `5e6a3b8f50d3` passed every lane".
+- Block and evidence: `a6866818d97e`.
 
 The docs state "The gate does not pattern-match prose for claims", which means a false "HOST-02 Complete" sentence elsewhere is accepted.
-**Fix:** Keep generated claims in the block only. Reject claim-bearing vocabulary (`Complete`, `Pass`, `HOST-02`, `QUAL-03`, revision-like hex) outside the block, or remove dated receipt prose from the guide and link to the evidence file. Delete the stale 706516b5a60c paragraph.
+**Fix:** Keep generated claims in the block only. Reject claim-bearing vocabulary (`Complete`, `Pass`, `HOST-02`, `QUAL-03`, revision-like hex) outside the block, or remove dated receipt prose from the guide and link to the evidence file. Delete the stale 5e6a3b8f50d3 paragraph.
 
 ### CR-05: Crosswalk "Existing Threat Scope" accepts any non-empty text, including nonexistent paths (confirmed)
 
@@ -242,7 +242,7 @@ The user gets a raw traceback instead of the documented "writes a failed receipt
 **File:** `docs/first-playable-build.md` (section "Previous qualification observation" and the "2026-10-10 qualification" paragraph)
 **Issue:**
 - "Plan 04-08 regenerates the receipt" is stale.
-- The 2026-10-10 paragraph names `706516b5a60c` while the generated block names `aaf3f093ab0f` (see CR-04).
+- The 2026-10-10 paragraph names `5e6a3b8f50d3` while the generated block names `a6866818d97e` (see CR-04).
 - Two "historical" sections repeat each other.
 
 **Fix:** Collapse into one historical section and remove the revision claim outside the generated block.

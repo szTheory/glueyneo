@@ -15,8 +15,8 @@ actuals:
   tokens: 9000
   tasks: 2
   commits: 4
-plan_head_before: ab4b64e9894bec6e20b95c862fb40b8fb0d064d2
-plan_head_after: d26323e82b451a28d4815d2f4a63ee1c6499301b
+plan_head_before: 1f6d366c7b2dabeefa13bfd6d2e678b1811878f0
+plan_head_after: a1b92fe9d42469d4564fa1aacb2e45cb55bcd90e
 tech-stack:
   added: []
   patterns: [read every non-block-start line as a row so disagreement fails closed]
@@ -41,16 +41,16 @@ status: complete
 
 ## TDD record
 
-- RED commit `a3b7d2d44118aa0d10f9bf1a62d29c43ffc5df8e` (`test(04-55)`): three tests added to `GfmTableFormTest`, additions only. `-k table_end` fails on assertions (`0 != 1`), `FAILED (failures=6)`, no `errors=`; the guard `-k still_close_the_table` passes. Semantic assessment: the target tests ran, and failed because the checker exited 0 where the hidden third open row required exit 1.
-- GREEN commit `045ed1c6ab93d77773d423e82e67cc80a5a9dc7e` (`fix(04-55)`): `TABLE_END` replaced, docstring updated; full suite 59 tests `OK`.
+- RED commit `e2b9cca74e11d88861102838c0ab4f19e00da21d` (`test(04-55)`): three tests added to `GfmTableFormTest`, additions only. `-k table_end` fails on assertions (`0 != 1`), `FAILED (failures=6)`, no `errors=`; the guard `-k still_close_the_table` passes. Semantic assessment: the target tests ran, and failed because the checker exited 0 where the hidden third open row required exit 1.
+- GREEN commit `6e91282a41792a283131dab24064a9a4b5edb97e` (`fix(04-55)`): `TABLE_END` replaced, docstring updated; full suite 59 tests `OK`.
 - Failure count k = 6 (subTests: five hash forms plus the backtick form), reproduced in a detached worktree at RED (since removed).
-- Evidence line (ignored `build/playable-qualification/04-55-evidence.txt`): `T-04-62-TABLE-END red a3b7d2d44118 exit 1 failures 6 errors 0 green 045ed1c6ab93 ok`.
+- Evidence line (ignored `build/playable-qualification/04-55-evidence.txt`): `T-04-62-TABLE-END red e2b9cca74e11 exit 1 failures 6 errors 0 green 6e91282a4179 ok`.
 - No REFACTOR commit was needed.
 
 ## Other commits
 
-- `ca6aea8` docs(04-55): CommonMark table-end contract in docs/testing.md (`ATX heading`, `#note`, `malformed row`, `(T-04-48, T-04-62; 04-55)`).
-- `d26323e` docs(04-55): rights inventory rows refreshed for the two changed tests/tools files (sha256 and source_revision only).
+- `9004d0e` docs(04-55): CommonMark table-end contract in docs/testing.md (`ATX heading`, `#note`, `malformed row`, `(T-04-48, T-04-62; 04-55)`).
+- `a1b92fe` docs(04-55): rights inventory rows refreshed for the two changed tests/tools files (sha256 and source_revision only).
 
 ## Verification
 

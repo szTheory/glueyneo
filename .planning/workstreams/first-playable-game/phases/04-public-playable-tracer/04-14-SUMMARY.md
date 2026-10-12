@@ -46,8 +46,8 @@ metrics:
   tasks: 3
   files: 9
 status: complete
-plan_head_before: 66a8523ac4735f40d1db6d1ab70ebbdb2614c3db
-plan_head_after: 75bbf9eea2a0e03ee646bc2df91aecc86b9f2a4e
+plan_head_before: cced77dfac27249c331260f1f528d4df38874d70
+plan_head_after: 188a2ea9a35e9086ae0e639debc826f5f4147ed1
 commits: 6
 ---
 
@@ -81,8 +81,8 @@ commits: 6
 
 ## TDD Gate Compliance
 
-- Task 1 RED: raw-quoted suffix regression failed on the intended leak in both real sanitizer paths and passed `gsd_run check tdd-red-evidence`; committed as `110fa45`. GREEN passed both focused suites and was committed as `e4e63b0`.
-- Task 2 RED: the `IN-` parser assertion failed because the current parser ignored Info findings and passed `gsd_run check tdd-red-evidence`; committed as `622d2ae`. GREEN passed the eight-test mutation suite and direct gate and was committed as `10a0cbe`.
+- Task 1 RED: raw-quoted suffix regression failed on the intended leak in both real sanitizer paths and passed `gsd_run check tdd-red-evidence`; committed as `01d0287`. GREEN passed both focused suites and was committed as `b8bc7dc`.
+- Task 2 RED: the `IN-` parser assertion failed because the current parser ignored Info findings and passed `gsd_run check tdd-red-evidence`; committed as `d949241`. GREEN passed the eight-test mutation suite and direct gate and was committed as `5c0ccda`.
 - No refactor-only commit was needed.
 
 ## Decisions Made
@@ -101,7 +101,7 @@ commits: 6
 - **Fix:** Updated the checker to recognize the current heading and status wording, and updated mutation fixtures to keep contradiction controls meaningful.
 - **Files modified:** `tests/tools/check_phase04_validation_map.py`, `tests/tools/test_check_phase04_validation_map.py`
 - **Verification:** Eight validation-map tests and the direct evidence-map gate pass.
-- **Committed in:** `10a0cbe`
+- **Committed in:** `5c0ccda`
 
 **Total deviations:** 1 auto-fixed (Rule 3). **Impact:** Required to run the planned direct gate against current evidence; no claim boundary changed.
 
@@ -129,5 +129,5 @@ Plan 04-14 is complete; Phase 04 remains incomplete. Plan 04-15 remains blocked 
 
 - Summary file and all nine declared plan files exist.
 - All six plan task commits are ancestors of the current HEAD; their inspected path lists contain only Plan 04-14-owned files.
-- The persisted pre-plan HEAD is `66a8523ac4735f40d1db6d1ab70ebbdb2614c3db`; `git rev-list --count` measures six task commits through `75bbf9eea2a0e03ee646bc2df91aecc86b9f2a4e`.
+- The persisted pre-plan HEAD is `cced77dfac27249c331260f1f528d4df38874d70`; `git rev-list --count` measures six task commits through `188a2ea9a35e9086ae0e639debc826f5f4147ed1`.
 - Final verification passed: 20 qualification tests, 26 frontend tests, 8 validation-map tests, the direct validation-map gate, and 47 owned-debug CTests.

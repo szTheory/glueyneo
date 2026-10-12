@@ -26,8 +26,8 @@ key-decisions:
   - "g4_lane re-raises AssertionError so a never-ready child reports its clear message instead of `uncaught AssertionError`; the gate SIGKILLs the never-ready child's group"
 status: complete
 commits: 4
-plan_head_before: 4dc0c123a6df2cb33af0117c214c105f5405f292
-plan_head_after: ec4f81a
+plan_head_before: 0881ae630078658fa40fc59c64177fb63382f2cf
+plan_head_after: 4e9c5b0
 actuals:
   tokens: 30000
   tasks: 3
@@ -41,15 +41,15 @@ Lane-signalling tests now wait (bounded, 30 s, read at call time) for one `lane.
 
 ## Commits
 
-- RED `4fb0a27` test(04-61): slow-start direct and Runner lane tests, never-ready wait test, `third_party/..` path test, non-list items test
-- FIX `591d0f7` fix(04-61): readiness handshake and rights ordering
-- DOCS `6ecc14b` docs(04-61): `### History gates after a squash merge`, amended Lane timeouts and Rights provenance, extended rights-inventory definition
-- REFRESH `ec4f81a` docs(04-61): rights inventory row for tests/tools/test_verify_playable.py (the only non-third_party row whose bytes changed)
+- RED `2b68273` test(04-61): slow-start direct and Runner lane tests, never-ready wait test, `third_party/..` path test, non-list items test
+- FIX `a10c8c8` fix(04-61): readiness handshake and rights ordering
+- DOCS `44464ec` docs(04-61): `### History gates after a squash merge`, amended Lane timeouts and Rights provenance, extended rights-inventory definition
+- REFRESH `4e9c5b0` docs(04-61): rights inventory row for tests/tools/test_verify_playable.py (the only non-third_party row whose bytes changed)
 
 Evidence lines (ignored `build/playable-qualification/04-59-evidence.txt`, re-proven in a detached worktree at the RED commit, exit 1 with `FAILED (`; green in the main checkout):
 
-- `G5WR-02 red 4fb0a27f527d exit 1 green 591d0f795498 ok`
-- `G5IN-01 red 4fb0a27f527d exit 1 green 591d0f795498 ok`
+- `G5WR-02 red 2b682735dade exit 1 green a10c8c8ae2b7 ok`
+- `G5IN-01 red 2b682735dade exit 1 green a10c8c8ae2b7 ok`
 
 ## ProcessGroupTest dispositions
 
@@ -92,4 +92,4 @@ Execute plan 04-62 (same `/gsd-execute-phase 04 --ws first-playable-game` run, w
 
 ## Self-Check: PASSED
 
-Commits 4fb0a27, 591d0f7, 6ecc14b and ec4f81a are ancestors of HEAD; the four modified files exist.
+Commits 2b68273, a10c8c8, 44464ec and 4e9c5b0 are ancestors of HEAD; the four modified files exist.
