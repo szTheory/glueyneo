@@ -136,9 +136,11 @@ def test_identity_importer(importer: str) -> tuple[str, tempfile.TemporaryDirect
     binary = Path(temporary.name) / ("mvs_importer_test.exe" if os.name == "nt" else "mvs_importer_test")
     if os.name == "nt":
         library = next(build_dir.rglob("glueyneo_mvs_zlib.lib"))
-        command = [compiler, "/nologo", "/std:c17", "/DMVS_IMPORT_TEST_IDENTITIES",
+        # Match the CMake default MSVC runtime of the zlib library, or the link fails with LNK2038.
+        runtime = "/MDd" if cache_values.get("CMAKE_BUILD_TYPE") == "Debug" else "/MD"
+        command = [compiler, "/nologo", "/std:c17", runtime, "/DMVS_IMPORT_TEST_IDENTITIES",
                    f"/I{root / 'third_party/zlib'}", str(root / "tools/mvs/mvs_import.c"), str(library),
-                   f"/Fe:{binary}"]
+                   f"/Fo:{temporary.name}\\", f"/Fe:{binary}"]
     else:
         library = build_dir / "libglueyneo_mvs_zlib.a"
         sanitizer_flags = (["-fsanitize=address,undefined", "-fno-omit-frame-pointer"]
@@ -148,7 +150,9 @@ def test_identity_importer(importer: str) -> tuple[str, tempfile.TemporaryDirect
                    "-DMVS_IMPORT_TEST_IDENTITIES",
                    "-I", str(root / "third_party/zlib"), str(root / "tools/mvs/mvs_import.c"), str(library),
                    *sanitizer_flags, "-o", str(binary)]
-    subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
+    if result.returncode != 0:
+        raise RuntimeError(f"test importer build failed ({result.returncode}):\n{result.stdout}")
     return str(binary), temporary
 
 
