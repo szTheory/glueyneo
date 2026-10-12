@@ -197,6 +197,7 @@ Rebased on the 2026-10-10 review (63 current disposition records). The earlier r
 | G7WR-02 | warning | T-04-103 / `tools/verify_playable.py` | fixed |
 | G7WR-03 | warning | T-04-103 / `tools/verify_playable.py` | fixed |
 | G7IN-01 | info | `tools/verify_playable.py` | fixed |
+| G8IN-01 | info | `tools/verify_playable.py` | fixed |
 
 ### Plan 04-20 Task 1 Current Evidence — 2026-10-08
 
