@@ -844,14 +844,14 @@
     {
       "key": "tests/fixture/rights-manifest.json",
       "kind": "rights",
-      "pin": "41715eca1d8cdd74b363ea23f04e47cea543b50e61c555659809cb956e74afae",
-      "revision": "b096b985c1b278ffb2d5ca4c35761f76ab72172c"
+      "pin": "11408fffc7ff7d601677f9481114b4d6b76eb6037d733e7ebaf8f9dd45ef430e",
+      "revision": "6a5977cd7bab59f64ff83ae25cb252100c147a69"
     },
     {
       "key": "tests/fixture/test_public_guest.c",
       "kind": "rights",
-      "pin": "f5b913c3b7803d754b1057d345a64a40e1be9a242da90224f0c2c47d2c7d0a4b",
-      "revision": "3de6caa5f2002fb6b51436c425f80f8c86842750"
+      "pin": "f8b5c270154c9a435dd72da4462920ff204e4036eac0a91630c550c4eb405d04",
+      "revision": "59af51f76902cce1347a5f466ab027af0461827e"
     },
     {
       "key": "tests/libretro/callback_harness.c",
