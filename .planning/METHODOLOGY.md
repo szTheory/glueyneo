@@ -178,6 +178,18 @@ a check the agent could run itself). Before rendering any UAT checkpoint:
    to fix such a finding (risk acceptance or deferral of a Critical/Warning)
    goes to the user. Info findings may be dispositioned `deferred` by the agent,
    with the reason in the record.
+5. A runtime permission denial is not a verification result (added 2026-10-12
+   after the user had to run `--record-frontend-evidence` by hand during the
+   history scrub). Run tracked-file writers such as `--record-frontend-evidence`,
+   `--history-allowlist write` and receipt commits as a single plain command
+   from an explicit absolute worktree root. Do not chain them with `cd`,
+   `git status`, `git diff` or log queries, and check that the target worktree
+   is the one the evidence belongs to. If the safety check still denies the
+   command, do not work around it. Hand the user that one command as
+   `! <command>`, say which files it writes, and keep doing independent
+   work. New repository tooling should write tracked evidence in the same
+   command that produced and checked it, so that no separate write step is
+   left to be denied.
 
 Write each UAT row as a check whose outcome a command decides, naming the
 command and the expected result, so a later verify-work resolves it without
