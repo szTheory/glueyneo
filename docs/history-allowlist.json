@@ -532,8 +532,26 @@
     {
       "key": "G8IN-01",
       "kind": "review_citation",
-      "pin": "ca78d6d32a42bcccd6668303ed7aab59d6b6cb9ef706e4435acf2666cdbb8628",
+      "pin": "695a3e369280116907cdbf633b037094dc3a0f64edff0612ea89effc405a5ccf",
       "revision": "065cdeeab6728a158b82e04928aa949cb51c983e"
+    },
+    {
+      "key": "G9IN-01",
+      "kind": "review_citation",
+      "pin": "d2e76f22898b42ac468a0dfd10b197fed8d8e71fc4387ae7660353f5d1af5296",
+      "revision": "060ce42429c4e167a76309cc9a3e7405ba149920"
+    },
+    {
+      "key": "G9IN-02",
+      "kind": "review_citation",
+      "pin": "5841f3434faa711fc0124d726bf147910816609d26116b559ffd840f8b686864",
+      "revision": "060ce42429c4e167a76309cc9a3e7405ba149920"
+    },
+    {
+      "key": "G9WR-01",
+      "kind": "review_citation",
+      "pin": "9d79d3c6a7acac7ad701d28467319f9910285b5a4aa4090d5d6b38b697465bd5",
+      "revision": "060ce42429c4e167a76309cc9a3e7405ba149920"
     },
     {
       "key": "GIN-01",
@@ -868,14 +886,14 @@
     {
       "key": "tests/tools/test_private_paths.py",
       "kind": "rights",
-      "pin": "005a952ba24814de460b1f43b58c803837a4b8278c5a5c4b91431c8a586fddf6",
-      "revision": "41611fca6123c1c5f810790bd189a13f4adb11c6"
+      "pin": "8300aa2fd82944f1f2432e5b2086bd78ff24f2c7a512dbede591b66b1fe16a9e",
+      "revision": "060ce42429c4e167a76309cc9a3e7405ba149920"
     },
     {
       "key": "tests/tools/test_verify_playable.py",
       "kind": "rights",
-      "pin": "3641526ce0de9afcc618d94ddb9c5d06c33810363ac3fed67764fa08aaa55a77",
-      "revision": "e71e283b9cb7abe868f4dcec35d4cfded9092242"
+      "pin": "b0c2b7eca2e3d73d4e62df6cdaf71663f53aec36cf42baba1b61930e518542cf",
+      "revision": "6510e09a134c199562a6469e18468b72d5ca4345"
     }
   ],
   "schema": 1,
