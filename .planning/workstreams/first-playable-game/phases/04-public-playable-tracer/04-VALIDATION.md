@@ -201,6 +201,9 @@ Rebased on the 2026-10-10 review (63 current disposition records). The earlier r
 | G9WR-01 | warning | T-04-60 / `tests/tools/test_private_paths.py` | fixed |
 | G9IN-01 | info | `tools/public_content.py` | fixed |
 | G9IN-02 | info | `tests/workflow/test_public_content.py` | fixed |
+| G10IN-01 | info | `tools/verify_playable.py` | deferred |
+| G10IN-02 | info | `tools/public_content.py` | deferred |
+| G10IN-03 | info | `tools/verify_playable.py` | deferred |
 
 ### Plan 04-20 Task 1 Current Evidence — 2026-10-08
 

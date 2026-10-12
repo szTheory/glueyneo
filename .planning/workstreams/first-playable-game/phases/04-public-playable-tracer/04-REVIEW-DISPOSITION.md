@@ -319,9 +319,21 @@ findings:
     severity: info
     disposition: fixed
     title: "The noreply email test omits lookalike addresses"
+  - id: G10IN-01
+    severity: info
+    disposition: deferred
+    title: "`_review_round_findings` hardcodes the round glob"
+  - id: G10IN-02
+    severity: info
+    disposition: deferred
+    title: "The G9IN-01 import-time guard has no test"
+  - id: G10IN-03
+    severity: info
+    disposition: deferred
+    title: "Round file path lists are self-attested, and the register change has only a parser-level test"
 open: 3
-total: 79
-recorded: 2026-10-12T00:00:00.000Z
+total: 82
+recorded: 2026-10-12T01:00:00.000Z
 ---
 
 # Phase 04: Code Review Disposition
@@ -404,9 +416,12 @@ recorded: 2026-10-12T00:00:00.000Z
 | G7WR-03 | warning | fixed | Reported by 04-REVIEW-GAPS-R7.md (bb0f4eb). Confirmed fixed by 04-REVIEW-GAPS-R8.md (1664be2). At revision `727935882640b3d434e3e0123303064d7e18624a`, `_head_blob` reads the regular-file entry at the checked head with `git ls-tree` and `git cat-file`, replacing the working-tree read, so dirty, untracked, ignored or hard-linked content and committed symlinks cannot pass a tolerated row. Test: test_g7wr_03_tolerated_rights_row_ignores_working_tree_bytes. |
 | G7IN-01 | info | fixed | Reported by 04-REVIEW-GAPS-R7.md (bb0f4eb). Confirmed fixed by 04-REVIEW-GAPS-R8.md (1664be2). At revision `9dcff1e591f4bc467908537662af2b62c674cdea`, `check_docs` reports a base_revision missing from the repository before the frontend gate (narrowed at revision `c5eb9e380335ff9fddc823d6f5b17f4f643be7e4` so other anchor errors keep their place), and docs/testing.md says `--check-docs` needs the history back to base_revision. Test: test_g7in_01_check_docs_reports_unanchored_allowlist_first. |
 | G8IN-01 | info | fixed | Reported by 04-REVIEW-GAPS-R8.md (1664be2). Confirmed fixed by 04-REVIEW-GAPS-R9.md (cafd5a4). See 04-REVIEW-FIX-R8.md. At revision `065cdeeab6728a158b82e04928aa949cb51c983e`, docs/testing.md and the `history_allowlist_check_applies` docstring give the correct reasons no post-squash staleness check exists; 04-REVIEW-FIX-R7.md is a dated record and is superseded on this point. Code paths unchanged. |
-| G9WR-01 | warning | fixed | Reported by 04-REVIEW-GAPS-R9.md (cafd5a4). Fix landed; the independent verdict is pending the next diff-scoped /gsd-code-review, which will confirm or reopen this row. See 04-REVIEW-FIX-R9.md. At revision `060ce42429c4e167a76309cc9a3e7405ba149920`, tests/tools/test_private_paths.py parenthesizes the runner path before `.replace("/", "\u2215")`, so the fully substituted input from before 41611fc is scanned again; rights row refreshed in 2b9971e. |
-| G9IN-01 | info | fixed | Reported by 04-REVIEW-GAPS-R9.md (cafd5a4). Fix landed; verdict pending the next diff-scoped review. At revision `060ce42429c4e167a76309cc9a3e7405ba149920`, tools/public_content.py refuses duplicate or overlapping history-disposition object IDs at import instead of overwriting one silently. |
-| G9IN-02 | info | fixed | Reported by 04-REVIEW-GAPS-R9.md (cafd5a4). Fix landed; verdict pending the next diff-scoped review. At revision `060ce42429c4e167a76309cc9a3e7405ba149920`, tests/workflow/test_public_content.py asserts that three lookalike Anthropic addresses stay private identities. |
+| G9WR-01 | warning | fixed | Reported by 04-REVIEW-GAPS-R9.md (cafd5a4). Confirmed fixed by 04-REVIEW-GAPS-R10.md (a05daa7). See 04-REVIEW-FIX-R9.md. At revision `060ce42429c4e167a76309cc9a3e7405ba149920`, tests/tools/test_private_paths.py parenthesizes the runner path before `.replace("/", "\u2215")`, so the fully substituted input from before 41611fc is scanned again; rights row refreshed in 2b9971e. |
+| G9IN-01 | info | fixed | Reported by 04-REVIEW-GAPS-R9.md (cafd5a4). Confirmed fixed by 04-REVIEW-GAPS-R10.md (a05daa7). At revision `060ce42429c4e167a76309cc9a3e7405ba149920`, tools/public_content.py refuses duplicate or overlapping history-disposition object IDs at import instead of overwriting one silently. |
+| G9IN-02 | info | fixed | Reported by 04-REVIEW-GAPS-R9.md (cafd5a4). Confirmed fixed by 04-REVIEW-GAPS-R10.md (a05daa7). At revision `060ce42429c4e167a76309cc9a3e7405ba149920`, tests/workflow/test_public_content.py asserts that three lookalike Anthropic addresses stay private identities. |
+| G10IN-01 | info | deferred | Reported by 04-REVIEW-GAPS-R10.md (a05daa7). Assessed at revision `f80ad8bbf104b9df6ada981b992c5f84a1f69f1e`. Deferred to the backlog under the METHODOLOGY review-round convergence rule: the round-10 focused review of the repair diff reported only Info findings, so the loop closes without another repair round in Phase 04. Consistency only: the glob literal equals `REVIEW_ROUNDS`, so behaviour is unchanged. |
+| G10IN-02 | info | deferred | Reported by 04-REVIEW-GAPS-R10.md (a05daa7). Assessed at revision `f80ad8bbf104b9df6ada981b992c5f84a1f69f1e`. Deferred to the backlog under the METHODOLOGY review-round convergence rule: the round-10 focused review of the repair diff reported only Info findings, so the loop closes without another repair round in Phase 04. The guard runs on every import of tools/public_content.py, so every public-content test and gate executes it; only a negative-path test is missing. |
+| G10IN-03 | info | deferred | Reported by 04-REVIEW-GAPS-R10.md (a05daa7). Assessed at revision `f80ad8bbf104b9df6ada981b992c5f84a1f69f1e`. Deferred to the backlog under the METHODOLOGY review-round convergence rule: the round-10 focused review of the repair diff reported only Info findings, so the loop closes without another repair round in Phase 04. Round reports are committed review evidence under the same frontmatter checks; the live crosswalk test already exercises the three-digit T-04-103 citations positively. |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
