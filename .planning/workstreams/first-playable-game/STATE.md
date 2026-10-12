@@ -2,21 +2,21 @@
 gsd_state_version: "1.0"
 milestone: first-playable-game
 milestone_name: First Playable Game
-current_phase: 04
-current_phase_name: Public Playable Tracer
+current_phase: 05
+current_phase_name: Selected MVS Boot
 current_plan: 1
-status: executing
-stopped_at: Completed 04-61-PLAN.md (scope-split halt carried)
-last_updated: "2026-10-11T19:10:33.802Z"
-last_activity: 2026-10-11
-last_activity_desc: Phase 04 planning complete — 65 plans ready
-state_head: 4494fac8978bd26a64ca9adf82c48f6e135aee21
+status: planning
+stopped_at: Phase 04 complete, ready to plan Phase 05
+last_updated: "2026-10-12T15:00:27.573Z"
+last_activity: 2026-10-12
+last_activity_desc: Phase 04 complete, transitioned to Phase 05
+state_head: af8dd6889cef1d15412011fabd990b100b3a5805
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 68
-  completed_plans: 64
-  percent: 0
+  completed_plans: 68
+  percent: 25
 ---
 
 # Project State
@@ -26,27 +26,27 @@ progress:
 See [PROJECT.md](../../PROJECT.md) for the current project contract.
 
 **Core value:** Trustworthy Neo Geo emulation that other software can embed easily.
-**Current focus:** Phase 04 — Public Playable Tracer
+**Current focus:** Phase 05 — Selected MVS Boot (Phase 04 complete 2026-10-12; milestone branch not yet shipped)
 
 ## Current Position
 
-Phase: 04 (Public Playable Tracer) — READY TO EXECUTE
-Current Plan: 2
-Total Plans in Phase: 65
-Status: Ready to execute
-Last activity: 2026-10-11 — Phase 04 execution started
-Last Activity Description: Phase 04 planning complete — 65 plans ready
+Phase: 05 — Selected MVS Boot
+Current Plan: 05-06 (halted at Task 2)
+Total Plans in Phase: 6
+Status: Blocked: 05-VERIFICATION.md gaps_found; independent selected configuration and sourced guest-predicate evidence are unavailable
+Last activity: 2026-10-12 — Phase 04 complete, transitioned to Phase 05
+Last Activity Description: Phase 04 complete, transitioned to Phase 05
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 25%
 
 ## Progress
 
-**Phases Complete:** 0
+**Phases Complete:** 1 (Phase 04)
 **Current Plan:** 1
 
 ## Performance Metrics
 
-**Plans completed:** 22 of 22; Phase 04 acceptance remains incomplete
+**Plans completed:** Phase 04 62/62 (04-51, 04-56, 04-57 superseded); Phase 04 accepted 2026-10-12
 **Per-Plan Metrics:**
 
 | Plan | Duration | Tasks | Files |
@@ -117,7 +117,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Last session:** 2026-10-11T16:50:02.133Z
 
-**Stopped At:** Completed 04-61-PLAN.md (scope-split halt carried)
+**Stopped At:** Phase 04 complete, ready to plan Phase 05
 **Resume File:** None
 
 ## Scope Notes

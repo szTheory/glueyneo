@@ -14,6 +14,8 @@ Trustworthy Neo Geo emulation that other software can embed easily.
 
 - Phase 01 accepted the owned C17 CPU backend for the documented bounded diagnostic subset, including guest execution, independent instances, supported-boundary continuation, timing limits, and source/state inventory. See [01-VERIFICATION.md](workstreams/cpu-bus-diagnostic-sdk-alpha/phases/01-cpu-acceptance-experiment/01-VERIFICATION.md). This does not qualify original-silicon behavior beyond the recorded subset or establish a public SDK.
 
+- First Playable Game Phase 04 (accepted 2026-10-12) proves the public playable tracer: an original rights-audited fixture rebuilt from tracked source runs through the native frame API with checked video and input-driven output, and loads, runs and unloads in pinned macOS RetroArch 1.22.2 with software video. It also admits the pinned Z80 and private-interface ymfm YM2610 candidates for their bounded synthetic workloads only; no game sound, selected-media boot or broad compatibility is claimed. See [04-VERIFICATION.md](workstreams/first-playable-game/phases/04-public-playable-tracer/04-VERIFICATION.md).
+
 ### Active
 
 Current milestone: **v0.1 — CPU/bus diagnostic SDK alpha**. Its first delivery target is an offline installable C library that executes an original deterministic diagnostic through its ordinary native API. A stub API or green automation without meaningful execution does not satisfy it.
@@ -83,7 +85,7 @@ The local repository began with preparation only. During Phase 03 execution on 2
 | PROJECT-D-45: Shift-left automated acceptance; human handoff only for irreducibly human or external evidence | Removes repeat UAT toil while keeping unknowns honest and CI proportional | — Default for planning and verification; apply per-phase |
 | PROJECT-D-46: Refresh a failed phase verdict before planning more gap work | Prevents stale negative reports and status-router behavior from generating repeated plans; only fresh, actionable in-scope gaps justify another bounded repair | — Default; Phase 01 runtime-routing incident and workaround recorded in [preparation evidence](preparation/2026-10-04-gsd-verification-loop.md) |
 | PROJECT-D-47: Keep candidate receipt disposition separate from phase admission | A frozen experiment receipt can remain unqualified while a fresh whole-phase verifier admits the bounded scope; status routing follows the verifier and canonical planning docs | — Phase 01 passed 10/10; candidate receipt remains unchanged and original-silicon saved PC remains unknown |
-| PROJECT-D-48: Permit a bounded C++14 ymfm exception for first-playable-game | The user prioritizes reaching playable sound efficiently and accepts this isolated dependency; retain a private C interface so later replacement can proceed incrementally | — User approved 2026-10-07; dependency admission and platform evidence remain pending. C remains the default, and no C rewrite is promised |
+| PROJECT-D-48: Permit a bounded C++14 ymfm exception for first-playable-game | The user prioritizes reaching playable sound efficiently and accepts this isolated dependency; retain a private C interface so later replacement can proceed incrementally | — User approved 2026-10-07; admitted 2026-10-12 with Phase 04 for the bounded synthetic YM2610 workload behind the private C interface (source/state, isolation, deterministic timing and static/shared consumer evidence). Game sound remains Phase 07 scope. C remains the default, and no C rewrite is promised |
 
 ## Evolution
 
@@ -105,4 +107,4 @@ After each milestone:
 4. Update the current milestone, next outline and revisable longer horizon.
 
 ---
-*Last updated: 2026-10-07 to record the user-approved ymfm language exception; milestone lifecycle remains workstream-scoped.*
+*Last updated: 2026-10-12 after First Playable Game Phase 04; milestone lifecycle remains workstream-scoped.*
