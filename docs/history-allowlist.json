@@ -910,8 +910,8 @@
     {
       "key": "tests/tools/test_verify_playable.py",
       "kind": "rights",
-      "pin": "b0c2b7eca2e3d73d4e62df6cdaf71663f53aec36cf42baba1b61930e518542cf",
-      "revision": "6510e09a134c199562a6469e18468b72d5ca4345"
+      "pin": "20e8c5b9b99f24566b7e7294188f6cb6bed2fcfb9ee5b155505ab029eeab5422",
+      "revision": "3c004803b30373698ba42f00fd19ac9eae43dcb9"
     }
   ],
   "schema": 1,
