@@ -60,3 +60,12 @@ The first R9 report text and the first G9WR-01 commit message quoted the literal
 The focused round-10 review of the repair diff (`04-REVIEW-GAPS-R10.md`, a05daa7) confirms G9WR-01, G9IN-01 and G9IN-02 fixed and both gate fixes sound. It reports 0 critical, 0 warning and 3 info findings (G10IN-01..03).
 
 Under the METHODOLOGY review-round convergence rule, an Info-only round closes the loop. G10IN-01..03 are therefore deferred to the backlog with reasons in 04-REVIEW-DISPOSITION.md, and no round-11 repair runs in Phase 04.
+
+## Late fixes from the full CTest run (verify-work, 2026-10-12)
+
+The full `ctest --preset owned-debug` run during `/gsd-verify-work 04` exposed two failures that predate round 9. Rounds 6–8 ran focused tests only.
+
+- **owned_cpu_inventory_check:** the source-manifest digest for CMakeLists.txt was stale after the G6WR-01, G7CR-02 and G7WR-02 CMake changes. Refreshed in 588aedf.
+- **qualification_runner:** timed out. `test_verify_playable.py` (169 tests) took 309 s against the unchanged 300 s limit, because each `check_docs` call spawned about 2,400 Git processes in the per-row history-allowlist anchor check. 3c00480 resolves all rows in one pass. `check_docs` now takes 7.8 s and the suite 129 s. Equivalence test: `test_batched_reachability_equals_per_row_merge_base`.
+
+The focused round-11 review (`04-REVIEW-GAPS-R11.md`, 88c92f4) confirms both fixes. It reports 0 critical, 0 warning and 3 info findings (G11IN-01..03). Under the convergence rule these are deferred with reasons in 04-REVIEW-DISPOSITION.md.
