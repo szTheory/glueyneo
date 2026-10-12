@@ -215,7 +215,7 @@ class ServiceAccountTest(unittest.TestCase):
 
     def test_runner_home_paths_still_fail_under_github_actions(self) -> None:
         with _home(RUNNER_HOME, True):
-            for value in (RUNNER_HOME + "/work/x", RUNNER_HOME + "/work/x".replace("/", "\u2215")):
+            for value in (RUNNER_HOME + "/work/x", (RUNNER_HOME + "/work/x").replace("/", "\u2215")):
                 with self.subTest(value=value), self.assertRaises(private_paths.PrivatePathError):
                     private_paths.scan_public(value)
 

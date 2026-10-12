@@ -135,6 +135,11 @@ class PublicContentTests(unittest.TestCase):
         other = "Contact: <" + "someone" + "@anthropic.com>"
         result = content.scan_bytes(other.encode(), "history/commit-metadata")
         self.assertIn("private-identity", result["findings"][0]["rules"])
+        for lookalike in ("noreply" + "@anthropic.com.evil.test", "xnoreply" + "@anthropic.com",
+                          "noreply" + "@mail.anthropic.com"):
+            with self.subTest(lookalike=lookalike):
+                found = content.scan_bytes(("Contact: <" + lookalike + ">").encode(), "history/commit-metadata")
+                self.assertIn("private-identity", found["findings"][0]["rules"])
 
     def test_private_key_header_is_detected_without_echoing_header(self) -> None:
         header = "-----BEGIN " + "OPENSSH " + "PRIVATE KEY-----"

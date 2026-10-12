@@ -203,6 +203,10 @@ _SYNTHETIC_PATH_HISTORY_OBJECTS = (
     ("fd40f966998de1411b92b2ac8585f36bfa6a817d", "tests/tools/test_verify_playable.py"),
     ("fead28e7de760ab3daca8d167c3d6dc7fb0d442c", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-38-PLAN.md"),
 )
+_SYNTHETIC_PATH_OBJECT_IDS = [object_id for object_id, _ in _SYNTHETIC_PATH_HISTORY_OBJECTS]
+if (len(set(_SYNTHETIC_PATH_OBJECT_IDS)) != len(_SYNTHETIC_PATH_OBJECT_IDS)
+        or HISTORY_FINDING_DISPOSITIONS.keys() & set(_SYNTHETIC_PATH_OBJECT_IDS)):
+    raise RuntimeError("history disposition object IDs must be unique")  # G9IN-01: never overwrite silently
 HISTORY_FINDING_DISPOSITIONS.update({
     object_id: {"path": path, "rules": {"personal-path"},
                 "reason": "synthetic path canary in a redaction or smoke-test fixture; audited object"}
