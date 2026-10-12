@@ -307,9 +307,21 @@ findings:
     severity: info
     disposition: fixed
     title: "The recorded reason for not adding a post-squash stale gate is wrong"
+  - id: G9WR-01
+    severity: warning
+    disposition: fixed
+    title: "The U+2215 runner-home input lost its leading homoglyph separators"
+  - id: G9IN-01
+    severity: info
+    disposition: fixed
+    title: "The synthetic-path disposition merge has no duplicate or collision guard"
+  - id: G9IN-02
+    severity: info
+    disposition: fixed
+    title: "The noreply email test omits lookalike addresses"
 open: 3
-total: 76
-recorded: 2026-10-11T23:00:00.000Z
+total: 79
+recorded: 2026-10-12T00:00:00.000Z
 ---
 
 # Phase 04: Code Review Disposition
@@ -391,7 +403,10 @@ recorded: 2026-10-11T23:00:00.000Z
 | G7WR-02 | warning | fixed | Reported by 04-REVIEW-GAPS-R7.md (bb0f4eb). Confirmed fixed by 04-REVIEW-GAPS-R8.md (1664be2). At revision `13c7a379e4189a97a9c65a3fbf6365fa25d48230`, the CI step runs `--history-allowlist ci --base <PR base>` on every pull request; the tool runs the full check whenever the allowlist differs from the base or any listed revision is an ancestor of the head (every pre-ship pull request). A history-independent staleness gate was not added: after the squash an unrefreshed edit to a listed rights file already fails the tolerated digest check, a refreshed row cites a main commit and is evaluated strictly, and an orphaned allowlist row is inert (reason corrected under G8IN-01; docs/testing.md). Tests: test_g7wr_02_*. |
 | G7WR-03 | warning | fixed | Reported by 04-REVIEW-GAPS-R7.md (bb0f4eb). Confirmed fixed by 04-REVIEW-GAPS-R8.md (1664be2). At revision `727935882640b3d434e3e0123303064d7e18624a`, `_head_blob` reads the regular-file entry at the checked head with `git ls-tree` and `git cat-file`, replacing the working-tree read, so dirty, untracked, ignored or hard-linked content and committed symlinks cannot pass a tolerated row. Test: test_g7wr_03_tolerated_rights_row_ignores_working_tree_bytes. |
 | G7IN-01 | info | fixed | Reported by 04-REVIEW-GAPS-R7.md (bb0f4eb). Confirmed fixed by 04-REVIEW-GAPS-R8.md (1664be2). At revision `9dcff1e591f4bc467908537662af2b62c674cdea`, `check_docs` reports a base_revision missing from the repository before the frontend gate (narrowed at revision `c5eb9e380335ff9fddc823d6f5b17f4f643be7e4` so other anchor errors keep their place), and docs/testing.md says `--check-docs` needs the history back to base_revision. Test: test_g7in_01_check_docs_reports_unanchored_allowlist_first. |
-| G8IN-01 | info | fixed | Reported by 04-REVIEW-GAPS-R8.md (1664be2). Fix landed; the independent verdict is pending the next diff-scoped /gsd-code-review, which will confirm or reopen this row. See 04-REVIEW-FIX-R8.md. At revision `065cdeeab6728a158b82e04928aa949cb51c983e`, docs/testing.md and the `history_allowlist_check_applies` docstring give the correct reasons no post-squash staleness check exists; 04-REVIEW-FIX-R7.md is a dated record and is superseded on this point. Code paths unchanged. |
+| G8IN-01 | info | fixed | Reported by 04-REVIEW-GAPS-R8.md (1664be2). Confirmed fixed by 04-REVIEW-GAPS-R9.md (cafd5a4). See 04-REVIEW-FIX-R8.md. At revision `065cdeeab6728a158b82e04928aa949cb51c983e`, docs/testing.md and the `history_allowlist_check_applies` docstring give the correct reasons no post-squash staleness check exists; 04-REVIEW-FIX-R7.md is a dated record and is superseded on this point. Code paths unchanged. |
+| G9WR-01 | warning | fixed | Reported by 04-REVIEW-GAPS-R9.md (cafd5a4). Fix landed; the independent verdict is pending the next diff-scoped /gsd-code-review, which will confirm or reopen this row. See 04-REVIEW-FIX-R9.md. At revision `060ce42429c4e167a76309cc9a3e7405ba149920`, tests/tools/test_private_paths.py parenthesizes the runner path before `.replace("/", "\u2215")`, so the fully substituted input from before 41611fc is scanned again; rights row refreshed in 2b9971e. |
+| G9IN-01 | info | fixed | Reported by 04-REVIEW-GAPS-R9.md (cafd5a4). Fix landed; verdict pending the next diff-scoped review. At revision `060ce42429c4e167a76309cc9a3e7405ba149920`, tools/public_content.py refuses duplicate or overlapping history-disposition object IDs at import instead of overwriting one silently. |
+| G9IN-02 | info | fixed | Reported by 04-REVIEW-GAPS-R9.md (cafd5a4). Fix landed; verdict pending the next diff-scoped review. At revision `060ce42429c4e167a76309cc9a3e7405ba149920`, tests/workflow/test_public_content.py asserts that three lookalike Anthropic addresses stay private identities. |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.

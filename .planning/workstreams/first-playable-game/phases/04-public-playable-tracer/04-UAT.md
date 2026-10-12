@@ -3,7 +3,7 @@ status: complete
 phase: 04-public-playable-tracer
 source: [04-01-SUMMARY.md, 04-02-SUMMARY.md, 04-03-SUMMARY.md, 04-04-SUMMARY.md, 04-05-SUMMARY.md, 04-06-SUMMARY.md, 04-07-SUMMARY.md, 04-08-SUMMARY.md, 04-09-SUMMARY.md, 04-10-SUMMARY.md, 04-11-SUMMARY.md, 04-12-SUMMARY.md, 04-13-SUMMARY.md, 04-14-SUMMARY.md, 04-15-SUMMARY.md, 04-16-SUMMARY.md, 04-17-SUMMARY.md, 04-18-SUMMARY.md, 04-19-SUMMARY.md, 04-20-SUMMARY.md, 04-21-SUMMARY.md, 04-22-SUMMARY.md, 04-VERIFICATION.md]
 started: 2026-10-10T11:38:03Z
-updated: 2026-10-11T11:38:10.840Z
+updated: 2026-10-12T00:00:00Z
 ---
 
 ## Current Test
@@ -247,7 +247,9 @@ blocked: 0
 
 - gap_id: G-04-35
   truth: "Round-3 review warnings are fixed or dispositioned in 04-REVIEW-DISPOSITION.md, and the round-4 re-review leaves no unrepaired in-scope Critical/Warning"
-  status: failed
+  status: resolved
+  resolved_by: 04-58-PLAN.md
+  resolved_at: 2026-10-12
   reason: "Automated evidence: G3WR-01 is partially fixed (residual G4WR-01). G3 rows are untranscribed (still open although R4 verdicts exist). R4 raises G4WR-01..04 and G4IN-01..03."
   severity: major
   test: 35
