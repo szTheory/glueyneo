@@ -856,8 +856,8 @@
     {
       "key": "tests/libretro/callback_harness.c",
       "kind": "rights",
-      "pin": "f9a7340026555502c3e534fe683bf3a954226b489aaf9fd13938c45c17cf382c",
-      "revision": "0689cec7dd2141ba79c554f53aaee6918e30c7db"
+      "pin": "54e80972d09ff47000ba7840fa619d27ca523b97759a680a23edb6cf6ce1ef9f",
+      "revision": "ddcae18f595d12edf9f8c27ae1260cfca0488d80"
     },
     {
       "key": "tests/libretro/retroarch_smoke.py",
