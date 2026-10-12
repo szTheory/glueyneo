@@ -1051,9 +1051,8 @@ class DocumentationCopies:
     """
 
     def copy_review_provenance(self, source_root: Path) -> None:
-        reviewed = [line[4:].strip() for line in (ROOT / playable.REVIEW).read_text(encoding="utf-8").splitlines()
-                    if line.startswith("  - ")]
-        rounds = sorted(path.relative_to(ROOT) for path in (ROOT / playable.PHASE_DIRECTORY).glob("04-REVIEW-GAPS*.md"))
+        reviewed = sorted(playable.review_round_paths(ROOT))
+        rounds = sorted(path.relative_to(ROOT) for path in (ROOT / playable.PHASE_DIRECTORY).glob(playable.REVIEW_ROUNDS))
         for path in (playable.SECURITY, playable.REVIEW, playable.DISPOSITION, Path("README.md"), playable.RIGHTS_INVENTORY,
                      playable.HISTORY_ALLOWLIST, *rounds, *(Path(item) for item in reviewed)):
             if (ROOT / path).is_file():
@@ -1371,6 +1370,18 @@ class CrosswalkProvenanceTest(DocumentationCopies, unittest.TestCase):
         for label, transform, expected in cases:
             with self.subTest(case=label):
                 self.mutate_row(transform, expected)
+
+    def test_scope_may_cite_a_path_reviewed_only_by_a_later_round(self) -> None:
+        later = playable.review_round_paths(ROOT) - playable._reviewed_paths(
+            (ROOT / playable.REVIEW).read_text(encoding="utf-8"))
+        self.assertIn("tools/public_content.py", later)
+        text = self.with_scope("CR-05", "`tools/public_content.py`")((ROOT / playable.VALIDATION).read_text(encoding="utf-8"))
+        self.assertEqual(playable.crosswalk_errors(ROOT, text), [])
+
+    def test_three_digit_threat_ids_are_read_whole(self) -> None:
+        self.assertEqual(playable.THREAT_REFERENCE.findall("T-04-103 / T-04-10 / T-04-SC (04-58)"),
+                         ["T-04-103", "T-04-10", "T-04-SC (04-58)"])
+        self.mutate_row(self.with_scope("CR-05", "T-04-109999"), "unknown threat T-04-109999")
 
     def test_scope_path_parent_segments_are_rejected(self) -> None:
         for scope in ("`../x.md`", "`docs/../x.md`", "`tools/../tools/verify_playable.py`"):

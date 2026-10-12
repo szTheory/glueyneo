@@ -922,6 +922,7 @@ PHASE_DIRECTORY = Path(".planning/workstreams/first-playable-game/phases/04-publ
 SECURITY = PHASE_DIRECTORY / "04-SECURITY.md"
 REVIEW = PHASE_DIRECTORY / "04-REVIEW.md"
 DISPOSITION = PHASE_DIRECTORY / "04-REVIEW-DISPOSITION.md"
+REVIEW_ROUNDS = "04-REVIEW-GAPS*.md"
 REQUIRED_FRONTEND_OBSERVATIONS = (
     "RetroArch launched the requested core and content path",
     "frontend screenshot contained the guest marker and black backdrop",
@@ -1262,6 +1263,14 @@ def _reviewed_paths(review_text: str) -> set[str]:
     return paths
 
 
+def review_round_paths(source_root: Path) -> set[str]:
+    """Files reviewed by the phase review or any later diff-scoped round, which a finding scope may cite."""
+    reviewed = _reviewed_paths((source_root / REVIEW).read_text(encoding="utf-8"))
+    for round_report in sorted((source_root / PHASE_DIRECTORY).glob(REVIEW_ROUNDS)):
+        reviewed |= _reviewed_paths(round_report.read_text(encoding="utf-8"))
+    return reviewed
+
+
 def _disposition_triples(disposition_text: str) -> dict[str, tuple[str, str]]:
     """Finding id -> (severity, disposition), cross-checked between the frontmatter and the table."""
     from_frontmatter: dict[str, tuple[str, str]] = {}
@@ -1300,6 +1309,10 @@ def _review_round_findings(source_root: Path) -> set[str]:
     return findings
 
 
+# Whole IDs: before G9 the two-digit form read T-04-103 as T-04-10 and the register skipped three-digit rows.
+THREAT_REFERENCE = re.compile(r"T-04-(?:\d{2,}(?!\d)|SC \(04-\d{2}\))")
+
+
 def _register_threats(security_text: str) -> set[str]:
     threats: set[str] = set()
     registered = False
@@ -1310,12 +1323,11 @@ def _register_threats(security_text: str) -> set[str]:
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
         if cells and cells[0] == "Threat ID":
             registered = "Severity" in cells and "Status" in cells
-        elif registered and cells and re.fullmatch(r"T-04-(?:\d{2}|SC \(04-\d{2}\))", cells[0]):
+        elif registered and cells and THREAT_REFERENCE.fullmatch(cells[0]):
             threats.add(cells[0])
     return threats
 
 
-THREAT_REFERENCE = re.compile(r"T-04-(?:\d{2}|SC \(04-\d{2}\))")
 PATH_REFERENCE = re.compile(r"`([A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+)(?::\d+(?:-\d+)?)?`")
 
 
@@ -1323,7 +1335,7 @@ def crosswalk_errors(source_root: Path, validation_text: str) -> list[str]:
     """Check the review crosswalk against the disposition record, the threat register and the reviewed files."""
     record = _disposition_triples((source_root / DISPOSITION).read_text(encoding="utf-8"))
     threats = _register_threats((source_root / SECURITY).read_text(encoding="utf-8"))
-    reviewed = _reviewed_paths((source_root / REVIEW).read_text(encoding="utf-8"))
+    reviewed = review_round_paths(source_root)
     rows = _markdown_table_rows(
         validation_text, "| Review Finding | Severity | Existing Threat Scope | Disposition |",
     )
