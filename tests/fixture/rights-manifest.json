@@ -8,7 +8,7 @@
   },
   "assertions": {
     "path": "tests/fixture/test_public_guest.c",
-    "sha256": "f392b2794b7dbf00a7bae24cb4184c2aabff4a6336c88934ab4c34ca0995d4b7"
+    "sha256": "7c5c7a0e87cd339f885b7c8092737c13322462c1c352a66b1ce66f3c919981e1"
   },
   "generator": {
     "target": "glueyneo-public-fixture",
