@@ -1,6 +1,6 @@
 ---
 phase: 04-public-playable-tracer
-verified: 2026-10-12T15:24:24Z
+verified: 2026-10-12T15:48:16Z
 status: passed
 score: 5/5 roadmap truths verified; 8/8 requirement IDs satisfied
 behavior_unverified: 0
@@ -15,6 +15,8 @@ re_verification:
   delta_rechecks:
     - range: "af8dd68..f1751d7"
       result: "no regression; CI-portability fix (59af51f) and digest refreshes only"
+    - range: "abe24c5..135bd58"
+      result: "no regression; Windows/MSVC-only build fixes (ddcae18, 3b8488e), Phase 05 test-importer fix (7e67db1), docs and digest refreshes"
 covered_files:
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-01-PLAN.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-01-SUMMARY.md"
@@ -149,20 +151,48 @@ covered_files:
   - "docs/rights-inventory.md"
   - "experiments/owned_cpu/source-manifest.json"
   - "include/glueyneo/glueyneo.h"
+  - "src/chips/z80_candidate.c"
   - "src/instance.c"
   - "tests/fixture/rights-manifest.json"
   - "tests/fixture/test_public_guest.c"
+  - "tests/libretro/callback_harness.c"
   - "tools/public_content.py"
   - "tools/verify_playable.py"
-covered_digest: "v3:sha256:198fa0a0323972363179b92f9910b8a37f1e44c40206896a1d765232e4135117"
+covered_digest: "v3:sha256:1c14edc3922f423df57b66bd3e33d5e03be8b7f9078642e45996d7656c8b86af"
 ---
 
-# Phase 04: Public Playable Tracer Verification Report (round 11 re-verification, delta re-checked at f1751d7)
+# Phase 04: Public Playable Tracer Verification Report (round 11 re-verification, delta re-checked at f1751d7 and 135bd58)
 
 **Phase Goal:** A maintainer can rebuild and run an original guest with visible, input-driven behavior through the ordinary native API and an actual pinned RetroArch build, while resolving the selected sound candidates' admission gates before full integration.
-**Verified:** 2026-10-12 at HEAD `f55be70` (initial run at `2d62ac9`; delta re-checked); delta `af8dd68..f1751d7` re-checked 2026-10-12 at HEAD `f1751d7` (receipt qualified at `cbcd28b76391`, ancestor of HEAD).
+**Verified:** 2026-10-12 at HEAD `f55be70` (initial run at `2d62ac9`; delta re-checked); deltas `af8dd68..f1751d7` and `abe24c5..135bd58` re-checked 2026-10-12 at HEADs `f1751d7` and `135bd58` (receipt qualified at `cbcd28b76391`, ancestor of HEAD).
 **Status:** passed
 **Re-verification:** Yes -- supersedes the stale round-5 report (HEAD 1bc70f4, gap G5WR-01). Executed plans 04-59..04-65 and review rounds R6..R11 are covered. Plans 04-51, 04-56 and 04-57 are `status: superseded` and were not executed; they are not counted.
+
+## Delta re-check abe24c5..135bd58 (2026-10-12)
+
+These commits come from three hosted-CI rounds on PR #3, Windows MSVC lane.
+
+- **1ff8256.** Replaces the stale "pending verify-work" prose in REQUIREMENTS.md. Docs only.
+- **ddcae18.** CMakeLists.txt marks `third_party/chips` as a SYSTEM include for `z80_admission_test` and adds `/external:I` and `/external:W0` on MSVC. It also defines `RARCH_DLL_IMPORT` for `libretro_callback_test`, on Windows only. `tests/libretro/callback_harness.c` uses `GetModuleHandleA`/`GetProcAddress` under `_WIN32`. The non-Windows `dlsym(RTLD_DEFAULT, ...)` path is unchanged.
+- **3b8488e.** `src/chips/z80_candidate.c` wraps the `CHIPS_IMPL` include in a `#pragma warning(disable: 4702)` push/pop. The pragma is guarded by `_MSC_VER`. The file has no `__LINE__`/`assert` uses, so on clang/GCC the preprocessed translation unit is the same apart from line numbering.
+- **7e67db1.** A Phase 05 test (`tests/mvs/test_mvs_qualification.py`). Its importer build now uses a runtime that matches its zlib library. It is outside the Phase 04 truths.
+- **af56bf6, 1eba60d, b57becb, 135bd58.** Digest refreshes. Checked against the files on disk:
+  - `CMakeLists.txt` = `972ce95c...` (owned-CPU source manifest).
+  - `callback_harness.c` = `3de23e9a...` (rights row).
+  - `test_mvs_qualification.py` = `c4a15bf1...` (rights row).
+- **Receipt binding (HOST-02).** Since `cbcd28b`, the receipt-adjacent paths that changed are `CMakeLists.txt`, `src/chips/z80_candidate.c` and two test files: `tests/fixture/test_public_guest.c` and `tests/libretro/callback_harness.c`. `tests/fixture/rights-manifest.json` also changed, but only its digest. None of these feeds the receipt's subjects:
+  - The libretro core is built only from `src/libretro/libretro_core.c` plus the core library. `z80_candidate.c` is compiled only into `z80_admission_test` (CMakeLists.txt line 627). The callback harness is a test executable.
+  - The fixture rebuilt at 135bd58 hashes to `59ed3645...`, which equals the receipt's `fixture_sha256`.
+  - The receipt remains accepted by `--check-docs`. RetroArch was not launched (`pgrep -x RetroArch` exit 1).
+- **SND-01 Z80 admission evidence.** Unaffected on non-MSVC toolchains, as explained above. On MSVC the change suppresses only the C4702 code-generation diagnostic for the pinned upstream header. It changes no behavior, and hosted windows-msvc is green per the orchestrator. Re-run here: `z80_admission_contract` and the five `z80_admission_mutation_*` tests (bus, cycle, irq, continuation, instance) all pass.
+- **Evidence re-run by this verifier at 135bd58.**
+  - `cmake --build --preset owned-debug` succeeded.
+  - `ctest --preset owned-debug -R 'z80|libretro|fixture|public|ym2610'` passed 13/13.
+  - `--check-docs` passed.
+  - `--history-allowlist check --base 4b2120d` is current (158 rows).
+  - The orchestrator ran these at the same HEAD and they were not repeated here: hosted CI (all 6 matrix lanes plus public-content and ci-policy), the full local 63/63 CTest, and the history scan.
+- **Info (pre-existing, not a delta regression).** `src/chips/z80_candidate.c` has no per-file row in docs/rights-inventory.md or the owned-CPU source manifest, either before or after this delta. No digest binds it.
+- **Verdict.** No truth or requirement regressed. Status stays passed at 5/5 truths and 8/8 requirements.
 
 ## Delta re-check af8dd68..f1751d7 (2026-10-12)
 
