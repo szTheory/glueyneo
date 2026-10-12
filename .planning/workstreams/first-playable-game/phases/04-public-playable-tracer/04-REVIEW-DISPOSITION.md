@@ -331,8 +331,20 @@ findings:
     severity: info
     disposition: deferred
     title: "Round file path lists are self-attested, and the register change has only a parser-level test"
+  - id: G11IN-01
+    severity: info
+    disposition: deferred
+    title: "`splitlines()` and the newline guard are not aligned on exotic separators"
+  - id: G11IN-02
+    severity: info
+    disposition: deferred
+    title: "`anchored_history_allowlist` gains a new raise path, and the helper trusts `base`"
+  - id: G11IN-03
+    severity: info
+    disposition: deferred
+    title: "The equivalence test is meaningful but narrow"
 open: 3
-total: 82
+total: 85
 recorded: 2026-10-12T01:00:00.000Z
 ---
 
@@ -422,6 +434,9 @@ recorded: 2026-10-12T01:00:00.000Z
 | G10IN-01 | info | deferred | Reported by 04-REVIEW-GAPS-R10.md (a05daa7). Assessed at revision `f80ad8bbf104b9df6ada981b992c5f84a1f69f1e`. Deferred to the backlog under the METHODOLOGY review-round convergence rule: the round-10 focused review of the repair diff reported only Info findings, so the loop closes without another repair round in Phase 04. Consistency only: the glob literal equals `REVIEW_ROUNDS`, so behaviour is unchanged. |
 | G10IN-02 | info | deferred | Reported by 04-REVIEW-GAPS-R10.md (a05daa7). Assessed at revision `f80ad8bbf104b9df6ada981b992c5f84a1f69f1e`. Deferred to the backlog under the METHODOLOGY review-round convergence rule: the round-10 focused review of the repair diff reported only Info findings, so the loop closes without another repair round in Phase 04. The guard runs on every import of tools/public_content.py, so every public-content test and gate executes it; only a negative-path test is missing. |
 | G10IN-03 | info | deferred | Reported by 04-REVIEW-GAPS-R10.md (a05daa7). Assessed at revision `f80ad8bbf104b9df6ada981b992c5f84a1f69f1e`. Deferred to the backlog under the METHODOLOGY review-round convergence rule: the round-10 focused review of the repair diff reported only Info findings, so the loop closes without another repair round in Phase 04. Round reports are committed review evidence under the same frontmatter checks; the live crosswalk test already exercises the three-digit T-04-103 citations positively. |
+| G11IN-01 | info | deferred | Reported by 04-REVIEW-GAPS-R11.md (88c92f4). Assessed at revision `e1274c28f8dab69ee1d0b8cb784ade1d092f3163`. Deferred to the backlog under the METHODOLOGY review-round convergence rule: the round-11 focused review reported only Info findings. Fail-closed robustness only: the loader admits only 12-40 hex revisions, and a misaligned answer count raises RuntimeError. |
+| G11IN-02 | info | deferred | Reported by 04-REVIEW-GAPS-R11.md (88c92f4). Assessed at revision `e1274c28f8dab69ee1d0b8cb784ade1d092f3163`. Deferred to the backlog under the METHODOLOGY review-round convergence rule: the round-11 focused review reported only Info findings. The new raise is fail-closed, and both callers validate `base` as 40 hex before the helper runs. |
+| G11IN-03 | info | deferred | Reported by 04-REVIEW-GAPS-R11.md (88c92f4). Assessed at revision `e1274c28f8dab69ee1d0b8cb784ade1d092f3163`. Deferred to the backlog under the METHODOLOGY review-round convergence rule: the round-11 focused review reported only Info findings. The differential test covers the inclusive, unresolvable, short-prefix and non-revision rows. Tag, tree and error-path cases are backlog test depth. |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.

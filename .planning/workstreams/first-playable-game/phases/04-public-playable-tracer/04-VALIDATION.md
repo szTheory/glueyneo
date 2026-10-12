@@ -204,6 +204,9 @@ Rebased on the 2026-10-10 review (63 current disposition records). The earlier r
 | G10IN-01 | info | `tools/verify_playable.py` | deferred |
 | G10IN-02 | info | `tools/public_content.py` | deferred |
 | G10IN-03 | info | `tools/verify_playable.py` | deferred |
+| G11IN-01 | info | `tools/verify_playable.py` | deferred |
+| G11IN-02 | info | `tools/verify_playable.py` | deferred |
+| G11IN-03 | info | `tests/tools/test_verify_playable.py` | deferred |
 
 ### Plan 04-20 Task 1 Current Evidence — 2026-10-08
 
