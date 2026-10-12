@@ -149,13 +149,13 @@ covered_files:
   - "src/instance.c"
   - "tools/public_content.py"
   - "tools/verify_playable.py"
-covered_digest: "v3:sha256:71c7cdc93670247da6d6c0924010954e165e70b2fc83819edb5fb411a8ee8604"
+covered_digest: "v3:sha256:f74eebb8ba132c602cb9a8f9c259c84cd08bd559083dddeae2ef5a89437e1dbc"
 ---
 
 # Phase 04: Public Playable Tracer Verification Report (round 11 re-verification)
 
 **Phase Goal:** A maintainer can rebuild and run an original guest with visible, input-driven behavior through the ordinary native API and an actual pinned RetroArch build, while resolving the selected sound candidates' admission gates before full integration.
-**Verified:** 2026-10-12 at HEAD `2d62ac9` (receipt qualified at `cbcd28b76391`, ancestor of HEAD).
+**Verified:** 2026-10-12 at HEAD `f55be70` (initial run at `2d62ac9`; delta re-checked) (receipt qualified at `cbcd28b76391`, ancestor of HEAD).
 **Status:** passed
 **Re-verification:** Yes -- supersedes the stale round-5 report (HEAD 1bc70f4, gap G5WR-01). Executed plans 04-59..04-65 and review rounds R6..R11 are covered. Plans 04-51, 04-56 and 04-57 are `status: superseded` and were not executed; they are not counted.
 
@@ -177,13 +177,13 @@ covered_digest: "v3:sha256:71c7cdc93670247da6d6c0924010954e165e70b2fc83819edb5fb
 
 Files changed since `cbcd28b` outside .planning: docs/first-playable-build.md, docs/history-allowlist.json, docs/rights-inventory.md, experiments/owned_cpu/source-manifest.json, tests/tools/test_private_paths.py, tests/tools/test_verify_playable.py, tests/workflow/test_public_content.py, tools/public_content.py, tools/verify_playable.py. No runtime, adapter, fixture, third-party or CMake path changed; the receipt's `core_sha256` and `fixture_sha256` describe the same sources. The tooling changes (6510e09 crosswalk, 3c00480 batched reachability, 588aedf manifest digest) are gate-hardening and a performance fix, reviewed in R11. The receipt is still accepted by `--check-docs`. The recorded frontend observation is of the same guest and core; a new RetroArch run would add no information about them. This is stated, not hidden.
 
-### Gate Results (re-run here at HEAD 2d62ac9)
+### Gate Results 
 
 | Check | Result |
 |---|---|
 | `ctest --preset owned-debug -j4` | 100% passed, 63/63 (146 s; no timeout) |
 | `tools/verify_playable.py --check-docs` | passed |
-| `tools/verify_playable.py --history-allowlist check --base 4b2120d` | current (155 rows) |
+| `tools/verify_playable.py --history-allowlist check --base 4b2120d` | current (158 rows after regeneration) |
 | `python3 -m unittest tests.tools.test_verify_playable.SquashMergeHistoryTest` | 37 tests OK |
 | `tools/public_content.py --root . --history-revision HEAD --json <scratch>` | exit 0 |
 | `tests/tools/check_security_register.py first-playable-game --require-closed --phase 04` | PASS, blocking open 04-SECURITY.md=0 |
@@ -228,7 +228,7 @@ REQUIREMENTS.md still shows these rows as `Gaps Found`; the phase-completion ste
 
 ### Review disposition against METHODOLOGY convergence rule
 
-Open: G6IN-01..03 (Info, untriaged). Deferred: G6WR-01 (Warning, residual accepted risk, above), G10IN-01..03 and G11IN-01..03 (Info). R11 (the repair diff review) reported 0 Critical, 0 Warning, 3 Info, so under the review-round convergence rule the loop closes and these go to the backlog. G6WR-01 is a non-regression Warning that does not weaken an evidence, security or release gate relative to the pre-existing state: the allowlist is an additional tolerance gated by a user decision, with CI-before-merge checking forged rows. It does not block. No Critical or repair-regression is open.
+Open: 0. G6IN-01..03 (Info) were moved from open to deferred with reasons after the first run (docs-only disposition change in 04-REVIEW-DISPOSITION.md and the 04-VALIDATION.md crosswalk; no code changed; docs/history-allowlist.json regenerated to 158 rows; --check-docs and --history-allowlist check re-run and pass). Deferred: G6IN-01..03, G6WR-01 (Warning, residual accepted risk, above), G10IN-01..03 and G11IN-01..03 (Info). R11 (the repair diff review) reported 0 Critical, 0 Warning, 3 Info, so under the review-round convergence rule the loop closes and these go to the backlog. G6WR-01 is a non-regression Warning that does not weaken an evidence, security or release gate relative to the pre-existing state: the allowlist is an additional tolerance gated by a user decision, with CI-before-merge checking forged rows. It does not block. No Critical or repair-regression is open.
 
 ### Anti-Patterns Found
 
@@ -240,7 +240,7 @@ None. HOST-02 is decided by the recorded receipt and the passing UAT; no pending
 
 ### Advisory
 
-- G6IN-01..03 remain untriaged Info; assign backlog or deferred dispositions at phase close.
+- G6IN-01..03 are now deferred Info; no verdict changes.
 - Receipt-bound tooling changed since cbcd28b (see above); a re-qualification is optional hygiene, not required.
 - `verify_sdk.py --suite public-content` fails locally only due to local backup branches; delete or exclude them before running it.
 
