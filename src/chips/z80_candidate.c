@@ -1,6 +1,15 @@
 /* SPDX-License-Identifier: MIT */
 #define CHIPS_IMPL
+#if defined(_MSC_VER)
+/* C4702 (unreachable code in the pinned z80.h decoder) comes from code
+   generation, which /external:W0 does not cover. */
+#pragma warning(push)
+#pragma warning(disable : 4702)
+#endif
 #include "z80_candidate.h"
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 #include <stdlib.h>
 
