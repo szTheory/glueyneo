@@ -62,6 +62,24 @@
       "revision": "323fa1453329"
     },
     {
+      "key": "G10IN-01",
+      "kind": "review_citation",
+      "pin": "9d782a3e59e5c96689d2ed5f9662ae7388d9fefaaed11c76cf6451932db33999",
+      "revision": "f80ad8bbf104b9df6ada981b992c5f84a1f69f1e"
+    },
+    {
+      "key": "G10IN-02",
+      "kind": "review_citation",
+      "pin": "dea194fdc84718b442f66b6327b87fc4174c69f75af4c956270e225a74487e2a",
+      "revision": "f80ad8bbf104b9df6ada981b992c5f84a1f69f1e"
+    },
+    {
+      "key": "G10IN-03",
+      "kind": "review_citation",
+      "pin": "9253a4cdc481cea20ee6e1d3eb46d95be3dc8f7624c9d63e9a81340ef4e5eb26",
+      "revision": "f80ad8bbf104b9df6ada981b992c5f84a1f69f1e"
+    },
+    {
       "key": "G2CR-01",
       "kind": "review_citation",
       "pin": "be37b23ba5a5728c582fabf947810444a53cc728362d6c45df1d93d42e1641bc",
@@ -538,19 +556,19 @@
     {
       "key": "G9IN-01",
       "kind": "review_citation",
-      "pin": "d2e76f22898b42ac468a0dfd10b197fed8d8e71fc4387ae7660353f5d1af5296",
+      "pin": "ce14ac6a7108f05001fb95235a4bb8911d7e6283fb594a30bdc35574f51582ed",
       "revision": "060ce42429c4e167a76309cc9a3e7405ba149920"
     },
     {
       "key": "G9IN-02",
       "kind": "review_citation",
-      "pin": "5841f3434faa711fc0124d726bf147910816609d26116b559ffd840f8b686864",
+      "pin": "812eecc7e8e149edcae285e870c4f451c75cb19093c3dd45bc69a2013ace933f",
       "revision": "060ce42429c4e167a76309cc9a3e7405ba149920"
     },
     {
       "key": "G9WR-01",
       "kind": "review_citation",
-      "pin": "9d79d3c6a7acac7ad701d28467319f9910285b5a4aa4090d5d6b38b697465bd5",
+      "pin": "dae2846e99e9414dcf0c8b5d5acf8a41551be61146d18147dd92cebc71203e8f",
       "revision": "060ce42429c4e167a76309cc9a3e7405ba149920"
     },
     {
