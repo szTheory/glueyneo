@@ -80,6 +80,24 @@
       "revision": "f80ad8bbf104b9df6ada981b992c5f84a1f69f1e"
     },
     {
+      "key": "G11IN-01",
+      "kind": "review_citation",
+      "pin": "7867cd13a334f9a2f508e541fb14d7cbe0fdb3d6db6f265afcdad442d53a8099",
+      "revision": "e1274c28f8dab69ee1d0b8cb784ade1d092f3163"
+    },
+    {
+      "key": "G11IN-02",
+      "kind": "review_citation",
+      "pin": "4e4fe78894df8d8cacec02e1ed276e699aaebae0966fdc3412e75c4226dff12b",
+      "revision": "e1274c28f8dab69ee1d0b8cb784ade1d092f3163"
+    },
+    {
+      "key": "G11IN-03",
+      "kind": "review_citation",
+      "pin": "3de82542744d58a27e3d2c3f4e7997eb8e15f826fe56d03dd2606e7fb0a54899",
+      "revision": "e1274c28f8dab69ee1d0b8cb784ade1d092f3163"
+    },
+    {
       "key": "G2CR-01",
       "kind": "review_citation",
       "pin": "be37b23ba5a5728c582fabf947810444a53cc728362d6c45df1d93d42e1641bc",
