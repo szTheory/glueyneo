@@ -1,6 +1,6 @@
 ---
 phase: 04-public-playable-tracer
-verified: 2026-10-12T00:00:00Z
+verified: 2026-10-12T15:24:24Z
 status: passed
 score: 5/5 roadmap truths verified; 8/8 requirement IDs satisfied
 behavior_unverified: 0
@@ -12,6 +12,9 @@ re_verification:
     - "G5WR-01 rights rows citing branch-only revisions break after a squash merge"
   gaps_remaining: []
   regressions: []
+  delta_rechecks:
+    - range: "af8dd68..f1751d7"
+      result: "no regression; CI-portability fix (59af51f) and digest refreshes only"
 covered_files:
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-01-PLAN.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-01-SUMMARY.md"
@@ -140,24 +143,36 @@ covered_files:
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-64-SUMMARY.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-65-PLAN.md"
   - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-65-SUMMARY.md"
-  - ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-FRONTEND-RECEIPT.json"
   - "CMakeLists.txt"
   - "docs/first-playable-build.md"
   - "docs/history-allowlist.json"
   - "docs/rights-inventory.md"
+  - "experiments/owned_cpu/source-manifest.json"
   - "include/glueyneo/glueyneo.h"
   - "src/instance.c"
+  - "tests/fixture/rights-manifest.json"
+  - "tests/fixture/test_public_guest.c"
   - "tools/public_content.py"
   - "tools/verify_playable.py"
-covered_digest: "v3:sha256:f74eebb8ba132c602cb9a8f9c259c84cd08bd559083dddeae2ef5a89437e1dbc"
+covered_digest: "v3:sha256:198fa0a0323972363179b92f9910b8a37f1e44c40206896a1d765232e4135117"
 ---
 
-# Phase 04: Public Playable Tracer Verification Report (round 11 re-verification)
+# Phase 04: Public Playable Tracer Verification Report (round 11 re-verification, delta re-checked at f1751d7)
 
 **Phase Goal:** A maintainer can rebuild and run an original guest with visible, input-driven behavior through the ordinary native API and an actual pinned RetroArch build, while resolving the selected sound candidates' admission gates before full integration.
-**Verified:** 2026-10-12 at HEAD `f55be70` (initial run at `2d62ac9`; delta re-checked) (receipt qualified at `cbcd28b76391`, ancestor of HEAD).
+**Verified:** 2026-10-12 at HEAD `f55be70` (initial run at `2d62ac9`; delta re-checked); delta `af8dd68..f1751d7` re-checked 2026-10-12 at HEAD `f1751d7` (receipt qualified at `cbcd28b76391`, ancestor of HEAD).
 **Status:** passed
 **Re-verification:** Yes -- supersedes the stale round-5 report (HEAD 1bc70f4, gap G5WR-01). Executed plans 04-59..04-65 and review rounds R6..R11 are covered. Plans 04-51, 04-56 and 04-57 are `status: superseded` and were not executed; they are not counted.
+
+## Delta re-check af8dd68..f1751d7 (2026-10-12)
+
+The report went stale because covered files changed. Commits reviewed: b81f6fc and 2654269 (planning docs: transition and ship note); 59af51f (hosted-CI fix for PR #3); 6a5977c, b1ecadd and f1751d7 (digest refreshes).
+
+- **59af51f code delta.** `CMakeLists.txt` adds `glueyneo_apply_sdk_sanitizer(ym2610_admission_test)`. The helper does nothing unless `GLUEYNEO_SDK_SANITIZER_FLAGS` is set, so non-sanitizer builds are unchanged. `tests/fixture/test_public_guest.c` moves two block-scope `extern` declarations (`public_guest_write`, `public_guest_content_size`) to file scope. Signatures and behavior are unchanged. No runtime, adapter, third-party or header path changed.
+- **Digest refreshes.** Checked against the files on disk: `test_public_guest.c` = `7c5c7a0e...` (rights-inventory row and fixture rights-manifest `assertions.sha256`); `CMakeLists.txt` = `23f5a511...` (owned-CPU source manifest); `rights-manifest.json` = `d4de53c4...` (inventory row). The history-allowlist rows moved to 6a5977c/59af51f.
+- **Receipt binding (HOST-02).** Since `cbcd28b`, two receipt-adjacent sources changed: `CMakeLists.txt` and `tests/fixture/test_public_guest.c`. `rights-manifest.json` also changed, but only its digest. Neither change affects the receipt's subjects. The fixture rebuilt here from HEAD hashes to `59ed3645...`, which equals the receipt's `fixture_sha256` and the manifest's artifact digest. The core sources (src/, include/, third_party/, tests/libretro/) are unchanged since `cbcd28b`, and the CMake line touches only the ym2610 test target in sanitizer builds. RetroArch was not launched (`pgrep -x RetroArch` exit 1). The receipt remains accepted by `--check-docs`.
+- **Evidence re-run by this verifier at f1751d7.** `cmake --build --preset owned-debug` succeeded. `ctest --preset owned-debug -R 'fixture|public|ym2610|libretro'` passed 7/7 (ym2610_admission, sdk_fixture_write, native-tracer/public-fixture tests, libretro callback contract). `verify_playable.py --check-docs` passed. `--history-allowlist check --base 4b2120d` is current (158 rows). There are no debt markers in the changed code. The orchestrator's evidence at the same HEAD was not repeated here: the full `ctest --preset owned-debug` 63/63, `verify_sdk.py --suite sanitizer` (asan-ubsan 8/8, tsan 2/2), and the ASan ym2610/public_guest/libretro tests (6/6).
+- **Verdict.** No truth or requirement regressed. Status stays passed at 5/5 truths and 8/8 requirements. The REQUIREMENTS.md bookkeeping noted below has since been done by b81f6fc.
 
 ## Goal Achievement
 
