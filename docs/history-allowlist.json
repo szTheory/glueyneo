@@ -470,6 +470,24 @@
       "revision": "a10c8c8ae2b7f362220c477742bc28084aea66eb"
     },
     {
+      "key": "G6IN-01",
+      "kind": "review_citation",
+      "pin": "6a990e110a227bf989f43c07f7a2c25109bdd965d6f441c3ea643fca26f39052",
+      "revision": "932c1297d020d506f3bb45ed2db02bcf9de0976d"
+    },
+    {
+      "key": "G6IN-02",
+      "kind": "review_citation",
+      "pin": "531eb0a8c1e19ec14ac446904fe28d4e2a7e618edeb194975b2b5187670b3764",
+      "revision": "932c1297d020d506f3bb45ed2db02bcf9de0976d"
+    },
+    {
+      "key": "G6IN-03",
+      "kind": "review_citation",
+      "pin": "41eac188518fbc9154a0feef811d3e13159338123744203b848517569e3e9d9d",
+      "revision": "932c1297d020d506f3bb45ed2db02bcf9de0976d"
+    },
+    {
       "key": "G6WR-01",
       "kind": "review_citation",
       "pin": "8bc7f7627142d41bc055cdeb88f250798ac04409cba50031d4767a448f65b012",
