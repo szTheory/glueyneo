@@ -4,877 +4,877 @@
     {
       "key": "source_revision",
       "kind": "frontend_receipt",
-      "pin": "06ce9b69e194b7c1cc1ee520d74a3516ceb92dd3a3d97632f800576edbdd1166",
-      "revision": "6a15c34aa79bf473c50a700f26c6e2150dd20d90"
+      "pin": "71dc4e77f0ddb72ddf0fdc5e9690971c987bfffdb69b895f23cc3c9b6237d7f3",
+      "revision": "cbcd28b763914144eaad15f554b022816ae269f6"
     },
     {
       "key": "CR-01",
       "kind": "review_citation",
-      "pin": "918958e3ff1aa364cebef3a98e7e42ddc686db76303a068482219ee15ca6fc74",
+      "pin": "347ecdaaaac51452d85f2dfbdaeb4b744830d43df7c36583368eb849129b1f01",
       "revision": "323fa1453329"
     },
     {
       "key": "CR-02",
       "kind": "review_citation",
-      "pin": "f617a6455bdc9d1d246dd06809fa012b07c44e1cd6105ccb711d68179b471b06",
+      "pin": "7e1455974b167c0e30759820ba76facf0adb7904779e826ed5869462495a711a",
       "revision": "323fa1453329"
     },
     {
       "key": "CR-03",
       "kind": "review_citation",
-      "pin": "fb9eb10b621f20b4b3cd104b32b903743fca49e6c08f911d050c1a7432f7e084",
+      "pin": "30f54324ed956270888d7f57b0a53b4ccab9fc269934ad8e6b8a527090354707",
       "revision": "323fa1453329"
     },
     {
       "key": "CR-04",
       "kind": "review_citation",
-      "pin": "e7a81682a29ac37d6eb9c041d9942a9dd03ccaaec7c3b0bf5d2b130ff33ccf6f",
+      "pin": "e63eaada502c38f9ddd561c0f2c3a44313a3e18602c4b409bcf09236464cf70d",
       "revision": "323fa1453329"
     },
     {
       "key": "CR-05",
       "kind": "review_citation",
-      "pin": "4f3972ff02e631950e5e462c2c3d37f193611a61f7bafb401c8cdf51e8f6c57d",
+      "pin": "d3e27fd49290800d6500415a99074c9c71aa712af6350d02971a92ab79f99621",
       "revision": "323fa1453329"
     },
     {
       "key": "CR-06",
       "kind": "review_citation",
-      "pin": "b1ed4336edb07c23117ab0fd0ea58c45f52b0290dd626f43353699a52f3526cd",
+      "pin": "896c59d71133d97359298fd584c72070c33a2eb5806f4baa8d785ed9f1619b4e",
       "revision": "323fa1453329"
     },
     {
       "key": "CR-07",
       "kind": "review_citation",
-      "pin": "c0b1aa65ef25953755872be791d6c2395540d031bf49ee18c0750087ace6935d",
+      "pin": "ccfedc746b3660dc7f0abd2c9563ad986267501126b865201d6974d033659b0e",
       "revision": "45952598202a"
     },
     {
       "key": "CR-08",
       "kind": "review_citation",
-      "pin": "041ce3a09fe82c53f1165227f59d9553ddc88787e98c24e1f6e6450b7e88da4a",
+      "pin": "15b2cde39a1008cf3e19cabcd8c71f30fc5f6468a1aa4752e6392f957bb54519",
       "revision": "323fa1453329"
     },
     {
       "key": "CR-09",
       "kind": "review_citation",
-      "pin": "567fd8f7675cabe330a59d1ceb1d1cb24d37f776ac7cc70f60754bf92569a525",
+      "pin": "e9bad20a1b83af3ea13b1957a0095c43ac058db952f3fd40eb205985a1b5375f",
       "revision": "323fa1453329"
     },
     {
       "key": "G2CR-01",
       "kind": "review_citation",
-      "pin": "a4394d8ad6c2370462c9eaf3a26cb14a9ce9b244516c963bddfdd2065d205c2d",
+      "pin": "be37b23ba5a5728c582fabf947810444a53cc728362d6c45df1d93d42e1641bc",
       "revision": "3c5255e286b3f593b2c0cbc8aeaf36e0ea69263c"
     },
     {
       "key": "G2CR-01",
       "kind": "review_citation",
-      "pin": "a4394d8ad6c2370462c9eaf3a26cb14a9ce9b244516c963bddfdd2065d205c2d",
+      "pin": "be37b23ba5a5728c582fabf947810444a53cc728362d6c45df1d93d42e1641bc",
       "revision": "77d5159ee5b77980b6b83bbde5ea5d34709cda34"
     },
     {
       "key": "G2CR-02",
       "kind": "review_citation",
-      "pin": "45d6f7a1f735afe9f38d89416c2c2452f2977372074dea112ac61a1eaf8b70b7",
+      "pin": "bb6d645a2eb4dfdffe71de496293e187e036d222c5de028e67e5bba2a6b56094",
+      "revision": "77d5159ee5b77980b6b83bbde5ea5d34709cda34"
+    },
+    {
+      "key": "G2CR-02",
+      "kind": "review_citation",
+      "pin": "bb6d645a2eb4dfdffe71de496293e187e036d222c5de028e67e5bba2a6b56094",
       "revision": "8446d8d16705e3a47e56909603354379f1275daa"
     },
     {
-      "key": "G2CR-02",
+      "key": "G2IN-01",
       "kind": "review_citation",
-      "pin": "45d6f7a1f735afe9f38d89416c2c2452f2977372074dea112ac61a1eaf8b70b7",
+      "pin": "9a11d09e30fcef9e26c7d0140737be4e8196293fd05acbc979336239e59c7fa0",
       "revision": "77d5159ee5b77980b6b83bbde5ea5d34709cda34"
     },
     {
       "key": "G2IN-01",
       "kind": "review_citation",
-      "pin": "c233370f73f0b5bfd955d756ffc3e3a9960fedc9144f5f7079b0df70ad6fb296",
-      "revision": "77d5159ee5b77980b6b83bbde5ea5d34709cda34"
-    },
-    {
-      "key": "G2IN-01",
-      "kind": "review_citation",
-      "pin": "c233370f73f0b5bfd955d756ffc3e3a9960fedc9144f5f7079b0df70ad6fb296",
+      "pin": "9a11d09e30fcef9e26c7d0140737be4e8196293fd05acbc979336239e59c7fa0",
       "revision": "c33c7c0cbbb5b61777eaad98dbcb371a3e67287d"
     },
     {
       "key": "G2IN-02",
       "kind": "review_citation",
-      "pin": "d8b05ce1e9d561e96c5477f2b3c1966ba962157c842ed9b37ab0cee1d40ea4dc",
+      "pin": "bd79aa248829b011db5c980e01f544cb565437b399a007beaac9afdd4bb61abe",
       "revision": "013cd58cacaa9767948ddd6f269a901e5ce127d0"
     },
     {
       "key": "G2IN-02",
       "kind": "review_citation",
-      "pin": "d8b05ce1e9d561e96c5477f2b3c1966ba962157c842ed9b37ab0cee1d40ea4dc",
+      "pin": "bd79aa248829b011db5c980e01f544cb565437b399a007beaac9afdd4bb61abe",
       "revision": "f783c73668b2cea08108d390b44025e9cfeb858c"
     },
     {
       "key": "G2IN-03",
       "kind": "review_citation",
-      "pin": "db808158086c4f94fe00e62abc09674956df85bca899550fa5d8b6817a29db4e",
-      "revision": "8446d8d16705e3a47e56909603354379f1275daa"
+      "pin": "7da39b218bf6d204763fd58ed5eaa2249626e6ec09f278e09910a6c026a52260",
+      "revision": "77d5159ee5b77980b6b83bbde5ea5d34709cda34"
     },
     {
       "key": "G2IN-03",
       "kind": "review_citation",
-      "pin": "db808158086c4f94fe00e62abc09674956df85bca899550fa5d8b6817a29db4e",
-      "revision": "77d5159ee5b77980b6b83bbde5ea5d34709cda34"
+      "pin": "7da39b218bf6d204763fd58ed5eaa2249626e6ec09f278e09910a6c026a52260",
+      "revision": "8446d8d16705e3a47e56909603354379f1275daa"
     },
     {
       "key": "G2WR-01",
       "kind": "review_citation",
-      "pin": "752917edf6aa58e89b6fba30aa3e5453e375adad84e78f356c7bc5d1e8b94b07",
+      "pin": "2e57f15cc0a633218c88ae822f44c52b46e40578453e8ec7fed47d65d253bbfd",
       "revision": "58a3ba86a76cf85372f6499ac2e826890a61544a"
     },
     {
       "key": "G2WR-01",
       "kind": "review_citation",
-      "pin": "752917edf6aa58e89b6fba30aa3e5453e375adad84e78f356c7bc5d1e8b94b07",
+      "pin": "2e57f15cc0a633218c88ae822f44c52b46e40578453e8ec7fed47d65d253bbfd",
       "revision": "97fbbdaa75120c27845b24679c3948e6206ec42f"
     },
     {
       "key": "G2WR-02",
       "kind": "review_citation",
-      "pin": "453432d42c6ef42cb1b109f9effabe329fe443b4e6adb34a5f0394a305ac9dba",
-      "revision": "97fbbdaa75120c27845b24679c3948e6206ec42f"
-    },
-    {
-      "key": "G2WR-02",
-      "kind": "review_citation",
-      "pin": "453432d42c6ef42cb1b109f9effabe329fe443b4e6adb34a5f0394a305ac9dba",
+      "pin": "0ed3464421dc69d2b210611e9e2ceecafb2a1f933fbaf0a3b677e402666b1154",
       "revision": "77d5159ee5b77980b6b83bbde5ea5d34709cda34"
+    },
+    {
+      "key": "G2WR-02",
+      "kind": "review_citation",
+      "pin": "0ed3464421dc69d2b210611e9e2ceecafb2a1f933fbaf0a3b677e402666b1154",
+      "revision": "97fbbdaa75120c27845b24679c3948e6206ec42f"
     },
     {
       "key": "G2WR-03",
       "kind": "review_citation",
-      "pin": "298e09ae8a6cd3e57f205d3d94b1b476fa657289eae5593870ebefbd448e960c",
+      "pin": "aaacfd70d9292e913839ea8add6ac3c645c5d971591a58842329a4e32a042eb6",
       "revision": "3c5255e286b3f593b2c0cbc8aeaf36e0ea69263c"
     },
     {
       "key": "G2WR-03",
       "kind": "review_citation",
-      "pin": "298e09ae8a6cd3e57f205d3d94b1b476fa657289eae5593870ebefbd448e960c",
+      "pin": "aaacfd70d9292e913839ea8add6ac3c645c5d971591a58842329a4e32a042eb6",
       "revision": "77d5159ee5b77980b6b83bbde5ea5d34709cda34"
     },
     {
       "key": "G2WR-04",
       "kind": "review_citation",
-      "pin": "77bd1c71848b90b75ac282184a5f9f1eb8497415653d5da347c722b430e1652d",
+      "pin": "cf588ab4d7ff373686e5b9ef37efba4d4c70e6e2798c8a82d0918ce17f2e47ba",
+      "revision": "77d5159ee5b77980b6b83bbde5ea5d34709cda34"
+    },
+    {
+      "key": "G2WR-04",
+      "kind": "review_citation",
+      "pin": "cf588ab4d7ff373686e5b9ef37efba4d4c70e6e2798c8a82d0918ce17f2e47ba",
       "revision": "856592e5ae89c9ec2a56c6651c59ffacc778e836"
     },
     {
       "key": "G2WR-04",
       "kind": "review_citation",
-      "pin": "77bd1c71848b90b75ac282184a5f9f1eb8497415653d5da347c722b430e1652d",
-      "revision": "77d5159ee5b77980b6b83bbde5ea5d34709cda34"
-    },
-    {
-      "key": "G2WR-04",
-      "kind": "review_citation",
-      "pin": "77bd1c71848b90b75ac282184a5f9f1eb8497415653d5da347c722b430e1652d",
+      "pin": "cf588ab4d7ff373686e5b9ef37efba4d4c70e6e2798c8a82d0918ce17f2e47ba",
       "revision": "c33c7c0cbbb5b61777eaad98dbcb371a3e67287d"
     },
     {
       "key": "G2WR-05",
       "kind": "review_citation",
-      "pin": "7d2e487a8115994edfb9a0d3a2215eaa4d3128dcc9dedac033b774f487f040d0",
-      "revision": "58a3ba86a76cf85372f6499ac2e826890a61544a"
+      "pin": "20f5184470aba8cf596ff5d37075771dc86278a4173343f0b6da6b66ad7286aa",
+      "revision": "15df7bc5d985f0d4d3e98628cb2307a66cabac98"
     },
     {
       "key": "G2WR-05",
       "kind": "review_citation",
-      "pin": "7d2e487a8115994edfb9a0d3a2215eaa4d3128dcc9dedac033b774f487f040d0",
-      "revision": "15df7bc5d985f0d4d3e98628cb2307a66cabac98"
-    },
-    {
-      "key": "G2WR-06",
-      "kind": "review_citation",
-      "pin": "af4b99ad9dfa6a9f8cbe474f7f2c2c65bf0753767a15dbc5f024b70cb53c5e1d",
+      "pin": "20f5184470aba8cf596ff5d37075771dc86278a4173343f0b6da6b66ad7286aa",
       "revision": "58a3ba86a76cf85372f6499ac2e826890a61544a"
     },
     {
       "key": "G2WR-06",
       "kind": "review_citation",
-      "pin": "af4b99ad9dfa6a9f8cbe474f7f2c2c65bf0753767a15dbc5f024b70cb53c5e1d",
+      "pin": "5add0156224287d40eb4b53c71c037170aee729e050603ed57764a8a3ede4e37",
+      "revision": "58a3ba86a76cf85372f6499ac2e826890a61544a"
+    },
+    {
+      "key": "G2WR-06",
+      "kind": "review_citation",
+      "pin": "5add0156224287d40eb4b53c71c037170aee729e050603ed57764a8a3ede4e37",
       "revision": "f866fa49277abffad5ab2b811fc2d5d57934730f"
     },
     {
       "key": "G3IN-01",
       "kind": "review_citation",
-      "pin": "01989f2dc24746837e4e4022758ab4e3cadbf0e165506cf6192c72f1b706a72b",
+      "pin": "4cd204da6f0692596f9d125d724a39b73f3a0f088c5bd918a58508e82bf44e05",
       "revision": "58a3ba86a76cf85372f6499ac2e826890a61544a"
     },
     {
       "key": "G3IN-01",
       "kind": "review_citation",
-      "pin": "01989f2dc24746837e4e4022758ab4e3cadbf0e165506cf6192c72f1b706a72b",
+      "pin": "4cd204da6f0692596f9d125d724a39b73f3a0f088c5bd918a58508e82bf44e05",
       "revision": "c44cb0bd7ff459fca457c8f93c1e4be853c84803"
     },
     {
       "key": "G3IN-02",
       "kind": "review_citation",
-      "pin": "18071c9f188a9fe5abce75c20d2f14407300410fee107d1b2db3daa8a89da919",
-      "revision": "58a3ba86a76cf85372f6499ac2e826890a61544a"
+      "pin": "e49900eb277521601addbfccee5277812053f1cd67eb3c21aa229c16df890db5",
+      "revision": "3093ff80037ddef9ba6c9d05dc334296ed9a09f5"
     },
     {
       "key": "G3IN-02",
       "kind": "review_citation",
-      "pin": "18071c9f188a9fe5abce75c20d2f14407300410fee107d1b2db3daa8a89da919",
-      "revision": "3093ff80037ddef9ba6c9d05dc334296ed9a09f5"
+      "pin": "e49900eb277521601addbfccee5277812053f1cd67eb3c21aa229c16df890db5",
+      "revision": "58a3ba86a76cf85372f6499ac2e826890a61544a"
     },
     {
       "key": "G3IN-03",
       "kind": "review_citation",
-      "pin": "81d14353b0fafcf2bbaae2b92da05928aaded432ed1a8b8ee7a3cb3449684171",
+      "pin": "6cf0f00b460a6502d999aa7aacd8b39ea2c74897ae50b828d8b0e1fa159be7f6",
       "revision": "2587c6ea4704aba8312cff3b4a4c5f62c576224c"
     },
     {
       "key": "G3IN-03",
       "kind": "review_citation",
-      "pin": "81d14353b0fafcf2bbaae2b92da05928aaded432ed1a8b8ee7a3cb3449684171",
+      "pin": "6cf0f00b460a6502d999aa7aacd8b39ea2c74897ae50b828d8b0e1fa159be7f6",
       "revision": "856592e5ae89c9ec2a56c6651c59ffacc778e836"
     },
     {
       "key": "G3WR-01",
       "kind": "review_citation",
-      "pin": "2ffb2bf390e7b5374a3b9f7b265f1bad20e780dde26f45e5137460008eee4142",
-      "revision": "f783c73668b2cea08108d390b44025e9cfeb858c"
+      "pin": "bc01634fee47b910a3ead4aa4c5e27b4774b958deac3f88ba2407732f3d32485",
+      "revision": "930be6b489dd71d48d7e2cbbbd4dc008b0f9267f"
     },
     {
       "key": "G3WR-01",
       "kind": "review_citation",
-      "pin": "2ffb2bf390e7b5374a3b9f7b265f1bad20e780dde26f45e5137460008eee4142",
-      "revision": "930be6b489dd71d48d7e2cbbbd4dc008b0f9267f"
+      "pin": "bc01634fee47b910a3ead4aa4c5e27b4774b958deac3f88ba2407732f3d32485",
+      "revision": "f783c73668b2cea08108d390b44025e9cfeb858c"
     },
     {
       "key": "G3WR-02",
       "kind": "review_citation",
-      "pin": "92c2fb658dd33e6862381cc72a1f4981412bbb9d2dd4ab1c74832fcef696d0d9",
+      "pin": "87a9cba169d88e85d9e3c10d0005b17a9195f8fa1c2b755dd37c3e849e006f60",
       "revision": "58a3ba86a76cf85372f6499ac2e826890a61544a"
     },
     {
       "key": "G3WR-02",
       "kind": "review_citation",
-      "pin": "92c2fb658dd33e6862381cc72a1f4981412bbb9d2dd4ab1c74832fcef696d0d9",
+      "pin": "87a9cba169d88e85d9e3c10d0005b17a9195f8fa1c2b755dd37c3e849e006f60",
       "revision": "c44cb0bd7ff459fca457c8f93c1e4be853c84803"
     },
     {
       "key": "G3WR-03",
       "kind": "review_citation",
-      "pin": "9177f580ff4e7cc76169e7d46d1b92da6a7f29ca43ca741084eef104200a1cde",
+      "pin": "4549da36a49947c072b042d2828c50c3af633dbfc803fbfe7b6ed365cf52b470",
       "revision": "58a3ba86a76cf85372f6499ac2e826890a61544a"
     },
     {
       "key": "G3WR-03",
       "kind": "review_citation",
-      "pin": "9177f580ff4e7cc76169e7d46d1b92da6a7f29ca43ca741084eef104200a1cde",
+      "pin": "4549da36a49947c072b042d2828c50c3af633dbfc803fbfe7b6ed365cf52b470",
       "revision": "fa55fc2ffdb933a5d3a47e6ca74eeaad9ab0256c"
     },
     {
       "key": "G3WR-04",
       "kind": "review_citation",
-      "pin": "06c4dfdb8f6e686fe084fb461c4d6845f3c8fdd43c2d971b3420e9b1a700a129",
+      "pin": "27a160f01c9bfc6a5ba4a0cd07c087ad647c637d969a93c63e3acbbd7b8fa589",
       "revision": "58a3ba86a76cf85372f6499ac2e826890a61544a"
     },
     {
       "key": "G3WR-04",
       "kind": "review_citation",
-      "pin": "06c4dfdb8f6e686fe084fb461c4d6845f3c8fdd43c2d971b3420e9b1a700a129",
+      "pin": "27a160f01c9bfc6a5ba4a0cd07c087ad647c637d969a93c63e3acbbd7b8fa589",
       "revision": "930be6b489dd71d48d7e2cbbbd4dc008b0f9267f"
     },
     {
       "key": "G3WR-05",
       "kind": "review_citation",
-      "pin": "ccbb6587e3aba9e3786cae2ee37befc83ada6208816c8737a2739c84979bbcc4",
-      "revision": "58a3ba86a76cf85372f6499ac2e826890a61544a"
+      "pin": "a24c7d63cf0cf4b946fe2315c3fa80e8e161323b7b2cc2070d119969de976545",
+      "revision": "492ec02dd46bee14dba19b9c142d6bfc9de8f5ef"
     },
     {
       "key": "G3WR-05",
       "kind": "review_citation",
-      "pin": "ccbb6587e3aba9e3786cae2ee37befc83ada6208816c8737a2739c84979bbcc4",
-      "revision": "492ec02dd46bee14dba19b9c142d6bfc9de8f5ef"
+      "pin": "a24c7d63cf0cf4b946fe2315c3fa80e8e161323b7b2cc2070d119969de976545",
+      "revision": "58a3ba86a76cf85372f6499ac2e826890a61544a"
     },
     {
       "key": "G4IN-01",
       "kind": "review_citation",
-      "pin": "f18322a66b4a42de8566e6fc65c016cba0e1f1baf52a413a33e74bf8459fd93d",
+      "pin": "8505f57c133abdc4baeaf3d0dd200540a0498ec2a3d15564af7845e3d0617e28",
       "revision": "856592e5ae89"
     },
     {
       "key": "G4IN-01",
       "kind": "review_citation",
-      "pin": "f18322a66b4a42de8566e6fc65c016cba0e1f1baf52a413a33e74bf8459fd93d",
+      "pin": "8505f57c133abdc4baeaf3d0dd200540a0498ec2a3d15564af7845e3d0617e28",
       "revision": "856592e5ae89c9ec2a56c6651c59ffacc778e836"
     },
     {
       "key": "G4IN-02",
       "kind": "review_citation",
-      "pin": "54c46f4d806d944d092bba86782b1cc5f66495878f988a6185d726247f42e56a",
+      "pin": "30cf4584393f418d39f8f2e38118717b3cff54e1e0ab58a02eb1316de5216279",
       "revision": "856592e5ae89"
     },
     {
       "key": "G4IN-02",
       "kind": "review_citation",
-      "pin": "54c46f4d806d944d092bba86782b1cc5f66495878f988a6185d726247f42e56a",
+      "pin": "30cf4584393f418d39f8f2e38118717b3cff54e1e0ab58a02eb1316de5216279",
       "revision": "f783c73668b2cea08108d390b44025e9cfeb858c"
     },
     {
       "key": "G4IN-03",
       "kind": "review_citation",
-      "pin": "1b6da7f9b2323ec424e7b191e6c92a777ec4d5b108ea227ef09b2292378565c0",
+      "pin": "9926f1f5cd2e7840dd881935226162d9fd953d5f4a0a46bbd5935d874a2b0b71",
       "revision": "856592e5ae89"
     },
     {
       "key": "G4IN-03",
       "kind": "review_citation",
-      "pin": "1b6da7f9b2323ec424e7b191e6c92a777ec4d5b108ea227ef09b2292378565c0",
+      "pin": "9926f1f5cd2e7840dd881935226162d9fd953d5f4a0a46bbd5935d874a2b0b71",
       "revision": "856592e5ae89c9ec2a56c6651c59ffacc778e836"
     },
     {
       "key": "G4WR-01",
       "kind": "review_citation",
-      "pin": "aefb9c195bec44ee8171207550a83efea0c8eafd03f21d85057f3b836160030e",
+      "pin": "2559d205a9245e35da50d5abf3e45ecee3dcea072f37f5626657c1bea9d3e42d",
       "revision": "856592e5ae89"
     },
     {
       "key": "G4WR-01",
       "kind": "review_citation",
-      "pin": "aefb9c195bec44ee8171207550a83efea0c8eafd03f21d85057f3b836160030e",
+      "pin": "2559d205a9245e35da50d5abf3e45ecee3dcea072f37f5626657c1bea9d3e42d",
       "revision": "f783c73668b2cea08108d390b44025e9cfeb858c"
     },
     {
       "key": "G4WR-02",
       "kind": "review_citation",
-      "pin": "e01ef37366b8ddcbc86311d8371ecc694b842b632ce4275293c6f83e72ad8749",
+      "pin": "ef1328a71a644c29652faac6e0c955a1c04c50f526ac1c8c8598d2f98e1a35c0",
       "revision": "856592e5ae89"
     },
     {
       "key": "G4WR-02",
       "kind": "review_citation",
-      "pin": "e01ef37366b8ddcbc86311d8371ecc694b842b632ce4275293c6f83e72ad8749",
+      "pin": "ef1328a71a644c29652faac6e0c955a1c04c50f526ac1c8c8598d2f98e1a35c0",
       "revision": "856592e5ae89c9ec2a56c6651c59ffacc778e836"
     },
     {
       "key": "G4WR-03",
       "kind": "review_citation",
-      "pin": "dfd191a674c5d91d005037221310f5ed156eab914adabc515dd7476ac6ffe88c",
+      "pin": "751fd3bc395718435c1286fb37390effa2c2d91d77054e98dca1d86c56b8621f",
       "revision": "856592e5ae89"
     },
     {
       "key": "G4WR-03",
       "kind": "review_citation",
-      "pin": "dfd191a674c5d91d005037221310f5ed156eab914adabc515dd7476ac6ffe88c",
+      "pin": "751fd3bc395718435c1286fb37390effa2c2d91d77054e98dca1d86c56b8621f",
       "revision": "f783c73668b2cea08108d390b44025e9cfeb858c"
     },
     {
       "key": "G4WR-04",
       "kind": "review_citation",
-      "pin": "fe85f1119502a56823402d68664f2fe4e37b4b0684156a6e22ba0ea2b64ae292",
+      "pin": "fea8e6c643a974cfef83a01425edf79a7e8ac6c9ca6cb1acaa104c9e676a6606",
       "revision": "856592e5ae89"
     },
     {
       "key": "G4WR-04",
       "kind": "review_citation",
-      "pin": "fe85f1119502a56823402d68664f2fe4e37b4b0684156a6e22ba0ea2b64ae292",
+      "pin": "fea8e6c643a974cfef83a01425edf79a7e8ac6c9ca6cb1acaa104c9e676a6606",
       "revision": "9a0d02b7c7de62ba07c2d07058f424ab92209306"
     },
     {
       "key": "G5IN-01",
       "kind": "review_citation",
-      "pin": "0c2b7294fb17708a50abde130ddc07744389914e44a3f064638e16960a3a3b70",
+      "pin": "c1f57bddf4693f41df78472f156df1b37b9bc908740ad22c0039e16df1884262",
       "revision": "a10c8c8ae2b7f362220c477742bc28084aea66eb"
     },
     {
       "key": "G5WR-01",
       "kind": "review_citation",
-      "pin": "2913a0f3c4fc2b01330a1f52be776ff5e0e8dae8be1b413ecbf1e7fa8299c308",
+      "pin": "8ed8b6dba76a394206e836224c47e7893f01ab101542f9b6779ae89c70b56679",
       "revision": "0031bb09410d742b035147f439bad53cbd870c88"
     },
     {
       "key": "G5WR-01",
       "kind": "review_citation",
-      "pin": "2913a0f3c4fc2b01330a1f52be776ff5e0e8dae8be1b413ecbf1e7fa8299c308",
-      "revision": "2481154c0b8e3cd4d9c4c61090d9393b6b5cab13"
+      "pin": "8ed8b6dba76a394206e836224c47e7893f01ab101542f9b6779ae89c70b56679",
+      "revision": "019e25d58f1f0c36b2616486c3eb307ac9ad0a76"
     },
     {
       "key": "G5WR-01",
       "kind": "review_citation",
-      "pin": "2913a0f3c4fc2b01330a1f52be776ff5e0e8dae8be1b413ecbf1e7fa8299c308",
-      "revision": "ad43068224e968d56e3158b8b2386b06c2e9cf38"
-    },
-    {
-      "key": "G5WR-01",
-      "kind": "review_citation",
-      "pin": "2913a0f3c4fc2b01330a1f52be776ff5e0e8dae8be1b413ecbf1e7fa8299c308",
+      "pin": "8ed8b6dba76a394206e836224c47e7893f01ab101542f9b6779ae89c70b56679",
       "revision": "18d86dede92015374d41251245bc5e939d81a839"
     },
     {
       "key": "G5WR-01",
       "kind": "review_citation",
-      "pin": "2913a0f3c4fc2b01330a1f52be776ff5e0e8dae8be1b413ecbf1e7fa8299c308",
+      "pin": "8ed8b6dba76a394206e836224c47e7893f01ab101542f9b6779ae89c70b56679",
+      "revision": "2481154c0b8e3cd4d9c4c61090d9393b6b5cab13"
+    },
+    {
+      "key": "G5WR-01",
+      "kind": "review_citation",
+      "pin": "8ed8b6dba76a394206e836224c47e7893f01ab101542f9b6779ae89c70b56679",
       "revision": "7ad8eef0d10a3f0c97a5bdec64f6c33c0ccedcbb"
     },
     {
       "key": "G5WR-01",
       "kind": "review_citation",
-      "pin": "2913a0f3c4fc2b01330a1f52be776ff5e0e8dae8be1b413ecbf1e7fa8299c308",
-      "revision": "c43b9bbe94f58d5ed177a3350c5028bda6b695c3"
+      "pin": "8ed8b6dba76a394206e836224c47e7893f01ab101542f9b6779ae89c70b56679",
+      "revision": "ad43068224e968d56e3158b8b2386b06c2e9cf38"
     },
     {
       "key": "G5WR-01",
       "kind": "review_citation",
-      "pin": "2913a0f3c4fc2b01330a1f52be776ff5e0e8dae8be1b413ecbf1e7fa8299c308",
-      "revision": "019e25d58f1f0c36b2616486c3eb307ac9ad0a76"
+      "pin": "8ed8b6dba76a394206e836224c47e7893f01ab101542f9b6779ae89c70b56679",
+      "revision": "c43b9bbe94f58d5ed177a3350c5028bda6b695c3"
     },
     {
       "key": "G5WR-02",
       "kind": "review_citation",
-      "pin": "12621149cde9a130c0a2b7037d6c0f9aedd019c3d762626ae70b5068334c0554",
+      "pin": "8942883f18924b919bacccaf35a3a289e70de81fd88e8f1314e508754b81c696",
       "revision": "a10c8c8ae2b7f362220c477742bc28084aea66eb"
     },
     {
       "key": "G6WR-01",
       "kind": "review_citation",
-      "pin": "2005e1a1be65bb6eb293eb0a95ec3fcd8ae0875b02149e2851451464c483489c",
-      "revision": "e2845e66ab2b3d17a1d0bbe5068ad9704651d242"
+      "pin": "8bc7f7627142d41bc055cdeb88f250798ac04409cba50031d4767a448f65b012",
+      "revision": "6a7f287ef7a81d1574efb190668d63a3ea84770c"
     },
     {
       "key": "G6WR-01",
       "kind": "review_citation",
-      "pin": "2005e1a1be65bb6eb293eb0a95ec3fcd8ae0875b02149e2851451464c483489c",
-      "revision": "6a7f287ef7a81d1574efb190668d63a3ea84770c"
+      "pin": "8bc7f7627142d41bc055cdeb88f250798ac04409cba50031d4767a448f65b012",
+      "revision": "e2845e66ab2b3d17a1d0bbe5068ad9704651d242"
     },
     {
       "key": "G6WR-02",
       "kind": "review_citation",
-      "pin": "390cc5189fe99bcea845f954bdfa356f6309fda2a6a7edebd29f53d226725bc3",
+      "pin": "a604f4672b62ecf3b090687d9720b63fef416d2a6803d248b085ef19a8ba77cf",
       "revision": "49dcb76e246a000c3d35b0959a045551073d6fdd"
     },
     {
       "key": "G6WR-03",
       "kind": "review_citation",
-      "pin": "ba1f6944e7b1994174005839917fa0abfee00485fc1d9651a0d2c886ec0647b3",
+      "pin": "12873955bc35b5dedaf1aa09cca6565f76fc903fa6e0f4181a43fbda943d0714",
       "revision": "6ed52935aded48db2150e2f80aae5fa7574f742a"
     },
     {
       "key": "G7CR-01",
       "kind": "review_citation",
-      "pin": "14b5eb70c73f8e99f4975688a1de566db631e62669bd6036b2c138896e696307",
+      "pin": "b0863c2a9a6a9fa6abcb5f4cd42fe45b21e2c842ee5142d3de392d1f1cc22d0f",
+      "revision": "1b7c72680093ce3e08001704e6dc3e81e6e314bb"
+    },
+    {
+      "key": "G7CR-01",
+      "kind": "review_citation",
+      "pin": "b0863c2a9a6a9fa6abcb5f4cd42fe45b21e2c842ee5142d3de392d1f1cc22d0f",
       "revision": "91f51ac02c136a1188d0d99025a4050f0f75a80f"
     },
     {
       "key": "G7CR-01",
       "kind": "review_citation",
-      "pin": "14b5eb70c73f8e99f4975688a1de566db631e62669bd6036b2c138896e696307",
-      "revision": "e71e283b9cb7abe868f4dcec35d4cfded9092242"
-    },
-    {
-      "key": "G7CR-01",
-      "kind": "review_citation",
-      "pin": "14b5eb70c73f8e99f4975688a1de566db631e62669bd6036b2c138896e696307",
+      "pin": "b0863c2a9a6a9fa6abcb5f4cd42fe45b21e2c842ee5142d3de392d1f1cc22d0f",
       "revision": "b4c6f197e26d26b3704352838b993e0484652924"
     },
     {
       "key": "G7CR-01",
       "kind": "review_citation",
-      "pin": "14b5eb70c73f8e99f4975688a1de566db631e62669bd6036b2c138896e696307",
+      "pin": "b0863c2a9a6a9fa6abcb5f4cd42fe45b21e2c842ee5142d3de392d1f1cc22d0f",
+      "revision": "e71e283b9cb7abe868f4dcec35d4cfded9092242"
+    },
+    {
+      "key": "G7CR-02",
+      "kind": "review_citation",
+      "pin": "dd6000b4b2dc6101e9efc52ef1527133e389a51c9ba54cf5a35fb566d0b98562",
       "revision": "1b7c72680093ce3e08001704e6dc3e81e6e314bb"
     },
     {
       "key": "G7CR-02",
       "kind": "review_citation",
-      "pin": "b2edf16ae94e07a45b56202da35e663876115a9c47c5e860975175927c42666d",
+      "pin": "dd6000b4b2dc6101e9efc52ef1527133e389a51c9ba54cf5a35fb566d0b98562",
       "revision": "6103b9ed1cc647b06bec1a36c5e76ea332f27414"
-    },
-    {
-      "key": "G7CR-02",
-      "kind": "review_citation",
-      "pin": "b2edf16ae94e07a45b56202da35e663876115a9c47c5e860975175927c42666d",
-      "revision": "1b7c72680093ce3e08001704e6dc3e81e6e314bb"
     },
     {
       "key": "G7IN-01",
       "kind": "review_citation",
-      "pin": "b24f684726e7764b813543eed0959d6e52b8d103bbdab364e2c5fe8cfd56b874",
+      "pin": "13d5fc0169a5d21013afd262afda473a5924064a3f82465599b6b826ac6bc6e6",
       "revision": "9dcff1e591f4bc467908537662af2b62c674cdea"
     },
     {
       "key": "G7IN-01",
       "kind": "review_citation",
-      "pin": "b24f684726e7764b813543eed0959d6e52b8d103bbdab364e2c5fe8cfd56b874",
+      "pin": "13d5fc0169a5d21013afd262afda473a5924064a3f82465599b6b826ac6bc6e6",
       "revision": "c5eb9e380335ff9fddc823d6f5b17f4f643be7e4"
     },
     {
       "key": "G7WR-01",
       "kind": "review_citation",
-      "pin": "e4c242b6ab37a2e2fd3d410d2b489e31fba4b5551ddf0f35f6337820d5bf9497",
-      "revision": "e71e283b9cb7abe868f4dcec35d4cfded9092242"
+      "pin": "ec6a4093695ffb596ac535da24c4ad107ca6b35544636c0f0667863d94afe5e5",
+      "revision": "04dd69cc4bf4b5cc30a4f75f64d976e6b4ce5ff7"
     },
     {
       "key": "G7WR-01",
       "kind": "review_citation",
-      "pin": "e4c242b6ab37a2e2fd3d410d2b489e31fba4b5551ddf0f35f6337820d5bf9497",
-      "revision": "04dd69cc4bf4b5cc30a4f75f64d976e6b4ce5ff7"
+      "pin": "ec6a4093695ffb596ac535da24c4ad107ca6b35544636c0f0667863d94afe5e5",
+      "revision": "e71e283b9cb7abe868f4dcec35d4cfded9092242"
     },
     {
       "key": "G7WR-02",
       "kind": "review_citation",
-      "pin": "eaca5cdff5b71d4f92afeee6d6b27958d9a54a5281e42ac63848ec3d32ae2733",
+      "pin": "7c5beee683bac8a55059695a32c664eda4f424c0a29cf1c04a274abfe30e1514",
       "revision": "13c7a379e4189a97a9c65a3fbf6365fa25d48230"
     },
     {
       "key": "G7WR-03",
       "kind": "review_citation",
-      "pin": "f52403a91bb9ce3ba172be5a2bf6657f72297f812c9a838d7f42f69fab8f52e2",
+      "pin": "2ca314493aa1da39884adebe7cda6504f4db5f8e186fc98d69a8cd0428994373",
       "revision": "727935882640b3d434e3e0123303064d7e18624a"
     },
     {
       "key": "G8IN-01",
       "kind": "review_citation",
-      "pin": "a606d7a2ce1ef9b32762bb2fe5028bd2760296a9d7895557051e46239e3f3201",
+      "pin": "ca78d6d32a42bcccd6668303ed7aab59d6b6cb9ef706e4435acf2666cdbb8628",
       "revision": "065cdeeab6728a158b82e04928aa949cb51c983e"
     },
     {
       "key": "GIN-01",
       "kind": "review_citation",
-      "pin": "49eabf821eed03f591d308e7e2fca25d3676b96d160df9e2cbfd86ea4c66ec98",
+      "pin": "a1be7c52fe7fac8282af23eec45ddbeb98be0bfcf95fff011a37aa0ecec1fd0a",
       "revision": "323fa1453329"
     },
     {
       "key": "GIN-02",
       "kind": "review_citation",
-      "pin": "71b01e26c33342fd70b83fce91df022aef84b42a623caeadc3d006e76196ef4c",
+      "pin": "c829f96d06e8d400ffe3af01d117e297ac199bdf957b25f3a4b3ba135c1930b3",
       "revision": "323fa1453329"
     },
     {
       "key": "GIN-03",
       "kind": "review_citation",
-      "pin": "b23f3b84c2a023df32ee30561a2acaa7b0b0c2ca5182087b0e07f69380ba7bbb",
+      "pin": "f1766a23b2b58de115e8ec1331d28841f764de7bec7bc457a58f7fdeedf13aa7",
       "revision": "323fa1453329"
     },
     {
       "key": "GIN-04",
       "kind": "review_citation",
-      "pin": "c050a9dae191d2169d13196396f76bdb0257bdb6c4a0a53307a12f4da1343c5c",
+      "pin": "7cfa9505206b9b708f7bbf154b77739e8b25956b72fc89d53189807ecce03bb7",
       "revision": "323fa1453329"
     },
     {
       "key": "GWR-01",
       "kind": "review_citation",
-      "pin": "b665c53553220f4624e2070fd090f6d56716fb738f75186b049004de967e9834",
+      "pin": "e03514f804dc381da8963a5c69b96876ff5ac11019fb238c47616337272546f5",
       "revision": "323fa1453329"
     },
     {
       "key": "GWR-02",
       "kind": "review_citation",
-      "pin": "9ee66f58957db27f69a3cbd1d63d67ecf66fe8da2a114215e0ca2c09c8e49a91",
+      "pin": "43b89e8ada8546f47bd0e20f070b891bd1ff49d7ac47ade2b2f1900e6c1c4323",
       "revision": "323fa1453329"
     },
     {
       "key": "GWR-03",
       "kind": "review_citation",
-      "pin": "819931acbb5db2a6c4c632bc334bc21d22bbc549fe3a97e07ab669c4cdaa8790",
+      "pin": "3e340b48c5ccb83c69f759967ecb438c3f572209779bd0c26f89376f04d770c4",
       "revision": "323fa1453329"
     },
     {
       "key": "GWR-04",
       "kind": "review_citation",
-      "pin": "a172f08bdc105599461a11e5fd23eccd7f0e2e41cb17eb7980888f9afb87aaaf",
+      "pin": "bc1a073a2e01932526d7011605ca216e017a5c8db62f99effa8c17c6355f4cf9",
       "revision": "323fa1453329"
     },
     {
       "key": "GWR-05",
       "kind": "review_citation",
-      "pin": "b9edd393bca15332d034902a98060f5f1766f38ab18f5ac839077c492629bc72",
+      "pin": "6a288660c0191b79b59d49ce18bfd296c00aeacf3955eb2183c2ead343df6a78",
       "revision": "323fa1453329"
     },
     {
       "key": "GWR-06",
       "kind": "review_citation",
-      "pin": "79f3638fe9f205464e7e077aa62b5502c920569a4226315573f9afcbe22bb285",
+      "pin": "0d2040912b27ca5b9eb329cd98288a19ea904a17a23ba7caada067507c832dd5",
       "revision": "323fa1453329"
     },
     {
       "key": "IN-01",
       "kind": "review_citation",
-      "pin": "91a3807b8e52db5297b36471ee0294b2def6d26265c69a3af8f096e22209aa81",
+      "pin": "f82d54f1e19f982ded757998a698a6f81f3bfc0c9a9028e29b2f9858561f9cba",
       "revision": "323fa1453329"
     },
     {
       "key": "IN-02",
       "kind": "review_citation",
-      "pin": "04bb45b0645744367adce9e7030527adb755ab7d149e11eac96f96d36fd40dd3",
+      "pin": "ab033def0243ad2d2cb090dbdcd8911c736d30fe1101b9af4e4b8e2e8abda9ba",
       "revision": "45952598202a"
     },
     {
       "key": "IN-03",
       "kind": "review_citation",
-      "pin": "5b1f21232aacfe1885a1443e51109b43145ab8a8d76ee4b3039a6e3a80264f1c",
+      "pin": "9e32fc0c68fb95efaf5f3b492cec1f36b1d46f9139c9376144e1fdf06258d35d",
       "revision": "45952598202a"
     },
     {
       "key": "IN-04",
       "kind": "review_citation",
-      "pin": "7efb1bfd4616e8aeca23f19567f0947b2d77db42251b7f8b55b6d90b8154d151",
+      "pin": "08759a6f30f171733fa4432535d6233ab9d02d838cee193f0ac1ce1d36fae0c4",
       "revision": "323fa1453329"
     },
     {
       "key": "WR-01",
       "kind": "review_citation",
-      "pin": "5b60c36a7b3fcd2b866b846a4ab46e59bffa5b9d739f70882a725f2a654351cd",
+      "pin": "24a19fc0a778eef1d87d94e2c6bf6f7291fa2bfa43bc1f26f502ed664aea7999",
       "revision": "323fa1453329"
     },
     {
       "key": "WR-02",
       "kind": "review_citation",
-      "pin": "68831e723fadbc9c83fc44a38d8ae97754571663ccf98fcfaab62458aae3e5e4",
+      "pin": "273884df4de00bacdf3f2b923f92e48b8420b1f5f0eb13c17615da22d347d788",
       "revision": "323fa1453329"
     },
     {
       "key": "WR-03",
       "kind": "review_citation",
-      "pin": "d5ae5ed09a550ef9253548299f24d2161d841716e82359977fccbd22c542dba3",
+      "pin": "e5b71581e909402053eef6bdf46965a37d1ff476934a530af346b83af891ebb4",
       "revision": "323fa1453329"
     },
     {
       "key": "WR-04",
       "kind": "review_citation",
-      "pin": "fc3831e149beb70b01cc589e713857529762cd7fd9bd003df3ac7eee946e9e49",
+      "pin": "6eb14c67bf587f0fb88521776b0f97d6a6e03ab79c544359627725e19cec7258",
       "revision": "45952598202a"
     },
     {
       "key": "WR-05",
       "kind": "review_citation",
-      "pin": "ac73cee054972c79153660681c3a9e482ba5cb8a3d83656cd2215b84b028aea3",
+      "pin": "241fee2eb440039d23081af8a491ec4d29be9bebda11f5ac2fa4dbd6ffcb8b19",
       "revision": "45952598202a"
     },
     {
       "key": "WR-06",
       "kind": "review_citation",
-      "pin": "ca32a69b1fbbff80b7f7eba36e848f591a5480a1a209da0fe0f37a209d7e091b",
+      "pin": "64f52b44469a99b9fe3ebda83fb4232cbcb27daec7b2780838ee7c6f40ca1b5a",
       "revision": "323fa1453329"
     },
     {
       "key": "WR-07",
       "kind": "review_citation",
-      "pin": "90bb0cf27fa850fa67a31e8a8c111b57de88d2d7cd754309ee8817f9decc5f90",
+      "pin": "76ade2483d26d1698ee6fdced0268e54cc3d9cc1168e6144cbea4477c0ab8ef2",
       "revision": "323fa1453329"
     },
     {
       "key": "WR-08",
       "kind": "review_citation",
-      "pin": "847268cf39620f6d80e9e2b54004c6d6c94ca6f377519957159972dc2e21c83c",
+      "pin": "432d955087acfad354b3c2cdeb4f018ff00e2d4ced627dd8eb611631a09ba90f",
       "revision": "323fa1453329"
     },
     {
       "key": "WR-09",
       "kind": "review_citation",
-      "pin": "b50b17b762546550338ddc8e7d7ca7113850967d4d951e5e096d59a011f311b6",
+      "pin": "0faeb4b29446ab0030c16cabed6e6d8740c39ed90f08cad7181c014214535a10",
       "revision": "323fa1453329"
     },
     {
       "key": "WR-10",
       "kind": "review_citation",
-      "pin": "acae13491a7e01db4f24c61a78b7b0ed26a5396e1edddbbc514b82d09a88bba0",
+      "pin": "ca5543ffd1bb8c606ec1879bbf4ca49bd750be897fd45a318540819b4741577e",
       "revision": "323fa1453329"
     },
     {
       "key": "WR-11",
       "kind": "review_citation",
-      "pin": "ffecdd172def315398346d7550b36cf265c3e54050f114d911f1f754070e651d",
-      "revision": "97fbbdaa75120c27845b24679c3948e6206ec42f"
-    },
-    {
-      "key": "WR-11",
-      "kind": "review_citation",
-      "pin": "ffecdd172def315398346d7550b36cf265c3e54050f114d911f1f754070e651d",
+      "pin": "92aab5cec78471dc11a4e595ab25e0bd119173bc3a5867297ace162d2da930e6",
       "revision": "323fa1453329"
     },
     {
       "key": "WR-11",
       "kind": "review_citation",
-      "pin": "ffecdd172def315398346d7550b36cf265c3e54050f114d911f1f754070e651d",
+      "pin": "92aab5cec78471dc11a4e595ab25e0bd119173bc3a5867297ace162d2da930e6",
       "revision": "77d5159ee5b77980b6b83bbde5ea5d34709cda34"
+    },
+    {
+      "key": "WR-11",
+      "kind": "review_citation",
+      "pin": "92aab5cec78471dc11a4e595ab25e0bd119173bc3a5867297ace162d2da930e6",
+      "revision": "97fbbdaa75120c27845b24679c3948e6206ec42f"
     },
     {
       "key": "04-REVIEW.md",
       "kind": "reviewed_revision",
-      "pin": "6e1946d610032acbc457189ad645d8a68356694a3d228cea51cc0038e8a2a155",
+      "pin": "be7516ed3e7fb7f5092f541e9784b1f5cd56d8668ffb882cac23135cbe6da2b5",
       "revision": "867f31775c6daebd06b4fa53e06679e753b57e79"
     },
     {
       "key": "fixtures/diagnostic/manifest.json",
       "kind": "rights",
-      "pin": "5e03ce48d8a6d0c123d56fede91a12d9ed656dece8310a5eda12172e3b0a82a2",
+      "pin": "8f5eba561f3418df150fa603297cf1b71067730431b785de3c8d173d000e8172",
       "revision": "d8a996f973da2c81931facd78066c1f2bb7a7866"
     },
     {
       "key": "tests/chips/Z80-ADMISSION.md",
       "kind": "rights",
-      "pin": "a6e015fc741c368170284e8f6bf3c2a5e41bfcff75fbc199020bcdc7908c9d65",
+      "pin": "99578267c04469f838b4e88ecb994872be17079fa8306c31043ae8fed97b0a78",
       "revision": "d9400b6152a1c08ed3a98f6f8c023e6283f36ca7"
     },
     {
       "key": "tests/chips/check_ym2610.py",
       "kind": "rights",
-      "pin": "a33dff82441b0fff1f914c2a9609771c34a65f4a125bf8ec76fec149069daf20",
+      "pin": "e6cfb6f72faf246abac10df390d29497da1cfc63e8897dde038141fb647d9cf8",
       "revision": "af70ec720e9d4e947461842c30ddace811aa0126"
     },
     {
       "key": "tests/chips/check_z80_source.py",
       "kind": "rights",
-      "pin": "a45820de51d644a53779566d0c199b0a8ffa03bccb36f052e9969f5fbf072244",
+      "pin": "11b91eebecd6bd0458309743fb1b6285c32fa03cef755de9a030bfc3f0a6c58f",
       "revision": "21c6241b883595bd47d97761273738fb20b65b45"
     },
     {
       "key": "tests/chips/test_ym2610.c",
       "kind": "rights",
-      "pin": "228996c9f2a0e281d1a00201c2564c4d29940b7f84fcfdbfa90e765d8a1d7d91",
+      "pin": "c0d3b48f25296428b340c12ee204fdf6701768471c384e3868630acb90ad1f29",
       "revision": "834c069533695edd612a0b7479b85a41756a082c"
     },
     {
       "key": "tests/chips/test_z80.c",
       "kind": "rights",
-      "pin": "3ea91944f736ee455d1b9b672039bb3a60618a060471487742de7c97d6442dfc",
+      "pin": "0d3d8ec65bc14d8d9774b30f9168f9be66c96e5b51ccbb7884652044eb1bafe3",
       "revision": "d9400b6152a1c08ed3a98f6f8c023e6283f36ca7"
     },
     {
       "key": "tests/consumers/test_check_package.py",
       "kind": "rights",
-      "pin": "d56990c8c19176497ba2c6eafc751007adb9509aa782723416dba27cf35f1fd8",
+      "pin": "17a1d79437c9742aec588570013577dbd3ad25716c34a08325a212708f28b14d",
       "revision": "d17ec0aa0a6a6b828599f6483ada82a073491cf9"
     },
     {
       "key": "tests/consumers/test_playable_install.py",
       "kind": "rights",
-      "pin": "64a35a7df65fd224e65b13e21520f874b8f7936eac0d6cf7c24b4740e331ec1e",
+      "pin": "c9141d0a30e1cae49978d7e79c97a26517fa9798691eaa9450bc41fe1ecbdadc",
       "revision": "12ed41c9a8137805b0e289ebc5ad73b7c1514e2f"
     },
     {
       "key": "tests/fixture/ORACLE.md",
       "kind": "rights",
-      "pin": "50f02bf4f6a869a7c8be55eb7f8342fbd0ecaed98d2f78792191a986ee4ac535",
+      "pin": "008ee36afee1784fdfdd38d621f9733b6f59569ba44a9e1c44de9e7f94b8ee61",
       "revision": "b096b985c1b278ffb2d5ca4c35761f76ab72172c"
     },
     {
       "key": "tests/fixture/check_fixture.py",
       "kind": "rights",
-      "pin": "12dc01e2a663d2db3471c6c25510c73958ec9bafabf583266a579da218f4033f",
+      "pin": "3ed2b9a84dc9038a17d0d9d7d11abfc479565b91d6b44404d4d9b2bef65a9434",
       "revision": "4c55ac2e9b764a2b9f8251c61f6f450e29fe3569"
     },
     {
       "key": "tests/fixture/public_guest.c",
       "kind": "rights",
-      "pin": "b0af9d82927cf2844081ece5509e0e73192992e022c365518b9c818d984bae71",
+      "pin": "e66eb2e81f3d6bdb00daff40e238395050fa56127407c07aa63e3e5f98174d55",
       "revision": "ca25ed4ce7ef3bf4b6c4c311c62f3bb1e0e8442e"
     },
     {
       "key": "tests/fixture/rights-manifest.json",
       "kind": "rights",
-      "pin": "9e56405755e1f9736ab9c9c8401dc34d6de348ee2ba3c3d9c43036063594b222",
+      "pin": "41715eca1d8cdd74b363ea23f04e47cea543b50e61c555659809cb956e74afae",
       "revision": "b096b985c1b278ffb2d5ca4c35761f76ab72172c"
     },
     {
       "key": "tests/fixture/test_public_guest.c",
       "kind": "rights",
-      "pin": "6ea6600abd76399f5abe15a69b0eae9ae33cf0b4db3a6f495ec1e0ef1ac9dd21",
+      "pin": "f5b913c3b7803d754b1057d345a64a40e1be9a242da90224f0c2c47d2c7d0a4b",
       "revision": "3de6caa5f2002fb6b51436c425f80f8c86842750"
     },
     {
       "key": "tests/libretro/callback_harness.c",
       "kind": "rights",
-      "pin": "3ee8335b18ed91e8aa9aafff76c94e25f7cd242e1f68640b775b42bfafb80e83",
+      "pin": "f9a7340026555502c3e534fe683bf3a954226b489aaf9fd13938c45c17cf382c",
       "revision": "0689cec7dd2141ba79c554f53aaee6918e30c7db"
     },
     {
       "key": "tests/libretro/retroarch_smoke.py",
       "kind": "rights",
-      "pin": "f7602a25c7734e73d0d9aaab7bb8bd91b15bc9f404f51775e4fb1cc14b596c17",
+      "pin": "bf52ee00e2c402494259674dabc8372933b5492bf6691f8fac3fded4b13b8ef5",
       "revision": "856592e5ae89c9ec2a56c6651c59ffacc778e836"
     },
     {
       "key": "tests/libretro/test_retroarch_smoke.py",
       "kind": "rights",
-      "pin": "970418d2718b4bff62498bacff2c8df8858c4fecb3b7ea80d6ff3632c0f4982b",
+      "pin": "aa311e3eb3204c864d52b42ab22c13a08d99550f729afaf9dbbb785a0ecf54c4",
       "revision": "138a8676471f16333c2118c017c616e9a0e587dd"
     },
     {
       "key": "tests/mvs/fuzz_import.c",
       "kind": "rights",
-      "pin": "0be0ad00c316a3e121a7a44cede91cdd9479abf92ca9ac41d7450bfe8cbcbc23",
+      "pin": "50cf46a22e7eb95a2fe18e6f3a23def4cb7d808169dcc7334a7f0d3b6c2e5149",
       "revision": "a141dbb96b62a6883a681baeadae801f78f7fc1f"
     },
     {
       "key": "tests/mvs/test_mvs.c",
       "kind": "rights",
-      "pin": "2771897d1146791a9ebea2fe7d4a04bd1208d3c9d1ee5c92ff16a1d8f8140025",
+      "pin": "178d5df3993cd257d5a86e4d17af392cb2a450f69a53f1ebd2801d3fdfae78a5",
       "revision": "6dee7250da17a958f504608f907dafa4c06df97b"
     },
     {
       "key": "tests/mvs/test_mvs_qualification.py",
       "kind": "rights",
-      "pin": "a4e6c01ef42416e9feeded9c42ababcacb297b212806ee5845169c9215b9b4b6",
+      "pin": "0bf18b8ac15d354614795d223b34456414387389c9f18f9657d1c8a249c0bd50",
       "revision": "40e126f3fe30adb289ff6aec7f0f8bdc0f10120f"
     },
     {
       "key": "tests/owned_cpu/ORACLE.md",
       "kind": "rights",
-      "pin": "611af327f6b9770547e02e852a6fbdd94ee84d7eef02c1c6f09f554876968d1c",
+      "pin": "ab35ef5858c231d931134427a21dcd95f593ab3db4a0364b0f4a2bfdc61b2984",
       "revision": "6dee7250da17a958f504608f907dafa4c06df97b"
     },
     {
       "key": "tests/owned_cpu/isolation_fixture.h",
       "kind": "rights",
-      "pin": "1fed61df288824f81a10ebc7955e9552be79962028228ec134c96301cf8fab29",
+      "pin": "eae75dd9efdbc9fe16875070c7bec16d2e771289e1e27a1e56a3a3b7305bc728",
       "revision": "6dee7250da17a958f504608f907dafa4c06df97b"
     },
     {
       "key": "tests/sdk/ORACLE.md",
       "kind": "rights",
-      "pin": "95e316ab8f7595ec1a8475c2f1ab568c45d5c6cacfacc034ad80f7107654dad2",
+      "pin": "70967f3e15ae68247de901c51d9a029e949dcc231931fc7c44b8cfc4da95a581",
       "revision": "d8a996f973da2c81931facd78066c1f2bb7a7866"
     },
     {
       "key": "tests/tools/check_runtime_storage.py",
       "kind": "rights",
-      "pin": "6c20a759da1ede4e5e40676e3ee2252b1b29de1b5e54f320534cbfef50c59561",
+      "pin": "cc74483f22f4f06b1ae1fd7d8e05486a6a60cc3ff13307f450000bedba7b0149",
       "revision": "1ee3be980eae1ae87729492486d6f2755445f62b"
     },
     {
       "key": "tests/tools/check_security_register.py",
       "kind": "rights",
-      "pin": "24502ebc6cdfaf8834966358f3e68a534b2f09db3f7336bec09b3934506672c3",
+      "pin": "0c974af38b22c664715b3a366da9e7e87289293cc7b285b2454c786019673516",
       "revision": "856592e5ae89c9ec2a56c6651c59ffacc778e836"
     },
     {
       "key": "tests/tools/test_check_runtime_storage.py",
       "kind": "rights",
-      "pin": "f0baca2bd70078d9f411635e7b1ac1d00144c620551fda24497c5220c85292c9",
+      "pin": "cbc7e10072750e98e31a4771228cf90778ce8a858c033ffe155a61936ed7a4b8",
       "revision": "10b1375f4154a8746f8d9c880dc07b004defc3e6"
     },
     {
       "key": "tests/tools/test_check_security_register.py",
       "kind": "rights",
-      "pin": "6ee4393b9b7ea3a4ea61a9dd7e79250206a4221c581dd0f5dd48b43cbc02ff35",
+      "pin": "12aa057ea7fde4b5918e3dd127ab23bf663c7b9b948ac135304306f3c294bde0",
       "revision": "138a8676471f16333c2118c017c616e9a0e587dd"
     },
     {
       "key": "tests/tools/test_independent_review.py",
       "kind": "rights",
-      "pin": "9f6f28b5833098f1f716c3f306b942fdb3b4a4cd2122395e7856d09b2f7c53d2",
+      "pin": "4fa017595fdd64ce71f832dca1d01b36fe80ff12e8f80f1ecd96a5f02142c063",
       "revision": "d5a41a4f0b9fc36c56869c4961d7d88cdd571fe4"
     },
     {
       "key": "tests/tools/test_private_paths.py",
       "kind": "rights",
-      "pin": "4b567eda827af0c8350edd84433cf7aaf843baa293e2d38408b82e5114432501",
-      "revision": "0b5bcd0df0cc606355302fdfc522cbc02f88837a"
+      "pin": "005a952ba24814de460b1f43b58c803837a4b8278c5a5c4b91431c8a586fddf6",
+      "revision": "41611fca6123c1c5f810790bd189a13f4adb11c6"
     },
     {
       "key": "tests/tools/test_verify_playable.py",
       "kind": "rights",
-      "pin": "6c6f3346a111c1a1f2ae4965e629068988af0a68351a6f35ea3d0affa58101ca",
+      "pin": "3641526ce0de9afcc618d94ddb9c5d06c33810363ac3fed67764fa08aaa55a77",
       "revision": "e71e283b9cb7abe868f4dcec35d4cfded9092242"
     }
   ],
