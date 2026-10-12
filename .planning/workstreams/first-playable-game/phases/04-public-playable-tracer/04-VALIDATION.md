@@ -188,9 +188,9 @@ Rebased on the 2026-10-10 review (63 current disposition records). The earlier r
 | G6WR-01 | warning | T-04-103 / `tools/verify_playable.py` | deferred |
 | G6WR-02 | warning | T-04-103 / `tools/verify_playable.py` | fixed |
 | G6WR-03 | warning | T-04-103 / `tools/verify_playable.py` | fixed |
-| G6IN-01 | info | `tools/verify_playable.py` | open |
-| G6IN-02 | info | `tests/tools/check_security_register.py` | open |
-| G6IN-03 | info | `tests/libretro/retroarch_smoke.py` | open |
+| G6IN-01 | info | `tools/verify_playable.py` | deferred |
+| G6IN-02 | info | `tests/tools/check_security_register.py` | deferred |
+| G6IN-03 | info | `tests/libretro/retroarch_smoke.py` | deferred |
 | G7CR-01 | critical | T-04-103 / `docs/rights-inventory.md` | fixed |
 | G7CR-02 | critical | T-04-103 / `tools/verify_playable.py` | fixed |
 | G7WR-01 | warning | T-04-103 / `tools/verify_playable.py` | fixed |

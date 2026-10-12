@@ -269,15 +269,15 @@ findings:
     title: "Rights allowlist branch reads `source_root / path` through symlinks and un-normalized paths"
   - id: G6IN-01
     severity: info
-    disposition: open
+    disposition: deferred
     title: "Typing escapes around `HistoryAllowlist.EMPTY`"
   - id: G6IN-02
     severity: info
-    disposition: open
+    disposition: deferred
     title: "`strip_comment` is not quote-aware"
   - id: G6IN-03
     severity: info
-    disposition: open
+    disposition: deferred
     title: "`_drain` treats every `OSError` from `os.read` as EOF"
   - id: G7CR-01
     severity: critical
@@ -343,7 +343,7 @@ findings:
     severity: info
     disposition: deferred
     title: "The equivalence test is meaningful but narrow"
-open: 3
+open: 0
 total: 85
 recorded: 2026-10-12T01:00:00.000Z
 ---
@@ -418,9 +418,9 @@ recorded: 2026-10-12T01:00:00.000Z
 | G6WR-01 | warning | deferred | Reported by 04-REVIEW-GAPS-R6.md (d46e6e1). Fixed in part; see 04-REVIEW-FIX-R6.md. At revision `6a7f287ef7a81d1574efb190668d63a3ea84770c`, the loader checks `base_revision` and resolvable rows against git, and revision `e2845e66ab2b3d17a1d0bbe5068ad9704651d242` adds the CTest `qualification_history_allowlist`. Tests: test_g6wr_01_*. Deferred residual (accepted risk under the 2026-10-11 squash-tolerance decision, 2026-10-11): after the squash, rows whose revision does not resolve are still accepted on their self-attested pin. No signing scheme is added because its cost outweighs the fault value. Mitigations: CI verifies the allowlist against the pull request history on every PR that changes it, which rejects any post-squash edit, and the local CTest is opt-in via GLUEYNEO_PRE_SHIP_HISTORY_CHECK so a squashed main stays green (docs/testing.md). |
 | G6WR-02 | warning | fixed | Reported by 04-REVIEW-GAPS-R6.md (d46e6e1). Confirmed fixed by 04-REVIEW-GAPS-R7.md (bb0f4eb). Fixed at revision `49dcb76e246a000c3d35b0959a045551073d6fdd`: `load_history_allowlist` rejects repeated (kind, key, revision) rows as malformed. Test: test_g6wr_02_duplicate_rows_are_malformed. |
 | G6WR-03 | warning | fixed | Reported by 04-REVIEW-GAPS-R6.md (d46e6e1). Confirmed fixed for symlinks and unnormalized paths by 04-REVIEW-GAPS-R7.md (bb0f4eb); the residual (working-tree bytes) is tracked as G7WR-03. Fixed at revision `6ed52935aded48db2150e2f80aae5fa7574f742a`: path form rejects empty and `.` segments and backslashes, and `_confined_file_bytes` reads only a non-symlink regular file under the source root. Tests: test_g6wr_03_*. |
-| G6IN-01 | info | open | Reported by 04-REVIEW-GAPS-R6.md (d46e6e1). Not yet triaged; the info items were outside the --fix scope. |
-| G6IN-02 | info | open | Reported by 04-REVIEW-GAPS-R6.md (d46e6e1). Not yet triaged; the info items were outside the --fix scope. |
-| G6IN-03 | info | open | Reported by 04-REVIEW-GAPS-R6.md (d46e6e1). Not yet triaged; the info items were outside the --fix scope. |
+| G6IN-01 | info | deferred | Reported by 04-REVIEW-GAPS-R6.md (d46e6e1). Assessed at revision `932c1297d020d506f3bb45ed2db02bcf9de0976d`. Deferred to the backlog at Phase 04 close (agent disposition for Info under METHODOLOGY checkpoint pre-flight step 4). Typing cleanup only: the `# type: ignore` escapes do not change runtime behaviour, and no type checker gates this repository. |
+| G6IN-02 | info | deferred | Reported by 04-REVIEW-GAPS-R6.md (d46e6e1). Assessed at revision `932c1297d020d506f3bb45ed2db02bcf9de0976d`. Deferred to the backlog at Phase 04 close (agent disposition for Info under METHODOLOGY checkpoint pre-flight step 4). Fail-closed: a quoted register value carrying a ` #` tail is mangled into an unrecognized value, which the checker rejects instead of accepting. No current register uses that form. |
+| G6IN-03 | info | deferred | Reported by 04-REVIEW-GAPS-R6.md (d46e6e1). Assessed at revision `932c1297d020d506f3bb45ed2db02bcf9de0976d`. Deferred to the backlog at Phase 04 close (agent disposition for Info under METHODOLOGY checkpoint pre-flight step 4). Diagnostic completeness only: an unexpected read error ends output capture for a lane, but lane status still comes from the exit code and the timeout path. The FD_SETSIZE limit is unreachable with the fixed number of lane pipes. |
 | G7CR-01 | critical | fixed | Reported by 04-REVIEW-GAPS-R7.md (bb0f4eb). Confirmed fixed by 04-REVIEW-GAPS-R8.md (1664be2). See 04-REVIEW-FIX-R7.md. At revision `b4c6f197e26d26b3704352838b993e0484652924`, `history_allowlist_document` refuses to list a rights row whose file at the checked head does not hold the recorded SHA-256 (the post-squash predicate), so `check`, the CTest and the CI step catch this class. At revision `91f51ac02c136a1188d0d99025a4050f0f75a80f` (after revision `1b7c72680093ce3e08001704e6dc3e81e6e314bb`), the tests/tools/test_verify_playable.py rights row records the HEAD bytes at revision `e71e283b9cb7abe868f4dcec35d4cfded9092242`. Test: test_g7cr_01_generator_refuses_rights_row_stale_at_head. |
 | G7CR-02 | critical | fixed | Reported by 04-REVIEW-GAPS-R7.md (bb0f4eb). Confirmed fixed by 04-REVIEW-GAPS-R8.md (1664be2). At revision `6103b9ed1cc647b06bec1a36c5e76ea332f27414`, `--base` defaults to `origin/main` (HISTORY_DEFAULT_BASE) and refuses when it does not resolve; the opt-in CTest passes GLUEYNEO_HISTORY_BASE. At revision `1b7c72680093ce3e08001704e6dc3e81e6e314bb`, docs/history-allowlist.json is regenerated against origin/main (base_revision 4b2120d57f48, 133 rows; the 12 rows reachable from main are gone), a correction of the base, not a regeneration to green. Test: test_g7cr_02_default_base_is_the_upstream_main_ref. |
 | G7WR-01 | warning | fixed | Reported by 04-REVIEW-GAPS-R7.md (bb0f4eb). Confirmed fixed by 04-REVIEW-GAPS-R8.md (1664be2). At revision `04dd69cc4bf4b5cc30a4f75f64d976e6b4ce5ff7`, docs/testing.md and the `history_allowlist_anchor_errors` docstring state that the in-tree anchoring is a consistency check that cannot change a gate outcome, and that forged or invented rows are caught only by the CI `--history-allowlist ci` step before merge. The code path is unchanged; at revision `e71e283b9cb7abe868f4dcec35d4cfded9092242`, test_t_04_38_unresolvable_reviewed_revision_fails no longer copies the live allowlist, whose anchor error had preempted the gate under test since G6WR-01. |
