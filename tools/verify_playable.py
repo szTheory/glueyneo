@@ -1922,7 +1922,11 @@ def history_allowlist_check_applies(source_root: Path, repository: Path, head: s
     row, a receipt, a rights item or a rights file's bytes can each make the shipped allowlist stale.
     It does not apply to an unchanged allowlist none of whose rows is in this history, which is every
     pull request after the milestone squash merge; there `check` refuses by design and a voided row is
-    strict, so `--check-docs` is the gate. A malformed allowlist raises.
+    strict, so `--check-docs` is the gate. No history-independent staleness check is added (G8IN-01):
+    after the squash an unrefreshed edit to a listed rights file already fails the tolerated branch's
+    digest check, a refreshed row cites a main commit and is evaluated strictly, and an orphaned row is
+    inert; the allowlist cannot be edited after the squash because this mode then applies and `check`
+    refuses on squashed history. A malformed allowlist raises.
     """
     if not isinstance(base, str) or (RIGHTS_REVISION.fullmatch(base) is None and HISTORY_BASE_NAME.fullmatch(base) is None):
         raise RuntimeError("history allowlist base is not a revision or branch name")

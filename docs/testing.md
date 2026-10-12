@@ -278,10 +278,13 @@ rights item or a rights file's bytes can each make the allowlist stale without
 changing it. So neither a changed nor a stale allowlist can merge from that
 branch. After the milestone squash merge an unchanged allowlist none of whose
 rows is in the history does not apply (the check refuses on squashed history by
-design, and a voided row is strict, so `--check-docs` is the gate there); a
-history-independent staleness check was not added because a legitimate
-post-squash rights refresh voids a listed row, and failing on that would leave
-no way to proceed, since the allowlist can no longer be regenerated. The CTest `qualification_history_allowlist` runs the same
+design, and a voided row is strict, so `--check-docs` is the gate there). No
+history-independent staleness check was added (G8IN-01): after the squash an
+unrefreshed edit to a listed rights file already fails the tolerated branch's
+digest check, a refreshed row cites a main commit and is evaluated strictly, and
+an orphaned allowlist row is inert. The allowlist cannot be edited after the
+squash because `ci` mode refuses on squashed history, so a gate that failed on
+orphaned rows could never be satisfied. The CTest `qualification_history_allowlist` runs the same
 check locally against `-DGLUEYNEO_HISTORY_BASE=<ref>` (default `origin/main`,
 which must be fetched) and is registered only with
 `-DGLUEYNEO_PRE_SHIP_HISTORY_CHECK=ON`.
