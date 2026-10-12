@@ -489,6 +489,8 @@ if(GLUEYNEO_BUILD_TESTS)
   target_link_libraries(libretro_callback_test PRIVATE
     glueyneo_libretro Glueyneo::glueyneo ${CMAKE_DL_LIBS}
   )
+  # libretro.h marks RETRO_API dllexport on Windows unless the consumer asks for dllimport.
+  target_compile_definitions(libretro_callback_test PRIVATE $<$<PLATFORM_ID:Windows>:RARCH_DLL_IMPORT>)
   if(MSVC)
     target_compile_options(libretro_callback_test PRIVATE /W4 /WX)
   else()
@@ -626,6 +628,9 @@ if(GLUEYNEO_BUILD_TESTS)
   )
   target_include_directories(z80_admission_test PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/chips
+  )
+  # The pinned upstream header carries its implementation; keep its warnings out of /WX and -Werror.
+  target_include_directories(z80_admission_test SYSTEM PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/chips
   )
   target_compile_features(z80_admission_test PRIVATE c_std_17)
@@ -639,7 +644,8 @@ if(GLUEYNEO_BUILD_TESTS)
     target_link_libraries(z80_admission_test PRIVATE Threads::Threads)
   endif()
   if(MSVC)
-    target_compile_options(z80_admission_test PRIVATE /W4 /WX)
+    target_compile_options(z80_admission_test PRIVATE /W4 /WX /external:W0
+      "/external:I${CMAKE_CURRENT_SOURCE_DIR}/third_party/chips")
   else()
     target_compile_options(z80_admission_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
   endif()

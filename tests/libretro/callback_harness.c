@@ -2,7 +2,12 @@
 #include "glueyneo/glueyneo.h"
 #include "libretro.h"
 
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
 #include <dlfcn.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -108,7 +113,12 @@ static bool read_content(const char *path) {
 }
 
 static void require_export(const char *name) {
+#if defined(_WIN32)
+    const HMODULE core = GetModuleHandleA("glueyneo_libretro.dll");
+    CHECK(core != NULL && GetProcAddress(core, name) != NULL, name);
+#else
     CHECK(dlsym(RTLD_DEFAULT, name) != NULL, name);
+#endif
 }
 
 static void run_and_compare(bool right_pressed, const char *label) {
