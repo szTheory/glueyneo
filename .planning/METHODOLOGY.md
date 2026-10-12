@@ -100,6 +100,12 @@ revision during execution or verification. A green command is evidence only
 when its assertions directly cover the claim and its input, configuration,
 oracle, denominator and revision are recorded.
 
+When an acceptance check matches exact wording in a planning document, treat
+that wording as an interface. Before changing it, locate and reconcile every
+validator, regression test, README instruction and workflow route that consumes
+it. Run those affected checks against the changed document revision; a test
+that passed before a prose edit does not validate the new revision.
+
 Describe automated acceptance in plans before implementation and in SUMMARY
 `coverage` entries after execution. Keep coverage YAML in the installed
 classifier's supported form and run `gsd_run query uat.classify-coverage` before
@@ -126,6 +132,80 @@ acceptance scope: do not restart it on a later verify-work call unless relevant
 source files or acceptance criteria changed after its recorded revision. When
 they do change, rerun only affected checks and preserve prior results. Hand off
 only residual human-only checks or true blockers.
+
+Before presenting a UAT checkpoint, classify the claim against current local
+and CI evidence. If a deterministic test already covers it, record that result
+as automated without asking for confirmation. If a machine-observable claim
+has no adequate test, make the smallest useful unit, seam, integration, or
+headless smoke check part of the plan and run it before handing the claim to a
+person. Prefer adding recurring checks to the existing CI/local entrypoint;
+add a CI lane only when it catches a distinct recurring fault at reasonable
+runner cost. Keep commercial inputs and derived data local, test public paths
+with synthetic fixtures, and make local private qualification report generic
+machine outcomes. A missing input or unavailable app remains blocked/unknown;
+do not repeat an unchanged attempt or relabel its result as passed. Reopen the
+same checkpoint only after its relevant implementation, input, environment,
+or acceptance contract changes.
+
+Checkpoint pre-flight (added 2026-10-10 after a verify-work run handed the user
+a check the agent could run itself). Before rendering any UAT checkpoint:
+
+1. Try the automated route in the current runtime first. An "unavailable" or
+   "blocked" result recorded by an earlier runtime, sandbox or launch context
+   describes that context only; re-test it once here before inheriting it.
+   On this project's macOS host, an agent shell in the logged-in session can
+   launch pinned RetroArch, so the frontend lane is agent-runnable:
+   `python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean`,
+   then `--record-frontend-evidence` and `--check-docs`. Clean up leftover
+   RetroArch processes before and after each launch.
+2. If the automated route fails, diagnose and fix it as repository work in the
+   same run when the cause is a repository defect; add the cheapest recurring
+   guard for that fault class (configure-time or existing package/test
+   entrypoint before a new CI lane).
+3. Present a checkpoint only for what remains: a decision that belongs to the
+   user (risk acceptance, scope, priorities), an unavailable credential or
+   physical input, or a genuinely subjective judgment. Never ask the user to
+   confirm a result the agent already measured, and never present a
+   machine-observable claim before step 1 has been tried.
+4. Review and security findings are routed by policy, not by a checkpoint
+   (added 2026-10-11 after a verify-work run asked the user whether a residual
+   review warning was "fixed or dispositioned"). Read the answer from the
+   disposition record and the gates (`tools/verify_playable.py --check-docs`
+   fails when any `04-REVIEW*.md` finding lacks a record row;
+   `check_security_register.py --require-closed`). A reproducible Critical or
+   Warning that fits phase scope is gap work: record the UAT row as an
+   automated issue and route it to the bounded gap plan. Only a proposal *not*
+   to fix such a finding (risk acceptance or deferral of a Critical/Warning)
+   goes to the user. Info findings may be dispositioned `deferred` by the agent,
+   with the reason in the record.
+5. A runtime permission denial is not a verification result (added 2026-10-12
+   after the user had to run `--record-frontend-evidence` by hand during the
+   history scrub). Run tracked-file writers such as `--record-frontend-evidence`,
+   `--history-allowlist write` and receipt commits as a single plain command
+   from an explicit absolute worktree root. Do not chain them with `cd`,
+   `git status`, `git diff` or log queries, and check that the target worktree
+   is the one the evidence belongs to. If the safety check still denies the
+   command, do not work around it. Hand the user that one command as
+   `! <command>`, say which files it writes, and keep doing independent
+   work. New repository tooling should write tracked evidence in the same
+   command that produced and checked it, so that no separate write step is
+   left to be denied.
+
+Write each UAT row as a check whose outcome a command decides, naming the
+command and the expected result, so a later verify-work resolves it without
+asking. A criterion like "fixed or dispositioned" must name the record and the
+controlled states that satisfy it.
+
+Review-round convergence. A gap plan that repairs review findings carries its
+own focused review of the repair diff and the regression tests for each
+finding, in the same execute run, before the next named GSD step. The next
+`/gsd-code-review` round is scoped to the repair diff only. When that round
+reports only Info findings, or Warnings that are not regressions from the
+repair and do not weaken an evidence, security or release gate, record them
+(`open` or `deferred` with reason) and close the loop. Do not start another
+repair round for them in the same phase; they go to the backlog. Criticals,
+repair regressions and gate-weakening Warnings still block.
+
 This preference does not remove the separate pause after each named GSD step
 for review and model selection. In the installed OpenGSD configuration,
 `workflow.human_verify_mode` controls checkpoint timing (`mid-flight` or
@@ -137,6 +217,38 @@ disagree; record the supported validation path instead of repeating a rejected
 flag.
 
 ## Phase-verification freshness and bounded gap closure
+
+### Phase closeout batch and default execution pace
+
+Treat a phase as one delivery unit. Dependency waves are scheduling details
+inside one `$gsd-execute-phase` run; do not invoke the executor once per wave
+unless the user requests a checkpoint. Before creating a gap plan, freeze the
+current revision and finish the applicable phase evidence batch: whole-phase
+verification, independent code review, security audit, validation/Nyquist
+coverage, and integration checks that the phase requires. Reconcile those
+outputs into one gap ledger before planning. An audit already required by the
+phase must not be deferred until after its repair plan, where it can create a
+serial chain of newly discovered gaps.
+
+Create one bounded gap plan containing every actionable repository finding in
+that ledger, with the implementation, regression, evidence-map, documentation,
+and review work that can be completed together. Run preflight commands before
+planning so stale fixtures, test wrappers, command paths, and denominators are
+known inputs rather than surprises during closeout. Reserve a task in the same
+plan for reviewing the changed code and rerunning only checks affected by that
+review. Execute all planned waves in one `$gsd-execute-phase --gaps-only` run.
+Do not split one source-of-truth reconciliation across successive plans or
+rerun planning against an unchanged report.
+
+After execution, run one current-revision closeout batch and compare it with
+the frozen gap ledger. If a new in-scope defect was introduced by the repair,
+fix it within the active plan/run when feasible and rerun the affected checks.
+If a fresh audit instead leaves only external, physical, or user-directed
+blockers, keep them open, keep the phase blocked, and stop gap planning; do not
+manufacture another plan to restate the same blocker. Continue unrelated work
+only when the roadmap and verified technical dependencies allow it. This
+changes execution pacing, not evidence thresholds, risk disposition, or phase
+acceptance.
 
 `$gsd-verify-work` closes UAT; it does not perform the whole-phase goal
 verification. A `gaps_found` phase report is a verdict about the inputs it
@@ -169,6 +281,35 @@ automation moving, and hand off only that irreducible item. Recheck this
 workaround after a GSD runtime upgrade and remove it only when the installed
 router demonstrably refreshes stale `gaps_found` reports and never skips a
 required verifier pass.
+
+After a bounded repair, compare the new verifier report with the old one and
+close only findings supported by changed current evidence. Audit exact-text
+consumers when canonical docs change: update the affected validator contract,
+its regression test, and user-facing command route together, then rerun only
+those affected checks. Keep administrative state and handoff notes aligned with
+the verifier's actual next action so a context reset cannot replay a completed
+step.
+
+### Forward progress while a phase is blocked
+
+An external, physical, or user-directed acceptance blocker does not clear with
+time and does not justify another gap plan when no repository defect remains.
+Keep that phase's status and claims blocked, then inspect the next useful
+roadmap work for concrete technical dependencies on the blocked evidence. If
+the next implementation consumes already-verified artifacts and the blocker is
+only an acceptance/signoff gate, record that distinction explicitly in the
+roadmap before proceeding. Preserve the unresolved evidence and risk rows, plan
+the independent vertical slice with its own current-revision tests and review,
+and never let downstream work retroactively pass the earlier phase. Stop only
+when the missing evidence is a real implementation prerequisite, the remaining
+work would violate a user-directed risk boundary, or the user has explicitly
+reserved the next decision.
+
+If aligning STATE or a handoff changes its verifier-time fingerprint after the
+report is written, retain the report as the point-in-time verdict and proceed
+to its bounded finding. Do not repeat the whole-phase verifier just to hash
+administrative continuity edits; rerun it after the planned repair changes
+acceptance-relevant evidence.
 
 ## Decision namespaces
 

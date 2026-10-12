@@ -4,7 +4,6 @@
 #include "test_support.h"
 
 #include <inttypes.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -257,8 +256,8 @@ static void execute_wrap_sign_regressions(void) {
         memset(&run, 0, sizeof(run));
         memset(&observations, 0, sizeof(observations));
         mutation_check_status("sdk.mutation.integer.run", GN_STATUS_OK,
-                              gn_run(instance, 172u, &run));
-        sdk_mutation_guest_cycles += UINT64_C(172);
+                              gn_run(instance, 196u, &run));
+        sdk_mutation_guest_cycles += UINT64_C(196);
         mutation_check_u64("sdk.mutation.integer.stop", GN_RUN_STOPPED,
                            (uint64_t)run.reason);
         mutation_check_status("sdk.mutation.integer.observe", GN_STATUS_OK,
@@ -294,8 +293,8 @@ static void execute_wrap_sign_regressions(void) {
         memset(&run, 0, sizeof(run));
         memset(&observations, 0, sizeof(observations));
         mutation_check_status("sdk.mutation.integer.run-wrap", GN_STATUS_OK,
-                              gn_run(instance, 172u, &run));
-        sdk_mutation_guest_cycles += UINT64_C(172);
+                              gn_run(instance, 196u, &run));
+        sdk_mutation_guest_cycles += UINT64_C(196);
         mutation_check_status("sdk.mutation.integer.observe-wrap", GN_STATUS_OK,
                               gn_observe(instance, &observations));
         mutation_check_u64("integer-addq-unsigned-wrap", 0u,
@@ -375,11 +374,11 @@ static int start_media_instances(gn_instance **target, gn_instance **peer,
                           gn_load(*peer, &peer_manifest));
     gn_run_result progress;
     mutation_check_status("sdk.mutation.media.progress-target", GN_STATUS_OK,
-                          gn_run(*target, 44u, &progress));
+                          gn_run(*target, 68u, &progress));
     memset(&progress, 0, sizeof(progress));
     mutation_check_status("sdk.mutation.media.progress-peer", GN_STATUS_OK,
-                          gn_run(*peer, 44u, &progress));
-    sdk_mutation_guest_cycles += UINT64_C(88);
+                          gn_run(*peer, 68u, &progress));
+    sdk_mutation_guest_cycles += UINT64_C(136);
     mutation_check_u64("sdk.mutation.media.peer-progress-pc", UINT32_C(0x102),
                        progress.boundary_pc);
     return mutation_failure_id == NULL;
@@ -447,9 +446,9 @@ static int run_media_input(const uint8_t *input, size_t length,
         mutation_check_status("sdk.mutation.media.success-reset",
                               GN_STATUS_OK, gn_reset(target));
         mutation_check_status("sdk.mutation.media.success-run",
-                              GN_STATUS_OK, gn_run(target, 172u, &first_run));
-        sdk_mutation_guest_cycles += UINT64_C(172);
-        input_guest_cycles += UINT64_C(172);
+                              GN_STATUS_OK, gn_run(target, 196u, &first_run));
+        sdk_mutation_guest_cycles += UINT64_C(196);
+        input_guest_cycles += UINT64_C(196);
         mutation_check_u64("sdk.mutation.media.success-stop", GN_RUN_STOPPED,
                            (uint64_t)first_run.reason);
         mutation_check_status("sdk.mutation.media.success-observe",
@@ -467,9 +466,9 @@ static int run_media_input(const uint8_t *input, size_t length,
         memset(&repeated_run, 0, sizeof(repeated_run));
         memset(&repeated_observations, 0, sizeof(repeated_observations));
         mutation_check_status("sdk.mutation.media.copy-run",
-                              GN_STATUS_OK, gn_run(target, 172u, &repeated_run));
-        sdk_mutation_guest_cycles += UINT64_C(172);
-        input_guest_cycles += UINT64_C(172);
+                              GN_STATUS_OK, gn_run(target, 196u, &repeated_run));
+        sdk_mutation_guest_cycles += UINT64_C(196);
+        input_guest_cycles += UINT64_C(196);
         mutation_check_status("sdk.mutation.media.copy-observe",
                               GN_STATUS_OK,
                               gn_observe(target, &repeated_observations));
@@ -663,8 +662,8 @@ static int run_sequence_operation(sequence_owner owners[MUTATION_LIVE_LIMIT],
         owners[target].loaded = 0;
     }
     uint64_t loaded_storage = 0u;
-    for (unsigned index = 0u; index < MUTATION_LIVE_LIMIT; ++index) {
-        if (owners[index].instance != NULL && owners[index].loaded != 0) {
+    for (unsigned owner_index = 0u; owner_index < MUTATION_LIVE_LIMIT; ++owner_index) {
+        if (owners[owner_index].instance != NULL && owners[owner_index].loaded != 0) {
             loaded_storage += UINT64_C(5130);
         }
     }
@@ -693,11 +692,11 @@ static int audit_sequence_owners(sequence_owner owners[MUTATION_LIVE_LIMIT],
         gn_observations first_observations;
         memset(&first_run, 0, sizeof(first_run));
         memset(&first_observations, 0, sizeof(first_observations));
-        *guest_cycles += 172u;
-        sdk_mutation_guest_cycles += 172u;
+        *guest_cycles += 196u;
+        sdk_mutation_guest_cycles += 196u;
         mutation_check_status("sdk.mutation.sequence.audit-run-a",
                               GN_STATUS_OK,
-                              gn_run(owner->instance, 172u, &first_run));
+                              gn_run(owner->instance, 196u, &first_run));
         mutation_check_status("sdk.mutation.sequence.audit-observe-a",
                               GN_STATUS_OK,
                               gn_observe(owner->instance, &first_observations));
@@ -707,11 +706,11 @@ static int audit_sequence_owners(sequence_owner owners[MUTATION_LIVE_LIMIT],
         gn_observations second_observations;
         memset(&second_run, 0, sizeof(second_run));
         memset(&second_observations, 0, sizeof(second_observations));
-        *guest_cycles += 172u;
-        sdk_mutation_guest_cycles += 172u;
+        *guest_cycles += 196u;
+        sdk_mutation_guest_cycles += 196u;
         mutation_check_status("sdk.mutation.sequence.audit-run-b",
                               GN_STATUS_OK,
-                              gn_run(owner->instance, 172u, &second_run));
+                              gn_run(owner->instance, 196u, &second_run));
         mutation_check_status("sdk.mutation.sequence.audit-observe-b",
                               GN_STATUS_OK,
                               gn_observe(owner->instance, &second_observations));
@@ -968,10 +967,10 @@ static void replay_entrypoint(void) {
     }
 }
 
-static void *startup_thread(void *context) {
+static SDK_TEST_THREAD_RESULT SDK_TEST_THREAD_CALL startup_thread(void *context) {
     (void)context;
     startup_thread_value = 1;
-    return NULL;
+    return SDK_TEST_THREAD_DONE;
 }
 
 static int startup_probe(const char *lane) {
@@ -987,10 +986,10 @@ static int startup_probe(const char *lane) {
     if (sum != UINT64_C(120)) return 1;
     unsigned startup_checks = 17u;
     if (is_tsan) {
-        pthread_t thread;
+        sdk_test_thread thread;
         startup_thread_value = 0;
-        if (pthread_create(&thread, NULL, startup_thread, NULL) != 0) return 1;
-        if (pthread_join(thread, NULL) != 0) return 1;
+        if (!sdk_test_thread_start(&thread, startup_thread, NULL)) return 1;
+        if (!sdk_test_thread_join(thread)) return 1;
         if (startup_thread_value != 1) return 1;
         ++startup_checks;
     }

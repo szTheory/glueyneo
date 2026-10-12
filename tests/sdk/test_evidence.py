@@ -84,7 +84,7 @@ def valid_baseline_record() -> dict[str, Any]:
             "observed_output": dict(evidence.BASELINE_EXPECTED_OUTPUT),
             "observed_output_sha256": evidence.baseline_output_sha256(
                 evidence.BASELINE_EXPECTED_OUTPUT),
-            "guest_cycles": 172,
+            "guest_cycles": 196,
         },
         "protocol": {"warmup_samples": 3, "retained_samples": 31,
                      "load_runs_per_sample": evidence.BASELINE_EXECUTION_RUNS_PER_SAMPLE,

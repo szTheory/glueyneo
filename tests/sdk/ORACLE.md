@@ -42,31 +42,43 @@ pair to `700b 5a80` (11 + 5 = 16) and the initialized word to `0x2345`
 
 The instruction timings are 4, 8, 20, 4, 16, 8, 20, 4, 16, 8, 20, and 4
 cycles respectively: 132 instruction cycles. The MC68000 external-reset
-recovery is 40 cycles, for 172 cycles through the final STOP boundary. The
-following cumulative boundaries were checked through the ordinary API:
+recovery is 64 cycles, for 196 cycles through the final STOP boundary. These
+are the corrected reset and runner totals described below; the earlier 40/172
+figures are superseded. The following cumulative boundaries were checked
+through the ordinary API:
 
 | Cumulative guest cycles | Boundary PC | Completed instructions | Event |
 |---:|---:|---:|---|
-| 40 | `0x0100` | 0 | Reset recovery |
-| 44 | `0x0102` | 1 | MOVEQ |
-| 52 | `0x0104` | 2 | ADDQ.L |
-| 72 | `0x010a` | 3 | MOVE.L store |
-| 76 | `0x010c` | 4 | MOVEQ |
-| 92 | `0x0112` | 5 | MOVE.W load |
-| 100 | `0x0114` | 6 | ADDQ.L |
-| 120 | `0x011a` | 7 | MOVE.L store |
-| 124 | `0x011c` | 8 | MOVEQ |
-| 140 | `0x0122` | 9 | MOVE.W load |
-| 148 | `0x0124` | 10 | ADDQ.L |
-| 168 | `0x012a` | 11 | MOVE.L store |
-| 172 | `0x012e` | 12 | STOP |
+| 64 | `0x0100` | 0 | Reset recovery |
+| 68 | `0x0102` | 1 | MOVEQ |
+| 76 | `0x0104` | 2 | ADDQ.L |
+| 96 | `0x010a` | 3 | MOVE.L store |
+| 100 | `0x010c` | 4 | MOVEQ |
+| 116 | `0x0112` | 5 | MOVE.W load |
+| 124 | `0x0114` | 6 | ADDQ.L |
+| 144 | `0x011a` | 7 | MOVE.L store |
+| 148 | `0x011c` | 8 | MOVEQ |
+| 164 | `0x0122` | 9 | MOVE.W load |
+| 172 | `0x0124` | 10 | ADDQ.L |
+| 192 | `0x012a` | 11 | MOVE.L store |
+| 196 | `0x012e` | 12 | STOP |
 
 At the terminal boundary, the public observations are arithmetic `10`,
 initialized-data result `0x1237`, and BSS-derived result `1` for scenario A;
-scenario B returns `16`, `0x2348`, and `1`. The run requests exactly 172
-cycles and reports 172 elapsed, zero overshoot, 12 instructions and STOP. A
+scenario B returns `16`, `0x2348`, and `1`. The run requests exactly 196
+cycles and reports 196 elapsed, zero overshoot, 12 instructions and STOP. A
 STOP result alone is not diagnostic success: the runner checks every named
 result and the terminal run fields.
+
+## MC68000 reset-cost correction — 2026-10-09
+
+The CPU reset event uses the MC68000 value of 64 clocks from the MC68000
+column of Motorola/NXP User's Manual Rev. 9.1 Table 7-15 (printed p. 7-11).
+The original diagnostic instruction recipe remains 132 clocks, so fixed
+12-instruction runner vectors request and report 196 cycles. The per-instruction
+sequence and terminal PC are unchanged; only the processor-correct reset
+denominator changed. The same source correction sets IRQ to 72, address/bus
+error to 94, and illegal instruction, privilege exception, and TRAP to 62.
 
 ## Sources and limits
 
@@ -99,10 +111,10 @@ bounded candidate contract. A reference emulator is not this oracle's source.
 
 `gn_run` reports the backend's actual event charges. The native contract accepts
 requests from 0 through 1,000,000 guest cycles. A zero request consumes nothing.
-An outstanding external-reset recovery event costs 40 cycles as a whole, even
-when the request is smaller: requests 1, 39, 40 and 41 therefore report
-elapsed 40, 40, 40 and 44, with overshoots 39, 1, 0 and 3 respectively. The
-41-cycle call completes the first 4-cycle `MOVEQ`. A request above the limit is
+An outstanding external-reset recovery event costs 64 cycles as a whole, even
+when the request is smaller: requests 1, 63, 64 and 65 therefore report
+elapsed 64, 64, 64 and 68, with overshoots 63, 1, 0 and 3 respectively. The
+65-cycle call completes the first 4-cycle `MOVEQ`. A request above the limit is
 rejected before the CPU or guest RAM changes. After STOP, a later positive
 request advances stopped idle time by that exact amount and dispatches no
 instruction. Reaching STOP during a request can likewise consume the remaining
@@ -173,7 +185,7 @@ paths. The eight consequential mutations and their fixed assertions are:
 | Initialized word changes `$1234` to `$1235` | `sdk.observe.initialized` | 4663 | 4664 |
 | BSS read adapter returns 1 | `sdk.observe.bss` | 1 | 2 |
 | Run result adapter increments instruction count | `sdk.run.instructions` | 12 | 13 |
-| Run result adapter increments elapsed cycles | `sdk.run.elapsed-cycles` | 172 | 173 |
+| Run result adapter increments elapsed cycles | `sdk.run.elapsed-cycles` | 196 | 197 |
 | Run result adapter changes STOP to budget | `sdk.run.reason-stopped` | 1 | 0 |
 | Observation adapter reverses arithmetic byte order | `sdk.observe.arithmetic-byte-order` | 10 | 167772160 |
 | Trace adapter swaps the first two vector reads | `sdk.bus.event.00.address` | 0 | 2 |
@@ -191,8 +203,8 @@ outputs and run fields. A STOP result alone is insufficient.
 
 Scenario A (`10`, `$1237`, `1`) and scenario B (`16`, `$2348`, `1`) first run
 through the ordinary public API in separate instances to create owner-specific
-baselines. The split schedule is `40,4,8,20,4,16,8,20,4,16,8,20,4`, with
-cumulative guest-cycle boundaries `40,44,52,72,76,92,100,120,124,140,148,168,172`.
+baselines. The split schedule is `64,4,8,20,4,16,8,20,4,16,8,20,4`, with
+cumulative guest-cycle boundaries `64,68,76,96,100,116,124,144,148,164,172,192,196`.
 At all 13 boundaries the comparison includes public named observations, guest
 PC, run reason, cumulative elapsed cycles, completed instructions, cumulative
 overshoot, per-call requested/elapsed/overshoot/instruction fields, a
@@ -202,7 +214,7 @@ zero per-call overshoot; the comparison does not generalize to arbitrary
 budget partitions.
 
 The `sdk-isolation` suite repeats each split sequence after reset, compares a
-single 172-cycle call at the terminal boundary, interleaves 16 A/B instance
+single 196-cycle call at the terminal boundary, interleaves 16 A/B instance
 pairs, and runs 16 barrier-started concurrent A/B pairs. Every concurrent
 owner also attempts a replacement that fails at its first allocation, checks
 the pointer-free ROM/RAM/CPU-state digest and allocator live counts remain
@@ -211,7 +223,7 @@ destroys with no live allocation. The supervisor's two additional controls
 require exact failures: `control-swapped-owner` must fail
 `sdk.isolation.owner.arithmetic` (`10` expected, `16` observed), and
 `control-altered-split-progress` must fail
-`sdk.isolation.split-progress` (`40` expected, `41` observed).
+`sdk.isolation.split-progress` (`64` expected, `65` observed).
 
 The separate `sdk_cold` host supervisor starts eight fresh `sdk_diagnostic
 cold` processes. Each process creates two distinct instances concurrently
@@ -285,9 +297,9 @@ the following fields in this order as three big-endian `u32`, four big-endian
 result, requested cycles, elapsed cycles, overshoot cycles, instruction
 count, terminal PC, and numeric STOP reason (`1`). The resulting 52-byte
 scenario A record hashes to
-`e0cb8ba07f599ed85a8217d196f577e539cddbba86f2c930da0ed5f468a806bf`; scenario
+`d1a59d8a8b552cf512173fd67bba2524948d23ece994173b80d31a72fb54ac5c`; scenario
 B hashes to
-`b551afb0fd32171001a3155599f3ee51521a95b7994b4f94fdbb1861790c0cfb`.
+`324e8897e88fc6a1b746431b43585d4c6ba6ff929afaac0fd55a8ea5808ea094`.
 
 The recorded execution environment was Darwin arm64, AppleClang
 21.0.0.21000101, CMake 4.4.3, Ninja 1.13.2, schema-2 `sdk-debug` preset and

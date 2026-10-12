@@ -1,8 +1,12 @@
 """Corruption controls for the owned CPU source inventory checker."""
 
 from pathlib import Path
+import copy
+import json
 import sys
+import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
@@ -76,6 +80,67 @@ class InventoryControls(unittest.TestCase):
     def test_compile_database_has_closed_source_set(self):
         self.assertEqual(set(self.document["compiled_sources"]),
                          inventory.EXPECTED_COMPILED_SOURCES)
+
+    def test_compile_contract_is_scoped_to_owned_cmake_targets(self):
+        rows = []
+        for source in sorted(inventory.EXPECTED_COMPILED_SOURCES):
+            if source == "experiments/owned_cpu/cpu.c":
+                target = "owned_cpu"
+            elif source == "third_party/unity/src/unity.c":
+                target = "owned_cpu_unity"
+            elif source == "tests/cpu/guest_fixture.c":
+                target = "owned_cpu_diagnostic"
+            else:
+                target = "owned_cpu_" + Path(source).stem.removeprefix("test_")
+            rows.append({"file": source, "arguments": ["cc", "-std=c17", "-O0", "-o",
+                         f"experiments/owned_cpu/CMakeFiles/{target}.dir/{Path(source).name}.o",
+                         "-c", source]})
+        # Shared owned sources and C++ have unrelated flags on SDK targets.
+        rows.extend([
+            {"file": "experiments/owned_cpu/cpu.c", "arguments": ["cc", "-std=c17", "-o",
+             "CMakeFiles/glueyneo.dir/experiments/owned_cpu/cpu.c.o"]},
+            {"file": "src/chips/ym2610_candidate.cpp", "arguments": ["c++", "-std=c++14", "-o",
+             "CMakeFiles/gn_ym2610_candidate.dir/src/chips/ym2610_candidate.cpp.o"]},
+        ])
+        with tempfile.TemporaryDirectory() as temporary:
+            build = Path(temporary)
+            (build / "build.ninja").touch()
+            database = build / "compile_commands.json"
+            archive = mock.Mock(returncode=0, stdout="ar qc libowned_cpu.a experiments/owned_cpu/CMakeFiles/owned_cpu.dir/cpu.c.o\n")
+            with (mock.patch.object(inventory, "load_cache", return_value={}),
+                  mock.patch.object(inventory.shutil, "which", return_value="ninja"),
+                  mock.patch.object(inventory.subprocess, "run", return_value=archive)):
+                def check(commands):
+                    database.write_text(json.dumps(commands), encoding="utf-8")
+                    return inventory.compile_errors(ROOT, build, sorted(inventory.EXPECTED_COMPILED_SOURCES))
+
+                self.assertEqual([], check(rows))
+                missing_flag = copy.deepcopy(rows)
+                missing_flag[0]["arguments"].remove("-std=c17")
+                self.assertTrue(any("not strict C17" in error for error in check(missing_flag)))
+                missing_opt = copy.deepcopy(rows)
+                missing_opt[0]["arguments"].remove("-O0")
+                self.assertTrue(any("optimization mode missing" in error for error in check(missing_opt)))
+                missing_source = [row for row in rows if row["file"] != "tests/owned_cpu/test_state.c"]
+                self.assertIn("missing compiled source: tests/owned_cpu/test_state.c", check(missing_source))
+                extra = {"file": "src/instance.c", "arguments": ["cc", "-std=c17", "-O0", "-o",
+                         "experiments/owned_cpu/CMakeFiles/owned_cpu.dir/foreign.c.o"]}
+                self.assertIn("extra compiled source: src/instance.c", check(rows + [extra]))
+                # SDK compilation of cpu.c cannot substitute for its owned row.
+                without_owned = [row for row in rows if "owned_cpu.dir" not in " ".join(row["arguments"])]
+                self.assertIn("missing compiled source: experiments/owned_cpu/cpu.c", check(without_owned))
+                sanitized = copy.deepcopy(rows)
+                for row in sanitized[:-2]:
+                    row["arguments"].extend(["-fsanitize=address,undefined", "-fno-sanitize-recover=all"])
+                def ninja_commands(command, **kwargs):
+                    if command[-1] == "owned_cpu":
+                        return archive
+                    return mock.Mock(returncode=0, stdout=f"cc -fsanitize=address,undefined -o {command[-1]} objects.o\n")
+                with (mock.patch.object(inventory, "load_cache", return_value={"GLUEYNEO_OWNED_CPU_SANITIZER": "ADDRESS_UNDEFINED"}),
+                      mock.patch.object(inventory.subprocess, "run", side_effect=ninja_commands)):
+                    self.assertEqual([], check(sanitized))
+                    sanitized[0]["arguments"].remove("-fsanitize=address,undefined")
+                    self.assertTrue(any("ASan+UBSan missing" in error for error in check(sanitized)))
 
     def test_manifest_corruption_controls(self):
         import copy

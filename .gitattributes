@@ -1,0 +1,2 @@
+# Preserve canonical fixture, provenance and source bytes across checkouts.
+* text=auto eol=lf

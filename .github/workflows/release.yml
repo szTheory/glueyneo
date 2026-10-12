@@ -1,0 +1,376 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing draft tag to recover (must match the root version manifest)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: glueyneo-release-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-control:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      should_build: ${{ steps.identity.outputs.should_build }}
+      tag: ${{ steps.identity.outputs.tag }}
+      version: ${{ steps.identity.outputs.version }}
+      commit: ${{ steps.identity.outputs.commit }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+      - id: release
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+      - id: identity
+        name: Resolve versioned commit and always inspect its existing draft
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_CREATED: ${{ steps.release.outputs.release_created }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          DISPATCH_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          version=$(python3 -c 'import json; print(json.load(open(".release-please-manifest.json"))["."])')
+          tag="v${version}"
+          if [[ "${RELEASE_CREATED:-false}" == "true" ]]; then
+            [[ "$RELEASE_VERSION" == "$version" && "$RELEASE_TAG" == "$tag" ]] || { echo 'release-please identity differs from root manifest' >&2; exit 1; }
+            [[ "$RELEASE_SHA" == "$GITHUB_SHA" ]] || { echo 'release tag SHA differs from tested workflow SHA' >&2; exit 1; }
+          fi
+          if [[ -n "${DISPATCH_TAG:-}" ]]; then
+            [[ "$DISPATCH_TAG" == "$tag" ]] || { echo 'manual recovery tag differs from root manifest' >&2; exit 1; }
+            tag="$DISPATCH_TAG"
+          fi
+          mkdir -p build/release-control
+          GH_API_URL="$GITHUB_API_URL" python3 tools/release_state.py query-api \
+            --repository "$GITHUB_REPOSITORY" --tag "$tag" \
+            --output build/release-control/release.json
+          api_status=$(python3 -c 'import json; print(json.load(open("build/release-control/release.json"))["status"])')
+          should_build=false
+          if [[ "$api_status" == "found" ]]; then
+            is_draft=$(python3 -c 'import json; print(str(json.load(open("build/release-control/release.json"))["release"].get("draft", False)).lower())')
+            if [[ "$is_draft" == "true" ]]; then
+              should_build=true
+            elif [[ "${RELEASE_CREATED:-false}" == "true" ]]; then
+              echo 'release-please created or selected a published release; refusing to mutate it' >&2
+              exit 1
+            fi
+          elif [[ "${RELEASE_CREATED:-false}" == "true" ]]; then
+            echo 'release-please reported a release but the expected draft is absent' >&2
+            exit 1
+          fi
+          {
+            echo "should_build=$should_build"
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "commit=$GITHUB_SHA"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: release-api-snapshot
+          path: build/release-control/release.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  build-release:
+    needs: release-control
+    if: needs.release-control.outputs.should_build == 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - name: linux-x86_64
+            runner: ubuntu-24.04
+          - name: macos-arm64
+            runner: macos-15
+          - name: windows-x86_64
+            runner: windows-2025
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.release-control.outputs.commit }}
+          persist-credentials: false
+      - name: Run exact-commit SDK matrix and installed consumers
+        if: runner.os != 'Windows'
+        env:
+          SDK_MATRIX_LANE: ${{ matrix.name }}
+          SDK_SOURCE_REVISION: ${{ needs.release-control.outputs.commit }}
+        run: python3 tools/verify_sdk.py --suite matrix --lane "$SDK_MATRIX_LANE" --output "build/matrix-evidence/$SDK_MATRIX_LANE.json"
+      - name: Run exact-commit Windows SDK matrix and installed consumers
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          SDK_MATRIX_LANE: ${{ matrix.name }}
+          SDK_SOURCE_REVISION: ${{ needs.release-control.outputs.commit }}
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $install = & $vswhere -latest -products '*' -property installationPath
+          if (-not $install) { throw 'Visual Studio with MSVC was not found' }
+          $command = 'call "' + $install + '\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 && python tools/verify_sdk.py --suite matrix --lane ' + $env:SDK_MATRIX_LANE + ' --output build/matrix-evidence/' + $env:SDK_MATRIX_LANE + '.json'
+          cmd.exe /d /s /c $command
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload bounded matrix verification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-matrix-diagnostics-${{ matrix.name }}
+          path: build/matrix-evidence/
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Build offline source and complete installed SDK archives
+        if: runner.os != 'Windows'
+        run: python3 tools/release_manifest.py build --repo . --commit "${{ needs.release-control.outputs.commit }}" --output-dir build/release-assets
+      - name: Build offline source and complete installed SDK archives
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $install = & $vswhere -latest -products '*' -property installationPath
+          if (-not $install) { throw 'Visual Studio with MSVC was not found' }
+          $command = 'call "' + $install + '\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 && python tools/release_manifest.py build --repo . --commit "${{ needs.release-control.outputs.commit }}" --output-dir build/release-assets'
+          cmd.exe /d /s /c $command
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-matrix-${{ matrix.name }}
+          path: build/release-assets/*.tar.gz
+          if-no-files-found: error
+          retention-days: 3
+
+  stage-release:
+    needs: [release-control, build-release]
+    if: needs.release-control.outputs.should_build == 'true' && needs.build-release.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.release-control.outputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: release-matrix-*
+          path: build/release-matrix
+      - name: Assemble the exact archive set and identity manifest
+        shell: bash
+        env:
+          RELEASE_COMMIT: ${{ needs.release-control.outputs.commit }}
+          RELEASE_VERSION: ${{ needs.release-control.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/release-assets
+          cp "build/release-matrix/release-matrix-linux-x86_64/glueyneo-source-${RELEASE_VERSION}.tar.gz" build/release-assets/
+          cp "build/release-matrix/release-matrix-linux-x86_64/glueyneo-sdk-${RELEASE_VERSION}-linux-x86_64.tar.gz" build/release-assets/
+          cp "build/release-matrix/release-matrix-macos-arm64/glueyneo-sdk-${RELEASE_VERSION}-macos-arm64.tar.gz" build/release-assets/
+          cp "build/release-matrix/release-matrix-windows-x86_64/glueyneo-sdk-${RELEASE_VERSION}-windows-x86_64.tar.gz" build/release-assets/
+          python3 tools/release_manifest.py release-manifest --repo . --commit "$RELEASE_COMMIT" --version "$RELEASE_VERSION" --output-dir build/release-assets
+          cp build/release-assets/release-manifest.json build/expected-release-manifest.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-identity-manifest
+          path: build/expected-release-manifest.json
+          if-no-files-found: error
+          retention-days: 3
+      - name: Re-query draft state and validate exact identity before upload
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_API_URL: ${{ github.api_url }}
+          RELEASE_TAG: ${{ needs.release-control.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.release-control.outputs.version }}
+          RELEASE_COMMIT: ${{ needs.release-control.outputs.commit }}
+        run: |
+          set -euo pipefail
+          python3 tools/release_state.py query-api --repository "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --output build/release-api.json
+          python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["status"] == "found" and d["release"].get("draft") is True' build/release-api.json
+          python3 tools/release_state.py validate-draft --release build/release-api.json --manifest build/release-assets/release-manifest.json --tag "$RELEASE_TAG" --version "$RELEASE_VERSION" --commit "$RELEASE_COMMIT" > build/release-validation.json
+          while IFS= read -r asset; do gh release upload "$RELEASE_TAG" "build/release-assets/$asset"; done < <(python3 -c 'import json; print("\n".join(json.load(open("build/release-validation.json"))["missing_assets"]))')
+      - name: Re-query and require complete staged draft
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_API_URL: ${{ github.api_url }}
+          RELEASE_TAG: ${{ needs.release-control.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.release-control.outputs.version }}
+          RELEASE_COMMIT: ${{ needs.release-control.outputs.commit }}
+        run: |
+          set -euo pipefail
+          python3 tools/release_state.py query-api --repository "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --output build/release-api-final.json
+          python3 tools/release_state.py validate-draft --release build/release-api-final.json --manifest build/expected-release-manifest.json --tag "$RELEASE_TAG" --version "$RELEASE_VERSION" --commit "$RELEASE_COMMIT" > build/release-validation-final.json
+          python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["status"] == "ready" and d["publishable"]' build/release-validation-final.json
+
+  verify-downloaded-release:
+    needs: [release-control, stage-release]
+    if: needs.release-control.outputs.should_build == 'true' && needs.stage-release.result == 'success'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - name: linux-x86_64
+            runner: ubuntu-24.04
+          - name: macos-arm64
+            runner: macos-15
+          - name: windows-x86_64
+            runner: windows-2025
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.release-control.outputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-identity-manifest
+          path: build/expected
+      - name: Download staged release from GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release-control.outputs.tag }}
+        run: gh release download "$RELEASE_TAG" --dir build/release-download
+        if: runner.os != 'Windows'
+      - name: Download staged release from GitHub on Windows
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release-control.outputs.tag }}
+        run: gh release download $env:RELEASE_TAG --dir build/release-download
+        if: runner.os == 'Windows'
+      - name: Verify all downloaded release bytes against the trusted staged manifest
+        run: python3 tools/release_state.py verify-download --directory build/release-download --manifest build/expected/expected-release-manifest.json > build/download-verification.json
+        if: runner.os != 'Windows'
+      - name: Verify all downloaded release bytes on Windows
+        shell: pwsh
+        run: python tools/release_state.py verify-download --directory build/release-download --manifest build/expected/expected-release-manifest.json > build/download-verification.json
+        if: runner.os == 'Windows'
+      - name: Rebuild downloaded source offline and execute this platform SDK consumers
+        env:
+          RELEASE_COMMIT: ${{ needs.release-control.outputs.commit }}
+          RELEASE_VERSION: ${{ needs.release-control.outputs.version }}
+        run: python3 tests/consumers/test_release_consumer.py --verify-downloaded --directory build/release-download --manifest build/expected/expected-release-manifest.json --commit "$RELEASE_COMMIT" --version "$RELEASE_VERSION" --platform "${{ matrix.name }}"
+        if: runner.os != 'Windows'
+      - name: Rebuild downloaded source offline and execute Windows SDK consumers
+        shell: pwsh
+        env:
+          RELEASE_COMMIT: ${{ needs.release-control.outputs.commit }}
+          RELEASE_VERSION: ${{ needs.release-control.outputs.version }}
+        run: python tests/consumers/test_release_consumer.py --verify-downloaded --directory build/release-download --manifest build/expected/expected-release-manifest.json --commit $env:RELEASE_COMMIT --version $env:RELEASE_VERSION --platform windows-x86_64
+        if: runner.os == 'Windows'
+      - name: Scan history, downloaded bytes, notices, and rights on Linux
+        if: matrix.name == 'linux-x86_64'
+        env:
+          RELEASE_COMMIT: ${{ needs.release-control.outputs.commit }}
+          RELEASE_VERSION: ${{ needs.release-control.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 tools/public_content.py --root . --history-revision "$RELEASE_COMMIT" \
+            --log build/release-download/release-manifest.json \
+            --log build/download-verification.json \
+            --log .github/workflows/release.yml \
+            --log release-please-config.json \
+            --archive "build/release-download/glueyneo-source-${RELEASE_VERSION}.tar.gz" \
+            --archive "build/release-download/glueyneo-sdk-${RELEASE_VERSION}-linux-x86_64.tar.gz" \
+            --archive "build/release-download/glueyneo-sdk-${RELEASE_VERSION}-macos-arm64.tar.gz" \
+            --archive "build/release-download/glueyneo-sdk-${RELEASE_VERSION}-windows-x86_64.tar.gz" \
+            --json build/public-content.json
+
+  publish-release:
+    needs: [release-control, stage-release, verify-downloaded-release]
+    if: needs.release-control.outputs.should_build == 'true' && needs.stage-release.result == 'success' && needs.verify-downloaded-release.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.release-control.outputs.commit }}
+          persist-credentials: false
+      - id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-identity-manifest
+          path: build/expected
+      - name: Re-query and revalidate the exact draft after all platform consumers pass
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_API_URL: ${{ github.api_url }}
+          RELEASE_TAG: ${{ needs.release-control.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.release-control.outputs.version }}
+          RELEASE_COMMIT: ${{ needs.release-control.outputs.commit }}
+        run: |
+          set -euo pipefail
+          python3 tools/release_state.py query-api --repository "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --output build/release-api.json
+          python3 tools/release_state.py validate-draft --release build/release-api.json --manifest build/expected/expected-release-manifest.json --tag "$RELEASE_TAG" --version "$RELEASE_VERSION" --commit "$RELEASE_COMMIT" > build/release-validation.json
+          python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["status"] == "ready" and d["publishable"]' build/release-validation.json
+      - name: Publish the verified unsigned draft
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_TAG: ${{ needs.release-control.outputs.tag }}
+        run: |
+          set -euo pipefail
+          release_id=$(python3 -c 'import json; print(json.load(open("build/release-api.json"))["release"]["id"])')
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$release_id" -F draft=false > build/published-release.json
+          python3 -c 'import json,os; d=json.load(open("build/published-release.json")); assert d["tag_name"] == os.environ["RELEASE_TAG"] and d["draft"] is False'

@@ -197,16 +197,160 @@ def inspect_exports(
         raise CheckError("Installed public header differs from the producer header")
 
 
-def shared_exports(library: Path) -> list[str]:
-    nm = shutil.which("nm")
-    if nm is None:
-        raise CheckError("nm is required to inspect the tested shared-library exports")
-    if sys.platform == "darwin":
-        output = run([nm, "-gU", str(library)]).stdout
-    elif sys.platform.startswith("linux"):
-        output = run([nm, "-D", "--defined-only", str(library)]).stdout
+EXPECTED_SHARED_EXPORTS = {
+    "gn_create",
+    "gn_load",
+    "gn_load_mvs",
+    "gn_reset",
+    "gn_run",
+    "gn_run_mvs",
+    "gn_observe",
+    "gn_observe_mvs_bus_fault",
+    "gn_advance_frame",
+    "gn_unload",
+    "gn_destroy",
+    "gn_status_string",
+}
+
+
+def check_export_contract(names: set[str] | list[str]) -> list[str]:
+    observed = set(names)
+    public = {name for name in observed if name.startswith("gn_") and not name.startswith("gn_test_")}
+    missing = EXPECTED_SHARED_EXPORTS - public
+    extra = public - EXPECTED_SHARED_EXPORTS
+    private = sorted(name for name in observed if name.startswith(("owned_cpu_", "gn_test_")))
+    if missing or extra or private:
+        raise CheckError(
+            f"Shared export contract differs: missing={sorted(missing)}, "
+            f"extra={sorted(extra)}, private={private}"
+        )
+    return sorted(public)
+
+
+def parse_windows_exports(output: str) -> set[str]:
+    if re.search(r"^\s*File Type:\s*DLL\s*$", output, re.IGNORECASE | re.MULTILINE) is None:
+        raise CheckError("DUMPBIN output does not identify a DLL")
+    lines = output.splitlines()
+    header_index = next(
+        (index for index, line in enumerate(lines)
+         if re.search(r"^\s*ordinal\s+hint\s+RVA\s+name\s*$", line, re.IGNORECASE)),
+        None,
+    )
+    if header_index is None:
+        raise CheckError("DUMPBIN output has no recognizable /EXPORTS table header")
+    row = re.compile(
+        r"^\s*[0-9]+\s+[0-9A-Fa-f]+\s+[0-9A-Fa-f]+\s+([^\s=]+)(?:\s*=\s*\S.*)?\s*$"
+    )
+    names: set[str] = set()
+    saw_row = False
+    for line in lines[header_index + 1:]:
+        if not line.strip():
+            if saw_row:
+                break
+            continue
+        match = row.fullmatch(line)
+        if match is not None:
+            name = match.group(1)
+            if name in names:
+                raise CheckError(f"DUMPBIN output repeats export name: {name}")
+            names.add(name)
+            saw_row = True
+            continue
+        if re.match(r"^\s*[0-9]+\s+", line):
+            raise CheckError(f"DUMPBIN output contains an unparseable export row: {line.strip()}")
+        if saw_row:
+            break
+    if not names:
+        raise CheckError("DUMPBIN output contains no named DLL exports")
+    # DUMPBIN /EXPORTS table: https://learn.microsoft.com/en-us/cpp/build/reference/dash-exports
+    # x64 C-linkage exports have no __cdecl name decoration:
+    # https://learn.microsoft.com/en-us/cpp/build/reference/decorated-names
+    # Both Microsoft docs were checked 2026-10-06. Preserve names exactly here.
+    return names
+
+
+def export_inspector() -> tuple[str, str]:
+    if sys.platform == "win32":
+        name = "dumpbin"
+    elif sys.platform == "darwin" or sys.platform.startswith("linux"):
+        name = "nm"
     else:
         raise CheckError(f"Shared export inspection is not implemented for {sys.platform}")
+    executable = shutil.which(name)
+    if executable is None:
+        raise CheckError(f"{name} is required to inspect the tested shared-library exports")
+    return name, executable
+
+
+def export_inspector_identity(library: Path) -> dict[str, str]:
+    name, executable = export_inspector()
+    # DUMPBIN help can exit nonzero. Bind its banner to successful inspection
+    # of the tested DLL rather than accepting a failed inspector invocation.
+    output = run([executable, "/EXPORTS", str(library)] if name == "dumpbin"
+                 else [executable, "--version"]).stdout
+    first_line = next((line.strip() for line in output.splitlines() if line.strip()), "")
+    if name == "dumpbin" and re.search(r"Dumper Version\s+[0-9.]+", first_line, re.IGNORECASE) is None:
+        raise CheckError("DUMPBIN /EXPORTS returned an unsupported version identity")
+    if name == "nm" and not re.search(r"\b(nm|llvm-nm|Apple LLVM)\b", first_line, re.IGNORECASE):
+        raise CheckError("nm --version returned an unsupported tool identity")
+    return {"name": name, "executable": Path(executable).name, "version": first_line}
+
+
+def core_dependencies(core: Path) -> list[str]:
+    if sys.platform == "win32":
+        executable = shutil.which("dumpbin")
+        if executable is None:
+            raise CheckError("dumpbin is required to inspect the installed Libretro core")
+        output = run([executable, "/DEPENDENTS", str(core)]).stdout
+        return [line.strip() for line in output.splitlines() if line.strip().lower().endswith(".dll")]
+    if sys.platform == "darwin":
+        executable = shutil.which("otool")
+        if executable is None:
+            raise CheckError("otool is required to inspect the installed Libretro core")
+        lines = run([executable, "-L", str(core)]).stdout.splitlines()[1:]
+        # Paths may contain spaces; the path ends where the version suffix starts.
+        matches = (re.match(r"^\s*(.+?) \(compatibility version", line) for line in lines)
+        return [match.group(1) for match in matches if match]
+    executable = shutil.which("readelf")
+    if executable is None:
+        raise CheckError("readelf is required to inspect the installed Libretro core")
+    output = run([executable, "-d", str(core)]).stdout
+    return re.findall(r"\(NEEDED\)\s+Shared library: \[([^\]]+)\]", output)
+
+
+def check_core_self_contained(prefix: Path) -> None:
+    # Frontends load a core from their own cores directory without this
+    # package's rpath, so the installed core must not need a Glueyneo library.
+    cores = [path for path in prefix.rglob("glueyneo_libretro.*")
+             if path.is_file() and path.suffix in {".dylib", ".so", ".dll"}]
+    if len(cores) != 1:
+        raise CheckError(f"Expected one installed Libretro core; found {cores}", code="missing-core")
+    own_name = cores[0].name
+    needed = [name for name in core_dependencies(cores[0])
+              if "glueyneo" in Path(name).name.lower() and Path(name).name != own_name]
+    if needed:
+        raise CheckError(f"Installed Libretro core depends on package libraries: {needed}",
+                         code="core-not-self-contained")
+    if sys.platform == "darwin":
+        # The system allowlist is macOS-only because only macOS is exercised.
+        # otool -L lists the dylib's own install name first (@rpath/<core>).
+        unexpected = [name for name in core_dependencies(cores[0])
+                      if Path(name).name != own_name
+                      and not name.startswith(("/usr/lib/", "/System/Library/"))]
+        if unexpected:
+            raise CheckError(f"Installed Libretro core depends on non-system libraries: {unexpected}",
+                             code="core-dependency")
+
+
+def shared_exports(library: Path) -> list[str]:
+    name, executable = export_inspector()
+    if name == "dumpbin":
+        output = run([executable, "/EXPORTS", str(library)]).stdout
+        return check_export_contract(parse_windows_exports(output))
+    if sys.platform == "darwin":
+        output = run([executable, "-gU", str(library)]).stdout
+    else:
+        output = run([executable, "-D", "--defined-only", str(library)]).stdout
     names: list[str] = []
     for line in output.splitlines():
         fields = line.split()
@@ -214,23 +358,7 @@ def shared_exports(library: Path) -> list[str]:
             name = fields[-1].lstrip("_")
             if name.startswith("gn_") or name.startswith("owned_cpu_") or name.startswith("gn_test_"):
                 names.append(name)
-    expected = {
-        "gn_create",
-        "gn_load",
-        "gn_reset",
-        "gn_run",
-        "gn_observe",
-        "gn_unload",
-        "gn_destroy",
-        "gn_status_string",
-    }
-    found_public = {name for name in names if name.startswith("gn_") and not name.startswith("gn_test_")}
-    if found_public != expected:
-        raise CheckError(f"Shared public export set differs: found {sorted(found_public)}")
-    private = [name for name in names if name.startswith(("owned_cpu_", "gn_test_"))]
-    if private:
-        raise CheckError(f"Private backend/test symbols exported by shared runtime: {private}")
-    return sorted(found_public)
+    return check_export_contract(names)
 
 
 def compiler_identity(build_dir: Path) -> dict[str, str]:
@@ -292,6 +420,7 @@ def build_package(variant: str, work: Path) -> dict[str, object]:
     run(
         [
             shutil.which("cmake") or "cmake",
+            "-G", "Ninja",
             "-S",
             str(ROOT),
             "-B",
@@ -315,7 +444,9 @@ def build_package(variant: str, work: Path) -> dict[str, object]:
     identity = compiler_identity(build_dir)
     layout = installed_layout(prefix, variant)
     inspect_exports(prefix, build_dir, layout, variant)
+    check_core_self_contained(prefix)
     exports = shared_exports(layout["library"]) if variant == "shared" else []
+    export_tool = export_inspector_identity(layout["library"]) if variant == "shared" else None
 
     generated = work / "installed-runner-fixture.bin"
     clean = clean_environment(inherited)
@@ -332,6 +463,7 @@ def build_package(variant: str, work: Path) -> dict[str, object]:
         "layout": layout,
         "identity": identity,
         "exports": exports,
+        "export_inspector": export_tool,
     }
 
 
@@ -353,6 +485,7 @@ def case_build(variant: str) -> None:
         "header_sha256": sha256(layout["header"]),
         "fixture_sha256": sha256(layout["fixture"]),
         "shared_public_exports": package["exports"],
+        "shared_export_inspector": package["export_inspector"],
         "offline_configure": "pass; no fetch/download hooks; tests disabled; vendored dependencies not required",
         "install_prefix_relocation_ready": "pass; metadata contains no source/build path",
         "inherited_flags": "pass; controlled CFLAGS/CXXFLAGS sentinels were stripped",
@@ -416,7 +549,7 @@ def parse_diagnostic_record(output: str, local_paths: tuple[Path, ...]) -> dict[
         "arithmetic": 10,
         "initialized": 0x1237,
         "bss": 1,
-        "cycles": 172,
+        "cycles": 196,
         "instructions": 12,
         "pc": 0x12E,
     }
@@ -462,21 +595,53 @@ def check_ownership_error_guide() -> int:
     return len(required)
 
 
-def run_with_loader_trace(executable: Path, args: list[str], layout: dict[str, Path]) -> str:
+def run_with_loader_trace(
+    executable: Path,
+    args: list[str],
+    layout: dict[str, Path],
+    *,
+    expected_returncode: int = 0,
+) -> str:
     env = clean_environment()
     for name in ("DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH", "LD_LIBRARY_PATH"):
         env.pop(name, None)
     library = layout["library"].resolve()
+    if sys.platform == "win32":
+        # Windows searches the executable directory first, then PATH. The
+        # consumer build directory does not contain Glueyneo.dll, so put only
+        # the relocated package's runtime directory first in the search path.
+        env["PATH"] = str(library.parent) + os.pathsep + env.get("PATH", "")
+        return run(
+            [str(executable), *args], env=env,
+            expected_returncode=expected_returncode,
+        ).stdout
     if sys.platform == "darwin":
         env["DYLD_PRINT_LIBRARIES"] = "1"
     elif sys.platform.startswith("linux"):
         env["LD_DEBUG"] = "libs"
     else:
         raise CheckError(f"Relocated shared loader identity is not implemented for {sys.platform}")
-    output = run([str(executable), *args], env=env).stdout
-    if str(library) not in output:
+    output = run(
+        [str(executable), *args], env=env,
+        expected_returncode=expected_returncode,
+    ).stdout
+    # glibc's LD_DEBUG preserves a loader path such as bin/../lib. Inspect
+    # successful initialization, rather than a candidate search, and compare
+    # resolved paths so a relocatable $ORIGIN path keeps its actual identity.
+    # https://man7.org/linux/man-pages/man8/ld.so.8.html (checked 2026-10-06)
+    loaded = linux_trace_loaded_library(output, library) if sys.platform.startswith("linux") else str(library) in output
+    if not loaded:
         raise CheckError(f"Loader trace did not resolve the shared runtime from the moved prefix: {library}")
     return output
+
+
+def linux_trace_loaded_library(output: str, library: Path) -> bool:
+    expected = library.resolve()
+    for match in re.finditer(r"(?m)^\s*\d+:\s*calling init:\s*(.+?)\s*$", output):
+        path = Path(match.group(1))
+        if path.is_absolute() and path.resolve() == expected:
+            return True
+    return False
 
 
 def expect_failure(code: str, action) -> None:
@@ -530,6 +695,7 @@ def case_consumers(variant: str) -> None:
     run(
         [
             cmake,
+            "-G", "Ninja",
             "-S",
             str(staged_source),
             "-B",
@@ -589,21 +755,31 @@ def case_consumers(variant: str) -> None:
     c_record = parse_consumer_record(c_output, "SDK_CONSUMER ")
     cxx_record = parse_consumer_record(cxx_output, "SDK_CONSUMER_CPP ")
 
-    wrong_expected = run(
-        [str(c_executable), str(fixture), "--expect-arithmetic", "11"],
-        env=clean_environment(),
-        expected_returncode=1,
-    )
+    wrong_expected_output = [str(c_executable), str(fixture), "--expect-arithmetic", "11"]
+    if variant == "shared" and sys.platform == "win32":
+        wrong_expected_env = clean_environment()
+        wrong_expected_env["PATH"] = (
+            str(layout["library"].resolve().parent)
+            + os.pathsep
+            + wrong_expected_env.get("PATH", "")
+        )
+        wrong_expected_stdout = run(
+            wrong_expected_output, env=wrong_expected_env, expected_returncode=1
+        ).stdout
+    else:
+        wrong_expected_stdout = run(
+            wrong_expected_output, env=clean_environment(), expected_returncode=1
+        ).stdout
     intended_failures = (
         "CONSUMER_ASSERT sdk.observe.arithmetic expected=11 observed=10",
         "CONSUMER_ASSERT sdk.reset-observe.arithmetic expected=11 observed=10",
     )
-    if wrong_expected.stdout.count("CONSUMER_ASSERT") != len(intended_failures) or any(
-        marker not in wrong_expected.stdout for marker in intended_failures
+    if wrong_expected_stdout.count("CONSUMER_ASSERT") != len(intended_failures) or any(
+        marker not in wrong_expected_stdout for marker in intended_failures
     ):
         raise CheckError("Wrong-output control failed for a reason other than the arithmetic result")
     require_public_cli_output(
-        wrong_expected.stdout,
+        wrong_expected_stdout,
         (ROOT, work, relocated_prefix, Path.home(), Path(tempfile.gettempdir())),
     )
 
@@ -672,9 +848,12 @@ def README_commands() -> list[str]:
 
 def stage_documentation_project(destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
-    for file in ("CMakeLists.txt", "LICENSE"):
+    for file in ("CMakeLists.txt", "LICENSE", ".release-please-manifest.json"):
         shutil.copy2(ROOT / file, destination / file)
-    for directory in ("cmake", "include", "src", "experiments/owned_cpu"):
+    for directory in (
+        "cmake", "include", "src", "experiments/owned_cpu",
+        "third_party/libretro", "third_party/zlib",
+    ):
         shutil.copytree(ROOT / directory, destination / directory)
     for relative in (
         "tools/diagnostic/main.c",
@@ -897,6 +1076,7 @@ def suite(suite_name: str) -> None:
     run(
         [
             cmake,
+            "-G", "Ninja",
             "-S",
             str(ROOT),
             "-B",

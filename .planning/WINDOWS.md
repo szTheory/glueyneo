@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 1
+open_count: 2
 waived_count: 1
-fixed_count: 6
-total_count: 8
-last_updated: 2026-10-03T01:37:56.782Z
+fixed_count: 8
+total_count: 11
+last_updated: 2026-10-08T11:51:10.577Z
 ---
 
 # Broken Windows Ledger
@@ -23,6 +23,9 @@ last_updated: 2026-10-03T01:37:56.782Z
 | 6 | 01 | deviation | experiments/cpu/evidence/plan-01-03/reset-counterexamples.md |  | Reset debt, stale NMI and BSD address-error boundary counterexamples repaired within the final frozen attempt | fixed |  | 2026-10-01T18:25:33.135Z | 2026-10-01T18:25:33.314Z |
 | 7 | 01 | deviation | experiments/cpu/evidence/plan-01-03/state-review-counterexamples.md |  | Inconsistent reset records and zero-request counter guard repaired with atomicity and no-op regressions | fixed |  | 2026-10-01T18:25:33.491Z | 2026-10-01T18:25:33.655Z |
 | 8 | 01 | unmet-truth | experiments/owned_cpu/CONTRACT.md | 61 | F14-03: frozen ILLEGAL next-PC contract conflicts with implemented and tested fault-PC frame; user-directed canonical reconciliation required | open |  | 2026-10-03T01:37:56.782Z |  |
+| 9 | 04 | deviation | CMakeLists.txt |  | Installed Libretro core was missing for clean frontend qualification; install rule added under lib/libretro and static/shared installs verified. | fixed |  | 2026-10-07T22:07:35.122Z | 2026-10-07T22:07:43.989Z |
+| 10 | 04 | deviation | README.md |  | Clean package checks exposed README links to removed flat-mode planning paths; updated links to active workstream documents. | fixed |  | 2026-10-07T22:07:35.229Z | 2026-10-07T22:07:44.128Z |
+| 11 | 04 | deviation | .planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-12-SUMMARY.md |  | Requirement completion retains HOST-02 and QUAL-03 pending under the explicit frontend claim boundary. | open |  | 2026-10-08T11:51:10.577Z |  |
 
 ````json
 [
@@ -129,6 +132,45 @@ last_updated: 2026-10-03T01:37:56.782Z
     "recorded_at": "2026-10-03T01:37:56.782Z",
     "resolved_at": null,
     "milestone": "v0.1"
+  },
+  {
+    "id": 9,
+    "kind": "deviation",
+    "phase": "04",
+    "file": "CMakeLists.txt",
+    "line": null,
+    "description": "Installed Libretro core was missing for clean frontend qualification; install rule added under lib/libretro and static/shared installs verified.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-07T22:07:35.122Z",
+    "resolved_at": "2026-10-07T22:07:43.989Z",
+    "milestone": null
+  },
+  {
+    "id": 10,
+    "kind": "deviation",
+    "phase": "04",
+    "file": "README.md",
+    "line": null,
+    "description": "Clean package checks exposed README links to removed flat-mode planning paths; updated links to active workstream documents.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-07T22:07:35.229Z",
+    "resolved_at": "2026-10-07T22:07:44.128Z",
+    "milestone": null
+  },
+  {
+    "id": 11,
+    "kind": "deviation",
+    "phase": "04",
+    "file": ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-12-SUMMARY.md",
+    "line": null,
+    "description": "Requirement completion retains HOST-02 and QUAL-03 pending under the explicit frontend claim boundary.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-08T11:51:10.577Z",
+    "resolved_at": null,
+    "milestone": null
   }
 ]
 ````
