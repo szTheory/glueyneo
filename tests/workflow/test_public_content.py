@@ -129,6 +129,13 @@ class PublicContentTests(unittest.TestCase):
             self.assertIn("personal-path", result["findings"][0]["rules"])
             self.assertNotIn(local_home, json.dumps(result))
 
+    def test_only_listed_noreply_trailer_identities_are_public(self) -> None:
+        trailer = "Co-Authored-By: Claude <" + "noreply" + "@anthropic.com>"
+        self.assertEqual(content.scan_bytes(trailer.encode(), "history/commit-metadata")["findings"], [])
+        other = "Contact: <" + "someone" + "@anthropic.com>"
+        result = content.scan_bytes(other.encode(), "history/commit-metadata")
+        self.assertIn("private-identity", result["findings"][0]["rules"])
+
     def test_private_key_header_is_detected_without_echoing_header(self) -> None:
         header = "-----BEGIN " + "OPENSSH " + "PRIVATE KEY-----"
         result = content.scan_bytes((header + "\nsynthetic-key\n-----END OPENSSH PRIVATE KEY-----").encode(),
