@@ -3,8 +3,11 @@
 
 from __future__ import annotations
 
-import json
 import hashlib
+import io
+import json
+import os
+import platform
 from pathlib import Path
 import shutil
 import subprocess
@@ -12,8 +15,6 @@ import sys
 import tarfile
 import tempfile
 import unittest
-import io
-import platform
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 import release_manifest
@@ -22,6 +23,45 @@ import public_content
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+class ReleaseManifestCompilerIdentityTests(unittest.TestCase):
+    def test_generated_compiler_identity_accepts_visual_studio_string_and_filepath_cache(self):
+        compiler = (
+            "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/"
+            "14.44.35207/bin/Hostx64/x64/cl.exe"
+        )
+        expected = {"path_basename": "cl.exe", "id": "MSVC", "version": "19.44.35207.1"}
+        with tempfile.TemporaryDirectory(prefix="glueyneo-compiler-id-") as temp:
+            build = Path(temp)
+            generated = build / "CMakeFiles/4.2.0/CMakeCCompiler.cmake"
+            generated.parent.mkdir(parents=True)
+            generated.write_text(
+                f'set(CMAKE_C_COMPILER "{compiler}")\n'
+                'set(CMAKE_C_COMPILER_ID "MSVC")\n'
+                'set(CMAKE_C_COMPILER_VERSION "19.44.35207.1")\n',
+                encoding="utf-8",
+            )
+            cache = build / "CMakeCache.txt"
+            for cache_type in ("STRING", "FILEPATH"):
+                with self.subTest(cache_type=cache_type):
+                    cache.write_text(f"CMAKE_C_COMPILER:{cache_type}={compiler}\n", encoding="utf-8")
+                    self.assertEqual(release_manifest.generated_compiler_identity(build), expected)
+
+    def test_generated_compiler_identity_rejects_missing_fields(self):
+        incomplete = (
+            'set(CMAKE_C_COMPILER_ID "MSVC")\nset(CMAKE_C_COMPILER_VERSION "19.44.35207.1")\n',
+            'set(CMAKE_C_COMPILER "C:/VS/cl.exe")\nset(CMAKE_C_COMPILER_VERSION "19.44.35207.1")\n',
+            'set(CMAKE_C_COMPILER "C:/VS/cl.exe")\nset(CMAKE_C_COMPILER_ID "MSVC")\n',
+        )
+        for generated_text in incomplete:
+            with self.subTest(generated_text=generated_text):
+                with tempfile.TemporaryDirectory(prefix="glueyneo-compiler-id-missing-") as temp:
+                    generated = Path(temp) / "CMakeFiles/4.2.0/CMakeCCompiler.cmake"
+                    generated.parent.mkdir(parents=True)
+                    generated.write_text(generated_text, encoding="utf-8")
+                    with self.assertRaisesRegex(release_manifest.ReleaseError, "compiler identity"):
+                        release_manifest.generated_compiler_identity(generated.parents[2])
 
 
 class ReleaseConsumerTests(unittest.TestCase):
@@ -107,13 +147,14 @@ class ReleaseConsumerTests(unittest.TestCase):
         configure = subprocess.run(
             ["cmake", "-S", str(source_root), "-B", str(source_build),
              "-DBUILD_TESTING=OFF", "-DGLUEYNEO_BUILD_TESTS=OFF",
+             "-DCMAKE_BUILD_TYPE=Release",
              "-DFETCHCONTENT_FULLY_DISCONNECTED=ON"],
             text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             check=False, timeout=120,
         )
         self.assertEqual(configure.returncode, 0, configure.stdout)
         build = subprocess.run(
-            ["cmake", "--build", str(source_build), "--parallel", "2"],
+            ["cmake", "--build", str(source_build), "--config", "Release", "--parallel", "2"],
             text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             check=False, timeout=180,
         )
@@ -193,15 +234,24 @@ class ReleaseConsumerTests(unittest.TestCase):
             )
             self.assertEqual(configure.returncode, 0, configure.stdout)
             build = subprocess.run(
-                ["cmake", "--build", str(consumer_build), "--parallel", "2"],
+                ["cmake", "--build", str(consumer_build), "--config", "Release", "--parallel", "2"],
                 text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 check=False, timeout=120,
             )
             self.assertEqual(build.returncode, 0, build.stdout)
+            cache = (consumer_build / "CMakeCache.txt").read_text(encoding="utf-8")
+            multi_config = any(line.startswith("CMAKE_CONFIGURATION_TYPES:")
+                               for line in cache.splitlines())
+            exe_dir = consumer_build / "Release" if multi_config else consumer_build
+            exe_suffix = ".exe" if os.name == "nt" else ""
+            consumer_exe = exe_dir / f"glueyneo-installed-c{exe_suffix}"
+            consumer_env = os.environ.copy()
+            consumer_env["PATH"] = (str(prefix / "bin") + os.pathsep
+                                     + consumer_env.get("PATH", ""))
             consumer = subprocess.run(
-                [str(consumer_build / "glueyneo-installed-c"), str(fixture)],
+                [str(consumer_exe), str(fixture)],
                 text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                check=False, timeout=30,
+                check=False, timeout=30, env=consumer_env,
             )
             self.assertEqual(consumer.returncode, 0, consumer.stdout)
             self.assertIn('"outcome":"pass"', consumer.stdout)

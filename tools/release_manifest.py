@@ -85,6 +85,36 @@ def run(argv: list[str], *, cwd: Path, timeout: int = 300) -> str:
     return result.stdout
 
 
+def generated_compiler_identity(build: Path) -> dict[str, str]:
+    """Read the configured compiler identity from CMake's generated compiler files."""
+    compiler_files = sorted((build / "CMakeFiles").glob("*/CMakeCCompiler.cmake"))
+    identities: set[tuple[str, str, str]] = set()
+    for compiler_file in compiler_files:
+        try:
+            data = compiler_file.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            continue
+
+        values: dict[str, str] = {}
+        for name in ("CMAKE_C_COMPILER", "CMAKE_C_COMPILER_ID", "CMAKE_C_COMPILER_VERSION"):
+            match = re.search(rf'^set\({name} "([^"\r\n]*)"\)$', data, re.MULTILINE)
+            if match is None:
+                break
+            values[name] = match.group(1)
+        if len(values) != 3 or not all(values.values()):
+            continue
+        identities.add((values["CMAKE_C_COMPILER"], values["CMAKE_C_COMPILER_ID"],
+                        values["CMAKE_C_COMPILER_VERSION"]))
+
+    if len(identities) != 1:
+        raise ReleaseError("generated build does not provide a unique compiler identity")
+    compiler_path, compiler_id, compiler_version = next(iter(identities))
+    compiler_basename = compiler_path.replace("\\", "/").rsplit("/", 1)[-1]
+    if not compiler_basename:
+        raise ReleaseError("generated build does not provide a compiler identity")
+    return {"path_basename": compiler_basename, "id": compiler_id, "version": compiler_version}
+
+
 def manifest_version(raw: bytes) -> str:
     def reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
         result: dict[str, object] = {}
@@ -305,14 +335,7 @@ def build_archives(repo: Path, commit: str, output_dir: Path) -> dict[str, objec
         installed_files = [p for p in sorted(sdk_root.rglob("*")) if p.is_file()]
         assets = [{"path": p.relative_to(sdk_root).as_posix(), "size": p.stat().st_size,
                    "sha256": sha256_file(p)} for p in installed_files]
-        cache = (work / "build-static" / "CMakeCache.txt").read_text(encoding="utf-8")
-        compiler_match = re.search(r"^CMAKE_C_COMPILER:FILEPATH=(.*)$", cache, re.MULTILINE)
-        compiler_id_file = next((work / "build-static/CMakeFiles").glob("*/CMakeCCompiler.cmake"), None)
-        compiler_data = compiler_id_file.read_text(encoding="utf-8") if compiler_id_file else ""
-        compiler_id = re.search(r'set\(CMAKE_C_COMPILER_ID "([^"]*)"\)', compiler_data)
-        compiler_version = re.search(r'set\(CMAKE_C_COMPILER_VERSION "([^"]*)"\)', compiler_data)
-        if not (compiler_match and compiler_id and compiler_version):
-            raise ReleaseError("generated build does not provide compiler identity")
+        compiler = generated_compiler_identity(work / "build-static")
         cmake_version = run([cmake, "--version"], cwd=source_root).splitlines()[0]
         manifest = {
             "schema_version": 1,
@@ -322,8 +345,7 @@ def build_archives(repo: Path, commit: str, output_dir: Path) -> dict[str, objec
             "architecture": platform.machine(),
             "configuration": "Release",
             "cmake": cmake_version,
-            "compiler": {"path_basename": Path(compiler_match.group(1)).name,
-                         "id": compiler_id.group(1), "version": compiler_version.group(1)},
+            "compiler": compiler,
             "source_archive": {"name": source_name, "sha256": sha256_file(source_archive)},
             "assets": assets,
         }
