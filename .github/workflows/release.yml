@@ -155,9 +155,17 @@ jobs:
           path: build/matrix-evidence/
           if-no-files-found: ignore
           retention-days: 3
+      - name: Check out trusted release packaging helper
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.sha }}
+          path: build/release-tools
+          sparse-checkout: tools/release_manifest.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
       - name: Build offline source and complete installed SDK archives
         if: runner.os != 'Windows'
-        run: python3 tools/release_manifest.py build --repo . --commit "${{ needs.release-control.outputs.commit }}" --output-dir build/release-assets
+        run: python3 build/release-tools/tools/release_manifest.py build --repo . --commit "${{ needs.release-control.outputs.commit }}" --output-dir build/release-assets
       - name: Build offline source and complete installed SDK archives
         if: runner.os == 'Windows'
         shell: pwsh
@@ -165,7 +173,7 @@ jobs:
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
           $install = & $vswhere -latest -products '*' -property installationPath
           if (-not $install) { throw 'Visual Studio with MSVC was not found' }
-          $command = 'call "' + $install + '\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 && python tools/release_manifest.py build --repo . --commit "${{ needs.release-control.outputs.commit }}" --output-dir build/release-assets'
+          $command = 'call "' + $install + '\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 && python build/release-tools/tools/release_manifest.py build --repo . --commit "${{ needs.release-control.outputs.commit }}" --output-dir build/release-assets'
           cmd.exe /d /s /c $command
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

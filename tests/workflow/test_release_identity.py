@@ -96,6 +96,16 @@ class ReleaseIdentityTests(unittest.TestCase):
             section = re.split(r'\n  [a-z][\w-]*:\n', workflow.split('\n  '+job+':\n',1)[1])[0]
             self.assertIn('ref: ${{ needs.release-control.outputs.commit }}', section)
         self.assertIn('tools/workflow/release_identity.py build/release-control/release.json', workflow)
+        helper_checkout = workflow.split('      - name: Check out trusted release packaging helper\n', 1)[1].split('      - name:', 1)[0]
+        self.assertIn('ref: ${{ github.sha }}', helper_checkout)
+        self.assertIn('path: build/release-tools', helper_checkout)
+        self.assertIn('sparse-checkout: tools/release_manifest.py', workflow)
+        self.assertIn('python3 build/release-tools/tools/release_manifest.py build --repo . --commit', workflow)
+        self.assertIn('python build/release-tools/tools/release_manifest.py build --repo . --commit', workflow)
+        ci = (ROOT / '.github/workflows/ci.yml').read_text()
+        self.assertIn('Verify Windows release archives and relocated consumers', ci)
+        self.assertIn('&& python tools/verify_sdk.py --suite release-consumer', ci)
+        self.assertIn('python3 tools/verify_sdk.py --suite release-recovery', ci)
 
 
 if __name__ == '__main__':

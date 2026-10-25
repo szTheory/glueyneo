@@ -77,7 +77,13 @@ trusted workflow revision, and that tagged source's committed root manifest
 must carry the expected version. Build and downloaded-consumer jobs check out
 that tagged source; the trusted control, staging, and publication helpers run
 from the workflow revision. A newly created release still requires the tag
-commit to equal the tested workflow revision. Recovery does not retag commits.
+commit to equal the tested workflow revision. Recovery does not retag commits. Packaging also uses the reviewed
+workflow revision's helper through a separate sparse checkout; its `--repo`
+and full `--commit` still select the immutable tagged source. This permits a
+packager repair without substituting runtime or archive source. Windows CI
+runs the archive, offline rebuild and relocated-consumer regression in its
+existing MSVC job, alongside the installed SDK matrix. Compiler identity is
+read from CMake's generated compiler metadata across supported generators.
 
 ## Current qualification boundary
 
