@@ -15,6 +15,7 @@ import sys
 import tarfile
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 import release_manifest
@@ -23,6 +24,64 @@ import public_content
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+class ReleaseWorkspaceTests(unittest.TestCase):
+    def test_explicit_parent_precedes_runner_temp_and_runner_precedes_default(self):
+        with tempfile.TemporaryDirectory(prefix="glueyneo-workspace-test-") as temp:
+            root = Path(temp)
+            explicit, runner = root / "explicit", root / "runner"
+            explicit.mkdir()
+            runner.mkdir()
+            with mock.patch.dict(os.environ, {"RUNNER_TEMP": str(runner)}), \
+                    mock.patch.object(release_manifest.platform, "system", return_value="Linux"):
+                self.assertEqual(release_manifest.workspace_parent(explicit), explicit.resolve())
+                self.assertEqual(release_manifest.workspace_parent(), runner.resolve())
+            with mock.patch.dict(os.environ, {"RUNNER_TEMP": ""}), \
+                    mock.patch.object(tempfile, "gettempdir", return_value=str(root)), \
+                    mock.patch.object(release_manifest.platform, "system", return_value="Linux"):
+                self.assertEqual(release_manifest.workspace_parent(), root.resolve())
+
+    def test_parent_must_be_absolute_existing_directory(self):
+        with self.assertRaisesRegex(release_manifest.ReleaseError, "absolute"):
+            release_manifest.workspace_parent(Path("relative-workspace"))
+        with tempfile.TemporaryDirectory(prefix="glueyneo-workspace-test-") as temp:
+            root = Path(temp)
+            with self.assertRaisesRegex(release_manifest.ReleaseError, "directory"):
+                release_manifest.workspace_parent(root / "missing")
+            file = root / "file"
+            file.write_text("not a directory", encoding="ascii")
+            with self.assertRaisesRegex(release_manifest.ReleaseError, "directory"):
+                release_manifest.workspace_parent(file)
+
+    def test_windows_rejects_resolved_profile_parents_including_runner_temp(self):
+        # Model resolved Windows paths on every test host; links must be checked
+        # after resolution, and no rejected identity may appear in the error.
+        selected = Path(tempfile.gettempdir())
+        for path in ("C:/" + "Users/synthetic/AppData/Local/Temp", "c:/USERS",
+                     "D:/" + "Documents and Settings/synthetic/temp",
+                     "//?/C:/" + "Users/synthetic/temp"):
+            with self.subTest(path=path):
+                resolved = mock.Mock(spec=Path)
+                resolved.is_dir.return_value = True
+                resolved.as_posix.return_value = path
+                with mock.patch.object(release_manifest.platform, "system", return_value="Windows"), \
+                        mock.patch.object(Path, "resolve", return_value=resolved), \
+                        mock.patch.dict(os.environ, {"RUNNER_TEMP": str(selected)}):
+                    with self.assertRaisesRegex(release_manifest.ReleaseError, "outside user profiles") as caught:
+                        release_manifest.workspace_parent()
+                    self.assertNotIn(path, str(caught.exception))
+
+    def test_windows_accepts_neutral_parent_and_profile_prefix_neighbor(self):
+        selected = Path(tempfile.gettempdir())
+        for path in ("D:/runner/temp", "C:/UsersBackup/temp", "//?/D:/runner/temp"):
+            with self.subTest(path=path):
+                resolved = mock.Mock(spec=Path)
+                resolved.is_dir.return_value = True
+                resolved.as_posix.return_value = path
+                with mock.patch.object(release_manifest.platform, "system", return_value="Windows"), \
+                        mock.patch.object(Path, "resolve", return_value=resolved):
+                    self.assertIs(release_manifest.workspace_parent(selected), resolved)
 
 
 class ReleaseManifestCompilerIdentityTests(unittest.TestCase):
@@ -124,13 +183,19 @@ class ReleaseConsumerTests(unittest.TestCase):
             stdout=subprocess.PIPE, timeout=10,
         ).stdout.strip()
         output = Path(self.temp.name) / "artifacts"
+        workspace_temp = tempfile.TemporaryDirectory(
+            prefix="glueyneo-packaging-test-", dir=release_manifest.workspace_parent())
+        self.addCleanup(workspace_temp.cleanup)
+        workspace = Path(workspace_temp.name)
         result = subprocess.run(
-            [sys.executable, str(repo / "tools/release_manifest.py"), "build",
-             "--repo", str(repo), "--commit", commit, "--output-dir", str(output)],
+            [sys.executable, str(ROOT / "tools/release_manifest.py"), "build",
+             "--repo", str(repo), "--commit", commit, "--output-dir", str(output),
+             "--workspace-dir", str(workspace)],
             text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             check=False, timeout=600,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(list(workspace.iterdir()), [])
         record = json.loads(result.stdout)
         source_archive = output / record["source"]
         sdk_archive = output / record["sdk"]

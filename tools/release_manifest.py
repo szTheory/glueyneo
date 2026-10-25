@@ -272,7 +272,34 @@ def read_commit(repo: Path, commit: str) -> tuple[str, str]:
     return resolved, manifest_version(raw.stdout)
 
 
-def build_archives(repo: Path, commit: str, output_dir: Path) -> dict[str, object]:
+def workspace_parent(workspace_dir: Path | None = None) -> Path:
+    """Select an existing parent; Windows build metadata can retain its path."""
+    selected = workspace_dir
+    if selected is None:
+        selected = Path(os.environ.get("RUNNER_TEMP") or tempfile.gettempdir())
+    if not selected.is_absolute():
+        raise ReleaseError("release workspace parent must be absolute")
+    try:
+        parent = selected.resolve(strict=True)
+    except OSError as error:
+        raise ReleaseError("release workspace parent must be an existing directory") from error
+    if not parent.is_dir():
+        raise ReleaseError("release workspace parent must be an existing directory")
+    # Do not sanitize finished binaries: prevent profile paths from entering
+    # compiler/librarian inputs. Resolve links before checking the real parent.
+    windows_path = parent.as_posix()
+    if windows_path.startswith("//?/"):
+        windows_path = windows_path[4:]
+    if platform.system() == "Windows" and re.match(
+            r"(?i)^[a-z]:/(?:users|documents and settings)(?:/|$)",
+            windows_path):
+        raise ReleaseError("Windows release workspace must be outside user profiles; "
+                           "set RUNNER_TEMP or --workspace-dir to a neutral directory")
+    return parent
+
+
+def build_archives(repo: Path, commit: str, output_dir: Path,
+                   workspace_dir: Path | None = None) -> dict[str, object]:
     repo = repo.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     commit, version = read_commit(repo, commit)
@@ -284,7 +311,8 @@ def build_archives(repo: Path, commit: str, output_dir: Path) -> dict[str, objec
     source_archive = output_dir / source_name
     sdk_archive = output_dir / sdk_name
 
-    with tempfile.TemporaryDirectory(prefix="glueyneo-release-") as temp_name:
+    with tempfile.TemporaryDirectory(prefix="glueyneo-release-",
+                                     dir=workspace_parent(workspace_dir)) as temp_name:
         work = Path(temp_name)
         raw_tar = work / "source.tar"
         archive = subprocess.run(
@@ -310,8 +338,8 @@ def build_archives(repo: Path, commit: str, output_dir: Path) -> dict[str, objec
             cmake = shutil.which("cmake")
             if cmake is None:
                 raise ReleaseError("CMake is required to build the release SDK")
-            # Ninja supplies relative object paths to the MSVC librarian; the
-            # Visual Studio generator exposed the temporary profile path in .lib.
+            # Keep one explicit Windows packaging generator. Both generators
+            # still require a neutral workspace and the complete artifact scan.
             generator = ["-G", "Ninja"] if platform.system() == "Windows" else []
             run([cmake, *generator, "-S", str(source_root), "-B", str(build),
                  "-DCMAKE_BUILD_TYPE=Release", "-DBUILD_TESTING=OFF",
@@ -402,6 +430,8 @@ def main() -> int:
     build.add_argument("--commit", required=True, help="full immutable Git commit ID")
     build.add_argument("--repo", type=Path, default=Path.cwd())
     build.add_argument("--output-dir", type=Path, required=True)
+    build.add_argument("--workspace-dir", type=Path,
+                       help="existing absolute temporary parent (defaults to RUNNER_TEMP, then system temp)")
     release_manifest_cmd = subparsers.add_parser("release-manifest", help="manifest the four staged release archives")
     release_manifest_cmd.add_argument("--commit", required=True)
     release_manifest_cmd.add_argument("--version", required=True)
@@ -410,7 +440,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         if args.command == "build":
-            result = build_archives(args.repo, args.commit, args.output_dir)
+            result = build_archives(args.repo, args.commit, args.output_dir, args.workspace_dir)
             print(json.dumps({"outcome": "pass", **result}, sort_keys=True))
         elif args.command == "release-manifest":
             resolved, version = read_commit(args.repo, args.commit)

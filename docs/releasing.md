@@ -87,8 +87,27 @@ read from CMake's generated compiler metadata. Windows SDK packaging selects
 Ninja explicitly inside the configured Visual Studio environment; MSVC remains
 the compiler/librarian. The complete archive content scan and relocated
 consumers qualify the output. The Visual Studio packaging attempt that exposed
-a temporary profile path remains a failed result; it is not an admitted archive
-configuration.
+a temporary profile path and the subsequent Ninja attempt that retained the
+same finding remain failed results. Generator selection alone did not remove
+the path.
+
+Packaging now creates its extracted source, static/shared build trees and
+install trees inside one automatically cleaned temporary child. Its parent is
+the existing absolute `--workspace-dir` when supplied, otherwise `RUNNER_TEMP`
+when nonempty, otherwise the system temporary directory. Windows packaging
+rejects resolved drive paths beneath the known `Users` and
+`Documents and Settings` profile roots (including extended drive paths) before
+compilation: compiler or librarian metadata can retain source/build paths even
+in Release libraries.
+Use the CI runner's neutral temporary parent or provide an existing neutral
+directory with `--workspace-dir` for a local Windows build. Relative parents
+are rejected to avoid selecting different workspaces from different invocation
+directories. Output archives still use `--output-dir`; workspace cleanup never
+removes that parent directory. No finished binary is rewritten and the complete
+archive content scan remains required. Windows success for this workspace
+repair remains pending an exact-revision archive scan and relocated consumers.
+This parent check does not recognize every custom or network profile layout;
+the archive scanner remains the output gate for those paths too.
 
 ## Current qualification boundary
 
