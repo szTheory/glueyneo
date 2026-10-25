@@ -117,3 +117,19 @@ head, the aggregate and review must pass, and lane/assertion counts must be
 positive. This local validator does not fetch GitHub receipts or grant merge
 authority; attach the actual current-run/check and GSD review identifiers when
 the hosted workflow is qualified.
+
+## Effective release-token scope
+
+Every trusted App-token job queries `GET /installation/repositories` and fails
+unless exactly this repository is accessible. It records a small authority
+receipt bound to source SHA, workflow run, job and installation ID, without
+credential values or unexpected repository names. Redirects are refused before
+forwarding authorization. The existing Linux Clang CI job exercises rejection
+of broader/mismatched scope, malformed responses and missing job identities.
+
+The receipt names the documented one-hour maximum installation-token lifetime
+as an API contract, not a measured expiry. The pinned token action revokes its
+token in its post-job step; actual revocation is checked in hosted job logs.
+This effective job-token check does not inspect the App's installation-wide
+grant. See the [installation-token API](https://docs.github.com/en/rest/apps/installations#list-repositories-accessible-to-the-app-installation)
+and [pinned token action](https://github.com/actions/create-github-app-token/tree/bcd2ba49218906704ab6c1aa796996da409d3eb1).
