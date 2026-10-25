@@ -173,6 +173,8 @@ class ReleaseIdentityTests(unittest.TestCase):
               'PUBLISH_EXPECTED': 'false', 'PUBLISH_RESULT': 'skipped'}, False),
             ({'VERIFY_RESULT': 'failure', 'PUBLISH_RESULT': 'skipped'}, False),
             ({'PUBLISH_RESULT': 'skipped'}, False),
+            ({'PUBLISH_RESULT': 'cancelled'}, False),
+            ({'CONTROL_RESULT': 'cancelled'}, False),
             ({'CONTROL_RESULT': 'failure'}, False),
             ({'SHOULD_BUILD': ''}, False),
             ({'BUILD_RESULT': 'skipped'}, False),
@@ -204,9 +206,9 @@ class ReleaseIdentityTests(unittest.TestCase):
         self.assertNotIn('GH_TOKEN', verification)
         self.assertNotIn('secrets.', verification)
         self.assertIn('contents: read', verification)
-        self.assertIn("if: always() && needs.release-control.result == 'success'", verification)
+        self.assertIn("!cancelled() && needs.release-control.result == 'success'", verification)
         publish = workflow.split('\n  publish-release:\n', 1)[1].split('\n  release-policy:\n', 1)[0]
-        self.assertIn("if: always() && needs.release-control.result == 'success'", publish)
+        self.assertIn("!cancelled() && needs.release-control.result == 'success'", publish)
         self.assertIn("needs.verify-downloaded-release.result == 'success'", publish)
         self.assertIn('name: ${{ needs.stage-release.outputs.downloaded_artifact_name }}', verification)
         self.assertIn('needs.release-control.result == \'success\'', stage)

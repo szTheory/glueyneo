@@ -256,5 +256,6 @@ qualified reused-build skip, successful staging and consumer jobs, and expected
 publication or held publication. An active draft cannot pass solely because its
 consumer matrix was skipped. A legitimate no-new-release path is reported as a
 no-op without claiming a newly tested artifact source. Consumer and publication
-jobs use explicit dependency-result gates so a deliberately skipped build matrix
+jobs use `!cancelled()` with explicit dependency-result gates so cancellation
+is honored and a deliberately skipped build matrix
 does not suppress verification of reused archives.

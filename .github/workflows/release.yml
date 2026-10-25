@@ -215,7 +215,7 @@ jobs:
       manifest_artifact_name: ${{ steps.assemble.outputs.manifest_artifact_name }}
       downloaded_artifact_name: ${{ steps.downloaded.outputs.downloaded_artifact_name }}
     needs: [release-control, build-release]
-    if: always() && needs.release-control.result == 'success' && needs.release-control.outputs.should_build == 'true' && (needs.build-release.result == 'success' || (needs.build-release.result == 'skipped' && needs.release-control.outputs.reuse_builds == 'true'))
+    if: ${{ !cancelled() && needs.release-control.result == 'success' && needs.release-control.outputs.should_build == 'true' && (needs.build-release.result == 'success' || (needs.build-release.result == 'skipped' && needs.release-control.outputs.reuse_builds == 'true')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -336,7 +336,7 @@ jobs:
 
   verify-downloaded-release:
     needs: [release-control, stage-release]
-    if: always() && needs.release-control.result == 'success' && needs.release-control.outputs.should_build == 'true' && needs.stage-release.result == 'success'
+    if: ${{ !cancelled() && needs.release-control.result == 'success' && needs.release-control.outputs.should_build == 'true' && needs.stage-release.result == 'success' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     permissions:
@@ -407,7 +407,7 @@ jobs:
 
   publish-release:
     needs: [release-control, stage-release, verify-downloaded-release]
-    if: always() && needs.release-control.result == 'success' && needs.release-control.outputs.should_build == 'true' && needs.stage-release.result == 'success' && needs.verify-downloaded-release.result == 'success' && (github.event_name == 'push' || inputs.publish)
+    if: ${{ !cancelled() && needs.release-control.result == 'success' && needs.release-control.outputs.should_build == 'true' && needs.stage-release.result == 'success' && needs.verify-downloaded-release.result == 'success' && (github.event_name == 'push' || inputs.publish) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
