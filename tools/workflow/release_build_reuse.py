@@ -28,7 +28,7 @@ PACKAGING_HELPER_PATH = "tools/release_manifest.py"
 PLATFORMS = ("linux-x86_64", "macos-arm64", "windows-x86_64")
 REQUIRED_JOBS = (
     "release-control",
-    *(f"build-release ({platform})" for platform in PLATFORMS),
+    *(f"build-release:{platform}" for platform in PLATFORMS),
     "stage-release",
 )
 REQUIRED_ARTIFACTS = (
@@ -107,7 +107,9 @@ class GitHubActionsAPI:
         return self._get_json(self._repo_path(repository))
 
     def get_workflow(self, repository: str, path: str) -> Any:
-        route = quote(path, safe="/")
+        if path != WORKFLOW_PATH:
+            raise ReuseError("invalid-workflow-path")
+        route = quote(path.rsplit("/", 1)[-1], safe="")
         return self._get_json(self._repo_path(repository) + f"/actions/workflows/{route}")
 
     def get_run(self, repository: str, run_id: int) -> Any:
@@ -157,18 +159,38 @@ def _required_job_results(rows: list[dict[str, Any]], run_id: int, head_sha: str
     found: dict[str, dict[str, Any]] = {}
     for row in rows:
         name = row.get("name")
-        if name not in REQUIRED_JOBS:
+        role = _job_role(name)
+        if role is None:
             continue
-        if name in found:
+        if role in found:
             raise ReuseError("duplicate-required-job")
         job_sha = row.get("head_sha")
         if (type(row.get("run_id")) is not int or row.get("run_id") != run_id
                 or not isinstance(job_sha, str) or job_sha.lower() != head_sha
                 or row.get("status") != "completed" or row.get("conclusion") != "success"):
             raise ReuseError("required-job-not-successful")
-        found[name] = row
+        found[role] = row
     if set(found) != set(REQUIRED_JOBS):
         raise ReuseError("required-job-missing")
+
+
+def _job_role(name: Any) -> str | None:
+    if not isinstance(name, str):
+        return None
+    if name in {"release-control", "stage-release"}:
+        return name
+    if "\n" in name or "\r" in name:
+        return None
+    for platform in PLATFORMS:
+        short_name = f"build-release ({platform})"
+        if name == short_name:
+            return f"build-release:{platform}"
+        prefix = f"build-release ({platform},"
+        if name.startswith(prefix) and name.endswith(")"):
+            suffix = name[len(prefix):-1]
+            if suffix.strip() and all(part.strip() for part in suffix.split(",")):
+                return f"build-release:{platform}"
+    return None
 
 
 def _required_artifacts(
@@ -254,7 +276,7 @@ def validate_build_run(
     if (run.get("status") != "completed" or run.get("conclusion") not in {"success", "failure"}
             or type(run.get("run_attempt")) is not int or run.get("run_attempt") != 1
             or run.get("event") not in {"push", "workflow_dispatch"}
-            or run.get("head_branch") != "main" or run.get("path") != f"{WORKFLOW_PATH}@main"
+            or run.get("head_branch") != "main" or run.get("path") != WORKFLOW_PATH
             or run.get("workflow_id") != workflow["id"] or run.get("pull_requests") != []):
         raise ReuseError("prior-run-trust-check-failed")
     for field in ("repository", "head_repository"):

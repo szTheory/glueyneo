@@ -23,7 +23,7 @@ import release_build_reuse as reuse
 REPOSITORY = "szTheory/glueyneo"
 REPOSITORY_ID = 1407768047
 RUN_ID = 40215191635
-WORKFLOW_ID = 194372801
+WORKFLOW_ID = 382379702
 VERSION = "0.2.0"
 TOKEN = "test-token-never-printed"
 
@@ -106,7 +106,7 @@ class ReleaseBuildReuseTests(unittest.TestCase):
             "event": "workflow_dispatch",
             "head_branch": "main",
             "head_sha": self.prior_sha,
-            "path": f"{reuse.WORKFLOW_PATH}@main",
+            "path": reuse.WORKFLOW_PATH,
             "workflow_id": WORKFLOW_ID,
             "pull_requests": [],
             "repository": {"id": REPOSITORY_ID, "full_name": REPOSITORY},
@@ -114,9 +114,9 @@ class ReleaseBuildReuseTests(unittest.TestCase):
         }
         job_names = (
             "release-control",
-            "build-release (linux-x86_64)",
-            "build-release (macos-arm64)",
-            "build-release (windows-x86_64)",
+            "build-release (linux-x86_64, ubuntu-24.04, linux-clang, clang, clang++)",
+            "build-release (macos-arm64, macos-15, macos-appleclang)",
+            "build-release (windows-x86_64, windows-2025, windows-msvc)",
             "stage-release",
         )
         api.jobs = {
@@ -182,7 +182,7 @@ class ReleaseBuildReuseTests(unittest.TestCase):
 
     def test_rejects_wrong_workflow_id_or_path(self):
         for field, value in (("workflow_id", WORKFLOW_ID + 1),
-                             ("path", ".github/workflows/other.yml@main")):
+                             ("path", ".github/workflows/other.yml")):
             with self.subTest(field=field):
                 api = self.make_api()
                 api.run[field] = value
@@ -229,6 +229,22 @@ class ReleaseBuildReuseTests(unittest.TestCase):
         api = self.make_api()
         api.jobs["total_count"] = reuse.MAX_API_ITEMS + 1
         with self.assertRaisesRegex(reuse.ReuseError, "api-list-limit-or-shape"):
+            self.validate(api)
+
+    def test_normalizes_real_matrix_job_names_and_rejects_foreign_or_duplicate_platforms(self):
+        self.assertEqual(self.validate()["workflow_sha"], self.prior_sha)
+
+        api = self.make_api()
+        api.jobs["jobs"][1]["name"] = "build-release (linux-x86_64-extra, ubuntu-24.04, linux-clang)"
+        with self.assertRaisesRegex(reuse.ReuseError, "required-job-missing"):
+            self.validate(api)
+
+        api = self.make_api()
+        duplicate = copy.deepcopy(api.jobs["jobs"][1])
+        duplicate["name"] = "build-release (linux-x86_64, different-runner, different-lane)"
+        api.jobs["jobs"].append(duplicate)
+        api.jobs["total_count"] += 1
+        with self.assertRaisesRegex(reuse.ReuseError, "duplicate-required-job"):
             self.validate(api)
 
     def test_rejects_missing_duplicate_expired_or_undigested_artifacts(self):
@@ -340,6 +356,39 @@ class ReleaseBuildReuseTests(unittest.TestCase):
                 reuse.GitHubActionsAPI(TOKEN)._get_json("/repos/owner/repo")
         self.assertEqual(opener.request.get_header("Authorization"), "Bearer " + TOKEN)
         self.assertEqual(opener.timeout, reuse.API_TIMEOUT_SECONDS)
+
+    def test_workflow_lookup_uses_filename_route_and_checks_full_path_response(self):
+        class Response:
+            def __init__(self, url):
+                self.url = url
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def geturl(self):
+                return self.url
+
+            def read(self, _size):
+                return json.dumps({"id": WORKFLOW_ID, "path": reuse.WORKFLOW_PATH}).encode()
+
+        class Opener:
+            def open(self, request, *, timeout):
+                self.request = request
+                self.timeout = timeout
+                return Response(request.full_url)
+
+        opener = Opener()
+        with mock.patch.object(reuse, "build_opener", return_value=opener):
+            workflow = reuse.GitHubActionsAPI(TOKEN).get_workflow(REPOSITORY, reuse.WORKFLOW_PATH)
+        self.assertEqual(workflow["path"], reuse.WORKFLOW_PATH)
+        self.assertEqual(
+            opener.request.full_url,
+            f"{reuse.API_ORIGIN}/repos/{REPOSITORY}/actions/workflows/release.yml",
+        )
+        self.assertEqual(opener.request.get_header("Authorization"), "Bearer " + TOKEN)
 
 
 if __name__ == "__main__":
