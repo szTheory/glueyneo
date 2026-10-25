@@ -215,7 +215,7 @@ jobs:
       manifest_artifact_name: ${{ steps.assemble.outputs.manifest_artifact_name }}
       downloaded_artifact_name: ${{ steps.downloaded.outputs.downloaded_artifact_name }}
     needs: [release-control, build-release]
-    if: always() && needs.release-control.result == 'success' && needs.release-control.outputs.should_build == 'true' && (needs.build-release.result == 'success' || (needs.build-release.result == 'skipped' && needs.release-control.outputs.reuse_builds == 'true'))
+    if: ${{ !cancelled() && needs.release-control.result == 'success' && needs.release-control.outputs.should_build == 'true' && (needs.build-release.result == 'success' || (needs.build-release.result == 'skipped' && needs.release-control.outputs.reuse_builds == 'true')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -336,7 +336,7 @@ jobs:
 
   verify-downloaded-release:
     needs: [release-control, stage-release]
-    if: needs.release-control.outputs.should_build == 'true' && needs.stage-release.result == 'success'
+    if: ${{ !cancelled() && needs.release-control.result == 'success' && needs.release-control.outputs.should_build == 'true' && needs.stage-release.result == 'success' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     permissions:
@@ -407,7 +407,7 @@ jobs:
 
   publish-release:
     needs: [release-control, stage-release, verify-downloaded-release]
-    if: needs.release-control.outputs.should_build == 'true' && needs.stage-release.result == 'success' && needs.verify-downloaded-release.result == 'success' && (github.event_name == 'push' || inputs.publish)
+    if: ${{ !cancelled() && needs.release-control.result == 'success' && needs.release-control.outputs.should_build == 'true' && needs.stage-release.result == 'success' && needs.verify-downloaded-release.result == 'success' && (github.event_name == 'push' || inputs.publish) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -464,3 +464,47 @@ jobs:
           release_id=$(python3 -c 'import json; print(json.load(open("build/release-api.json"))["release"]["id"])')
           gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$release_id" -F draft=false > build/published-release.json
           python3 -c 'import json,os; d=json.load(open("build/published-release.json")); assert d["tag_name"] == os.environ["RELEASE_TAG"] and d["draft"] is False'
+
+  release-policy:
+    if: always()
+    needs: [release-control, build-release, stage-release, verify-downloaded-release, publish-release]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Require the intended release path and all consumer results
+        shell: bash
+        env:
+          CONTROL_RESULT: ${{ needs.release-control.result }}
+          BUILD_RESULT: ${{ needs.build-release.result }}
+          STAGE_RESULT: ${{ needs.stage-release.result }}
+          VERIFY_RESULT: ${{ needs.verify-downloaded-release.result }}
+          PUBLISH_RESULT: ${{ needs.publish-release.result }}
+          SHOULD_BUILD: ${{ needs.release-control.outputs.should_build }}
+          REUSING_BUILDS: ${{ needs.release-control.outputs.reuse_builds }}
+          PUBLISH_EXPECTED: ${{ github.event_name == 'push' || inputs.publish }}
+          SOURCE_COMMIT: ${{ needs.release-control.outputs.commit }}
+        run: |
+          python3 - <<'PY_POLICY'
+          import json, os, sys
+          results = {name: os.environ.get(name + "_RESULT", "") for name in ("CONTROL", "BUILD", "STAGE", "VERIFY", "PUBLISH")}
+          should_build = os.environ.get("SHOULD_BUILD", "")
+          reuse = os.environ.get("REUSING_BUILDS", "")
+          publish = os.environ.get("PUBLISH_EXPECTED", "")
+          issues = []
+          if results["CONTROL"] != "success" or should_build not in {"true", "false"}:
+              issues.append("release-control-not-successful")
+          if should_build == "true":
+              expected_build = "skipped" if reuse == "true" else "success"
+              if reuse not in {"true", "false"} or results["BUILD"] != expected_build:
+                  issues.append("build-origin-not-qualified")
+              if results["STAGE"] != "success" or results["VERIFY"] != "success":
+                  issues.append("staging-or-consumers-not-successful")
+              if publish not in {"true", "false"} or results["PUBLISH"] != ("success" if publish == "true" else "skipped"):
+                  issues.append("publication-result-unexpected")
+          elif should_build == "false" and any(results[name] != "skipped" for name in ("BUILD", "STAGE", "VERIFY", "PUBLISH")):
+              issues.append("no-release-path-mutated")
+          print("RELEASE_POLICY " + json.dumps({"outcome": "fail" if issues else "pass", "issues": issues, "results": results, "should_build": should_build, "reuse_builds": reuse, "source_commit": os.environ.get("SOURCE_COMMIT", "") if should_build == "true" else None, "workflow_commit": os.environ.get("GITHUB_SHA", ""), "run_id": os.environ.get("GITHUB_RUN_ID", "")}, sort_keys=True, separators=(",", ":")))
+          sys.exit(1 if issues else 0)
+          PY_POLICY

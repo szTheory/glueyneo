@@ -248,3 +248,14 @@ The current origin adapter supports initial attempts with at most 100 jobs and
 Missing/expired or unsupported origins fail closed; they do not authorize asset
 replacement or a tag change. Native job reruns and fresh recovery dispatches
 remain separate observed scenarios.
+
+## Release path status
+
+The always-started `release-policy` job checks the intended path, including a
+qualified reused-build skip, successful staging and consumer jobs, and expected
+publication or held publication. An active draft cannot pass solely because its
+consumer matrix was skipped. A legitimate no-new-release path is reported as a
+no-op without claiming a newly tested artifact source. Consumer and publication
+jobs use `!cancelled()` with explicit dependency-result gates so cancellation
+is honored and a deliberately skipped build matrix
+does not suppress verification of reused archives.
