@@ -133,3 +133,19 @@ token in its post-job step; actual revocation is checked in hosted job logs.
 This effective job-token check does not inspect the App's installation-wide
 grant. See the [installation-token API](https://docs.github.com/en/rest/apps/installations#list-repositories-accessible-to-the-app-installation)
 and [pinned token action](https://github.com/actions/create-github-app-token/tree/bcd2ba49218906704ab6c1aa796996da409d3eb1).
+
+## Staging-only recovery runs
+
+A trusted manual dispatch defaults `publish` to false: it builds, stages and
+checks the complete draft through all three downloaded consumers, then leaves
+publication skipped. Dispatch the same tag and commit with `publish=true` to
+exercise existing-draft recovery and publish only after the same verification
+gates pass again. Normal `main` push behavior remains automated. The input
+cannot skip artifact identity, rights, scope or consumer checks.
+
+Under user-approved PROJECT-D-50 (2026-10-25), independent GSD review of the
+exact commit satisfies the review prerequisite without a second GitHub account.
+Strict protected current-head checks and all trust/artifact gates remain
+required. The live first-time fork approval/run stays unverified and deferred
+until a contributor exists; the read-only/no-secret workflow and GitHub
+first-time-contributor approval setting remain in place.

@@ -9,6 +9,11 @@ on:
         description: Existing draft tag to recover (must match the root version manifest)
         required: false
         type: string
+      publish:
+        description: Publish the verified draft after all staging and downloaded-consumer checks pass
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -351,7 +356,7 @@ jobs:
 
   publish-release:
     needs: [release-control, stage-release, verify-downloaded-release]
-    if: needs.release-control.outputs.should_build == 'true' && needs.stage-release.result == 'success' && needs.verify-downloaded-release.result == 'success'
+    if: needs.release-control.outputs.should_build == 'true' && needs.stage-release.result == 'success' && needs.verify-downloaded-release.result == 'success' && (github.event_name == 'push' || inputs.publish)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
