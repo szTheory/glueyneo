@@ -3,8 +3,11 @@
 
 from __future__ import annotations
 
-import json
 import hashlib
+import io
+import json
+import os
+import platform
 from pathlib import Path
 import shutil
 import subprocess
@@ -12,8 +15,7 @@ import sys
 import tarfile
 import tempfile
 import unittest
-import io
-import platform
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 import release_manifest
@@ -22,6 +24,103 @@ import public_content
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+class ReleaseWorkspaceTests(unittest.TestCase):
+    def test_explicit_parent_precedes_runner_temp_and_runner_precedes_default(self):
+        with tempfile.TemporaryDirectory(prefix="glueyneo-workspace-test-") as temp:
+            root = Path(temp)
+            explicit, runner = root / "explicit", root / "runner"
+            explicit.mkdir()
+            runner.mkdir()
+            with mock.patch.dict(os.environ, {"RUNNER_TEMP": str(runner)}), \
+                    mock.patch.object(release_manifest.platform, "system", return_value="Linux"):
+                self.assertEqual(release_manifest.workspace_parent(explicit), explicit.resolve())
+                self.assertEqual(release_manifest.workspace_parent(), runner.resolve())
+            with mock.patch.dict(os.environ, {"RUNNER_TEMP": ""}), \
+                    mock.patch.object(tempfile, "gettempdir", return_value=str(root)), \
+                    mock.patch.object(release_manifest.platform, "system", return_value="Linux"):
+                self.assertEqual(release_manifest.workspace_parent(), root.resolve())
+
+    def test_parent_must_be_absolute_existing_directory(self):
+        with self.assertRaisesRegex(release_manifest.ReleaseError, "absolute"):
+            release_manifest.workspace_parent(Path("relative-workspace"))
+        with tempfile.TemporaryDirectory(prefix="glueyneo-workspace-test-") as temp:
+            root = Path(temp)
+            with self.assertRaisesRegex(release_manifest.ReleaseError, "directory"):
+                release_manifest.workspace_parent(root / "missing")
+            file = root / "file"
+            file.write_text("not a directory", encoding="ascii")
+            with self.assertRaisesRegex(release_manifest.ReleaseError, "directory"):
+                release_manifest.workspace_parent(file)
+
+    def test_windows_rejects_resolved_profile_parents_including_runner_temp(self):
+        # Model resolved Windows paths on every test host; links must be checked
+        # after resolution, and no rejected identity may appear in the error.
+        selected = Path(tempfile.gettempdir())
+        for path in ("C:/" + "Users/synthetic/AppData/Local/Temp", "c:/USERS",
+                     "D:/" + "Documents and Settings/synthetic/temp",
+                     "//?/C:/" + "Users/synthetic/temp"):
+            with self.subTest(path=path):
+                resolved = mock.Mock(spec=Path)
+                resolved.is_dir.return_value = True
+                resolved.as_posix.return_value = path
+                with mock.patch.object(release_manifest.platform, "system", return_value="Windows"), \
+                        mock.patch.object(Path, "resolve", return_value=resolved), \
+                        mock.patch.dict(os.environ, {"RUNNER_TEMP": str(selected)}):
+                    with self.assertRaisesRegex(release_manifest.ReleaseError, "outside user profiles") as caught:
+                        release_manifest.workspace_parent()
+                    self.assertNotIn(path, str(caught.exception))
+
+    def test_windows_accepts_neutral_parent_and_profile_prefix_neighbor(self):
+        selected = Path(tempfile.gettempdir())
+        for path in ("D:/runner/temp", "C:/UsersBackup/temp", "//?/D:/runner/temp"):
+            with self.subTest(path=path):
+                resolved = mock.Mock(spec=Path)
+                resolved.is_dir.return_value = True
+                resolved.as_posix.return_value = path
+                with mock.patch.object(release_manifest.platform, "system", return_value="Windows"), \
+                        mock.patch.object(Path, "resolve", return_value=resolved):
+                    self.assertIs(release_manifest.workspace_parent(selected), resolved)
+
+
+class ReleaseManifestCompilerIdentityTests(unittest.TestCase):
+    def test_generated_compiler_identity_accepts_visual_studio_string_and_filepath_cache(self):
+        compiler = (
+            "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/"
+            "14.44.35207/bin/Hostx64/x64/cl.exe"
+        )
+        expected = {"path_basename": "cl.exe", "id": "MSVC", "version": "19.44.35207.1"}
+        with tempfile.TemporaryDirectory(prefix="glueyneo-compiler-id-") as temp:
+            build = Path(temp)
+            generated = build / "CMakeFiles/4.2.0/CMakeCCompiler.cmake"
+            generated.parent.mkdir(parents=True)
+            generated.write_text(
+                f'set(CMAKE_C_COMPILER "{compiler}")\n'
+                'set(CMAKE_C_COMPILER_ID "MSVC")\n'
+                'set(CMAKE_C_COMPILER_VERSION "19.44.35207.1")\n',
+                encoding="utf-8",
+            )
+            cache = build / "CMakeCache.txt"
+            for cache_type in ("STRING", "FILEPATH"):
+                with self.subTest(cache_type=cache_type):
+                    cache.write_text(f"CMAKE_C_COMPILER:{cache_type}={compiler}\n", encoding="utf-8")
+                    self.assertEqual(release_manifest.generated_compiler_identity(build), expected)
+
+    def test_generated_compiler_identity_rejects_missing_fields(self):
+        incomplete = (
+            'set(CMAKE_C_COMPILER_ID "MSVC")\nset(CMAKE_C_COMPILER_VERSION "19.44.35207.1")\n',
+            'set(CMAKE_C_COMPILER "C:/VS/cl.exe")\nset(CMAKE_C_COMPILER_VERSION "19.44.35207.1")\n',
+            'set(CMAKE_C_COMPILER "C:/VS/cl.exe")\nset(CMAKE_C_COMPILER_ID "MSVC")\n',
+        )
+        for generated_text in incomplete:
+            with self.subTest(generated_text=generated_text):
+                with tempfile.TemporaryDirectory(prefix="glueyneo-compiler-id-missing-") as temp:
+                    generated = Path(temp) / "CMakeFiles/4.2.0/CMakeCCompiler.cmake"
+                    generated.parent.mkdir(parents=True)
+                    generated.write_text(generated_text, encoding="utf-8")
+                    with self.assertRaisesRegex(release_manifest.ReleaseError, "compiler identity"):
+                        release_manifest.generated_compiler_identity(generated.parents[2])
 
 
 class ReleaseConsumerTests(unittest.TestCase):
@@ -84,13 +183,19 @@ class ReleaseConsumerTests(unittest.TestCase):
             stdout=subprocess.PIPE, timeout=10,
         ).stdout.strip()
         output = Path(self.temp.name) / "artifacts"
+        workspace_temp = tempfile.TemporaryDirectory(
+            prefix="glueyneo-packaging-test-", dir=release_manifest.workspace_parent())
+        self.addCleanup(workspace_temp.cleanup)
+        workspace = Path(workspace_temp.name)
         result = subprocess.run(
-            [sys.executable, str(repo / "tools/release_manifest.py"), "build",
-             "--repo", str(repo), "--commit", commit, "--output-dir", str(output)],
-            text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            [sys.executable, str(ROOT / "tools/release_manifest.py"), "build",
+             "--repo", str(repo), "--commit", commit, "--output-dir", str(output),
+             "--workspace-dir", str(workspace)],
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             check=False, timeout=600,
         )
-        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(list(workspace.iterdir()), [])
         record = json.loads(result.stdout)
         source_archive = output / record["source"]
         sdk_archive = output / record["sdk"]
@@ -107,13 +212,14 @@ class ReleaseConsumerTests(unittest.TestCase):
         configure = subprocess.run(
             ["cmake", "-S", str(source_root), "-B", str(source_build),
              "-DBUILD_TESTING=OFF", "-DGLUEYNEO_BUILD_TESTS=OFF",
+             "-DCMAKE_BUILD_TYPE=Release",
              "-DFETCHCONTENT_FULLY_DISCONNECTED=ON"],
             text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             check=False, timeout=120,
         )
         self.assertEqual(configure.returncode, 0, configure.stdout)
         build = subprocess.run(
-            ["cmake", "--build", str(source_build), "--parallel", "2"],
+            ["cmake", "--build", str(source_build), "--config", "Release", "--parallel", "2"],
             text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             check=False, timeout=180,
         )
@@ -193,15 +299,24 @@ class ReleaseConsumerTests(unittest.TestCase):
             )
             self.assertEqual(configure.returncode, 0, configure.stdout)
             build = subprocess.run(
-                ["cmake", "--build", str(consumer_build), "--parallel", "2"],
+                ["cmake", "--build", str(consumer_build), "--config", "Release", "--parallel", "2"],
                 text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 check=False, timeout=120,
             )
             self.assertEqual(build.returncode, 0, build.stdout)
+            cache = (consumer_build / "CMakeCache.txt").read_text(encoding="utf-8")
+            multi_config = any(line.startswith("CMAKE_CONFIGURATION_TYPES:")
+                               for line in cache.splitlines())
+            exe_dir = consumer_build / "Release" if multi_config else consumer_build
+            exe_suffix = ".exe" if os.name == "nt" else ""
+            consumer_exe = exe_dir / f"glueyneo-installed-c{exe_suffix}"
+            consumer_env = os.environ.copy()
+            consumer_env["PATH"] = (str(prefix / "bin") + os.pathsep
+                                     + consumer_env.get("PATH", ""))
             consumer = subprocess.run(
-                [str(consumer_build / "glueyneo-installed-c"), str(fixture)],
+                [str(consumer_exe), str(fixture)],
                 text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                check=False, timeout=30,
+                check=False, timeout=30, env=consumer_env,
             )
             self.assertEqual(consumer.returncode, 0, consumer.stdout)
             self.assertIn('"outcome":"pass"', consumer.stdout)

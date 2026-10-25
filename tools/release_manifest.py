@@ -85,6 +85,36 @@ def run(argv: list[str], *, cwd: Path, timeout: int = 300) -> str:
     return result.stdout
 
 
+def generated_compiler_identity(build: Path) -> dict[str, str]:
+    """Read the configured compiler identity from CMake's generated compiler files."""
+    compiler_files = sorted((build / "CMakeFiles").glob("*/CMakeCCompiler.cmake"))
+    identities: set[tuple[str, str, str]] = set()
+    for compiler_file in compiler_files:
+        try:
+            data = compiler_file.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            continue
+
+        values: dict[str, str] = {}
+        for name in ("CMAKE_C_COMPILER", "CMAKE_C_COMPILER_ID", "CMAKE_C_COMPILER_VERSION"):
+            match = re.search(rf'^set\({name} "([^"\r\n]*)"\)$', data, re.MULTILINE)
+            if match is None:
+                break
+            values[name] = match.group(1)
+        if len(values) != 3 or not all(values.values()):
+            continue
+        identities.add((values["CMAKE_C_COMPILER"], values["CMAKE_C_COMPILER_ID"],
+                        values["CMAKE_C_COMPILER_VERSION"]))
+
+    if len(identities) != 1:
+        raise ReleaseError("generated build does not provide a unique compiler identity")
+    compiler_path, compiler_id, compiler_version = next(iter(identities))
+    compiler_basename = compiler_path.replace("\\", "/").rsplit("/", 1)[-1]
+    if not compiler_basename:
+        raise ReleaseError("generated build does not provide a compiler identity")
+    return {"path_basename": compiler_basename, "id": compiler_id, "version": compiler_version}
+
+
 def manifest_version(raw: bytes) -> str:
     def reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
         result: dict[str, object] = {}
@@ -242,7 +272,34 @@ def read_commit(repo: Path, commit: str) -> tuple[str, str]:
     return resolved, manifest_version(raw.stdout)
 
 
-def build_archives(repo: Path, commit: str, output_dir: Path) -> dict[str, object]:
+def workspace_parent(workspace_dir: Path | None = None) -> Path:
+    """Select an existing parent; Windows build metadata can retain its path."""
+    selected = workspace_dir
+    if selected is None:
+        selected = Path(os.environ.get("RUNNER_TEMP") or tempfile.gettempdir())
+    if not selected.is_absolute():
+        raise ReleaseError("release workspace parent must be absolute")
+    try:
+        parent = selected.resolve(strict=True)
+    except OSError as error:
+        raise ReleaseError("release workspace parent must be an existing directory") from error
+    if not parent.is_dir():
+        raise ReleaseError("release workspace parent must be an existing directory")
+    # Do not sanitize finished binaries: prevent profile paths from entering
+    # compiler/librarian inputs. Resolve links before checking the real parent.
+    windows_path = parent.as_posix()
+    if windows_path.startswith("//?/"):
+        windows_path = windows_path[4:]
+    if platform.system() == "Windows" and re.match(
+            r"(?i)^[a-z]:/(?:users|documents and settings)(?:/|$)",
+            windows_path):
+        raise ReleaseError("Windows release workspace must be outside user profiles; "
+                           "set RUNNER_TEMP or --workspace-dir to a neutral directory")
+    return parent
+
+
+def build_archives(repo: Path, commit: str, output_dir: Path,
+                   workspace_dir: Path | None = None) -> dict[str, object]:
     repo = repo.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     commit, version = read_commit(repo, commit)
@@ -254,7 +311,8 @@ def build_archives(repo: Path, commit: str, output_dir: Path) -> dict[str, objec
     source_archive = output_dir / source_name
     sdk_archive = output_dir / sdk_name
 
-    with tempfile.TemporaryDirectory(prefix="glueyneo-release-") as temp_name:
+    with tempfile.TemporaryDirectory(prefix="glueyneo-release-",
+                                     dir=workspace_parent(workspace_dir)) as temp_name:
         work = Path(temp_name)
         raw_tar = work / "source.tar"
         archive = subprocess.run(
@@ -280,7 +338,10 @@ def build_archives(repo: Path, commit: str, output_dir: Path) -> dict[str, objec
             cmake = shutil.which("cmake")
             if cmake is None:
                 raise ReleaseError("CMake is required to build the release SDK")
-            run([cmake, "-S", str(source_root), "-B", str(build),
+            # Keep one explicit Windows packaging generator. Both generators
+            # still require a neutral workspace and the complete artifact scan.
+            generator = ["-G", "Ninja"] if platform.system() == "Windows" else []
+            run([cmake, *generator, "-S", str(source_root), "-B", str(build),
                  "-DCMAKE_BUILD_TYPE=Release", "-DBUILD_TESTING=OFF",
                  "-DGLUEYNEO_BUILD_TESTS=OFF", f"-DBUILD_SHARED_LIBS={shared}",
                  f"-DCMAKE_INSTALL_PREFIX={prefix}"], cwd=source_root)
@@ -305,14 +366,7 @@ def build_archives(repo: Path, commit: str, output_dir: Path) -> dict[str, objec
         installed_files = [p for p in sorted(sdk_root.rglob("*")) if p.is_file()]
         assets = [{"path": p.relative_to(sdk_root).as_posix(), "size": p.stat().st_size,
                    "sha256": sha256_file(p)} for p in installed_files]
-        cache = (work / "build-static" / "CMakeCache.txt").read_text(encoding="utf-8")
-        compiler_match = re.search(r"^CMAKE_C_COMPILER:FILEPATH=(.*)$", cache, re.MULTILINE)
-        compiler_id_file = next((work / "build-static/CMakeFiles").glob("*/CMakeCCompiler.cmake"), None)
-        compiler_data = compiler_id_file.read_text(encoding="utf-8") if compiler_id_file else ""
-        compiler_id = re.search(r'set\(CMAKE_C_COMPILER_ID "([^"]*)"\)', compiler_data)
-        compiler_version = re.search(r'set\(CMAKE_C_COMPILER_VERSION "([^"]*)"\)', compiler_data)
-        if not (compiler_match and compiler_id and compiler_version):
-            raise ReleaseError("generated build does not provide compiler identity")
+        compiler = generated_compiler_identity(work / "build-static")
         cmake_version = run([cmake, "--version"], cwd=source_root).splitlines()[0]
         manifest = {
             "schema_version": 1,
@@ -322,8 +376,7 @@ def build_archives(repo: Path, commit: str, output_dir: Path) -> dict[str, objec
             "architecture": platform.machine(),
             "configuration": "Release",
             "cmake": cmake_version,
-            "compiler": {"path_basename": Path(compiler_match.group(1)).name,
-                         "id": compiler_id.group(1), "version": compiler_version.group(1)},
+            "compiler": compiler,
             "source_archive": {"name": source_name, "sha256": sha256_file(source_archive)},
             "assets": assets,
         }
@@ -377,6 +430,8 @@ def main() -> int:
     build.add_argument("--commit", required=True, help="full immutable Git commit ID")
     build.add_argument("--repo", type=Path, default=Path.cwd())
     build.add_argument("--output-dir", type=Path, required=True)
+    build.add_argument("--workspace-dir", type=Path,
+                       help="existing absolute temporary parent (defaults to RUNNER_TEMP, then system temp)")
     release_manifest_cmd = subparsers.add_parser("release-manifest", help="manifest the four staged release archives")
     release_manifest_cmd.add_argument("--commit", required=True)
     release_manifest_cmd.add_argument("--version", required=True)
@@ -385,7 +440,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         if args.command == "build":
-            result = build_archives(args.repo, args.commit, args.output_dir)
+            result = build_archives(args.repo, args.commit, args.output_dir, args.workspace_dir)
             print(json.dumps({"outcome": "pass", **result}, sort_keys=True))
         elif args.command == "release-manifest":
             resolved, version = read_commit(args.repo, args.commit)
