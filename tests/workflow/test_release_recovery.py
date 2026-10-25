@@ -12,6 +12,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 import release_state
+import sdk_evidence
 
 
 COMMIT = "a" * 40
@@ -143,6 +144,67 @@ class ReleaseRecoveryTests(unittest.TestCase):
             self.assertIn(f"name: {platform}", workflow)
         self.assertIn("validate-draft", workflow)
         self.assertIn("verify-download", workflow)
+
+    def test_release_build_matrix_uses_supported_sdk_lanes_and_compilers(self):
+        root = Path(__file__).resolve().parents[2]
+        workflow = (root / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        build = workflow.split("\n  build-release:\n", 1)[1].split("\n  stage-release:\n", 1)[0]
+        matrix_section = build.split("      matrix:\n", 1)[1].split("\n    steps:\n", 1)[0]
+
+        rows = []
+        current = None
+        for line in matrix_section.splitlines():
+            if line.startswith("          - "):
+                if current is not None:
+                    rows.append(current)
+                key, value = line.strip()[2:].split(": ", 1)
+                current = {key: value.strip('"')}
+            elif current is not None and line.startswith("            "):
+                key, value = line.strip().split(": ", 1)
+                current[key] = value.strip('"')
+        if current is not None:
+            rows.append(current)
+
+        expected = {
+            "linux-x86_64": ("ubuntu-24.04", "linux-clang", "clang", "clang++"),
+            "macos-arm64": ("macos-15", "macos-appleclang", "", ""),
+            "windows-x86_64": ("windows-2025", "windows-msvc", "", ""),
+        }
+        self.assertEqual({row.get("name") for row in rows}, set(expected))
+        runner_os = {"ubuntu-24.04": "Linux", "macos-15": "Darwin", "windows-2025": "Windows"}
+        verify_sdk = (root / "tools/verify_sdk.py").read_text(encoding="utf-8")
+        self.assertIn("parser.add_argument(\"--lane\", choices=evidence.REQUIRED_MATRIX_LANES)", verify_sdk)
+
+        for row in rows:
+            name = row["name"]
+            self.assertIn("lane", row, f"release matrix row {name} must select an SDK evidence lane")
+            runner, lane, cc, cxx = expected[name]
+            self.assertEqual((row.get("runner"), row.get("lane"), row.get("cc"), row.get("cxx")),
+                             (runner, lane, cc, cxx))
+            self.assertIn(row["lane"], sdk_evidence.REQUIRED_MATRIX_LANES)
+            observed_os, compiler_ids, _architectures = sdk_evidence.MATRIX_LANE_IDENTITY[row["lane"]]
+            self.assertEqual(observed_os, runner_os[row["runner"]])
+            compiler_for_lane = {
+                "linux-clang": "Clang",
+                "macos-appleclang": "AppleClang",
+                "windows-msvc": "MSVC",
+            }[row["lane"]]
+            self.assertIn(compiler_for_lane, compiler_ids)
+
+        linux_step = workflow.split("- name: Run exact-commit SDK matrix and installed consumers\n", 1)[1].split(
+            "- name: Run exact-commit Windows SDK matrix and installed consumers\n", 1
+        )[0]
+        windows_step = workflow.split("- name: Run exact-commit Windows SDK matrix and installed consumers\n", 1)[1]
+        for contract in (
+            "SDK_MATRIX_LANE: ${{ matrix.lane }}",
+            "CC: ${{ matrix.cc }}",
+            "CXX: ${{ matrix.cxx }}",
+            "--lane \"$SDK_MATRIX_LANE\"",
+        ):
+            self.assertIn(contract, linux_step)
+        self.assertIn("SDK_MATRIX_LANE: ${{ matrix.lane }}", windows_step)
+        self.assertIn("--lane ' + $env:SDK_MATRIX_LANE", windows_step)
+        self.assertIn("name: release-matrix-${{ matrix.name }}", workflow)
 
 
 if __name__ == "__main__":

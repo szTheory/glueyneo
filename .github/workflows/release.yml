@@ -135,10 +135,19 @@ jobs:
         include:
           - name: linux-x86_64
             runner: ubuntu-24.04
+            lane: linux-clang
+            cc: clang
+            cxx: clang++
           - name: macos-arm64
             runner: macos-15
+            lane: macos-appleclang
+            cc: ""
+            cxx: ""
           - name: windows-x86_64
             runner: windows-2025
+            lane: windows-msvc
+            cc: ""
+            cxx: ""
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -147,14 +156,16 @@ jobs:
       - name: Run exact-commit SDK matrix and installed consumers
         if: runner.os != 'Windows'
         env:
-          SDK_MATRIX_LANE: ${{ matrix.name }}
+          SDK_MATRIX_LANE: ${{ matrix.lane }}
           SDK_SOURCE_REVISION: ${{ needs.release-control.outputs.commit }}
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
         run: python3 tools/verify_sdk.py --suite matrix --lane "$SDK_MATRIX_LANE" --output "build/matrix-evidence/$SDK_MATRIX_LANE.json"
       - name: Run exact-commit Windows SDK matrix and installed consumers
         if: runner.os == 'Windows'
         shell: pwsh
         env:
-          SDK_MATRIX_LANE: ${{ matrix.name }}
+          SDK_MATRIX_LANE: ${{ matrix.lane }}
           SDK_SOURCE_REVISION: ${{ needs.release-control.outputs.commit }}
         run: |
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
