@@ -59,7 +59,7 @@ jobs:
         run: python3 tools/workflow/app_scope.py --output build/app-authority.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: release-app-authority-${{ github.job }}
+          name: release-app-authority-${{ github.job }}-attempt-${{ github.run_attempt }}
           path: build/app-authority.json
           if-no-files-found: error
           retention-days: 7
@@ -91,7 +91,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
-          name: release-api-snapshot
+          name: release-api-snapshot-attempt-${{ github.run_attempt }}
           path: build/release-control/release.json
           if-no-files-found: ignore
           retention-days: 7
@@ -151,7 +151,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: release-matrix-diagnostics-${{ matrix.name }}
+          name: release-matrix-diagnostics-${{ matrix.name }}-attempt-${{ github.run_attempt }}
           path: build/matrix-evidence/
           if-no-files-found: ignore
           retention-days: 3
@@ -184,6 +184,8 @@ jobs:
           retention-days: 3
 
   stage-release:
+    outputs:
+      manifest_artifact_name: ${{ steps.assemble.outputs.manifest_artifact_name }}
     needs: [release-control, build-release]
     if: needs.release-control.outputs.should_build == 'true' && needs.build-release.result == 'success'
     runs-on: ubuntu-24.04
@@ -211,7 +213,7 @@ jobs:
         run: python3 tools/workflow/app_scope.py --output build/app-authority.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: release-app-authority-${{ github.job }}
+          name: release-app-authority-${{ github.job }}-attempt-${{ github.run_attempt }}
           path: build/app-authority.json
           if-no-files-found: error
           retention-days: 7
@@ -219,7 +221,8 @@ jobs:
         with:
           pattern: release-matrix-*
           path: build/release-matrix
-      - name: Assemble the exact archive set and identity manifest
+      - id: assemble
+        name: Assemble the exact archive set and identity manifest
         shell: bash
         env:
           RELEASE_COMMIT: ${{ needs.release-control.outputs.commit }}
@@ -233,9 +236,10 @@ jobs:
           cp "build/release-matrix/release-matrix-windows-x86_64/glueyneo-sdk-${RELEASE_VERSION}-windows-x86_64.tar.gz" build/release-assets/
           python3 tools/release_manifest.py release-manifest --repo . --commit "$RELEASE_COMMIT" --version "$RELEASE_VERSION" --output-dir build/release-assets
           cp build/release-assets/release-manifest.json build/expected-release-manifest.json
+          echo "manifest_artifact_name=release-identity-manifest-attempt-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: release-identity-manifest
+          name: ${{ steps.assemble.outputs.manifest_artifact_name }}
           path: build/expected-release-manifest.json
           if-no-files-found: error
           retention-days: 3
@@ -252,7 +256,10 @@ jobs:
           python3 tools/release_state.py query-api --repository "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --output build/release-api.json
           python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["status"] == "found" and d["release"].get("draft") is True' build/release-api.json
           python3 tools/release_state.py validate-draft --release build/release-api.json --manifest build/release-assets/release-manifest.json --tag "$RELEASE_TAG" --version "$RELEASE_VERSION" --commit "$RELEASE_COMMIT" > build/release-validation.json
-          while IFS= read -r asset; do gh release upload "$RELEASE_TAG" "build/release-assets/$asset"; done < <(python3 -c 'import json; print("\n".join(json.load(open("build/release-validation.json"))["missing_assets"]))')
+          while IFS= read -r asset; do
+            [[ -n "$asset" ]] || continue
+            gh release upload "$RELEASE_TAG" "build/release-assets/$asset"
+          done < <(python3 -c 'import json; print("\n".join(json.load(open("build/release-validation.json"))["missing_assets"]))')
       - name: Re-query and require complete staged draft
         shell: bash
         env:
@@ -293,7 +300,7 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: release-identity-manifest
+          name: ${{ needs.stage-release.outputs.manifest_artifact_name }}
           path: build/expected
       - name: Download staged release from GitHub
         env:
@@ -374,13 +381,13 @@ jobs:
         run: python3 tools/workflow/app_scope.py --output build/app-authority.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: release-app-authority-${{ github.job }}
+          name: release-app-authority-${{ github.job }}-attempt-${{ github.run_attempt }}
           path: build/app-authority.json
           if-no-files-found: error
           retention-days: 7
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: release-identity-manifest
+          name: ${{ needs.stage-release.outputs.manifest_artifact_name }}
           path: build/expected
       - name: Re-query and revalidate the exact draft after all platform consumers pass
         shell: bash
