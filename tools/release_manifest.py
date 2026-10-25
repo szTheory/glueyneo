@@ -34,6 +34,10 @@ SOURCE_PATHS = (
     "src",
     "tests",
     "third_party/unity",
+    "third_party/libretro",
+    "third_party/zlib",
+    "third_party/chips",
+    "third_party/ymfm",
     "tools/diagnostic",
     "tools/release_manifest.py",
     "tools/release_state.py",
@@ -295,6 +299,7 @@ def build_archives(repo: Path, commit: str, output_dir: Path) -> dict[str, objec
         example = sdk_root / "consumer-example"
         (example / "source").mkdir(parents=True)
         shutil.copy2(source_root / "tests/consumers/CMakeLists.txt", example / "source/CMakeLists.txt")
+        shutil.copy2(source_root / ".release-please-manifest.json", example / "source/.release-please-manifest.json")
         shutil.copy2(source_root / "tests/consumers/header.cpp", example / "source/header.cpp")
         shutil.copy2(source_root / "examples/diagnostic.c", example / "source/diagnostic.c")
         installed_files = [p for p in sorted(sdk_root.rglob("*")) if p.is_file()]

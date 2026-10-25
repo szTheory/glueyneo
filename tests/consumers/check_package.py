@@ -18,6 +18,14 @@ import tempfile
 
 
 ROOT = Path(__file__).resolve().parents[2]
+NOTICE_FILES = {
+    "libretro/libretro.h": "third_party/libretro/libretro.h",
+    "libretro/NOTICE.md": "third_party/libretro/NOTICE.md",
+    "chips/NOTICE.md": "third_party/chips/NOTICE.md",
+    "ymfm/LICENSE": "third_party/ymfm/LICENSE",
+    "ymfm/NOTICE.md": "third_party/ymfm/NOTICE.md",
+    "zlib/LICENSE": "third_party/zlib/LICENSE",
+}
 BUILD_ROOT = ROOT / "build" / "consumers"
 EXPECTED_FIXTURE_SHA256 = (
     "495eb195089d0ee7e73f4090514980b47a5fd4a55869d9e7f46376bce1646948"
@@ -122,10 +130,15 @@ def installed_layout(prefix: Path, variant: str) -> dict[str, Path]:
     license_file = prefix / "share" / "licenses" / "Glueyneo" / "LICENSE"
     fixture = prefix / "share" / "glueyneo" / "diagnostic-original-a.bin"
     runner_candidates = list((prefix / "bin").glob("glueyneo-diagnostic*"))
-    for path in (version_file, targets_file, header, license_file, fixture):
+    notices = prefix / "share" / "licenses" / "Glueyneo"
+    notice_paths = [notices / relative for relative in NOTICE_FILES]
+    for path in (version_file, targets_file, header, license_file, fixture, *notice_paths):
         if not path.is_file():
             code = "missing-header" if path == header else "missing-fixture" if path == fixture else "missing-package-metadata"
             raise CheckError(f"Missing installed package artifact: {path.relative_to(prefix)}", code=code)
+    for relative, source in NOTICE_FILES.items():
+        if (notices / relative).read_bytes() != (ROOT / source).read_bytes():
+            raise CheckError(f"Installed dependency notice differs from source: {relative}", code="notice-mismatch")
     if len(runner_candidates) != 1:
         raise CheckError(f"Expected one installed diagnostic runner; found {runner_candidates}")
 
@@ -479,7 +492,7 @@ def case_build(variant: str) -> None:
         "host": f"{platform.system()} {platform.machine()}",
         "compiler": package["identity"],
         "cmake": run([shutil.which("cmake") or "cmake", "--version"]).stdout.splitlines()[0],
-        "project_version": "0.1.0",
+        "project_version": json.loads((ROOT / ".release-please-manifest.json").read_text())["."],
         "configuration": "Release",
         "library_sha256": sha256(layout["library"]),
         "header_sha256": sha256(layout["header"]),
@@ -496,6 +509,7 @@ def case_build(variant: str) -> None:
 def stage_consumer_project(destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     shutil.copy2(ROOT / "tests" / "consumers" / "CMakeLists.txt", destination / "CMakeLists.txt")
+    shutil.copy2(ROOT / ".release-please-manifest.json", destination / ".release-please-manifest.json")
     shutil.copy2(ROOT / "tests" / "consumers" / "header.cpp", destination / "header.cpp")
     shutil.copy2(ROOT / "examples" / "diagnostic.c", destination / "diagnostic.c")
 
@@ -889,7 +903,7 @@ def check_readme_links_and_contracts() -> int:
         raise CheckError(f"README local-link verification found too few links: {local_links}")
 
     required_contracts = (
-        "find_package(Glueyneo 0.1.0 EXACT CONFIG REQUIRED)",
+        'find_package(Glueyneo "${GLUEYNEO_CONSUMER_VERSION}" EXACT CONFIG REQUIRED)',
         "callbacks receive the low 24 address bits",
         "GN_STATUS_INVALID_MEDIA",
         "invalid diagnostic media",

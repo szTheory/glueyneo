@@ -118,6 +118,13 @@ jobs:
           $command = 'call "' + $install + '\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 && python tools/verify_sdk.py --suite matrix --lane windows-msvc --output evidence/sdk/matrix-windows-msvc.json'
           cmd.exe /d /s /c $command
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify bumped release archives and exact consumer versions
+        if: matrix.lane == 'linux-clang'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/consumers/test_check_package.py ConsumerVersionTest
+          python3 tools/verify_sdk.py --suite release-consumer
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:

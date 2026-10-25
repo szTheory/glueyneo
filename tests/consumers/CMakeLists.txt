@@ -2,7 +2,15 @@
 cmake_minimum_required(VERSION 3.20)
 project(GlueyneoInstalledConsumer LANGUAGES C CXX)
 
-find_package(Glueyneo 0.1.0 EXACT CONFIG REQUIRED)
+# The source consumer reads the root manifest; the packaged example carries a
+# staged copy beside this file. Both keep exact matching after release bumps.
+set(_manifest "${CMAKE_CURRENT_LIST_DIR}/.release-please-manifest.json")
+if(NOT EXISTS "${_manifest}")
+  set(_manifest "${CMAKE_CURRENT_LIST_DIR}/../../.release-please-manifest.json")
+endif()
+file(READ "${_manifest}" _manifest_json)
+string(JSON GLUEYNEO_CONSUMER_VERSION GET "${_manifest_json}" ".")
+find_package(Glueyneo "${GLUEYNEO_CONSUMER_VERSION}" EXACT CONFIG REQUIRED)
 
 add_executable(glueyneo-installed-c "${GLUEYNEO_CONSUMER_C_SOURCE}")
 target_link_libraries(glueyneo-installed-c PRIVATE Glueyneo::glueyneo)

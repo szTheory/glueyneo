@@ -39,6 +39,14 @@ output does not authorize publication; the API tag target, draft state, exact
 asset inventory, downloaded bytes, rebuild, consumers, and content gate are
 independent required checks.
 
+The existing Linux Clang CI job also builds an extracted source archive and
+relocates its static/shared SDK consumers at a synthetic `9.8.7` release
+version. The example carries the root manifest and keeps exact package-version
+matching, so a version bump does not rely on rewriting consumer source. The
+source archive includes the pinned runtime dependencies; installed SDKs retain
+their applicable dependency notices. Hosted runtime cost has not yet been
+measured.
+
 For a failed staging or verification run, rerun that workflow run or dispatch
 the workflow with the existing tag. Recovery still reads the root manifest and
 requires its tag and version to match. The workflow does not depend on an event
