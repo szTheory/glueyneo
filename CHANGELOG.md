@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.1](https://github.com/szTheory/glueyneo/compare/v0.2.0...v0.2.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* **release:** keep Windows SDK packaging outside profile directories ([#10](https://github.com/szTheory/glueyneo/issues/10)) ([4caa4b5](https://github.com/szTheory/glueyneo/commit/4caa4b55067c8cd9d90061dd61951c8983078643))
+* **release:** recover draft lookup without changing tagged source ([#8](https://github.com/szTheory/glueyneo/issues/8)) ([5c92964](https://github.com/szTheory/glueyneo/commit/5c92964deb3c013908c583193dc175388df69fbf))
+* **release:** relay private draft downloads to read-only consumers ([#12](https://github.com/szTheory/glueyneo/issues/12)) ([0a2630b](https://github.com/szTheory/glueyneo/commit/0a2630b8e103790575b19ffd8158712e3b4b4949))
+* **release:** require consumer results after reused build skips ([#13](https://github.com/szTheory/glueyneo/issues/13)) ([efb0c6e](https://github.com/szTheory/glueyneo/commit/efb0c6e83f19bf694bec5e3e18cd39cfc1180a32))
+* **release:** validate snapshots and preserve native staging retries ([#11](https://github.com/szTheory/glueyneo/issues/11)) ([858b82f](https://github.com/szTheory/glueyneo/commit/858b82f6f0966d1ded0da05f806806320e5d2416))
+
 ## [0.2.0](https://github.com/szTheory/glueyneo/compare/4b2120d57f486ef7561409ff80db109b7494ae5d...v0.2.0) (2026-10-25)
 
 
