@@ -127,10 +127,10 @@ class ReleaseConsumerTests(unittest.TestCase):
         result = subprocess.run(
             [sys.executable, str(repo / "tools/release_manifest.py"), "build",
              "--repo", str(repo), "--commit", commit, "--output-dir", str(output)],
-            text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             check=False, timeout=600,
         )
-        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         record = json.loads(result.stdout)
         source_archive = output / record["source"]
         sdk_archive = output / record["sdk"]
