@@ -9,6 +9,7 @@ import sys
 import tempfile
 from pathlib import Path
 import unittest
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 import release_state
@@ -38,6 +39,133 @@ def validate(value):
         value, expected_tag="v0.1.0", expected_version="0.1.0",
         expected_commit=COMMIT, manifest_version="0.1.0", expected_assets=ASSETS,
     )
+
+
+def release_record(release_id, tag):
+    return {"id": release_id, "tag_name": tag, "draft": True, "assets": []}
+
+
+class FakeGitHubReleaseAPI(release_state.GitHubReleaseAPI):
+    def __init__(self, responses):
+        super().__init__("owner/repo", "test-token")
+        self.responses = responses
+        self.calls = []
+
+    def _get(self, path, *, timeout=20):
+        self.calls.append((path, timeout))
+        if path not in self.responses:
+            raise AssertionError(f"unexpected GitHub API request: {path}")
+        response = self.responses[path]
+        if isinstance(response, BaseException):
+            raise response
+        return response
+
+
+class GitHubReleaseLookupTests(unittest.TestCase):
+    tag = "v0.2.0"
+    tag_path = "/releases/tags/v0.2.0"
+    page_size = 100
+    list_timeout = 10
+    max_pages = 5
+    max_response_bytes = 8 * 1024 * 1024
+
+    def page_path(self, page):
+        return f"/releases?per_page={self.page_size}&page={page}"
+
+    def test_published_tag_lookup_keeps_the_direct_fast_path(self):
+        published = release_record(42, self.tag)
+        published["draft"] = False
+        api = FakeGitHubReleaseAPI({self.tag_path: published})
+
+        self.assertIs(api.get_release_by_tag(self.tag), published)
+        self.assertEqual(api.calls, [(self.tag_path, 20)])
+
+    def test_tag_404_lists_bounded_pages_and_matches_the_exact_tag(self):
+        first_page = [release_record(index + 1, f"v0.1.{index}")
+                      for index in range(self.page_size)]
+        second_page = [release_record(101, self.tag), release_record(102, "v0.2.0-rc.1")]
+        api = FakeGitHubReleaseAPI({self.tag_path: None, self.page_path(1): first_page,
+                                    self.page_path(2): second_page})
+
+        self.assertEqual(api.get_release_by_tag(self.tag), second_page[0])
+        self.assertEqual(api.calls, [
+            (self.tag_path, 20),
+            (self.page_path(1), self.list_timeout),
+            (self.page_path(2), self.list_timeout),
+        ])
+
+    def test_exact_tag_absence_requires_a_complete_short_page(self):
+        page = [release_record(1, "v0.1.0"), release_record(2, "V0.2.0")]
+        api = FakeGitHubReleaseAPI({self.tag_path: None, self.page_path(1): page})
+
+        result = release_state.query_existing_release(api, self.tag, release_created=False)
+
+        self.assertEqual(result, {"status": "absent", "release": None})
+        self.assertEqual(api.calls[-1], (self.page_path(1), self.list_timeout))
+
+    def test_duplicate_exact_tags_are_rejected_across_pages(self):
+        first_page = [release_record(1, self.tag)] + [
+            release_record(index + 2, f"v0.1.{index}")
+            for index in range(self.page_size - 1)
+        ]
+        second_page = [release_record(101, self.tag)]
+        api = FakeGitHubReleaseAPI({self.tag_path: None, self.page_path(1): first_page,
+                                    self.page_path(2): second_page})
+
+        with self.assertRaisesRegex(release_state.ReleaseStateError, "ambiguous"):
+            api.get_release_by_tag(self.tag)
+
+    def test_malformed_release_list_or_rows_are_rejected(self):
+        malformed_pages = (
+            None,
+            {"message": "not a list"},
+            ["not a release object"],
+            [{"id": 1, "draft": True}],
+            [{"id": True, "tag_name": self.tag, "draft": True}],
+            [{"id": 1, "tag_name": self.tag, "draft": "true"}],
+            [{"id": 1, "tag_name": self.tag, "draft": True}],
+        )
+        for page in malformed_pages:
+            with self.subTest(page=page):
+                api = FakeGitHubReleaseAPI({self.tag_path: None, self.page_path(1): page})
+                with self.assertRaises(release_state.ReleaseStateError):
+                    api.get_release_by_tag(self.tag)
+
+    def test_full_page_bound_fails_closed_instead_of_claiming_absence(self):
+        responses = {self.tag_path: None}
+        for page in range(1, self.max_pages + 1):
+            responses[self.page_path(page)] = [
+                release_record(page * self.page_size + index,
+                               f"v0.1.{page}.{index}")
+                for index in range(self.page_size)
+            ]
+        api = FakeGitHubReleaseAPI(responses)
+
+        with self.assertRaisesRegex(release_state.ReleaseStateError, "page limit"):
+            api.get_release_by_tag(self.tag)
+        self.assertEqual(len(api.calls), self.max_pages + 1)
+
+    def test_api_response_body_read_is_size_bounded(self):
+        class Response:
+            def __init__(self):
+                self.read_size = None
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self, size=-1):
+                self.read_size = size
+                return b"x" * size
+
+        response = Response()
+        api = release_state.GitHubReleaseAPI("owner/repo", "test-token")
+        with mock.patch.object(release_state, "urlopen", return_value=response):
+            with self.assertRaisesRegex(release_state.ReleaseStateError, "size limit"):
+                api._get("/releases")
+        self.assertEqual(response.read_size, self.max_response_bytes + 1)
 
 
 class ReleaseRecoveryTests(unittest.TestCase):

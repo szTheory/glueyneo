@@ -58,6 +58,27 @@ prints and uploads a bounded diagnostic after path, identity, and credential
 redaction plus a detector-negative check; the uploaded receipt records the
 failed stage and exact source revision without adding successful counts.
 
+## Draft lookup on recovery
+
+The direct `Get a release by tag` lookup is retained for published releases. If
+it returns 404, recovery makes read-only `List releases` requests and selects
+only a case-sensitive exact `tag_name` match. GitHub documents that the list
+includes draft releases only for users with push access. This fallback reads at
+most five pages of 100 releases, uses a 10-second timeout per page request, and
+rejects a response body larger than 8 MiB. Malformed entries, duplicate exact
+tags, an unavailable list endpoint, or a full five-page result fail closed;
+they are never treated as an absent release. The API lookup itself performs no
+mutations. See GitHub's [Get a release by tag name](https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28#get-a-release-by-tag-name)
+and [List releases](https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28#list-releases)
+documentation.
+
+On recovery, the tag must identify a full commit that is an ancestor of the
+trusted workflow revision, and that tagged source's committed root manifest
+must carry the expected version. Build and downloaded-consumer jobs check out
+that tagged source; the trusted control, staging, and publication helpers run
+from the workflow revision. A newly created release still requires the tag
+commit to equal the tested workflow revision. Recovery does not retag commits.
+
 ## Current qualification boundary
 
 The local recovery fixtures cover exact and partial drafts, retry lookup when
