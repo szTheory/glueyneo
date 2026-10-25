@@ -9,6 +9,10 @@ on:
         description: Existing draft tag to recover (must match the root version manifest)
         required: false
         type: string
+      reuse_build_run:
+        description: Reuse qualified immutable build artifacts from this release workflow run
+        required: false
+        type: string
       publish:
         description: Publish the verified draft after all staging and downloaded-consumer checks pass
         required: false
@@ -31,11 +35,15 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      actions: read
     outputs:
       should_build: ${{ steps.identity.outputs.should_build }}
       tag: ${{ steps.identity.outputs.tag }}
       version: ${{ steps.identity.outputs.version }}
       commit: ${{ steps.identity.outputs.commit }}
+      build_run_id: ${{ steps.build-origin.outputs.build_run_id }}
+      reuse_builds: ${{ steps.build-origin.outputs.reuse_builds }}
+      prior_manifest_artifact_name: ${{ steps.build-origin.outputs.prior_manifest_artifact_name }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -88,6 +96,25 @@ jobs:
             --repository "$GITHUB_REPOSITORY" --tag "$tag" \
             --output build/release-control/release.json
           python3 tools/workflow/release_identity.py build/release-control/release.json
+      - id: build-origin
+        name: Select current builds or a verified recovery origin
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REUSE_BUILD_RUN: ${{ inputs.reuse_build_run }}
+          SHOULD_BUILD: ${{ steps.identity.outputs.should_build }}
+          RELEASE_VERSION: ${{ steps.identity.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${REUSE_BUILD_RUN:-}" ]]; then
+            [[ "$SHOULD_BUILD" == "true" ]] || { echo 'Build reuse requires an existing draft' >&2; exit 1; }
+            python3 tools/workflow/release_build_reuse.py --run-id "$REUSE_BUILD_RUN" --version "$RELEASE_VERSION"
+          else
+            {
+              echo "build_run_id=$GITHUB_RUN_ID"
+              echo 'reuse_builds=false'
+            } >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
@@ -98,7 +125,7 @@ jobs:
 
   build-release:
     needs: release-control
-    if: needs.release-control.outputs.should_build == 'true'
+    if: needs.release-control.outputs.should_build == 'true' && needs.release-control.outputs.reuse_builds != 'true'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     strategy:
@@ -186,12 +213,14 @@ jobs:
   stage-release:
     outputs:
       manifest_artifact_name: ${{ steps.assemble.outputs.manifest_artifact_name }}
+      downloaded_artifact_name: ${{ steps.downloaded.outputs.downloaded_artifact_name }}
     needs: [release-control, build-release]
-    if: needs.release-control.outputs.should_build == 'true' && needs.build-release.result == 'success'
+    if: always() && needs.release-control.result == 'success' && needs.release-control.outputs.should_build == 'true' && (needs.build-release.result == 'success' || (needs.build-release.result == 'skipped' && needs.release-control.outputs.reuse_builds == 'true'))
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -221,12 +250,23 @@ jobs:
         with:
           pattern: release-matrix-*
           path: build/release-matrix
+          run-id: ${{ needs.release-control.outputs.build_run_id }}
+          github-token: ${{ github.token }}
+      - name: Download the original trusted identity manifest for recovery
+        if: needs.release-control.outputs.reuse_builds == 'true'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ needs.release-control.outputs.prior_manifest_artifact_name }}
+          path: build/prior
+          run-id: ${{ needs.release-control.outputs.build_run_id }}
+          github-token: ${{ github.token }}
       - id: assemble
         name: Assemble the exact archive set and identity manifest
         shell: bash
         env:
           RELEASE_COMMIT: ${{ needs.release-control.outputs.commit }}
           RELEASE_VERSION: ${{ needs.release-control.outputs.version }}
+          REUSING_BUILDS: ${{ needs.release-control.outputs.reuse_builds }}
         run: |
           set -euo pipefail
           mkdir -p build/release-assets
@@ -236,6 +276,9 @@ jobs:
           cp "build/release-matrix/release-matrix-windows-x86_64/glueyneo-sdk-${RELEASE_VERSION}-windows-x86_64.tar.gz" build/release-assets/
           python3 tools/release_manifest.py release-manifest --repo . --commit "$RELEASE_COMMIT" --version "$RELEASE_VERSION" --output-dir build/release-assets
           cp build/release-assets/release-manifest.json build/expected-release-manifest.json
+          if [[ "$REUSING_BUILDS" == "true" ]]; then
+            cmp -s build/prior/expected-release-manifest.json build/expected-release-manifest.json || { echo 'Reused archives differ from the original trusted source identity manifest' >&2; exit 1; }
+          fi
           echo "manifest_artifact_name=release-identity-manifest-attempt-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -273,6 +316,23 @@ jobs:
           python3 tools/release_state.py query-api --repository "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --output build/release-api-final.json
           python3 tools/release_state.py validate-draft --release build/release-api-final.json --manifest build/expected-release-manifest.json --tag "$RELEASE_TAG" --version "$RELEASE_VERSION" --commit "$RELEASE_COMMIT" > build/release-validation-final.json
           python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["status"] == "ready" and d["publishable"]' build/release-validation-final.json
+      - id: downloaded
+        name: Download and hash staged bytes in the trusted staging job
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_TAG: ${{ needs.release-control.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release download "$RELEASE_TAG" --dir build/release-download
+          python3 tools/release_state.py verify-download --directory build/release-download --manifest build/expected-release-manifest.json
+          echo "downloaded_artifact_name=release-downloaded-bytes-attempt-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ steps.downloaded.outputs.downloaded_artifact_name }}
+          path: build/release-download/*
+          if-no-files-found: error
+          retention-days: 3
 
   verify-downloaded-release:
     needs: [release-control, stage-release]
@@ -302,19 +362,11 @@ jobs:
         with:
           name: ${{ needs.stage-release.outputs.manifest_artifact_name }}
           path: build/expected
-      - name: Download staged release from GitHub
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.release-control.outputs.tag }}
-        run: gh release download "$RELEASE_TAG" --dir build/release-download
-        if: runner.os != 'Windows'
-      - name: Download staged release from GitHub on Windows
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.release-control.outputs.tag }}
-        run: gh release download $env:RELEASE_TAG --dir build/release-download
-        if: runner.os == 'Windows'
+      - name: Receive hash-verified draft bytes without write authority
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ needs.stage-release.outputs.downloaded_artifact_name }}
+          path: build/release-download
       - name: Verify all downloaded release bytes against the trusted staged manifest
         run: python3 tools/release_state.py verify-download --directory build/release-download --manifest build/expected/expected-release-manifest.json > build/download-verification.json
         if: runner.os != 'Windows'

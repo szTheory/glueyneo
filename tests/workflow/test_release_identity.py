@@ -3,6 +3,7 @@
 import json
 import os
 import re
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -116,6 +117,41 @@ class ReleaseIdentityTests(unittest.TestCase):
                     expected += ['call', 'release', 'upload', 'v0.2.0', 'build/release-assets/' + name]
                 self.assertEqual(actual, expected)
 
+    def test_actual_assembly_rejects_reuse_with_a_different_original_source_manifest(self):
+        workflow = (ROOT / '.github/workflows/release.yml').read_text()
+        start = workflow.index('        name: Assemble the exact archive set and identity manifest')
+        start = workflow.index('        run: |\n', start) + len('        run: |\n')
+        end = workflow.index('      - uses:', start)
+        script = '\n'.join(line[10:] for line in workflow[start:end].splitlines())
+        tools = self.repo / 'tools'
+        tools.mkdir()
+        shutil.copy2(ROOT / 'tools/release_manifest.py', tools / 'release_manifest.py')
+        for platform in ('linux-x86_64', 'macos-arm64', 'windows-x86_64'):
+            archive_dir = self.repo / 'build/release-matrix' / ('release-matrix-' + platform)
+            archive_dir.mkdir(parents=True)
+            (archive_dir / f'glueyneo-sdk-0.2.0-{platform}.tar.gz').write_bytes(platform.encode())
+            if platform == 'linux-x86_64':
+                (archive_dir / 'glueyneo-source-0.2.0.tar.gz').write_bytes(b'original source fixture')
+        environment = {**os.environ, 'RELEASE_COMMIT': self.source, 'RELEASE_VERSION': '0.2.0',
+                       'GITHUB_OUTPUT': str(self.repo / 'outputs'), 'GITHUB_RUN_ATTEMPT': '1'}
+        def execute(reuse):
+            return subprocess.run(['bash', '-euo', 'pipefail', '-c', script], cwd=self.repo,
+                                  env={**environment, 'REUSING_BUILDS': reuse},
+                                  capture_output=True, text=True, timeout=10)
+        result = execute('false')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        prior = self.repo / 'build/prior/expected-release-manifest.json'
+        prior.parent.mkdir()
+        shutil.copy2(self.repo / 'build/expected-release-manifest.json', prior)
+        result = execute('true')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        changed = json.loads(prior.read_text())
+        changed['source_commit'] = self.workflow
+        prior.write_text(json.dumps(changed))
+        result = execute('true')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Reused archives differ from the original trusted source identity manifest', result.stderr)
+
     def test_workflow_uses_trusted_helpers_but_builds_and_consumes_tagged_source(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text()
         for job in ('release-control', 'stage-release', 'publish-release'):
@@ -126,6 +162,18 @@ class ReleaseIdentityTests(unittest.TestCase):
             section = re.split(r'\n  [a-z][\w-]*:\n', workflow.split('\n  '+job+':\n',1)[1])[0]
             self.assertIn('ref: ${{ needs.release-control.outputs.commit }}', section)
         self.assertIn('tools/workflow/release_identity.py build/release-control/release.json', workflow)
+        stage = re.split(r'\n  [a-z][\w-]*:\n', workflow.split('\n  stage-release:\n', 1)[1])[0]
+        verification = re.split(r'\n  [a-z][\w-]*:\n', workflow.split('\n  verify-downloaded-release:\n', 1)[1])[0]
+        self.assertIn('gh release download', stage)
+        self.assertNotIn('gh release download', verification)
+        self.assertNotIn('GH_TOKEN', verification)
+        self.assertNotIn('secrets.', verification)
+        self.assertIn('contents: read', verification)
+        self.assertIn('name: ${{ needs.stage-release.outputs.downloaded_artifact_name }}', verification)
+        self.assertIn('needs.release-control.result == \'success\'', stage)
+        self.assertIn('needs.build-release.result == \'skipped\'', stage)
+        self.assertIn('run-id: ${{ needs.release-control.outputs.build_run_id }}', stage)
+        self.assertIn('cmp -s build/prior/expected-release-manifest.json build/expected-release-manifest.json', stage)
         self.assertIn('manifest_artifact_name: ${{ steps.assemble.outputs.manifest_artifact_name }}', workflow)
         self.assertEqual(workflow.count('name: ${{ needs.stage-release.outputs.manifest_artifact_name }}'), 2)
         self.assertIn('release-identity-manifest-attempt-${GITHUB_RUN_ATTEMPT}', workflow)

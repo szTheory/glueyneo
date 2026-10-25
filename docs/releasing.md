@@ -18,9 +18,12 @@ deletion or replacement.
 The workflow builds an offline source archive and complete static/shared SDK
 archives on Linux x64, macOS arm64, and Windows x64. It writes
 `release-manifest.json` with the exact source commit and final archive hashes,
-then stages the five expected release assets in the draft. Three independent
-hosted jobs download the GitHub release assets again, verify every archive
-against the staged manifest, rebuild the downloaded source archive with
+then stages the five expected release assets in the draft. The trusted staging
+job downloads those private draft assets with its scoped App token and verifies
+all bytes against the expected manifest without extracting or executing them.
+It relays the raw downloaded files as an immutable workflow artifact. Three
+independent read-only hosted jobs receive and verify those same bytes, then
+rebuild the downloaded source archive with
 FetchContent disconnected, and run the installed diagnostic consumer against
 that platform's downloaded SDK archive. The Linux job also scans the repository
 history, downloaded archives, and rights inventory. A separate final job
@@ -189,9 +192,12 @@ and [pinned token action](https://github.com/actions/create-github-app-token/tre
 
 A trusted manual dispatch defaults `publish` to false: it builds, stages and
 checks the complete draft through all three downloaded consumers, then leaves
-publication skipped. Dispatch the same tag and commit with `publish=true` to
-exercise existing-draft recovery and publish only after the same verification
-gates pass again. Normal `main` push behavior remains automated. The input
+publication skipped. For an already staged current target, dispatch with
+`reuse_build_run` pointing to its qualified build run and `publish=true`; all
+verification gates run again before publication. A target whose workflow tree
+differs from current main may require a broader GitHub App grant to publish;
+prefer a fixed patch target with the current workflow tree instead of silently
+expanding authority. Normal `main` push behavior remains automated. The input
 cannot skip artifact identity, rights, scope or consumer checks.
 
 Under user-approved PROJECT-D-50 (2026-10-25), independent GSD review of the
@@ -215,3 +221,30 @@ publication download the manifest name emitted by the successful staging job,
 which also supports rerunning a later consumer while staging remains completed.
 A complete draft has no uploads to repeat. No-new-release control is qualified
 with a fresh held dispatch; native job reruns exercise artifact reuse separately.
+
+## Recover a held draft after a workflow repair
+
+A fresh dispatch can pass `reuse_build_run` to retain already staged SDK bytes.
+The read-only control validates that the initial-attempt origin is this repo's
+completed main release workflow, with successful control, all three builds and
+staging. Overall consumer failure is allowed because new consumers must run.
+It rejects PR/fork origins, wrong workflow/version, nonancestor revisions,
+changed packaging-helper bytes, duplicate or missing artifacts, expired
+artifacts and malformed metadata. API reads are bounded; no artifact content
+or token values are included in the metadata result. This is an immutable
+origin contract, not a limit on development or verification runs.
+
+Staging retrieves the three archive artifacts and the original trusted manifest
+using a read-only Actions token. Its newly assembled source/tag/version/digest
+manifest must match the original bytes exactly before any release asset write.
+The scoped stage App token handles private-draft visibility, then the raw
+hash-verified download goes to read-only consumer jobs. Downloaded SDK code
+never receives the App private key or a write token. Both current manifest and
+download artifact names come from the successful stage job and are unique per
+attempt; later reruns can retain prior successful outputs.
+
+The current origin adapter supports initial attempts with at most 100 jobs and
+100 artifacts per metadata response, and the artifact retention is three days.
+Missing/expired or unsupported origins fail closed; they do not authorize asset
+replacement or a tag change. Native job reruns and fresh recovery dispatches
+remain separate observed scenarios.
