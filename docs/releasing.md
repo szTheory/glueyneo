@@ -105,17 +105,21 @@ rejects resolved drive paths beneath the known `Users` and
 `Documents and Settings` profile roots (including extended drive paths) before
 compilation: compiler or librarian metadata can retain source/build paths even
 in Release libraries.
-Use the CI runner's neutral temporary parent or provide an existing neutral
-directory with `--workspace-dir` for a local Windows build. Relative parents
-are rejected to avoid selecting different workspaces from different invocation
-directories. Output archives still use `--output-dir`; workspace cleanup never
-removes that parent directory. No finished binary is rewritten and the complete
-archive content scan remains required. The v0.2.1 Windows archive passed the
-content scan and relocated consumer in [release run
+Use the CI runner's neutral local-drive temporary parent or provide an existing
+neutral local-drive directory with `--workspace-dir` for a local Windows build.
+Relative parents are rejected to avoid selecting different workspaces from
+different invocation directories. Output archives still use `--output-dir`;
+workspace cleanup never removes that parent directory. No finished binary is
+rewritten and the complete archive content scan remains required. The published
+v0.2.1 archives used the hosted runners' neutral `RUNNER_TEMP`; the Windows
+workspace was on a local drive. The Windows archive passed the content scan and
+relocated consumer in [release run
 40222108594](https://github.com/szTheory/glueyneo/actions/runs/40222108594),
-bound to source revision `fdc241e`.
-This parent check does not recognize every custom or network profile layout;
-the archive scanner remains the output gate for those paths too.
+bound to source revision `fdc241e`. No artifact leak was observed in that run.
+UNC and custom/network-profile workspaces remain unsupported and unqualified:
+the current guard and archive scanner do not cover every such layout, and a
+clean scan does not qualify an unrecognized workspace. Separate path coverage
+and artifact validation are required before claiming those workspace profiles.
 
 ## Current qualification boundary
 
