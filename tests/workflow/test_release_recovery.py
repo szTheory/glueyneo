@@ -132,6 +132,11 @@ class ReleaseRecoveryTests(unittest.TestCase):
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("verify-downloaded-release", workflow)
         self.assertIn("needs: [release-control, stage-release, verify-downloaded-release]", workflow)
+        self.assertIn(
+            "publish:\n        description: Publish the verified draft after all staging and downloaded-consumer checks pass\n        required: false\n        default: false\n        type: boolean",
+            workflow,
+        )
+        self.assertIn("&& (github.event_name == 'push' || inputs.publish)", workflow)
         self.assertIs(config["packages"]["."]["draft"], True)
         self.assertTrue(config["$schema"].endswith("release-please/v17.3.0/schemas/config.json"))
         for platform in ("linux-x86_64", "macos-arm64", "windows-x86_64"):

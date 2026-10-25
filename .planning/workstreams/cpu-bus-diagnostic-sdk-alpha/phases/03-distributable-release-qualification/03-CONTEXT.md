@@ -123,6 +123,16 @@ Apply the user's standing preference: automate repeatable verification as early 
 
 None — discussion stayed within Phase 03 scope.
 
+## Superseding decision
+
+PROJECT-D-50 (2026-10-25): the user approves passing independent GSD code review
+bound to the exact PR SHA as the solo-maintainer review prerequisite; no second
+GitHub account is required. Strict protected current-head checks, independent
+review, scoped App authority, and rights, artifact, and downloaded-consumer
+gates remain required. The first-time-contributor approval setting stays
+enabled; an actual live fork approval/run remains unverified and deferred until
+a contributor exists.
+
 </deferred>
 
 ---
