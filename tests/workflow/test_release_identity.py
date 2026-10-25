@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise draft recovery across a protected workflow repair without retagging."""
 import json
+import os
 import re
 from pathlib import Path
 import subprocess
@@ -86,6 +87,35 @@ class ReleaseIdentityTests(unittest.TestCase):
                 'tag_name':'v0.3.0', 'draft':True, 'tag_commit':self.source,
                 'target_commitish':self.source}}, {'GITHUB_SHA':future})
 
+    def test_actual_upload_loop_skips_complete_draft_and_uploads_only_missing_assets(self):
+        workflow = (ROOT / '.github/workflows/release.yml').read_text()
+        start = workflow.index('          while IFS= read -r asset; do')
+        end = workflow.index('      - name: Re-query and require complete staged draft', start)
+        loop = '\n'.join(line[10:] for line in workflow[start:end].splitlines())
+        calls = self.repo / 'calls'
+        binary = self.repo / 'fakebin'
+        binary.mkdir()
+        gh = binary / 'gh'
+        gh.write_text('#!/bin/sh\nprintf "call\n" >> "$CALL_LOG"\nprintf "%s\n" "$@" >> "$CALL_LOG"\n')
+        gh.chmod(0o755)
+        plan = self.repo / 'build/release-validation.json'
+        plan.parent.mkdir()
+        environment = {**os.environ, 'PATH': str(binary) + os.pathsep + os.environ['PATH'],
+                       'RELEASE_TAG': 'v0.2.0', 'CALL_LOG': str(calls)}
+        for missing in ([], ['glueyneo-source-0.2.0.tar.gz', 'release-manifest.json']):
+            with self.subTest(missing=missing):
+                calls.unlink(missing_ok=True)
+                plan.write_text(json.dumps({'missing_assets': missing}))
+                result = subprocess.run(['bash', '-euo', 'pipefail', '-c', loop],
+                                        cwd=self.repo, env=environment, capture_output=True,
+                                        text=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                actual = calls.read_text().splitlines() if calls.exists() else []
+                expected = []
+                for name in missing:
+                    expected += ['call', 'release', 'upload', 'v0.2.0', 'build/release-assets/' + name]
+                self.assertEqual(actual, expected)
+
     def test_workflow_uses_trusted_helpers_but_builds_and_consumes_tagged_source(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text()
         for job in ('release-control', 'stage-release', 'publish-release'):
@@ -96,6 +126,10 @@ class ReleaseIdentityTests(unittest.TestCase):
             section = re.split(r'\n  [a-z][\w-]*:\n', workflow.split('\n  '+job+':\n',1)[1])[0]
             self.assertIn('ref: ${{ needs.release-control.outputs.commit }}', section)
         self.assertIn('tools/workflow/release_identity.py build/release-control/release.json', workflow)
+        self.assertIn('manifest_artifact_name: ${{ steps.assemble.outputs.manifest_artifact_name }}', workflow)
+        self.assertEqual(workflow.count('name: ${{ needs.stage-release.outputs.manifest_artifact_name }}'), 2)
+        self.assertIn('release-identity-manifest-attempt-${GITHUB_RUN_ATTEMPT}', workflow)
+        self.assertEqual(workflow.count('release-app-authority-${{ github.job }}-attempt-${{ github.run_attempt }}'), 3)
         helper_checkout = workflow.split('      - name: Check out trusted release packaging helper\n', 1)[1].split('      - name:', 1)[0]
         self.assertIn('ref: ${{ github.sha }}', helper_checkout)
         self.assertIn('path: build/release-tools', helper_checkout)

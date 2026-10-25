@@ -200,3 +200,18 @@ Strict protected current-head checks and all trust/artifact gates remain
 required. The live first-time fork approval/run stays unverified and deferred
 until a contributor exists; the read-only/no-secret workflow and GitHub
 first-time-contributor approval setting remain in place.
+
+## Rerun staged verification without rebuilding archives
+
+For an interrupted staging or downloaded-consumer job, rerun that job (or failed
+jobs and dependents) within the original workflow run. Keep its successful build
+jobs and their immutable archive artifacts; the current retention is three days.
+A full new dispatch rebuilds archives and is not a promise of byte reproducibility
+across host images or temporary build identities. Existing-asset digest mismatches
+continue to reject replacement.
+
+Authority and stage-manifest artifacts use attempt-specific names. Consumers and
+publication download the manifest name emitted by the successful staging job,
+which also supports rerunning a later consumer while staging remains completed.
+A complete draft has no uploads to repeat. No-new-release control is qualified
+with a fresh held dispatch; native job reruns exercise artifact reuse separately.

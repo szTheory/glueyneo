@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -169,6 +170,24 @@ class GitHubReleaseLookupTests(unittest.TestCase):
 
 
 class ReleaseRecoveryTests(unittest.TestCase):
+    def setUp(self):
+        self.cli_temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.cli_temp.cleanup)
+        self.cli_directory = Path(self.cli_temp.name)
+        self.cli_manifest_path = self.cli_directory / "release-manifest.json"
+        archive_names = sorted(release_state.required_archive_names("0.1.0"))
+        rows = []
+        for name in archive_names:
+            data = f"release archive fixture: {name}".encode("ascii")
+            rows.append({"name": name, "size": len(data),
+                         "sha256": hashlib.sha256(data).hexdigest()})
+        manifest = {"schema_version": 1, "version": "0.1.0", "tag": "v0.1.0",
+                    "source_commit": COMMIT, "assets": rows}
+        self.cli_manifest_path.write_text(
+            json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8"
+        )
+        self.cli_assets = release_state.expected_api_assets(self.cli_manifest_path)
+
     def test_api_inventory_binds_all_packages_and_manifest_bytes(self):
         package_rows = [
             {"name": name, **record}
@@ -251,6 +270,50 @@ class ReleaseRecoveryTests(unittest.TestCase):
             expected_commit=COMMIT, manifest_version="0.1.1", expected_assets=ASSETS,
         )
         self.assertEqual(result["status"], "reject")
+
+    def test_validate_draft_cli_accepts_found_query_snapshot_for_empty_resume(self):
+        result = self.run_validate_draft_cli({"status": "found", "release": self.cli_release([])})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        value = json.loads(result.stdout)
+        self.assertEqual(value["status"], "resume")
+        self.assertFalse(value["publishable"])
+
+    def test_validate_draft_cli_accepts_complete_found_query_snapshot(self):
+        assets = [{"name": name, **record} for name, record in self.cli_assets.items()]
+        result = self.run_validate_draft_cli({"status": "found", "release": self.cli_release(assets)})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        value = json.loads(result.stdout)
+        self.assertEqual(value["status"], "ready")
+        self.assertTrue(value["publishable"])
+
+    def test_validate_draft_cli_rejects_wrong_tag_in_query_snapshot(self):
+        result = self.run_validate_draft_cli({
+            "status": "found", "release": self.cli_release([], tag_name="v0.1.1")
+        })
+        self.assertNotEqual(result.returncode, 0)
+
+    def test_validate_draft_cli_rejects_non_found_query_status(self):
+        result = self.run_validate_draft_cli({"status": "absent", "release": None})
+        self.assertNotEqual(result.returncode, 0)
+
+    def test_validate_draft_cli_rejects_malformed_query_snapshot(self):
+        result = self.run_validate_draft_cli({"status": "found", "release": []})
+        self.assertNotEqual(result.returncode, 0)
+
+    def cli_release(self, assets, *, tag_name="v0.1.0"):
+        return {"draft": True, "tag_name": tag_name, "target_commitish": COMMIT,
+                "tag_commit": COMMIT, "assets": assets}
+
+    def run_validate_draft_cli(self, snapshot):
+        snapshot_path = self.cli_directory / "release-query.json"
+        snapshot_path.write_text(json.dumps(snapshot, sort_keys=True, separators=(",", ":")) + "\n",
+                                 encoding="utf-8")
+        return subprocess.run(
+            [sys.executable, str(Path(__file__).resolve().parents[2] / "tools/release_state.py"),
+             "validate-draft", "--release", str(snapshot_path), "--manifest", str(self.cli_manifest_path),
+             "--tag", "v0.1.0", "--version", "0.1.0", "--commit", COMMIT],
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=10,
+        )
 
     def test_release_workflow_keeps_publish_behind_three_downloaded_consumers(self):
         root = Path(__file__).resolve().parents[2]
