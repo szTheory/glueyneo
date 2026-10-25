@@ -83,7 +83,12 @@ and full `--commit` still select the immutable tagged source. This permits a
 packager repair without substituting runtime or archive source. Windows CI
 runs the archive, offline rebuild and relocated-consumer regression in its
 existing MSVC job, alongside the installed SDK matrix. Compiler identity is
-read from CMake's generated compiler metadata across supported generators.
+read from CMake's generated compiler metadata. Windows SDK packaging selects
+Ninja explicitly inside the configured Visual Studio environment; MSVC remains
+the compiler/librarian. The complete archive content scan and relocated
+consumers qualify the output. The Visual Studio packaging attempt that exposed
+a temporary profile path remains a failed result; it is not an admitted archive
+configuration.
 
 ## Current qualification boundary
 

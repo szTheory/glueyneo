@@ -310,7 +310,10 @@ def build_archives(repo: Path, commit: str, output_dir: Path) -> dict[str, objec
             cmake = shutil.which("cmake")
             if cmake is None:
                 raise ReleaseError("CMake is required to build the release SDK")
-            run([cmake, "-S", str(source_root), "-B", str(build),
+            # Ninja supplies relative object paths to the MSVC librarian; the
+            # Visual Studio generator exposed the temporary profile path in .lib.
+            generator = ["-G", "Ninja"] if platform.system() == "Windows" else []
+            run([cmake, *generator, "-S", str(source_root), "-B", str(build),
                  "-DCMAKE_BUILD_TYPE=Release", "-DBUILD_TESTING=OFF",
                  "-DGLUEYNEO_BUILD_TESTS=OFF", f"-DBUILD_SHARED_LIBS={shared}",
                  f"-DCMAKE_INSTALL_PREFIX={prefix}"], cwd=source_root)
