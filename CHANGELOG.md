@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.2.0](https://github.com/szTheory/glueyneo/compare/v0.1.0...v0.2.0) (2026-10-25)
+## [0.2.0](https://github.com/szTheory/glueyneo/compare/4b2120d57f486ef7561409ff80db109b7494ae5d...v0.2.0) (2026-10-25)
 
 
 ### Features
