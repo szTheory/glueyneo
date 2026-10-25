@@ -523,6 +523,28 @@ does not establish hardware truth.
 
 ## Current platform and cost evidence
 
+The current hosted qualification is bound to source revision
+`fdc241e0f554d61c7a270cad141fd51c2aa2b334`. [CI run
+40222108429](https://github.com/szTheory/glueyneo/actions/runs/40222108429)
+passed its seven-lane aggregate with 1,159,842 total checks: 1,159,040 matrix
+assertions and 802 public-content input checks. Its maximum cold-build duration
+was 42.427865 seconds. The measured matrix-command critical path was 72.156
+seconds, and summed matrix-command execution was 3.5422573167 runner-minutes.
+These command measurements exclude checkout, upload, aggregate, and other job
+overhead; they are not the workflow's end-to-end critical path or GitHub billing.
+
+The same commit is published as [SDK v0.2.1](https://github.com/szTheory/glueyneo/releases/tag/v0.2.1).
+[Release run 40222108594](https://github.com/szTheory/glueyneo/actions/runs/40222108594)
+passed the archive checks and all three downloaded consumers before publishing.
+The archive compiler profiles were GNU 13.3.0 on Linux x86_64 (`ubuntu-24.04`),
+AppleClang 17.0.0.17000013 on macOS arm64 (`macos-15`), and MSVC 19.51.36260.0
+on Windows x86_64 (`windows-2025`, Windows SDK 10.0.26100.0); the Windows
+archive build uses Ninja inside the Visual Studio environment. The separate CI
+matrix exercises Linux Clang and GNU, macOS AppleClang, Windows MSVC, and Linux
+Clang sanitizer and fuzz lanes. This evidence qualifies only these named
+profiles. The declared CMake 3.20 floor, other compiler/platform combinations,
+original hardware behavior, and general game compatibility remain unqualified.
+
 The exact local profile recorded by the committed-head Phase 03 matrix is
 AppleClang 21.0.0.21000101, macOS arm64 (`Darwin-26`), Apple SDK 26.5, CMake
 4.4.3, Ninja 1.13.2, Debug, with the SDK sanitizer disabled. At source revision
@@ -557,13 +579,14 @@ elapsed time and billed cost are distinct; no billing multiplier or rounding
 is included. The schema's slowest-lane “critical path” excludes queue/setup and
 is not the workflow's end-to-end critical path.
 
-The [hosted receipt](../.planning/phases/03-distributable-release-qualification/03-CI-HOSTED-RECEIPT.json)
+The [hosted receipt](../.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/phases/03-distributable-release-qualification/03-CI-HOSTED-RECEIPT.json)
 retains exact job/build/fixture/binary identities and seven previous failed
-attempts. A new SHA requires new evidence; no platform range, published SDK
-release, original-silicon or general-game claim follows from this finite pass.
-The release App, first-time fork boundary, protected merge and released
-archive/download evidence remain pending. Failed/skipped/unsupported/unknown
-outcomes remain distinct and cannot contribute passing assertions.
+attempts. Those results apply to their recorded source revision and do not
+establish a broader platform range, original-silicon behavior, or general-game
+compatibility. The v0.2.1 evidence above supersedes the earlier statement that
+publication and downloaded-archive checks were pending. Failed, skipped,
+unsupported, and unknown outcomes remain distinct and cannot contribute passing
+assertions.
 
 The later PR head `2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1` also passed all six
 matrix lanes, `public-content`, and `ci-policy` in [CI run
@@ -571,8 +594,9 @@ matrix lanes, `public-content`, and `ci-policy` in [CI run
 That run extends the pass outcome to that exact revision. The detailed
 compiler, SDK, assertion, and artifact table above remains bound to
 `2c7926383222cee174ede5ddde06374b43002191`; the later run's timings do not
-replace those measurements. The release App, first-time fork boundary,
-protected merge, and released archive/download evidence remain pending.
+replace those measurements. At that time the protected merge and release
+evidence were pending; v0.2.1's later exact-source results are listed above.
+First-time fork approval and execution remain deferred and unverified.
 
 The rights inventory currently contains affirmative records for the shipped
 original diagnostic material and pinned Unity subset. No commercial game ROM,
@@ -608,13 +632,18 @@ behavior; it does not establish a hosted result. GitHub Actions run
 `37618668537` passed the six named matrix lanes and `ci-policy` at exact PR head
 `2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1`; the detailed toolchain and
 assertion receipt above belongs to the earlier exact source revision. A
-read-only API check observed that `main` requires the strict `CI / ci-policy`
-check and one approval, with stale reviews dismissed and approval required
-after the last push. Those settings do not establish a protected merge: no
-independent approval, merge, or first-time fork approval event has been
-exercised. The current documentation-only correction has no new hosted run.
-These receipts establish only the named outcomes at their recorded revisions,
-not a broader platform range. Runner execution minutes and matrix critical path
+read-only API check on 2026-10-25 observed that `main` requires the strict
+`CI / ci-policy` check, enforces administrators, dismisses stale reviews, and
+requires no GitHub approving review or last-push approval. Linear history is
+required; force pushes and branch deletion are disabled. The approved
+PROJECT-D-50 GSD review was bound to PR head
+`fbce9f172d4ec8bd836086e427c22e376ed54857`; PR #9 merged as
+`fdc241e0f554d61c7a270cad141fd51c2aa2b334`, whose main CI and release outcomes
+are recorded above. First-time fork approval and execution remain unverified.
+The later v0.2.1 aggregate and release evidence
+above records current outcomes; these receipts still establish only the named
+results at their recorded revisions, not a broader platform range. Runner
+execution minutes and matrix critical path
 are computed from measured verification command durations after checkout; they
 exclude checkout/upload overhead and GitHub's billing rounding. They describe
 those observed lane commands only.

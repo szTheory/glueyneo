@@ -8,15 +8,17 @@ can be checked before any artifact is trusted.
 On each `main` push, the serialized release workflow runs Release Please and
 queries GitHub for the manifest's tag even when the action reports no new
 release. An absent release after an ordinary push is a no-op. An existing draft
-is treated as a recovery candidate. A release tag must resolve to the exact
-commit that the workflow tests, the version and tag must match the root manifest,
+is treated as a recovery candidate. A newly created release tag must resolve to
+the exact commit that the workflow tests; recovery can use an older tagged
+ancestor as described below. The version and tag must match the root manifest,
 and every already uploaded asset must match the expected name, byte count, and
 SHA-256. Matching partial uploads are retained and only missing assets are
 uploaded. Extra, replaced, malformed, or published assets stop recovery without
 deletion or replacement.
 
 The workflow builds an offline source archive and complete static/shared SDK
-archives on Linux x64, macOS arm64, and Windows x64. It writes
+archives on Linux x86_64 with GNU 13.3.0, macOS arm64 with AppleClang
+17.0.0.17000013, and Windows x86_64 with MSVC 19.51.36260.0. It writes
 `release-manifest.json` with the exact source commit and final archive hashes,
 then stages the five expected release assets in the draft. The trusted staging
 job downloads those private draft assets with its scoped App token and verifies
@@ -47,8 +49,9 @@ relocates its static/shared SDK consumers at a synthetic `9.8.7` release
 version. The example carries the root manifest and keeps exact package-version
 matching, so a version bump does not rely on rewriting consumer source. The
 source archive includes the pinned runtime dependencies; installed SDKs retain
-their applicable dependency notices. Hosted runtime cost has not yet been
-measured.
+their applicable dependency notices. This regression does not report a separate
+runtime measurement; see the aggregate hosted CI measurements in
+[the testing guide](testing.md#current-platform-and-cost-evidence).
 
 For a failed staging or verification run, rerun that workflow run or dispatch
 the workflow with the existing tag. Recovery still reads the root manifest and
@@ -102,15 +105,21 @@ rejects resolved drive paths beneath the known `Users` and
 `Documents and Settings` profile roots (including extended drive paths) before
 compilation: compiler or librarian metadata can retain source/build paths even
 in Release libraries.
-Use the CI runner's neutral temporary parent or provide an existing neutral
-directory with `--workspace-dir` for a local Windows build. Relative parents
-are rejected to avoid selecting different workspaces from different invocation
-directories. Output archives still use `--output-dir`; workspace cleanup never
-removes that parent directory. No finished binary is rewritten and the complete
-archive content scan remains required. Windows success for this workspace
-repair remains pending an exact-revision archive scan and relocated consumers.
-This parent check does not recognize every custom or network profile layout;
-the archive scanner remains the output gate for those paths too.
+Use the CI runner's neutral local-drive temporary parent or provide an existing
+neutral local-drive directory with `--workspace-dir` for a local Windows build.
+Relative parents are rejected to avoid selecting different workspaces from
+different invocation directories. Output archives still use `--output-dir`;
+workspace cleanup never removes that parent directory. No finished binary is
+rewritten and the complete archive content scan remains required. The published
+v0.2.1 archives used the hosted runners' neutral `RUNNER_TEMP`; the Windows
+workspace was on a local drive. The Windows archive passed the content scan and
+relocated consumer in [release run
+40222108594](https://github.com/szTheory/glueyneo/actions/runs/40222108594),
+bound to source revision `fdc241e`. No artifact leak was observed in that run.
+UNC and custom/network-profile workspaces remain unsupported and unqualified:
+the current guard and archive scanner do not cover every such layout, and a
+clean scan does not qualify an unrecognized workspace. Separate path coverage
+and artifact validation are required before claiming those workspace profiles.
 
 ## Current qualification boundary
 
@@ -119,18 +128,36 @@ Release Please reports no new output, wrong tag targets, version disagreement,
 published state, duplicate/extra/missing/replaced assets, unordered responses,
 and downloaded-byte tampering. Local consumer tests also rebuild a source
 archive offline and relocate installed packages. These checks qualify the
-local release logic only. The public
-[szTheory/glueyneo repository](https://github.com/szTheory/glueyneo) now has
-hosted CI and strict main protection. Exact observations and failed attempts
-are recorded in the
-[hosted qualification receipt](../.planning/phases/03-distributable-release-qualification/03-HOSTED-QUALIFICATION.md).
-The owner reports a release App installed for this repository and the
-`RELEASE_APP_ID` variable and `RELEASE_APP_PRIVATE_KEY` secret configured; the
-[setup checkpoint](../.planning/phases/03-distributable-release-qualification/03-RELEASE-APP-SETUP.md)
-records that report without inspecting the live permission grant or secret
-value. App token/event behavior, first-time fork approval/execution, an
-independently approved protected merge and actual release publication remain
-pending.
+local release logic only. The v0.2.1 delivery is qualified at source revision
+`fdc241e0f554d61c7a270cad141fd51c2aa2b334`: [main CI run
+40222108429](https://github.com/szTheory/glueyneo/actions/runs/40222108429)
+passed, and [release run
+40222108594](https://github.com/szTheory/glueyneo/actions/runs/40222108594)
+published [v0.2.1](https://github.com/szTheory/glueyneo/releases/tag/v0.2.1)
+after all three downloaded platform consumers, the publisher, and release-policy
+job passed. Exact observations and failed attempts are recorded in the
+[hosted qualification receipt](../.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/phases/03-distributable-release-qualification/03-HOSTED-QUALIFICATION.md).
+Recovery evidence also includes a one-of-five-asset partial-draft resume and two
+native job reruns in [workflow run
+40220803583](https://github.com/szTheory/glueyneo/actions/runs/40220803583),
+across attempts 1–3. Those controlled recovery exercises passed; no actual
+network interruption is claimed.
+After publication, [no-new-release run
+40222563029](https://github.com/szTheory/glueyneo/actions/runs/40222563029)
+passed release control and policy with the other release jobs skipped and no
+asset mutation.
+The approved PROJECT-D-50 GSD review was bound to PR head
+`fbce9f172d4ec8bd836086e427c22e376ed54857`. PR #9 then merged to main as
+`fdc241e0f554d61c7a270cad141fd51c2aa2b334`; the main CI and release outcomes
+above are separately bound to that merge commit. Under PROJECT-D-50, this review
+satisfied the independent review prerequisite without a second GitHub account.
+The first-time fork approval and execution remain deferred and unverified. The
+held v0.2.0 tag
+`be43c51350ba40a91d65c577c6c12bf477f340c1` remains unpublished. The one-hour
+installation-token lifetime is an API contract, not a measured expiry; hosted
+job logs observed the pinned token action's revocation. The effective job-token
+scope was checked against this repository, but that check does not inspect the
+App's installation-wide grant.
 A clean scanner result
 is detector evidence; the affirmative item-level records in
 [`rights-inventory.md`](rights-inventory.md) remain the distribution-rights
@@ -169,8 +196,8 @@ be `resolved` with resolution evidence, or `dispositioned` with both a
 nonempty disposition and evidence reference. Both SHAs must equal the proposed
 head, the aggregate and review must pass, and lane/assertion counts must be
 positive. This local validator does not fetch GitHub receipts or grant merge
-authority; attach the actual current-run/check and GSD review identifiers when
-the hosted workflow is qualified.
+authority. The exact current-run and GSD review evidence for v0.2.1 is recorded
+in the qualification boundary below.
 
 ## Effective release-token scope
 

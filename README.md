@@ -2,8 +2,16 @@
 
 Glueyneo is a portable C Neo Geo MVS/AES core project. Its current alpha
 delivers an offline-installable C17 library, a headless runner, and one bounded,
-firmware-free CPU/bus diagnostic. It is not a playable emulator, and the local
-package checks do not qualify a platform support matrix or release artifact.
+firmware-free CPU/bus diagnostic. It is not a playable emulator. The hosted CI
+matrix tests Linux with Clang and GNU, macOS arm64 with AppleClang, and Windows
+x86_64 with MSVC. The published [v0.2.1 release](https://github.com/szTheory/glueyneo/releases/tag/v0.2.1)
+contains SDK archives built with GNU 13.3.0 on Linux, AppleClang
+17.0.0.17000013 on macOS arm64, and MSVC 19.51.36260.0 on Windows x86_64,
+all at source revision
+[`fdc241e`](https://github.com/szTheory/glueyneo/commit/fdc241e0f554d61c7a270cad141fd51c2aa2b334).
+These results describe those tested profiles, not a broader hardware or game
+compatibility claim. The local package checks alone do not qualify a platform support matrix
+or release artifact.
 
 ## Build and consume the installed SDK
 
@@ -82,7 +90,9 @@ consumers, compiled documentation examples, capabilities, provenance, evidence,
 the retained local baseline, and supported sanitizer lanes. It writes the
 canonical public-safe result to `evidence/sdk/verification.json`. This local
 gate does not qualify hosted CI, release authority, other platforms, or the
-CMake 3.20 minimum-version claim. Coverage-guided libFuzzer is unsupported on
+CMake 3.20 minimum-version claim. The hosted CI result is recorded in
+[the testing guide](docs/testing.md#current-platform-and-cost-evidence).
+Coverage-guided libFuzzer is unsupported on
 the current AppleClang toolchain; deterministic seeded mutation is used. The
 ThreadSanitizer lane runs its process-heavy CTest cases one at a time to avoid
 host resource contention.
@@ -164,10 +174,12 @@ are listed in the verifier. Historical documents are preserved, and this
 correction is not a physical-pin trace. No original-hardware saved-PC result is
 inferred.
 
-The declared CMake floor is 3.20, but the package and consumers have only been
-executed on Darwin arm64 with AppleClang 21.0.0.21000101 and CMake 4.4.3. The
-floor and other platforms remain unqualified. Build, consumer, documentation,
-and capability checks are local evidence, not hosted CI or release authority.
+The declared CMake floor is 3.20 and remains unqualified; the recorded local
+package run used CMake 4.4.3. Hosted CI run
+[`40222108429`](https://github.com/szTheory/glueyneo/actions/runs/40222108429)
+and the published v0.2.1 release ran against source revision `fdc241e`.
+Build, consumer, documentation, and capability checks from the local gate remain
+local evidence, separate from the hosted CI and release records.
 See the [CPU/bus SDK workstream state](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/STATE.md)
 for that deliverable's contributor workflow, and its [requirements](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/REQUIREMENTS.md)
 and [roadmap](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/ROADMAP.md)
