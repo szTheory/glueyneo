@@ -60,7 +60,7 @@ TEST_SOURCE_PATHS = frozenset({
     "tests/sdk/test_matrix_evidence.py", "tests/sdk/test_sdk.c",
     "tests/sdk/test_support.h", "tests/workflow/test_ci_policy.py",
     "tests/workflow/test_phase01_admission.py", "tests/workflow/test_phase01_docs.py",
-    "tests/workflow/test_app_scope.py", "tests/workflow/test_release_identity.py",
+    "tests/workflow/test_app_scope.py", "tests/workflow/test_release_build_reuse.py", "tests/workflow/test_release_identity.py",
     "tests/workflow/test_public_content.py", "tests/workflow/test_release_recovery.py",
 })
 
