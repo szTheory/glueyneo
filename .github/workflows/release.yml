@@ -83,38 +83,11 @@ jobs:
           set -euo pipefail
           version=$(python3 -c 'import json; print(json.load(open(".release-please-manifest.json"))["."])')
           tag="v${version}"
-          if [[ "${RELEASE_CREATED:-false}" == "true" ]]; then
-            [[ "$RELEASE_VERSION" == "$version" && "$RELEASE_TAG" == "$tag" ]] || { echo 'release-please identity differs from root manifest' >&2; exit 1; }
-            [[ "$RELEASE_SHA" == "$GITHUB_SHA" ]] || { echo 'release tag SHA differs from tested workflow SHA' >&2; exit 1; }
-          fi
-          if [[ -n "${DISPATCH_TAG:-}" ]]; then
-            [[ "$DISPATCH_TAG" == "$tag" ]] || { echo 'manual recovery tag differs from root manifest' >&2; exit 1; }
-            tag="$DISPATCH_TAG"
-          fi
           mkdir -p build/release-control
           GH_API_URL="$GITHUB_API_URL" python3 tools/release_state.py query-api \
             --repository "$GITHUB_REPOSITORY" --tag "$tag" \
             --output build/release-control/release.json
-          api_status=$(python3 -c 'import json; print(json.load(open("build/release-control/release.json"))["status"])')
-          should_build=false
-          if [[ "$api_status" == "found" ]]; then
-            is_draft=$(python3 -c 'import json; print(str(json.load(open("build/release-control/release.json"))["release"].get("draft", False)).lower())')
-            if [[ "$is_draft" == "true" ]]; then
-              should_build=true
-            elif [[ "${RELEASE_CREATED:-false}" == "true" ]]; then
-              echo 'release-please created or selected a published release; refusing to mutate it' >&2
-              exit 1
-            fi
-          elif [[ "${RELEASE_CREATED:-false}" == "true" ]]; then
-            echo 'release-please reported a release but the expected draft is absent' >&2
-            exit 1
-          fi
-          {
-            echo "should_build=$should_build"
-            echo "tag=$tag"
-            echo "version=$version"
-            echo "commit=$GITHUB_SHA"
-          } >> "$GITHUB_OUTPUT"
+          python3 tools/workflow/release_identity.py build/release-control/release.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
@@ -212,7 +185,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          ref: ${{ needs.release-control.outputs.commit }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - id: app-token
@@ -375,7 +348,8 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          ref: ${{ needs.release-control.outputs.commit }}
+          ref: ${{ github.sha }}
+          fetch-depth: 0
           persist-credentials: false
       - id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0

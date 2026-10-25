@@ -20,6 +20,13 @@ class ReleaseStateError(ValueError):
     """A staged release does not satisfy its immutable identity contract."""
 
 
+DEFAULT_RELEASE_API_TIMEOUT_SECONDS = 20
+RELEASE_LIST_PAGE_SIZE = 100
+RELEASE_LIST_MAX_PAGES = 5
+RELEASE_LIST_TIMEOUT_SECONDS = 10
+MAX_RELEASE_RESPONSE_BYTES = 8 * 1024 * 1024
+
+
 def query_existing_release(api: Any, tag: str, *, release_created: bool) -> dict[str, Any]:
     """Always query by tag, including release-please no-output and retry runs.
 
@@ -44,30 +51,70 @@ class GitHubReleaseAPI:
         self.base = api_url.rstrip("/") + f"/repos/{repository}"
         self.token = token
 
-    def _get(self, path: str) -> dict[str, Any] | None:
+    def _get(self, path: str, *, timeout: int = DEFAULT_RELEASE_API_TIMEOUT_SECONDS
+             ) -> dict[str, Any] | list[Any] | None:
         request = Request(self.base + path, headers={
             "Accept": "application/vnd.github+json", "Authorization": f"Bearer {self.token}",
             "X-GitHub-Api-Version": "2022-11-28",
         })
         try:
-            with urlopen(request, timeout=20) as response:
-                value = json.loads(response.read().decode("utf-8"))
+            with urlopen(request, timeout=timeout) as response:
+                payload = response.read(MAX_RELEASE_RESPONSE_BYTES + 1)
+                if not isinstance(payload, bytes):
+                    raise ReleaseStateError("GitHub release API returned a malformed response body")
+                if len(payload) > MAX_RELEASE_RESPONSE_BYTES:
+                    raise ReleaseStateError("GitHub release API response exceeds the size limit")
+                value = json.loads(payload.decode("utf-8"))
         except HTTPError as error:
             if error.code == 404:
                 return None
             raise ReleaseStateError(f"GitHub release API returned HTTP {error.code}") from error
         except (OSError, URLError, UnicodeError, json.JSONDecodeError) as error:
             raise ReleaseStateError("GitHub release API could not be read") from error
-        if not isinstance(value, dict):
+        if not isinstance(value, (dict, list)):
             raise ReleaseStateError("GitHub release API returned malformed JSON")
         return value
 
     def get_release_by_tag(self, tag: str) -> dict[str, Any] | None:
-        return self._get("/releases/tags/" + quote(tag, safe=""))
+        if not isinstance(tag, str) or not tag:
+            raise ReleaseStateError("release tag is malformed")
+        response = self._get("/releases/tags/" + quote(tag, safe=""))
+        if response is not None:
+            if not isinstance(response, dict):
+                raise ReleaseStateError("GitHub release-by-tag response is malformed")
+            return response
+        return self._list_release_by_tag(tag)
+
+    def _list_release_by_tag(self, tag: str) -> dict[str, Any] | None:
+        matches = []
+        for page in range(1, RELEASE_LIST_MAX_PAGES + 1):
+            response = self._get(
+                f"/releases?per_page={RELEASE_LIST_PAGE_SIZE}&page={page}",
+                timeout=RELEASE_LIST_TIMEOUT_SECONDS,
+            )
+            if not isinstance(response, list) or len(response) > RELEASE_LIST_PAGE_SIZE:
+                raise ReleaseStateError("GitHub release list returned a malformed page")
+            for release in response:
+                if not isinstance(release, dict):
+                    raise ReleaseStateError("GitHub release list contains a malformed release")
+                release_id = release.get("id")
+                release_tag = release.get("tag_name")
+                if (type(release_id) is not int or release_id < 1
+                        or not isinstance(release_tag, str) or not release_tag
+                        or not isinstance(release.get("draft"), bool)
+                        or not isinstance(release.get("assets"), list)):
+                    raise ReleaseStateError("GitHub release list contains a malformed release")
+                if release_tag == tag:
+                    matches.append(release)
+                    if len(matches) > 1:
+                        raise ReleaseStateError("GitHub release list has an ambiguous exact tag")
+            if len(response) < RELEASE_LIST_PAGE_SIZE:
+                return matches[0] if matches else None
+        raise ReleaseStateError("GitHub release list exceeds the bounded page limit")
 
     def tag_commit(self, tag: str) -> str:
         ref = self._get("/git/ref/tags/" + quote(tag, safe=""))
-        if ref is None:
+        if not isinstance(ref, dict):
             raise ReleaseStateError("release tag ref is missing")
         target = ref.get("object")
         for _ in range(5):
@@ -80,7 +127,7 @@ class GitHubReleaseAPI:
             if target.get("type") != "tag":
                 raise ReleaseStateError("release tag does not resolve to a commit")
             annotated = self._get("/git/tags/" + quote(target["sha"], safe=""))
-            if annotated is None:
+            if not isinstance(annotated, dict):
                 raise ReleaseStateError("annotated release tag object is missing")
             target = annotated.get("object")
         raise ReleaseStateError("release tag nesting exceeds the resolution limit")
