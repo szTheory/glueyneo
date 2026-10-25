@@ -866,7 +866,7 @@ def stage_documentation_project(destination: Path) -> None:
         shutil.copy2(ROOT / file, destination / file)
     for directory in (
         "cmake", "include", "src", "experiments/owned_cpu",
-        "third_party/libretro", "third_party/zlib",
+        "third_party/libretro", "third_party/zlib", "third_party/chips", "third_party/ymfm",
     ):
         shutil.copytree(ROOT / directory, destination / directory)
     for relative in (
