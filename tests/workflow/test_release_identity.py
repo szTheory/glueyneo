@@ -152,6 +152,41 @@ class ReleaseIdentityTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('Reused archives differ from the original trusted source identity manifest', result.stderr)
 
+    def test_actual_release_policy_rejects_skipped_consumers_and_missing_publication(self):
+        workflow = (ROOT / '.github/workflows/release.yml').read_text()
+        section = workflow.split('\n  release-policy:\n', 1)[1]
+        start = section.index("          import json, os, sys")
+        end = section.index('          PY_POLICY', start)
+        policy = '\n'.join(line[10:] for line in section[start:end].splitlines())
+        base = {**os.environ, 'CONTROL_RESULT': 'success', 'BUILD_RESULT': 'success',
+                'STAGE_RESULT': 'success', 'VERIFY_RESULT': 'success', 'PUBLISH_RESULT': 'success',
+                'SHOULD_BUILD': 'true', 'REUSING_BUILDS': 'false', 'PUBLISH_EXPECTED': 'true',
+                'SOURCE_COMMIT': self.source}
+        cases = [
+            ({}, True),
+            ({'PUBLISH_EXPECTED': 'false', 'PUBLISH_RESULT': 'skipped'}, True),
+            ({'REUSING_BUILDS': 'true', 'BUILD_RESULT': 'skipped',
+              'PUBLISH_EXPECTED': 'false', 'PUBLISH_RESULT': 'skipped'}, True),
+            ({'SHOULD_BUILD': 'false', 'BUILD_RESULT': 'skipped', 'STAGE_RESULT': 'skipped',
+              'VERIFY_RESULT': 'skipped', 'PUBLISH_RESULT': 'skipped'}, True),
+            ({'REUSING_BUILDS': 'true', 'BUILD_RESULT': 'skipped', 'VERIFY_RESULT': 'skipped',
+              'PUBLISH_EXPECTED': 'false', 'PUBLISH_RESULT': 'skipped'}, False),
+            ({'VERIFY_RESULT': 'failure', 'PUBLISH_RESULT': 'skipped'}, False),
+            ({'PUBLISH_RESULT': 'skipped'}, False),
+            ({'CONTROL_RESULT': 'failure'}, False),
+            ({'SHOULD_BUILD': ''}, False),
+            ({'BUILD_RESULT': 'skipped'}, False),
+        ]
+        for overrides, success in cases:
+            with self.subTest(overrides=overrides):
+                result = subprocess.run([sys.executable, '-c', policy], env={**base, **overrides},
+                                        capture_output=True, text=True, timeout=10)
+                self.assertEqual(result.returncode == 0, success, result.stdout + result.stderr)
+                report = json.loads(result.stdout.strip().removeprefix('RELEASE_POLICY '))
+                self.assertEqual(report['outcome'], 'pass' if success else 'fail')
+                if overrides.get('SHOULD_BUILD') == 'false':
+                    self.assertIsNone(report['source_commit'])
+
     def test_workflow_uses_trusted_helpers_but_builds_and_consumes_tagged_source(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text()
         for job in ('release-control', 'stage-release', 'publish-release'):
@@ -169,6 +204,10 @@ class ReleaseIdentityTests(unittest.TestCase):
         self.assertNotIn('GH_TOKEN', verification)
         self.assertNotIn('secrets.', verification)
         self.assertIn('contents: read', verification)
+        self.assertIn("if: always() && needs.release-control.result == 'success'", verification)
+        publish = workflow.split('\n  publish-release:\n', 1)[1].split('\n  release-policy:\n', 1)[0]
+        self.assertIn("if: always() && needs.release-control.result == 'success'", publish)
+        self.assertIn("needs.verify-downloaded-release.result == 'success'", publish)
         self.assertIn('name: ${{ needs.stage-release.outputs.downloaded_artifact_name }}', verification)
         self.assertIn('needs.release-control.result == \'success\'', stage)
         self.assertIn('needs.build-release.result == \'skipped\'', stage)
