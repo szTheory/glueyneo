@@ -1104,7 +1104,8 @@ def suite_release_consumer() -> dict[str, Any]:
 
 
 def suite_release_recovery() -> dict[str, Any]:
-    output = run([sys.executable, "tests/workflow/test_release_recovery.py"], timeout=60).stdout
+    output = run([sys.executable, "-m", "unittest", "discover", "-s", "tests/workflow",
+                  "-p", "test_release_*.py"], timeout=60).stdout
     match = re.search(r"(?m)^Ran (\d+) tests? in [\d.]+s$", output)
     if match is None or int(match.group(1)) <= 0 or "OK" not in output.splitlines()[-1:]:
         raise VerificationError("release-recovery suite omitted a positive unittest denominator")
