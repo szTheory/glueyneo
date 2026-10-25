@@ -22,6 +22,23 @@ import release_manifest as release  # noqa: E402
 
 
 class PublicContentTests(unittest.TestCase):
+    def test_source_dispositions_bind_path_bytes_and_rule(self) -> None:
+        for (path, digest), disposition in content.SOURCE_FINDING_DISPOSITIONS.items():
+            with self.subTest(path=path):
+                data = (ROOT / path).read_bytes()
+                self.assertEqual(hashlib.sha256(data).hexdigest(), digest)
+                for location in (path, "glueyneo-source/" + path):
+                    result = content.scan_bytes(data, location)
+                    self.assertEqual(result["findings"], [])
+                    self.assertEqual(set(result["dispositions"][0]["rules"]), disposition["rules"])
+                self.assertTrue(content.scan_bytes(data + b"\n", path)["findings"])
+                self.assertTrue(content.scan_bytes(data, "ci-log-1")["findings"])
+                self.assertTrue(content.scan_bytes(data, "other/" + path)["findings"])
+        license_data = (ROOT / "third_party/zlib/LICENSE").read_bytes()
+        location = "glueyneo-sdk-9.8.7/static/share/licenses/Glueyneo/zlib/LICENSE"
+        self.assertEqual(content.scan_bytes(license_data, location)["findings"], [])
+        self.assertTrue(content.scan_bytes(license_data + b"\n", location)["findings"])
+
     def test_source_scan_tracks_release_archive_policy(self) -> None:
         self.assertEqual(tuple(content.SOURCE_PATHS), release.SOURCE_PATHS)
         self.assertIn(".github/workflows", content.REPOSITORY_PATHS)
@@ -249,7 +266,7 @@ class PublicContentTests(unittest.TestCase):
     def test_repository_inventory_matches_recorded_fixture_and_dependency_bytes(self) -> None:
         result = content.validate_repository_inventory(ROOT)
         self.assertTrue(result["passed"])
-        self.assertEqual(result["items"], 46)
+        self.assertEqual(result["items"], 77)
 
     def test_rights_inventory_binds_bytes_and_rejects_unknown_or_changed_item(self) -> None:
         inventory = {"schema": 1, "items": [{

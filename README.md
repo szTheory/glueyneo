@@ -1,13 +1,14 @@
 # Glueyneo
 
-Glueyneo is a portable C Neo Geo MVS/AES core project. Its current v0.1 alpha
+Glueyneo is a portable C Neo Geo MVS/AES core project. Its current alpha
 delivers an offline-installable C17 library, a headless runner, and one bounded,
 firmware-free CPU/bus diagnostic. It is not a playable emulator, and the local
 package checks do not qualify a platform support matrix or release artifact.
 
 ## Build and consume the installed SDK
 
-The package exports `Glueyneo::glueyneo` and version `0.1.0`. The commands
+The package exports `Glueyneo::glueyneo` at the version recorded in
+`.release-please-manifest.json`. The commands
 below build and install separate static and shared packages, then compile C
 and C++ consumers against the installed package. The C example reads the
 installed original fixture in the host application and passes its bytes to the
@@ -57,7 +58,9 @@ cmake --build build/consumer-shared --parallel 2
 ```
 <!-- docs:installed-commands:end -->
 
-The consumer project calls `find_package(Glueyneo 0.1.0 EXACT CONFIG REQUIRED)`.
+The consumer reads the release manifest and calls
+`find_package(Glueyneo "${GLUEYNEO_CONSUMER_VERSION}" EXACT CONFIG REQUIRED)`.
+It requires that exact release version, including after a version bump.
 For lifecycle, ownership, status strings, and allocation-failure recovery, see
 [Ownership, lifecycle, and errors](docs/ownership-and-errors.md). The malformed
 manifest recovery is the final `--recovery` command above: it expects

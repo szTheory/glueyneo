@@ -14,11 +14,11 @@ import tempfile
 import unittest
 import io
 import platform
-import re
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 import release_manifest
 import release_state
+import public_content
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -73,6 +73,12 @@ class ReleaseConsumerTests(unittest.TestCase):
             stderr=subprocess.PIPE,
             timeout=60,
         )
+        (repo / ".release-please-manifest.json").write_text('{".": "9.8.7"}\n', encoding="utf-8")
+        subprocess.run(
+            ["git", "-c", "user.name=Glueyneo Tests", "-c", "user.email=tests@example.org",
+             "-c", "commit.gpgsign=false", "commit", "--quiet", "-am", "test: bump release version"],
+            cwd=repo, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30,
+        )
         commit = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=repo, check=True, text=True,
             stdout=subprocess.PIPE, timeout=10,
@@ -88,8 +94,11 @@ class ReleaseConsumerTests(unittest.TestCase):
         record = json.loads(result.stdout)
         source_archive = output / record["source"]
         sdk_archive = output / record["sdk"]
+        self.assertEqual(record["version"], "9.8.7")
         self.assertEqual(hashlib.sha256(source_archive.read_bytes()).hexdigest(), record["source_sha256"])
         self.assertEqual(hashlib.sha256(sdk_archive.read_bytes()).hexdigest(), record["sdk_sha256"])
+        self.assertEqual(public_content.scan_archive(source_archive)["findings"], [])
+        self.assertEqual(public_content.scan_archive(sdk_archive)["findings"], [])
 
         source_extract = Path(self.temp.name) / "source-extracted"
         release_manifest.safe_extract(source_archive, source_extract)
@@ -125,6 +134,21 @@ class ReleaseConsumerTests(unittest.TestCase):
             self.assertTrue(asset_path.is_file(), asset["path"])
             self.assertEqual(hashlib.sha256(asset_path.read_bytes()).hexdigest(), asset["sha256"])
             self.assertEqual(asset_path.stat().st_size, asset["size"])
+        notices = {
+            "libretro/libretro.h": "third_party/libretro/libretro.h",
+            "libretro/NOTICE.md": "third_party/libretro/NOTICE.md",
+            "chips/NOTICE.md": "third_party/chips/NOTICE.md",
+            "ymfm/LICENSE": "third_party/ymfm/LICENSE",
+            "ymfm/NOTICE.md": "third_party/ymfm/NOTICE.md",
+            "zlib/LICENSE": "third_party/zlib/LICENSE",
+        }
+        for variant in ("static", "shared"):
+            for notice, original in notices.items():
+                self.assertEqual((sdk_root / variant / "share/licenses/Glueyneo" / notice).read_bytes(),
+                                 (source_root / original).read_bytes(), f"{variant}/{notice}")
+        consumer_source = sdk_root / "consumer-example/source"
+        self.assertEqual((consumer_source / ".release-please-manifest.json").read_bytes(),
+                         (source_root / ".release-please-manifest.json").read_bytes())
         cmake_sources = [sdk_root / "README.md"]
         cmake_sources.extend(sorted((sdk_root / "static").rglob("*.cmake")))
         cmake_sources.extend(sorted((sdk_root / "shared").rglob("*.cmake")))
@@ -286,11 +310,6 @@ def verify_downloaded_release(download: Path, staged_manifest: Path, *, commit: 
             if diagnostic.returncode:
                 raise RuntimeError(f"relocated {variant} diagnostic failed: {diagnostic.stdout[-4000:]}")
             consumer_source = sdk_root / "consumer-example/source"
-            consumer_cmake = consumer_source / "CMakeLists.txt"
-            consumer_text = consumer_cmake.read_text(encoding="utf-8")
-            consumer_text = re.sub(r"find_package\(Glueyneo\s+[0-9A-Za-z.+-]+\s+EXACT\s+CONFIG\s+REQUIRED\)",
-                                   "find_package(Glueyneo " + version + " EXACT CONFIG REQUIRED)", consumer_text)
-            consumer_cmake.write_text(consumer_text, encoding="utf-8")
             consumer_build = work / f"consumer-{variant}"
             run([cmake, "-S", str(consumer_source), "-B", str(consumer_build),
                  f"-DGlueyneo_DIR={prefix / 'lib/cmake/Glueyneo'}",

@@ -39,6 +39,14 @@ output does not authorize publication; the API tag target, draft state, exact
 asset inventory, downloaded bytes, rebuild, consumers, and content gate are
 independent required checks.
 
+The existing Linux Clang CI job also builds an extracted source archive and
+relocates its static/shared SDK consumers at a synthetic `9.8.7` release
+version. The example carries the root manifest and keeps exact package-version
+matching, so a version bump does not rely on rewriting consumer source. The
+source archive includes the pinned runtime dependencies; installed SDKs retain
+their applicable dependency notices. Hosted runtime cost has not yet been
+measured.
+
 For a failed staging or verification run, rerun that workflow run or dispatch
 the workflow with the existing tag. Recovery still reads the root manifest and
 requires its tag and version to match. The workflow does not depend on an event
@@ -109,3 +117,19 @@ head, the aggregate and review must pass, and lane/assertion counts must be
 positive. This local validator does not fetch GitHub receipts or grant merge
 authority; attach the actual current-run/check and GSD review identifiers when
 the hosted workflow is qualified.
+
+## Effective release-token scope
+
+Every trusted App-token job queries `GET /installation/repositories` and fails
+unless exactly this repository is accessible. It records a small authority
+receipt bound to source SHA, workflow run, job and installation ID, without
+credential values or unexpected repository names. Redirects are refused before
+forwarding authorization. The existing Linux Clang CI job exercises rejection
+of broader/mismatched scope, malformed responses and missing job identities.
+
+The receipt names the documented one-hour maximum installation-token lifetime
+as an API contract, not a measured expiry. The pinned token action revokes its
+token in its post-job step; actual revocation is checked in hosted job logs.
+This effective job-token check does not inspect the App's installation-wide
+grant. See the [installation-token API](https://docs.github.com/en/rest/apps/installations#list-repositories-accessible-to-the-app-installation)
+and [pinned token action](https://github.com/actions/create-github-app-token/tree/bcd2ba49218906704ab6c1aa796996da409d3eb1).

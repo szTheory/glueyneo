@@ -210,7 +210,7 @@ def main() -> int:
     # Hosted observations supersede the former unknown rows only for the exact
     # recorded source and identities. Keep the release/authority boundary above.
     hosted = evidence.load_canonical_json(
-        (ROOT / ".planning/phases/03-distributable-release-qualification/03-CI-HOSTED-RECEIPT.json").read_bytes(),
+        (ROOT / ".planning/workstreams/cpu-bus-diagnostic-sdk-alpha/phases/03-distributable-release-qualification/03-CI-HOSTED-RECEIPT.json").read_bytes(),
         label="hosted CI observation")
     evidence.validate_matrix_report(hosted["aggregate"]["matrix"])
     expect(hosted["source_revision"] in testing, "hosted support docs must name the exact observed source")

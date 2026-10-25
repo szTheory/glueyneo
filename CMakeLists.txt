@@ -343,6 +343,14 @@ install(DIRECTORY include/glueyneo
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 install(FILES LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/Glueyneo")
+install(FILES third_party/libretro/libretro.h third_party/libretro/NOTICE.md
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/Glueyneo/libretro")
+install(FILES third_party/chips/NOTICE.md
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/Glueyneo/chips")
+install(FILES third_party/ymfm/LICENSE third_party/ymfm/NOTICE.md
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/Glueyneo/ymfm")
+install(FILES third_party/zlib/LICENSE
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/Glueyneo/zlib")
 install(FILES "${GLUEYNEO_DIAGNOSTIC_FIXTURE}"
   DESTINATION "${CMAKE_INSTALL_DATADIR}/glueyneo")
 

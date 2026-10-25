@@ -47,6 +47,17 @@ jobs:
           permission-contents: write
           permission-issues: write
           permission-pull-requests: write
+      - name: Verify effective App token repository scope
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_INSTALLATION_ID: ${{ steps.app-token.outputs.installation-id }}
+        run: python3 tools/workflow/app_scope.py --output build/app-authority.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-app-authority-${{ github.job }}
+          path: build/app-authority.json
+          if-no-files-found: error
+          retention-days: 7
       - id: release
         uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
         with:
@@ -196,6 +207,17 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-contents: write
+      - name: Verify effective App token repository scope
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_INSTALLATION_ID: ${{ steps.app-token.outputs.installation-id }}
+        run: python3 tools/workflow/app_scope.py --output build/app-authority.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-app-authority-${{ github.job }}
+          path: build/app-authority.json
+          if-no-files-found: error
+          retention-days: 7
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: release-matrix-*
@@ -347,6 +369,17 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-contents: write
+      - name: Verify effective App token repository scope
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_INSTALLATION_ID: ${{ steps.app-token.outputs.installation-id }}
+        run: python3 tools/workflow/app_scope.py --output build/app-authority.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-app-authority-${{ github.job }}
+          path: build/app-authority.json
+          if-no-files-found: error
+          retention-days: 7
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-identity-manifest

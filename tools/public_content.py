@@ -31,7 +31,8 @@ SOURCE_PATHS = (
     ".release-please-manifest.json", "CMakeLists.txt", "CMakePresets.json",
     "LICENSE", "README.md", "cmake", "docs", "examples",
     "experiments/owned_cpu", "fixtures/diagnostic", "include", "src",
-    "tests", "third_party/unity", "tools/diagnostic", "tools/release_manifest.py",
+    "tests", "third_party/unity", "third_party/libretro", "third_party/zlib",
+    "third_party/chips", "third_party/ymfm", "tools/diagnostic", "tools/release_manifest.py",
     "tools/release_state.py",
 )
 # Repository publication includes workflow and release configuration even
@@ -59,6 +60,7 @@ TEST_SOURCE_PATHS = frozenset({
     "tests/sdk/test_matrix_evidence.py", "tests/sdk/test_sdk.c",
     "tests/sdk/test_support.h", "tests/workflow/test_ci_policy.py",
     "tests/workflow/test_phase01_admission.py", "tests/workflow/test_phase01_docs.py",
+    "tests/workflow/test_app_scope.py",
     "tests/workflow/test_public_content.py", "tests/workflow/test_release_recovery.py",
 })
 
@@ -79,6 +81,18 @@ PRIVACY_RULES = (
 PUBLIC_EMAILS = {"noreply@github.com", "noreply@anthropic.com"}
 SYNTHETIC_PATH_MARKERS = {"private-person"}
 SYNTHETIC_EMAIL_SUFFIXES = (".invalid", ".example", ".example.com", ".example.org", ".example.net")
+# Exact source/archive false positives are tied to both path and complete bytes.
+# Other paths, changed bytes, and captured logs still use the ordinary detectors.
+SOURCE_FINDING_DISPOSITIONS = {
+    ("third_party/zlib/LICENSE", "e32ff4e00d9d94930537635291da39e7e612703334bf6fde8c7f1686fe8a45a2"): {
+        "rules": {"private-identity"},
+        "reason": "upstream public copyright contacts in the retained zlib license at da607da739fa6047df13e66a2af6b8bec7c2a498",
+    },
+    ("third_party/zlib/zlib.h", "818667d6ab6a37fe7469cb06a7f0cb2c2cb2f2c948a03e5accf1a4a74bf3020a"): {
+        "rules": {"private-identity"},
+        "reason": "upstream public copyright contacts in unchanged zlib.h at da607da739fa6047df13e66a2af6b8bec7c2a498",
+    },
+}
 # Exact immutable history objects audited as bounded false positives. These
 # dispositions are tied to object IDs, not paths or rule classes globally:
 # upstream Musashi and zlib contain public copyright contacts; historical
@@ -257,7 +271,16 @@ def scan_bytes(data: bytes, location: str) -> dict[str, Any]:
                 if any(marker.casefold() in path_parts for marker in SYNTHETIC_PATH_MARKERS):
                     continue
             rules.add(rule)
-    return {"bytes": len(data), "sha256": sha256_bytes(data),
+    digest = sha256_bytes(data)
+    source_path = location.removeprefix("glueyneo-source/")
+    if re.fullmatch(r"glueyneo-sdk-[^/]+/(?:static|shared)/share/licenses/Glueyneo/zlib/LICENSE", location):
+        source_path = "third_party/zlib/LICENSE"
+    disposition = SOURCE_FINDING_DISPOSITIONS.get((source_path, digest))
+    disposed = rules.intersection(disposition["rules"]) if disposition else set()
+    rules -= disposed
+    return {"bytes": len(data), "sha256": digest,
+            "dispositions": ([{"location": _safe_location(location), "sha256": digest,
+                               "rules": sorted(disposed), "reason": disposition["reason"]}] if disposed else []),
             "findings": ([{"location": _safe_location(location), "rules": sorted(rules)}] if rules else [])}
 
 
@@ -319,6 +342,7 @@ def scan_tree(root: Path, paths: list[str]) -> dict[str, Any]:
             result = scan_bytes(data, rel)
             rows.append({"path": rel, **result})
     return {"files": len(rows), "bytes": total, "findings": _findings(rows),
+            "dispositions": [item for row in rows for item in row.get("dispositions", [])],
             "inventory_sha256": sha256_bytes(canonical_bytes([{k: row[k] for k in ("path", "sha256", "bytes")} for row in rows]))}
 
 
@@ -450,6 +474,7 @@ def scan_archive(path: Path) -> dict[str, Any]:
         raise ContentError("archive-unreadable", "release archive is malformed or unreadable") from error
     rights = _validate_archive_inventory(rows)
     return {"files": len(rows), "members": len(members), "bytes": total, "findings": _findings(rows),
+            "dispositions": [item for row in rows for item in row.get("dispositions", [])],
             "rights": rights,
             "inventory_sha256": sha256_bytes(canonical_bytes([{k: row[k] for k in ("path", "sha256", "bytes")} for row in rows]))}
 
@@ -655,7 +680,7 @@ def scan_inputs(*, root: Path = ROOT, paths: list[str] | None = None,
     for index, archive in enumerate(archives or []):
         result = scan_archive(archive)
         archive_bytes += result["bytes"]
-        archive_rows.append({"files": result["files"], "members": result["members"], "bytes": result["bytes"], "findings": result["findings"]})
+        archive_rows.append({"files": result["files"], "members": result["members"], "bytes": result["bytes"], "findings": result["findings"], "dispositions": result["dispositions"]})
     counts = {
         "source": {"files": source["files"], "bytes": source["bytes"]},
         "history": {"files": history["files"], "bytes": history["bytes"]},
@@ -668,6 +693,8 @@ def scan_inputs(*, root: Path = ROOT, paths: list[str] | None = None,
     findings.sort(key=lambda item: (item["location"], item["rules"]))
     return {"schema": 1, "outcome": "fail" if findings else "pass", "findings": findings,
             "rights": rights, "history_dispositions": finding_dispositions,
+            "source_dispositions": source["dispositions"],
+            "archive_dispositions": [item for row in archive_rows for item in row["dispositions"]],
             "counts": counts, "detector_negative_only": True,
             "coverage": {"logs_supplied": len(log_rows), "archives_supplied": len(archive_rows),
                          "history_mode": ("synthetic supplied input" if history_text is not None
