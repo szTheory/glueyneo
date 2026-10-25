@@ -378,8 +378,13 @@ def main() -> int:
                     or manifest.get("source_commit", "").lower() != args.commit.lower()
                     or manifest.get("tag") != args.tag):
                 raise ReleaseStateError("staged manifest differs from the release identity")
+            snapshot = load_json(args.release)
+            if (not isinstance(snapshot, dict) or set(snapshot) != {"status", "release"}
+                    or snapshot.get("status") != "found"
+                    or not isinstance(snapshot.get("release"), dict)):
+                raise ReleaseStateError("release query snapshot does not contain a found release object")
             result = validate_release(
-                load_json(args.release), expected_tag=args.tag, expected_version=args.version,
+                snapshot["release"], expected_tag=args.tag, expected_version=args.version,
                 expected_commit=args.commit, manifest_version=manifest["version"],
                 expected_assets=expected_api_assets(args.manifest),
             )
