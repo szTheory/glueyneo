@@ -494,6 +494,45 @@ jobs:
           python3 tools/release_state.py query-api --repository "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --output build/release-api.json
           python3 tools/release_state.py validate-draft --release build/release-api.json --manifest build/expected/expected-release-manifest.json --tag "$RELEASE_TAG" --version "$RELEASE_VERSION" --commit "$RELEASE_COMMIT" > build/release-validation.json
           python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["status"] == "ready" and d["publishable"]' build/release-validation.json
+      - name: Record trusted publication event and exact main source
+        env:
+          SOURCE_COMMIT: ${{ needs.release-control.outputs.commit }}
+          WORKFLOW_COMMIT: ${{ needs.release-control.outputs.workflow_commit }}
+          PUBLISH_INPUT: ${{ inputs.publish }}
+        run: |
+          python3 - <<'PY_TRIGGER'
+          import json, os, re
+          from pathlib import Path
+
+          event = os.environ.get("GITHUB_EVENT_NAME", "")
+          ref = os.environ.get("GITHUB_REF", "")
+          source_commit = os.environ.get("SOURCE_COMMIT", "")
+          workflow_commit = os.environ.get("WORKFLOW_COMMIT", "")
+          publish_raw = os.environ.get("PUBLISH_INPUT", "").strip().lower()
+          if event == "push":
+              publish_input = None if publish_raw in {"", "false"} else True if publish_raw == "true" else "invalid"
+              source_event = "push-main"
+          elif event == "workflow_dispatch":
+              publish_input = publish_raw == "true"
+              source_event = "workflow-dispatch-publish"
+          else:
+              raise SystemExit("unsupported publication event")
+          if (ref != "refs/heads/main" or not re.fullmatch(r"[0-9a-f]{40}", source_commit)
+                  or not re.fullmatch(r"[0-9a-f]{40}", workflow_commit)
+                  or workflow_commit != os.environ.get("GITHUB_SHA")
+                  or publish_input == "invalid"
+                  or not (event == "push" or publish_input is True)):
+              raise SystemExit("publication trigger is not an authorized current-main release")
+          record = {"schema_version": 1, "repository": os.environ["GITHUB_REPOSITORY"],
+                    "event": event, "source_event": source_event, "ref": ref,
+                    "source_commit": source_commit, "workflow_commit": workflow_commit,
+                    "publish_input": publish_input,
+                    "publication_expected": True}
+          path = Path("build/release-trigger.json")
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n",
+                          encoding="utf-8")
+          PY_TRIGGER
       - name: Publish the verified unsigned draft
         shell: bash
         env:
@@ -511,6 +550,7 @@ jobs:
           name: delivery-evidence-published-release-attempt-${{ github.run_attempt }}
           path: |
             build/published-release.json
+            build/release-trigger.json
             build/expected/expected-release-manifest.json
             build/app-authority.json
           if-no-files-found: warn

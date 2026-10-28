@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -13,6 +14,7 @@ from pathlib import PurePosixPath
 import re
 import subprocess
 import sys
+import tarfile
 import tempfile
 import urllib.parse
 import urllib.request
@@ -63,6 +65,38 @@ def digest(value: object) -> str:
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise DeliveryContractError(message)
+
+
+def _review_frontmatter(report: str, *, commit: str) -> dict[str, str]:
+    match = re.match(r"\A---\s*\n(.*?)\n---(?:\s*\n|\s*\Z)", report, re.DOTALL)
+    require(match is not None, "independent code review report has no structured frontmatter")
+    fields: dict[str, str] = {}
+    for name in ("reviewed_commit", "status"):
+        value = re.search(rf"(?m)^{name}:\s*([^\r\n]+)\s*$", match.group(1))
+        require(value is not None, f"independent code review report omits {name}")
+        fields[name] = value.group(1)
+    require(fields["reviewed_commit"] == commit,
+            "independent code review report does not name its exact reviewed commit")
+    counts = dict(re.findall(r"(?m)^  (critical|warning|info|total):\s*([0-9]+)\s*$", match.group(1)))
+    require(set(counts) == {"critical", "warning", "info", "total"},
+            "independent code review report omits finding counts")
+    require(fields["status"] == "clean" and all(int(value) == 0 for value in counts.values()),
+            "independent code review report is not clean")
+    return fields
+
+
+def _security_report_verdict(report: str, *, commit: str) -> tuple[str, int]:
+    fields: dict[str, str] = {}
+    for name in ("reviewed_commit", "verdict", "threats_open"):
+        value = re.search(rf"(?m)^{name}:\s*([^\r\n]+)\s*$", report)
+        require(value is not None, f"independent security report omits {name}")
+        fields[name] = value.group(1)
+    require(fields["reviewed_commit"] == commit,
+            "independent security report does not name its exact reviewed commit")
+    require(fields["verdict"] in {"SECURED", "OPEN_THREATS", "ESCALATE"}
+            and fields["threats_open"].isdigit(),
+            "independent security report verdict is malformed")
+    return fields["verdict"], int(fields["threats_open"])
 
 
 def workflow_job(name: str) -> str:
@@ -155,8 +189,8 @@ def _validate_platform_evidence(item: object, *, source: dict[str, object], rele
             "platform evidence has the wrong distribution or profile")
     require(item.get("source_commit") == source["commit"] and item.get("version") == source["version"],
             "platform evidence is stale or uses a planning identity")
-    require(item.get("workflow_commit") == source["workflow_commit"] == source["commit"],
-            "platform evidence is not bound to the current workflow source commit")
+    require(item.get("workflow_commit") == source["workflow_commit"],
+            "platform evidence is not bound to the trusted workflow source commit")
     manifest = item.get("manifest")
     require(isinstance(manifest, dict) and manifest == release["manifest"],
             "platform evidence manifest differs from the published release manifest")
@@ -207,7 +241,8 @@ def validate_receipt(receipt: object) -> dict[str, object]:
     version, tag = source.get("version"), source.get("tag")
     require(isinstance(commit, str) and SHA_RE.fullmatch(commit) is not None,
             "source commit must be a full immutable public commit")
-    require(workflow_commit == commit, "workflow revision differs from the intended public source commit")
+    require(isinstance(workflow_commit, str) and SHA_RE.fullmatch(workflow_commit) is not None,
+            "workflow revision must be a full immutable commit")
     require(isinstance(version, str) and release_manifest.VERSION_RE.fullmatch(version) is not None
             and tag == f"v{version}", "source version must come from Release Please tag identity")
     require(source.get("repository") == REPOSITORY and source.get("public_ref") == "refs/heads/main",
@@ -266,13 +301,13 @@ def validate_receipt(receipt: object) -> dict[str, object]:
         require(type(rights.get(field)) is int and rights[field] > 0, f"rights/content evidence omitted positive {field}")
     require(rights.get("candidate_count") == rights.get("rights_rows"), "rights inventory is not complete")
     require(rights.get("report_sha256") == report_sha
-            and rights.get("candidate_count") == rights_report.get("files")
+            and rights.get("candidate_count") == rights_report.get("items")
             and rights.get("archive_count") == coverage.get("archives_supplied")
             and rights.get("log_count") == coverage.get("logs_supplied")
             and rights.get("source_file_count") == counts["source"].get("files")
             and rights.get("source_bytes") == counts["source"].get("bytes"),
             "rights/content denominators differ from the actual producer report")
-    require(type(rights_report.get("files")) is int and rights_report["files"] > 0
+    require(type(rights_report.get("items")) is int and rights_report["items"] > 0
             and isinstance(rights_report.get("inventory_sha256"), str)
             and DIGEST_RE.fullmatch(rights_report["inventory_sha256"]) is not None,
             "rights inventory report is incomplete")
@@ -317,8 +352,9 @@ def validate_receipt(receipt: object) -> dict[str, object]:
     source_map = correspondence.get("mapping")
     require(isinstance(source_map, dict)
             and set(source_map) == {"schema_version", "local_revision", "public_revision",
-                                   "public_tree_sha", "path_count", "rows"}
+                                   "public_tree_sha", "scope", "path_count", "rows"}
             and source_map.get("schema_version") == 1
+            and source_map.get("scope") == "release-manifest.SOURCE_PATHS"
             and isinstance(source_map.get("local_revision"), str)
             and SHA_RE.fullmatch(source_map["local_revision"]) is not None
             and source_map["local_revision"] != state_head
@@ -356,6 +392,10 @@ def validate_receipt(receipt: object) -> dict[str, object]:
         if transformation == "exact":
             require(row["local_sha256"] == row["public_sha256"],
                     f"source-byte correspondence differs for exact path {path}")
+        elif transformation == "public-release-version-authority":
+            require(path == ".release-please-manifest.json"
+                    and row["local_sha256"] != row["public_sha256"],
+                    f"source-byte correspondence has an unapproved release-version authority change at {path}")
         else:
             require(transformation == "sanitized-public-history-remap" and path in remapped_paths
                     and row["local_sha256"] != row["public_sha256"],
@@ -380,19 +420,22 @@ def validate_receipt(receipt: object) -> dict[str, object]:
     require(isinstance(report_text, str) and report_text.strip()
             and hashlib.sha256(report_text.encode("utf-8")).hexdigest() == review["report_sha256"],
             "independent review report bytes do not match the cited digest")
-    require(f"reviewed_commit: {review.get('sha')}" in report_text,
-            "independent review report does not name its exact reviewed commit")
+    _review_frontmatter(report_text, commit=str(review["sha"]))
     security = gates.get("independent_security_review")
     require(isinstance(security, dict) and security.get("review_type") == "gsd-security-audit"
             and security.get("sha") == pull_request["head_commit"] and security.get("outcome") == "pass"
             and security.get("url") == pull_request["url"],
             "independent security review is not bound to the exact merged pull request head")
-    require(isinstance(security.get("report"), str) and security["report"].strip()
-            and hashlib.sha256(security["report"].encode("utf-8")).hexdigest() == security.get("report_sha256")
-            and f"reviewed_commit: {security.get('sha')}" in security["report"],
+    security_report = security.get("report")
+    require(isinstance(security_report, str) and security_report.strip()
+            and hashlib.sha256(security_report.encode("utf-8")).hexdigest() == security.get("report_sha256"),
             "independent security review report is missing or stale")
+    security_verdict, open_threats = _security_report_verdict(security_report, commit=str(security["sha"]))
+    require(security_verdict == "SECURED" and open_threats == 0,
+            "independent security review has open threats or did not secure the exact source")
     findings = review.get("findings")
     require(isinstance(findings, list), "independent review findings must be an explicit list")
+    require(findings == [], "independent review receipt must contain the report's clean zero-finding result")
     for index, finding in enumerate(findings):
         require(isinstance(finding, dict), f"independent review finding {index} is malformed")
         status = finding.get("status")
@@ -416,7 +459,8 @@ def validate_receipt(receipt: object) -> dict[str, object]:
     require(isinstance(checks.get("run_url"), str) and checks["run_url"].startswith("https://github.com/")
             and isinstance(checks.get("job_url"), str) and checks["job_url"].startswith(checks["run_url"] + "/job/"),
             "required-check run/job URLs are missing")
-    require(gates.get("source_event") == "push-main", "a pull-request event cannot stand in for protected release source")
+    require(gates.get("source_event") in {"push-main", "workflow-dispatch-publish"},
+            "receipt event is not an authorized protected-main publication trigger")
     authority = gates.get("publisher_authority")
     require(isinstance(authority, dict) and set(authority) == {"stage-release", "publish-release"},
             "scoped publisher authority observations are missing")
@@ -469,6 +513,61 @@ def _validate_completed_job(jobs: dict[int, dict[str, object]], *, job_id: int,
             f"actual workflow job did not pass under the recorded identity: {name}")
 
 
+def _source_archive_observations(path: Path) -> list[dict[str, object]]:
+    """Hash every safe source-archive file as both SHA-256 bytes and a Git blob."""
+    file_rows: dict[str, dict[str, object]] = {}
+    total_bytes = 0
+    try:
+        archive = tarfile.open(path, mode="r:gz")
+    except (OSError, tarfile.TarError) as error:
+        raise DeliveryContractError("anonymous public source archive is malformed") from error
+    with archive:
+        members = archive.getmembers()
+        require(0 < len(members) <= 50_000, "public source archive member count is empty or excessive")
+        for member in members:
+            name = member.name[:-1] if member.isdir() and member.name.endswith("/") else member.name
+            pure = PurePosixPath(name)
+            require(name and "\\" not in name and "\x00" not in name
+                    and not pure.is_absolute()
+                    and not re.match(r"^[A-Za-z]:", name)
+                    and all(part not in {"", ".", ".."} for part in name.split("/")),
+                    "public source archive contains an unsafe path")
+            require(pure.parts and pure.parts[0] == "glueyneo-source",
+                    "public source archive member has an unexpected root")
+            if member.isdir():
+                continue
+            require(member.isfile() and not member.issym() and not member.islnk()
+                    and member.size >= 0 and member.size <= 64 * 1024 * 1024,
+                    "public source archive contains an oversized, linked or special member")
+            relative = PurePosixPath(*pure.parts[1:]).as_posix()
+            require(relative and relative not in file_rows,
+                    "public source archive contains duplicate or root-only files")
+            total_bytes += member.size
+            require(total_bytes <= 512 * 1024 * 1024,
+                    "public source archive exceeds the total byte limit")
+            stream = archive.extractfile(member)
+            require(stream is not None, "public source archive member bytes are unavailable")
+            sha256 = hashlib.sha256()
+            git_blob = hashlib.sha1(b"blob " + str(member.size).encode("ascii") + b"\0")
+            read_bytes = 0
+            with stream:
+                while block := stream.read(1024 * 1024):
+                    read_bytes += len(block)
+                    require(read_bytes <= member.size,
+                            "public source archive member exceeds its declared size")
+                    sha256.update(block)
+                    git_blob.update(block)
+            require(read_bytes == member.size,
+                    "public source archive member is truncated")
+            file_rows[relative] = {
+                "path": relative,
+                "sha256": sha256.hexdigest(),
+                "public_blob_sha1": git_blob.hexdigest(),
+                "mode": "100755" if member.mode & 0o111 else "100644",
+            }
+    return [file_rows[path] for path in sorted(file_rows)]
+
+
 def validate_live_observations(receipt: object, live: object) -> dict[str, object]:
     """Cross-check a structurally valid receipt against observed GitHub producers and public bytes."""
     result = validate_receipt(receipt)
@@ -482,13 +581,32 @@ def validate_live_observations(receipt: object, live: object) -> dict[str, objec
     require(isinstance(run, dict) and type(run.get("id")) is int
             and run.get("id") == run_identity.get("run_id")
             and run.get("run_attempt") == run_identity.get("attempt")
-            and run.get("head_sha") == commit and run.get("head_branch") == "main"
-            and run.get("event") == "push" and run.get("status") == "completed"
+            and run.get("head_sha") == source["workflow_commit"] and run.get("head_branch") == "main"
+            and run.get("event") in {"push", "workflow_dispatch"} and run.get("status") == "completed"
             and run.get("conclusion") == "success"
             and run.get("path", "").split("@", 1)[0] == ".github/workflows/release.yml"
             and isinstance(run.get("repository"), dict)
             and run["repository"].get("full_name") == REPOSITORY,
-            "published producer run is not a successful current-source main push")
+            "published producer run is not a successful current-source main publication")
+    trigger = live.get("publication_trigger")
+    require(isinstance(trigger, dict) and trigger.get("schema_version") == 1
+            and trigger.get("repository") == REPOSITORY
+            and trigger.get("event") == run.get("event")
+            and trigger.get("ref") == "refs/heads/main"
+            and trigger.get("source_commit") == commit
+            and trigger.get("workflow_commit") == source["workflow_commit"] == run.get("head_sha")
+            and trigger.get("publication_expected") is True,
+            "published release trigger does not prove the exact protected-main source")
+    if run.get("event") == "push":
+        require(trigger.get("source_event") == "push-main"
+                and trigger.get("publish_input") in {None, False},
+                "push publication trigger is inconsistent")
+    else:
+        require(trigger.get("source_event") == "workflow-dispatch-publish"
+                and trigger.get("publish_input") is True,
+                "manual publication did not record publish=true")
+    require(receipt["gates"].get("source_event") == trigger.get("source_event"),
+            "receipt source event differs from the recorded trusted publication trigger")
     expected_run_url = f"https://github.com/{REPOSITORY}/actions/runs/{run_identity['run_id']}"
     require(run.get("html_url") == expected_run_url and run_identity.get("run_url") == expected_run_url,
             "release producer run URL differs from the observed workflow")
@@ -530,6 +648,22 @@ def validate_live_observations(receipt: object, live: object) -> dict[str, objec
                 and observed.get("sha") == row["public_blob_sha1"]
                 and observed.get("mode") == row["mode"],
                 f"public Git tree differs from source-byte correspondence at {row['path']}")
+    archive_rows = live.get("public_source_archive")
+    require(isinstance(archive_rows, list), "anonymous public source archive observations are missing")
+    archive_by_path: dict[str, dict[str, object]] = {}
+    for row in archive_rows:
+        require(isinstance(row, dict) and isinstance(row.get("path"), str)
+                and row["path"] not in archive_by_path,
+                "anonymous public source archive observations are malformed or duplicated")
+        archive_by_path[row["path"]] = row
+    require(set(archive_by_path) == {row["path"] for row in mapping_rows},
+            "anonymous public source archive path coverage differs from the source-byte mapping")
+    for row in mapping_rows:
+        observed = archive_by_path[row["path"]]
+        require(observed.get("sha256") == row["public_sha256"]
+                and observed.get("public_blob_sha1") == row["public_blob_sha1"]
+                and observed.get("mode") == row["mode"],
+                f"public source archive bytes differ from source-byte correspondence at {row['path']}")
     require(live.get("current_main_sha") == commit,
             "public main no longer points at the exact delivered source commit")
     require(live.get("tag_commit") == commit,
@@ -825,6 +959,7 @@ def verify_receipt_live(receipt: object) -> dict[str, object]:
                                         "public-content.json")
         published_dir = downloaded[f"delivery-evidence-published-release-attempt-{attempt}"]
         published_release_artifact = _artifact_json(published_dir, "published-release.json")
+        publication_trigger = _artifact_json(published_dir, "release-trigger.json")
         published_manifest = _artifact_json(published_dir, "expected-release-manifest.json")
         publish_scope = _artifact_json(published_dir, "app-authority.json")
         stage_scope_dir = downloaded[f"release-app-authority-stage-release-attempt-{attempt}"]
@@ -854,6 +989,8 @@ def verify_receipt_live(receipt: object) -> dict[str, object]:
             expected_path.write_bytes(canonical_json(release["manifest"]))
             public_manifest, public_asset_rows = _download_public_release(
                 public_dir / "assets", expected_path, tag=release["tag"], version=release["version"])
+            public_source_archive_rows = _source_archive_observations(
+                public_dir / "assets" / f"glueyneo-source-{release['version']}.tar.gz")
 
     release_api = _github_api_json(f"repos/{REPOSITORY}/releases/tags/{release['tag']}")
     pr_number = source["pull_request"]["number"]
@@ -883,11 +1020,13 @@ def verify_receipt_live(receipt: object) -> dict[str, object]:
             "pull_request": pull_request, "pull_request_head_commit": pr_head_commit,
             "public_source_tree": pr_source_tree["tree"],
             "pull_request_merge_commit": pr_merge_commit,
+            "publication_trigger": publication_trigger,
             "public_content_report_artifact": public_content,
             "staged_manifest_artifact": staged_manifest,
             "published_manifest_artifact": published_manifest,
             "published_release_artifact": published_release_artifact,
             "anonymous_release_manifest": public_manifest, "anonymous_asset_rows": public_asset_rows,
+            "public_source_archive": public_source_archive_rows,
             "main_protection": main_protection, "ci_run": ci_run,
             "ci_policy_job": ci_policy_job, "ci_aggregate_artifact": ci_aggregate,
             "publisher_authority": {"stage-release": stage_scope, "publish-release": publish_scope}}
@@ -1044,7 +1183,7 @@ def _valid_receipt(version: str = "1.2.3") -> dict[str, object]:
                    "local_source_mapping_sha256": "3" * 64,
                    "public_content_report": {"schema": 1, "outcome": "pass", "findings": [],
                                              "detector_negative_only": True,
-                                             "rights": {"files": 120, "bytes": 9000,
+                                             "rights": {"items": 120,
                                                         "inventory_sha256": "7" * 64},
                                              "coverage": {"history_mode": "selected revision",
                                                           "history_revision": "a" * 40,
@@ -1069,19 +1208,20 @@ def _valid_receipt(version: str = "1.2.3") -> dict[str, object]:
                               "mapping_sha256": "", "mapping": {
                                   "schema_version": 1, "local_revision": "1" * 40,
                                   "public_revision": "c" * 40, "public_tree_sha": "d" * 40,
+                                  "scope": "release-manifest.SOURCE_PATHS",
                                   "path_count": 1,
                                   "rows": [{"path": "README.md", "local_sha256": "4" * 64,
                                             "public_sha256": "4" * 64, "public_blob_sha1": "5" * 40,
                                             "mode": "100644", "transformation": "exact"}]}},
         "gates": {"independent_review": {"review_type": "gsd-code-review", "sha": "c" * 40,
                                           "outcome": "pass", "url": f"https://github.com/{REPOSITORY}/pull/10",
-                                          "report": "reviewed_commit: " + "c" * 40 + "\nstatus: clean\n",
-                                          "report_sha256": hashlib.sha256(("reviewed_commit: " + "c" * 40 + "\nstatus: clean\n").encode()).hexdigest(),
+                                          "report": "---\nreviewed_commit: " + "c" * 40 + "\nfindings:\n  critical: 0\n  warning: 0\n  info: 0\n  total: 0\nstatus: clean\n---\n",
+                                          "report_sha256": hashlib.sha256(("---\nreviewed_commit: " + "c" * 40 + "\nfindings:\n  critical: 0\n  warning: 0\n  info: 0\n  total: 0\nstatus: clean\n---\n").encode()).hexdigest(),
                                           "findings": []},
                   "independent_security_review": {"review_type": "gsd-security-audit", "sha": "c" * 40,
                                                    "outcome": "pass", "url": f"https://github.com/{REPOSITORY}/pull/10",
-                                                   "report": "reviewed_commit: " + "c" * 40 + "\nstatus: secured\n",
-                                                   "report_sha256": hashlib.sha256(("reviewed_commit: " + "c" * 40 + "\nstatus: secured\n").encode()).hexdigest()},
+                                                   "report": "reviewed_commit: " + "c" * 40 + "\nverdict: SECURED\nthreats_open: 0\n",
+                                                   "report_sha256": hashlib.sha256(("reviewed_commit: " + "c" * 40 + "\nverdict: SECURED\nthreats_open: 0\n").encode()).hexdigest()},
                   "publisher_authority": {job: {"schema_version": 1, "outcome": "pass",
                                                  "kind": "effective-token-repository-scope",
                                                  "repository": REPOSITORY, "repository_count": 1,
@@ -1133,11 +1273,16 @@ def _valid_live_observations(receipt: dict[str, object]) -> dict[str, object]:
     pr = source["pull_request"]
     ci = receipt["gates"]["required_checks"]
     return {
-        "release_run": {"id": run_id, "run_attempt": attempt, "head_sha": source["commit"],
+        "release_run": {"id": run_id, "run_attempt": attempt, "head_sha": source["workflow_commit"],
                         "head_branch": "main", "event": "push", "status": "completed",
                         "conclusion": "success", "path": ".github/workflows/release.yml@refs/heads/main",
                         "repository": {"full_name": REPOSITORY},
                         "html_url": release["run"]["run_url"]},
+        "publication_trigger": {"schema_version": 1, "repository": REPOSITORY,
+                                 "event": "push", "source_event": "push-main",
+                                 "ref": "refs/heads/main", "source_commit": source["commit"],
+                                 "workflow_commit": source["workflow_commit"],
+                                 "publish_input": None, "publication_expected": True},
         "pull_request": {"number": pr["number"], "html_url": pr["url"], "state": "closed",
                          "merged": True, "merged_at": pr["merged_at"],
                          "base": {"ref": "main"}, "head": {"sha": pr["head_commit"]},
@@ -1165,6 +1310,9 @@ def _valid_live_observations(receipt: dict[str, object]) -> dict[str, object]:
         "public_source_tree": [{"path": row["path"], "sha": row["public_blob_sha1"],
                                 "type": "blob", "mode": row["mode"]}
                                for row in receipt["local_publication"]["mapping"]["rows"]],
+        "public_source_archive": [{"path": row["path"], "sha256": row["public_sha256"],
+                                   "public_blob_sha1": row["public_blob_sha1"], "mode": row["mode"]}
+                                  for row in receipt["local_publication"]["mapping"]["rows"]],
     }
 
 
@@ -1197,6 +1345,32 @@ class DeliveryReceiptTests(unittest.TestCase):
         live["public_source_tree"][0]["sha"] = "f" * 40
         with self.assertRaisesRegex(DeliveryContractError, "public Git tree"):
             validate_live_observations(receipt, live)
+        live = _valid_live_observations(receipt)
+        live["public_source_archive"][0]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(DeliveryContractError, "public source archive bytes"):
+            validate_live_observations(receipt, live)
+
+    def test_source_archive_hashes_bytes_as_git_blobs(self) -> None:
+        content = b"public source bytes\n"
+        archive_bytes = io.BytesIO()
+        with tarfile.open(fileobj=archive_bytes, mode="w:gz") as archive:
+            root = tarfile.TarInfo("glueyneo-source/")
+            root.type = tarfile.DIRTYPE
+            root.mode = 0o755
+            archive.addfile(root)
+            member = tarfile.TarInfo("glueyneo-source/README.md")
+            member.mode = 0o644
+            member.size = len(content)
+            archive.addfile(member, io.BytesIO(content))
+        with tempfile.TemporaryDirectory(prefix="delivery-source-archive-") as directory:
+            path = Path(directory) / "source.tar.gz"
+            path.write_bytes(archive_bytes.getvalue())
+            rows = _source_archive_observations(path)
+        self.assertEqual(rows, [{"path": "README.md",
+                                 "sha256": hashlib.sha256(content).hexdigest(),
+                                 "public_blob_sha1": hashlib.sha1(
+                                     b"blob " + str(len(content)).encode() + b"\0" + content).hexdigest(),
+                                 "mode": "100644"}])
 
     def test_local_source_mapping_reads_immutable_revision_bytes(self) -> None:
         revision = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT,
@@ -1224,11 +1398,7 @@ class DeliveryReceiptTests(unittest.TestCase):
     def test_review_findings_require_resolution_or_disposition_evidence(self) -> None:
         receipt = _valid_receipt()
         receipt["gates"]["independent_review"]["findings"] = [{"status": "dispositioned"}]
-        with self.assertRaisesRegex(DeliveryContractError, "lacks disposition evidence"):
-            validate_receipt(receipt)
-        receipt = _valid_receipt()
-        receipt["gates"]["independent_review"]["findings"] = [{"status": "resolved"}]
-        with self.assertRaisesRegex(DeliveryContractError, "lacks evidence"):
+        with self.assertRaisesRegex(DeliveryContractError, "clean zero-finding"):
             validate_receipt(receipt)
 
     def test_review_report_digest_and_pull_request_are_bound(self) -> None:
@@ -1240,6 +1410,39 @@ class DeliveryReceiptTests(unittest.TestCase):
         receipt["gates"]["independent_review"]["report"] += "edited\n"
         with self.assertRaisesRegex(DeliveryContractError, "report bytes do not match"):
             validate_receipt(receipt)
+
+    def test_failing_review_verdicts_cannot_be_attested_as_passing(self) -> None:
+        receipt = _valid_receipt()
+        review = receipt["gates"]["independent_review"]
+        review["report"] = review["report"].replace("status: clean", "status: issues_found")
+        review["report_sha256"] = hashlib.sha256(review["report"].encode()).hexdigest()
+        with self.assertRaisesRegex(DeliveryContractError, "report is not clean"):
+            validate_receipt(receipt)
+
+        receipt = _valid_receipt()
+        security = receipt["gates"]["independent_security_review"]
+        security["report"] = security["report"].replace("threats_open: 0", "threats_open: 1")
+        security["report_sha256"] = hashlib.sha256(security["report"].encode()).hexdigest()
+        with self.assertRaisesRegex(DeliveryContractError, "open threats"):
+            validate_receipt(receipt)
+
+    def test_manual_publication_requires_recorded_publish_true(self) -> None:
+        receipt = _valid_receipt()
+        receipt["gates"]["source_event"] = "workflow-dispatch-publish"
+        live = _valid_live_observations(receipt)
+        live["release_run"]["event"] = "workflow_dispatch"
+        live["publication_trigger"].update(event="workflow_dispatch",
+                                            source_event="workflow-dispatch-publish",
+                                            publish_input=True)
+        self.assertEqual(validate_live_observations(receipt, live)["live_status"], "pass")
+        live["publication_trigger"]["publish_input"] = False
+        with self.assertRaisesRegex(DeliveryContractError, "did not record publish=true"):
+            validate_live_observations(receipt, live)
+
+        live = _valid_live_observations(_valid_receipt())
+        live["publication_trigger"]["workflow_commit"] = "f" * 40
+        with self.assertRaisesRegex(DeliveryContractError, "protected-main source"):
+            validate_live_observations(_valid_receipt(), live)
 
     def test_stale_source_and_state_head_substitution_are_rejected(self) -> None:
         receipt = _valid_receipt()
@@ -1305,6 +1508,8 @@ class DeliveryWorkflowTests(unittest.TestCase):
         self.assertIn("workflow_commit: ${{ steps.identity.outputs.workflow_commit }}", control)
         publish = workflow_job("publish-release")
         self.assertIn("outputs.commit == needs.release-control.outputs.workflow_commit", publish)
+        self.assertIn("WORKFLOW_COMMIT: ${{ needs.release-control.outputs.workflow_commit }}", publish)
+        self.assertIn('"workflow_commit": workflow_commit', publish)
         self.assertIn("workflow_commit", (ROOT / "tools/workflow/release_identity.py").read_text(encoding="utf-8"))
 
     def test_private_ref_exclusion_uses_exact_sanitized_public_revision(self) -> None:
