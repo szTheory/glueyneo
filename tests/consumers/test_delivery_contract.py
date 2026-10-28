@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import copy
 import hashlib
 import io
@@ -11,6 +12,7 @@ import json
 import os
 from pathlib import Path
 from pathlib import PurePosixPath
+from functools import lru_cache
 import re
 import subprocess
 import sys
@@ -98,6 +100,47 @@ def _security_report_verdict(report: str, *, commit: str) -> tuple[str, int]:
             and fields["threats_open"].isdigit(),
             "independent security report verdict is malformed")
     return fields["verdict"], int(fields["threats_open"])
+
+
+@lru_cache(maxsize=16)
+def _release_source_paths_at_revision(revision: str) -> tuple[str, ...]:
+    """Expand SOURCE_PATHS from the exact mapped source revision's Git tree."""
+    tree_result = subprocess.run(["git", "ls-tree", "-r", "-z", revision], cwd=ROOT,
+                                 capture_output=True, check=False, timeout=60)
+    require(tree_result.returncode == 0, "mapped source revision is unavailable for SOURCE_PATHS closure")
+    tracked_paths: list[str] = []
+    manifest_blob: str | None = None
+    for record in tree_result.stdout.split(b"\0"):
+        if not record:
+            continue
+        try:
+            metadata, raw_path = record.split(b"\t", 1)
+            mode, kind, blob = metadata.decode("ascii").split(" ")
+            path = raw_path.decode("utf-8")
+        except (UnicodeDecodeError, ValueError) as error:
+            raise DeliveryContractError("mapped source Git tree is malformed") from error
+        require(kind == "blob", "mapped source tree contains a non-file SOURCE_PATHS entry")
+        tracked_paths.append(path)
+        if path == "tools/release_manifest.py":
+            manifest_blob = blob
+    require(manifest_blob is not None, "mapped source revision has no release-manifest helper")
+    manifest_result = subprocess.run(["git", "cat-file", "blob", manifest_blob], cwd=ROOT,
+                                     capture_output=True, check=False, timeout=30)
+    require(manifest_result.returncode == 0, "mapped release-manifest helper blob is unavailable")
+    try:
+        module = ast.parse(manifest_result.stdout.decode("utf-8"))
+    except (UnicodeDecodeError, SyntaxError) as error:
+        raise DeliveryContractError("mapped release-manifest helper is malformed") from error
+    roots: object = None
+    for node in module.body:
+        if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "SOURCE_PATHS"
+                                                for target in node.targets):
+            roots = ast.literal_eval(node.value)
+            break
+    require(isinstance(roots, (list, tuple)) and roots and all(isinstance(root, str) for root in roots),
+            "mapped release-manifest helper has no literal SOURCE_PATHS closure")
+    return tuple(sorted(path for path in tracked_paths
+                        if any(path == root or path.startswith(root.rstrip("/") + "/") for root in roots)))
 
 
 def workflow_job(name: str) -> str:
@@ -403,37 +446,46 @@ def validate_receipt(receipt: object) -> dict[str, object]:
                     f"source-byte correspondence has an unapproved public transformation at {path}")
     require(mapped_paths == sorted(set(mapped_paths)),
             "source-byte correspondence paths must be unique and sorted")
+    expected_paths = _release_source_paths_at_revision(str(source_map["local_revision"]))
+    require(mapped_paths == list(expected_paths),
+            "source-byte correspondence does not cover the exact expanded SOURCE_PATHS closure")
     require(digest(source_map) == correspondence.get("mapping_sha256") == mapping,
             "source-byte correspondence digest does not bind the path rows")
 
     gates = receipt.get("gates")
     require(isinstance(gates, dict), "current-head release gates are missing")
-    review = gates.get("independent_review")
+    review = gates.get("review_content_check")
     require(isinstance(review, dict) and review.get("review_type") == "gsd-code-review"
-            and review.get("sha") == pull_request["head_commit"] and review.get("outcome") == "pass",
-            "independent review is not bound to the exact merged pull request head")
+            and review.get("sha") == pull_request["head_commit"] and review.get("content_outcome") == "pass"
+            and review.get("report_origin") == "executor-observed-agent-output"
+            and review.get("origin_authenticated") is False
+            and review.get("verification_scope") == "content-only",
+            "review report content-only check is not explicitly scoped to the exact observed PR-head report")
     require(isinstance(review.get("url"), str)
             and review.get("url") == pull_request["url"],
-            "independent review URL does not identify the merged source pull request")
+            "review content record URL does not identify the merged source pull request")
     require(isinstance(review.get("report_sha256"), str) and DIGEST_RE.fullmatch(review["report_sha256"]) is not None,
-            "independent review report digest is missing")
+            "review content report digest is missing")
     report_text = review.get("report")
     require(isinstance(report_text, str) and report_text.strip()
             and hashlib.sha256(report_text.encode("utf-8")).hexdigest() == review["report_sha256"],
-            "independent review report bytes do not match the cited digest")
+            "review content report bytes do not match the cited digest")
     _review_frontmatter(report_text, commit=str(review["sha"]))
-    security = gates.get("independent_security_review")
+    security = gates.get("security_review_content_check")
     require(isinstance(security, dict) and security.get("review_type") == "gsd-security-audit"
-            and security.get("sha") == pull_request["head_commit"] and security.get("outcome") == "pass"
+            and security.get("sha") == pull_request["head_commit"] and security.get("content_outcome") == "pass"
+            and security.get("report_origin") == "executor-observed-agent-output"
+            and security.get("origin_authenticated") is False
+            and security.get("verification_scope") == "content-only"
             and security.get("url") == pull_request["url"],
-            "independent security review is not bound to the exact merged pull request head")
+            "security-review report content check is not explicitly scoped to the exact observed PR-head report")
     security_report = security.get("report")
     require(isinstance(security_report, str) and security_report.strip()
             and hashlib.sha256(security_report.encode("utf-8")).hexdigest() == security.get("report_sha256"),
-            "independent security review report is missing or stale")
+            "security-review content report is missing or stale")
     security_verdict, open_threats = _security_report_verdict(security_report, commit=str(security["sha"]))
     require(security_verdict == "SECURED" and open_threats == 0,
-            "independent security review has open threats or did not secure the exact source")
+            "security-review content report has open threats or did not secure the exact source")
     findings = review.get("findings")
     require(isinstance(findings, list), "independent review findings must be an explicit list")
     require(findings == [], "independent review receipt must contain the report's clean zero-finding result")
@@ -495,7 +547,8 @@ def validate_receipt(receipt: object) -> dict[str, object]:
     require(next(row for row in rows if row["name"] == f"glueyneo-source-{version}.tar.gz")["sha256"] == source_sha,
             "rights source archive digest differs from release bytes")
     return {"status": "pass", "source_commit": commit, "version": version,
-            "platform_rows": len(evidence), "case_rows": len(evidence) * len(CASE_IDS)}
+            "platform_rows": len(evidence), "case_rows": len(evidence) * len(CASE_IDS),
+            "review_evidence_scope": "content-only", "review_origin_authenticated": False}
 
 
 def _job_id_from_url(value: object) -> int:
@@ -787,7 +840,8 @@ def validate_live_observations(receipt: object, live: object) -> dict[str, objec
                 and scope.get("source_revision") == commit and scope.get("job") == job_name
                 and scope.get("repository_count") == 1 and scope.get("repository") == REPOSITORY,
                 f"observed App token scope is not tied to the exact release producer: {job_name}")
-    return {**result, "live_status": "pass", "run_id": run_identity["run_id"],
+    return {**result, "live_status": "pass", "review_evidence_scope": "content-only",
+            "review_origin_authenticated": False, "run_id": run_identity["run_id"],
             "verified_public_assets": len(by_name), "verified_producer_jobs": len(expected_job_ids),
             "verified_pull_request": pull_request_identity["number"]}
 
@@ -1205,22 +1259,19 @@ def _valid_receipt(version: str = "1.2.3") -> dict[str, object]:
                     "published_at": "2026-10-28T12:00:00Z", "run": run, "manifest": manifest,
                     "manifest_sha256": digest(manifest), "anonymous_download": True},
         "local_publication": {"status": "pass", "source_commit": "a" * 40, "clean_checkout": True,
-                              "private_refs_pushed": False, "path_count": 1,
-                              "mapping_sha256": "", "mapping": {
-                                  "schema_version": 1, "local_revision": "1" * 40,
-                                  "public_revision": "c" * 40, "public_tree_sha": "d" * 40,
-                                  "scope": "release-manifest.SOURCE_PATHS",
-                                  "path_count": 1,
-                                  "rows": [{"path": "README.md", "local_sha256": "4" * 64,
-                                            "public_sha256": "4" * 64, "public_blob_sha1": "5" * 40,
-                                            "mode": "100644", "transformation": "exact"}]}},
-        "gates": {"independent_review": {"review_type": "gsd-code-review", "sha": "c" * 40,
-                                          "outcome": "pass", "url": f"https://github.com/{REPOSITORY}/pull/10",
+                              "private_refs_pushed": False, "path_count": 0,
+                              "mapping_sha256": "", "mapping": {}},
+        "gates": {"review_content_check": {"review_type": "gsd-code-review", "sha": "c" * 40,
+                                          "content_outcome": "pass", "report_origin": "executor-observed-agent-output",
+                                          "origin_authenticated": False, "verification_scope": "content-only",
+                                          "url": f"https://github.com/{REPOSITORY}/pull/10",
                                           "report": "---\nreviewed_commit: " + "c" * 40 + "\nfindings:\n  critical: 0\n  warning: 0\n  info: 0\n  total: 0\nstatus: clean\n---\n",
                                           "report_sha256": hashlib.sha256(("---\nreviewed_commit: " + "c" * 40 + "\nfindings:\n  critical: 0\n  warning: 0\n  info: 0\n  total: 0\nstatus: clean\n---\n").encode()).hexdigest(),
                                           "findings": []},
-                  "independent_security_review": {"review_type": "gsd-security-audit", "sha": "c" * 40,
-                                                   "outcome": "pass", "url": f"https://github.com/{REPOSITORY}/pull/10",
+                  "security_review_content_check": {"review_type": "gsd-security-audit", "sha": "c" * 40,
+                                                   "content_outcome": "pass", "report_origin": "executor-observed-agent-output",
+                                                   "origin_authenticated": False, "verification_scope": "content-only",
+                                                   "url": f"https://github.com/{REPOSITORY}/pull/10",
                                                    "report": "reviewed_commit: " + "c" * 40 + "\nverdict: SECURED\nthreats_open: 0\n",
                                                    "report_sha256": hashlib.sha256(("reviewed_commit: " + "c" * 40 + "\nverdict: SECURED\nthreats_open: 0\n").encode()).hexdigest()},
                   "publisher_authority": {job: {"schema_version": 1, "outcome": "pass",
@@ -1239,9 +1290,45 @@ def _valid_receipt(version: str = "1.2.3") -> dict[str, object]:
                               for distribution in ("staged", "published") for profile in PROFILES],
     }
     mapping = receipt["local_publication"]["mapping"]
+    mapping.update(_fixture_source_mapping())
+    receipt["local_publication"]["path_count"] = mapping["path_count"]
     receipt["local_publication"]["mapping_sha256"] = digest(mapping)
     receipt["source"]["local_source_mapping_sha256"] = digest(mapping)
     return _seal_receipt_reports(receipt)
+
+
+_FIXTURE_SOURCE_MAPPING: dict[str, object] | None = None
+
+
+def _fixture_source_mapping() -> dict[str, object]:
+    """Build a complete synthetic map for this checkout's curated archive closure."""
+    global _FIXTURE_SOURCE_MAPPING
+    if _FIXTURE_SOURCE_MAPPING is None:
+        revision = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT,
+                                  capture_output=True, text=True, check=True).stdout.strip()
+        tree_result = subprocess.run(["git", "ls-tree", "-r", "-z", revision], cwd=ROOT,
+                                     capture_output=True, check=True)
+        rows: list[dict[str, object]] = []
+        for record in tree_result.stdout.split(b"\0"):
+            if not record:
+                continue
+            metadata, raw_path = record.split(b"\t", 1)
+            mode, kind, blob = metadata.decode("ascii").split(" ")
+            path = raw_path.decode("utf-8")
+            if kind != "blob" or not any(path == root or path.startswith(root.rstrip("/") + "/")
+                                          for root in release_manifest.SOURCE_PATHS):
+                continue
+            content = subprocess.run(["git", "cat-file", "blob", blob], cwd=ROOT,
+                                     capture_output=True, check=True).stdout
+            sha = hashlib.sha256(content).hexdigest()
+            rows.append({"path": path, "local_sha256": sha, "public_sha256": sha,
+                         "public_blob_sha1": blob, "mode": mode, "transformation": "exact"})
+        rows.sort(key=lambda row: row["path"])
+        _FIXTURE_SOURCE_MAPPING = {"schema_version": 1, "local_revision": revision,
+                                  "public_revision": "c" * 40, "public_tree_sha": "d" * 40,
+                                  "scope": "release-manifest.SOURCE_PATHS",
+                                  "path_count": len(rows), "rows": rows}
+    return copy.deepcopy(_FIXTURE_SOURCE_MAPPING)
 
 
 def _seal_receipt_reports(receipt: dict[str, object]) -> dict[str, object]:
@@ -1351,6 +1438,18 @@ class DeliveryReceiptTests(unittest.TestCase):
         with self.assertRaisesRegex(DeliveryContractError, "public source archive bytes"):
             validate_live_observations(receipt, live)
 
+    def test_source_mapping_must_cover_exact_expanded_manifest_paths(self) -> None:
+        receipt = _valid_receipt()
+        correspondence = receipt["local_publication"]
+        mapping = correspondence["mapping"]
+        mapping["rows"].pop()
+        mapping["path_count"] -= 1
+        correspondence["path_count"] = mapping["path_count"]
+        correspondence["mapping_sha256"] = digest(mapping)
+        receipt["source"]["local_source_mapping_sha256"] = digest(mapping)
+        with self.assertRaisesRegex(DeliveryContractError, "exact expanded SOURCE_PATHS"):
+            validate_receipt(receipt)
+
     def test_source_archive_hashes_bytes_as_git_blobs(self) -> None:
         content = b"public source bytes\n"
         archive_bytes = io.BytesIO()
@@ -1398,37 +1497,45 @@ class DeliveryReceiptTests(unittest.TestCase):
 
     def test_review_findings_require_resolution_or_disposition_evidence(self) -> None:
         receipt = _valid_receipt()
-        receipt["gates"]["independent_review"]["findings"] = [{"status": "dispositioned"}]
+        receipt["gates"]["review_content_check"]["findings"] = [{"status": "dispositioned"}]
         with self.assertRaisesRegex(DeliveryContractError, "clean zero-finding"):
             validate_receipt(receipt)
 
     def test_review_report_digest_and_pull_request_are_bound(self) -> None:
         receipt = _valid_receipt()
-        receipt["gates"]["independent_review"]["url"] = "https://github.com/other/repo/pull/10"
+        content_result = validate_receipt(receipt)
+        self.assertEqual(content_result["review_evidence_scope"], "content-only")
+        self.assertIs(content_result["review_origin_authenticated"], False)
+        receipt = _valid_receipt()
+        receipt["gates"]["review_content_check"]["origin_authenticated"] = True
+        with self.assertRaisesRegex(DeliveryContractError, "content-only"):
+            validate_receipt(receipt)
+        receipt = _valid_receipt()
+        receipt["gates"]["review_content_check"]["url"] = "https://github.com/other/repo/pull/10"
         with self.assertRaisesRegex(DeliveryContractError, "merged source pull request"):
             validate_receipt(receipt)
         receipt = _valid_receipt()
-        receipt["gates"]["independent_review"]["report"] += "edited\n"
+        receipt["gates"]["review_content_check"]["report"] += "edited\n"
         with self.assertRaisesRegex(DeliveryContractError, "report bytes do not match"):
             validate_receipt(receipt)
 
     def test_failing_review_verdicts_cannot_be_attested_as_passing(self) -> None:
         receipt = _valid_receipt()
-        review = receipt["gates"]["independent_review"]
+        review = receipt["gates"]["review_content_check"]
         review["report"] = review["report"].replace("status: clean", "status: issues_found")
         review["report_sha256"] = hashlib.sha256(review["report"].encode()).hexdigest()
         with self.assertRaisesRegex(DeliveryContractError, "report is not clean"):
             validate_receipt(receipt)
 
         receipt = _valid_receipt()
-        security = receipt["gates"]["independent_security_review"]
+        security = receipt["gates"]["security_review_content_check"]
         security["report"] = security["report"].replace("threats_open: 0", "threats_open: 1")
         security["report_sha256"] = hashlib.sha256(security["report"].encode()).hexdigest()
         with self.assertRaisesRegex(DeliveryContractError, "open threats"):
             validate_receipt(receipt)
 
         receipt = _valid_receipt()
-        review = receipt["gates"]["independent_review"]
+        review = receipt["gates"]["review_content_check"]
         review["report"] = review["report"].replace(
             "status: clean\n---\n", "status: clean\nstatus: issues_found\n---\n")
         review["report_sha256"] = hashlib.sha256(review["report"].encode()).hexdigest()
@@ -1436,7 +1543,7 @@ class DeliveryReceiptTests(unittest.TestCase):
             validate_receipt(receipt)
 
         receipt = _valid_receipt()
-        security = receipt["gates"]["independent_security_review"]
+        security = receipt["gates"]["security_review_content_check"]
         security["report"] += "verdict: OPEN_THREATS\nthreats_open: 1\n"
         security["report_sha256"] = hashlib.sha256(security["report"].encode()).hexdigest()
         with self.assertRaisesRegex(DeliveryContractError, "duplicate verdict"):
