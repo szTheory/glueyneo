@@ -282,9 +282,9 @@
       },
       {
         "path": "src/instance.c",
-        "sha256": "dc859296c90b6a6167c4b88e326355b990ce84fea7034f9d9d27c826bf11161f",
-        "bytes": 311481,
-        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "sha256": "a3b3be1f7fdd85d1c801e57c0f7d7ca3a45ba255433504167fe5883187262ef1",
+        "bytes": 311486,
+        "source_revision": "96260890ddfdbba1fbfb83f79f3b5fd3d9b0d278",
         "license": "MIT",
         "role": "Owned save implementation and lifecycle semantics."
       },
@@ -394,9 +394,9 @@
       },
       {
         "path": "tools/verify_sdk.py",
-        "sha256": "fd54e5b50bd297618c15a56c8bb9408eaa31aeaea576c2085a92417f2af07e04",
-        "bytes": 158256,
-        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "sha256": "3acd8f570705a08b0ff39046ec5fb825587533f47bac26e26bb36e9e6b9377c1",
+        "bytes": 158278,
+        "source_revision": "96260890ddfdbba1fbfb83f79f3b5fd3d9b0d278",
         "license": "MIT",
         "role": "SDK route selection, measurement validation and source identity harness."
       }
@@ -616,11 +616,11 @@
       },
       {
         "path": "src/instance.c",
-        "bytes": 311481,
-        "sha256": "dc859296c90b6a6167c4b88e326355b990ce84fea7034f9d9d27c826bf11161f",
+        "bytes": 311486,
+        "sha256": "a3b3be1f7fdd85d1c801e57c0f7d7ca3a45ba255433504167fe5883187262ef1",
         "license": "MIT",
         "notice": "LICENSE",
-        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+        "provenance": "Original Glueyneo first-party source; semantically equivalent fixed-width status masks preserve the current contract while removing strict MSVC narrowing warnings."
       },
       {
         "path": "src/libretro/libretro_core.c",
@@ -712,11 +712,11 @@
       },
       {
         "path": "tools/verify_sdk.py",
-        "bytes": 158256,
-        "sha256": "fd54e5b50bd297618c15a56c8bb9408eaa31aeaea576c2085a92417f2af07e04",
+        "bytes": 158278,
+        "sha256": "3acd8f570705a08b0ff39046ec5fb825587533f47bac26e26bb36e9e6b9377c1",
         "license": "MIT",
         "notice": "LICENSE",
-        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+        "provenance": "Original Glueyneo first-party source; CTest evidence now includes both SDK and state negative-control cases in the sdk-controls label."
       }
     ]
   },
