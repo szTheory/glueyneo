@@ -364,6 +364,12 @@ class PersistenceInstallTests(unittest.TestCase):
             )
             self.assertEqual(0, code, output)
             record = self._record(output, "producer")
+            if record.get("outcome") == "unsupported":
+                self.assertTrue(record.get("reason"))
+                self.assertEqual(record.get("host_file_commit"), "unsupported")
+                self.assertFalse(slot.exists())
+                self.assertEqual(record.get("receipt_acked"), 0)
+                return
             self.assertEqual(record.get("host_file_commit"), "committed_darwin_apfs")
             self.assertTrue(slot.is_file())
             if self.mode == "faults":
