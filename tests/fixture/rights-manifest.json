@@ -396,7 +396,7 @@
         "path": "tools/verify_sdk.py",
         "sha256": "15c4c16033be81148f5ae5c45c7202c6aaea20fd42535d85f2cc372c76a6289a",
         "bytes": 158340,
-        "source_revision": "8dce0eaee42678c56367ca9c8b8853dab5e9f6e",
+        "source_revision": "8dce0ea4714cf65b3d98381586ffbf5aecb927ff",
         "license": "MIT",
         "role": "SDK route selection, measurement validation and source identity harness."
       }
