@@ -154,6 +154,26 @@ def workflow_job(name: str) -> str:
     return workflow[match.end():end]
 
 
+def _ci_workflow_job(name: str, workflow: str) -> str:
+    match = re.search(rf"\n  {re.escape(name)}:\n", workflow)
+    require(match is not None, f"CI workflow is missing job {name}")
+    following = re.search(r"\n  [a-z][\w-]*:\n", workflow[match.end():])
+    end = match.end() + following.start() if following else len(workflow)
+    return workflow[match.end():end]
+
+
+def _require_matrix_checkout_lane_depth(workflow: str) -> None:
+    matrix_job = _ci_workflow_job("matrix", workflow)
+    checkout = re.search(
+        r"(?m)^      - uses: actions/checkout@[^\n]*\n(?P<step>(?:(?!^      - )[^\n]*\n)*)",
+        matrix_job,
+    )
+    require(checkout is not None, "CI matrix job has no checkout step")
+    require(re.search(r"(?m)^          fetch-depth: \$\{\{ matrix\.fetch_depth \}\}$",
+                      checkout.group("step")) is not None,
+            "CI matrix checkout does not use its lane-specific history depth")
+
+
 def _asset_rows(manifest: object, *, commit: str, version: str) -> list[dict[str, object]]:
     require(isinstance(manifest, dict), "release manifest is not an object")
     require(type(manifest.get("schema_version")) is int and manifest["schema_version"] == 1,
@@ -1639,10 +1659,25 @@ class DeliveryWorkflowTests(unittest.TestCase):
         rows = dict(lane_rows)
         self.assertEqual(len(rows), len(lane_rows))
         self.assertEqual(set(rows), set(expected_depths))
-        self.assertIn("fetch-depth: ${{ matrix.fetch_depth }}", workflow)
+        _require_matrix_checkout_lane_depth(workflow)
         for lane, depth in expected_depths.items():
             with self.subTest(lane=lane):
                 self.assertRegex(rows[lane], rf"(?m)^            fetch_depth: {depth}$")
+
+    def test_history_depth_expression_in_another_job_does_not_qualify(self) -> None:
+        workflow = CI_WORKFLOW.read_text(encoding="utf-8")
+        moved = workflow.replace(
+            "          fetch-depth: ${{ matrix.fetch_depth }}\n",
+            "          fetch-depth: 1\n",
+            1,
+        ).replace(
+            "          fetch-depth: 0\n",
+            "          fetch-depth: ${{ matrix.fetch_depth }}\n",
+            1,
+        )
+        self.assertIn("fetch-depth: ${{ matrix.fetch_depth }}", moved)
+        with self.assertRaisesRegex(DeliveryContractError, "matrix checkout"):
+            _require_matrix_checkout_lane_depth(moved)
 
     def test_delivery_current_source_is_checked_and_recorded(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
