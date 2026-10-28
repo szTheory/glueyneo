@@ -1580,13 +1580,57 @@ static int run_fresh_adapter_process(const char *selector, char *line,
     return output_valid && child_status_ok && line[0] != '\0';
 }
 
+static int is_lowercase_hex_digit(char value) {
+    return (value >= '0' && value <= '9') ||
+        (value >= 'a' && value <= 'f');
+}
+
 static int parse_process_result(const char *line, char *selector,
                                 char identity[65], char sram_values[13]) {
-    return line != NULL && selector != NULL && identity != NULL &&
-        sram_values != NULL &&
-        sscanf(line, "SAFETY_PROCESS_RESULT=%c:%64[0-9a-f]:%12[0-9a-f]",
-               selector, identity, sram_values) == 3 &&
-        strlen(identity) == 64u && strlen(sram_values) == 12u;
+    static const char prefix[] = "SAFETY_PROCESS_RESULT=";
+    const size_t prefix_length = sizeof(prefix) - 1u;
+    const size_t expected_length = prefix_length + 2u + 64u + 1u + 12u;
+    if (line == NULL || selector == NULL || identity == NULL ||
+        sram_values == NULL) {
+        return 0;
+    }
+    const size_t line_length = strlen(line);
+    const int has_line_feed =
+        (line_length == expected_length + 1u &&
+         line[expected_length] == '\n') ||
+        (line_length == expected_length + 2u &&
+         line[expected_length] == '\r' &&
+         line[expected_length + 1u] == '\n');
+    if ((line_length != expected_length && !has_line_feed) ||
+        memcmp(line, prefix, prefix_length) != 0) {
+        return 0;
+    }
+
+    const char *cursor = line + prefix_length;
+    const char parsed_selector = cursor[0];
+    if (cursor[1] != ':') return 0;
+    cursor += 2u;
+
+    char parsed_identity[65];
+    for (size_t index = 0; index < 64u; ++index) {
+        if (!is_lowercase_hex_digit(cursor[index])) return 0;
+        parsed_identity[index] = cursor[index];
+    }
+    parsed_identity[64] = '\0';
+    cursor += 64u;
+    if (*cursor++ != ':') return 0;
+
+    char parsed_sram_values[13];
+    for (size_t index = 0; index < 12u; ++index) {
+        if (!is_lowercase_hex_digit(cursor[index])) return 0;
+        parsed_sram_values[index] = cursor[index];
+    }
+    parsed_sram_values[12] = '\0';
+
+    *selector = parsed_selector;
+    memcpy(identity, parsed_identity, sizeof(parsed_identity));
+    memcpy(sram_values, parsed_sram_values, sizeof(parsed_sram_values));
+    return 1;
 }
 
 static void fresh_adapter_processes_keep_distinct_content_and_sram(void) {
@@ -1611,6 +1655,21 @@ static void fresh_adapter_processes_keep_distinct_content_and_sram(void) {
     SAFETY_CHECK(child_a_ok && child_b_ok && child_a_again_ok,
                  "three fresh adapter processes complete their public guest runs");
     if (!child_a_ok || !child_b_ok || !child_a_again_ok) goto done;
+    char malformed_line[512];
+    char malformed_selector = '\0';
+    char malformed_identity[65] = {0};
+    char malformed_sram_values[13] = {0};
+    memcpy(malformed_line, line_a, strlen(line_a) + 1u);
+    malformed_line[sizeof("SAFETY_PROCESS_RESULT=") - 1u + 2u] = 'G';
+    SAFETY_CHECK(!parse_process_result(malformed_line, &malformed_selector,
+                                      malformed_identity, malformed_sram_values),
+                 "fresh process parser rejects uppercase non-hex identity bytes");
+    memcpy(malformed_line, line_a, strlen(line_a) + 1u);
+    malformed_line[sizeof("SAFETY_PROCESS_RESULT=") - 1u + 2u +
+                   64u + 1u + 11u] = '\0';
+    SAFETY_CHECK(!parse_process_result(malformed_line, &malformed_selector,
+                                      malformed_identity, malformed_sram_values),
+                 "fresh process parser rejects truncated SRAM values");
     SAFETY_CHECK(parse_process_result(line_a, &selector_a, identity_a, sram_a) &&
                      parse_process_result(line_b, &selector_b, identity_b, sram_b) &&
                      parse_process_result(line_a_again, &selector_a_again,
