@@ -72,14 +72,15 @@ def _review_frontmatter(report: str, *, commit: str) -> dict[str, str]:
     require(match is not None, "independent code review report has no structured frontmatter")
     fields: dict[str, str] = {}
     for name in ("reviewed_commit", "status"):
-        value = re.search(rf"(?m)^{name}:\s*([^\r\n]+)\s*$", match.group(1))
-        require(value is not None, f"independent code review report omits {name}")
-        fields[name] = value.group(1)
+        values = re.findall(rf"(?m)^{name}:\s*([^\r\n]+)\s*$", match.group(1))
+        require(len(values) == 1, f"independent code review report has missing or duplicate {name}")
+        fields[name] = values[0]
     require(fields["reviewed_commit"] == commit,
             "independent code review report does not name its exact reviewed commit")
-    counts = dict(re.findall(r"(?m)^  (critical|warning|info|total):\s*([0-9]+)\s*$", match.group(1)))
-    require(set(counts) == {"critical", "warning", "info", "total"},
-            "independent code review report omits finding counts")
+    count_rows = re.findall(r"(?m)^  (critical|warning|info|total):\s*([0-9]+)\s*$", match.group(1))
+    counts = dict(count_rows)
+    require(len(count_rows) == 4 and set(counts) == {"critical", "warning", "info", "total"},
+            "independent code review report has missing or duplicate finding counts")
     require(fields["status"] == "clean" and all(int(value) == 0 for value in counts.values()),
             "independent code review report is not clean")
     return fields
@@ -88,9 +89,9 @@ def _review_frontmatter(report: str, *, commit: str) -> dict[str, str]:
 def _security_report_verdict(report: str, *, commit: str) -> tuple[str, int]:
     fields: dict[str, str] = {}
     for name in ("reviewed_commit", "verdict", "threats_open"):
-        value = re.search(rf"(?m)^{name}:\s*([^\r\n]+)\s*$", report)
-        require(value is not None, f"independent security report omits {name}")
-        fields[name] = value.group(1)
+        values = re.findall(rf"(?m)^{name}:\s*([^\r\n]+)\s*$", report)
+        require(len(values) == 1, f"independent security report has missing or duplicate {name}")
+        fields[name] = values[0]
     require(fields["reviewed_commit"] == commit,
             "independent security report does not name its exact reviewed commit")
     require(fields["verdict"] in {"SECURED", "OPEN_THREATS", "ESCALATE"}
@@ -1424,6 +1425,21 @@ class DeliveryReceiptTests(unittest.TestCase):
         security["report"] = security["report"].replace("threats_open: 0", "threats_open: 1")
         security["report_sha256"] = hashlib.sha256(security["report"].encode()).hexdigest()
         with self.assertRaisesRegex(DeliveryContractError, "open threats"):
+            validate_receipt(receipt)
+
+        receipt = _valid_receipt()
+        review = receipt["gates"]["independent_review"]
+        review["report"] = review["report"].replace(
+            "status: clean\n---\n", "status: clean\nstatus: issues_found\n---\n")
+        review["report_sha256"] = hashlib.sha256(review["report"].encode()).hexdigest()
+        with self.assertRaisesRegex(DeliveryContractError, "duplicate status"):
+            validate_receipt(receipt)
+
+        receipt = _valid_receipt()
+        security = receipt["gates"]["independent_security_review"]
+        security["report"] += "verdict: OPEN_THREATS\nthreats_open: 1\n"
+        security["report_sha256"] = hashlib.sha256(security["report"].encode()).hexdigest()
+        with self.assertRaisesRegex(DeliveryContractError, "duplicate verdict"):
             validate_receipt(receipt)
 
     def test_manual_publication_requires_recorded_publish_true(self) -> None:
