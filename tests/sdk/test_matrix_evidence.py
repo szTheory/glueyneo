@@ -313,6 +313,15 @@ class CtestLabelContractTests(unittest.TestCase):
         self.assertEqual(verify_sdk.CTEST_CASES["controls"],
                          {"sdk_controls", "sdk_state_controls"})
 
+    def test_sdk_isolation_label_includes_state_isolation(self) -> None:
+        self.assertEqual(verify_sdk.CTEST_CASES["isolation"],
+                         {"sdk_state_isolation", "sdk_isolation", "sdk_cold"})
+
+    def test_sdk_hostile_label_includes_state_minimizer(self) -> None:
+        self.assertEqual(verify_sdk.CTEST_CASES["hostile"],
+                         {"sdk_mutation_media", "sdk_mutation_sequence",
+                          "sdk_mutation_minimizer", "sdk_state_minimizer"})
+
 
 class MvsLaneTests(unittest.TestCase):
     def test_build_matrix_report_rejects_nonobject_rows_before_sorting(self) -> None:

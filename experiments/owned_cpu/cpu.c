@@ -2949,7 +2949,7 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
         const uint32_t base = *opcode == UINT16_C(0x4efb)
             ? extension_address
             : cpu->address_registers[(unsigned)(*opcode & 7u)];
-        const uint32_t target = base + sign_extend_byte(extension) + index;
+        const uint32_t target = base + sign_extend_byte((uint8_t)extension) + index;
         status = preflight_event(cpu, STEP_INSTRUCTION, UINT64_C(14), 1u, 0u);
         if (status != OWNED_CPU_OK) return status;
         cursor = target;
@@ -3558,9 +3558,9 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
             : cpu->data_registers[index_register];
         const uint32_t index = (extension & UINT16_C(0x0800)) != 0u
             ? index_full
-            : sign_extend_word(index_full);
+            : sign_extend_word((uint16_t)index_full);
         const uint32_t destination = cpu->address_registers[base_register] +
-                                     sign_extend_byte(extension) +
+                                     sign_extend_byte((uint8_t)extension) +
                                      index;
         if ((destination & UINT32_C(1)) != 0u) {
             cpu->fault_pc = instruction_pc;
@@ -3652,10 +3652,10 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
         const uint32_t index =
             (destination_extension & UINT16_C(0x0800)) != 0u
                 ? index_full
-                : sign_extend_word(index_full);
+                : sign_extend_word((uint16_t)index_full);
         const uint32_t destination_address =
             cpu->address_registers[destination_base_register] +
-            sign_extend_byte(destination_extension) + index;
+            sign_extend_byte((uint8_t)destination_extension) + index;
         if ((destination_address & UINT32_C(1)) != 0u) {
             cpu->fault_pc = instruction_pc;
             cpu->instruction_register = *opcode;
@@ -3724,17 +3724,17 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
         const uint32_t source_index =
             (source_extension & UINT16_C(0x0800)) != 0u
                 ? source_index_full
-                : sign_extend_word(source_index_full);
+                : sign_extend_word((uint16_t)source_index_full);
         const uint32_t destination_index =
             (destination_extension & UINT16_C(0x0800)) != 0u
                 ? destination_index_full
-                : sign_extend_word(destination_index_full);
+                : sign_extend_word((uint16_t)destination_index_full);
         const uint32_t source_address =
             cpu->address_registers[source_base_register] +
-            sign_extend_byte(source_extension) + source_index;
+            sign_extend_byte((uint8_t)source_extension) + source_index;
         const uint32_t destination_address =
             cpu->address_registers[destination_base_register] +
-            sign_extend_byte(destination_extension) +
+            sign_extend_byte((uint8_t)destination_extension) +
             destination_index;
         if ((source_address & UINT32_C(1)) != 0u) {
             cpu->fault_pc = instruction_pc;
@@ -3822,13 +3822,13 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
         const uint32_t index =
             (destination_extension & UINT16_C(0x0800)) != 0u
                 ? index_full
-                : sign_extend_word(index_full);
+                : sign_extend_word((uint16_t)index_full);
         const uint32_t source_address =
             cpu->address_registers[source_base_register] +
             sign_extend_word(source_displacement);
         const uint32_t destination_address =
             cpu->address_registers[destination_base_register] +
-            sign_extend_byte(destination_extension) + index;
+            sign_extend_byte((uint8_t)destination_extension) + index;
         if ((source_address & UINT32_C(1)) != 0u ||
             (destination_address & UINT32_C(1)) != 0u) {
             const uint32_t fault_address =
@@ -4048,9 +4048,9 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
             : cpu->data_registers[index_register];
         const uint32_t index = (extension & UINT16_C(0x0800)) != 0u
             ? index_full
-            : sign_extend_word(index_full);
+            : sign_extend_word((uint16_t)index_full);
         const uint32_t destination = cpu->address_registers[base_register] +
-            sign_extend_byte(extension) + index;
+            sign_extend_byte((uint8_t)extension) + index;
         status = preflight_event(cpu, STEP_INSTRUCTION, UINT64_C(18), 1u, 0u);
         if (status != OWNED_CPU_OK) return status;
         uint8_t discarded = 0u;
@@ -4129,9 +4129,9 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
                 ? cpu->address_registers[index_register]
                 : cpu->data_registers[index_register];
             const uint32_t index = (extension & UINT16_C(0x0800)) != 0u
-                ? index_full : sign_extend_word(index_full);
+                ? index_full : sign_extend_word((uint16_t)index_full);
             destination = cpu->address_registers[ea_register] +
-                          sign_extend_byte(extension) + index;
+                          sign_extend_byte((uint8_t)extension) + index;
             instruction_cycles = UINT64_C(18);
             break;
         }
@@ -4733,9 +4733,9 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
             : cpu->data_registers[index_register];
         const uint32_t index = (extension & UINT16_C(0x0800)) != 0u
             ? index_full
-            : sign_extend_word(index_full);
+            : sign_extend_word((uint16_t)index_full);
         const uint32_t source = cpu->address_registers[base_register] +
-            sign_extend_byte(extension) + index;
+            sign_extend_byte((uint8_t)extension) + index;
         if ((source & UINT32_C(1)) != 0u) {
             cpu->fault_pc = instruction_pc;
             cpu->instruction_register = *opcode;
@@ -4871,9 +4871,9 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
             : cpu->data_registers[index_register];
         const uint32_t index = (extension & UINT16_C(0x0800)) != 0u
             ? index_full
-            : sign_extend_word(index_full);
+            : sign_extend_word((uint16_t)index_full);
         const uint32_t source = cpu->address_registers[base_register] +
-            sign_extend_byte(extension) + index;
+            sign_extend_byte((uint8_t)extension) + index;
         status = preflight_event(cpu, STEP_INSTRUCTION, UINT64_C(14), 1u, 0u);
         if (status != OWNED_CPU_OK) return status;
         uint8_t value = 0u;
@@ -4913,9 +4913,9 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
             : cpu->data_registers[index_register];
         const uint32_t index = (extension & UINT16_C(0x0800)) != 0u
             ? index_full
-            : sign_extend_word(index_full);
+            : sign_extend_word((uint16_t)index_full);
         const uint32_t source = cpu->address_registers[base_register] +
-            sign_extend_byte(extension) + index;
+            sign_extend_byte((uint8_t)extension) + index;
         if ((source & UINT32_C(1)) != 0u) {
             cpu->fault_pc = instruction_pc;
             cpu->instruction_register = *opcode;
@@ -6575,7 +6575,7 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
         status = preflight_event(cpu, STEP_INSTRUCTION, UINT64_C(20), 1u, 0u);
         if (status != OWNED_CPU_OK) return status;
 
-        const uint16_t operation = immediate_logic_ccr_operation(*opcode);
+        const uint16_t operation = (uint16_t)immediate_logic_ccr_operation(*opcode);
         const uint16_t current_flags =
             (uint16_t)(cpu->sr & SR_ARITHMETIC_FLAGS);
         const uint16_t source_flags =
@@ -7496,9 +7496,9 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
             : cpu->data_registers[index_register];
         const uint32_t index = (extension & UINT16_C(0x0800)) != 0u
             ? index_full
-            : sign_extend_word(index_full);
+            : sign_extend_word((uint16_t)index_full);
         const uint32_t address = extension_address +
-                                 sign_extend_byte(extension) + index;
+                                 sign_extend_byte((uint8_t)extension) + index;
         status = preflight_event(cpu, STEP_INSTRUCTION, UINT64_C(14), 1u, 0u);
         if (status != OWNED_CPU_OK) return status;
         uint8_t value = 0u;
@@ -7757,9 +7757,9 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
             : cpu->data_registers[index_register];
         const uint32_t index = (extension & UINT16_C(0x0800)) != 0u
             ? index_full
-            : sign_extend_word(index_full);
+            : sign_extend_word((uint16_t)index_full);
         const uint32_t address = cpu->address_registers[base_register] +
-                                 sign_extend_byte(extension) +
+                                 sign_extend_byte((uint8_t)extension) +
                                  index;
         if ((address & UINT32_C(1)) != 0u) {
             cpu->fault_pc = instruction_pc;
@@ -7820,9 +7820,9 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
             : cpu->data_registers[index_register];
         const uint32_t index = (extension & UINT16_C(0x0800)) != 0u
             ? index_full
-            : sign_extend_word(index_full);
+            : sign_extend_word((uint16_t)index_full);
         const uint32_t address = extension_address +
-                                 sign_extend_byte(extension) + index;
+                                 sign_extend_byte((uint8_t)extension) + index;
         if ((address & 1u) != 0u) {
             cpu->fault_pc = instruction_pc;
             cpu->instruction_register = *opcode;
@@ -8252,9 +8252,9 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
         const uint32_t index =
             (index_extension & UINT16_C(0x0800)) != 0u
                 ? index_full
-                : sign_extend_word(index_full);
+                : sign_extend_word((uint16_t)index_full);
         const uint32_t displacement =
-            sign_extend_byte(index_extension);
+            sign_extend_byte((uint8_t)index_extension);
         const uint32_t effective_address =
             cpu->address_registers[base_register] + displacement + index;
         /* LEA (d8,An,Xn),An: PRM §4 LEA p. 4-110 loads the 32-bit effective
@@ -8354,9 +8354,9 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
             : cpu->data_registers[index_register];
         const uint32_t index = (extension & UINT16_C(0x0800)) != 0u
             ? index_full
-            : sign_extend_word(index_full);
+            : sign_extend_word((uint16_t)index_full);
         const uint32_t destination = cpu->address_registers[base_register] +
-            sign_extend_byte(extension) + index;
+            sign_extend_byte((uint8_t)extension) + index;
         const uint8_t value = (uint8_t)cpu->data_registers[source_register];
         status = preflight_event(cpu, STEP_INSTRUCTION, UINT64_C(14), 1u, 0u);
         if (status != OWNED_CPU_OK) return status;
@@ -8777,9 +8777,9 @@ static owned_cpu_status execute_one(owned_cpu *cpu, uint32_t *next_pc, uint16_t 
             : cpu->data_registers[index_register];
         const uint32_t index = (extension & UINT16_C(0x0800)) != 0u
             ? index_full
-            : sign_extend_word(index_full);
+            : sign_extend_word((uint16_t)index_full);
         const uint32_t destination = cpu->address_registers[base_register] +
-            sign_extend_byte(extension) + index;
+            sign_extend_byte((uint8_t)extension) + index;
         if ((destination & UINT32_C(1)) != 0u) {
             cpu->fault_pc = instruction_pc;
             cpu->instruction_register = *opcode;

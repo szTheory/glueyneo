@@ -499,11 +499,15 @@ static void state_instances_are_isolated_when_interleaved_and_concurrent(void) {
     }
 
     for (unsigned owner = 0u; owner < 3u; ++owner) {
-        arguments[owner] = (state_isolation_thread_argument){
-            instances[owner], states[owner], state_sizes[owner], inputs[owner],
-            cycles[owner], {0}, 0};
+        state_isolation_thread_argument *argument = &arguments[owner];
+        memset(argument, 0, sizeof(*argument));
+        argument->instance = instances[owner];
+        argument->state = states[owner];
+        argument->state_size = state_sizes[owner];
+        argument->input = inputs[owner];
+        argument->prior_cycles = cycles[owner];
         if (!sdk_test_thread_start(&threads[owner], state_isolation_thread,
-                                   &arguments[owner])) break;
+                                   argument)) break;
         ++started;
     }
     for (unsigned owner = 0u; owner < started; ++owner)

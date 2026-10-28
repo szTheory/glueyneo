@@ -547,7 +547,7 @@
     "tests/owned_cpu/test_timing.c",
     "third_party/unity/src/unity.c"
   ],
-  "core_identity_sha256": "5aaac958b0c7ab179e89ccff7789a1468835536f315e97ad054e86e721e26a65",
+  "core_identity_sha256": "5e578260333c8ef78f77a9463d7698a55a2284afe4477fa3ef12151728aa6931",
   "fields": [
     {
       "capture_disposition": "excluded from guest state; destination bus userdata/read16/write16 bindings remain attached",
@@ -1227,7 +1227,7 @@
       }
     ],
     "core_identity": "full SHA-256 of experiments/owned_cpu/cpu.c; format version is checked separately",
-    "core_identity_sha256": "5aaac958b0c7ab179e89ccff7789a1468835536f315e97ad054e86e721e26a65",
+    "core_identity_sha256": "5e578260333c8ef78f77a9463d7698a55a2284afe4477fa3ef12151728aa6931",
     "excluded_or_reconstructed": [
       "bus and allocator are destination-rebound",
       "ready is reconstructed to one only on successful restore",
@@ -1388,8 +1388,8 @@
   "scope": "Private MC68000 owned-core acceptance experiment; current compile closure only.",
   "source_hashes": {
     "experiments/owned_cpu/CMakeLists.txt": "a1d3fe8a39843fed63a442c4e3b1f7956657ef1af6463a7a3744f83a1d1731e5",
-    "experiments/owned_cpu/cpu.c": "5aaac958b0c7ab179e89ccff7789a1468835536f315e97ad054e86e721e26a65",
-    "experiments/owned_cpu/cpu.h": "99be3ebce6422f3dae7191e8d056ea9d372ded2abb1f68f081ca8f4851c5bb51",
+    "experiments/owned_cpu/cpu.c": "5e578260333c8ef78f77a9463d7698a55a2284afe4477fa3ef12151728aa6931",
+    "experiments/owned_cpu/cpu.h": "eb47ee344d03680e3b8ec6eee570df1e23fca98bfd6c9566758d89632333430e",
     "tests/cpu/guest_fixture.c": "3a85140f2c50f0958d15b4d028108539a84486016c6931f8304b533f8889a83d",
     "tests/cpu/guest_fixture.h": "12b0156be07ff491870da8be98ae9b4b853e883f0b52f8f52917deaff2e7381c",
     "tests/owned_cpu/cold.py": "4f0687b793cb04a4c61b31dc917ec7d08233e9a272bf2c0e41b274d06d604f84",
