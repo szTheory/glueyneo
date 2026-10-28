@@ -368,6 +368,7 @@ class PersistenceInstallTests(unittest.TestCase):
                 self.assertTrue(record.get("reason"))
                 self.assertEqual(record.get("host_file_commit"), "unsupported")
                 self.assertFalse(slot.exists())
+                self.assertEqual(list(slot.parent.iterdir()), [])
                 self.assertEqual(record.get("receipt_acked"), 0)
                 return
             self.assertEqual(record.get("host_file_commit"), "committed_darwin_apfs")
