@@ -326,6 +326,9 @@ pass whenever publication is expected.
 
 `tests/consumers/test_delivery_contract.py --mode verify --receipt PATH`
 validates the durable delivery receipt against exact source, manifest, rights,
-review, check, run, job, and positive-case evidence. Local unit controls alone
-do not establish a hosted release, an anonymous public download, or any
-platform result.
+current-head check, run, job, and positive-case evidence. It verifies supplied
+code-review and security-review report content and declared outcomes, but it
+does not authenticate those reports' origin. Independent review must be
+observed separately during the authorized delivery workflow. Local unit
+controls alone do not establish a hosted release, an anonymous public
+download, or any platform result.
