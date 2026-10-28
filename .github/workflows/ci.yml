@@ -92,7 +92,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Record matrix lane and measured identity
+      - name: Record matrix lane and measured identity (sanitizer lane verifies installed consumers)
         if: runner.os != 'Windows'
         shell: bash
         env:
@@ -137,6 +137,21 @@ jobs:
           python3 tests/workflow/test_app_scope.py
           python3 tools/verify_sdk.py --suite release-recovery
           python3 tools/verify_sdk.py --suite release-consumer
+      - name: Verify native save-state continuation and rejection suite
+        if: matrix.lane == 'linux-clang'
+        shell: bash
+        run: python3 tools/verify_sdk.py --suite state
+      - name: Verify native durable MVS backup-RAM save suite
+        if: matrix.lane == 'linux-clang'
+        shell: bash
+        run: python3 tools/verify_sdk.py --suite save
+      - name: Verify frontend callback boundary and recurring public registration
+        if: matrix.lane == 'linux-clang'
+        shell: bash
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: python3 tools/verify_sdk.py --suite frontend
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:

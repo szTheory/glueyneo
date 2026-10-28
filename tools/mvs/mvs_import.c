@@ -19,15 +19,29 @@
 #include <unistd.h>
 #endif
 
+/* Stable process exit codes: `--selected` returns the status value itself, so
+ * the numeric values are an interface (docs/ownership-and-errors.md "MVS import
+ * and load errors"). Append new classes; never renumber. IMPORT_PROFILE is
+ * returned only by the canonical profile mode; the selected mode reports the
+ * split classes instead so one code never covers two distinct causes. */
 enum { IMPORT_OK, IMPORT_MALFORMED, IMPORT_UNSUPPORTED, IMPORT_LIMIT,
-       IMPORT_PROFILE, IMPORT_DECOMPRESS, IMPORT_MEMORY, IMPORT_AMBIGUOUS };
+       IMPORT_PROFILE, IMPORT_DECOMPRESS, IMPORT_MEMORY, IMPORT_AMBIGUOUS,
+       IMPORT_MISSING_INPUT, IMPORT_UNSUPPORTED_SET, IMPORT_BIOS_MISSING,
+       IMPORT_BIOS_INCOMPATIBLE, IMPORT_OUTPUT, IMPORT_ZOOM_INCOMPATIBLE };
 
-#define ZIP_ENTRIES_MAX 6u
+#define ZIP_LEGACY_ENTRIES 6u
+#define ZIP_ENTRIES_MAX 7u
+#define SELECTED_ROLE_MAX 8u
+#define AUDIO_BIOS_ROLE 7u
+#define Y_ZOOM_ROLE 8u
+#define GNMV_VERSION_LEGACY 1u
+#define GNMV_VERSION_AUDIO_BIOS 2u
+#define GNMV_VERSION_Y_ZOOM 3u
 #define SOURCE_ENTRIES_MAX 64u
 #define SOURCE_ZIP_MAX (96u * 1024u * 1024u)
 #define ZIP_INPUT_MAX (64u * 1024u * 1024u)
 #define REGION_MAX (48u * 1024u * 1024u)
-#define OUTPUT_MAX (64u * 1024u * 1024u)
+#define OUTPUT_MAX (64u * 1024u * 1024u + 16u + SELECTED_ROLE_MAX * 12u)
 #define BUNDLE_HEADER 16u
 #define BUNDLE_ENTRY_HEADER 12u
 
@@ -74,6 +88,19 @@ static const source_member selected_sources[] = {
 static const source_member selected_bios = {
     "sp-s2.sp1", 0x20000u, 1u, 0u, TRANSFORM_WORD_SWAP,
     0x9036d879u, "4f5ed7105b7128794654ce82b51723e16e389543"
+};
+
+/* Metadata from pinned MAME neogeo.cpp at 31e52312c59e4d60d70235118bcbccd220f5232e.
+ * When absent, no replacement or generated audio-BIOS content is supplied. */
+static const source_member selected_audio_bios = {
+    "sm1.sm1", 0x20000u, AUDIO_BIOS_ROLE, 0u, TRANSFORM_COPY,
+    0x94416d67u, "42f9d7ddd6c0931fd64226a60dc73602b2819dcf"
+};
+
+/* The exact board lookup ROM in the pinned MAME neogeo.cpp source register. */
+static const source_member selected_y_zoom = {
+    "000-lo.lo", 0x20000u, Y_ZOOM_ROLE, 0u, TRANSFORM_COPY,
+    0x5a86cff2u, "5992277debadeb64d1c1c64b0a92d9293eaf7e4a"
 };
 
 typedef struct {
@@ -158,7 +185,7 @@ static int zip_flags_valid(uint16_t flags, uint16_t method) {
 static uint32_t role_for_name(const uint8_t *name, size_t length) {
     static const char *const names[ZIP_ENTRIES_MAX] = {
         "bios.bin", "program.bin", "fixed.bin", "audio.bin",
-        "samples.bin", "sprites.bin"};
+        "samples.bin", "sprites.bin", "audio-bios.bin"};
     for (uint32_t index = 0u; index < ZIP_ENTRIES_MAX; ++index) {
         if (strlen(names[index]) == length &&
             memcmp(name, names[index], length) == 0) return index + 1u;
@@ -167,9 +194,10 @@ static uint32_t role_for_name(const uint8_t *name, size_t length) {
 }
 
 static uint32_t expected_size(uint32_t role) {
-    static const uint32_t sizes[ZIP_ENTRIES_MAX] = {
-        0x80000u, 0x500000u, 0x20000u, 0x20000u, 0xa00000u, 0x3000000u};
-    return role == 0u || role > ZIP_ENTRIES_MAX ? 0u : sizes[role - 1u];
+    static const uint32_t sizes[SELECTED_ROLE_MAX] = {
+        0x80000u, 0x500000u, 0x20000u, 0x20000u, 0xa00000u, 0x3000000u,
+        0x20000u, 0x20000u};
+    return role == 0u || role > SELECTED_ROLE_MAX ? 0u : sizes[role - 1u];
 }
 
 static int safe_name(const uint8_t *name, size_t length) {
@@ -186,20 +214,21 @@ static int safe_name(const uint8_t *name, size_t length) {
 
 static int extra_fields_valid(const uint8_t *extra, size_t length) {
     size_t cursor = 0u;
+    int unsupported = 0;
     while (cursor < length) {
         if (length - cursor < 4u) return IMPORT_MALFORMED;
         const uint16_t identifier = get16(extra + cursor);
         const uint16_t field_size = get16(extra + cursor + 2u);
         cursor += 4u;
         if (field_size > length - cursor) return IMPORT_MALFORMED;
-        if (identifier == 1u) return IMPORT_UNSUPPORTED; /* ZIP64 */
+        if (identifier == 1u) unsupported = 1; /* ZIP64; keep validating the complete list. */
         cursor += field_size;
     }
-    return IMPORT_OK;
+    return unsupported ? IMPORT_UNSUPPORTED : IMPORT_OK;
 }
 
 static int parse_candidate(const uint8_t *zip, size_t size, size_t eocd,
-                           zip_entry entries[6], size_t *entry_count) {
+                           zip_entry entries[ZIP_ENTRIES_MAX], size_t *entry_count) {
     if (!span(size, (uint32_t)eocd, 22u)) return IMPORT_MALFORMED;
     const uint8_t *end = zip + eocd;
     const uint16_t comment = get16(end + 20u);
@@ -209,7 +238,8 @@ static int parse_candidate(const uint8_t *zip, size_t size, size_t eocd,
     const uint16_t count = get16(end + 10u);
     const uint32_t central_size = get32(end + 12u);
     const uint32_t central_offset = get32(end + 16u);
-    if (count != ZIP_ENTRIES_MAX) return IMPORT_PROFILE;
+    if (count < ZIP_LEGACY_ENTRIES || count > ZIP_ENTRIES_MAX)
+        return IMPORT_PROFILE;
     if (central_offset > eocd || central_size != eocd - central_offset ||
         !span(size, central_offset, central_size)) return IMPORT_MALFORMED;
     uint32_t seen = 0u;
@@ -278,7 +308,8 @@ static int parse_candidate(const uint8_t *zip, size_t size, size_t eocd,
         memcpy(entry->name, name, name_length); entry->name[name_length] = '\0';
         pos += rec_size;
     }
-    if (pos != (size_t)central_offset + central_size || seen != UINT32_C(0x7e))
+    if (pos != (size_t)central_offset + central_size ||
+        (seen != UINT32_C(0x7e) && seen != UINT32_C(0xfe)))
         return IMPORT_PROFILE;
     for (size_t i = 0u; i < count; ++i) {
         for (size_t j = i + 1u; j < count; ++j) {
@@ -290,7 +321,8 @@ static int parse_candidate(const uint8_t *zip, size_t size, size_t eocd,
     return IMPORT_OK;
 }
 
-static int parse_zip(const uint8_t *zip, size_t size, zip_entry entries[6],
+static int parse_zip(const uint8_t *zip, size_t size,
+                     zip_entry entries[ZIP_ENTRIES_MAX],
                      size_t *entry_count) {
     if (zip == NULL) return IMPORT_MALFORMED;
     if (size > ZIP_INPUT_MAX) return IMPORT_LIMIT;
@@ -337,10 +369,17 @@ int mvs_import_memory(const uint8_t *zip, size_t zip_size,
     }
     uint8_t *bundle = (uint8_t *)malloc(output_size);
     if (bundle == NULL) return IMPORT_MEMORY;
-    memcpy(bundle, "GNMV", 4u); put32(bundle + 4u, 1u);
-    put32(bundle + 8u, UINT32_C(0x4d53584d)); put32(bundle + 12u, (uint32_t)count);
+    int has_audio_bios = 0;
+    for (size_t index = 0u; index < count; ++index)
+        if (entries[index].role == AUDIO_BIOS_ROLE) has_audio_bios = 1;
+    const uint32_t output_count = ZIP_LEGACY_ENTRIES + (uint32_t)has_audio_bios;
+    memcpy(bundle, "GNMV", 4u);
+    put32(bundle + 4u, has_audio_bios
+        ? GNMV_VERSION_AUDIO_BIOS : GNMV_VERSION_LEGACY);
+    put32(bundle + 8u, UINT32_C(0x4d53584d));
+    put32(bundle + 12u, output_count);
     size_t cursor = BUNDLE_HEADER;
-    for (uint32_t role = 1u; role <= ZIP_ENTRIES_MAX; ++role) {
+    for (uint32_t role = 1u; role <= output_count; ++role) {
         size_t found = count;
         for (size_t index = 0u; index < count; ++index)
             if (entries[index].role == role) found = index;
@@ -409,9 +448,11 @@ static int parse_source_zip(const uint8_t *zip, size_t size, int bios_archive,
             const uint8_t *end = zip + eocd;
             const uint16_t count = get16(end + 10u);
             const uint32_t central_size = get32(end + 12u), central_offset = get32(end + 16u);
-            if (get16(end + 4u) || get16(end + 6u) || get16(end + 8u) != count ||
-                count == 0u || count > SOURCE_ENTRIES_MAX || central_offset > eocd ||
-                central_size != eocd - central_offset) candidate_status = IMPORT_UNSUPPORTED;
+            if (get16(end + 4u) || get16(end + 6u) || get16(end + 8u) != count)
+                candidate_status = IMPORT_UNSUPPORTED; /* multi-disk archive */
+            else if (count == 0u || central_offset > eocd || central_size != eocd - central_offset)
+                candidate_status = IMPORT_MALFORMED;
+            else if (count > SOURCE_ENTRIES_MAX) candidate_status = IMPORT_LIMIT;
             else {
                 size_t pos = central_offset, found = 0u, expanded_total = 0u; int status = IMPORT_OK;
                 zip_entry parsed[SOURCE_ENTRIES_MAX];
@@ -426,8 +467,9 @@ static int parse_source_zip(const uint8_t *zip, size_t size, int bios_archive,
                         !safe_name(record + 46u, name_length) || name_length >= sizeof(parsed[0].name)) { status = IMPORT_MALFORMED; break; }
                     if (!zip_flags_valid(flags, method) || (method != 0u && method != 8u) ||
                         get16(record + 34u) != 0u || compressed == UINT32_MAX || expanded == UINT32_MAX) { status = IMPORT_UNSUPPORTED; break; }
-                    if (expanded > 0x800000u || compressed > SOURCE_ZIP_MAX ||
-                        extra_fields_valid(record + 46u + name_length, extra_length) != IMPORT_OK) { status = IMPORT_LIMIT; break; }
+                    if (expanded > 0x800000u || compressed > SOURCE_ZIP_MAX) { status = IMPORT_LIMIT; break; }
+                    const int extra_status = extra_fields_valid(record + 46u + name_length, extra_length);
+                    if (extra_status != IMPORT_OK) { status = extra_status; break; } /* ZIP64 is unsupported, not a limit */
                     if (expanded > 128u * 1024u * 1024u - expanded_total) { status = IMPORT_LIMIT; break; }
                     expanded_total += expanded;
                     zip_entry *entry = &parsed[found]; memset(entry, 0, sizeof(*entry));
@@ -438,7 +480,7 @@ static int parse_source_zip(const uint8_t *zip, size_t size, int bios_archive,
                         /* BIOS archives may carry unrelated flat members, but they
                          * remain untrusted input: metadata, extents, limits, and
                          * decompressed CRC are checked before they are ignored. */
-                    } else if (find_source(entry->name) == NULL) { status = IMPORT_PROFILE; break; }
+                    } else if (find_source(entry->name) == NULL) { status = IMPORT_UNSUPPORTED_SET; break; }
                     for (size_t prior = 0u; prior < found; ++prior)
                         if (strcmp(parsed[prior].name, entry->name) == 0) status = IMPORT_AMBIGUOUS;
                     if (status != IMPORT_OK) break;
@@ -449,8 +491,9 @@ static int parse_source_zip(const uint8_t *zip, size_t size, int bios_archive,
                         !span(size, local_offset + 30u, (size_t)local_name + local_extra) ||
                         memcmp(local + 30u, entry->name, name_length) != 0 ||
                         get32(local + 14u) != entry->crc || get32(local + 18u) != compressed ||
-                        get32(local + 22u) != expanded ||
-                        extra_fields_valid(local + 30u + local_name, local_extra) != IMPORT_OK) { status = IMPORT_MALFORMED; break; }
+                        get32(local + 22u) != expanded) { status = IMPORT_MALFORMED; break; }
+                    const int local_extra_status = extra_fields_valid(local + 30u + local_name, local_extra);
+                    if (local_extra_status != IMPORT_OK) { status = local_extra_status; break; }
                     const size_t payload = (size_t)local_offset + 30u + local_name + local_extra;
                     if (payload > UINT32_MAX || !span(size, (uint32_t)payload, compressed) || payload + compressed > central_offset) { status = IMPORT_MALFORMED; break; }
                     entry->data_offset = (uint32_t)payload; entry->extent_end = (uint32_t)(payload + compressed);
@@ -502,53 +545,125 @@ int mvs_import_selected_memory(const uint8_t *game_zip, size_t game_size,
     if (status != IMPORT_OK) return status;
     status = parse_source_zip(bios_zip, bios_size, 1, bios, &bios_count);
     if (status != IMPORT_OK) return status;
-    if (game_count != sizeof(selected_sources) / sizeof(selected_sources[0])) return IMPORT_PROFILE;
+    /* Every game member name is unique and in the pinned table, so the count
+     * alone decides whether the whole selected set is present. */
+    if (game_count != sizeof(selected_sources) / sizeof(selected_sources[0])) return IMPORT_UNSUPPORTED_SET;
     size_t selected_bios_count = 0u;
+    size_t selected_audio_bios_count = 0u;
+    size_t selected_y_zoom_count = 0u;
     for (size_t i = 0u; i < bios_count; ++i)
         if (strcmp(bios[i].name, selected_bios.name) == 0) ++selected_bios_count;
-    if (selected_bios_count != 1u) return IMPORT_PROFILE;
+    for (size_t i = 0u; i < bios_count; ++i)
+        if (strcmp(bios[i].name, selected_audio_bios.name) == 0)
+            ++selected_audio_bios_count;
+    for (size_t i = 0u; i < bios_count; ++i)
+        if (strcmp(bios[i].name, selected_y_zoom.name) == 0)
+            ++selected_y_zoom_count;
+    if (selected_bios_count == 0u) return IMPORT_BIOS_MISSING;
+    if (selected_bios_count != 1u) return IMPORT_AMBIGUOUS;
+    if (selected_audio_bios_count > 1u) return IMPORT_AMBIGUOUS;
+    if (selected_y_zoom_count > 1u) return IMPORT_AMBIGUOUS;
+    for (size_t i = 0u; i < bios_count; ++i)
+        if (strcmp(bios[i].name, selected_bios.name) == 0 && bios[i].expanded != selected_bios.size)
+            return IMPORT_BIOS_INCOMPATIBLE;
+    for (size_t i = 0u; i < bios_count; ++i)
+        if (strcmp(bios[i].name, selected_audio_bios.name) == 0 &&
+            bios[i].expanded != selected_audio_bios.size)
+            return IMPORT_BIOS_INCOMPATIBLE;
+    for (size_t i = 0u; i < bios_count; ++i)
+        if (strcmp(bios[i].name, selected_y_zoom.name) == 0 &&
+            bios[i].expanded != selected_y_zoom.size)
+            return IMPORT_ZOOM_INCOMPATIBLE;
     size_t expanded_total = 0u;
     for (size_t i = 0u; i < game_count; ++i) expanded_total += game[i].expanded;
     for (size_t i = 0u; i < bios_count; ++i) {
         if (bios[i].expanded > 128u * 1024u * 1024u - expanded_total) return IMPORT_LIMIT;
         expanded_total += bios[i].expanded;
     }
-    const size_t output_size = BUNDLE_HEADER + 6u * BUNDLE_ENTRY_HEADER +
-        expected_size(1u) + expected_size(2u) + expected_size(3u) + expected_size(4u) + expected_size(5u) + expected_size(6u);
+    uint32_t output_roles[SELECTED_ROLE_MAX] = {0u};
+    uint32_t output_count = ZIP_LEGACY_ENTRIES;
+    for (uint32_t role = 1u; role <= ZIP_LEGACY_ENTRIES; ++role)
+        output_roles[role - 1u] = role;
+    if (selected_audio_bios_count != 0u)
+        output_roles[output_count++] = AUDIO_BIOS_ROLE;
+    if (selected_y_zoom_count != 0u)
+        output_roles[output_count++] = Y_ZOOM_ROLE;
+    size_t output_size = BUNDLE_HEADER + (size_t)output_count * BUNDLE_ENTRY_HEADER;
+    for (uint32_t index = 0u; index < output_count; ++index)
+        output_size += expected_size(output_roles[index]);
     if (output_size > OUTPUT_MAX) return IMPORT_LIMIT;
+#if defined(MVS_IMPORT_TEST_IDENTITIES)
+    /* Test-only allocation-failure seam, absent from the shipping importer. */
+    const char *fail_mode = getenv("MVS_IMPORT_TEST_FAIL_ALLOC");
+    uint8_t *bundle = fail_mode != NULL && strcmp(fail_mode, "bundle") == 0
+        ? NULL : (uint8_t *)calloc(1u, output_size);
+#else
     uint8_t *bundle = (uint8_t *)calloc(1u, output_size);
+#endif
     if (bundle == NULL) return IMPORT_MEMORY;
-    memcpy(bundle, "GNMV", 4u); put32(bundle + 4u, 1u); put32(bundle + 8u, UINT32_C(0x4d53584d)); put32(bundle + 12u, 6u);
-    uint8_t *regions[7] = {NULL}; size_t cursor = BUNDLE_HEADER;
-    for (uint32_t role = 1u; role <= 6u; ++role) {
+    memcpy(bundle, "GNMV", 4u);
+    put32(bundle + 4u, selected_y_zoom_count != 0u
+        ? GNMV_VERSION_Y_ZOOM
+        : selected_audio_bios_count != 0u
+            ? GNMV_VERSION_AUDIO_BIOS : GNMV_VERSION_LEGACY);
+    put32(bundle + 8u, UINT32_C(0x4d53584d));
+    put32(bundle + 12u, output_count);
+    uint8_t *regions[SELECTED_ROLE_MAX + 1u] = {NULL}; size_t cursor = BUNDLE_HEADER;
+    for (uint32_t index = 0u; index < output_count; ++index) {
+        const uint32_t role = output_roles[index];
         put32(bundle + cursor, role); put64(bundle + cursor + 4u, expected_size(role)); cursor += BUNDLE_ENTRY_HEADER;
         regions[role] = bundle + cursor; cursor += expected_size(role);
     }
-    const zip_entry *bios_entry = NULL;
-    for (size_t i = 0u; i < bios_count; ++i) if (strcmp(bios[i].name, "sp-s2.sp1") == 0) bios_entry = &bios[i];
-    if (bios_entry == NULL || bios_entry->expanded != 0x20000u) { status = IMPORT_PROFILE; goto selected_fail; }
     uint8_t *temporary = (uint8_t *)malloc(0x800000u);
     if (temporary == NULL) { status = IMPORT_MEMORY; goto selected_fail; }
-    for (size_t z = 0u; z < 2u; ++z) {
+    /* The BIOS archive is verified first so a missing or wrong BIOS is reported
+     * as such regardless of the game archive's own identity. */
+    for (size_t pass = 0u; pass < 2u; ++pass) {
+        const size_t z = 1u - pass;
         zip_entry *entries = z == 0u ? game : bios; size_t count = z == 0u ? game_count : bios_count;
         const uint8_t *zip = z == 0u ? game_zip : bios_zip;
         for (size_t i = 0u; i < count; ++i) {
             status = source_expand(zip, &entries[i], temporary);
             if (status != IMPORT_OK) { free(temporary); goto selected_fail; }
-            if (z == 1u && strcmp(entries[i].name, "sp-s2.sp1") != 0) continue;
+            if (z == 1u && strcmp(entries[i].name, selected_bios.name) != 0 &&
+                strcmp(entries[i].name, selected_audio_bios.name) != 0 &&
+                strcmp(entries[i].name, selected_y_zoom.name) != 0)
+                continue;
             const source_member *member = z == 1u ? NULL : find_source(entries[i].name);
             if (z == 1u) {
+                const source_member *bios_member =
+                    strcmp(entries[i].name, selected_bios.name) == 0
+                        ? &selected_bios
+                        : strcmp(entries[i].name, selected_audio_bios.name) == 0
+                            ? &selected_audio_bios : &selected_y_zoom;
 #if !defined(MVS_IMPORT_TEST_IDENTITIES)
                 char digest[41]; sha1_hex(temporary, entries[i].expanded, digest);
-                if (entries[i].crc != selected_bios.crc || strcmp(digest, selected_bios.sha1) != 0) { free(temporary); status = IMPORT_PROFILE; goto selected_fail; }
+                if (entries[i].crc != bios_member->crc ||
+                    strcmp(digest, bios_member->sha1) != 0) {
+                    free(temporary);
+                    status = bios_member == &selected_y_zoom
+                        ? IMPORT_ZOOM_INCOMPATIBLE : IMPORT_BIOS_INCOMPATIBLE;
+                    goto selected_fail;
+                }
 #endif
-                for (size_t j = 0u; j < 0x20000u; j += 2u) { regions[1][j] = temporary[j + 1u]; regions[1][j + 1u] = temporary[j]; }
+                if (bios_member == &selected_bios) {
+                    for (size_t j = 0u; j < selected_bios.size; j += 2u) {
+                        regions[selected_bios.role][j] = temporary[j + 1u];
+                        regions[selected_bios.role][j + 1u] = temporary[j];
+                    }
+                } else if (bios_member == &selected_audio_bios) {
+                    memcpy(regions[selected_audio_bios.role], temporary,
+                           selected_audio_bios.size);
+                } else {
+                    memcpy(regions[selected_y_zoom.role], temporary,
+                           selected_y_zoom.size);
+                }
                 continue;
             }
-            if (member == NULL || entries[i].expanded != member->size) { free(temporary); status = IMPORT_PROFILE; goto selected_fail; }
+            if (member == NULL || entries[i].expanded != member->size) { free(temporary); status = IMPORT_UNSUPPORTED_SET; goto selected_fail; }
 #if !defined(MVS_IMPORT_TEST_IDENTITIES)
             char digest[41]; sha1_hex(temporary, entries[i].expanded, digest);
-            if (entries[i].crc != member->crc || strcmp(digest, member->sha1) != 0) { free(temporary); status = IMPORT_PROFILE; goto selected_fail; }
+            if (entries[i].crc != member->crc || strcmp(digest, member->sha1) != 0) { free(temporary); status = IMPORT_UNSUPPORTED_SET; goto selected_fail; }
 #endif
             uint8_t *destination = regions[member->role] + member->destination;
             if (member->transform == TRANSFORM_COPY) memcpy(destination, temporary, member->size);
@@ -578,26 +693,35 @@ static const char *status_message(int status) {
         case IMPORT_DECOMPRESS: return "DEFLATE stream, expanded size, or CRC validation failed";
         case IMPORT_MEMORY: return "insufficient memory for bounded media import";
         case IMPORT_AMBIGUOUS: return "archive contains ambiguous MVS region entries";
+        case IMPORT_MISSING_INPUT: return "selected media input is missing or unreadable";
+        case IMPORT_UNSUPPORTED_SET: return "game archive is not the supported game set; supply the supported game archive";
+        case IMPORT_BIOS_MISSING: return "BIOS archive lacks the required BIOS member; supply the Europe MVS v2 BIOS archive";
+        case IMPORT_BIOS_INCOMPATIBLE: return "BIOS member does not match the required BIOS; supply the Europe MVS v2 BIOS archive";
+        case IMPORT_OUTPUT: return "normalized media could not be published atomically";
+        case IMPORT_ZOOM_INCOMPATIBLE: return "board zoom lookup does not match the required MVS data";
         default: return "MVS media import failed";
     }
 }
 
+/* Reads one selected input. An absent or unreadable path is IMPORT_MISSING_INPUT,
+ * kept separate from a file over SOURCE_ZIP_MAX (IMPORT_LIMIT). */
 static int read_bounded(const char *path, uint8_t **bytes, size_t *length) {
     FILE *input = fopen(path, "rb");
-    if (input == NULL) return 0;
+    if (input == NULL) return IMPORT_MISSING_INPUT;
     int ok = fseek(input, 0, SEEK_END) == 0;
     const long measured = ok ? ftell(input) : -1L;
-    if (!ok || measured < 0 || (unsigned long)measured > SOURCE_ZIP_MAX ||
-        fseek(input, 0, SEEK_SET) != 0) { fclose(input); return 0; }
+    if (!ok || measured < 0) { fclose(input); return IMPORT_MISSING_INPUT; }
+    if ((unsigned long)measured > SOURCE_ZIP_MAX) { fclose(input); return IMPORT_LIMIT; }
+    if (fseek(input, 0, SEEK_SET) != 0) { fclose(input); return IMPORT_MISSING_INPUT; }
     const size_t size = (size_t)measured;
     uint8_t *data = (uint8_t *)malloc(size == 0u ? 1u : size);
-    if (data == NULL) { fclose(input); return 0; }
+    if (data == NULL) { fclose(input); return IMPORT_MEMORY; }
     const int read_ok = fread(data, 1u, size, input) == size;
     const int closed = fclose(input) == 0;
     if (!read_ok || !closed) {
-        free(data); return 0;
+        free(data); return IMPORT_MISSING_INPUT;
     }
-    *bytes = data; *length = size; return 1;
+    *bytes = data; *length = size; return IMPORT_OK;
 }
 
 static int write_atomic(const char *path, const uint8_t *bytes, size_t length) {
@@ -640,15 +764,17 @@ int main(int argc, char **argv) {
     if (argc == 5 && strcmp(argv[1], "--selected") == 0) {
         uint8_t *game = NULL, *bios = NULL, *bundle = NULL;
         size_t game_size = 0u, bios_size = 0u, bundle_size = 0u;
-        if (!read_bounded(argv[2], &game, &game_size) || !read_bounded(argv[3], &bios, &bios_size)) {
-            free(game); free(bios); fputs("selected media input could not be read within bounds\n", stderr); return 1;
+        int status = read_bounded(argv[2], &game, &game_size);
+        if (status == IMPORT_OK) status = read_bounded(argv[3], &bios, &bios_size);
+        if (status != IMPORT_OK) {
+            free(game); free(bios); fprintf(stderr, "%s\n", status_message(status)); return status;
         }
-        const int status = mvs_import_selected_memory(game, game_size, bios, bios_size, &bundle, &bundle_size);
+        status = mvs_import_selected_memory(game, game_size, bios, bios_size, &bundle, &bundle_size);
         free(game); free(bios);
         if (status != IMPORT_OK) { fprintf(stderr, "%s\n", status_message(status)); return status; }
         const int written = write_atomic(argv[4], bundle, bundle_size);
         free(bundle);
-        if (!written) { fputs("normalized media could not be published atomically\n", stderr); return 1; }
+        if (!written) { fprintf(stderr, "%s\n", status_message(IMPORT_OUTPUT)); return IMPORT_OUTPUT; }
         return 0;
     }
     if (argc != 3) { fputs("usage: mvs_importer input.zip output.gnmv\n", stderr); return 2; }

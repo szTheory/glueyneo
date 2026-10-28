@@ -22,7 +22,7 @@ import release_manifest as release  # noqa: E402
 
 
 class PublicContentTests(unittest.TestCase):
-    def test_source_dispositions_bind_path_bytes_and_rule(self) -> None:
+    def test_current_source_dispositions_bind_path_bytes_and_rule(self) -> None:
         for (path, digest), disposition in content.SOURCE_FINDING_DISPOSITIONS.items():
             with self.subTest(path=path):
                 data = (ROOT / path).read_bytes()
@@ -44,6 +44,17 @@ class PublicContentTests(unittest.TestCase):
         self.assertIn(".github/workflows", content.REPOSITORY_PATHS)
         self.assertIn("release-please-config.json", content.REPOSITORY_PATHS)
         self.assertNotIn(".github/workflows", content.SOURCE_PATHS)
+
+    def test_complete_current_inventory_matches_current_candidate_paths(self) -> None:
+        paths = content._git_source_paths(ROOT)
+        actual = {
+            path for path in paths
+            if content._is_rights_candidate(path)
+        }
+        inventory = content.load_rights_inventory(ROOT)
+        declared = {item["path"] for item in inventory["items"]}
+        self.assertEqual(declared, actual)
+        self.assertEqual(content.validate_repository_inventory(ROOT)["items"], len(actual))
 
     def test_public_content_cli_accepts_all_history_as_option_value(self) -> None:
         with tempfile.TemporaryDirectory(prefix="public-content-cli-") as temp:
@@ -99,20 +110,117 @@ class PublicContentTests(unittest.TestCase):
         self.assertNotIn(marker, json.dumps(result))
 
     def test_exact_history_dispositions_remain_visible_and_provenance_bound(self) -> None:
-        _, dispositions, _, _ = content._git_history(ROOT)
-        expected = set(content.HISTORY_FINDING_DISPOSITIONS)
-        reachable = subprocess.run(
-            ["git", "rev-list", "--objects", "--all"], cwd=ROOT, check=True,
-            text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-        ).stdout
-        reachable_objects = {row.split(" ", 1)[0] for row in reachable.splitlines()}
+        # Exercise the exact available audited blobs, rather than scan unrelated
+        # private refs or let repository growth consume the scanner's byte limit.
+        # Public clones need not retain every historical object in this register.
+        expected = set()
+        stream = bytearray()
+
+        def add_blob(path: str, data: bytes) -> None:
+            stream.extend(
+                b"commit refs/heads/fixture\n"
+                b"committer Public User <public@example.invalid> 1 +0000\n"
+                b"data 7\nfixture\n"
+            )
+            stream.extend(f"M 100644 inline {json.dumps(path)}\ndata {len(data)}\n".encode())
+            stream.extend(data + b"\n\n")
+
+        add_blob("README.md", b"synthetic bounded history\n")
+        inspected = subprocess.run(
+            ["git", "cat-file", "--batch-check"], cwd=ROOT, check=True,
+            input="\n".join(content.HISTORY_FINDING_DISPOSITIONS) + "\n",
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        ).stdout.splitlines()
+        self.assertEqual(len(inspected), len(content.HISTORY_FINDING_DISPOSITIONS))
+        for (object_id, disposition), row in zip(
+                content.HISTORY_FINDING_DISPOSITIONS.items(), inspected):
+            fields = row.split()
+            self.assertEqual(fields[0], object_id)
+            if fields[1:] == ["missing"]:
+                continue  # an absent old blob is expected in fresh public clones
+            self.assertEqual(fields[1], "blob")
+            result = subprocess.run(
+                ["git", "cat-file", "blob", object_id], cwd=ROOT,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True,
+            )
+            expected.add(object_id)
+            add_blob(disposition["path"], result.stdout)
+
+        with tempfile.TemporaryDirectory(prefix="public-content-dispositions-") as temp:
+            root = Path(temp)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(["git", "fast-import", "--quiet"], cwd=root,
+                           input=bytes(stream), check=True,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            _, dispositions, _, _ = content._git_history(root, "refs/heads/fixture")
         observed = {row["object"] for row in dispositions if "reason" in row}
-        self.assertEqual(observed, expected & reachable_objects)
+        self.assertEqual(observed, expected)
         for row in dispositions:
             if "reason" in row:
                 self.assertTrue(row["location"].startswith("history/"))
                 self.assertTrue(row["rules"])
                 self.assertTrue(row["reason"])
+
+    def test_archived_history_disposition_retains_exact_blob_and_path_binding(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="public-content-archive-") as temp:
+            root = Path(temp)
+            original = ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-10-PLAN.md"
+            archived = original.replace("workstreams/first-playable-game", "milestones/ws-first-playable-game-2026-10-24")
+            target = root / original
+            target.parent.mkdir(parents=True)
+            target.write_text("/".join(("", "Us" + "ers", "placeholder", "sentinel.txt")), encoding="utf-8")
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            def commit(message: str) -> None:
+                subprocess.run(["git", "-C", str(root), "add", "-A"], check=True)
+                subprocess.run(["git", "-C", str(root), "-c", "user.name=Public User", "-c",
+                                "user.email=public@example.invalid", "commit", "-qm", message], check=True)
+            commit("original")
+            oid = subprocess.check_output(["git", "-C", str(root), "hash-object", original], text=True).strip()
+            (root / archived).parent.mkdir(parents=True)
+            target.rename(root / archived)
+            commit("archive")
+            entry = {oid: {"path": original, "rules": {"personal-path"}, "reason": "synthetic audited object"}}
+            with mock.patch.object(content, "HISTORY_FINDING_DISPOSITIONS", entry):
+                _, rows, _, _ = content._git_history(root)
+                self.assertTrue(any(row["object"] == oid and "reason" in row for row in rows))
+                with mock.patch.dict(entry[oid], {"rules": {"private-identity"}}):
+                    with self.assertRaisesRegex(content.ContentError, "no longer matches"):
+                        content._git_history(root)
+                # A changed blob remains a finding even at the admitted archive path.
+                with (root / archived).open("a", encoding="utf-8") as stream:
+                    stream.write(" changed")
+                commit("changed blob")
+                _, rows, _, _ = content._git_history(root)
+                self.assertTrue(any("reason" not in row for row in rows))
+                (root / archived).write_bytes(subprocess.check_output(["git", "-C", str(root), "cat-file", "blob", oid]))
+                (root / archived).rename(root / "other.md")
+                commit("unrelated path")
+                with self.assertRaisesRegex(content.ContentError, "no longer matches"):
+                    content._git_history(root)
+
+    def test_tracked_plan_text_has_no_unaudited_privacy_finding(self) -> None:
+        tracked = subprocess.run(
+            ["git", "ls-files", "--", ".planning"], cwd=ROOT, check=True,
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        ).stdout.splitlines()
+        findings: list[tuple[str, list[str]]] = []
+        for path in tracked:
+            if not path.endswith("-PLAN.md"):
+                continue
+            object_id = subprocess.run(
+                ["git", "hash-object", path], cwd=ROOT, check=True,
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            ).stdout.strip()
+            if object_id in content.HISTORY_FINDING_DISPOSITIONS:
+                continue
+            report = content.scan_bytes((ROOT / path).read_bytes(), path)
+            findings.extend((path, row["rules"]) for row in report["findings"])
+        self.assertEqual(findings, [], f"unaudited plan privacy findings: {findings}")
+
+        canary = "/".join(("", "Us" + "ers", "placeholder", "sentinel.txt"))
+        detected = content.scan_bytes(canary.encode(), "tests/synthetic-plan-canary.txt")
+        self.assertTrue(any("personal-path" in row["rules"]
+                            for row in detected["findings"]))
 
     def test_uncatalogued_binary_test_asset_fails_tree_and_archive_rights_gates(self) -> None:
         for suffix in (".bin", ".json", ".txt", ".md", ".py", ".extension", ""):
@@ -243,6 +351,38 @@ class PublicContentTests(unittest.TestCase):
             content.MAX_MEMBERS = original_count_limit
             archive.unlink(missing_ok=True)
 
+    def test_archive_resource_limits_accept_the_boundary_and_reject_the_next_byte_or_member(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="public-content-limits-") as temp:
+            archive = Path(temp) / "bounded.tar.gz"
+
+            def write_archive(members: list[tuple[str, bytes]]) -> None:
+                with tarfile.open(archive, "w:gz") as stream:
+                    for name, body in members:
+                        item = tarfile.TarInfo(name)
+                        item.size = len(body)
+                        stream.addfile(item, io.BytesIO(body))
+
+            with mock.patch.object(content, "MAX_FILE_BYTES", 4), \
+                    mock.patch.object(content, "MAX_MEMBERS", 2):
+                write_archive([("payload/one.bin", b"1234"), ("payload/two.bin", b"5678")])
+                self.assertEqual(content.scan_archive(archive)["members"], 2)
+                write_archive([("payload/one.bin", b"12345")])
+                with self.assertRaises(content.ContentError) as caught:
+                    content.scan_archive(archive)
+                self.assertEqual(caught.exception.reason, "archive-file-limit")
+                write_archive([(f"payload/{index}.bin", b"x") for index in range(3)])
+                with self.assertRaises(content.ContentError) as caught:
+                    content.scan_archive(archive)
+                self.assertEqual(caught.exception.reason, "archive-count")
+
+            with mock.patch.object(content, "MAX_TOTAL_BYTES", 512):
+                write_archive([("payload/one.bin", b"a" * 256), ("payload/two.bin", b"b" * 256)])
+                self.assertEqual(content.scan_archive(archive)["bytes"], 512)
+                write_archive([("payload/one.bin", b"a" * 256), ("payload/two.bin", b"b" * 257)])
+                with self.assertRaises(content.ContentError) as caught:
+                    content.scan_archive(archive)
+                self.assertEqual(caught.exception.reason, "archive-total-limit")
+
     def test_archive_rights_gate_rejects_uninventoried_fixture_and_missing_notice(self) -> None:
         inventory = content.load_rights_inventory(ROOT)
         full_without_notice = [(item["path"], (ROOT / item["path"]).read_bytes())
@@ -266,7 +406,8 @@ class PublicContentTests(unittest.TestCase):
     def test_repository_inventory_matches_recorded_fixture_and_dependency_bytes(self) -> None:
         result = content.validate_repository_inventory(ROOT)
         self.assertTrue(result["passed"])
-        self.assertEqual(result["items"], 77)
+        actual_count = sum(content._is_rights_candidate(path) for path in content._git_source_paths(ROOT))
+        self.assertEqual(result["items"], actual_count)
 
     def test_rights_inventory_binds_bytes_and_rejects_unknown_or_changed_item(self) -> None:
         inventory = {"schema": 1, "items": [{
@@ -275,12 +416,96 @@ class PublicContentTests(unittest.TestCase):
             "source_revision": "a" * 40, "provenance": "original project work", "notice": "LICENSE",
         }]}
         self.assertTrue(content.validate_inventory(inventory, {"fixture.bin": b"fixture"})["passed"])
-        for actual in ({"unknown.bin": b"x"}, {"fixture.bin": b"changed"}):
+        for actual, reason in (({"unknown.bin": b"x"}, "rights-path-set"),
+                               ({"fixture.bin": b"changed"}, "rights-digest")):
             with self.assertRaises(content.ContentError):
-                content.validate_inventory(inventory, actual)
+                try:
+                    content.validate_inventory(inventory, actual)
+                except content.ContentError as error:
+                    self.assertEqual(error.reason, reason)
+                    raise
         inventory["items"][0]["rights"] = "unknown"
         with self.assertRaises(content.ContentError):
             content.validate_inventory(inventory, {"fixture.bin": b"fixture"})
+
+    def test_original_recipe_provenance_tracks_guest_and_sample_helper_copy(self) -> None:
+        manifest = json.loads((ROOT / "tests/fixture/rights-manifest.json").read_text(encoding="utf-8"))
+        fixture = manifest["public_persistence_fixture"]
+        self.assertEqual(fixture["rights"], {
+            "status": "affirmative", "license": "MIT", "notice": "LICENSE",
+            "third_party_guest_bytes": False, "game_rom_or_commercial_bytes": False,
+            "production_bios_bytes": False, "private_media_or_capture_bytes": False,
+        })
+        self.assertFalse(fixture["oracle"]["hardware_truth_established"])
+        self.assertTrue(fixture["oracle"]["emulator_only"])
+        for row in (fixture["generator_source"], fixture["base_source"]):
+            current = (ROOT / row["path"]).read_bytes()
+            recorded = subprocess.check_output(
+                ["git", "show", f"{row['source_revision']}:{row['path']}"], cwd=ROOT)
+            self.assertEqual(len(current), row["bytes"])
+            self.assertEqual(hashlib.sha256(current).hexdigest(), row["sha256"])
+            self.assertEqual(recorded, current)
+
+        helper = manifest["sample_owned_helper"]
+        self.assertEqual(helper["license"], "MIT")
+        self.assertEqual(helper["owner"], "Glueyneo Maintainers")
+        self.assertIn("review drift", helper["drift_check"].lower())
+        origin_revision = "a73a9f543d8743896a5e4b7d2b28d0189f3e94c8"
+        for row in helper["origin_sources"]:
+            self.assertEqual(row["source_revision"], origin_revision)
+            recorded = subprocess.check_output(
+                ["git", "show", f"{origin_revision}:{row['path']}"], cwd=ROOT)
+            self.assertEqual(len(recorded), row["bytes"])
+            self.assertEqual(hashlib.sha256(recorded).hexdigest(), row["sha256"])
+        for row in helper["sample_sources"]:
+            current = (ROOT / row["path"]).read_bytes()
+            recorded = subprocess.check_output(
+                ["git", "show", f"{row['source_revision']}:{row['path']}"], cwd=ROOT)
+            self.assertEqual(len(current), row["bytes"])
+            self.assertEqual(hashlib.sha256(current).hexdigest(), row["sha256"])
+            self.assertEqual(recorded, current)
+
+    def test_rights_inventory_rejects_nonobjects_mixed_rows_and_noncanonical_paths(self) -> None:
+        valid_item = {
+            "path": "fixture.bin", "sha256": hashlib.sha256(b"fixture").hexdigest(),
+            "kind": "fixture", "license": "MIT", "rights": "affirmative",
+            "source_revision": "a" * 40, "provenance": "original project work", "notice": "LICENSE",
+        }
+        malformed = (
+            (None, "rights-schema"),
+            ([], "rights-schema"),
+            ({"schema": True, "items": [valid_item]}, "rights-schema"),
+            ({"schema": 1, "items": [valid_item, None]}, "rights-schema"),
+            ({"schema": 1, "items": [{**valid_item, "path": []}]}, "rights-path"),
+        )
+        for inventory, reason in malformed:
+            with self.subTest(inventory=inventory):
+                with self.assertRaises(content.ContentError) as caught:
+                    content.validate_inventory(inventory, {"fixture.bin": b"fixture"})
+                self.assertEqual(caught.exception.reason, reason)
+        for path in ("", "-fixture.bin", "fixture//asset.bin", "fixture/./asset.bin",
+                     "fixture/../asset.bin", "/fixture.bin", "fixture\\asset.bin"):
+            with self.subTest(path=path):
+                candidate = {"schema": 1, "items": [{**valid_item, "path": path}]}
+                with self.assertRaises(content.ContentError) as caught:
+                    content.validate_inventory(candidate, {path: b"fixture"})
+                self.assertEqual(caught.exception.reason, "rights-path")
+
+    def test_archive_rights_inventory_rejects_nonobject_and_mixed_rows(self) -> None:
+        candidates = (
+            (None, "rights-schema"),
+            ([], "rights-schema"),
+            ({"schema": True, "items": []}, "rights-schema"),
+            ({"schema": 1, "items": [None]}, "rights-schema"),
+            ({"schema": 1, "items": [{"path": []}]}, "rights-path"),
+        )
+        rows = [{"path": "tests/fixture/public.bin", "sha256": hashlib.sha256(b"x").hexdigest()}]
+        for inventory, reason in candidates:
+            with self.subTest(inventory=inventory), mock.patch.object(
+                    content, "load_rights_inventory", return_value=inventory):
+                with self.assertRaises(content.ContentError) as caught:
+                    content._validate_archive_inventory(rows)
+                self.assertEqual(caught.exception.reason, reason)
 
     def test_full_scan_reports_each_available_class_and_detector_limitation(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -311,6 +536,22 @@ class PublicContentTests(unittest.TestCase):
             with self.assertRaises(content.ContentError) as caught:
                 content.scan_tree(root, ["hardlink"])
             self.assertEqual(caught.exception.reason, "input-type")
+
+    def test_source_tree_file_count_and_byte_limits_accept_boundary_and_reject_next_unit(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="public-content-source-limits-") as temp:
+            root = Path(temp)
+            for name in ("one.txt", "two.txt", "three.txt"):
+                (root / name).write_bytes(b"x")
+            with mock.patch.object(content, "MAX_SOURCE_FILES", 2), \
+                    mock.patch.object(content, "MAX_TOTAL_BYTES", 2):
+                self.assertEqual(content.scan_tree(root, ["one.txt", "two.txt"])["bytes"], 2)
+                with self.assertRaises(content.ContentError) as caught:
+                    content.scan_tree(root, ["one.txt", "two.txt", "three.txt"])
+                self.assertEqual(caught.exception.reason, "source-count")
+                with mock.patch.object(content, "MAX_SOURCE_FILES", 3):
+                    with self.assertRaises(content.ContentError) as caught:
+                        content.scan_tree(root, ["one.txt", "two.txt", "three.txt"])
+                    self.assertEqual(caught.exception.reason, "input-total-limit")
 
 
 if __name__ == "__main__":

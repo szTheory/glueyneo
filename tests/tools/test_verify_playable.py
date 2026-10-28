@@ -11,10 +11,12 @@ import json
 import os
 from pathlib import Path
 import re
+import runpy
 import shutil
 import signal
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
 import unittest
@@ -27,6 +29,142 @@ import verify_playable as playable  # noqa: E402
 
 
 class SnapshotTest(unittest.TestCase):
+    def test_archive_private_sink_is_not_in_build_child_output(self) -> None:
+        with mock.patch.dict(os.environ, {"GLUEYNEO_ARCHIVE_DIAGNOSTIC_DIR": str(self.base)}):
+            child = subprocess.run([
+                sys.executable, "-B", "-c",
+                "import os; print(os.environ.get('GLUEYNEO_ARCHIVE_DIAGNOSTIC_DIR', 'unset'))",
+            ], env=playable.clean_environment(), capture_output=True, text=True, timeout=10)
+        self.assertEqual(child.returncode, 0)
+        self.assertEqual(child.stdout, "unset\n")
+        self.assertNotIn(str(self.base), child.stdout + child.stderr)
+
+    def test_archive_directory_replacing_committed_file_is_diagnosed(self) -> None:
+        archive = io.BytesIO()
+        with tarfile.open(fileobj=archive, mode="w:") as tar:
+            member = tarfile.TarInfo("source.c/")
+            member.type = tarfile.DIRTYPE
+            tar.addfile(member)
+        with self.assertRaises(playable.SnapshotError) as raised:
+            playable._archive_members(archive.getvalue(), {"source.c": "file"})
+        self.assertEqual(raised.exception.reason, "incomplete-archive")
+        self.assertEqual(raised.exception.archive_mismatch["examples"], [
+            {"path": "source.c", "expected": "file", "archived": "directory"},
+        ])
+
+    def test_archive_private_capture_is_opt_in_and_bound_to_real_git_failure(self) -> None:
+        commit = self.commit_fixture_project()
+        diagnostic_directory = self.base / "diagnostics"
+        diagnostic_directory.mkdir()
+        (self.repository / ".git/info/attributes").write_text("writer.c export-ignore\n", encoding="utf-8")
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("GLUEYNEO_ARCHIVE_DIAGNOSTIC_DIR", None)
+            with self.assertRaises(playable.SnapshotError) as raised:
+                playable.create_snapshot(self.repository, commit, self.base / "default-off")
+            self.assertEqual(raised.exception.reason, "incomplete-archive")
+            self.assertEqual(list(diagnostic_directory.iterdir()), [])
+        with mock.patch.dict(os.environ, {"GLUEYNEO_ARCHIVE_DIAGNOSTIC_DIR": str(diagnostic_directory)}):
+            with self.assertRaises(playable.SnapshotError) as raised:
+                playable.create_snapshot(self.repository, commit, self.base / "captured")
+            self.assertEqual(raised.exception.reason, "incomplete-archive")
+            self.assertIn("private diagnostic recorded", str(raised.exception))
+            self.assertNotIn(str(diagnostic_directory), str(raised.exception))
+            reports = list(diagnostic_directory.glob("glueyneo-archive-mismatch-*.json"))
+            self.assertEqual(len(reports), 1)
+            self.assertEqual(reports[0].stat().st_mode & 0o777, 0o600)
+            report = json.loads(reports[0].read_text(encoding="utf-8"))
+            self.assertEqual(report["commit"], commit)
+            self.assertEqual(report["archive_sha256"], hashlib.sha256(playable._git_archive(self.repository, commit)).hexdigest())
+            self.assertEqual(report["mismatch"]["examples"], [
+                {"path": "writer.c", "expected": "file", "archived": None},
+            ])
+            child = subprocess.run([
+                sys.executable, "-B", "-c",
+                "import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); "
+                "import verify_playable as p\n"
+                "try: p.create_snapshot(Path(sys.argv[2]), sys.argv[3], Path(sys.argv[4]))\n"
+                "except p.SnapshotError as e: print(e); sys.exit(17)\n",
+                str(ROOT / "tools"), str(self.repository), commit, str(self.base / "child"),
+            ], env=os.environ.copy(), capture_output=True, text=True, timeout=10)
+            self.assertEqual(child.returncode, 17, child.stderr)
+            self.assertIn("private diagnostic recorded", child.stdout)
+            self.assertNotIn(str(diagnostic_directory), child.stdout + child.stderr)
+            self.assertEqual(len(list(diagnostic_directory.glob("*.json"))), 2)
+            (self.repository / ".git/info/attributes").unlink()
+            playable.create_snapshot(self.repository, commit, self.base / "matching")
+            self.assertEqual(len(list(diagnostic_directory.iterdir())), 2)
+
+    def test_archive_private_capture_rejects_in_tree_or_missing_sink_without_masking(self) -> None:
+        commit = self.commit_fixture_project()
+        (self.repository / ".git/info/attributes").write_text("writer.c export-ignore\n", encoding="utf-8")
+        for index, directory in enumerate((self.repository, ROOT, self.base / "missing")):
+            with self.subTest(index=index), mock.patch.dict(os.environ, {
+                "GLUEYNEO_ARCHIVE_DIAGNOSTIC_DIR": str(directory),
+            }):
+                with self.assertRaises(playable.SnapshotError) as raised:
+                    playable.create_snapshot(self.repository, commit, self.base / f"rejected-{index}")
+                self.assertEqual(raised.exception.reason, "incomplete-archive")
+                self.assertIn("private diagnostic unavailable", str(raised.exception))
+                self.assertNotIn(str(directory), str(raised.exception))
+
+    def test_archive_mismatch_diagnostics_are_bounded_and_not_public_paths(self) -> None:
+        expected = {"changed": "file-executable", "missing": "file"}
+        archive = io.BytesIO()
+        with tarfile.open(fileobj=archive, mode="w:") as tar:
+            for name in ("changed", "extra-private-name"):
+                member = tarfile.TarInfo(name)
+                member.mode = 0o644
+                member.size = 1
+                tar.addfile(member, io.BytesIO(b"x"))
+        with self.assertRaises(playable.SnapshotError) as raised:
+            playable._archive_members(archive.getvalue(), expected)
+        error = raised.exception
+        self.assertEqual(error.reason, "incomplete-archive")
+        self.assertIn("missing=1, extra=1, type_mismatches=1", str(error))
+        self.assertNotIn("extra-private-name", str(error))
+        self.assertEqual(error.archive_mismatch, {
+            "expected_count": 2, "archived_count": 2,
+            "missing_count": 1, "extra_count": 1, "type_mismatch_count": 1,
+            "examples": [
+                {"path": "changed", "expected": "file-executable", "archived": "file"},
+                {"path": "extra-private-name", "expected": None, "archived": "file"},
+                {"path": "missing", "expected": "file", "archived": None},
+            ],
+        })
+
+    def test_archive_mismatch_diagnostic_sample_boundaries(self) -> None:
+        archive = io.BytesIO()
+        with tarfile.open(fileobj=archive, mode="w:"):
+            pass
+        for count in (1, 5, 6):
+            with self.subTest(count=count):
+                expected = {f"missing-{index}": "file" for index in range(count)}
+                with self.assertRaises(playable.SnapshotError) as raised:
+                    playable._archive_members(archive.getvalue(), expected)
+                diagnostic = raised.exception.archive_mismatch
+                self.assertEqual(diagnostic["missing_count"], count)
+                self.assertEqual(len(diagnostic["examples"]), min(count, 5))
+        long_path = "a" * 300
+        with self.assertRaises(playable.SnapshotError) as raised:
+            playable._archive_members(archive.getvalue(), {long_path: "file"})
+        self.assertEqual(raised.exception.archive_mismatch["examples"], [
+            {"path": "a" * 160, "path_truncated": True, "expected": "file", "archived": None},
+        ])
+        files, symlinks, rows = playable._archive_members(archive.getvalue(), {})
+        self.assertEqual((files, symlinks, rows), ({}, {}, ()))
+
+    def test_archive_mismatch_diagnostics_keep_unsafe_path_gate(self) -> None:
+        for name in ("/absolute", "../escape", "back\\slash", "line\nbreak"):
+            with self.subTest(name=name):
+                archive = io.BytesIO()
+                with tarfile.open(fileobj=archive, mode="w:") as tar:
+                    tar.addfile(tarfile.TarInfo(name), io.BytesIO())
+                with self.assertRaises(playable.SnapshotError) as raised:
+                    playable._archive_members(archive.getvalue(), {})
+                self.assertEqual(raised.exception.reason, "unsafe-archive-path")
+                self.assertIsNone(raised.exception.archive_mismatch)
+                self.assertNotIn(name, str(raised.exception))
+
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory(prefix="playable-snapshot-test-")
         self.addCleanup(self.temporary.cleanup)
@@ -1067,7 +1205,9 @@ class DocumentationCopies:
 
     def copy_documentation(self, source_root: Path) -> Path:
         """Copy the docs as they read without tracked frontend evidence."""
-        for path in (playable.GUIDE, playable.VALIDATION):
+        for path in (playable.GUIDE, playable.VALIDATION, Path("docs/audio-contract.md"),
+                     Path("tests/consumers/test_playable_install.py"), Path("tests/consumers/sound_consumer.c"),
+                     Path("examples/diagnostic.c")):
             (source_root / path).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / path, source_root / path)
         self.copy_review_provenance(source_root)
@@ -1081,11 +1221,70 @@ class DocumentationCopies:
         return validation
 
     def copy_documentation_with_evidence(self, source_root: Path) -> dict[str, object]:
-        for path in (playable.GUIDE, playable.VALIDATION, playable.FRONTEND_EVIDENCE):
+        for path in (playable.GUIDE, playable.VALIDATION, playable.FRONTEND_EVIDENCE,
+                     Path("docs/audio-contract.md"), Path("tests/consumers/test_playable_install.py"),
+                     Path("tests/consumers/sound_consumer.c"), Path("examples/diagnostic.c")):
             (source_root / path).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / path, source_root / path)
         self.copy_review_provenance(source_root)
         return json.loads((source_root / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+
+
+class InstalledSoundRecipeTest(unittest.TestCase):
+    def validate(self, root: Path) -> None:
+        helper = runpy.run_path(str(ROOT / "tests/consumers/test_playable_install.py"))
+        helper["validate_sound_recipe"](root)
+
+    def copy_recipe(self, root: Path) -> None:
+        for name in ("docs/audio-contract.md", "tests/consumers/sound_consumer.c", "examples/diagnostic.c"):
+            target = root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / name, target)
+        self.validate(root)
+
+    def test_current_recipe_matches_real_consumer(self) -> None:
+        self.validate(ROOT)
+
+    def test_missing_documented_consumer_source_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_recipe(root)
+            (root / "examples/diagnostic.c").unlink()
+            with self.assertRaisesRegex(RuntimeError, "sound recipe diagnostic source"):
+                self.validate(root)
+
+    def test_missing_fixture_command_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_recipe(root)
+            path = root / "docs/audio-contract.md"
+            original = path.read_text()
+            changed = original.replace("--write-fixture", "--old-fixture-option")
+            self.assertTrue(original != changed, "required recipe token is absent")
+            path.write_text(changed)
+            with self.assertRaisesRegex(RuntimeError, "sound recipe"):
+                self.validate(root)
+
+    def test_stale_documented_capacity_api_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_recipe(root)
+            path = root / "docs/audio-contract.md"
+            original = path.read_text()
+            changed = original.replace("gn_mvs_audio_capacity_v1", "gn_obsolete_capacity")
+            self.assertTrue(original != changed, "required recipe token is absent")
+            path.write_text(changed)
+            with self.assertRaisesRegex(RuntimeError, "sound recipe"):
+                self.validate(root)
+
+    def test_changed_executable_api_sequence_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_recipe(root)
+            path = root / "tests/consumers/sound_consumer.c"
+            path.write_text(path.read_text().replace("gn_mvs_advance_frame_v1", "gn_run_mvs"))
+            with self.assertRaisesRegex(RuntimeError, "sound recipe"):
+                self.validate(root)
 
 
 class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
@@ -1539,6 +1738,23 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
                 self.round_errors(finding, anchor, head, repository, commits[0]),
                 [f"review finding {finding} cites revision {anchor[:12]} equal to its review round anchor ({label})"])
             self.assertEqual(self.round_errors(finding, later, head, repository, commits[0]), [])
+
+    def test_workstream_archive_preserves_original_review_round_anchor(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-archive-") as temporary:
+            repository = Path(temporary) / "repo"
+            with mock.patch.object(playable, "PHASE_DIRECTORY", playable.PHASE_HISTORY_DIRECTORY):
+                commits = self.rounds(repository)
+            old = repository / playable.PHASE_HISTORY_DIRECTORY
+            archived = repository / playable.PHASE_DIRECTORY
+            archived.parent.mkdir(parents=True, exist_ok=True)
+            old.rename(archived)
+            subprocess.run(["git", "-C", str(repository), "add", "-A"], check=True)
+            subprocess.run(["git", "-C", str(repository), "-c", "user.name=t", "-c",
+                            "user.email=t@example.invalid", "commit", "-qm", "archive workstream"], check=True)
+            anchor = (commits[2], "04-REVIEW-GAPS-R2.md")
+            self.assertEqual(playable._review_round_anchor("G2WR-01", repository, repository, "HEAD"), anchor)
+            self.assertEqual(playable._review_round_anchor("G2WR-01", repository, repository, commits[4]), anchor)
+            self.assertEqual(self.round_errors("G2WR-01", commits[3], "HEAD", repository, commits[0]), [])
 
     def test_g3wr_05_gap_round_two_closure_must_strictly_follow_its_round_file(self) -> None:
         self.check_round("G2WR-01", "04-REVIEW-GAPS-R2.md", 2)
@@ -2227,6 +2443,22 @@ class AtomicRecordTest(DocumentationCopies, unittest.TestCase):
 
 
 class MainErrorPathTest(unittest.TestCase):
+    def test_explicit_headless_clean_reaches_snapshot_without_frontend_acquisition(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary, \
+                mock.patch.object(playable, "OUTPUT", Path(temporary)/"out"), \
+                mock.patch.object(playable, "create_snapshot", side_effect=playable.SnapshotError(
+                    "synthetic-source-failure", "synthetic failure")) as snapshot, \
+                mock.patch.object(playable, "run_frontend_smoke_lane") as frontend, \
+                mock.patch.object(sys, "argv", ["verify_playable.py", "--clean", "--headless"]), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(playable.main(), 1)
+            snapshot.assert_called_once()
+            frontend.assert_not_called()
+            receipt=json.loads((Path(temporary)/"out/receipt.json").read_text())
+            self.assertEqual(receipt["qualification_scope"], "public-core-headless")
+            self.assertEqual(receipt["retroarch_smoke"]["status"], "not-run")
+            self.assertEqual(receipt["status"], "fail", "headless must preserve public build failures")
+
     """Early failures still write a named fail receipt, and printed errors are redacted (CR-08, CR-09, IN-04)."""
 
     def run_main(self, *arguments: str) -> tuple[int, str, str]:

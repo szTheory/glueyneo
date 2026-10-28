@@ -40,6 +40,27 @@ LINUX = """\
 
 
 class WritableSymbolsTest(unittest.TestCase):
+    def test_audit_compilation_requires_exact_production_closure(self) -> None:
+        def row(target: str, extra: list[str] | None = None) -> dict:
+            return {"file": "runtime.c", "arguments": ["cc", "-DSAME=1",
+                    "-fsanitize=address,undefined", *(extra or []),
+                    "-o", "CMakeFiles/" + target + ".dir/runtime.c.o", "-c", "runtime.c"]}
+        production = row("glueyneo")
+        audit_row = row("glueyneo_storage_audit", ["-fno-sanitize=all"])
+        audit.check_compile_closure([production, audit_row])
+        audit.check_compile_closure([
+            row("glueyneo", ["-DGLUEYNEO_SHARED=1"]),
+            row("glueyneo_runtime_static"), audit_row])
+        for mutated in (
+            [production], [audit_row],
+            [production, row("glueyneo_storage_audit")],
+            [production, row("glueyneo_storage_audit", ["-fno-sanitize=all", "-fsanitize=thread"])],
+            [production, row("glueyneo_storage_audit", ["-DDIFFERENT=1", "-fno-sanitize=all"])],
+            [production, {**audit_row, "file": "different.c"}],
+        ):
+            with self.subTest(rows=mutated), self.assertRaises(ValueError):
+                audit.check_compile_closure(mutated)
+
     def test_darwin_selects_writable_sections_only(self) -> None:
         self.assertEqual(audit.writable_symbols(DARWIN, "darwin"),
                          ["_counter", "_scratch", "_tentative"])

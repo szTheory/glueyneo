@@ -37,5 +37,13 @@ __pycache__/
 # rejects a value weaker than the root .planning/config.json)
 /.planning/workstreams/*/config.json
 
+# Preserve local-runtime exclusions when OpenGSD archives a workstream.
+/.planning/milestones/ws-*/state.json
+/.planning/milestones/ws-*/milestone.lock
+/.planning/milestones/ws-*/.verification-ledger.json
+/.planning/milestones/ws-*/config.json
+/.planning/milestones/ws-*/phases/*/.plan-start-epoch
+/.planning/milestones/ws-*/phases/*/.plan-start-time
+
 # Executor scratch (RED-test evidence and similar transient captures)
 /.planning/tmp/

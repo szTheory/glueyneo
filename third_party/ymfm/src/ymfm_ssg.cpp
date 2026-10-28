@@ -121,6 +121,14 @@ void ssg_engine::save_restore(ymfm_saved_state &state)
 	state.save_restore(m_envelope_state);
 	state.save_restore(m_noise_count);
 	state.save_restore(m_noise_state);
+	state.require(m_tone_count[0] <= 0xfff && m_tone_count[1] <= 0xfff &&
+		m_tone_count[2] <= 0xfff);
+	state.require(m_tone_state[0] <= 1 && m_tone_state[1] <= 1 &&
+		m_tone_state[2] <= 1);
+	state.require(m_envelope_count <= 0xffff);
+	state.require(m_envelope_state <= 63);
+	state.require(m_noise_count <= 0x3f);
+	state.require(m_noise_state <= 0x1ffff);
 }
 
 

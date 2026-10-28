@@ -162,7 +162,7 @@ template<class RegisterType> class fm_engine_base;
 // fm_operator represents an FM operator (or "slot" in FM parlance), which
 // produces an output sine wave modulated by an envelope
 template<class RegisterType>
-class fm_operator
+class fm_operator : private ymfm_test_lifetime
 {
 	// "quiet" value, used to optimize when we can skip doing work
 	static constexpr uint32_t EG_QUIET = 0x380;
@@ -247,7 +247,7 @@ private:
 // fm_channel represents an FM channel which combines the output of 2 or 4
 // operators into a final result
 template<class RegisterType>
-class fm_channel
+class fm_channel : private ymfm_test_lifetime
 {
 	using output_data = ymfm_output<RegisterType::OUTPUTS>;
 
@@ -394,6 +394,8 @@ public:
 
 	// return the current clock prescale
 	uint32_t clock_prescale() const { return m_clock_prescale; }
+	uint8_t irq_state() const { return m_irq_state; }
+	uint8_t timer_running(uint32_t tnum) const { return m_timer_running[tnum & 1]; }
 
 	// set prescale factor (2/3/6)
 	void set_clock_prescale(uint32_t prescale) { m_clock_prescale = prescale; }

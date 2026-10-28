@@ -462,6 +462,13 @@ class AcceptanceControls(unittest.TestCase):
     def test_presets_reject_optimized_false_green(self):
         original = json.loads((ROOT / "CMakePresets.json").read_text())
         a.validate_presets(original)
+        # The acceptance harness owns only the owned-CPU lanes. Other maintained
+        # SDK presets may coexist in CMakePresets.json without changing this contract.
+        for group in ("configurePresets", "buildPresets", "testPresets"):
+            self.assertEqual(set(a.LANES), {
+                row["name"] for row in original[group]
+                if row["name"].startswith("owned-")
+            })
         for mutation in ("floor", "backend", "workers", "optimization", "duplicate"):
             document = copy.deepcopy(original)
             if mutation == "floor": document["version"] = 3

@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import platform
 import re
 import signal
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -21,14 +23,14 @@ CONTROL_CASES = {
     "initialized": ("sdk.observe.initialized", 0x1237, 0x1238),
     "bss": ("sdk.observe.bss", 1, 2),
     "run-instructions": ("sdk.run.instructions", 12, 13),
-    "run-elapsed": ("sdk.run.elapsed-cycles", 196, 197),
+    "run-elapsed": ("sdk.run.elapsed-cycles", 172, 173),
     "run-stop": ("sdk.run.reason-stopped", 1, 0),
     "byte-order": ("sdk.observe.arithmetic-byte-order", 10, 167772160),
     "access-order": ("sdk.bus.event.00.address", 0, 2),
 }
 ISOLATION_CONTROL_CASES = {
     "swapped-owner": ("sdk.isolation.owner.arithmetic", 10, 16),
-    "altered-split-progress": ("sdk.isolation.split-progress", 64, 65),
+    "altered-split-progress": ("sdk.isolation.split-progress", 40, 41),
 }
 
 ASSERTION = re.compile(
@@ -158,9 +160,9 @@ def run_control_matrix(executable: str) -> int:
     return 0
 
 
-def run_isolation_matrix(executable: str) -> int:
+def run_isolation_matrix(executable: str, timeout_seconds: float = 30.0) -> int:
     try:
-        normal = run_child([executable, "isolation"], timeout=30.0)
+        normal = run_child([executable, "isolation"], timeout=timeout_seconds)
     except subprocess.TimeoutExpired as error:
         return fail("normal isolation comparison timed out", str(error.stdout or ""))
     except OSError as error:
@@ -234,8 +236,8 @@ def run_cold_processes(executable: str) -> int:
 SANITIZER_LANES = (
     ("sdk-asan-ubsan", "asan-ubsan", "ADDRESS_UNDEFINED",
      "-fsanitize=address,undefined",
-     "^sdk_(diagnostic|lifecycle|media|faults|run|mutation_media|mutation_sequence|mutation_minimizer)$"),
-    ("sdk-tsan", "tsan", "THREAD", "-fsanitize=thread", "^sdk_(isolation|cold)$"),
+     "^sdk_(diagnostic|lifecycle|media|faults|run|mutation_media|mutation_sequence|mutation_minimizer|state_hostile|state_oom|save_api|save_receipts|save_lifecycle)$"),
+    ("sdk-tsan", "tsan", "THREAD", "-fsanitize=thread", "^sdk_(isolation|cold|state_isolation)$"),
 )
 
 
@@ -270,14 +272,16 @@ def process_tree_rss_kib(root_pid: int) -> int | None:
 
 
 def run_logged(command: list[str], log_path: Path, sample_rss: bool = False,
-               timeout: float = 600.0) -> tuple[int, float, int | None, str]:
+               timeout: float = 600.0,
+               environment: dict[str, str] | None = None) -> tuple[int, float, int | None, str]:
     start = time.perf_counter()
     peak_rss: int | None = None
     with log_path.open("w", encoding="utf-8") as log_file:
         try:
             child = subprocess.Popen(command, stdout=log_file,
                                      stderr=subprocess.STDOUT, text=True,
-                                     start_new_session=(os.name == "posix"))
+                                     start_new_session=(os.name == "posix"),
+                                     env=environment)
         except OSError as error:
             log_file.write(f"could not start command: {error}\n")
             return 127, time.perf_counter() - start, None, str(error)
@@ -371,11 +375,546 @@ def verify_target_scoped_flags(build_dir: Path, sanitizer_flag: str,
     export_files = list(install_prefix.rglob("GlueyneoTargets.cmake"))
     if not export_files:
         return False, "installed package did not contain GlueyneoTargets.cmake"
-    if any("-fsanitize" in path.read_text(encoding="utf-8", errors="replace")
-           for path in export_files):
-        return False, "sanitizer flags leaked into the exported consumer target"
-    return True, (f"PRIVATE compile/link flags and clean consumer export verified "
-                  f"({len(relevant)} relevant compile entries)")
+    export_text = "\n".join(
+        path.read_text(encoding="utf-8", errors="replace") for path in export_files)
+    link_options = re.findall(
+        r"(?m)^\s*INTERFACE_LINK_OPTIONS\s+\"([^\"]*)\"", export_text)
+    if len(link_options) != 1 or link_options[0].split(";") != [sanitizer_flag]:
+        return False, ("installed static target must export exactly its sanitizer "
+                       "runtime selector and no other link policy")
+    compile_options = re.findall(
+        r"(?m)^\s*INTERFACE_COMPILE_OPTIONS\s+\"([^\"]*)\"", export_text)
+    if any("-fsanitize" in value or "-fno-" in value for value in compile_options):
+        return False, "private sanitizer compile or recovery flags leaked to consumers"
+    if not re.search(r"INTERFACE_LINK_LIBRARIES.*LINK_LANGUAGE:C>:[^\"]+", export_text):
+        return False, "installed C consumer lost the private C++ runtime dependency"
+    return True, (f"private compile policy, runtime-only interface option, and C++ "
+                  f"runtime closure verified ({len(relevant)} relevant compile entries)")
+
+
+INSTALLED_SANITIZER_FLAGS = {
+    "ADDRESS_UNDEFINED": "-fsanitize=address,undefined",
+    "THREAD": "-fsanitize=thread",
+}
+
+
+def stage_consumer_project(destination: Path) -> None:
+    """Copy only public consumer inputs so final links cannot use source-tree paths."""
+    destination.mkdir(parents=True, exist_ok=True)
+    files = {
+        "tests/consumers/CMakeLists.txt": "CMakeLists.txt",
+        "tests/consumers/header.cpp": "header.cpp",
+        "tests/consumers/sanitizer_runtime.cpp": "sanitizer_runtime.cpp",
+        "tests/consumers/sound_consumer.c": "sound_consumer.c",
+        "examples/continuation.c": "continuation.c",
+        "examples/persistence.c": "persistence.c",
+        "examples/persistence_host.c": "persistence_host.c",
+        "examples/persistence_host.h": "persistence_host.h",
+        "tests/fixture/public_persistence_guest.c": "public_persistence_guest.c",
+        "tests/fixture/public_sound_guest.c": "public_sound_guest.c",
+        ".release-please-manifest.json": ".release-please-manifest.json",
+    }
+    root = Path(__file__).resolve().parents[2]
+    for source, name in files.items():
+        shutil.copy2(root / source, destination / name)
+
+
+def sanitizer_missing_runtime(output: str, mode: str) -> bool:
+    """Recognize a final-link failure naming this mode's actual runtime symbols."""
+    lowered = output.lower()
+    if not any(marker in lowered for marker in (
+            "undefined symbols", "undefined reference", "symbol(s) not found",
+            "unresolved external", "ld.lld: error: undefined")):
+        return False
+    names = (r"_{0,2}asan_", r"_{0,2}ubsan_") if mode == "ADDRESS_UNDEFINED" else (
+        r"_{0,2}tsan_",)
+    return any(re.search(name, lowered) for name in names)
+
+
+def run_installed_sanitizers(mode: str) -> int:
+    """Build, relocate, link, run, and mutate a real instrumented static SDK."""
+    if mode not in INSTALLED_SANITIZER_FLAGS:
+        return fail("installed sanitizer mode must be ADDRESS_UNDEFINED or THREAD")
+
+    root = Path(__file__).resolve().parents[2]
+    flag = INSTALLED_SANITIZER_FLAGS[mode]
+    run_name = f"{time.time_ns()}-{os.getpid()}"
+    result_dir = root / "build" / "installed-sanitizer-controls" / mode / run_name
+    result_dir.mkdir(parents=True, exist_ok=False)
+    report_path = result_dir / "report.json"
+    report: dict[str, Any] = {
+        "schema_version": 1,
+        "mode": mode,
+        "status": "failed",
+        "linkage": "static",
+        "runtime_flag": flag,
+        "platform": {"system": platform.system(), "release": platform.release(),
+                     "machine": platform.machine()},
+        "compiler": {},
+        "cases": [],
+        "commands": [],
+        "duration_seconds": 0.0,
+        "first_failure": None,
+    }
+    started = time.perf_counter()
+
+    def command(name: str, argv: list[str], timeout: float = 600.0,
+                environment: dict[str, str] | None = None) -> tuple[int, str]:
+        log = result_dir / f"{name}.log"
+        code, seconds, _, output = run_logged(argv, log, timeout=timeout,
+                                               environment=environment)
+        report["commands"].append({"name": name, "argv": argv,
+                                   "returncode": code, "seconds": seconds,
+                                   "log": log.name})
+        return code, output
+
+    def record_case(case_id: str, outcome: str, assertions: int,
+                    detail: str, seconds: float | None = None,
+                    *, tested_mode: str | None = None,
+                    linkage: str = "static",
+                    prefixes: list[str] | None = None,
+                    unsupported_reason: str | None = None) -> None:
+        row_mode = tested_mode or mode
+        compiler = dict(report["compiler"])
+        compiler["sanitizer"] = row_mode
+        row = {
+            "schema_version": 1,
+            "case_id": case_id,
+            "mode": mode,
+            "tested_mode": row_mode,
+            "run_id": run_name,
+            "prefix_id": f"installed/{mode}/{run_name}",
+            "linkage": linkage,
+            "configuration": "Debug",
+            "outcome": outcome,
+            "cases": 1 if outcome == "pass" else 0,
+            "assertions": assertions if outcome == "pass" else 0,
+            "duration_seconds": seconds if seconds is not None else time.perf_counter() - started,
+            "detail": detail,
+            "compiler": compiler,
+            "platform": report["platform"],
+        }
+        if prefixes is not None:
+            row["prefixes"] = prefixes
+        if unsupported_reason is not None:
+            row["unsupported_reason"] = unsupported_reason
+        report["cases"].append(row)
+        print("SDK_INSTALLED_SANITIZER " + json.dumps(row, sort_keys=True))
+
+    def finish(status: str, error: str | None = None) -> int:
+        existing = {row["case_id"] for row in report["cases"]}
+        fallback_outcome = "unsupported" if status == "unsupported" else "failed"
+        for missing_case in sorted({"ordinary_none_export", "installed_c_chip",
+                                    "installed_cxx_chip", "removed_runtime_usage"} - existing):
+            reason = error or f"installed sanitizer verification ended with {status}"
+            record_case(
+                missing_case, fallback_outcome, 0, reason,
+                tested_mode="NONE" if missing_case == "ordinary_none_export" else mode,
+                linkage="static_shared" if missing_case == "ordinary_none_export" else "static",
+                unsupported_reason=reason if fallback_outcome == "unsupported" else None)
+        report["status"] = status
+        report["duration_seconds"] = time.perf_counter() - started
+        if error:
+            report["first_failure"] = error
+        report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n",
+                               encoding="utf-8")
+        print("SDK_INSTALLED_SANITIZER_REPORT " + json.dumps({
+            "mode": mode, "status": status, "report": report_path.relative_to(root).as_posix(),
+            "duration_seconds": report["duration_seconds"],
+        }, sort_keys=True))
+        return 0 if status in {"passed", "unsupported"} else 1
+
+    def run_none_exports(consumer_source: Path, workspace: Path) -> tuple[str | None, int, list[str]]:
+        stage_consumer_project(consumer_source)
+        prefix_ids: list[str] = []
+        assertions = 0
+        for linkage in ("static", "shared"):
+            shared = linkage == "shared"
+            producer_build_none = workspace / f"none-{mode.lower()}-{linkage}-build"
+            install_none = workspace / f"none-{mode.lower()}-{linkage}-install"
+            prefix_none = workspace / f"none-{mode.lower()}-{linkage}-prefix"
+            consumer_build_none = workspace / f"none-{mode.lower()}-{linkage}-consumer"
+            prefix_ids.append(f"installed/NONE/{linkage}/{run_name}")
+            configure_argv_none = [
+                shutil.which("cmake") or "cmake", "-S", str(root), "-B", str(producer_build_none),
+                "-G", "Ninja", f"-DBUILD_SHARED_LIBS={'ON' if shared else 'OFF'}",
+                "-DGLUEYNEO_BUILD_TESTS=OFF", "-DGLUEYNEO_YM2610_ADMISSION=OFF",
+                "-DGLUEYNEO_SDK_SANITIZER=NONE", "-DCMAKE_BUILD_TYPE=Debug",
+            ]
+            configure_status_none, configure_output_none = command(
+                f"none-{linkage}-configure", configure_argv_none)
+            if configure_status_none != 0:
+                return (f"NONE {linkage} producer configure failed: " +
+                        " | ".join(configure_output_none.splitlines()[-8:]), assertions, prefix_ids)
+            cache_none = cache_values(producer_build_none / "CMakeCache.txt")
+            if not report["compiler"].get("c_id"):
+                c_identity = re.search(
+                    r"(?m)^-- The C compiler identification is ([^\r\n]+)$", configure_output_none)
+                cxx_identity = re.search(
+                    r"(?m)^-- The CXX compiler identification is ([^\r\n]+)$", configure_output_none)
+                c_parts = c_identity.group(1).split() if c_identity else []
+                cxx_parts = cxx_identity.group(1).split() if cxx_identity else []
+                report["compiler"] = {
+                    "c_id": c_parts[0] if c_parts else "unknown",
+                    "c_version": " ".join(c_parts[1:]) if c_parts else "unknown",
+                    "c_path": cache_none.get("CMAKE_C_COMPILER", "unknown"),
+                    "cxx_id": cxx_parts[0] if cxx_parts else "unknown",
+                    "cxx_version": " ".join(cxx_parts[1:]) if cxx_parts else "unknown",
+                    "cxx_path": cache_none.get("CMAKE_CXX_COMPILER", "unknown"),
+                    "linker": cache_none.get("CMAKE_LINKER", "compiler driver"),
+                    "generator": cache_none.get("CMAKE_GENERATOR", "unknown"),
+                    "configuration": "Debug", "sanitizer": "NONE",
+                }
+            build_status_none, build_output_none = command(
+                f"none-{linkage}-producer-build", [
+                    shutil.which("cmake") or "cmake", "--build", str(producer_build_none),
+                    "--target", "glueyneo", "glueyneo-diagnostic", "glueyneo_libretro",
+                    "glueyneo-original-fixture",
+                    "--parallel", "2",
+                ], timeout=900.0)
+            if build_status_none != 0:
+                return (f"NONE {linkage} producer build failed: " +
+                        " | ".join(build_output_none.splitlines()[-8:]), assertions, prefix_ids)
+            install_status_none, install_output_none = command(
+                f"none-{linkage}-install", [
+                    shutil.which("cmake") or "cmake", "--install", str(producer_build_none),
+                    "--prefix", str(install_none),
+                ], timeout=120.0)
+            if install_status_none != 0:
+                return (f"NONE {linkage} install failed: " +
+                        " | ".join(install_output_none.splitlines()[-8:]), assertions, prefix_ids)
+            shutil.move(str(install_none), str(prefix_none))
+            shutil.move(str(producer_build_none), str(workspace / f"none-{mode.lower()}-{linkage}-hidden"))
+            export_files_none = list(prefix_none.rglob("GlueyneoTargets.cmake"))
+            if not export_files_none:
+                return (f"NONE {linkage} installed target export is missing", assertions, prefix_ids)
+            export_text_none = "\n".join(
+                path.read_text(encoding="utf-8", errors="replace") for path in export_files_none)
+            if "-fsanitize" in export_text_none or "-fno-sanitize" in export_text_none:
+                return (f"NONE {linkage} export contains sanitizer usage", assertions, prefix_ids)
+            assertions += 1
+
+            consumer_configure_none = [
+                shutil.which("cmake") or "cmake", "-S", str(consumer_source), "-B",
+                str(consumer_build_none), "-G", "Ninja", f"-DCMAKE_PREFIX_PATH={prefix_none}",
+                f"-DGLUEYNEO_CONSUMER_C_SOURCE={consumer_source / 'sound_consumer.c'}",
+                f"-DGLUEYNEO_SOUND_FIXTURE_SOURCE={consumer_source / 'public_sound_guest.c'}",
+                "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+            ]
+            consumer_configure_status_none, consumer_configure_output_none = command(
+                f"none-{linkage}-consumer-configure", consumer_configure_none)
+            if consumer_configure_status_none != 0:
+                return (f"NONE {linkage} consumer configure failed: " +
+                        " | ".join(consumer_configure_output_none.splitlines()[-8:]), assertions, prefix_ids)
+            consumer_build_status_none, consumer_build_output_none = command(
+                f"none-{linkage}-consumer-build", [
+                    shutil.which("cmake") or "cmake", "--build", str(consumer_build_none),
+                    "--target", "glueyneo-installed-sound", "glueyneo-installed-cxx-runtime",
+                    "--parallel", "2", "--verbose",
+                ], timeout=360.0)
+            if consumer_build_status_none != 0:
+                return (f"NONE {linkage} installed C/C++ consumers did not link: " +
+                        " | ".join(consumer_build_output_none.splitlines()[-8:]), assertions, prefix_ids)
+            compile_text_none = (consumer_build_none / "compile_commands.json").read_text(
+                encoding="utf-8", errors="replace")
+            if "-fsanitize" in compile_text_none or "-fno-sanitize" in compile_text_none:
+                return (f"NONE {linkage} consumer compile received sanitizer flags", assertions, prefix_ids)
+            link_lines_none = [line for line in consumer_build_output_none.splitlines()
+                               if " -o glueyneo-installed-sound " in line or
+                               " -o glueyneo-installed-cxx-runtime " in line]
+            if (len(link_lines_none) != 2 or any("-fsanitize" in line or
+                    "-fno-sanitize" in line for line in link_lines_none)):
+                return (f"NONE {linkage} consumer final link has sanitizer flags", assertions, prefix_ids)
+            assertions += 2
+
+            runtime_env = None
+            if shared:
+                runtime_env = os.environ.copy()
+                for variable in ("DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH", "LD_LIBRARY_PATH"):
+                    runtime_env.pop(variable, None)
+                if os.name == "nt":
+                    runtime_env["PATH"] = str(prefix_none / "bin") + os.pathsep + runtime_env.get("PATH", "")
+                elif platform.system() == "Darwin":
+                    runtime_env["DYLD_LIBRARY_PATH"] = str(prefix_none / "lib")
+                else:
+                    runtime_env["LD_LIBRARY_PATH"] = str(prefix_none / "lib")
+            c_executable_none = consumer_build_none / "glueyneo-installed-sound"
+            cxx_executable_none = consumer_build_none / "glueyneo-installed-cxx-runtime"
+            if os.name == "nt":
+                c_executable_none = c_executable_none.with_suffix(".exe")
+                cxx_executable_none = cxx_executable_none.with_suffix(".exe")
+            fixture_none = workspace / f"none-{mode.lower()}-{linkage}-fixture.gnmv"
+            c_trace_none = workspace / f"none-{mode.lower()}-{linkage}-c.trace"
+            cxx_trace_none = workspace / f"none-{mode.lower()}-{linkage}-cxx.trace"
+            fixture_code, fixture_output = command(
+                f"none-{linkage}-fixture", [str(c_executable_none), "--write-fixture",
+                                              str(fixture_none)], timeout=30.0,
+                environment=runtime_env)
+            if fixture_code != 0 or not fixture_none.is_file():
+                return (f"NONE {linkage} C consumer failed to write its public fixture: " +
+                        " | ".join(fixture_output.splitlines()[-6:]), assertions, prefix_ids)
+            c_code, c_output = command(
+                f"none-{linkage}-c-run", [str(c_executable_none), str(fixture_none), "--trace",
+                                           str(c_trace_none)], timeout=120.0,
+                environment=runtime_env)
+            cxx_code, cxx_output = command(
+                f"none-{linkage}-cxx-run", [str(cxx_executable_none), str(fixture_none), "--trace",
+                                             str(cxx_trace_none)], timeout=120.0,
+                environment=runtime_env)
+            if c_code != 0 or cxx_code != 0:
+                return (f"NONE {linkage} installed consumer failed at runtime: " +
+                        " | ".join((c_output + "\n" + cxx_output).splitlines()[-8:]), assertions, prefix_ids)
+            c_rows = records_from_log(c_output, "SDK_SOUND ")
+            cxx_rows = records_from_log(cxx_output, "SDK_SANITIZER_CONSUMER ")
+            if (len(c_rows) != 1 or c_rows[0].get("outcome") != "pass" or
+                    c_rows[0].get("frames") != 4 or c_rows[0].get("sample_frames", 0) <= 0 or
+                    len(cxx_rows) != 1 or cxx_rows[0].get("outcome") != "pass" or
+                    cxx_rows[0].get("language") != "C++17" or cxx_rows[0].get("assertions", 0) <= 0 or
+                    not c_trace_none.is_file() or c_trace_none.stat().st_size <= 0 or
+                    c_trace_none.read_bytes() != cxx_trace_none.read_bytes()):
+                return (f"NONE {linkage} installed C/C++ workload or trace parity failed",
+                        assertions, prefix_ids)
+            assertions += 4
+        return None, assertions, prefix_ids
+
+    with tempfile.TemporaryDirectory(prefix="glueyneo-installed-sanitizer-") as temporary:
+        workspace = Path(temporary)
+        producer = workspace / "producer-build"
+        install = workspace / "install-before-relocation"
+        relocated = workspace / "sdk-relocated"
+        consumer_source = workspace / "consumer-source"
+        consumer_build = workspace / "consumer-build"
+        mutated_prefix = workspace / "sdk-without-runtime-usage"
+        mutated_build = workspace / "consumer-build-without-runtime-usage"
+
+        none_error, none_assertions, none_prefixes = run_none_exports(consumer_source, workspace)
+        if none_error is not None:
+            return finish("failed", none_error)
+        record_case(
+            "ordinary_none_export", "pass", none_assertions,
+            "relocated ordinary NONE static/shared packages exported no sanitizer usage and ran C/C++ workloads",
+            tested_mode="NONE", linkage="static_shared", prefixes=none_prefixes)
+
+        configure_argv = [
+            shutil.which("cmake") or "cmake", "-S", str(root), "-B", str(producer),
+            "-G", "Ninja", "-DBUILD_SHARED_LIBS=OFF",
+            "-DGLUEYNEO_BUILD_TESTS=OFF", "-DGLUEYNEO_YM2610_ADMISSION=OFF",
+            f"-DGLUEYNEO_SDK_SANITIZER={mode}", "-DCMAKE_BUILD_TYPE=Debug",
+            "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+        ]
+        configure_status, configure_output = command("configure", configure_argv)
+        if configure_status != 0:
+            if "SDK_SANITIZER_UNSUPPORTED:" in configure_output:
+                reason = configure_output.split("SDK_SANITIZER_UNSUPPORTED:", 1)[1].strip()
+                report["unsupported_reason"] = reason.splitlines()[0]
+                for case_id in ("installed_c_chip", "installed_cxx_chip",
+                                "removed_runtime_usage"):
+                    record_case(case_id, "unsupported", 0, report["unsupported_reason"])
+                return finish("unsupported", report["unsupported_reason"])
+            return finish("failed", "producer configure failed without an unsupported marker")
+
+        cache = cache_values(producer / "CMakeCache.txt")
+        c_identity = re.search(
+            r"(?m)^-- The C compiler identification is ([^\r\n]+)$", configure_output)
+        cxx_identity = re.search(
+            r"(?m)^-- The CXX compiler identification is ([^\r\n]+)$", configure_output)
+        c_identity_parts = c_identity.group(1).split() if c_identity else []
+        cxx_identity_parts = cxx_identity.group(1).split() if cxx_identity else []
+        report["compiler"] = {
+            "c_id": c_identity_parts[0] if c_identity_parts else "unknown",
+            "c_version": " ".join(c_identity_parts[1:]) if c_identity_parts else "unknown",
+            "c_path": cache.get("CMAKE_C_COMPILER", "unknown"),
+            "cxx_id": cxx_identity_parts[0] if cxx_identity_parts else "unknown",
+            "cxx_version": " ".join(cxx_identity_parts[1:]) if cxx_identity_parts else "unknown",
+            "cxx_path": cache.get("CMAKE_CXX_COMPILER", "unknown"),
+            "linker": cache.get("CMAKE_LINKER", "compiler driver"),
+            "generator": cache.get("CMAKE_GENERATOR", "unknown"),
+            "configuration": cache.get("CMAKE_BUILD_TYPE", "unknown"),
+            "sanitizer": cache.get("GLUEYNEO_SDK_SANITIZER", "unknown"),
+        }
+        if (report["compiler"]["c_id"] == "unknown" or
+                report["compiler"]["cxx_id"] == "unknown" or
+                report["compiler"]["sanitizer"] != mode):
+            return finish("failed", "producer compiler or mode identity is incomplete")
+
+        build_argv = [shutil.which("cmake") or "cmake", "--build", str(producer),
+                      "--target", "glueyneo", "glueyneo-diagnostic",
+                      "glueyneo_libretro", "glueyneo-original-fixture", "--parallel", "2"]
+        build_status, build_output = command("producer-build", build_argv, timeout=900.0)
+        if build_status != 0:
+            return finish("failed", "instrumented static SDK build failed: " +
+                          " | ".join(build_output.splitlines()[-8:]))
+        install_status, install_output = command(
+            "install", [shutil.which("cmake") or "cmake", "--install",
+                        str(producer), "--prefix", str(install)], timeout=120.0)
+        if install_status != 0 or not (install / "lib" / "cmake" / "Glueyneo" /
+                                       "GlueyneoTargets.cmake").is_file():
+            return finish("failed", "instrumented SDK install failed: " +
+                          " | ".join(install_output.splitlines()[-8:]))
+
+        shutil.move(str(install), str(relocated))
+        shutil.move(str(producer), str(workspace / "producer-build-hidden"))
+        stage_consumer_project(consumer_source)
+        consumer_configure = [
+            shutil.which("cmake") or "cmake", "-S", str(consumer_source), "-B",
+            str(consumer_build), "-G", "Ninja", f"-DCMAKE_PREFIX_PATH={relocated}",
+            f"-DGLUEYNEO_CONSUMER_C_SOURCE={consumer_source / 'sound_consumer.c'}",
+            f"-DGLUEYNEO_SOUND_FIXTURE_SOURCE={consumer_source / 'public_sound_guest.c'}",
+            "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+        ]
+        consumer_configure_status, consumer_configure_output = command(
+            "consumer-configure", consumer_configure)
+        if consumer_configure_status != 0:
+            return finish("failed", "relocated consumer configure failed: " +
+                          " | ".join(consumer_configure_output.splitlines()[-8:]))
+
+        target_file = relocated / "lib" / "cmake" / "Glueyneo" / "GlueyneoTargets.cmake"
+        export_text = target_file.read_text(encoding="utf-8", errors="replace")
+        link_values = re.findall(
+            r"(?m)^\s*INTERFACE_LINK_OPTIONS\s+\"([^\"]*)\"", export_text)
+        if len(link_values) != 1 or link_values[0].split(";") != [flag]:
+            return finish("failed", "relocated target lacks the exact runtime-only interface option")
+        compile_values = re.findall(
+            r"(?m)^\s*INTERFACE_COMPILE_OPTIONS\s+\"([^\"]*)\"", export_text)
+        if any("-fsanitize" in value or "-fno-" in value for value in compile_values):
+            return finish("failed", "private compile or recovery flags leaked to installed consumers")
+        if not re.search(r"INTERFACE_LINK_LIBRARIES.*LINK_LANGUAGE:C>:[^\"]+", export_text):
+            return finish("failed", "relocated C consumer lost the private C++ runtime closure")
+
+        consumer_build_argv = [
+            shutil.which("cmake") or "cmake", "--build", str(consumer_build),
+            "--target", "glueyneo-installed-sound", "glueyneo-installed-cxx-runtime",
+            "--parallel", "2", "--verbose",
+        ]
+        consumer_build_status, consumer_build_output = command(
+            "consumer-build", consumer_build_argv, timeout=360.0)
+        if consumer_build_status != 0:
+            return finish("failed", "relocated installed C/C++ consumer final links failed: " +
+                          " | ".join(consumer_build_output.splitlines()[-10:]))
+
+        compile_commands_path = consumer_build / "compile_commands.json"
+        try:
+            compile_commands = json.loads(compile_commands_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            return finish("failed", f"consumer compile commands are unreadable: {error}")
+        consumer_entries = [entry for entry in compile_commands
+                            if Path(entry.get("file", "")).name in
+                            {"sound_consumer.c", "sanitizer_runtime.cpp"}]
+        consumer_source_names = {Path(entry.get("file", "")).name
+                                 for entry in consumer_entries}
+        if consumer_source_names != {"sound_consumer.c", "sanitizer_runtime.cpp"}:
+            source_names = [Path(entry.get("file", "")).name for entry in compile_commands]
+            return finish("failed", "consumer compile database omitted C or C++ runtime source: " +
+                          repr(source_names))
+        if any("-fsanitize" in entry.get("command", "") or
+               "-fsanitize" in " ".join(entry.get("arguments", [])) or
+               "-fno-sanitize" in entry.get("command", "")
+               for entry in consumer_entries):
+            return finish("failed", "consumer compile instrumentation leaked from installed target")
+        link_lines = [line for line in consumer_build_output.splitlines()
+                      if " -o glueyneo-installed-sound " in line or
+                      " -o glueyneo-installed-cxx-runtime " in line]
+        if (len(link_lines) != 2 or any(flag not in line for line in link_lines) or
+                any("-fno-omit-frame-pointer" in line or "-fno-sanitize-recover" in line
+                    for line in link_lines)):
+            return finish("failed", "consumer final link commands lack only the required runtime selector")
+        if any(str(root / "src") in line or str(root / "include") in line or
+               str(workspace / "producer-build-hidden") in line
+               for line in compile_commands_path.read_text(encoding="utf-8").splitlines()):
+            return finish("failed", "consumer build command still references producer source/build paths")
+
+        c_exe = consumer_build / "glueyneo-installed-sound"
+        cxx_exe = consumer_build / "glueyneo-installed-cxx-runtime"
+        fixture = workspace / "public-sound.gnmv"
+        c_trace = workspace / "installed-c.trace"
+        cxx_trace = workspace / "installed-cxx.trace"
+        fixture_status, fixture_output = command(
+            "fixture-write", [str(c_exe), "--write-fixture", str(fixture)], timeout=30.0)
+        if fixture_status != 0 or not fixture.is_file():
+            return finish("failed", "installed C consumer could not write the public fixture: " +
+                          " | ".join(fixture_output.splitlines()[-6:]))
+        c_run_status, c_output = command(
+            "installed-c-run", [str(c_exe), str(fixture), "--trace", str(c_trace)], timeout=120.0)
+        if c_run_status != 0:
+            return finish("failed", "installed C consumer runtime failed: " +
+                          " | ".join(c_output.splitlines()[-8:]))
+        c_records = records_from_log(c_output, "SDK_SOUND ")
+        if (len(c_records) != 1 or c_records[0].get("outcome") != "pass" or
+                c_records[0].get("frames") != 4 or c_records[0].get("sample_frames", 0) <= 0 or
+                any(c_records[0].get(field) != "pass" for field in ("tone", "fire", "release"))):
+            return finish("failed", "installed C consumer omitted meaningful sound/video evidence")
+
+        cxx_run_status, cxx_output = command(
+            "installed-cxx-run", [str(cxx_exe), str(fixture), "--trace", str(cxx_trace)],
+            timeout=120.0)
+        if cxx_run_status != 0:
+            return finish("failed", "installed C++ consumer runtime failed: " +
+                          " | ".join(cxx_output.splitlines()[-8:]))
+        cxx_records = records_from_log(cxx_output, "SDK_SANITIZER_CONSUMER ")
+        if (len(cxx_records) != 1 or cxx_records[0].get("language") != "C++17" or
+                cxx_records[0].get("outcome") != "pass" or cxx_records[0].get("cases") != 1 or
+                cxx_records[0].get("assertions", 0) <= 0 or cxx_records[0].get("frames") != 4 or
+                cxx_records[0].get("sample_frames", 0) <= 0):
+            return finish("failed", "installed C++ consumer omitted its loaded-media assertions")
+        if not c_trace.is_file() or not cxx_trace.is_file() or \
+                c_trace.stat().st_size <= 0 or c_trace.read_bytes() != cxx_trace.read_bytes():
+            return finish("failed", "C and C++ public fixture video/PCM traces differ")
+        record_case("installed_c_chip", "pass", 8,
+                    "relocated C17 consumer linked imported runtime usage and matched the public fixture workload")
+        record_case("installed_cxx_chip", "pass", cxx_records[0]["assertions"],
+                    "relocated C++17 consumer loaded original public media and matched C video/PCM trace")
+
+        shutil.copytree(relocated, mutated_prefix)
+        mutated_target = mutated_prefix / "lib" / "cmake" / "Glueyneo" / "GlueyneoTargets.cmake"
+        mutated_text = mutated_target.read_text(encoding="utf-8", errors="replace")
+        usage_pattern = re.compile(
+            r"(?m)^(\s*INTERFACE_LINK_OPTIONS\s+\")([^\"]*)(\"\s*)$")
+        removed = 0
+
+        def remove_runtime_usage(match: re.Match[str]) -> str:
+            nonlocal removed
+            items = match.group(2).split(";")
+            if flag not in items:
+                return match.group(0)
+            items.remove(flag)
+            removed += 1
+            return match.group(1) + ";".join(items) + match.group(3)
+
+        mutated_text = usage_pattern.sub(remove_runtime_usage, mutated_text)
+        if removed != 1:
+            return finish("failed", "removed-runtime mutation did not remove exactly one exported option")
+        mutated_target.write_text(mutated_text, encoding="utf-8")
+        mutated_configure_status, mutated_configure_output = command(
+            "negative-configure", [
+                shutil.which("cmake") or "cmake", "-S", str(consumer_source), "-B",
+                str(mutated_build), "-G", "Ninja", f"-DCMAKE_PREFIX_PATH={mutated_prefix}",
+                f"-DGLUEYNEO_CONSUMER_C_SOURCE={consumer_source / 'sound_consumer.c'}",
+                f"-DGLUEYNEO_SOUND_FIXTURE_SOURCE={consumer_source / 'public_sound_guest.c'}",
+            ])
+        if mutated_configure_status != 0:
+            return finish("failed", "removed-runtime consumer configure failed before linking: " +
+                          " | ".join(mutated_configure_output.splitlines()[-8:]))
+        negative_results: list[bool] = []
+        for case_name, target in (("c", "glueyneo-installed-sound"),
+                                  ("cxx", "glueyneo-installed-cxx-runtime")):
+            negative_status, negative_output = command(
+                f"removed-runtime-{case_name}", [
+                    shutil.which("cmake") or "cmake", "--build", str(mutated_build),
+                    "--target", target, "--parallel", "2", "--verbose",
+                ], timeout=180.0)
+            expected_missing_runtime = (
+                negative_status != 0 and
+                sanitizer_missing_runtime(negative_output, mode) and
+                ("Linking CXX executable" in negative_output or
+                 "clang++: error: linker command failed" in negative_output or
+                 "collect2: error: ld returned" in negative_output))
+            negative_results.append(expected_missing_runtime)
+        if negative_results != [True, True]:
+            return finish("failed", "removed-runtime mutation did not fail both C and C++ final links for sanitizer symbols")
+        record_case("removed_runtime_usage", "pass", 4,
+                    "removing only exported runtime usage makes both C and C++ final links fail on sanitizer symbols")
+
+    return finish("passed")
 
 
 def records_from_log(output: str, prefix: str) -> list[dict[str, Any]]:
@@ -413,7 +952,7 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
         "platform": {"system": platform.system(), "release": platform.release(),
                      "machine": platform.machine()},
         "compiler": {},
-        "expected_tests": 8 if probe_name == "asan-ubsan" else 2,
+        "expected_tests": 13 if probe_name == "asan-ubsan" else 3,
         "ctest_parallel_jobs": 1 if probe_name == "tsan" else 2,
         "tests_passed": 0,
         "tests_attempted": 0,
@@ -529,9 +1068,11 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
     test_details = (last_test_log.read_text(encoding="utf-8", errors="replace")
                     if last_test_log.exists() else "")
     ctest_log = ctest_output + "\n" + test_details
-    log_records = records_from_log(ctest_log, "SDK_RESULT ")
-    if probe_name == "tsan":
-        log_records = records_from_log(ctest_log, "SDK_CONTROL_RESULT ")
+    sdk_records = records_from_log(ctest_log, "SDK_RESULT ")
+    control_records = (records_from_log(ctest_log, "SDK_CONTROL_RESULT ")
+                       if probe_name == "tsan" else [])
+    log_records = sdk_records + control_records
+    state_hostile_records = records_from_log(ctest_log, "STATE_HOSTILE_RESULT ")
     # Completed test rows retain partial progress on a failed CTest run. The
     # failure-list status may be Failed, Timeout, SEGFAULT, or another native
     # outcome; none of those is interchangeable with the old timeout receipt.
@@ -546,7 +1087,9 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
         r"(?m)^\s*\d+\s+-\s+(sdk_\w+)\s+\([^\n]+\)\s*$", ctest_output)))
     report["sdk_assertions"] = sum(
         record.get("assertions", 0) for record in log_records
-        if isinstance(record.get("assertions"), int))
+        if isinstance(record.get("assertions"), int)) + sum(
+            record.get("assertions", 0) for record in state_hostile_records
+            if isinstance(record.get("assertions"), int))
     if ctest_status != 0:
         report["failure_stage"] = "runtime"
         report["runtime_status"] = "failed"
@@ -561,11 +1104,17 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
         report["error"] = (f"expected {report['expected_tests']} runtime tests, "
                             f"observed {report['tests_passed']}")
         return report
-    if len(log_records) != (7 if probe_name == "asan-ubsan" else 2):
+    expected_sdk_records = 10 if probe_name == "asan-ubsan" else 1
+    expected_control_records = 0 if probe_name == "asan-ubsan" else 2
+    if (len(sdk_records) != expected_sdk_records or
+            sum(record.get("identity", {}).get("sanitizer") == cache_mode
+                for record in sdk_records) != expected_sdk_records or
+            len(control_records) != expected_control_records or
+            len(state_hostile_records) != (1 if probe_name == "asan-ubsan" else 0)):
         report["failure_stage"] = "runtime"
         report["runtime_status"] = "failed"
         report["status"] = "failed_runtime"
-        report["error"] = f"expected SDK identity records, observed {len(log_records)}"
+        report["error"] = "sanitizer CTest lane omitted one or more exact positive SDK identity records"
         return report
     if any(record.get("outcome") != "pass" or record.get("cases", 0) < 1 or
            record.get("assertions", 0) < 1 or
@@ -575,6 +1124,14 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
         report["runtime_status"] = "failed"
         report["status"] = "failed_runtime"
         report["error"] = "an SDK suite result was not a passing identity record"
+        return report
+    if state_hostile_records and any(
+            row.get("outcome") != "pass" or row.get("cases", 0) < 1 or
+            row.get("assertions", 0) < 1 for row in state_hostile_records):
+        report["failure_stage"] = "runtime"
+        report["runtime_status"] = "failed"
+        report["status"] = "failed_runtime"
+        report["error"] = "state hostile sanitizer result was not a positive assertion record"
         return report
     report["status"] = "passed"
     report["runtime_status"] = "passed"
@@ -593,6 +1150,9 @@ def run_sanitizer_matrix() -> int:
                                encoding="utf-8")
         print(f"SANITIZER_LANE {json.dumps(report, sort_keys=True)}")
         if report["status"] not in {"passed", "unsupported"}:
+            overall = 1
+    for mode in ("ADDRESS_UNDEFINED", "THREAD"):
+        if run_installed_sanitizers(mode) != 0:
             overall = 1
     print(f"SANITIZER_MATRIX platform={platform.system()} {platform.release()} "
           f"{platform.machine()} memory=recorded-per-lane")
@@ -631,7 +1191,7 @@ def diagnostic_records(runner: str, result_dir: Path) -> int:
             if (record.get("outcome") != "pass" or record.get("assertions", 0) <= 0 or
                     observed.get("arithmetic") != expected["arithmetic"] or
                     observed.get("initialized") != expected["initialized"] or
-                    observed.get("bss") != 1 or observed.get("cycles") != 196 or
+                    observed.get("bss") != 1 or observed.get("cycles") != 172 or
                     observed.get("instructions") != 12 or observed.get("pc") != 302 or
                     observed.get("reason") != 1):
                 return fail(f"runner scenario {scenario} did not report named progress/results",
@@ -649,16 +1209,28 @@ def diagnostic_records(runner: str, result_dir: Path) -> int:
 
 
 def main(arguments: list[str]) -> int:
+    if (len(arguments) == 4 and arguments[1] == "--installed-sanitizers" and
+            arguments[2] == "--mode"):
+        return run_installed_sanitizers(arguments[3])
     if len(arguments) == 2 and arguments[1] == "--sanitizers":
         return run_sanitizer_matrix()
-    if len(arguments) == 3 and arguments[1] == "--isolation":
+    if len(arguments) in (3, 4) and arguments[1] == "--isolation":
         self_control = supervisor_self_controls()
-        return self_control if self_control != 0 else run_isolation_matrix(arguments[2])
+        try:
+            timeout_seconds = 30.0 if len(arguments) == 3 else float(arguments[3])
+        except ValueError:
+            return fail("isolation timeout must be a positive number of seconds")
+        if not math.isfinite(timeout_seconds) or timeout_seconds <= 0.0:
+            return fail("isolation timeout must be a positive number of seconds")
+        return self_control if self_control != 0 else run_isolation_matrix(
+            arguments[2], timeout_seconds)
     if len(arguments) == 3 and arguments[1] == "--cold":
         return run_cold_processes(arguments[2])
     if len(arguments) != 4 or arguments[1] != "--controls":
         return fail("usage: controls.py --controls SDK_DIAGNOSTIC PUBLIC_RUNNER | "
-                    "--isolation SDK_DIAGNOSTIC | --cold SDK_DIAGNOSTIC | --sanitizers")
+                    "--isolation SDK_DIAGNOSTIC [TIMEOUT_SECONDS] | "
+                    "--cold SDK_DIAGNOSTIC | --sanitizers | "
+                    "--installed-sanitizers --mode ADDRESS_UNDEFINED|THREAD")
     self_control = supervisor_self_controls()
     if self_control != 0:
         return self_control

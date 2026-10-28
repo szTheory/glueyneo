@@ -1,22 +1,25 @@
 # Glueyneo
 
-Glueyneo is a portable C Neo Geo MVS/AES core project. Its current alpha
+Glueyneo is a portable C Neo Geo MVS/AES core project. Its current v0.1 alpha
 delivers an offline-installable C17 library, a headless runner, and one bounded,
-firmware-free CPU/bus diagnostic. It is not a playable emulator. The hosted CI
-matrix tests Linux with Clang and GNU, macOS arm64 with AppleClang, and Windows
-x86_64 with MSVC. The published [v0.2.1 release](https://github.com/szTheory/glueyneo/releases/tag/v0.2.1)
-contains SDK archives built with GNU 13.3.0 on Linux, AppleClang
-17.0.0.17000013 on macOS arm64, and MSVC 19.51.36260.0 on Windows x86_64,
-all at source revision
-[`fdc241e`](https://github.com/szTheory/glueyneo/commit/fdc241e0f554d61c7a270cad141fd51c2aa2b334).
-These results describe those tested profiles, not a broader hardware or game
-compatibility claim. The local package checks alone do not qualify a platform support matrix
-or release artifact.
+firmware-free CPU/bus diagnostic. The published [v0.2.1 diagnostic SDK](https://github.com/szTheory/glueyneo/releases/tag/v0.2.1)
+at public source `fdc241e0f554d61c7a270cad141fd51c2aa2b334` has Linux x86_64/GNU,
+macOS arm64/AppleClang and Windows x86_64/MSVC download/consumer evidence.
+Local package checks do not qualify a platform support matrix or release artifact;
+the hosted receipts qualify only the exact profiles above. That release is
+separate from the newer local gameplay/audio implementation.
+The local checkout's manifest/package version below is not a claim that its
+later source was released or qualified by those artifacts.
 
 ## Build and consume the installed SDK
 
-The package exports `Glueyneo::glueyneo` at the version recorded in
-`.release-please-manifest.json`. The commands
+For the source-bound first run, including the fresh-process continuation and
+portable/host persistence examples, start with the
+[runnable SDK examples](docs/sdk-examples.md). That guide owns the exact
+example commands and links to their separate state, save, frontend, and testing
+contracts.
+
+The package exports `Glueyneo::glueyneo` and version `0.1.0`. The commands
 below build and install separate static and shared packages, then compile C
 and C++ consumers against the installed package. The C example reads the
 installed original fixture in the host application and passes its bytes to the
@@ -90,9 +93,7 @@ consumers, compiled documentation examples, capabilities, provenance, evidence,
 the retained local baseline, and supported sanitizer lanes. It writes the
 canonical public-safe result to `evidence/sdk/verification.json`. This local
 gate does not qualify hosted CI, release authority, other platforms, or the
-CMake 3.20 minimum-version claim. The hosted CI result is recorded in
-[the testing guide](docs/testing.md#current-platform-and-cost-evidence).
-Coverage-guided libFuzzer is unsupported on
+CMake 3.20 minimum-version claim. Coverage-guided libFuzzer is unsupported on
 the current AppleClang toolchain; deterministic seeded mutation is used. The
 ThreadSanitizer lane runs its process-heavy CTest cases one at a time to avoid
 host resource contention.
@@ -156,7 +157,7 @@ wall-clock service.
 
 ## Evidence and limits
 
-The fresh [Phase 01 whole-phase verification](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/phases/01-cpu-acceptance-experiment/01-VERIFICATION.md)
+The fresh [Phase 01 whole-phase verification](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/milestones/v0.1-phases/01-cpu-acceptance-experiment/01-VERIFICATION.md)
 passed 10/10 must-haves at source revision
 `09476ed57ee29c0798f8be8f082e05ad73776e3b` and admitted the bounded candidate
 for Phase 02 integration. The frozen candidate receipt remains
@@ -174,14 +175,14 @@ are listed in the verifier. Historical documents are preserved, and this
 correction is not a physical-pin trace. No original-hardware saved-PC result is
 inferred.
 
-The declared CMake floor is 3.20 and remains unqualified; the recorded local
-package run used CMake 4.4.3. Hosted CI run
-[`40222108429`](https://github.com/szTheory/glueyneo/actions/runs/40222108429)
-and the published v0.2.1 release ran against source revision `fdc241e`.
-Build, consumer, documentation, and capability checks from the local gate remain
-local evidence, separate from the hosted CI and release records.
+The declared CMake floor is 3.20 and remains unqualified. The published unsigned
+v0.2.1 diagnostic SDK has exact-source hosted and downloaded-consumer evidence
+for Linux x86_64, macOS arm64 and Windows x86_64; see [support identities](docs/testing.md).
+Broader platform combinations and the later local gameplay/audio implementation
+are not qualified by that release. Planning milestone v0.1 closed with an explicit
+[identity/debt override](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/milestones/v0.1-CLOSEOUT.md).
 See the [CPU/bus SDK workstream state](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/STATE.md)
-for that deliverable's contributor workflow, and its [requirements](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/REQUIREMENTS.md)
+for that deliverable's contributor workflow, and its [requirements](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/milestones/v0.1-REQUIREMENTS.md)
 and [roadmap](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/ROADMAP.md)
 for scope and next steps.
 

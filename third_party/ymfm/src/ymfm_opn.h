@@ -361,6 +361,9 @@ public:
 	// save/restore
 	void save_restore(ymfm_saved_state &state);
 
+	// reset mutable sample-index and last-output state without changing ratio
+	void reset();
+
 	// get the current sample index
 	uint32_t sampindex() const { return m_sampindex; }
 
@@ -665,6 +668,12 @@ public:
 
 	// save/restore
 	void save_restore(ymfm_saved_state &state);
+	// Glueyneo's private state visitor includes this held FM value because the
+	// canonical wrapper can capture between MAX-fidelity output ticks.
+	void save_restore_held_output(ymfm_saved_state &state)
+	{
+		state.save_restore(m_last_fm.data);
+	}
 
 	// pass-through helpers
 	uint32_t sample_rate(uint32_t input_clock) const
@@ -679,6 +688,7 @@ public:
 	}
 	uint32_t ssg_effective_clock(uint32_t input_clock) const { return input_clock / 4; }
 	void invalidate_caches() { m_fm.invalidate_caches(); }
+	const fm_engine &fm_engine_state() const { return m_fm; }
 
 	// read access
 	uint8_t read_status();

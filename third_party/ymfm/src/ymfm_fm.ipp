@@ -413,9 +413,13 @@ void fm_operator<RegisterType>::save_restore(ymfm_saved_state &state)
 	state.save_restore(m_phase);
 	state.save_restore(m_env_attenuation);
 	state.save_restore(m_env_state);
+	state.require(m_env_attenuation <= 0x3ff);
+	state.require(m_env_state == EG_ATTACK || m_env_state == EG_DECAY ||
+		m_env_state == EG_SUSTAIN || m_env_state == EG_RELEASE);
 	state.save_restore(m_ssg_inverted);
 	state.save_restore(m_key_state);
 	state.save_restore(m_keyon_live);
+	state.require(m_ssg_inverted <= 1 && m_key_state <= 1 && m_keyon_live <= 7);
 }
 
 
@@ -829,6 +833,9 @@ void fm_channel<RegisterType>::save_restore(ymfm_saved_state &state)
 	state.save_restore(m_feedback[0]);
 	state.save_restore(m_feedback[1]);
 	state.save_restore(m_feedback_in);
+	state.require(m_feedback[0] >= -8191 && m_feedback[0] <= 8191);
+	state.require(m_feedback[1] >= -8191 && m_feedback[1] <= 8191);
+	state.require(m_feedback_in >= -8191 && m_feedback_in <= 8191);
 }
 
 
@@ -1195,11 +1202,21 @@ fm_engine_base<RegisterType>::fm_engine_base(ymfm_interface &intf) :
 
 	// create the channels
 	for (uint32_t chnum = 0; chnum < CHANNELS; chnum++)
+	{
+#if defined(GLUEYNEO_YM2610_TEST_HOOKS) || defined(GLUEYNEO_SDK_TEST_HOOKS)
+		ymfm_test_allocation_point(sizeof(fm_channel<RegisterType>), 3u);
+#endif
 		m_channel[chnum] = std::make_unique<fm_channel<RegisterType>>(*this, RegisterType::channel_offset(chnum));
+	}
 
 	// create the operators
 	for (uint32_t opnum = 0; opnum < OPERATORS; opnum++)
+	{
+#if defined(GLUEYNEO_YM2610_TEST_HOOKS) || defined(GLUEYNEO_SDK_TEST_HOOKS)
+		ymfm_test_allocation_point(sizeof(fm_operator<RegisterType>), 4u);
+#endif
 		m_operator[opnum] = std::make_unique<fm_operator<RegisterType>>(*this, RegisterType::operator_offset(opnum));
+	}
 
 #if (YMFM_DEBUG_LOG_WAVFILES)
 	for (uint32_t chnum = 0; chnum < CHANNELS; chnum++)
@@ -1254,6 +1271,13 @@ void fm_engine_base<RegisterType>::save_restore(ymfm_saved_state &state)
 	state.save_restore(m_timer_running[0]);
 	state.save_restore(m_timer_running[1]);
 	state.save_restore(m_total_clocks);
+	state.require(m_clock_prescale == 2 || m_clock_prescale == 3 ||
+		m_clock_prescale == 6);
+	state.require((m_status & ~(STATUS_TIMERA | STATUS_TIMERB |
+		STATUS_BUSY | STATUS_IRQ)) == 0);
+	state.require((m_irq_mask & ~(STATUS_TIMERA | STATUS_TIMERB)) == 0);
+	state.require(m_irq_state <= 1);
+	state.require(m_timer_running[0] <= 1 && m_timer_running[1] <= 1);
 
 	// save the register/family data
 	m_regs.save_restore(state);
@@ -1266,8 +1290,10 @@ void fm_engine_base<RegisterType>::save_restore(ymfm_saved_state &state)
 	for (uint32_t opnum = 0; opnum < OPERATORS; opnum++)
 		m_operator[opnum]->save_restore(state);
 
-	// invalidate any caches
-	invalidate_caches();
+	// A measurement/capture is a read-only traversal. Restore still clears
+	// derived pointers and caches before the staged instance can be applied.
+	if (!state.checked() || !state.saving())
+		invalidate_caches();
 }
 
 

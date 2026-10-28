@@ -255,7 +255,7 @@ static int prepare_checkpoint(state_machine *machine, state_case which) {
     owned_cpu_run_result result;
     if (which == CASE_RESET_DEBT) return 1;
     result = run_one(machine); /* Consume the 40-cycle reset event. */
-    if (result.reason != OWNED_CPU_BUDGET || result.elapsed_cycles != 64u) return 0;
+    if (result.reason != OWNED_CPU_BUDGET || result.elapsed_cycles != 40u) return 0;
     switch (which) {
         case CASE_DIAGNOSTIC_MOVEQ:
             result = run_one(machine);
@@ -282,7 +282,7 @@ static int prepare_checkpoint(state_machine *machine, state_case which) {
         case CASE_IRQ_ENTRY:
             if (owned_cpu_set_irq(machine->cpu, 7u) != OWNED_CPU_OK) return 0;
             result = run_one(machine);
-            return result.reason == OWNED_CPU_BUDGET && result.elapsed_cycles == 72u;
+            return result.reason == OWNED_CPU_BUDGET && result.elapsed_cycles == 44u;
         case CASE_TRAP_ENTRY:
         case CASE_ADDRESS_ERROR_ENTRY:
             result = run_one(machine);
@@ -465,7 +465,7 @@ static void continue_scenario(state_case which, omission_kind omission) {
             TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, actual.reason);
             TEST_ASSERT_EQUAL_HEX32(0x180u, expected.pc);
             TEST_ASSERT_EQUAL_HEX32(0x180u, actual.pc);
-            TEST_ASSERT_EQUAL_UINT64(which == CASE_RTE_ODD_PC ? 94u : 62u,
+            TEST_ASSERT_EQUAL_UINT64(which == CASE_RTE_ODD_PC ? 50u : 34u,
                                      expected.elapsed_cycles);
             TEST_ASSERT_EQUAL_UINT64(expected.elapsed_cycles, actual.elapsed_cycles);
             owned_cpu_observation observation;
@@ -701,7 +701,7 @@ static void reentrant_capture_and_restore_reject_while_active(void) {
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_capture_state(source.cpu, &state));
     owned_cpu_run_result reset_event = run_one(&machine);
     TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, reset_event.reason);
-    TEST_ASSERT_EQUAL_UINT64(64u, reset_event.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(40u, reset_event.elapsed_cycles);
     machine.active_probe_state = &state;
     (void)run_one(&machine);
     TEST_ASSERT_EQUAL_UINT(1u, machine.active_probe_count);
@@ -742,6 +742,57 @@ static void terminal_instance_rejects_restore_without_bus_activity(void) {
     puts("terminal_capture_restore_rejected=1 additional_bus_callbacks=0");
 }
 
+static void a7_program_state(const uint8_t *program, size_t length, unsigned instructions,
+                             state_machine *machine, owned_cpu_state *captured) {
+    TEST_ASSERT_TRUE(machine_create_and_reset(machine, CASE_RESET_DEBT));
+    memcpy(machine->memory + 0x100u, program, length);
+    TEST_ASSERT_EQUAL_UINT64(40u, run_one(machine).elapsed_cycles); /* reset event */
+    for (unsigned count = 0u; count < instructions; ++count) {
+        TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, run_one(machine).reason);
+    }
+    TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_capture_state(machine->cpu, captured));
+}
+
+static void a7_state_restores_into_fresh_owner(state_machine *machine,
+                                               const owned_cpu_state *captured) {
+    state_machine destination;
+    memset(&destination, 0, sizeof(destination));
+    TEST_ASSERT_TRUE(machine_create_fresh(&destination));
+    TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_restore_state(destination.cpu, captured));
+    TEST_ASSERT_TRUE(capture_equal(machine->cpu, destination.cpu));
+    machine_destroy(&destination);
+}
+
+/* UM Rev. 9.1 / PRM section 2: A7 is the active stack pointer; the inactive
+ * bank holds the other pointer. MOVEA.L Dn,A7 must update the active bank. */
+static void movea_to_a7_keeps_active_bank_for_capture_and_restore(void) {
+    const uint8_t supervisor[] = {0x70u, 0x20u, 0x2eu, 0x40u};
+    const uint8_t user[] = {0x46u, 0xfcu, 0x00u, 0x00u, 0x70u, 0x20u, 0x2eu, 0x40u};
+    const uint8_t switch_back[] = {0x70u, 0x20u, 0x2eu, 0x40u, 0x46u, 0xfcu, 0x00u, 0x00u};
+    state_machine machine;
+    owned_cpu_state state;
+
+    a7_program_state(supervisor, sizeof(supervisor), 2u, &machine, &state);
+    TEST_ASSERT_EQUAL_HEX32(0x20u, state.address_registers[7]);
+    TEST_ASSERT_EQUAL_HEX32(0x20u, state.ssp);
+    a7_state_restores_into_fresh_owner(&machine, &state);
+    machine_destroy(&machine);
+
+    a7_program_state(user, sizeof(user), 3u, &machine, &state);
+    TEST_ASSERT_EQUAL_HEX32(0x20u, state.address_registers[7]);
+    TEST_ASSERT_EQUAL_HEX32(0x20u, state.usp);
+    TEST_ASSERT_EQUAL_HEX32(0x3000u, state.ssp);
+    a7_state_restores_into_fresh_owner(&machine, &state);
+    machine_destroy(&machine);
+
+    a7_program_state(switch_back, sizeof(switch_back), 3u, &machine, &state);
+    TEST_ASSERT_EQUAL_HEX32(0x20u, state.ssp);
+    TEST_ASSERT_EQUAL_HEX32(0u, state.usp);
+    TEST_ASSERT_EQUAL_HEX32(0u, state.address_registers[7]);
+    a7_state_restores_into_fresh_owner(&machine, &state);
+    machine_destroy(&machine);
+}
+
 static void pending_irq_omission_control(void) {
     continue_scenario(CASE_PENDING_IRQ7, OMIT_IRQ7_PENDING);
 }
@@ -768,6 +819,7 @@ int main(int argc, char **argv) {
         RUN_TEST(instruction_counter_mismatch_rejects_atomically);
         RUN_TEST(reentrant_capture_and_restore_reject_while_active);
         RUN_TEST(terminal_instance_rejects_restore_without_bus_activity);
+        RUN_TEST(movea_to_a7_keeps_active_bank_for_capture_and_restore);
     }
     int failures = UNITY_END();
     if (controlled != 0) puts("Unity denominator: expected=1 observed=1");

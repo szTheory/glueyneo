@@ -16,8 +16,15 @@ from typing import Callable
 
 
 FAILURE = re.compile(r"(?m)^SDK_MUTATION_FAILURE id=([A-Za-z0-9_.-]+)\b")
+STATE_RECIPE = re.compile(r"(?m)^SDK_STATE_RECIPE id=([A-Za-z0-9_.-]+)\b")
 MAX_INPUT_BYTES = 4096
+MAX_STATE_RECIPE_BYTES = 65536
+MAX_ORACLE_RUNS = 4096
 RUN_TIMEOUT_SECONDS = 10.0
+SANITIZER_MARKERS = (
+    "AddressSanitizer", "UndefinedBehaviorSanitizer", "ThreadSanitizer",
+    "runtime error:", "Sanitizer: ",
+)
 
 
 def failure_id(output: str) -> str | None:
@@ -47,7 +54,9 @@ def delta_delete(data: bytes, reproduces: Callable[[bytes], bool]) -> bytes:
     return current
 
 
-def run_oracle(command: list[str], data: bytes, expected_id: str) -> tuple[bool, str]:
+def run_oracle(command: list[str], data: bytes, expected_id: str,
+               expected_recipe: str | None = None,
+               timeout: float = RUN_TIMEOUT_SECONDS) -> tuple[bool, str]:
     with tempfile.TemporaryDirectory(prefix="glueyneo-minimize-") as directory:
         input_path = Path(directory) / "input.bin"
         input_path.write_bytes(data)
@@ -57,44 +66,94 @@ def run_oracle(command: list[str], data: bytes, expected_id: str) -> tuple[bool,
         try:
             completed = subprocess.run(
                 expanded, capture_output=True, text=True, errors="replace",
-                timeout=RUN_TIMEOUT_SECONDS, check=False,
+                timeout=timeout, check=False,
             )
         except (OSError, subprocess.TimeoutExpired) as error:
             return False, f"oracle could not reproduce input: {error}"
         output = completed.stdout + completed.stderr
-        return (completed.returncode == 1 and failure_id(output) == expected_id,
-                output)
+        clean_runtime = not any(marker in output for marker in SANITIZER_MARKERS)
+        recipe_matches = (expected_recipe is None or
+                          STATE_RECIPE.findall(output) == [expected_recipe])
+        return (completed.returncode == 1 and
+                failure_id(output) == expected_id and recipe_matches and
+                clean_runtime, output)
 
 
-def self_test() -> int:
+def self_test(state_mode: bool) -> int:
     expected = "sdk.synthetic.required-byte-pair"
+    recipe = "state.ym.invalid-magic"
     marker = b"\xde\xad"
     original = b"prefix\x00noise\xde\xadmore-noise\xff"
-
-    def oracle(candidate: bytes) -> str:
-        if marker in candidate:
-            return f"SDK_MUTATION_FAILURE id={expected} seed=1 iteration=0\n"
-        return "PASS: synthetic input does not contain the two-byte trigger\n"
+    script = (
+        "import os,pathlib,sys,time\n"
+        "mode,path=sys.argv[1:3]; data=pathlib.Path(path).read_bytes()\n"
+        "if mode=='timeout': time.sleep(0.2); sys.exit(0)\n"
+        "if mode=='crash': print('synthetic crash control'); sys.exit(139)\n"
+        "if mode=='sanitizer':\n"
+        f" print('SDK_MUTATION_FAILURE id={expected} seed=1 iteration=0')\n"
+        f" print('SDK_STATE_RECIPE id={recipe}')\n"
+        " print('ERROR: AddressSanitizer: synthetic fault'); sys.exit(1)\n"
+        "if mode=='unrelated':\n"
+        " print('SDK_MUTATION_FAILURE id=sdk.synthetic.other-failure')\n"
+        " print('SDK_STATE_RECIPE id=state.ym.invalid-magic'); sys.exit(1)\n"
+        "if mode=='subject' and bytes.fromhex('dead') in data:\n"
+        f" print('SDK_MUTATION_FAILURE id={expected} seed=1 iteration=0')\n"
+        f" print('SDK_STATE_RECIPE id={recipe}'); sys.exit(1)\n"
+        "print('PASS: clean synthetic subject')\n"
+    )
+    command = [sys.executable, "-c", script, "subject", "{input}"]
 
     def reproduces(candidate: bytes) -> bool:
-        return failure_id(oracle(candidate)) == expected
+        return run_oracle(command, candidate, expected,
+                          recipe if state_mode else None)[0]
 
     reduced = delta_delete(original, reproduces)
-    observed_id = failure_id(oracle(reduced))
-    if reduced != marker or observed_id != expected:
+    replayed, output = run_oracle(command, reduced, expected,
+                                  recipe if state_mode else None)
+    observed_id = failure_id(output)
+    observed_recipe = STATE_RECIPE.findall(output)
+    if (not replayed or reduced != marker or observed_id != expected or
+            (state_mode and observed_recipe != [recipe])):
         print("FAIL: minimizer self-test lost or changed its exact failure ID",
               file=sys.stderr)
         return 1
     print(f"PASS: minimizer self-test preserved={observed_id} "
+          f"recipe={observed_recipe[0] if state_mode else 'not-required'} "
           f"original_bytes={len(original)} minimized_bytes={len(reduced)}")
+    clean = [sys.executable, "-c", script, "clean", "{input}"]
+    unrelated = [sys.executable, "-c", script, "unrelated", "{input}"]
+    crashing = [sys.executable, "-c", script, "crash", "{input}"]
+    sanitizing = [sys.executable, "-c", script, "sanitizer", "{input}"]
+    timing_out = [sys.executable, "-c", script, "timeout", "{input}"]
+    if run_oracle(clean, original, expected,
+                  recipe if state_mode else None)[0]:
+        print("FAIL: minimizer accepted a known-clean control", file=sys.stderr)
+        return 1
+    if run_oracle(unrelated, original, expected, recipe)[0]:
+        print("FAIL: minimizer accepted an unrelated named failure", file=sys.stderr)
+        return 1
+    if run_oracle(crashing, original, expected, recipe)[0]:
+        print("FAIL: minimizer accepted a crashing subject", file=sys.stderr)
+        return 1
+    if run_oracle(sanitizing, original, expected, recipe)[0]:
+        print("FAIL: minimizer accepted a sanitizer failure", file=sys.stderr)
+        return 1
+    if run_oracle(timing_out, original, expected, recipe, timeout=0.01)[0]:
+        print("FAIL: minimizer accepted a timed-out subject", file=sys.stderr)
+        return 1
+    print("PASS: clean, unrelated, crash, sanitizer, timeout and exact-recipe "
+          "controls rejected")
     return 0
 
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("--self-test", action="store_true")
+    result.add_argument("--state", action="store_true",
+                        help="require an exact public state recipe marker")
     result.add_argument("--input", type=Path)
     result.add_argument("--failure-id")
+    result.add_argument("--recipe-id")
     result.add_argument("--output", type=Path)
     result.add_argument("--seed", default="unrecorded")
     result.add_argument("command", nargs=argparse.REMAINDER)
@@ -104,7 +163,7 @@ def parser() -> argparse.ArgumentParser:
 def main(argv: list[str]) -> int:
     arguments = parser().parse_args(argv)
     if arguments.self_test:
-        return self_test()
+        return self_test(arguments.state)
     if (arguments.input is None or arguments.failure_id is None or
             arguments.output is None or not arguments.command):
         print("FAIL: require --input, --failure-id, --output, and an oracle command",
@@ -121,22 +180,48 @@ def main(argv: list[str]) -> int:
     except OSError as error:
         print(f"FAIL: cannot read original input: {error}", file=sys.stderr)
         return 2
-    if len(original) > MAX_INPUT_BYTES:
-        print(f"FAIL: input exceeds {MAX_INPUT_BYTES}-byte cap", file=sys.stderr)
+    input_limit = (MAX_STATE_RECIPE_BYTES if arguments.state
+                   else MAX_INPUT_BYTES)
+    if len(original) > input_limit:
+        print(f"FAIL: input exceeds {input_limit}-byte cap", file=sys.stderr)
         return 2
-    reproduced, original_output = run_oracle(command, original, arguments.failure_id)
+    if arguments.state and not arguments.recipe_id:
+        print("FAIL: --state requires --recipe-id", file=sys.stderr)
+        return 2
+    expected_recipe = arguments.recipe_id if arguments.state else None
+    reproduced, original_output = run_oracle(
+        command, original, arguments.failure_id, expected_recipe)
     if not reproduced:
         print("FAIL: original input did not reproduce the exact named failure",
               file=sys.stderr)
         print(original_output, file=sys.stderr)
         return 1
 
+    oracle_runs = 1
+    exhausted_budget = False
+    last_output = original_output
+
     def preserves(candidate: bytes) -> bool:
-        accepted, _ = run_oracle(command, candidate, arguments.failure_id)
+        nonlocal oracle_runs, exhausted_budget, last_output
+        if oracle_runs >= MAX_ORACLE_RUNS:
+            exhausted_budget = True
+            return False
+        oracle_runs += 1
+        accepted, last_output = run_oracle(
+            command, candidate, arguments.failure_id, expected_recipe)
         return accepted
 
     minimized = delta_delete(original, preserves)
-    if not preserves(minimized):
+    if exhausted_budget:
+        print(f"FAIL: minimizer exceeded {MAX_ORACLE_RUNS} oracle runs",
+              file=sys.stderr)
+        return 1
+    final_preserved = preserves(minimized)
+    if exhausted_budget:
+        print(f"FAIL: minimizer exceeded {MAX_ORACLE_RUNS} oracle runs",
+              file=sys.stderr)
+        return 1
+    if not final_preserved:
         print("FAIL: minimized input changed or lost the failure ID", file=sys.stderr)
         return 1
     original_path = arguments.output.with_name(arguments.output.name + ".original")
@@ -147,15 +232,19 @@ def main(argv: list[str]) -> int:
     metadata = {
         "schema_version": 1,
         "failure_id": arguments.failure_id,
+        "state_recipe_id": expected_recipe,
+        "state_mode": arguments.state,
         "seed": arguments.seed,
         "command": command,
-        "input_limit_bytes": MAX_INPUT_BYTES,
+        "input_limit_bytes": input_limit,
+        "oracle_run_limit": MAX_ORACLE_RUNS,
+        "oracle_runs": oracle_runs,
         "original_bytes": len(original),
         "minimized_bytes": len(minimized),
         "original_sha256": hashlib.sha256(original).hexdigest(),
         "minimized_sha256": hashlib.sha256(minimized).hexdigest(),
-        "replayed_failure_id": failure_id(run_oracle(command, minimized,
-                                                       arguments.failure_id)[1]),
+        "replayed_failure_id": failure_id(last_output),
+        "replayed_state_recipe_id": STATE_RECIPE.findall(last_output),
     }
     metadata_path.write_text(json.dumps(metadata, indent=2) + "\n",
                              encoding="utf-8")

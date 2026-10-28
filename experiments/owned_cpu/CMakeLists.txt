@@ -130,6 +130,31 @@ add_test(NAME owned_cpu_semantics COMMAND owned_cpu_semantics)
 set_tests_properties(owned_cpu_semantics PROPERTIES
   LABELS "owned-cpu;owned-diagnostic"
   TIMEOUT 30)
+add_test(NAME owned_cpu_neg_long_displacement
+  COMMAND owned_cpu_semantics --test neg_long_displacement_a6_uses_24_cycles)
+set_tests_properties(owned_cpu_neg_long_displacement PROPERTIES
+  LABELS "owned-cpu;owned-diagnostic"
+  TIMEOUT 30)
+add_test(NAME owned_cpu_neg_memory_matrix
+  COMMAND owned_cpu_semantics --test neg_memory_byte_word_long_covers_all_data_alterable_eas)
+set_tests_properties(owned_cpu_neg_memory_matrix PROPERTIES
+  LABELS "owned-cpu;owned-diagnostic"
+  TIMEOUT 30)
+add_test(NAME owned_cpu_neg_memory_neighbors
+  COMMAND owned_cpu_semantics --test neg_memory_invalid_size_and_eas_stay_unsupported)
+set_tests_properties(owned_cpu_neg_memory_neighbors PROPERTIES
+  LABELS "owned-cpu;owned-diagnostic"
+  TIMEOUT 30)
+add_test(NAME owned_cpu_neg_word_alignment
+  COMMAND owned_cpu_semantics --test neg_word_address_indirect_odd_address_enters_vector_three)
+set_tests_properties(owned_cpu_neg_word_alignment PROPERTIES
+  LABELS "owned-cpu;owned-diagnostic"
+  TIMEOUT 30)
+add_test(NAME owned_cpu_neg_memory_fault_boundaries
+  COMMAND owned_cpu_semantics --test neg_memory_faults_and_counter_preflight_keep_boundaries)
+set_tests_properties(owned_cpu_neg_memory_fault_boundaries PROPERTIES
+  LABELS "owned-cpu;owned-diagnostic"
+  TIMEOUT 30)
 set_tests_properties(owned_cpu_negative PROPERTIES
   LABELS "owned-cpu;owned-diagnostic-control"
   TIMEOUT 30)

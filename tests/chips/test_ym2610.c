@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "unity.h"
@@ -69,6 +70,26 @@ static void program_ssg_tone(ym2610_candidate *candidate) {
     write_register(candidate, 8u, 0x0fu);
 }
 
+/* Yamaha YM2610 Application Manual (1995-01-20), FM register table: channel 1
+ * key-on is register 0x28, F-NUM/block uses 0xA0/0xA4, operator levels use
+ * 0x40-series, and 0xB4 controls L/R. This is an original register-path
+ * expectation for the pinned software candidate, not a hardware waveform. */
+static void program_fm_channel(ym2610_candidate *candidate, uint8_t channel) {
+    for (uint8_t offset = 0u; offset < 16u; offset += 4u) {
+        write_register(candidate, (uint8_t)(0x30u + offset + channel), 1u);
+        write_register(candidate, (uint8_t)(0x40u + offset + channel), 0u);
+        write_register(candidate, (uint8_t)(0x50u + offset + channel), 0x1fu);
+        write_register(candidate, (uint8_t)(0x60u + offset + channel), 0u);
+        write_register(candidate, (uint8_t)(0x70u + offset + channel), 0u);
+        write_register(candidate, (uint8_t)(0x80u + offset + channel), 0x0fu);
+    }
+    write_register(candidate, (uint8_t)(0xa0u + channel), 0x80u);
+    write_register(candidate, (uint8_t)(0xa4u + channel), 0x22u);
+    write_register(candidate, (uint8_t)(0xb0u + channel), 0x07u);
+    write_register(candidate, (uint8_t)(0xb4u + channel), 0xc0u);
+    write_register(candidate, 0x28u, (uint8_t)(0xf0u | channel));
+}
+
 static int run_trace(ym2610_candidate *candidate, uint32_t total_clocks,
                      int32_t *samples, size_t *frame_count) {
     size_t produced = 0u;
@@ -131,6 +152,103 @@ static void identical_clock_and_register_traces_match_non_silent_samples(void) {
            frames_a, nonzero, (unsigned long long)fingerprint);
     ym2610_candidate_destroy(a);
     ym2610_candidate_destroy(b);
+}
+
+static void bounded_diagnostics_are_per_instance_and_do_not_reset_chip_state(void) {
+    test_callbacks userdata[2] = {{0}, {0}};
+    ym2610_candidate *instances[2] = {NULL, NULL};
+    int32_t warm[2][TEST_SAMPLES * 3] = {{0}};
+    int32_t continued[2][TEST_SAMPLES * 3] = {{0}};
+    size_t warm_frames[2] = {0u, 0u};
+    size_t continued_frames[2] = {0u, 0u};
+    ym2610_candidate_observation observed[2];
+    for (size_t owner = 0u; owner < 2u; ++owner) {
+        TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+            ym2610_candidate_create(&CALLBACKS, &userdata[owner], &instances[owner]));
+        program_ssg_tone(instances[owner]);
+        TEST_ASSERT_TRUE(run_trace(instances[owner], 512u, warm[owner],
+                                   &warm_frames[owner]));
+        TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+            ym2610_candidate_observe(instances[owner], &observed[owner]));
+        TEST_ASSERT_EQUAL_UINT(512u, observed[owner].clocks);
+        TEST_ASSERT_EQUAL_UINT(4u, observed[owner].ssg_register_writes);
+        TEST_ASSERT_EQUAL_UINT(1u, observed[owner].ssg_volume_writes);
+        TEST_ASSERT_EQUAL_UINT(32u, observed[owner].native_frames);
+        TEST_ASSERT_TRUE(observed[owner].native_ssg_nonzero_frames > 0u);
+        TEST_ASSERT_EQUAL_UINT(4u, observed[owner].event_count);
+    }
+
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+        ym2610_candidate_diagnostics_clear(instances[0]));
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+        ym2610_candidate_observe(instances[0], &observed[0]));
+    TEST_ASSERT_EQUAL_UINT(0u, observed[0].clocks);
+    TEST_ASSERT_EQUAL_UINT(0u, observed[0].register_writes);
+    TEST_ASSERT_EQUAL_UINT(0u, observed[0].event_count);
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+        ym2610_candidate_observe(instances[1], &observed[1]));
+    TEST_ASSERT_EQUAL_UINT(512u, observed[1].clocks);
+    TEST_ASSERT_EQUAL_UINT(4u, observed[1].ssg_register_writes);
+
+    for (size_t owner = 0u; owner < 2u; ++owner) {
+        TEST_ASSERT_TRUE(run_trace(instances[owner], 512u, continued[owner],
+                                   &continued_frames[owner]));
+    }
+    TEST_ASSERT_EQUAL_UINT(continued_frames[0], continued_frames[1]);
+    TEST_ASSERT_EQUAL_MEMORY(continued[0], continued[1],
+        continued_frames[0] * 3u * sizeof(continued[0][0]));
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+        ym2610_candidate_observe(instances[0], &observed[0]));
+    TEST_ASSERT_EQUAL_UINT(512u, observed[0].clocks);
+    TEST_ASSERT_EQUAL_UINT(32u, observed[0].native_frames);
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+        ym2610_candidate_observe(instances[1], &observed[1]));
+    TEST_ASSERT_EQUAL_UINT(1024u, observed[1].clocks);
+    TEST_ASSERT_EQUAL_UINT(64u, observed[1].native_frames);
+    for (size_t owner = 0u; owner < 2u; ++owner)
+        ym2610_candidate_destroy(instances[owner]);
+}
+
+static void fm_key_frequency_and_stereo_registers_reach_native_output(void) {
+    test_callbacks userdata = {0};
+    ym2610_candidate *candidate = NULL;
+    int32_t samples[TEST_SAMPLES * 3] = {0};
+    size_t frames = 0u;
+    ym2610_candidate_observation observed;
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+        ym2610_candidate_create(&CALLBACKS, &userdata, &candidate));
+    program_fm_channel(candidate, 1u);
+    TEST_ASSERT_TRUE(run_trace(candidate, 4096u, samples, &frames));
+    TEST_ASSERT_EQUAL_UINT(256u, frames);
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+        ym2610_candidate_observe(candidate, &observed));
+    TEST_ASSERT_TRUE(observed.fm_register_writes > 0u);
+    TEST_ASSERT_EQUAL_UINT(1u, observed.control_register_writes);
+    TEST_ASSERT_EQUAL_UINT(1u, observed.fm_key_on_writes);
+    TEST_ASSERT_TRUE(observed.fm_frequency_writes >= 2u);
+    TEST_ASSERT_TRUE(observed.fm_level_writes >= 4u);
+    TEST_ASSERT_EQUAL_UINT(1u, observed.fm_pan_writes);
+    TEST_ASSERT_TRUE(observed.native_stereo_nonzero_frames > 0u);
+    TEST_ASSERT_TRUE(observed.native_peak > 0u);
+    ym2610_candidate_destroy(candidate);
+}
+
+static void diagnostic_event_storage_is_bounded_with_saturating_drop_count(void) {
+    test_callbacks userdata = {0};
+    ym2610_candidate *candidate = NULL;
+    ym2610_candidate_observation observed;
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+        ym2610_candidate_create(&CALLBACKS, &userdata, &candidate));
+    for (uint32_t index = 0u; index < 40u; ++index)
+        write_register(candidate, 8u, (uint8_t)(index & 0x0fu));
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+        ym2610_candidate_observe(candidate, &observed));
+    TEST_ASSERT_EQUAL_UINT(40u, observed.register_writes);
+    TEST_ASSERT_EQUAL_UINT(40u, observed.ssg_register_writes);
+    TEST_ASSERT_EQUAL_UINT(YM2610_CANDIDATE_DIAGNOSTIC_EVENT_CAPACITY,
+                           observed.event_count);
+    TEST_ASSERT_EQUAL_UINT(8u, observed.event_dropped);
+    ym2610_candidate_destroy(candidate);
 }
 
 static void independent_interleaved_instances_match_isolated_baselines(void) {
@@ -205,6 +323,8 @@ static void callback_failure_latches_until_reset_and_exceptions_are_contained(vo
     ym2610_candidate *candidate = NULL;
     int32_t samples[3] = {0};
     size_t produced = 0u;
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_NO_MEMORY,
+        ym2610_candidate_test_create_oom());
     TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
         ym2610_candidate_create(&CALLBACKS, &userdata, &candidate));
     userdata.candidate = candidate;
@@ -253,6 +373,23 @@ static void capacities_and_clock_limits_fail_before_mutation(void) {
         ym2610_candidate_create(&CALLBACKS, &userdata_b, &b));
     program_ssg_tone(a);
     program_ssg_tone(b);
+    uint8_t value = 0xa5u;
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_INVALID_ARGUMENT,
+        ym2610_candidate_read(NULL, 0u, &value));
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_INVALID_ARGUMENT,
+        ym2610_candidate_read(a, 4u, &value));
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_INVALID_ARGUMENT,
+        ym2610_candidate_read(a, 0u, NULL));
+    TEST_ASSERT_EQUAL_UINT8(0xa5u, value);
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+        ym2610_candidate_read(a, 1u, &value));
+    TEST_ASSERT_EQUAL_UINT8(0x0fu, value);
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+        ym2610_candidate_read(a, 2u, &value));
+    TEST_ASSERT_EQUAL_UINT8(0u, value);
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+        ym2610_candidate_read(a, 3u, &value));
+    TEST_ASSERT_EQUAL_UINT8(0u, value);
     TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_CAPACITY,
         ym2610_candidate_clock(a, 16u, samples_a, 0u, &produced_a));
     TEST_ASSERT_EQUAL_UINT(0u, produced_a);
@@ -273,6 +410,56 @@ static void capacities_and_clock_limits_fail_before_mutation(void) {
     ym2610_candidate_destroy(b);
 }
 
+static void state_validation_bypass_hook_is_active_and_single_use(void) {
+    test_callbacks userdata = {0};
+    ym2610_candidate *candidate = NULL;
+    ym2610_candidate *staged = NULL;
+    ym2610_candidate_state_detail detail;
+    size_t length = 0u;
+    size_t written = 0u;
+    size_t allocation_points = 0u;
+    int64_t lifetime_balance = 0;
+    uint8_t *bytes = NULL;
+
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+        ym2610_candidate_create(&CALLBACKS, &userdata, &candidate));
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+        ym2610_candidate_state_size(candidate, &length));
+    TEST_ASSERT_TRUE(length > 0u);
+    bytes = malloc(length);
+    TEST_ASSERT_NOT_NULL(bytes);
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+        ym2610_candidate_state_capture(candidate, bytes, length, &written));
+    TEST_ASSERT_EQUAL_UINT(length, written);
+    bytes[0] ^= 1u;
+
+    ym2610_candidate_test_bypass_next_state_validation();
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_OK,
+        ym2610_candidate_state_stage(bytes, length, &staged, &detail));
+    TEST_ASSERT_NOT_NULL(staged);
+    ym2610_candidate_destroy(staged);
+    staged = NULL;
+
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_INVALID_ARGUMENT,
+        ym2610_candidate_state_stage(bytes, length, &staged, &detail));
+    TEST_ASSERT_NULL(staged);
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_STATE_REASON_MAGIC, detail.reason);
+
+    ym2610_candidate_test_bypass_next_state_validation();
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_NO_MEMORY,
+        ym2610_candidate_test_state_stage_failpoint(bytes, length, 0u,
+                                                     &allocation_points,
+                                                     &lifetime_balance));
+    TEST_ASSERT_TRUE(allocation_points > 0u);
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_INVALID_ARGUMENT,
+        ym2610_candidate_state_stage(bytes, length, &staged, &detail));
+    TEST_ASSERT_NULL(staged);
+    TEST_ASSERT_EQUAL_INT(YM2610_CANDIDATE_STATE_REASON_MAGIC, detail.reason);
+
+    free(bytes);
+    ym2610_candidate_destroy(candidate);
+}
+
 static int run_red_create(void) {
     test_callbacks userdata = {0};
     ym2610_candidate *candidate = NULL;
@@ -291,9 +478,13 @@ int main(int argc, char **argv) {
     if (argc != 1) return 2;
     UNITY_BEGIN();
     RUN_TEST(identical_clock_and_register_traces_match_non_silent_samples);
+    RUN_TEST(bounded_diagnostics_are_per_instance_and_do_not_reset_chip_state);
+    RUN_TEST(fm_key_frequency_and_stereo_registers_reach_native_output);
+    RUN_TEST(diagnostic_event_storage_is_bounded_with_saturating_drop_count);
     RUN_TEST(independent_interleaved_instances_match_isolated_baselines);
     RUN_TEST(reset_and_chunked_continuation_reproduce_baseline);
     RUN_TEST(callback_failure_latches_until_reset_and_exceptions_are_contained);
     RUN_TEST(capacities_and_clock_limits_fail_before_mutation);
+    RUN_TEST(state_validation_bypass_hook_is_active_and_single_use);
     return UNITY_END();
 }

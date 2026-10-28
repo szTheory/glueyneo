@@ -9,6 +9,14 @@
 include closure. Its implementation uses only the C standard headers `<stdint.h>`,
 `<stdbool.h>`, `<string.h>`, and `<assert.h>`.
 
+The vendored z80.h is unchanged; the upstream identity above covers only
+`third_party/chips/z80.h`.
+Glueyneo's private codec and adapter are local code in
+`src/chips/z80_candidate.c` and `src/chips/z80_candidate.h`; the canonical state
+schema, source-derived validation, and evidence are recorded in
+`docs/state-z80-inventory.md`. No local modification was made to the vendored
+file.
+
 ## Upstream license
 
 ```text

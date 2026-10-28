@@ -256,7 +256,8 @@ def validate_release(
 def validate_downloaded_assets(directory: Path, manifest_path: Path) -> dict[str, Any]:
     """Verify exact downloaded release bytes against a trusted staged manifest."""
     manifest = load_json(manifest_path)
-    if (not isinstance(manifest, dict) or manifest.get("schema_version") != 1
+    if (not isinstance(manifest, dict) or type(manifest.get("schema_version")) is not int
+            or manifest.get("schema_version") != 1
             or not isinstance(manifest.get("version"), str)
             or not isinstance(manifest.get("source_commit"), str)
             or not COMMIT_RE.fullmatch(manifest["source_commit"])
@@ -317,7 +318,8 @@ def validate_downloaded_assets(directory: Path, manifest_path: Path) -> dict[str
 def expected_api_assets(manifest_path: Path) -> dict[str, dict[str, Any]]:
     """Build the exact API asset allowlist, including the manifest's own bytes."""
     manifest = load_json(manifest_path)
-    if (not isinstance(manifest, dict) or manifest.get("schema_version") != 1
+    if (not isinstance(manifest, dict) or type(manifest.get("schema_version")) is not int
+            or manifest.get("schema_version") != 1
             or not isinstance(manifest.get("version"), str)
             or not isinstance(manifest.get("source_commit"), str)
             or not COMMIT_RE.fullmatch(manifest["source_commit"])):

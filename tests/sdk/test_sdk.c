@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 #include "glueyneo/glueyneo.h"
+#include "chips/ym2610_candidate.h"
 #include "guest_fixture.h"
 #include "sdk_private.h"
 #include "test_support.h"
@@ -8,6 +9,7 @@
 #include <stdatomic.h>
 #endif
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #ifndef GLUEYNEO_SOURCE_REVISION
@@ -24,10 +26,179 @@
 #endif
 
 static gn_instance *instance;
+static gn_instance *state_peer;
+static gn_instance *state_witness;
 static const char *selected_suite;
 static uint64_t sdk_failpoint_positions;
 static uint64_t sdk_failpoint_failures;
 static uint64_t sdk_failpoint_success_boundaries;
+static char sdk_sound_fixture_path[4096];
+
+enum {
+    SDK_SOUND_HEADER_BYTES = 16u,
+    SDK_SOUND_REGION_COUNT = 8u,
+    SDK_SOUND_DESCRIPTOR_BYTES = 12u,
+    SDK_SOUND_WIDTH = 320u,
+    SDK_SOUND_HEIGHT = 224u,
+    SDK_SOUND_FRAMES = 6u
+};
+
+typedef struct {
+    uint8_t *bytes;
+    size_t size;
+    size_t offsets[SDK_SOUND_REGION_COUNT];
+    size_t lengths[SDK_SOUND_REGION_COUNT];
+} sdk_sound_bundle;
+
+static uint32_t sdk_sound_read_u32_be(const uint8_t *bytes) {
+    return ((uint32_t)bytes[0] << 24) | ((uint32_t)bytes[1] << 16) |
+           ((uint32_t)bytes[2] << 8) | (uint32_t)bytes[3];
+}
+
+static void sdk_sound_set_fixture_path(const char *executable) {
+    const char *slash = strrchr(executable, '/');
+    size_t directory_bytes = slash == NULL ? 0u : (size_t)(slash - executable);
+    const char *suffix = "public-sound-mvs.bin";
+    if (directory_bytes + (directory_bytes != 0u ? 1u : 0u) +
+            strlen(suffix) + 1u > sizeof(sdk_sound_fixture_path)) return;
+    if (directory_bytes != 0u) {
+        memcpy(sdk_sound_fixture_path, executable, directory_bytes);
+        sdk_sound_fixture_path[directory_bytes++] = '/';
+    }
+    memcpy(sdk_sound_fixture_path + directory_bytes, suffix, strlen(suffix) + 1u);
+}
+
+static int sdk_sound_bundle_read(sdk_sound_bundle *bundle) {
+    memset(bundle, 0, sizeof(*bundle));
+    if (sdk_sound_fixture_path[0] == '\0') return 0;
+    FILE *file = fopen(sdk_sound_fixture_path, "rb");
+    if (file == NULL) return 0;
+    if (fseek(file, 0L, SEEK_END) != 0) {
+        (void)fclose(file);
+        return 0;
+    }
+    const long measured = ftell(file);
+    if (measured < (long)(SDK_SOUND_HEADER_BYTES +
+                          SDK_SOUND_REGION_COUNT * SDK_SOUND_DESCRIPTOR_BYTES) ||
+        (uint64_t)measured > GN_MVS_MAX_MEDIA_BYTES +
+            SDK_SOUND_HEADER_BYTES +
+            SDK_SOUND_REGION_COUNT * SDK_SOUND_DESCRIPTOR_BYTES ||
+        fseek(file, 0L, SEEK_SET) != 0) {
+        (void)fclose(file);
+        return 0;
+    }
+    bundle->size = (size_t)measured;
+    bundle->bytes = (uint8_t *)malloc(bundle->size);
+    if (bundle->bytes == NULL) {
+        (void)fclose(file);
+        return 0;
+    }
+    const size_t count = fread(bundle->bytes, 1u, bundle->size, file);
+    const int extra = fgetc(file);
+    const int close_status = fclose(file);
+    if (count != bundle->size || extra != EOF || close_status != 0 ||
+        memcmp(bundle->bytes, "GNMV", 4u) != 0 ||
+        sdk_sound_read_u32_be(bundle->bytes + 4u) !=
+            GN_MVS_MANIFEST_VERSION_ZOOM ||
+        sdk_sound_read_u32_be(bundle->bytes + 8u) != GN_MVS_PROFILE_MSX ||
+        sdk_sound_read_u32_be(bundle->bytes + 12u) != SDK_SOUND_REGION_COUNT) {
+        free(bundle->bytes);
+        memset(bundle, 0, sizeof(*bundle));
+        return 0;
+    }
+    size_t cursor = SDK_SOUND_HEADER_BYTES;
+    for (size_t index = 0u; index < SDK_SOUND_REGION_COUNT; ++index) {
+        if (cursor > bundle->size ||
+            bundle->size - cursor < SDK_SOUND_DESCRIPTOR_BYTES) goto invalid;
+        const uint32_t role = sdk_sound_read_u32_be(bundle->bytes + cursor);
+        const uint32_t high = sdk_sound_read_u32_be(bundle->bytes + cursor + 4u);
+        const uint32_t low = sdk_sound_read_u32_be(bundle->bytes + cursor + 8u);
+        cursor += SDK_SOUND_DESCRIPTOR_BYTES;
+        if (role != index + 1u || high != 0u || low == 0u ||
+            (size_t)low > bundle->size - cursor) goto invalid;
+        bundle->offsets[index] = cursor;
+        bundle->lengths[index] = (size_t)low;
+        cursor += (size_t)low;
+    }
+    if (cursor != bundle->size) goto invalid;
+    return 1;
+invalid:
+    free(bundle->bytes);
+    memset(bundle, 0, sizeof(*bundle));
+    return 0;
+}
+
+static int sdk_sound_patch_sequence(uint8_t *region, size_t size,
+                                    const uint8_t *from, size_t from_size,
+                                    const uint8_t *to, size_t to_size,
+                                    size_t *out_changes) {
+    if (from_size != to_size || from_size == 0u) return 0;
+    size_t changes = 0u;
+    for (size_t index = 0u; index + from_size <= size; ++index) {
+        if (memcmp(region + index, from, from_size) == 0) {
+            memcpy(region + index, to, to_size);
+            ++changes;
+            index += from_size - 1u;
+        }
+    }
+    if (out_changes != NULL) *out_changes = changes;
+    return 1;
+}
+
+static int sdk_sound_make_variant(sdk_sound_bundle *bundle) {
+    uint8_t *const bios = bundle->bytes + bundle->offsets[0];
+    uint8_t *const audio_bios = bundle->bytes + bundle->offsets[6];
+    uint8_t *const samples = bundle->bytes + bundle->offsets[4];
+    static const uint8_t music_set[] = {
+        0x13u, 0xfcu, 0x00u, 0x3cu, 0x00u, 0x32u, 0x00u, 0x00u
+    };
+    static const uint8_t music_set_variant[] = {
+        0x13u, 0xfcu, 0x00u, 0x3du, 0x00u, 0x32u, 0x00u, 0x00u
+    };
+    static const uint8_t music_compare[] = {0x0cu, 0x00u, 0x00u, 0x3cu};
+    static const uint8_t music_compare_variant[] = {0x0cu, 0x00u, 0x00u, 0x3du};
+    static const uint8_t audio_compare[] = {0xfeu, 0x3cu};
+    static const uint8_t audio_compare_variant[] = {0xfeu, 0x3du};
+    static const uint8_t ssg_pitch[] = {
+        0x3eu, 0x00u, 0xd3u, 0x04u, 0x3eu, 0x7du, 0xd3u, 0x05u
+    };
+    static const uint8_t ssg_pitch_variant[] = {
+        0x3eu, 0x00u, 0xd3u, 0x04u, 0x3eu, 0x61u, 0xd3u, 0x05u
+    };
+    static const uint8_t adpcm_pan[] = {
+        0x3eu, 0x11u, 0xd3u, 0x04u, 0x3eu, 0xc0u, 0xd3u, 0x05u
+    };
+    static const uint8_t adpcm_pan_variant[] = {
+        0x3eu, 0x11u, 0xd3u, 0x04u, 0x3eu, 0x80u, 0xd3u, 0x05u
+    };
+    size_t set_changes = 0u, compare_changes = 0u, audio_changes = 0u;
+    size_t pitch_changes = 0u, pan_changes = 0u;
+    if (!sdk_sound_patch_sequence(bios, bundle->lengths[0], music_set,
+            sizeof(music_set), music_set_variant, sizeof(music_set_variant),
+            &set_changes) ||
+        !sdk_sound_patch_sequence(bios, bundle->lengths[0], music_compare,
+            sizeof(music_compare), music_compare_variant,
+            sizeof(music_compare_variant), &compare_changes) ||
+        !sdk_sound_patch_sequence(audio_bios, bundle->lengths[6], audio_compare,
+            sizeof(audio_compare), audio_compare_variant,
+            sizeof(audio_compare_variant), &audio_changes) ||
+        !sdk_sound_patch_sequence(audio_bios, bundle->lengths[6], ssg_pitch,
+            sizeof(ssg_pitch), ssg_pitch_variant, sizeof(ssg_pitch_variant),
+            &pitch_changes) ||
+        !sdk_sound_patch_sequence(audio_bios, bundle->lengths[6], adpcm_pan,
+            sizeof(adpcm_pan), adpcm_pan_variant, sizeof(adpcm_pan_variant),
+            &pan_changes)) return 0;
+    if (set_changes != 2u || compare_changes != 2u || audio_changes != 1u ||
+        pitch_changes != 2u || pan_changes != 1u || bundle->lengths[4] < 256u) {
+        (void)fprintf(stderr, "SDK_MVS_ISOLATION variant matches %zu/%zu/%zu/%zu/%zu\n",
+                      set_changes, compare_changes, audio_changes, pitch_changes,
+                      pan_changes);
+        return 0;
+    }
+    for (size_t index = 0u; index < 256u; ++index)
+        samples[index] = (uint8_t)((samples[index] << 4) | (samples[index] >> 4));
+    return 1;
+}
 
 static void make_manifest(gn_manifest *manifest, guest_fixture_image *fixture,
                           unsigned scenario) {
@@ -89,11 +260,14 @@ static gn_status load_scenario(gn_instance *target, unsigned scenario) {
 void setUp(void) {
     instance = NULL;
     if (strcmp(selected_suite, "cold") == 0 ||
-        strcmp(selected_suite, "isolation") == 0) {
+        strcmp(selected_suite, "isolation") == 0 ||
+        strcmp(selected_suite, "state-machine") == 0) {
         return;
     }
     SDK_CHECK_STATUS("sdk.instance.create", GN_STATUS_OK, gn_create(&instance));
     if (instance != NULL && (strcmp(selected_suite, "diagnostic") == 0 ||
+                             strcmp(selected_suite, "state-tracer") == 0 ||
+                             strcmp(selected_suite, "state-identity") == 0 ||
                              strcmp(selected_suite, "run") == 0 ||
                              strcmp(selected_suite, "controls") == 0 ||
                              suite_is_control())) {
@@ -110,15 +284,19 @@ void setUp(void) {
 void tearDown(void) {
     gn_destroy(instance);
     instance = NULL;
+    gn_destroy(state_peer);
+    state_peer = NULL;
+    gn_destroy(state_witness);
+    state_witness = NULL;
 }
 
 static void original_guest_computes_named_results(void) {
     SDK_CASE("sdk.diagnostic.original-a");
     gn_run_result run;
     memset(&run, 0xa5, sizeof(run));
-    SDK_CHECK_STATUS("sdk.run.status", GN_STATUS_OK, gn_run(instance, 196u, &run));
-    SDK_CHECK_U64("sdk.run.requested-cycles", 196u, run.requested_cycles);
-    SDK_CHECK_U64("sdk.run.elapsed-cycles", 196u, run.elapsed_cycles);
+    SDK_CHECK_STATUS("sdk.run.status", GN_STATUS_OK, gn_run(instance, 172u, &run));
+    SDK_CHECK_U64("sdk.run.requested-cycles", 172u, run.requested_cycles);
+    SDK_CHECK_U64("sdk.run.elapsed-cycles", 172u, run.elapsed_cycles);
     SDK_CHECK_U64("sdk.run.overshoot-cycles", 0u, run.overshoot_cycles);
     SDK_CHECK_U64("sdk.run.instructions", 12u, run.instructions);
     SDK_CHECK_STATUS("sdk.run.reason-stopped", GN_RUN_STOPPED, run.reason);
@@ -153,7 +331,7 @@ static void failed_replacement_and_reset_preserve_owned_media(void) {
     SDK_CHECK_U64("sdk.reset.bss-zero", 0u, before_run.bss_result);
 
     gn_run_result run;
-    SDK_CHECK_STATUS("sdk.run.after-reset", GN_STATUS_OK, gn_run(instance, 196u, &run));
+    SDK_CHECK_STATUS("sdk.run.after-reset", GN_STATUS_OK, gn_run(instance, 172u, &run));
     gn_observations after_run;
     SDK_CHECK_STATUS("sdk.observe.after-reset-run", GN_STATUS_OK,
                      gn_observe(instance, &after_run));
@@ -169,7 +347,7 @@ static void scenario_b_has_distinguishable_named_results(void) {
     SDK_CHECK_STATUS("sdk.media.load.original-b", GN_STATUS_OK,
                      load_scenario(instance, GUEST_FIXTURE_SCENARIO_B));
     gn_run_result run;
-    SDK_CHECK_STATUS("sdk.run.scenario-b", GN_STATUS_OK, gn_run(instance, 196u, &run));
+    SDK_CHECK_STATUS("sdk.run.scenario-b", GN_STATUS_OK, gn_run(instance, 172u, &run));
     gn_observations observations;
     SDK_CHECK_STATUS("sdk.observe.scenario-b", GN_STATUS_OK,
                      gn_observe(instance, &observations));
@@ -178,17 +356,17 @@ static void scenario_b_has_distinguishable_named_results(void) {
     SDK_CHECK_U64("sdk.scenario-b.initialized", 0x2348u,
                   observations.initialized_result);
     SDK_CHECK_U64("sdk.scenario-b.bss", 1u, observations.bss_result);
-    SDK_CHECK_U64("sdk.scenario-b.cycles", 196u, run.elapsed_cycles);
+    SDK_CHECK_U64("sdk.scenario-b.cycles", 172u, run.elapsed_cycles);
     SDK_CHECK_U64("sdk.scenario-b.instructions", 12u, run.instructions);
     SDK_CHECK_STATUS("sdk.scenario-b.stopped", GN_RUN_STOPPED, run.reason);
 }
 
 static void original_instruction_boundaries_match_manual_recipe(void) {
     static const uint64_t requests[] = {
-        64u, 4u, 8u, 20u, 4u, 16u, 8u, 20u, 4u, 16u, 8u, 20u, 4u
+        40u, 4u, 8u, 20u, 4u, 16u, 8u, 20u, 4u, 16u, 8u, 20u, 4u
     };
     static const uint64_t cumulative_cycles[] = {
-        64u, 68u, 76u, 96u, 100u, 116u, 124u, 144u, 148u, 164u, 172u, 192u, 196u
+        40u, 44u, 52u, 72u, 76u, 92u, 100u, 120u, 124u, 140u, 148u, 168u, 172u
     };
     static const uint32_t boundary_pcs[] = {
         0x100u, 0x102u, 0x104u, 0x10au, 0x10cu, 0x112u, 0x114u,
@@ -219,6 +397,1069 @@ static void original_instruction_boundaries_match_manual_recipe(void) {
     }
 }
 
+#if defined(GN_STATE_FORMAT_V1_VERSION)
+static int sdk_state_future_equal(gn_instance *left, gn_instance *right,
+                                  uint64_t budget) {
+    gn_run_result left_run;
+    gn_run_result right_run;
+    gn_observations left_observations;
+    gn_observations right_observations;
+    if (gn_run(left, budget, &left_run) != GN_STATUS_OK ||
+        gn_run(right, budget, &right_run) != GN_STATUS_OK ||
+        left_run.requested_cycles != right_run.requested_cycles ||
+        left_run.elapsed_cycles != right_run.elapsed_cycles ||
+        left_run.overshoot_cycles != right_run.overshoot_cycles ||
+        left_run.instructions != right_run.instructions ||
+        left_run.boundary_pc != right_run.boundary_pc ||
+        left_run.reason != right_run.reason ||
+        gn_observe(left, &left_observations) != GN_STATUS_OK ||
+        gn_observe(right, &right_observations) != GN_STATUS_OK) return 0;
+    return left_observations.arithmetic_result ==
+               right_observations.arithmetic_result &&
+           left_observations.initialized_result ==
+               right_observations.initialized_result &&
+           left_observations.bss_result == right_observations.bss_result &&
+           left_observations.ready == right_observations.ready;
+}
+#endif
+
+static void check_diagnostic_restore_resources(gn_instance *subject,
+                                              int complete) {
+    gn_test_state_resources r;
+    SDK_CHECK_STATUS("sdk.state-tracer.resources.read", GN_STATUS_OK,
+                     gn_test_state_resources_read(subject, &r));
+    SDK_CHECK_U64("sdk.state-tracer.resources.no-heap-staging", 0u,
+                  r.heap_staging_bytes);
+    SDK_CHECK_TRUE("sdk.state-tracer.resources.includes-ram-and-cpu-copies",
+                   r.stack_staging_bytes > 4096u);
+    SDK_CHECK_TRUE("sdk.state-tracer.resources.bounded-work",
+        r.byte_work <= r.byte_work_limit && r.phases <= r.phase_limit &&
+        r.repeated_phase == 0u);
+    if (complete) {
+        SDK_CHECK_U64("sdk.state-tracer.resources.full-byte-charge",
+                      r.byte_work_limit, r.byte_work);
+        SDK_CHECK_U64("sdk.state-tracer.resources.full-fixed-phases", 4u,
+                      r.phases);
+        (void)printf("SDK_STATE_DIAGNOSTIC_BOUND input_bytes=%zu "
+            "stack_staging_bytes=%zu byte_work_limit=%zu fixed_phases=%zu\n",
+            r.input_bytes, r.stack_staging_bytes, r.byte_work_limit, r.phases);
+    }
+}
+
+static void diagnostic_native_state_tracer_round_trips_real_continuation(void) {
+    SDK_CASE("sdk.state-tracer.diagnostic-continuation");
+#if !defined(GN_STATE_FORMAT_V1_VERSION)
+    SDK_CHECK_TRUE("sdk.state-tracer.public-api-available", 0);
+#else
+    size_t capacity = 0u;
+    SDK_CHECK_STATUS("sdk.state-tracer.capacity", GN_STATUS_OK,
+                     gn_state_capacity_v1(instance, &capacity));
+    SDK_CHECK_TRUE("sdk.state-tracer.capacity-nonzero", capacity > 1u);
+    SDK_CHECK_STATUS("sdk.state-tracer.create-peer", GN_STATUS_OK,
+                     gn_create(&state_peer));
+    SDK_CHECK_STATUS("sdk.state-tracer.load-peer", GN_STATUS_OK,
+                     load_scenario(state_peer, 0u));
+
+    uint8_t *exact = (uint8_t *)malloc(capacity);
+    uint8_t *repeat = (uint8_t *)malloc(capacity);
+    uint8_t *larger = (uint8_t *)malloc(capacity + 1u);
+    SDK_CHECK_TRUE("sdk.state-tracer.allocate-capture-buffers",
+                   exact != NULL && repeat != NULL && larger != NULL);
+    memset(exact, 0xa5, capacity);
+    memset(repeat, 0x3c, capacity);
+    memset(larger, 0x5a, capacity + 1u);
+
+    gn_observations before_capture;
+    gn_observations after_capture;
+    SDK_CHECK_STATUS("sdk.state-tracer.observe-before-capture", GN_STATUS_OK,
+                     gn_observe(instance, &before_capture));
+    size_t exact_written = SIZE_MAX;
+    size_t repeat_written = SIZE_MAX;
+    size_t larger_written = SIZE_MAX;
+    gn_state_detail_v1 detail;
+    memset(&detail, 0, sizeof(detail));
+    detail.size = (uint32_t)sizeof(detail);
+    SDK_CHECK_STATUS("sdk.state-tracer.capture-loaded", GN_STATUS_OK,
+                     gn_state_capture_v1(instance, exact, capacity,
+                                         &exact_written, &detail,
+                                         sizeof(detail)));
+    SDK_CHECK_STATUS("sdk.state-tracer.capture-repeat", GN_STATUS_OK,
+                     gn_state_capture_v1(instance, repeat, capacity,
+                                         &repeat_written, &detail,
+                                         sizeof(detail)));
+    SDK_CHECK_STATUS("sdk.state-tracer.capture-larger-buffer", GN_STATUS_OK,
+                     gn_state_capture_v1(instance, larger, capacity + 1u,
+                                         &larger_written, &detail,
+                                         sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-tracer.capture-length-exact", exact_written,
+                  repeat_written);
+    SDK_CHECK_U64("sdk.state-tracer.capture-length-larger", exact_written,
+                  larger_written);
+    SDK_CHECK_TRUE("sdk.state-tracer.capture-bytes-deterministic",
+                   exact_written <= capacity &&
+                       memcmp(exact, repeat, exact_written) == 0 &&
+                       memcmp(exact, larger, exact_written) == 0);
+    SDK_CHECK_U64("sdk.state-tracer.larger-buffer-tail-untouched", 0x5au,
+                  larger[capacity]);
+    SDK_CHECK_STATUS("sdk.state-tracer.observe-after-capture", GN_STATUS_OK,
+                     gn_observe(instance, &after_capture));
+    SDK_CHECK_U64("sdk.state-tracer.capture-no-execution-arithmetic",
+                  before_capture.arithmetic_result,
+                  after_capture.arithmetic_result);
+    SDK_CHECK_U64("sdk.state-tracer.capture-no-execution-initialized",
+                  before_capture.initialized_result,
+                  after_capture.initialized_result);
+    SDK_CHECK_U64("sdk.state-tracer.capture-no-execution-bss",
+                  before_capture.bss_result, after_capture.bss_result);
+
+    uint8_t *small = (uint8_t *)malloc(capacity);
+    SDK_CHECK_TRUE("sdk.state-tracer.allocate-small-buffer", small != NULL);
+    memset(small, 0xa5, capacity);
+    size_t failed_written = SIZE_MAX;
+    SDK_CHECK_STATUS("sdk.state-tracer.reject-capacity-minus-one",
+                     GN_STATUS_INVALID_ARGUMENT,
+                     gn_state_capture_v1(instance, small, capacity - 1u,
+                                         &failed_written, &detail,
+                                         sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-tracer.failed-capture-count-zero", 0u,
+                  failed_written);
+    SDK_CHECK_U64("sdk.state-tracer.capacity-error-reason",
+                  GN_STATE_REASON_INSUFFICIENT_CAPACITY, detail.reason);
+    int untouched = 1;
+    for (size_t index = 0u; index < capacity; ++index) {
+        if (small[index] != UINT8_C(0xa5)) untouched = 0;
+    }
+    SDK_CHECK_TRUE("sdk.state-tracer.capacity-reject-no-write", untouched);
+
+    uint8_t *transfer = (uint8_t *)malloc(exact_written);
+    SDK_CHECK_TRUE("sdk.state-tracer.allocate-transfer", transfer != NULL);
+    memcpy(transfer, exact, exact_written);
+    SDK_CHECK_STATUS("sdk.state-tracer.restore-fresh-peer", GN_STATUS_OK,
+                     gn_state_restore_v1(state_peer, transfer, exact_written,
+                                         &detail, sizeof(detail)));
+    check_diagnostic_restore_resources(state_peer, 1);
+    memset(transfer, 0x96, exact_written);
+    free(transfer);
+    transfer = NULL;
+    gn_run_result source_run;
+    gn_run_result peer_run;
+    SDK_CHECK_STATUS("sdk.state-tracer.run-source-after-load-capture",
+                     GN_STATUS_OK, gn_run(instance, 172u, &source_run));
+    SDK_CHECK_STATUS("sdk.state-tracer.run-peer-after-buffer-destroy",
+                     GN_STATUS_OK, gn_run(state_peer, 172u, &peer_run));
+    SDK_CHECK_U64("sdk.state-tracer.future-cycles-match",
+                  source_run.elapsed_cycles, peer_run.elapsed_cycles);
+    SDK_CHECK_U64("sdk.state-tracer.future-instructions-match",
+                  source_run.instructions, peer_run.instructions);
+    SDK_CHECK_U64("sdk.state-tracer.future-stop-match", source_run.reason,
+                  peer_run.reason);
+    SDK_CHECK_TRUE("sdk.state-tracer.future-observations-match",
+                   sdk_state_future_equal(instance, state_peer, 8u));
+
+    SDK_CHECK_STATUS("sdk.state-tracer.reset-capture-source", GN_STATUS_OK,
+                     gn_reset(instance));
+    size_t reset_written = 0u;
+    SDK_CHECK_STATUS("sdk.state-tracer.capture-after-reset", GN_STATUS_OK,
+                     gn_state_capture_v1(instance, exact, capacity,
+                                         &reset_written, &detail,
+                                         sizeof(detail)));
+    SDK_CHECK_STATUS("sdk.state-tracer.raw-budget", GN_STATUS_OK,
+                     gn_run(instance, 40u, &source_run));
+    SDK_CHECK_U64("sdk.state-tracer.raw-budget-reason", GN_RUN_BUDGET,
+                  source_run.reason);
+    size_t raw_written = 0u;
+    SDK_CHECK_STATUS("sdk.state-tracer.capture-after-raw-budget", GN_STATUS_OK,
+                     gn_state_capture_v1(instance, exact, capacity,
+                                         &raw_written, &detail,
+                                         sizeof(detail)));
+    SDK_CHECK_STATUS("sdk.state-tracer.restore-raw-budget", GN_STATUS_OK,
+                     gn_state_restore_v1(state_peer, exact, raw_written,
+                                         &detail, sizeof(detail)));
+    SDK_CHECK_TRUE("sdk.state-tracer.raw-budget-continuation-matches",
+                   sdk_state_future_equal(instance, state_peer, 132u));
+    size_t stop_written = 0u;
+    SDK_CHECK_STATUS("sdk.state-tracer.capture-after-normal-stop", GN_STATUS_OK,
+                     gn_state_capture_v1(instance, exact, capacity,
+                                         &stop_written, &detail,
+                                         sizeof(detail)));
+    SDK_CHECK_STATUS("sdk.state-tracer.restore-stop-state", GN_STATUS_OK,
+                     gn_state_restore_v1(state_peer, exact, stop_written,
+                                         &detail, sizeof(detail)));
+    SDK_CHECK_TRUE("sdk.state-tracer.stop-continuation-matches",
+                   sdk_state_future_equal(instance, state_peer, 16u));
+
+    SDK_CHECK_STATUS("sdk.state-tracer.create-independent-witness",
+                     GN_STATUS_OK, gn_create(&state_witness));
+    SDK_CHECK_STATUS("sdk.state-tracer.load-independent-witness", GN_STATUS_OK,
+                     load_scenario(state_witness, 0u));
+    SDK_CHECK_STATUS("sdk.state-tracer.seed-peer-for-rejection", GN_STATUS_OK,
+                     gn_state_restore_v1(state_peer, exact, stop_written,
+                                         &detail, sizeof(detail)));
+    SDK_CHECK_STATUS("sdk.state-tracer.seed-witness-for-rejection", GN_STATUS_OK,
+                     gn_state_restore_v1(state_witness, exact, stop_written,
+                                         &detail, sizeof(detail)));
+
+    SDK_CHECK_STATUS("sdk.state-tracer.reject-truncated-state",
+                     GN_STATUS_INVALID_ARGUMENT,
+                     gn_state_restore_v1(state_peer, exact, stop_written - 1u,
+                                         &detail, sizeof(detail)));
+    check_diagnostic_restore_resources(state_peer, 0);
+    SDK_CHECK_U64("sdk.state-tracer.truncated-reason", GN_STATE_REASON_TRUNCATED,
+                  detail.reason);
+    SDK_CHECK_TRUE("sdk.state-tracer.truncated-rejection-preserves-machine",
+                   sdk_state_future_equal(state_peer, state_witness, 8u));
+
+    uint8_t *extended = (uint8_t *)malloc(stop_written + 1u);
+    SDK_CHECK_TRUE("sdk.state-tracer.allocate-extended", extended != NULL);
+    memcpy(extended, exact, stop_written);
+    extended[stop_written] = UINT8_C(0x7e);
+    SDK_CHECK_STATUS("sdk.state-tracer.seed-peer-before-trailing-reject",
+                     GN_STATUS_OK,
+                     gn_state_restore_v1(state_peer, exact, stop_written,
+                                         &detail, sizeof(detail)));
+    SDK_CHECK_STATUS("sdk.state-tracer.seed-witness-before-trailing-reject",
+                     GN_STATUS_OK,
+                     gn_state_restore_v1(state_witness, exact, stop_written,
+                                         &detail, sizeof(detail)));
+    SDK_CHECK_STATUS("sdk.state-tracer.reject-trailing-data",
+                     GN_STATUS_INVALID_ARGUMENT,
+                     gn_state_restore_v1(state_peer, extended,
+                                         stop_written + 1u, &detail,
+                                         sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-tracer.trailing-reason",
+                  GN_STATE_REASON_TRAILING_DATA, detail.reason);
+    SDK_CHECK_TRUE("sdk.state-tracer.trailing-rejection-preserves-machine",
+                   sdk_state_future_equal(state_peer, state_witness, 8u));
+    free(extended);
+
+    uint8_t *wrong_format = (uint8_t *)malloc(stop_written);
+    SDK_CHECK_TRUE("sdk.state-tracer.allocate-wrong-format",
+                   wrong_format != NULL);
+    memcpy(wrong_format, exact, stop_written);
+    wrong_format[16u] ^= UINT8_C(0x80);
+    SDK_CHECK_STATUS("sdk.state-tracer.seed-peer-before-format-reject",
+                     GN_STATUS_OK,
+                     gn_state_restore_v1(state_peer, exact, stop_written,
+                                         &detail, sizeof(detail)));
+    SDK_CHECK_STATUS("sdk.state-tracer.seed-witness-before-format-reject",
+                     GN_STATUS_OK,
+                     gn_state_restore_v1(state_witness, exact, stop_written,
+                                         &detail, sizeof(detail)));
+    SDK_CHECK_STATUS("sdk.state-tracer.reject-format-mismatch",
+                     GN_STATUS_INVALID_ARGUMENT,
+                     gn_state_restore_v1(state_peer, wrong_format,
+                                         stop_written, &detail,
+                                         sizeof(detail)));
+    check_diagnostic_restore_resources(state_peer, 0);
+    SDK_CHECK_U64("sdk.state-tracer.format-mismatch-reason",
+                  GN_STATE_REASON_UNSUPPORTED_FORMAT, detail.reason);
+    SDK_CHECK_TRUE("sdk.state-tracer.format-rejection-preserves-machine",
+                   sdk_state_future_equal(state_peer, state_witness, 8u));
+    free(wrong_format);
+
+    guest_fixture_image fault_fixture;
+    gn_manifest fault_manifest;
+    make_manifest(&fault_manifest, &fault_fixture,
+                  GUEST_FIXTURE_SCENARIO_A);
+    fault_fixture.rom[0x100u] = UINT8_C(0x4a);
+    fault_fixture.rom[0x101u] = UINT8_C(0xfc);
+    SDK_CHECK_STATUS("sdk.state-tracer.load-guest-fault", GN_STATUS_OK,
+                     gn_load(instance, &fault_manifest));
+    SDK_CHECK_STATUS("sdk.state-tracer.run-guest-fault", GN_STATUS_OK,
+                     gn_run(instance, 172u, &source_run));
+    SDK_CHECK_STATUS("sdk.state-tracer.guest-fault-reason", GN_RUN_FAULT,
+                     source_run.reason);
+    failed_written = SIZE_MAX;
+    SDK_CHECK_STATUS("sdk.state-tracer.reject-latched-guest-fault",
+                     GN_STATUS_INVALID_STATE,
+                     gn_state_capture_v1(instance, exact, capacity,
+                                         &failed_written, &detail,
+                                         sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-tracer.guest-fault-count-zero", 0u,
+                  failed_written);
+    SDK_CHECK_U64("sdk.state-tracer.guest-fault-capture-reason",
+                  GN_STATE_REASON_GUEST_FAULT, detail.reason);
+    SDK_CHECK_STATUS("sdk.state-tracer.reset-clears-guest-fault",
+                     GN_STATUS_OK, gn_reset(instance));
+    SDK_CHECK_STATUS("sdk.state-tracer.capture-after-fault-reset",
+                     GN_STATUS_OK,
+                     gn_state_capture_v1(instance, exact, capacity,
+                                         &reset_written, &detail,
+                                         sizeof(detail)));
+    free(small);
+    free(larger);
+    free(repeat);
+    free(exact);
+#endif
+}
+
+static void sdk_state_write_u32(uint8_t *bytes, uint32_t value) {
+    bytes[0] = (uint8_t)(value >> 24);
+    bytes[1] = (uint8_t)(value >> 16);
+    bytes[2] = (uint8_t)(value >> 8);
+    bytes[3] = (uint8_t)value;
+}
+
+#if defined(GN_TEST_NATIVE_SHA256_HOOK)
+static int sdk_hex_nibble(char value) {
+    if (value >= '0' && value <= '9') return value - '0';
+    if (value >= 'a' && value <= 'f') return value - 'a' + 10;
+    if (value >= 'A' && value <= 'F') return value - 'A' + 10;
+    return -1;
+}
+
+static int sdk_sha256_matches_hex(const uint8_t digest[32], const char *hex) {
+    for (size_t index = 0u; index < 32u; ++index) {
+        const int high = sdk_hex_nibble(hex[index * 2u]);
+        const int low = sdk_hex_nibble(hex[index * 2u + 1u]);
+        if (high < 0 || low < 0 ||
+            digest[index] != (uint8_t)((high << 4) | low)) return 0;
+    }
+    return hex[64] == '\0';
+}
+
+static void diagnostic_sha256_known_answer_vectors(void) {
+    uint8_t digest[32];
+    static const uint8_t abc[] = "abc";
+    static const uint8_t padding_edge[] =
+        "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
+    static const char block_pattern[] =
+        "0123456701234567012345670123456701234567012345670123456701234567";
+    uint8_t exact_blocks[640];
+    SDK_CHECK_U64("sdk.state-identity.sha256-pattern-size", 64u,
+                  sizeof(block_pattern) - 1u);
+    for (size_t block = 0u; block < 10u; ++block)
+        memcpy(exact_blocks + block * 64u, block_pattern, 64u);
+    SDK_CHECK_STATUS("sdk.state-identity.sha256-empty-status", GN_STATUS_OK,
+                     gn_test_sha256(NULL, 0u, digest));
+    SDK_CHECK_TRUE("sdk.state-identity.sha256-empty-kat",
+                   sdk_sha256_matches_hex(digest,
+                       "e3b0c44298fc1c149afbf4c8996fb924"
+                       "27ae41e4649b934ca495991b7852b855"));
+    SDK_CHECK_STATUS("sdk.state-identity.sha256-abc-status", GN_STATUS_OK,
+                     gn_test_sha256(abc, sizeof(abc) - 1u, digest));
+    SDK_CHECK_TRUE("sdk.state-identity.sha256-abc-kat",
+                   sdk_sha256_matches_hex(digest,
+                       "ba7816bf8f01cfea414140de5dae2223"
+                       "b00361a396177a9cb410ff61f20015ad"));
+    SDK_CHECK_STATUS("sdk.state-identity.sha256-padding-edge-status",
+                     GN_STATUS_OK,
+                     gn_test_sha256(padding_edge,
+                                    sizeof(padding_edge) - 1u, digest));
+    SDK_CHECK_TRUE("sdk.state-identity.sha256-padding-edge-kat",
+                   sdk_sha256_matches_hex(digest,
+                       "248d6a61d20638b8e5c026930c3e6039"
+                       "a33ce45964ff2167f6ecedd419db06c1"));
+    SDK_CHECK_STATUS("sdk.state-identity.sha256-exact-blocks-status",
+                     GN_STATUS_OK,
+                     gn_test_sha256(exact_blocks, sizeof(exact_blocks), digest));
+    SDK_CHECK_TRUE("sdk.state-identity.sha256-exact-blocks-kat",
+                   sdk_sha256_matches_hex(digest,
+                       "594847328451bdfa85056225462cc1d8"
+                       "67d877fb388df0ce35f25ab5562bfbb5"));
+    SDK_CHECK_STATUS("sdk.state-identity.sha256-reject-null-input",
+                     GN_STATUS_INVALID_ARGUMENT,
+                     gn_test_sha256(NULL, 1u, digest));
+    SDK_CHECK_STATUS("sdk.state-identity.sha256-reject-null-output",
+                     GN_STATUS_INVALID_ARGUMENT,
+                     gn_test_sha256(abc, sizeof(abc) - 1u, NULL));
+}
+#endif
+
+static void diagnostic_identity_exposes_ids_and_rejects_mismatch(void) {
+    SDK_CASE("sdk.state-identity.native-identities");
+    gn_state_compatibility_info_v1 source_info;
+    memset(&source_info, 0xa5, sizeof(source_info));
+    SDK_CHECK_STATUS("sdk.state-identity.compatibility", GN_STATUS_OK,
+                     gn_state_compatibility_v1(instance, &source_info,
+                                               sizeof(source_info)));
+    SDK_CHECK_U64("sdk.state-identity.compatibility-size",
+                  sizeof(source_info), source_info.size);
+    SDK_CHECK_U64("sdk.state-identity.format-id", GN_STATE_FORMAT_V1_ID,
+                  source_info.format_id);
+    SDK_CHECK_U64("sdk.state-identity.replay-id", GN_STATE_REPLAY_V1_ID,
+                  source_info.replay_id);
+    SDK_CHECK_U64("sdk.state-identity.durable-save-unsupported", 0u,
+                  source_info.durable_save_id);
+    SDK_CHECK_U64("sdk.state-identity.public-abi-id", GN_STATE_PUBLIC_ABI_V1_ID,
+                  source_info.public_abi_id);
+    SDK_CHECK_U64("sdk.state-identity.profile-id", GN_PROFILE_DIAGNOSTIC,
+                  source_info.profile_id);
+    SDK_CHECK_U64("sdk.state-identity.configuration-id",
+                  GN_STATE_CONFIGURATION_DIAGNOSTIC_V1,
+                  source_info.configuration_id);
+
+    gn_state_compatibility_info_v1 untouched_info;
+    memset(&untouched_info, 0xa5, sizeof(untouched_info));
+    SDK_CHECK_STATUS("sdk.state-identity.reject-short-compatibility",
+                     GN_STATUS_INVALID_ARGUMENT,
+                     gn_state_compatibility_v1(instance, &untouched_info,
+                                               sizeof(untouched_info) - 1u));
+    SDK_CHECK_U64("sdk.state-identity.short-output-untouched",
+                  UINT32_C(0xa5a5a5a5), untouched_info.size);
+
+    size_t capacity = 0u;
+    SDK_CHECK_STATUS("sdk.state-identity.capacity", GN_STATUS_OK,
+                     gn_state_capacity_v1(instance, &capacity));
+    uint8_t *state = (uint8_t *)malloc(capacity);
+    uint8_t *mutated = (uint8_t *)malloc(capacity);
+    SDK_CHECK_TRUE("sdk.state-identity.allocate-state",
+                   state != NULL && mutated != NULL);
+    size_t written = 0u;
+    gn_state_detail_v1 detail;
+    SDK_CHECK_STATUS("sdk.state-identity.capture-source", GN_STATUS_OK,
+                     gn_state_capture_v1(instance, state, capacity, &written,
+                                         &detail, sizeof(detail)));
+
+    gn_instance *role_order_peer = NULL;
+    SDK_CHECK_STATUS("sdk.state-identity.create-role-order-peer", GN_STATUS_OK,
+                     gn_create(&role_order_peer));
+    guest_fixture_image role_order_fixture;
+    gn_manifest role_order_manifest;
+    make_manifest(&role_order_manifest, &role_order_fixture,
+                  GUEST_FIXTURE_SCENARIO_A);
+    const gn_region first_region = role_order_manifest.regions[0];
+    role_order_manifest.regions[0] = role_order_manifest.regions[1];
+    role_order_manifest.regions[1] = first_region;
+    SDK_CHECK_STATUS("sdk.state-identity.load-role-order-peer", GN_STATUS_OK,
+                     gn_load(role_order_peer, &role_order_manifest));
+    gn_state_compatibility_info_v1 role_order_info;
+    SDK_CHECK_STATUS("sdk.state-identity.role-order-compatibility", GN_STATUS_OK,
+                     gn_state_compatibility_v1(role_order_peer, &role_order_info,
+                                               sizeof(role_order_info)));
+    SDK_CHECK_TRUE("sdk.state-identity.role-order-normalized",
+                   memcmp(source_info.media_identity_sha256,
+                          role_order_info.media_identity_sha256, 32u) == 0);
+
+    SDK_CHECK_STATUS("sdk.state-identity.create-media-mismatch-peer",
+                     GN_STATUS_OK, gn_create(&state_peer));
+    SDK_CHECK_STATUS("sdk.state-identity.create-media-witness",
+                     GN_STATUS_OK, gn_create(&state_witness));
+    guest_fixture_image changed_fixture;
+    gn_manifest changed_manifest;
+    make_manifest(&changed_manifest, &changed_fixture,
+                  GUEST_FIXTURE_SCENARIO_A);
+    changed_fixture.ram_seed[8u] ^= UINT8_C(0x01);
+    SDK_CHECK_STATUS("sdk.state-identity.load-changed-media-peer",
+                     GN_STATUS_OK, gn_load(state_peer, &changed_manifest));
+    SDK_CHECK_STATUS("sdk.state-identity.load-changed-media-witness",
+                     GN_STATUS_OK, load_scenario(state_witness,
+                                                 GUEST_FIXTURE_SCENARIO_A));
+    gn_state_compatibility_info_v1 changed_info;
+    SDK_CHECK_STATUS("sdk.state-identity.changed-media-compatibility",
+                     GN_STATUS_OK,
+                     gn_state_compatibility_v1(state_peer, &changed_info,
+                                               sizeof(changed_info)));
+    SDK_CHECK_TRUE("sdk.state-identity.effective-ram-changes-identity",
+                   memcmp(source_info.media_identity_sha256,
+                          changed_info.media_identity_sha256, 32u) != 0);
+    SDK_CHECK_STATUS("sdk.state-identity.reject-media-mismatch",
+                     GN_STATUS_INVALID_MEDIA,
+                     gn_state_restore_v1(state_peer, state, written, &detail,
+                                         sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-identity.media-mismatch-reason",
+                  GN_STATE_REASON_MEDIA_IDENTITY, detail.reason);
+    SDK_CHECK_TRUE("sdk.state-identity.media-reject-no-mutation",
+                   sdk_state_future_equal(state_peer, state_witness, 8u));
+
+    memcpy(mutated, state, written);
+    sdk_state_write_u32(mutated + 20u, GN_STATE_REPLAY_V1_ID + 1u);
+    SDK_CHECK_STATUS("sdk.state-identity.reject-replay-id",
+                     GN_STATUS_UNSUPPORTED_PROFILE,
+                     gn_state_restore_v1(role_order_peer, mutated, written,
+                                         &detail, sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-identity.replay-id-reason",
+                  GN_STATE_REASON_REPLAY_IDENTITY, detail.reason);
+    memcpy(mutated, state, written);
+    sdk_state_write_u32(mutated + 24u, GN_PROFILE_DIAGNOSTIC + 1u);
+    SDK_CHECK_STATUS("sdk.state-identity.reject-profile-id",
+                     GN_STATUS_UNSUPPORTED_PROFILE,
+                     gn_state_restore_v1(role_order_peer, mutated, written,
+                                         &detail, sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-identity.profile-id-reason",
+                  GN_STATE_REASON_PROFILE_IDENTITY, detail.reason);
+    memcpy(mutated, state, written);
+    sdk_state_write_u32(mutated + 28u,
+                        GN_STATE_CONFIGURATION_DIAGNOSTIC_V1 + 1u);
+    SDK_CHECK_STATUS("sdk.state-identity.reject-configuration-id",
+                     GN_STATUS_UNSUPPORTED_PROFILE,
+                     gn_state_restore_v1(role_order_peer, mutated, written,
+                                         &detail, sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-identity.configuration-id-reason",
+                  GN_STATE_REASON_CONFIGURATION_IDENTITY, detail.reason);
+    memcpy(mutated, state, written);
+    mutated[68u] = UINT8_C(1);
+    SDK_CHECK_STATUS("sdk.state-identity.reject-reserved-corruption",
+                     GN_STATUS_INVALID_MEDIA,
+                     gn_state_restore_v1(role_order_peer, mutated, written,
+                                         &detail, sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-identity.reserved-corruption-reason",
+                  GN_STATE_REASON_RESERVED, detail.reason);
+
+    gn_state_compatibility_info_v1 after_reset_info;
+    SDK_CHECK_STATUS("sdk.state-identity.reset-preserves-media-identity",
+                     GN_STATUS_OK, gn_reset(instance));
+    SDK_CHECK_STATUS("sdk.state-identity.compatibility-after-reset",
+                     GN_STATUS_OK,
+                     gn_state_compatibility_v1(instance, &after_reset_info,
+                                               sizeof(after_reset_info)));
+    SDK_CHECK_TRUE("sdk.state-identity.reset-keeps-cached-identity",
+                   memcmp(source_info.media_identity_sha256,
+                          after_reset_info.media_identity_sha256, 32u) == 0);
+#if defined(GN_TEST_NATIVE_SHA256_HOOK)
+    diagnostic_sha256_known_answer_vectors();
+#else
+    SDK_CHECK_TRUE("sdk.state-identity.sha256-test-hook-available", 0);
+#endif
+    free(mutated);
+    free(state);
+    gn_destroy(role_order_peer);
+}
+
+enum { SDK_YM_SAMPLE_BYTES = 4096u, SDK_YM_FUTURE_CLOCKS = 512u };
+
+typedef struct sdk_ym_owner {
+    uint8_t *samples;
+    size_t sample_bytes;
+    uint64_t clock_position;
+    uint64_t irq_clocks[16];
+    int irq_levels[16];
+    size_t irq_count;
+    size_t sample_reads;
+} sdk_ym_owner;
+
+static int sdk_ym_owner_init(sdk_ym_owner *owner) {
+    memset(owner, 0, sizeof(*owner));
+    owner->samples = (uint8_t *)malloc(SDK_YM_SAMPLE_BYTES);
+    if (owner->samples == NULL) return 0;
+    owner->sample_bytes = SDK_YM_SAMPLE_BYTES;
+    for (size_t index = 0u; index < owner->sample_bytes; ++index)
+        owner->samples[index] = (uint8_t)((index * 37u + 0x6du) & 0xffu);
+    return 1;
+}
+
+static void sdk_ym_owner_destroy(sdk_ym_owner *owner) {
+    free(owner->samples);
+    memset(owner, 0, sizeof(*owner));
+}
+
+static int sdk_ym_read(void *userdata, uint32_t access, uint32_t address,
+                       uint8_t *value) {
+    sdk_ym_owner *owner = (sdk_ym_owner *)userdata;
+    if (owner == NULL || value == NULL || owner->samples == NULL ||
+        (access != YM2610_CANDIDATE_ACCESS_ADPCM_A &&
+         access != YM2610_CANDIDATE_ACCESS_ADPCM_B) ||
+        address >= owner->sample_bytes) return -1;
+    *value = owner->samples[address];
+    ++owner->sample_reads;
+    return 0;
+}
+
+static int sdk_ym_write(void *userdata, uint32_t access, uint32_t address,
+                        uint8_t value) {
+    (void)userdata;
+    (void)access;
+    (void)address;
+    (void)value;
+    return 0;
+}
+
+static void sdk_ym_irq(void *userdata, int asserted) {
+    sdk_ym_owner *owner = (sdk_ym_owner *)userdata;
+    if (owner == NULL || owner->irq_count >= 16u) return;
+    owner->irq_clocks[owner->irq_count] = owner->clock_position;
+    owner->irq_levels[owner->irq_count] = asserted;
+    ++owner->irq_count;
+}
+
+static const ym2610_candidate_callbacks SDK_YM_CALLBACKS = {
+    sdk_ym_read, sdk_ym_write, sdk_ym_irq,
+    SDK_YM_SAMPLE_BYTES, SDK_YM_SAMPLE_BYTES, 2u
+};
+
+static ym2610_candidate_status sdk_ym_write_register(
+    ym2610_candidate *candidate, uint8_t reg, uint8_t value) {
+    ym2610_candidate_status status = ym2610_candidate_write(candidate, 0u, reg);
+    if (status != YM2610_CANDIDATE_OK) return status;
+    return ym2610_candidate_write(candidate, 1u, value);
+}
+
+static ym2610_candidate_status sdk_ym_program_tone(
+    ym2610_candidate *candidate) {
+    ym2610_candidate_status status;
+    for (uint8_t offset = 0u; offset < 16u; offset += 4u) {
+        status = sdk_ym_write_register(candidate, (uint8_t)(0x30u + offset + 1u), 1u);
+        if (status != YM2610_CANDIDATE_OK) return status;
+        status = sdk_ym_write_register(candidate, (uint8_t)(0x40u + offset + 1u), 0u);
+        if (status != YM2610_CANDIDATE_OK) return status;
+        status = sdk_ym_write_register(candidate, (uint8_t)(0x50u + offset + 1u), 0x1fu);
+        if (status != YM2610_CANDIDATE_OK) return status;
+        status = sdk_ym_write_register(candidate, (uint8_t)(0x60u + offset + 1u), 0u);
+        if (status != YM2610_CANDIDATE_OK) return status;
+        status = sdk_ym_write_register(candidate, (uint8_t)(0x70u + offset + 1u), 0u);
+        if (status != YM2610_CANDIDATE_OK) return status;
+        status = sdk_ym_write_register(candidate, (uint8_t)(0x80u + offset + 1u), 0x0fu);
+        if (status != YM2610_CANDIDATE_OK) return status;
+    }
+    status = sdk_ym_write_register(candidate, 0xa1u, 0x80u);
+    if (status != YM2610_CANDIDATE_OK) return status;
+    status = sdk_ym_write_register(candidate, 0xa5u, 0x22u);
+    if (status != YM2610_CANDIDATE_OK) return status;
+    status = sdk_ym_write_register(candidate, 0xb1u, 0x07u);
+    if (status != YM2610_CANDIDATE_OK) return status;
+    status = sdk_ym_write_register(candidate, 0xb5u, 0xc0u);
+    if (status != YM2610_CANDIDATE_OK) return status;
+    status = sdk_ym_write_register(candidate, 0x28u, 0xf1u);
+    if (status != YM2610_CANDIDATE_OK) return status;
+    status = sdk_ym_write_register(candidate, 0u, 1u);
+    if (status != YM2610_CANDIDATE_OK) return status;
+    status = sdk_ym_write_register(candidate, 1u, 0u);
+    if (status != YM2610_CANDIDATE_OK) return status;
+    status = sdk_ym_write_register(candidate, 7u, 0x3eu);
+    if (status != YM2610_CANDIDATE_OK) return status;
+    return sdk_ym_write_register(candidate, 8u, 0x0fu);
+}
+
+static ym2610_candidate_status sdk_ym_program_timer_a(
+    ym2610_candidate *candidate) {
+    ym2610_candidate_status status = sdk_ym_write_register(candidate, 0x24u, 0xffu);
+    if (status != YM2610_CANDIDATE_OK) return status;
+    status = sdk_ym_write_register(candidate, 0x25u, 0x03u);
+    if (status != YM2610_CANDIDATE_OK) return status;
+    return sdk_ym_write_register(candidate, 0x27u, 0x05u);
+}
+
+static int sdk_ym_clock(ym2610_candidate *candidate, sdk_ym_owner *owner,
+                        uint32_t clocks, int32_t *samples,
+                        size_t sample_capacity, size_t *frames) {
+    *frames = 0u;
+    for (uint32_t clock = 0u; clock < clocks; ++clock) {
+        int32_t frame[3] = {0, 0, 0};
+        size_t produced = 0u;
+        ++owner->clock_position;
+        if (ym2610_candidate_clock(candidate, 1u, frame, 1u, &produced) !=
+            YM2610_CANDIDATE_OK) return 0;
+        if (produced != 0u) {
+            if (samples == NULL || *frames >= sample_capacity) return 0;
+            memcpy(samples + (*frames * 3u), frame, sizeof(frame));
+            ++*frames;
+        }
+    }
+    return 1;
+}
+
+static size_t sdk_ym_nonzero_values(const int32_t *samples, size_t count) {
+    size_t nonzero = 0u;
+    for (size_t index = 0u; index < count; ++index)
+        if (samples[index] != 0) ++nonzero;
+    return nonzero;
+}
+
+static void ym2610_state_round_trip_continues_pcm_and_timer_after_source_destruction(void) {
+    SDK_CASE("sdk.state-ym.nonzero-continuation-and-owner-rebind");
+    sdk_ym_owner source_owner, reference_owner, destination_owner;
+    memset(&source_owner, 0, sizeof(source_owner));
+    memset(&reference_owner, 0, sizeof(reference_owner));
+    memset(&destination_owner, 0, sizeof(destination_owner));
+    ym2610_candidate *source = NULL, *reference = NULL, *staged = NULL;
+    uint8_t *bytes = NULL;
+    int32_t source_warm[256u * 3u] = {0};
+    int32_t reference_warm[256u * 3u] = {0};
+    int32_t source_future[64u * 3u] = {0};
+    int32_t reference_future[64u * 3u] = {0};
+    size_t source_warm_frames = 0u, reference_warm_frames = 0u;
+    size_t source_pre_frames = 0u, reference_pre_frames = 0u;
+    size_t source_future_frames = 0u, reference_future_frames = 0u;
+    size_t written = 0u, state_bytes = 0u;
+    size_t rebind_allocation_points = 0u;
+    int64_t rebind_lifetime_balance = -1;
+    ym2610_candidate_state_detail detail = {0};
+    ym2610_candidate_observation reference_before = {0}, reference_after = {0};
+    ym2610_candidate_observation staged_before = {0}, staged_after = {0};
+    int setup_ok = sdk_ym_owner_init(&source_owner) &&
+                   sdk_ym_owner_init(&reference_owner) &&
+                   sdk_ym_owner_init(&destination_owner);
+    int continued = 0, owners_rebound = 0, timer_observed = 0;
+
+    if (setup_ok &&
+        ym2610_candidate_create(&SDK_YM_CALLBACKS, &source_owner, &source) == YM2610_CANDIDATE_OK &&
+        ym2610_candidate_create(&SDK_YM_CALLBACKS, &reference_owner, &reference) == YM2610_CANDIDATE_OK &&
+        sdk_ym_program_tone(source) == YM2610_CANDIDATE_OK &&
+        sdk_ym_program_tone(reference) == YM2610_CANDIDATE_OK &&
+        sdk_ym_clock(source, &source_owner, 4096u, source_warm, 256u,
+                     &source_warm_frames) &&
+        sdk_ym_clock(reference, &reference_owner, 4096u, reference_warm, 256u,
+                     &reference_warm_frames) &&
+        sdk_ym_program_timer_a(source) == YM2610_CANDIDATE_OK &&
+        sdk_ym_program_timer_a(reference) == YM2610_CANDIDATE_OK &&
+        sdk_ym_clock(source, &source_owner, 48u, source_future, 64u,
+                     &source_pre_frames) &&
+        sdk_ym_clock(reference, &reference_owner, 48u, reference_future, 64u,
+                     &reference_pre_frames) &&
+        ym2610_candidate_state_size(source, &state_bytes) == YM2610_CANDIDATE_OK &&
+        state_bytes != 0u) {
+        bytes = (uint8_t *)malloc(state_bytes);
+        if (bytes != NULL &&
+            ym2610_candidate_state_capture(source, bytes, state_bytes,
+                                           &written) == YM2610_CANDIDATE_OK &&
+            written == state_bytes) {
+            ym2610_candidate_destroy(source);
+            source = NULL;
+            sdk_ym_owner_destroy(&source_owner);
+            if (ym2610_candidate_state_stage(bytes, written, &staged, &detail) ==
+                    YM2610_CANDIDATE_OK &&
+                ym2610_candidate_test_state_rebind_failpoint(
+                    staged, &SDK_YM_CALLBACKS, &destination_owner, 0u,
+                    &rebind_allocation_points, &rebind_lifetime_balance) ==
+                    YM2610_CANDIDATE_OK &&
+                ym2610_candidate_state_rebind(staged, &SDK_YM_CALLBACKS,
+                                              &destination_owner) ==
+                    YM2610_CANDIDATE_OK &&
+                ym2610_candidate_observe(reference, &reference_before) ==
+                    YM2610_CANDIDATE_OK &&
+                ym2610_candidate_observe(staged, &staged_before) ==
+                    YM2610_CANDIDATE_OK) {
+                owners_rebound = destination_owner.irq_count == 0u &&
+                    destination_owner.sample_reads == 0u;
+                destination_owner.clock_position =
+                    reference_owner.clock_position;
+                reference_owner.irq_count = 0u;
+                destination_owner.irq_count = 0u;
+                if (sdk_ym_clock(reference, &reference_owner,
+                                 SDK_YM_FUTURE_CLOCKS, reference_future,
+                                 64u, &reference_future_frames) &&
+                    sdk_ym_clock(staged, &destination_owner,
+                                 SDK_YM_FUTURE_CLOCKS, source_future,
+                                 64u, &source_future_frames) &&
+                    ym2610_candidate_observe(reference, &reference_after) ==
+                        YM2610_CANDIDATE_OK &&
+                    ym2610_candidate_observe(staged, &staged_after) ==
+                        YM2610_CANDIDATE_OK) {
+                    continued = reference_future_frames == source_future_frames &&
+                        memcmp(reference_future, source_future,
+                               reference_future_frames * 3u * sizeof(int32_t)) == 0;
+                    timer_observed = reference_owner.irq_count != 0u &&
+                        reference_owner.irq_count == destination_owner.irq_count &&
+                        memcmp(reference_owner.irq_clocks,
+                               destination_owner.irq_clocks,
+                               reference_owner.irq_count * sizeof(uint64_t)) == 0 &&
+                        memcmp(reference_owner.irq_levels,
+                               destination_owner.irq_levels,
+                               reference_owner.irq_count * sizeof(int)) == 0 &&
+                        reference_after.timer_expirations >
+                            reference_before.timer_expirations &&
+                        staged_after.timer_expirations >
+                            staged_before.timer_expirations;
+                }
+            }
+        }
+    }
+
+    ym2610_candidate_destroy(source);
+    ym2610_candidate_destroy(reference);
+    ym2610_candidate_destroy(staged);
+    free(bytes);
+    sdk_ym_owner_destroy(&source_owner);
+    sdk_ym_owner_destroy(&reference_owner);
+    sdk_ym_owner_destroy(&destination_owner);
+
+    SDK_CHECK_TRUE("sdk.state-ym.valid-independent-setup", setup_ok);
+    SDK_CHECK_U64("sdk.state-ym.warm-nonzero-fm", 1u,
+                  sdk_ym_nonzero_values(reference_warm,
+                                        reference_warm_frames * 3u) != 0u);
+    SDK_CHECK_U64("sdk.state-ym.warm-frame-count", 256u, reference_warm_frames);
+    SDK_CHECK_TRUE("sdk.state-ym.stage-rebound-without-callbacks", owners_rebound);
+    SDK_CHECK_TRUE("sdk.state-ym.rebind-is-no-throw-no-allocation",
+                   rebind_allocation_points == 0u &&
+                       rebind_lifetime_balance == 0);
+    SDK_CHECK_TRUE("sdk.state-ym.future-pcm-equal", continued);
+    SDK_CHECK_TRUE("sdk.state-ym.future-timer-and-irq-equal", timer_observed);
+    SDK_CHECK_TRUE("sdk.state-ym.future-nonzero-waveform",
+                   sdk_ym_nonzero_values(reference_future,
+                                         reference_future_frames * 3u) != 0u);
+}
+
+static void ym2610_state_uses_canonical_scalars_and_rejects_invalid_nested_input(void) {
+    SDK_CASE("sdk.state-ym.canonical-scalar-and-hostile-input");
+    sdk_ym_owner owner;
+    memset(&owner, 0, sizeof(owner));
+    ym2610_candidate *candidate = NULL, *staged = NULL;
+    uint8_t *valid = NULL, *mutated = NULL;
+    size_t state_bytes = 0u, written = 0u, second_written = 0u;
+    ym2610_candidate_state_detail detail = {0};
+    int boolean_found = 0, enum_found = 0, nested_range_found = 0;
+    int live_unchanged = 0;
+    int32_t scalar_samples[18u * 3u] = {0};
+    int setup_ok = sdk_ym_owner_init(&owner) &&
+        ym2610_candidate_create(&SDK_YM_CALLBACKS, &owner, &candidate) ==
+            YM2610_CANDIDATE_OK;
+    int deterministic = 0, scalar_vector = 0, boundary_rejection = 0;
+    int all_truncations_rejected = 1, all_extensions_rejected = 1;
+    int legal_eos_status_accepted = 0;
+    if (setup_ok && ym2610_candidate_reset(candidate) == YM2610_CANDIDATE_OK &&
+        ym2610_candidate_state_size(candidate, &state_bytes) == YM2610_CANDIDATE_OK) {
+        valid = (uint8_t *)malloc((state_bytes * 2u) + 1u);
+        mutated = (uint8_t *)malloc(state_bytes);
+        if (valid != NULL && mutated != NULL &&
+            ym2610_candidate_state_capture(candidate, valid, state_bytes,
+                                           &written) == YM2610_CANDIDATE_OK &&
+            written == state_bytes) {
+            uint8_t *second = (uint8_t *)malloc(state_bytes);
+            if (second != NULL &&
+                ym2610_candidate_state_capture(candidate, second, state_bytes,
+                                               &second_written) ==
+                    YM2610_CANDIDATE_OK) {
+                deterministic = second_written == written &&
+                    memcmp(valid, second, written) == 0;
+            }
+            free(second);
+
+            if (sdk_ym_clock(candidate, &owner, 0x123u, scalar_samples, 18u,
+                             &second_written) &&
+                ym2610_candidate_state_capture(candidate, valid, state_bytes,
+                                               &written) == YM2610_CANDIDATE_OK) {
+                scalar_vector = written == state_bytes &&
+                    valid[0] == 'G' && valid[1] == 'Y' &&
+                    valid[2] == 'M' && valid[3] == '1' &&
+                    valid[4] == 0u && valid[5] == 0u &&
+                    valid[6] == 0u && valid[7] == 1u &&
+                    valid[8] == 0u && valid[9] == 0u &&
+                    valid[10] == 0u && valid[11] == 0u &&
+                    valid[12] == 0u && valid[13] == 0u &&
+                    valid[14] == 1u && valid[15] == 0x23u &&
+                    valid[42] == 3u && valid[43] == 0u &&
+                    valid[49] == 1u && valid[50] == 0x23u;
+            }
+
+            const ym2610_candidate_status truncated_status =
+                ym2610_candidate_state_validate(valid, written - 1u, &detail);
+            const ym2610_candidate_state_reason truncated_reason = detail.reason;
+            const size_t truncated_offset = detail.offset;
+            const size_t truncated_consumed = detail.consumed;
+            valid[written] = 0xa5u;
+            const ym2610_candidate_status extended_status =
+                ym2610_candidate_state_validate(valid, written + 1u, &detail);
+            boundary_rejection = truncated_status != YM2610_CANDIDATE_OK &&
+                truncated_reason == YM2610_CANDIDATE_STATE_REASON_TRUNCATED &&
+                truncated_offset == written - 1u &&
+                truncated_consumed == written - 1u &&
+                extended_status != YM2610_CANDIDATE_OK &&
+                detail.reason == YM2610_CANDIDATE_STATE_REASON_TRAILING &&
+                detail.offset == written && detail.consumed == written;
+
+            for (size_t prefix = 0u; prefix < written; ++prefix) {
+                const ym2610_candidate_status status =
+                    ym2610_candidate_state_validate(valid, prefix, &detail);
+                all_truncations_rejected &=
+                    status == YM2610_CANDIDATE_INVALID_ARGUMENT &&
+                    detail.reason == YM2610_CANDIDATE_STATE_REASON_TRUNCATED &&
+                    detail.offset == prefix && detail.consumed == prefix;
+            }
+            for (size_t extra = 1u; extra <= written; ++extra) {
+                memset(valid + written, 0xa5, extra);
+                const ym2610_candidate_status status =
+                    ym2610_candidate_state_validate(valid, written + extra,
+                                                    &detail);
+                all_extensions_rejected &=
+                    status == YM2610_CANDIDATE_INVALID_ARGUMENT &&
+                    detail.reason == YM2610_CANDIDATE_STATE_REASON_TRAILING &&
+                    detail.offset == written && detail.consumed == written;
+            }
+
+            memcpy(mutated, valid, written);
+            mutated[53u] = 0xffu;
+            const ym2610_candidate_status address_status =
+                ym2610_candidate_state_stage(mutated, written, &staged, &detail);
+            boundary_rejection = boundary_rejection &&
+                address_status == YM2610_CANDIDATE_INVALID_ARGUMENT &&
+                staged == NULL &&
+                detail.reason == YM2610_CANDIDATE_STATE_REASON_RANGE;
+
+            memcpy(mutated, valid, written);
+            mutated[40u] = 2u;
+            boolean_found =
+                ym2610_candidate_state_validate(mutated, written, &detail) ==
+                    YM2610_CANDIDATE_INVALID_ARGUMENT &&
+                detail.reason == YM2610_CANDIDATE_STATE_REASON_BOOLEAN;
+
+            memcpy(mutated, valid, written);
+            mutated[55u] = 0xffu;
+            legal_eos_status_accepted =
+                ym2610_candidate_state_validate(mutated, written, &detail) ==
+                    YM2610_CANDIDATE_OK &&
+                detail.reason == YM2610_CANDIDATE_STATE_REASON_NONE;
+
+            for (size_t offset = 57u; offset < written; ++offset) {
+                memcpy(mutated, valid, written);
+                mutated[offset] = 0xffu;
+                const ym2610_candidate_status status =
+                    ym2610_candidate_state_validate(mutated, written, &detail);
+                if (status == YM2610_CANDIDATE_INVALID_ARGUMENT &&
+                    detail.reason == YM2610_CANDIDATE_STATE_REASON_ENUM)
+                    enum_found = 1;
+                if (status == YM2610_CANDIDATE_INVALID_ARGUMENT &&
+                    detail.reason == YM2610_CANDIDATE_STATE_REASON_RANGE &&
+                    detail.offset > 1000u)
+                    nested_range_found = 1;
+                if (boolean_found && enum_found && nested_range_found) break;
+            }
+
+            if (ym2610_candidate_state_capture(candidate, mutated, state_bytes,
+                                               &second_written) ==
+                    YM2610_CANDIDATE_OK && second_written == written) {
+                live_unchanged = memcmp(valid, mutated, written) == 0 &&
+                    owner.irq_count == 0u && owner.sample_reads == 0u;
+            }
+        }
+    }
+    ym2610_candidate_destroy(staged);
+    ym2610_candidate_destroy(candidate);
+    free(valid);
+    free(mutated);
+    sdk_ym_owner_destroy(&owner);
+
+    SDK_CHECK_TRUE("sdk.state-ym.setup", setup_ok);
+    SDK_CHECK_TRUE("sdk.state-ym.canonical-bytes-repeat", deterministic);
+    SDK_CHECK_TRUE("sdk.state-ym.big-endian-scalar-vector", scalar_vector);
+    SDK_CHECK_TRUE("sdk.state-ym.exact-nested-boundaries", boundary_rejection);
+    SDK_CHECK_TRUE("sdk.state-ym.every-truncated-prefix-rejected",
+                   all_truncations_rejected);
+    SDK_CHECK_TRUE("sdk.state-ym.every-extension-length-rejected",
+                   all_extensions_rejected);
+    SDK_CHECK_TRUE("sdk.state-ym.accepts-full-eos-status-bits",
+                   legal_eos_status_accepted);
+    SDK_CHECK_TRUE("sdk.state-ym.rejects-raw-boolean", boolean_found);
+    SDK_CHECK_TRUE("sdk.state-ym.rejects-invalid-enum", enum_found);
+    SDK_CHECK_TRUE("sdk.state-ym.rejects-nested-index-range", nested_range_found);
+    SDK_CHECK_TRUE("sdk.state-ym.hostile-input-preserves-live-target",
+                   live_unchanged);
+}
+
+static void ym2610_state_allocation_failures_are_swept_and_atomic(void) {
+    SDK_CASE("sdk.state-ym.allocation-failure-sweeps");
+    enum { SDK_YM_CONSTRUCTOR_ALLOCATION_POINTS = 1 + 6 + 24 + 6 + 1 };
+    sdk_ym_owner owner;
+    memset(&owner, 0, sizeof(owner));
+    ym2610_candidate *candidate = NULL;
+    uint8_t *bytes = NULL, *destination = NULL, *after = NULL;
+    size_t state_bytes = 0u, written = 0u, attempts = 0u;
+    int64_t lifetime_balance = -1;
+    ym2610_candidate_observation observation_before = {0}, observation_after = {0};
+    int setup_ok = sdk_ym_owner_init(&owner) &&
+        ym2610_candidate_create(&SDK_YM_CALLBACKS, &owner, &candidate) ==
+            YM2610_CANDIDATE_OK &&
+        ym2610_candidate_reset(candidate) == YM2610_CANDIDATE_OK &&
+        ym2610_candidate_state_size(candidate, &state_bytes) == YM2610_CANDIDATE_OK;
+    int create_sweep_ok = 1, stage_sweep_ok = 1, capture_sweep_ok = 1;
+    int construction_balanced = 1, target_untouched = 1;
+    size_t create_failures = 0u, stage_failures = 0u, capture_failures = 0u;
+    size_t capture_success_points = 0u;
+
+    if (setup_ok) {
+        bytes = (uint8_t *)malloc(state_bytes);
+        destination = (uint8_t *)malloc(state_bytes);
+        after = (uint8_t *)malloc(state_bytes);
+        setup_ok = bytes != NULL && destination != NULL && after != NULL &&
+            ym2610_candidate_state_capture(candidate, bytes, state_bytes,
+                                           &written) == YM2610_CANDIDATE_OK &&
+            written == state_bytes &&
+            ym2610_candidate_observe(candidate, &observation_before) ==
+                YM2610_CANDIDATE_OK;
+    }
+
+    for (size_t fail_at = 0u;
+         setup_ok && fail_at <= SDK_YM_CONSTRUCTOR_ALLOCATION_POINTS;
+         ++fail_at) {
+        const ym2610_candidate_status status =
+            ym2610_candidate_test_state_create_failpoint(
+                fail_at, &attempts, &lifetime_balance);
+        construction_balanced &= lifetime_balance == 0;
+        if (fail_at < SDK_YM_CONSTRUCTOR_ALLOCATION_POINTS) {
+            create_failures += status == YM2610_CANDIDATE_NO_MEMORY;
+            create_sweep_ok &= status == YM2610_CANDIDATE_NO_MEMORY &&
+                attempts == fail_at + 1u;
+        } else {
+            create_sweep_ok &= status == YM2610_CANDIDATE_OK &&
+                attempts == SDK_YM_CONSTRUCTOR_ALLOCATION_POINTS;
+        }
+
+        const ym2610_candidate_status stage_status =
+            ym2610_candidate_test_state_stage_failpoint(
+                bytes, state_bytes, fail_at, &attempts, &lifetime_balance);
+        construction_balanced &= lifetime_balance == 0;
+        if (fail_at < SDK_YM_CONSTRUCTOR_ALLOCATION_POINTS) {
+            stage_failures += stage_status == YM2610_CANDIDATE_NO_MEMORY;
+            stage_sweep_ok &= stage_status == YM2610_CANDIDATE_NO_MEMORY &&
+                attempts == fail_at + 1u;
+        } else {
+            stage_sweep_ok &= stage_status == YM2610_CANDIDATE_OK &&
+                attempts == SDK_YM_CONSTRUCTOR_ALLOCATION_POINTS;
+        }
+    }
+
+    for (size_t fail_at = 0u; setup_ok && fail_at < 64u; ++fail_at) {
+        memset(destination, 0xa5, state_bytes);
+        written = SIZE_MAX;
+        const ym2610_candidate_status status =
+            ym2610_candidate_test_state_capture_failpoint(
+                candidate, destination, state_bytes, &written, fail_at,
+                &attempts, &lifetime_balance);
+        construction_balanced &= lifetime_balance == 0;
+        if (status == YM2610_CANDIDATE_NO_MEMORY) {
+            ++capture_failures;
+            capture_sweep_ok &= attempts == fail_at + 1u && written == 0u;
+            for (size_t index = 0u; index < state_bytes; ++index)
+                target_untouched &= destination[index] == 0xa5u;
+            continue;
+        }
+        capture_success_points = attempts;
+        capture_sweep_ok &= status == YM2610_CANDIDATE_OK &&
+            written == state_bytes && capture_failures != 0u;
+        if (status == YM2610_CANDIDATE_OK)
+            target_untouched &= memcmp(destination, bytes, state_bytes) == 0;
+        break;
+    }
+
+    if (setup_ok) {
+        target_untouched &= ym2610_candidate_observe(candidate, &observation_after) ==
+                YM2610_CANDIDATE_OK &&
+            observation_before.clocks == observation_after.clocks &&
+            observation_before.register_writes == observation_after.register_writes &&
+            observation_before.timer_expirations == observation_after.timer_expirations &&
+            observation_before.irq_assertions == observation_after.irq_assertions &&
+            observation_before.irq_deassertions == observation_after.irq_deassertions &&
+            owner.irq_count == 0u && owner.sample_reads == 0u;
+        written = 0u;
+        target_untouched &= ym2610_candidate_state_capture(
+                candidate, after, state_bytes, &written) == YM2610_CANDIDATE_OK &&
+            written == state_bytes && memcmp(bytes, after, state_bytes) == 0;
+    }
+
+    ym2610_candidate_destroy(candidate);
+    free(bytes);
+    free(destination);
+    free(after);
+    sdk_ym_owner_destroy(&owner);
+
+    SDK_CHECK_TRUE("sdk.state-ym.allocation-fixture-ready", setup_ok);
+    SDK_CHECK_U64("sdk.state-ym.candidate-construction-failpoint-sweep",
+                  SDK_YM_CONSTRUCTOR_ALLOCATION_POINTS, create_failures);
+    SDK_CHECK_TRUE("sdk.state-ym.candidate-construction-failpoints-cover-all-sites",
+                   create_sweep_ok);
+    SDK_CHECK_U64("sdk.state-ym.staged-construction-failpoint-sweep",
+                  SDK_YM_CONSTRUCTOR_ALLOCATION_POINTS, stage_failures);
+    SDK_CHECK_TRUE("sdk.state-ym.staged-construction-failpoints-cover-all-sites",
+                   stage_sweep_ok);
+    SDK_CHECK_TRUE("sdk.state-ym.capture-vector-growth-failpoint-sweep",
+                   capture_sweep_ok && capture_success_points != 0u);
+    SDK_CHECK_U64("sdk.state-ym.capture-vector-growth-allocation-count",
+                  capture_success_points, capture_failures);
+    SDK_CHECK_TRUE("sdk.state-ym.partial-construction-lifetimes-balanced",
+                   construction_balanced);
+    SDK_CHECK_TRUE("sdk.state-ym.failure-preserves-target-bytes-and-observations",
+                   target_untouched);
+}
+
 static void assert_run_result(const char *label, uint64_t request,
                               uint64_t elapsed, uint64_t overshoot,
                               uint64_t instructions, uint32_t pc,
@@ -247,22 +1488,22 @@ static void bounded_run_reports_actual_progress_and_preserves_invalid_requests(v
                      gn_test_image_digest(instance, &after));
     SDK_CHECK_U64("sdk.run.zero-does-not-change-state", before, after);
 
-    assert_run_result("sdk.run.one-status", 1u, 64u, 63u, 0u, 0x100u,
+    assert_run_result("sdk.run.one-status", 1u, 40u, 39u, 0u, 0x100u,
                       GN_RUN_BUDGET);
-    SDK_CHECK_STATUS("sdk.run.reset-before-63", GN_STATUS_OK, gn_reset(instance));
-    assert_run_result("sdk.run.63-status", 63u, 64u, 1u, 0u, 0x100u,
+    SDK_CHECK_STATUS("sdk.run.reset-before-39", GN_STATUS_OK, gn_reset(instance));
+    assert_run_result("sdk.run.39-status", 39u, 40u, 1u, 0u, 0x100u,
                       GN_RUN_BUDGET);
-    SDK_CHECK_STATUS("sdk.run.reset-before-64", GN_STATUS_OK, gn_reset(instance));
-    assert_run_result("sdk.run.64-status", 64u, 64u, 0u, 0u, 0x100u,
+    SDK_CHECK_STATUS("sdk.run.reset-before-40", GN_STATUS_OK, gn_reset(instance));
+    assert_run_result("sdk.run.40-status", 40u, 40u, 0u, 0u, 0x100u,
                       GN_RUN_BUDGET);
-    SDK_CHECK_STATUS("sdk.run.reset-before-65", GN_STATUS_OK, gn_reset(instance));
-    assert_run_result("sdk.run.65-status", 65u, 68u, 3u, 1u, 0x102u,
+    SDK_CHECK_STATUS("sdk.run.reset-before-41", GN_STATUS_OK, gn_reset(instance));
+    assert_run_result("sdk.run.41-status", 41u, 44u, 3u, 1u, 0x102u,
                       GN_RUN_BUDGET);
 
-    SDK_CHECK_STATUS("sdk.run.reset-before-196", GN_STATUS_OK, gn_reset(instance));
-    assert_run_result("sdk.run.196-status", 196u, 196u, 0u, 12u, 0x12eu,
+    SDK_CHECK_STATUS("sdk.run.reset-before-172", GN_STATUS_OK, gn_reset(instance));
+    assert_run_result("sdk.run.172-status", 172u, 172u, 0u, 12u, 0x12eu,
                       GN_RUN_STOPPED);
-    assert_run_result("sdk.run.197-status", 197u, 197u, 0u, 0u, 0x12eu,
+    assert_run_result("sdk.run.173-status", 173u, 173u, 0u, 0u, 0x12eu,
                       GN_RUN_STOPPED);
     SDK_CHECK_STATUS("sdk.run.reset-before-maximum", GN_STATUS_OK,
                      gn_reset(instance));
@@ -287,7 +1528,7 @@ static void bounded_run_reports_actual_progress_and_preserves_invalid_requests(v
 
 static void stopped_guest_consumes_idle_budget_without_dispatches(void) {
     SDK_CASE("sdk.run.stop-idle-progress");
-    assert_run_result("sdk.run.stop-before-idle", 196u, 196u, 0u, 12u,
+    assert_run_result("sdk.run.stop-before-idle", 172u, 172u, 0u, 12u,
                       0x12eu, GN_RUN_STOPPED);
     assert_run_result("sdk.run.stop-idle", 21u, 21u, 0u, 0u, 0x12eu,
                       GN_RUN_STOPPED);
@@ -299,12 +1540,12 @@ static void reset_debt_overflow_is_rejected_before_any_event_mutation(void) {
     uint64_t after = 0u;
     gn_run_result completed;
     SDK_CHECK_STATUS("sdk.run.overflow-establish-stop", GN_STATUS_OK,
-                     gn_run(instance, 196u, &completed));
+                     gn_run(instance, 172u, &completed));
     SDK_CHECK_STATUS("sdk.run.overflow-establish-stop-reason", GN_RUN_STOPPED,
                      completed.reason);
     SDK_CHECK_STATUS("sdk.run.overflow-seed-counters", GN_STATUS_OK,
                      gn_test_seed_counters(instance, 12u, 132u, 0u,
-                                           UINT64_MAX - UINT64_C(196),
+                                           UINT64_MAX - UINT64_C(172),
                                            UINT64_MAX));
     SDK_CHECK_STATUS("sdk.run.overflow-digest-before", GN_STATUS_OK,
                      gn_test_image_digest(instance, &before));
@@ -332,19 +1573,19 @@ static void unsupported_instruction_exposes_only_bounded_fault_details(void) {
                      gn_load(instance, &manifest));
     gn_run_result result;
     SDK_CHECK_STATUS("sdk.run.unsupported-status", GN_STATUS_OK,
-                     gn_run(instance, 196u, &result));
+                     gn_run(instance, 172u, &result));
     SDK_CHECK_STATUS("sdk.run.unsupported-reason", GN_RUN_FAULT, result.reason);
     SDK_CHECK_U64("sdk.run.unsupported-fault-pc", 0x100u, result.fault_pc);
     SDK_CHECK_U64("sdk.run.unsupported-opcode", 0x4afcu,
                   result.instruction_register);
-    SDK_CHECK_U64("sdk.run.unsupported-elapsed-reset-only", 64u,
+    SDK_CHECK_U64("sdk.run.unsupported-elapsed-reset-only", 40u,
                   result.elapsed_cycles);
     SDK_CHECK_U64("sdk.run.unsupported-no-dispatch", 0u, result.instructions);
 }
 
 static void host_fault_is_sticky_until_reset_and_can_recover(void) {
     SDK_CASE("sdk.run.host-fault-reset-recovery");
-    assert_run_result("sdk.run.host-fault-reset-debt", 64u, 64u, 0u, 0u,
+    assert_run_result("sdk.run.host-fault-reset-debt", 40u, 40u, 0u, 0u,
                       0x100u, GN_RUN_BUDGET);
     SDK_CHECK_STATUS("sdk.run.arm-host-fault", GN_STATUS_OK,
                      gn_test_fail_next_bus_callback(instance));
@@ -359,7 +1600,7 @@ static void host_fault_is_sticky_until_reset_and_can_recover(void) {
     SDK_CHECK_STATUS("sdk.run.reset-clears-host-fault", GN_STATUS_OK,
                      gn_reset(instance));
     SDK_CHECK_STATUS("sdk.run.host-fault-recovery", GN_STATUS_OK,
-                     gn_run(instance, 196u, &result));
+                     gn_run(instance, 172u, &result));
     SDK_CHECK_STATUS("sdk.run.host-fault-recovery-stopped", GN_RUN_STOPPED,
                      result.reason);
 }
@@ -385,7 +1626,7 @@ static void expected_result_integer_boundaries_match_original_encodings(void) {
                          gn_load(instance, &manifest));
         gn_run_result run;
         SDK_CHECK_STATUS("sdk.run.integer-run-moveq", GN_STATUS_OK,
-                         gn_run(instance, 196u, &run));
+                         gn_run(instance, 172u, &run));
         gn_observations observations;
         SDK_CHECK_STATUS("sdk.run.integer-observe-moveq", GN_STATUS_OK,
                          gn_observe(instance, &observations));
@@ -411,7 +1652,7 @@ static void expected_result_integer_boundaries_match_original_encodings(void) {
                      gn_load(instance, &manifest));
     gn_run_result wrap_run;
     SDK_CHECK_STATUS("sdk.run.integer-run-addq-wrap", GN_STATUS_OK,
-                     gn_run(instance, 196u, &wrap_run));
+                     gn_run(instance, 172u, &wrap_run));
     gn_observations wrap_observations;
     SDK_CHECK_STATUS("sdk.run.integer-observe-addq-wrap", GN_STATUS_OK,
                      gn_observe(instance, &wrap_observations));
@@ -495,8 +1736,8 @@ static void named_observations_and_bounded_functional_trace_match_fixture(void) 
     SDK_CASE("sdk.controls.original-functional-trace");
     gn_run_result run;
     SDK_CHECK_STATUS("sdk.controls.run", GN_STATUS_OK,
-                     gn_run(instance, 196u, &run));
-    SDK_CHECK_U64("sdk.run.elapsed-cycles", 196u, run.elapsed_cycles);
+                     gn_run(instance, 172u, &run));
+    SDK_CHECK_U64("sdk.run.elapsed-cycles", 172u, run.elapsed_cycles);
     SDK_CHECK_U64("sdk.run.instructions", 12u, run.instructions);
     SDK_CHECK_STATUS("sdk.run.reason-stopped", GN_RUN_STOPPED, run.reason);
     gn_observations observations;
@@ -516,7 +1757,7 @@ static void controlled_wrong_behavior_fails_its_exact_assertion(void) {
     SDK_CASE("sdk.controls.exact-negative-control");
     gn_run_result run;
     SDK_CHECK_STATUS("sdk.control.run-status", GN_STATUS_OK,
-                     gn_run(instance, 196u, &run));
+                     gn_run(instance, 172u, &run));
     gn_observations observations;
     SDK_CHECK_STATUS("sdk.control.observe-status", GN_STATUS_OK,
                      gn_observe(instance, &observations));
@@ -532,7 +1773,7 @@ static void controlled_wrong_behavior_fails_its_exact_assertion(void) {
     } else if (strcmp(selected_suite, "control-run-instructions") == 0) {
         SDK_CHECK_U64("sdk.run.instructions", 12u, run.instructions);
     } else if (strcmp(selected_suite, "control-run-elapsed") == 0) {
-        SDK_CHECK_U64("sdk.run.elapsed-cycles", 196u, run.elapsed_cycles);
+        SDK_CHECK_U64("sdk.run.elapsed-cycles", 172u, run.elapsed_cycles);
     } else if (strcmp(selected_suite, "control-run-stop") == 0) {
         SDK_CHECK_STATUS("sdk.run.reason-stopped", GN_RUN_STOPPED, run.reason);
     } else if (strcmp(selected_suite, "control-byte-order") == 0) {
@@ -557,11 +1798,11 @@ static void controlled_wrong_behavior_fails_its_exact_assertion(void) {
 enum { SDK_BOUNDARY_COUNT = 13, SDK_ISOLATION_PAIRS = 16 };
 
 static const uint64_t sdk_boundary_requests[SDK_BOUNDARY_COUNT] = {
-    64u, 4u, 8u, 20u, 4u, 16u, 8u, 20u, 4u, 16u, 8u, 20u, 4u
+    40u, 4u, 8u, 20u, 4u, 16u, 8u, 20u, 4u, 16u, 8u, 20u, 4u
 };
 
 static const uint64_t sdk_boundary_cycles[SDK_BOUNDARY_COUNT] = {
-    64u, 68u, 76u, 96u, 100u, 116u, 124u, 144u, 148u, 164u, 172u, 192u, 196u
+    40u, 44u, 52u, 72u, 76u, 92u, 100u, 120u, 124u, 140u, 148u, 168u, 172u
 };
 
 static const uint32_t sdk_boundary_pcs[SDK_BOUNDARY_COUNT] = {
@@ -853,8 +2094,8 @@ static int sdk_repeated_and_single_calls_match(
         gn_instance *single = NULL;
         if (!sdk_load_owner(owner, &single)) return 0;
         gn_run_result run;
-        if (gn_run(single, 196u, &run) != GN_STATUS_OK ||
-            run.requested_cycles != 196u || run.elapsed_cycles != 196u ||
+        if (gn_run(single, 172u, &run) != GN_STATUS_OK ||
+            run.requested_cycles != 172u || run.elapsed_cycles != 172u ||
             run.overshoot_cycles != 0u || run.instructions != 12u ||
             run.reason != GN_RUN_STOPPED || run.boundary_pc != 0x12eu) {
             gn_destroy(single);
@@ -964,7 +2205,7 @@ sdk_concurrent_owner_thread(void *userdata) {
         gn_run_result reset_run;
         gn_run_result first_instruction;
         result->recovery_ok =
-            gn_run(target, 64u, &reset_run) == GN_STATUS_OK &&
+            gn_run(target, 40u, &reset_run) == GN_STATUS_OK &&
             reset_run.reason == GN_RUN_BUDGET &&
             reset_run.boundary_pc == 0x100u &&
             gn_run(target, 4u, &first_instruction) == GN_STATUS_OK &&
@@ -1033,6 +2274,1545 @@ static int sdk_concurrent_pairs_match(
     return 1;
 }
 
+typedef struct {
+    gn_mvs_frame_result_v1 result;
+    gn_mvs_private_video_activity video;
+    gn_mvs_bus_fault_observation bus;
+    gn_test_mvs_sound_state sound;
+    uint8_t guest_reply;
+    uint64_t elapsed_total;
+    uint64_t pixel_digest;
+    size_t audio_frames;
+    int16_t audio[GN_MVS_AUDIO_CAPACITY_FRAMES_V1 * 2u];
+} sdk_mvs_snapshot;
+
+typedef struct {
+    sdk_sound_bundle owners[2];
+    sdk_mvs_snapshot baselines[2][SDK_SOUND_FRAMES];
+    uint64_t elapsed[2][SDK_SOUND_FRAMES];
+} sdk_mvs_isolation_fixture;
+
+static const uint32_t sdk_mvs_inputs[2][SDK_SOUND_FRAMES] = {
+    {0u, GN_MVS_INPUT_P1_A, 0u, 0u, GN_MVS_INPUT_P1_A, 0u},
+    {0u, 0u, GN_MVS_INPUT_P1_A, 0u, 0u, GN_MVS_INPUT_P1_A}
+};
+
+static uint64_t sdk_mvs_pixel_digest(const uint8_t *pixels, size_t bytes) {
+    uint64_t digest = UINT64_C(14695981039346656037);
+    for (size_t index = 0u; index < bytes; ++index)
+        digest = (digest ^ pixels[index]) * UINT64_C(1099511628211);
+    return digest;
+}
+
+static void sdk_mvs_fixture_destroy(sdk_mvs_isolation_fixture *fixture) {
+    for (unsigned owner = 0u; owner < 2u; ++owner) {
+        free(fixture->owners[owner].bytes);
+        memset(&fixture->owners[owner], 0, sizeof(fixture->owners[owner]));
+    }
+}
+
+static int sdk_mvs_fixture_prepare(sdk_mvs_isolation_fixture *fixture) {
+    memset(fixture, 0, sizeof(*fixture));
+    if (!sdk_sound_bundle_read(&fixture->owners[0])) {
+        (void)fprintf(stderr, "SDK_MVS_ISOLATION source fixture read failed\n");
+        return 0;
+    }
+    uint8_t *audio_bios = fixture->owners[0].bytes +
+        fixture->owners[0].offsets[6];
+    static const uint8_t startup[] = {
+        0x31u, 0xffu, 0xffu, /* LD SP,$ffff */
+        0x01u, 0x08u, 0x0au, /* LD BC,$0a08: select sound ROM bank 0. */
+        0xedu, 0x78u         /* IN A,(C): bank transition on the sound bus. */
+    };
+    size_t cursor = sizeof(startup);
+    memcpy(audio_bios, startup, sizeof(startup));
+    static const uint8_t timer_setup[][8] = {
+        {0x3eu, 0x24u, 0xd3u, 0x04u, 0x3eu, 0xffu, 0xd3u, 0x05u},
+        {0x3eu, 0x25u, 0xd3u, 0x04u, 0x3eu, 0x03u, 0xd3u, 0x05u},
+        {0x3eu, 0x27u, 0xd3u, 0x04u, 0x3eu, 0x05u, 0xd3u, 0x05u}
+    };
+    for (size_t index = 0u; index < sizeof(timer_setup) / sizeof(timer_setup[0]);
+         ++index) {
+        memcpy(audio_bios + cursor, timer_setup[index], sizeof(timer_setup[index]));
+        cursor += sizeof(timer_setup[index]);
+    }
+    static const uint8_t finish[] = {
+        0x3eu, 0x00u, 0xd3u, 0x08u, /* Enable command NMI. */
+        0xedu, 0x56u,               /* IM 1 for YM timer IRQ. */
+        0xfbu, 0x76u, 0x18u, 0xfdu /* EI; HALT; JR HALT. */
+    };
+    memcpy(audio_bios + cursor, finish, sizeof(finish));
+    cursor += sizeof(finish);
+    if (cursor >= 0x38u) goto fail;
+    audio_bios[0x38u] = 0xc3u; audio_bios[0x39u] = 0x00u;
+    audio_bios[0x3au] = 0x01u; /* Timer interrupt vector -> $0100. */
+    static const uint8_t timer_isr[] = {
+        0xf5u,                         /* PUSH AF */
+        0x3eu, 0x27u, 0xd3u, 0x04u,   /* Select YM timer control. */
+        0x3eu, 0x10u, 0xd3u, 0x05u,   /* Clear timer A's IRQ latch. */
+        0xf1u, 0xfbu, 0xedu, 0x4du    /* POP AF; EI; RETI. */
+    };
+    memcpy(audio_bios + 0x100u, timer_isr, sizeof(timer_isr));
+    fixture->owners[1].size = fixture->owners[0].size;
+    fixture->owners[1].bytes = (uint8_t *)malloc(fixture->owners[1].size);
+    if (fixture->owners[1].bytes == NULL) goto fail;
+    memcpy(fixture->owners[1].bytes, fixture->owners[0].bytes,
+           fixture->owners[1].size);
+    memcpy(fixture->owners[1].offsets, fixture->owners[0].offsets,
+           sizeof(fixture->owners[1].offsets));
+    memcpy(fixture->owners[1].lengths, fixture->owners[0].lengths,
+           sizeof(fixture->owners[1].lengths));
+    if (!sdk_sound_make_variant(&fixture->owners[1])) {
+        (void)fprintf(stderr, "SDK_MVS_ISOLATION fixture variant rejected\n");
+        goto fail;
+    }
+    return 1;
+fail:
+    sdk_mvs_fixture_destroy(fixture);
+    return 0;
+}
+
+static int sdk_mvs_instance_load(const sdk_sound_bundle *bundle,
+                                 gn_instance **out_instance) {
+    *out_instance = NULL;
+    if (bundle == NULL || bundle->bytes == NULL ||
+        gn_create(out_instance) != GN_STATUS_OK || *out_instance == NULL) {
+        gn_destroy(*out_instance);
+        *out_instance = NULL;
+        return 0;
+    }
+    gn_mvs_manifest_v3 manifest;
+    memset(&manifest, 0, sizeof(manifest));
+    manifest.version = GN_MVS_MANIFEST_VERSION_ZOOM;
+    manifest.profile = GN_MVS_PROFILE_MSX;
+    manifest.region_count = SDK_SOUND_REGION_COUNT;
+    for (size_t index = 0u; index < SDK_SOUND_REGION_COUNT; ++index) {
+        manifest.regions[index] = (gn_mvs_region){
+            (gn_mvs_region_role)(index + 1u),
+            bundle->bytes + bundle->offsets[index], bundle->lengths[index],
+            bundle->lengths[index], GN_MVS_LAYOUT_LINEAR};
+    }
+    if (gn_load_mvs_v3(*out_instance, &manifest) != GN_STATUS_OK) {
+        gn_destroy(*out_instance);
+        *out_instance = NULL;
+        return 0;
+    }
+    return 1;
+}
+
+static int sdk_mvs_capture_frame(gn_instance *instance, unsigned owner,
+                                 size_t boundary, uint64_t prior_elapsed,
+                                 sdk_mvs_snapshot *snapshot) {
+    const size_t pixel_bytes = (size_t)SDK_SOUND_WIDTH * SDK_SOUND_HEIGHT *
+                               sizeof(uint32_t);
+    const size_t audio_storage_frames = GN_MVS_AUDIO_CAPACITY_FRAMES_V1 + 1u;
+    uint8_t *pixels = (uint8_t *)malloc(pixel_bytes);
+    int16_t *audio = (int16_t *)malloc(audio_storage_frames * 2u * sizeof(int16_t));
+    if (pixels == NULL || audio == NULL) {
+        free(audio);
+        free(pixels);
+        return 0;
+    }
+    memset(audio, 0x5a, audio_storage_frames * 2u * sizeof(int16_t));
+    const gn_mvs_frame_request_v1 request = {
+        GN_MVS_FRAME_REQUEST_V1_VERSION, sdk_mvs_inputs[owner][boundary],
+        GN_PIXEL_XRGB8888, SDK_SOUND_WIDTH, SDK_SOUND_HEIGHT,
+        (size_t)SDK_SOUND_WIDTH * sizeof(uint32_t), pixels, pixel_bytes,
+        audio, GN_MVS_AUDIO_CAPACITY_FRAMES_V1
+    };
+    memset(snapshot, 0, sizeof(*snapshot));
+    const gn_status status = gn_mvs_advance_frame_v1(
+        instance, &request, sizeof(request), &snapshot->result,
+        sizeof(snapshot->result));
+    int passed = status == GN_STATUS_OK &&
+        snapshot->result.audio_frames_generated ==
+            snapshot->result.audio_frames_delivered &&
+        snapshot->result.audio_frames_delivered <=
+            GN_MVS_AUDIO_CAPACITY_FRAMES_V1 &&
+        snapshot->result.audio_frames_discarded == 0u &&
+        snapshot->result.video_pixels_produced ==
+            (size_t)SDK_SOUND_WIDTH * SDK_SOUND_HEIGHT;
+    for (size_t index = snapshot->result.audio_frames_delivered * 2u;
+         passed != 0 && index < audio_storage_frames * 2u; ++index) {
+        const uint8_t byte = ((const uint8_t *)audio)[index * sizeof(int16_t)];
+        const uint8_t byte2 = ((const uint8_t *)audio)[index * sizeof(int16_t) + 1u];
+        if (byte != 0x5au || byte2 != 0x5au) passed = 0;
+    }
+    if (passed != 0 &&
+        (gn_private_mvs_video_activity(instance, &snapshot->video) !=
+             GN_STATUS_OK ||
+         gn_observe_mvs_bus_fault(instance, &snapshot->bus,
+                                   sizeof(snapshot->bus)) != GN_STATUS_OK ||
+         gn_test_mvs_sound_state_read(instance, &snapshot->sound) !=
+             GN_STATUS_OK ||
+         gn_test_mvs_read_bus8(instance, UINT32_C(0x320000),
+                               &snapshot->guest_reply) != GN_STATUS_OK))
+        passed = 0;
+    if (passed != 0) {
+        snapshot->audio_frames = snapshot->result.audio_frames_delivered;
+        memcpy(snapshot->audio, audio,
+               snapshot->audio_frames * 2u * sizeof(int16_t));
+        snapshot->elapsed_total = prior_elapsed + snapshot->result.elapsed_cycles;
+        snapshot->pixel_digest = sdk_mvs_pixel_digest(pixels, pixel_bytes);
+    }
+    free(audio);
+    free(pixels);
+    return passed;
+}
+
+static int sdk_mvs_snapshot_equal(const sdk_mvs_snapshot *expected,
+                                 const sdk_mvs_snapshot *actual) {
+    return memcmp(&expected->result, &actual->result,
+                  sizeof(expected->result)) == 0 &&
+        memcmp(&expected->video, &actual->video, sizeof(expected->video)) == 0 &&
+        memcmp(&expected->bus, &actual->bus, sizeof(expected->bus)) == 0 &&
+        memcmp(&expected->sound, &actual->sound, sizeof(expected->sound)) == 0 &&
+        expected->guest_reply == actual->guest_reply &&
+        expected->elapsed_total == actual->elapsed_total &&
+        expected->pixel_digest == actual->pixel_digest &&
+        expected->audio_frames == actual->audio_frames &&
+        memcmp(expected->audio, actual->audio,
+               expected->audio_frames * 2u * sizeof(int16_t)) == 0;
+}
+
+static int sdk_mvs_capture_discard_matches(
+    gn_instance *instance, unsigned owner, size_t boundary,
+    uint64_t prior_elapsed, const sdk_mvs_snapshot *expected) {
+    const size_t pixel_bytes = (size_t)SDK_SOUND_WIDTH * SDK_SOUND_HEIGHT *
+                               sizeof(uint32_t);
+    uint8_t *pixels = (uint8_t *)malloc(pixel_bytes);
+    if (pixels == NULL) return 0;
+    memset(pixels, 0xa5, pixel_bytes);
+    const gn_mvs_frame_request_v1 request = {
+        GN_MVS_FRAME_REQUEST_V1_VERSION, sdk_mvs_inputs[owner][boundary],
+        GN_PIXEL_XRGB8888, SDK_SOUND_WIDTH, SDK_SOUND_HEIGHT,
+        (size_t)SDK_SOUND_WIDTH * sizeof(uint32_t), pixels, pixel_bytes,
+        NULL, 0u
+    };
+    sdk_mvs_snapshot actual;
+    memset(&actual, 0, sizeof(actual));
+    const gn_status status = gn_mvs_advance_frame_v1(
+        instance, &request, sizeof(request), &actual.result,
+        sizeof(actual.result));
+    int passed = status == GN_STATUS_OK &&
+        actual.result.audio_frames_generated != 0u &&
+        actual.result.audio_frames_delivered == 0u &&
+        actual.result.audio_frames_discarded ==
+            actual.result.audio_frames_generated &&
+        actual.result.video_pixels_produced ==
+            (size_t)SDK_SOUND_WIDTH * SDK_SOUND_HEIGHT &&
+        gn_private_mvs_video_activity(instance, &actual.video) == GN_STATUS_OK &&
+        gn_observe_mvs_bus_fault(instance, &actual.bus, sizeof(actual.bus)) ==
+            GN_STATUS_OK &&
+        gn_test_mvs_sound_state_read(instance, &actual.sound) == GN_STATUS_OK &&
+        gn_test_mvs_read_bus8(instance, UINT32_C(0x320000),
+                              &actual.guest_reply) == GN_STATUS_OK;
+    if (passed != 0) {
+        actual.elapsed_total = prior_elapsed + actual.result.elapsed_cycles;
+        actual.pixel_digest = sdk_mvs_pixel_digest(pixels, pixel_bytes);
+        gn_mvs_frame_result_v1 normalized = actual.result;
+        normalized.audio_frames_delivered =
+            expected->result.audio_frames_delivered;
+        normalized.audio_frames_discarded =
+            expected->result.audio_frames_discarded;
+        passed = memcmp(&normalized, &expected->result,
+                        sizeof(normalized)) == 0 &&
+            memcmp(&actual.video, &expected->video, sizeof(actual.video)) == 0 &&
+            memcmp(&actual.bus, &expected->bus, sizeof(actual.bus)) == 0 &&
+            memcmp(&actual.sound, &expected->sound, sizeof(actual.sound)) == 0 &&
+            actual.guest_reply == expected->guest_reply &&
+            actual.elapsed_total == expected->elapsed_total &&
+            actual.pixel_digest == expected->pixel_digest;
+    }
+    free(pixels);
+    return passed;
+}
+
+static int sdk_mvs_injected_sound_failure_is_bounded(gn_instance *instance,
+                                                     unsigned owner,
+                                                     size_t boundary) {
+    const size_t pixel_bytes = (size_t)SDK_SOUND_WIDTH * SDK_SOUND_HEIGHT *
+                               sizeof(uint32_t);
+    const size_t storage_frames = GN_MVS_AUDIO_CAPACITY_FRAMES_V1 + 1u;
+    uint8_t *pixels = (uint8_t *)malloc(pixel_bytes);
+    int16_t *audio = (int16_t *)malloc(storage_frames * 2u * sizeof(int16_t));
+    if (pixels == NULL || audio == NULL) {
+        free(audio);
+        free(pixels);
+        return 0;
+    }
+    memset(pixels, 0xa5, pixel_bytes);
+    memset(audio, 0x5a, storage_frames * 2u * sizeof(int16_t));
+    int passed = gn_test_mvs_set_failure(
+        instance, GN_TEST_MVS_FAILURE_SOUND_TICK_LIMIT) == GN_STATUS_OK;
+    gn_mvs_frame_result_v1 result;
+    memset(&result, 0, sizeof(result));
+    const gn_mvs_frame_request_v1 request = {
+        GN_MVS_FRAME_REQUEST_V1_VERSION, sdk_mvs_inputs[owner][boundary],
+        GN_PIXEL_XRGB8888, SDK_SOUND_WIDTH, SDK_SOUND_HEIGHT,
+        (size_t)SDK_SOUND_WIDTH * sizeof(uint32_t), pixels, pixel_bytes,
+        audio, GN_MVS_AUDIO_CAPACITY_FRAMES_V1
+    };
+    if (passed != 0) {
+        const gn_status status = gn_mvs_advance_frame_v1(
+            instance, &request, sizeof(request), &result, sizeof(result));
+        passed = status == GN_STATUS_CPU_FAILURE &&
+            result.reason == GN_RUN_ERROR && result.elapsed_cycles != 0u &&
+            result.elapsed_cycles < result.requested_cycles &&
+            result.audio_frames_generated == result.audio_frames_delivered +
+                result.audio_frames_discarded &&
+            result.audio_frames_delivered <= GN_MVS_AUDIO_CAPACITY_FRAMES_V1 &&
+            result.video_pixels_produced == 0u;
+    }
+    for (size_t index = 0u; passed != 0 && index < pixel_bytes; ++index)
+        if (pixels[index] != 0xa5u) passed = 0;
+    for (size_t index = result.audio_frames_delivered * 2u * sizeof(int16_t);
+         passed != 0 && index < storage_frames * 2u * sizeof(int16_t); ++index)
+        if (((const uint8_t *)audio)[index] != 0x5au) passed = 0;
+    gn_test_mvs_sound_state failed_state;
+    if (passed != 0 &&
+        (gn_test_mvs_sound_state_read(instance, &failed_state) != GN_STATUS_OK ||
+         failed_state.failed == 0u)) passed = 0;
+    free(audio);
+    free(pixels);
+    return passed;
+}
+
+static int sdk_mvs_short_preflight_preserves_boundary(
+    gn_instance *instance, unsigned owner, size_t boundary,
+    const sdk_mvs_snapshot *expected) {
+    const size_t pixel_bytes = (size_t)SDK_SOUND_WIDTH * SDK_SOUND_HEIGHT *
+                               sizeof(uint32_t);
+    const size_t storage_frames = GN_MVS_AUDIO_CAPACITY_FRAMES_V1 + 1u;
+    uint8_t *pixels = (uint8_t *)malloc(pixel_bytes);
+    int16_t *audio = (int16_t *)malloc(storage_frames * 2u * sizeof(int16_t));
+    if (pixels == NULL || audio == NULL) {
+        free(audio);
+        free(pixels);
+        return 0;
+    }
+    memset(pixels, 0xa5, pixel_bytes);
+    memset(audio, 0x5a, storage_frames * 2u * sizeof(int16_t));
+    gn_mvs_frame_result_v1 result;
+    memset(&result, 0xc3, sizeof(result));
+    const gn_mvs_frame_request_v1 request = {
+        GN_MVS_FRAME_REQUEST_V1_VERSION, sdk_mvs_inputs[owner][boundary],
+        GN_PIXEL_XRGB8888, SDK_SOUND_WIDTH, SDK_SOUND_HEIGHT,
+        (size_t)SDK_SOUND_WIDTH * sizeof(uint32_t), pixels, pixel_bytes,
+        audio, GN_MVS_AUDIO_CAPACITY_FRAMES_V1 - 1u
+    };
+    int passed = gn_mvs_advance_frame_v1(
+        instance, &request, sizeof(request), &result, sizeof(result)) ==
+            GN_STATUS_INVALID_ARGUMENT;
+    const uint8_t *result_bytes = (const uint8_t *)&result;
+    for (size_t index = 0u; passed != 0 && index < sizeof(result); ++index)
+        if (result_bytes[index] != 0xc3u) passed = 0;
+    for (size_t index = 0u; passed != 0 && index < pixel_bytes; ++index)
+        if (pixels[index] != 0xa5u) passed = 0;
+    for (size_t index = 0u; passed != 0 &&
+         index < storage_frames * 2u * sizeof(int16_t); ++index)
+        if (((const uint8_t *)audio)[index] != 0x5au) passed = 0;
+    gn_test_mvs_sound_state state;
+    if (passed != 0 &&
+        (gn_test_mvs_sound_state_read(instance, &state) != GN_STATUS_OK ||
+         memcmp(&state, &expected->sound, sizeof(state)) != 0)) passed = 0;
+    free(audio);
+    free(pixels);
+    return passed;
+}
+
+static int sdk_mvs_manifest_make(const sdk_sound_bundle *bundle,
+                                 gn_mvs_manifest_v3 *manifest) {
+    if (bundle == NULL || bundle->bytes == NULL || manifest == NULL) return 0;
+    memset(manifest, 0, sizeof(*manifest));
+    manifest->version = GN_MVS_MANIFEST_VERSION_ZOOM;
+    manifest->profile = GN_MVS_PROFILE_MSX;
+    manifest->region_count = SDK_SOUND_REGION_COUNT;
+    for (size_t index = 0u; index < SDK_SOUND_REGION_COUNT; ++index) {
+        manifest->regions[index] = (gn_mvs_region){
+            (gn_mvs_region_role)(index + 1u),
+            bundle->bytes + bundle->offsets[index], bundle->lengths[index],
+            bundle->lengths[index], GN_MVS_LAYOUT_LINEAR};
+    }
+    return 1;
+}
+
+static int sdk_mvs_lifecycle_peer_isolation(
+    sdk_mvs_isolation_fixture *fixture) {
+    gn_instance *subject = NULL;
+    gn_instance *peer = NULL;
+    if (!sdk_mvs_instance_load(&fixture->owners[0], &subject) ||
+        !sdk_mvs_instance_load(&fixture->owners[1], &peer)) {
+        gn_destroy(peer);
+        gn_destroy(subject);
+        return 0;
+    }
+    int passed = 1;
+    sdk_mvs_snapshot actual;
+    uint64_t subject_elapsed = 0u;
+    if (!sdk_mvs_capture_frame(subject, 0u, 0u, subject_elapsed, &actual) ||
+        !sdk_mvs_snapshot_equal(&fixture->baselines[0][0], &actual))
+        passed = 0;
+    else subject_elapsed = actual.elapsed_total;
+
+    for (size_t boundary = 0u; boundary < SDK_SOUND_FRAMES && passed != 0;
+         ++boundary) {
+        if (boundary == 1u) {
+            if (!sdk_mvs_short_preflight_preserves_boundary(subject, 0u, 1u,
+                    &fixture->baselines[0][0]) ||
+                !sdk_mvs_capture_frame(subject, 0u, 1u, subject_elapsed,
+                                       &actual) ||
+                !sdk_mvs_snapshot_equal(&fixture->baselines[0][1], &actual) ||
+                !sdk_mvs_injected_sound_failure_is_bounded(subject, 0u, 2u) ||
+                gn_reset(subject) != GN_STATUS_OK ||
+                !sdk_mvs_capture_frame(subject, 0u, 0u, 0u, &actual) ||
+                !sdk_mvs_snapshot_equal(&fixture->baselines[0][0], &actual)) {
+                passed = 0;
+            } else {
+                subject_elapsed = actual.elapsed_total;
+            }
+        } else if (boundary == 2u) {
+            if (!sdk_mvs_capture_discard_matches(subject, 0u, 1u,
+                    subject_elapsed, &fixture->baselines[0][1])) {
+                passed = 0;
+            } else {
+                subject_elapsed = fixture->baselines[0][1].elapsed_total;
+            }
+        } else if (boundary == 3u) {
+            gn_mvs_manifest_v3 rejected;
+            if (!sdk_mvs_manifest_make(&fixture->owners[0], &rejected)) {
+                passed = 0;
+            } else {
+                rejected.region_count--;
+                if (gn_load_mvs_v3(subject, &rejected) != GN_STATUS_INVALID_MEDIA ||
+                    !sdk_mvs_capture_frame(subject, 0u, 2u, subject_elapsed,
+                                           &actual) ||
+                    !sdk_mvs_snapshot_equal(&fixture->baselines[0][2], &actual)) {
+                    passed = 0;
+                } else {
+                    subject_elapsed = actual.elapsed_total;
+                }
+            }
+        } else if (boundary == 4u) {
+            gn_mvs_manifest_v3 reload;
+            if (gn_unload(subject) != GN_STATUS_OK ||
+                !sdk_mvs_manifest_make(&fixture->owners[0], &reload) ||
+                gn_load_mvs_v3(subject, &reload) != GN_STATUS_OK ||
+                !sdk_mvs_capture_frame(subject, 0u, 0u, 0u, &actual) ||
+                !sdk_mvs_snapshot_equal(&fixture->baselines[0][0], &actual)) {
+                passed = 0;
+            } else {
+                subject_elapsed = actual.elapsed_total;
+            }
+        } else if (boundary == 5u) {
+            gn_destroy(subject);
+            subject = NULL;
+        }
+        sdk_mvs_snapshot peer_actual;
+        uint64_t peer_elapsed = boundary == 0u ? 0u :
+            fixture->baselines[1][boundary - 1u].elapsed_total;
+        if (passed != 0 &&
+            (!sdk_mvs_capture_frame(peer, 1u, boundary, peer_elapsed,
+                                    &peer_actual) ||
+             !sdk_mvs_snapshot_equal(&fixture->baselines[1][boundary],
+                                     &peer_actual)))
+            passed = 0;
+    }
+    gn_destroy(peer);
+    gn_destroy(subject);
+    if (passed == 0)
+        (void)fprintf(stderr,
+            "SDK_MVS_LIFECYCLE peer continuation or owner recovery mismatch\n");
+    else
+        (void)printf("SDK_MVS_LIFECYCLE peer_frames=%u reset=1 discard=1 "
+                     "failure=1 rejected_load=1 reload=1 destroy=1 status=pass\n",
+                     SDK_SOUND_FRAMES);
+    return passed;
+}
+
+static int sdk_mvs_run_sequence(const sdk_sound_bundle *bundle, unsigned owner,
+                                sdk_mvs_snapshot *snapshots,
+                                uint64_t *elapsed_out) {
+    gn_instance *target = NULL;
+    if (!sdk_mvs_instance_load(bundle, &target)) return 0;
+    uint64_t elapsed = 0u;
+    int passed = 1;
+    for (size_t boundary = 0u; boundary < SDK_SOUND_FRAMES; ++boundary) {
+        if (!sdk_mvs_capture_frame(target, owner, boundary, elapsed,
+                                   &snapshots[boundary])) {
+            passed = 0;
+            break;
+        }
+        elapsed = snapshots[boundary].elapsed_total;
+    }
+    gn_destroy(target);
+    if (passed != 0) *elapsed_out = elapsed;
+    return passed;
+}
+
+static int sdk_mvs_repeated_and_interleaved(sdk_mvs_isolation_fixture *fixture) {
+    for (unsigned owner = 0u; owner < 2u; ++owner) {
+        sdk_mvs_snapshot repeated[SDK_SOUND_FRAMES];
+        uint64_t elapsed = 0u;
+        if (!sdk_mvs_run_sequence(&fixture->owners[owner], owner,
+                                  repeated, &elapsed)) return 0;
+        for (size_t boundary = 0u; boundary < SDK_SOUND_FRAMES; ++boundary) {
+            if (!sdk_mvs_snapshot_equal(&fixture->baselines[owner][boundary],
+                                        &repeated[boundary])) return 0;
+        }
+    }
+    gn_instance *instances[2] = {NULL, NULL};
+    for (unsigned owner = 0u; owner < 2u; ++owner) {
+        if (!sdk_mvs_instance_load(&fixture->owners[owner], &instances[owner])) {
+            gn_destroy(instances[0]);
+            gn_destroy(instances[1]);
+            return 0;
+        }
+    }
+    uint64_t elapsed[2] = {0u, 0u};
+    int passed = 1;
+    for (size_t boundary = 0u; boundary < SDK_SOUND_FRAMES && passed != 0;
+         ++boundary) {
+        for (unsigned turn = 0u; turn < 2u; ++turn) {
+            const unsigned owner = (unsigned)((boundary + turn) & 1u);
+            sdk_mvs_snapshot actual;
+            if (!sdk_mvs_capture_frame(instances[owner], owner, boundary,
+                                       elapsed[owner], &actual) ||
+                !sdk_mvs_snapshot_equal(&fixture->baselines[owner][boundary],
+                                        &actual)) {
+                passed = 0;
+                break;
+            }
+            elapsed[owner] = actual.elapsed_total;
+        }
+    }
+    gn_destroy(instances[1]);
+    gn_destroy(instances[0]);
+    return passed;
+}
+
+#if defined(_WIN32)
+typedef struct { volatile LONG active, overlap, progress; } sdk_mvs_markers;
+static LONG sdk_mvs_marker_read(volatile LONG *value) {
+    return InterlockedCompareExchange(value, 0, 0);
+}
+static void sdk_mvs_marker_or(volatile LONG *value, LONG bits) {
+    (void)InterlockedOr(value, bits);
+}
+static void sdk_mvs_marker_and(volatile LONG *value, LONG bits) {
+    (void)InterlockedAnd(value, bits);
+}
+#else
+typedef struct { atomic_uint active, overlap, progress; } sdk_mvs_markers;
+static unsigned sdk_mvs_marker_read(atomic_uint *value) {
+    return atomic_load_explicit(value, memory_order_acquire);
+}
+static void sdk_mvs_marker_or(atomic_uint *value, unsigned bits) {
+    atomic_fetch_or_explicit(value, bits, memory_order_acq_rel);
+}
+static void sdk_mvs_marker_and(atomic_uint *value, unsigned bits) {
+    atomic_fetch_and_explicit(value, bits, memory_order_acq_rel);
+}
+#endif
+
+typedef struct {
+    sdk_start_gate *gate;
+    sdk_mvs_markers *markers;
+    sdk_mvs_isolation_fixture *fixture;
+    unsigned owner;
+    int sequence_ok;
+    sdk_mvs_snapshot snapshots[SDK_SOUND_FRAMES];
+} sdk_mvs_thread_argument;
+
+static SDK_TEST_THREAD_RESULT SDK_TEST_THREAD_CALL
+sdk_mvs_owner_thread(void *userdata) {
+    sdk_mvs_thread_argument *argument = (sdk_mvs_thread_argument *)userdata;
+    const unsigned owner = argument->owner;
+    gn_instance *target = NULL;
+    const size_t pixel_bytes = (size_t)SDK_SOUND_WIDTH * SDK_SOUND_HEIGHT *
+                               sizeof(uint32_t);
+    const size_t audio_storage_frames = GN_MVS_AUDIO_CAPACITY_FRAMES_V1 + 1u;
+    uint8_t *pixels = (uint8_t *)malloc(pixel_bytes);
+    int16_t *audio = (int16_t *)malloc(audio_storage_frames * 2u * sizeof(int16_t));
+    if (pixels == NULL || audio == NULL ||
+        !sdk_mvs_instance_load(&argument->fixture->owners[owner], &target)) {
+        free(audio);
+        free(pixels);
+        gn_destroy(target);
+        argument->sequence_ok = 0;
+        return SDK_TEST_THREAD_DONE;
+    }
+    sdk_start_gate_arrive(argument->gate);
+    while (!sdk_start_gate_released(argument->gate)) sdk_test_thread_yield();
+
+    uint64_t elapsed = 0u;
+    argument->sequence_ok = 1;
+    for (size_t boundary = 0u; boundary < SDK_SOUND_FRAMES; ++boundary) {
+        memset(audio, 0x5a, audio_storage_frames * 2u * sizeof(int16_t));
+        const gn_mvs_frame_request_v1 request = {
+            GN_MVS_FRAME_REQUEST_V1_VERSION, sdk_mvs_inputs[owner][boundary],
+            GN_PIXEL_XRGB8888, SDK_SOUND_WIDTH, SDK_SOUND_HEIGHT,
+            (size_t)SDK_SOUND_WIDTH * sizeof(uint32_t), pixels, pixel_bytes,
+            audio, GN_MVS_AUDIO_CAPACITY_FRAMES_V1
+        };
+        const unsigned bit = 1u << owner;
+        const unsigned other = 1u << (owner ^ 1u);
+        sdk_mvs_marker_or(&argument->markers->active, bit);
+        if ((sdk_mvs_marker_read(&argument->markers->active) & other) != 0u)
+            sdk_mvs_marker_or(&argument->markers->overlap, bit);
+        sdk_mvs_snapshot *snapshot = &argument->snapshots[boundary];
+        memset(snapshot, 0, sizeof(*snapshot));
+        const gn_status status = gn_mvs_advance_frame_v1(
+            target, &request, sizeof(request), &snapshot->result,
+            sizeof(snapshot->result));
+        if (status != GN_STATUS_OK ||
+            snapshot->result.audio_frames_delivered !=
+                snapshot->result.audio_frames_generated ||
+            snapshot->result.audio_frames_delivered >
+                GN_MVS_AUDIO_CAPACITY_FRAMES_V1 ||
+            snapshot->result.video_pixels_produced !=
+                (size_t)SDK_SOUND_WIDTH * SDK_SOUND_HEIGHT ||
+            gn_private_mvs_video_activity(target, &snapshot->video) !=
+                GN_STATUS_OK ||
+            gn_observe_mvs_bus_fault(target, &snapshot->bus,
+                                      sizeof(snapshot->bus)) != GN_STATUS_OK ||
+            gn_test_mvs_sound_state_read(target, &snapshot->sound) !=
+                GN_STATUS_OK ||
+            gn_test_mvs_read_bus8(target, UINT32_C(0x320000),
+                                  &snapshot->guest_reply) != GN_STATUS_OK) {
+            argument->sequence_ok = 0;
+#if defined(_WIN32)
+            sdk_mvs_marker_and(&argument->markers->active, ~(LONG)bit);
+#else
+            sdk_mvs_marker_and(&argument->markers->active, ~bit);
+#endif
+            break;
+        }
+        snapshot->audio_frames = snapshot->result.audio_frames_delivered;
+        memcpy(snapshot->audio, audio,
+               snapshot->audio_frames * 2u * sizeof(int16_t));
+        snapshot->elapsed_total = elapsed + snapshot->result.elapsed_cycles;
+        snapshot->pixel_digest = sdk_mvs_pixel_digest(pixels, pixel_bytes);
+        elapsed = snapshot->elapsed_total;
+        if ((sdk_mvs_marker_read(&argument->markers->active) & other) != 0u) {
+            sdk_mvs_marker_or(&argument->markers->overlap, bit);
+            sdk_mvs_marker_or(&argument->markers->progress, bit);
+        }
+#if defined(_WIN32)
+        sdk_mvs_marker_and(&argument->markers->active, ~(LONG)bit);
+#else
+        sdk_mvs_marker_and(&argument->markers->active, ~bit);
+#endif
+        sdk_test_thread_yield();
+    }
+    gn_destroy(target);
+    free(audio);
+    free(pixels);
+    return SDK_TEST_THREAD_DONE;
+}
+
+static int sdk_mvs_concurrent(sdk_mvs_isolation_fixture *fixture,
+                              unsigned *out_overlap, unsigned *out_progress) {
+    sdk_start_gate gate;
+    sdk_start_gate_init(&gate);
+    sdk_mvs_markers markers;
+#if defined(_WIN32)
+    markers.active = 0; markers.overlap = 0; markers.progress = 0;
+#else
+    atomic_init(&markers.active, 0u);
+    atomic_init(&markers.overlap, 0u);
+    atomic_init(&markers.progress, 0u);
+#endif
+    sdk_mvs_thread_argument arguments[2];
+    sdk_test_thread threads[2];
+    unsigned started = 0u;
+    memset(arguments, 0, sizeof(arguments));
+    for (unsigned owner = 0u; owner < 2u; ++owner) {
+        arguments[owner].gate = &gate;
+        arguments[owner].markers = &markers;
+        arguments[owner].fixture = fixture;
+        arguments[owner].owner = owner;
+        if (!sdk_test_thread_start(&threads[owner], sdk_mvs_owner_thread,
+                                   &arguments[owner])) {
+            sdk_start_gate_release(&gate);
+            for (unsigned index = 0u; index < started; ++index)
+                (void)sdk_test_thread_join(threads[index]);
+            return 0;
+        }
+        ++started;
+    }
+    while (!sdk_start_gate_ready(&gate)) sdk_test_thread_yield();
+    sdk_start_gate_release(&gate);
+    int joined = 1;
+    for (unsigned owner = 0u; owner < 2u; ++owner)
+        if (!sdk_test_thread_join(threads[owner])) joined = 0;
+    *out_overlap = (unsigned)sdk_mvs_marker_read(&markers.overlap);
+    *out_progress = (unsigned)sdk_mvs_marker_read(&markers.progress);
+    if (joined == 0 || *out_overlap != 3u || *out_progress != 3u) return 0;
+    for (unsigned owner = 0u; owner < 2u; ++owner) {
+        if (arguments[owner].sequence_ok == 0) return 0;
+        for (size_t boundary = 0u; boundary < SDK_SOUND_FRAMES; ++boundary) {
+            if (!sdk_mvs_snapshot_equal(
+                    &fixture->baselines[owner][boundary],
+                    &arguments[owner].snapshots[boundary])) return 0;
+        }
+    }
+    return 1;
+}
+
+static int sdk_mvs_full_machine_isolation(void) {
+    sdk_mvs_isolation_fixture fixture;
+    if (!sdk_mvs_fixture_prepare(&fixture)) {
+        (void)fprintf(stderr, "SDK_MVS_ISOLATION fixture preparation failed\n");
+        return 0;
+    }
+    int passed = 1;
+    unsigned main_remainder_mask = 0u;
+    unsigned ym_remainder_mask = 0u;
+    unsigned pcm_phase_mask = 0u;
+    for (unsigned owner = 0u; owner < 2u && passed != 0; ++owner) {
+        uint64_t elapsed = 0u;
+        passed = sdk_mvs_run_sequence(&fixture.owners[owner], owner,
+            fixture.baselines[owner], &elapsed);
+        fixture.elapsed[owner][SDK_SOUND_FRAMES - 1u] = elapsed;
+        if (passed != 0) {
+            for (size_t boundary = 0u; boundary < SDK_SOUND_FRAMES; ++boundary) {
+                const gn_test_mvs_sound_state *state =
+                    &fixture.baselines[owner][boundary].sound;
+                main_remainder_mask |= 1u << state->main_clock_remainder;
+                ym_remainder_mask |= 1u << state->ym_clock_remainder;
+                pcm_phase_mask |= 1u << (state->pcm_output_phase != 0u);
+            }
+            const gn_test_mvs_sound_state *final =
+                &fixture.baselines[owner][SDK_SOUND_FRAMES - 1u].sound;
+            if (final->main_cycles_advanced == 0u || final->native_samples == 0u ||
+                final->bank_changes == 0u ||
+                final->timer_register_writes[0] == 0u ||
+                final->timer_register_writes[1] == 0u ||
+                final->timer_register_writes[2] == 0u ||
+                final->irq_assertions == 0u || final->irq_deassertions == 0u ||
+                final->failed != 0u) {
+                (void)fprintf(stderr,
+                    "SDK_MVS_ISOLATION sound events owner=%u bank=%llu timer=%llu/%llu/%llu irq=%llu/%llu samples=%llu failed=%u\n",
+                    owner, (unsigned long long)final->bank_changes,
+                    (unsigned long long)final->timer_register_writes[0],
+                    (unsigned long long)final->timer_register_writes[1],
+                    (unsigned long long)final->timer_register_writes[2],
+                    (unsigned long long)final->irq_assertions,
+                    (unsigned long long)final->irq_deassertions,
+                    (unsigned long long)final->native_samples, final->failed);
+                passed = 0;
+            }
+        }
+        if (passed != 0) {
+            (void)printf("SDK_MVS_COMMAND owner=%u replies=%02x,%02x,%02x,%02x,%02x,%02x\n",
+                owner,
+                fixture.baselines[owner][0].guest_reply,
+                fixture.baselines[owner][1].guest_reply,
+                fixture.baselines[owner][2].guest_reply,
+                fixture.baselines[owner][3].guest_reply,
+                fixture.baselines[owner][4].guest_reply,
+                fixture.baselines[owner][5].guest_reply);
+        }
+    }
+    if (passed != 0 && ((main_remainder_mask & ~1u) == 0u ||
+                        (ym_remainder_mask & ~1u) == 0u ||
+                        (pcm_phase_mask & 2u) == 0u)) {
+        (void)fprintf(stderr,
+            "SDK_MVS_ISOLATION remainder coverage main=%x ym=%x pcm=%x\n",
+            main_remainder_mask, ym_remainder_mask, pcm_phase_mask);
+        passed = 0;
+    }
+    if (passed != 0) {
+        int distinct = 0;
+        int swapped_sequence_equal = 1;
+        for (size_t boundary = 0u; boundary < SDK_SOUND_FRAMES; ++boundary) {
+            if (!sdk_mvs_snapshot_equal(&fixture.baselines[0][boundary],
+                                        &fixture.baselines[1][boundary]))
+                distinct = 1;
+            if (!sdk_mvs_snapshot_equal(&fixture.baselines[0][boundary],
+                                        &fixture.baselines[1][boundary]))
+                swapped_sequence_equal = 0;
+        }
+        const int guest_input_landmarks =
+            fixture.baselines[0][0].guest_reply == 0x3cu &&
+            fixture.baselines[0][1].guest_reply == 0xa5u &&
+            fixture.baselines[1][0].guest_reply == 0x3du &&
+            fixture.baselines[1][1].guest_reply == 0x3du &&
+            fixture.baselines[1][2].guest_reply == 0xa5u;
+        const int swapped_control_rejected = swapped_sequence_equal == 0;
+        passed = distinct && swapped_control_rejected && guest_input_landmarks &&
+                 sdk_mvs_repeated_and_interleaved(&fixture);
+        if (!distinct)
+            (void)fprintf(stderr, "SDK_MVS_ISOLATION owner streams were identical\n");
+        if (!swapped_control_rejected)
+            (void)fprintf(stderr, "SDK_MVS_ISOLATION swapped baseline control matched\n");
+        if (!guest_input_landmarks)
+            (void)fprintf(stderr, "SDK_MVS_ISOLATION guest input landmarks mismatched\n");
+    }
+    unsigned overlap = 0u, progress = 0u;
+    if (passed != 0) passed = sdk_mvs_concurrent(&fixture, &overlap, &progress);
+    if (passed != 0) passed = sdk_mvs_lifecycle_peer_isolation(&fixture);
+    (void)printf("SDK_MVS_ISOLATION frames=%u owners=2 overlap_mask=%u "
+                 "progress_mask=%u status=%s\n", SDK_SOUND_FRAMES, overlap,
+                 progress, passed != 0 ? "pass" : "fail");
+    sdk_mvs_fixture_destroy(&fixture);
+    return passed;
+}
+
+static void mvs_native_state_api_accepts_the_public_machine_profile(void) {
+    SDK_CASE("sdk.state-machine.mvs-public-profile");
+    sdk_mvs_isolation_fixture fixture;
+    memset(&fixture, 0, sizeof(fixture));
+    SDK_CHECK_TRUE("sdk.state-machine.public-fixture-prepared",
+                   sdk_mvs_fixture_prepare(&fixture));
+    gn_instance *subject = NULL;
+    SDK_CHECK_TRUE("sdk.state-machine.public-fixture-loaded",
+                   sdk_mvs_instance_load(&fixture.owners[0], &subject));
+
+    size_t capacity = 0u;
+    SDK_CHECK_STATUS("sdk.state-machine.mvs-capacity", GN_STATUS_OK,
+                     gn_state_capacity_v1(subject, &capacity));
+    SDK_CHECK_TRUE("sdk.state-machine.mvs-capacity-includes-device-state",
+                   capacity > GN_STATE_MAX_SIZE_V1);
+    gn_destroy(subject);
+    sdk_mvs_fixture_destroy(&fixture);
+}
+
+static int sdk_mvs_state_snapshot_equal(const sdk_mvs_snapshot *expected,
+                                        const sdk_mvs_snapshot *actual) {
+    sdk_mvs_snapshot expected_copy = *expected;
+    sdk_mvs_snapshot actual_copy = *actual;
+    gn_test_mvs_sound_state *left = &expected_copy.sound;
+    gn_test_mvs_sound_state *right = &actual_copy.sound;
+    left->main_cycles_advanced = right->main_cycles_advanced = 0u;
+    left->ym_input_clocks = right->ym_input_clocks = 0u;
+    left->native_samples = right->native_samples = 0u;
+    left->irq_assertions = right->irq_assertions = 0u;
+    left->irq_deassertions = right->irq_deassertions = 0u;
+    left->bank_changes = right->bank_changes = 0u;
+    memset(left->timer_register_writes, 0, sizeof(left->timer_register_writes));
+    memset(right->timer_register_writes, 0, sizeof(right->timer_register_writes));
+    left->ym_clock_remainder = right->ym_clock_remainder = 0u;
+    return sdk_mvs_snapshot_equal(&expected_copy, &actual_copy);
+}
+
+static int sdk_mvs_state_section_payload_offset(const uint8_t *state,
+                                                 size_t capacity,
+                                                 uint32_t section_id,
+                                                 size_t *out_offset);
+
+static void mvs_native_state_restores_full_continuation_atomically(void) {
+    SDK_CASE("sdk.state-machine.mvs-continuation");
+    sdk_mvs_isolation_fixture fixture;
+    memset(&fixture, 0, sizeof(fixture));
+    SDK_CHECK_TRUE("sdk.state-machine.fixture-prepared",
+                   sdk_mvs_fixture_prepare(&fixture));
+    if (fixture.owners[0].bytes == NULL) return;
+    uint8_t *main_bios = fixture.owners[0].bytes +
+        fixture.owners[0].offsets[GN_MVS_REGION_BIOS - 1u];
+    static const uint8_t input_poll[] = {
+        0x10u, 0x39u, 0x00u, 0x30u, 0x00u, 0x00u,
+        0x0cu, 0x00u, 0x00u, 0xefu
+    };
+    static const uint8_t stop_after_sound[] = {
+        0x4eu, 0x72u, 0x27u, 0x00u, 0x4eu, 0x71u,
+        0x4eu, 0x71u, 0x4eu, 0x71u
+    };
+    size_t stop_patches = 0u;
+    SDK_CHECK_TRUE("sdk.state-machine.stopped-guest-fixture",
+        sdk_sound_patch_sequence(main_bios,
+            fixture.owners[0].lengths[GN_MVS_REGION_BIOS - 1u], input_poll,
+            sizeof(input_poll), stop_after_sound, sizeof(stop_after_sound),
+            &stop_patches));
+    SDK_CHECK_U64("sdk.state-machine.single-stop-patch", 1u, stop_patches);
+    gn_instance *subject = NULL;
+    gn_test_allocator allocator;
+    gn_test_allocator_init(&allocator);
+    gn_mvs_manifest_v3 manifest;
+    const int manifest_ready = sdk_mvs_manifest_make(&fixture.owners[0],
+                                                      &manifest);
+    SDK_CHECK_TRUE("sdk.state-machine.fixture-manifest", manifest_ready);
+    if (manifest_ready == 0) {
+        sdk_mvs_fixture_destroy(&fixture);
+        return;
+    }
+    const gn_status owner_status = gn_test_create(&allocator, &subject);
+    SDK_CHECK_STATUS("sdk.state-machine.fixture-owner-created", GN_STATUS_OK,
+                     owner_status);
+    if (subject == NULL) {
+        sdk_mvs_fixture_destroy(&fixture);
+        return;
+    }
+    const gn_status load_status = gn_load_mvs_v3(subject, &manifest);
+    SDK_CHECK_STATUS("sdk.state-machine.fixture-loaded", GN_STATUS_OK,
+                     load_status);
+    if (load_status != GN_STATUS_OK) {
+        gn_destroy(subject);
+        sdk_mvs_fixture_destroy(&fixture);
+        return;
+    }
+    if (subject == NULL) {
+        sdk_mvs_fixture_destroy(&fixture);
+        return;
+    }
+    size_t capacity = 0u;
+    gn_state_detail_v1 detail;
+    size_t written = 0u;
+    SDK_CHECK_STATUS("sdk.state-machine.capacity", GN_STATUS_OK,
+                     gn_state_capacity_v1(subject, &capacity));
+    uint8_t *baseline = (uint8_t *)malloc(capacity);
+    uint8_t *current = (uint8_t *)malloc(capacity);
+    uint8_t *rejected = (uint8_t *)malloc(capacity);
+    const size_t surface_bytes = (size_t)SDK_SOUND_WIDTH * SDK_SOUND_HEIGHT *
+                                 sizeof(uint32_t);
+    uint8_t *expected_surface = (uint8_t *)malloc(surface_bytes);
+    uint8_t *replayed_surface = (uint8_t *)malloc(surface_bytes);
+    SDK_CHECK_TRUE("sdk.state-machine.transfer-buffers-allocated",
+                   baseline != NULL && current != NULL && rejected != NULL &&
+                   expected_surface != NULL && replayed_surface != NULL);
+    if (baseline == NULL || current == NULL || rejected == NULL ||
+        expected_surface == NULL || replayed_surface == NULL) goto cleanup;
+
+    gn_run_result raw;
+    SDK_CHECK_STATUS("sdk.state-machine.raw-run-status", GN_STATUS_OK,
+                     gn_run(subject, 20000u, &raw));
+    SDK_CHECK_STATUS("sdk.state-machine.raw-run-stopped", GN_RUN_STOPPED,
+                     raw.reason);
+
+    sdk_mvs_snapshot prefix;
+    sdk_mvs_snapshot expected;
+    sdk_mvs_snapshot replayed;
+    uint64_t prior_elapsed = 0u;
+    SDK_CHECK_TRUE("sdk.state-machine.first-frame",
+                   sdk_mvs_capture_frame(subject, 0u, 0u, prior_elapsed,
+                                         &prefix));
+    prior_elapsed = prefix.elapsed_total;
+    SDK_CHECK_STATUS("sdk.state-machine.capture-frame-boundary", GN_STATUS_OK,
+        gn_state_capture_v1(subject, baseline, capacity, &written,
+                            &detail, sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-machine.full-mvs-state-written", capacity, written);
+    size_t board_payload_offset = 0u;
+    SDK_CHECK_TRUE("sdk.state-machine.board-section-located",
+        sdk_mvs_state_section_payload_offset(baseline, capacity, 3u,
+                                              &board_payload_offset));
+    memcpy(rejected, baseline, capacity);
+    rejected[board_payload_offset + 51u] = UINT8_C(0xa5);
+    rejected[board_payload_offset + 52u] = UINT8_C(0x5a);
+    SDK_CHECK_STATUS("sdk.state-machine.arbitrary-output-registers-restore",
+                     GN_STATUS_OK,
+        gn_state_restore_v1(subject, rejected, capacity, &detail,
+                            sizeof(detail)));
+    size_t output_register_state_size = 0u;
+    SDK_CHECK_STATUS("sdk.state-machine.arbitrary-output-registers-recapture",
+                     GN_STATUS_OK,
+        gn_state_capture_v1(subject, current, capacity,
+                            &output_register_state_size, &detail,
+                            sizeof(detail)));
+    SDK_CHECK_TRUE("sdk.state-machine.arbitrary-output-registers-preserved",
+        output_register_state_size == capacity &&
+        memcmp(current, rejected, capacity) == 0);
+    SDK_CHECK_STATUS("sdk.state-machine.restore-baseline-after-register-check",
+                     GN_STATUS_OK,
+        gn_state_restore_v1(subject, baseline, capacity, &detail,
+                            sizeof(detail)));
+    const uintptr_t save_ram_before = gn_test_mvs_save_ram_address(subject);
+    SDK_CHECK_TRUE("sdk.state-machine.save-ram-owned-address",
+                   save_ram_before != (uintptr_t)0);
+
+    SDK_CHECK_TRUE("sdk.state-machine.expected-continuation",
+                   sdk_mvs_capture_frame(subject, 0u, 1u, prior_elapsed,
+                                         &expected));
+    size_t pixels_produced = 0u;
+    SDK_CHECK_STATUS("sdk.state-machine.raw-video-observation", GN_STATUS_OK,
+        gn_private_mvs_render_frame(subject, SDK_SOUND_WIDTH, SDK_SOUND_HEIGHT,
+            (size_t)SDK_SOUND_WIDTH * sizeof(uint32_t), expected_surface,
+            surface_bytes, &pixels_produced));
+    SDK_CHECK_U64("sdk.state-machine.raw-video-byte-count",
+                   (uint64_t)SDK_SOUND_WIDTH * SDK_SOUND_HEIGHT,
+                   pixels_produced);
+    SDK_CHECK_TRUE("sdk.state-machine.chip-and-filter-state-advanced",
+                   expected.sound.native_samples > prefix.sound.native_samples &&
+                   expected.sound.filter_history_digest !=
+                       prefix.sound.filter_history_digest);
+    SDK_CHECK_STATUS("sdk.state-machine.inject-sound-fault", GN_STATUS_OK,
+        gn_test_mvs_set_failure(subject, GN_TEST_MVS_FAILURE_SOUND_TICK_LIMIT));
+    SDK_CHECK_STATUS("sdk.state-machine.sound-fault-status",
+                     GN_STATUS_CPU_FAILURE, gn_run(subject, 64u, &raw));
+    SDK_CHECK_STATUS("sdk.state-machine.faulted-capture-rejected",
+                     GN_STATUS_INVALID_STATE,
+        gn_state_capture_v1(subject, current, capacity, &written,
+                            &detail, sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-machine.fault-latch-reason",
+                   GN_STATE_REASON_GUEST_FAULT, detail.reason);
+    gn_test_allocator_arm(&allocator, 1u);
+    SDK_CHECK_STATUS("sdk.state-machine.restore-full-machine", GN_STATUS_OK,
+        gn_state_restore_v1(subject, baseline, capacity, &detail, sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-machine.no-fallible-image-allocation-at-commit",
+                   0u, allocator.attempts);
+    gn_test_allocator_disarm(&allocator);
+    SDK_CHECK_U64("sdk.state-machine.save-ram-address-retained",
+                   save_ram_before, gn_test_mvs_save_ram_address(subject));
+    memset(baseline, 0xddu, capacity);
+    free(baseline);
+    baseline = NULL;
+    SDK_CHECK_TRUE("sdk.state-machine.transfer-buffer-independent",
+                   sdk_mvs_capture_frame(subject, 0u, 1u, prior_elapsed,
+                                         &replayed));
+    SDK_CHECK_TRUE("sdk.state-machine.guest-video-pcm-time-match",
+                   sdk_mvs_state_snapshot_equal(&expected, &replayed));
+    pixels_produced = 0u;
+    SDK_CHECK_STATUS("sdk.state-machine.raw-video-replay", GN_STATUS_OK,
+        gn_private_mvs_render_frame(subject, SDK_SOUND_WIDTH, SDK_SOUND_HEIGHT,
+            (size_t)SDK_SOUND_WIDTH * sizeof(uint32_t), replayed_surface,
+            surface_bytes, &pixels_produced));
+    SDK_CHECK_TRUE("sdk.state-machine.full-raw-video-match",
+                   pixels_produced == (size_t)SDK_SOUND_WIDTH * SDK_SOUND_HEIGHT &&
+                   memcmp(expected_surface, replayed_surface, surface_bytes) == 0);
+
+    SDK_CHECK_STATUS("sdk.state-machine.capture-pre-rejection", GN_STATUS_OK,
+        gn_state_capture_v1(subject, current, capacity, &written,
+                            &detail, sizeof(detail)));
+    memcpy(rejected, current, capacity);
+    rejected[68] = 1u; /* Reserved header word must reject before any apply. */
+    SDK_CHECK_STATUS("sdk.state-machine.reject-malformed-state",
+                     GN_STATUS_INVALID_MEDIA,
+                     gn_state_restore_v1(subject, rejected, capacity,
+                                         &detail, sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-machine.rejection-reason",
+                   GN_STATE_REASON_RESERVED, detail.reason);
+    SDK_CHECK_STATUS("sdk.state-machine.capture-after-rejection", GN_STATUS_OK,
+        gn_state_capture_v1(subject, baseline = (uint8_t *)malloc(capacity),
+                            capacity, &written, &detail, sizeof(detail)));
+    SDK_CHECK_TRUE("sdk.state-machine.rejected-load-is-atomic",
+                   baseline != NULL && memcmp(current, baseline, capacity) == 0);
+    SDK_CHECK_U64("sdk.state-machine.save-ram-address-after-rejection",
+                   save_ram_before, gn_test_mvs_save_ram_address(subject));
+cleanup:
+    free(replayed_surface);
+    free(expected_surface);
+    free(rejected);
+    free(current);
+    free(baseline);
+    gn_destroy(subject);
+    SDK_CHECK_U64("sdk.state-machine.owner-allocation-balance", 0u,
+                   allocator.live_allocations);
+    sdk_mvs_fixture_destroy(&fixture);
+}
+
+static int sdk_mvs_restore_rejects_atomically(
+    gn_instance *instance, const uint8_t *rejected_state, size_t rejected_length,
+    size_t capacity,
+    gn_status expected_status, gn_state_reason expected_reason) {
+    uint8_t *before = (uint8_t *)malloc(capacity);
+    uint8_t *after = (uint8_t *)malloc(capacity);
+    if (before == NULL || after == NULL) {
+        free(after);
+        free(before);
+        return 0;
+    }
+    gn_state_detail_v1 detail;
+    size_t before_written = 0u, after_written = 0u;
+    int passed = gn_state_capture_v1(instance, before, capacity,
+        &before_written, &detail, sizeof(detail)) == GN_STATUS_OK &&
+        before_written == capacity &&
+        gn_state_restore_v1(instance, rejected_state, rejected_length,
+            &detail, sizeof(detail)) == expected_status &&
+        detail.reason == expected_reason &&
+        gn_state_capture_v1(instance, after, capacity,
+            &after_written, &detail, sizeof(detail)) == GN_STATUS_OK &&
+        after_written == capacity && memcmp(before, after, capacity) == 0;
+    free(after);
+    free(before);
+    return passed;
+}
+
+static int sdk_mvs_state_section_payload_offset(const uint8_t *state,
+                                                 size_t capacity,
+                                                 uint32_t section_id,
+                                                 size_t *out_offset) {
+    if (state == NULL || out_offset == NULL || capacity < 72u) return 0;
+    size_t offset = 72u;
+    for (size_t index = 0u; index < 5u; ++index) {
+        if (offset > capacity || capacity - offset < 8u) return 0;
+        const uint32_t id = sdk_sound_read_u32_be(state + offset);
+        const uint32_t size = sdk_sound_read_u32_be(state + offset + 4u);
+        offset += 8u;
+        if ((size_t)size > capacity - offset) return 0;
+        if (id == section_id) {
+            *out_offset = offset;
+            return 1;
+        }
+        offset += size;
+    }
+    return 0;
+}
+
+static void mvs_native_state_identity_is_normalized_and_fail_closed(void) {
+    SDK_CASE("sdk.state-identity.mvs-normalized-media");
+    sdk_mvs_isolation_fixture fixture;
+    memset(&fixture, 0, sizeof(fixture));
+    SDK_CHECK_TRUE("sdk.state-identity.fixture-prepared",
+                   sdk_mvs_fixture_prepare(&fixture));
+    if (fixture.owners[0].bytes == NULL) return;
+
+    gn_mvs_manifest_v3 ordered;
+    SDK_CHECK_TRUE("sdk.state-identity.ordered-manifest",
+                   sdk_mvs_manifest_make(&fixture.owners[0], &ordered));
+    gn_mvs_manifest_v3 reordered = ordered;
+    for (size_t index = 0u; index < SDK_SOUND_REGION_COUNT; ++index)
+        reordered.regions[index] = ordered.regions[SDK_SOUND_REGION_COUNT - 1u - index];
+
+    sdk_sound_bundle swapped_bundle;
+    memset(&swapped_bundle, 0, sizeof(swapped_bundle));
+    swapped_bundle.size = fixture.owners[0].size;
+    swapped_bundle.bytes = (uint8_t *)malloc(swapped_bundle.size);
+    SDK_CHECK_TRUE("sdk.state-identity.word-swap-buffer",
+                   swapped_bundle.bytes != NULL);
+    if (swapped_bundle.bytes == NULL) goto cleanup;
+    memcpy(swapped_bundle.bytes, fixture.owners[0].bytes, swapped_bundle.size);
+    memcpy(swapped_bundle.offsets, fixture.owners[0].offsets,
+           sizeof(swapped_bundle.offsets));
+    memcpy(swapped_bundle.lengths, fixture.owners[0].lengths,
+           sizeof(swapped_bundle.lengths));
+    for (size_t role = 0u; role < SDK_SOUND_REGION_COUNT; ++role) {
+        uint8_t *region = swapped_bundle.bytes + swapped_bundle.offsets[role];
+        for (size_t byte = 0u; byte < swapped_bundle.lengths[role]; byte += 2u) {
+            const uint8_t first = region[byte];
+            region[byte] = region[byte + 1u];
+            region[byte + 1u] = first;
+        }
+    }
+    gn_mvs_manifest_v3 word_swapped;
+    SDK_CHECK_TRUE("sdk.state-identity.swapped-manifest",
+                   sdk_mvs_manifest_make(&swapped_bundle, &word_swapped));
+    for (size_t index = 0u; index < SDK_SOUND_REGION_COUNT / 2u; ++index) {
+        const size_t opposite = SDK_SOUND_REGION_COUNT - 1u - index;
+        const gn_mvs_region temporary = word_swapped.regions[index];
+        word_swapped.regions[index] = word_swapped.regions[opposite];
+        word_swapped.regions[opposite] = temporary;
+    }
+    for (size_t index = 0u; index < SDK_SOUND_REGION_COUNT; ++index)
+        word_swapped.regions[index].layout = GN_MVS_LAYOUT_WORD_SWAP;
+
+    gn_mvs_manifest_v3 swapped_roles = ordered;
+    const size_t fixed_index = (size_t)GN_MVS_REGION_FIXED - 1u;
+    const size_t audio_bios_index =
+        (size_t)GN_MVS_REGION_AUDIO_BIOS - 1u;
+    SDK_CHECK_TRUE("sdk.state-identity.swapped-role-fixture-distinct",
+        memcmp(ordered.regions[fixed_index].source,
+               ordered.regions[audio_bios_index].source,
+               ordered.regions[fixed_index].source_size) != 0);
+    const uint8_t *role_bytes = swapped_roles.regions[fixed_index].source;
+    swapped_roles.regions[fixed_index].source =
+        swapped_roles.regions[audio_bios_index].source;
+    swapped_roles.regions[audio_bios_index].source = role_bytes;
+
+    gn_instance *source = NULL, *role_peer = NULL, *layout_peer = NULL;
+    gn_instance *swapped_role_peer = NULL, *foreign = NULL, *optional_peer = NULL;
+    SDK_CHECK_STATUS("sdk.state-identity.source-create", GN_STATUS_OK,
+                     gn_create(&source));
+    SDK_CHECK_STATUS("sdk.state-identity.role-peer-create", GN_STATUS_OK,
+                     gn_create(&role_peer));
+    SDK_CHECK_STATUS("sdk.state-identity.layout-peer-create", GN_STATUS_OK,
+                     gn_create(&layout_peer));
+    SDK_CHECK_STATUS("sdk.state-identity.swapped-role-peer-create", GN_STATUS_OK,
+                     gn_create(&swapped_role_peer));
+    if (source == NULL || role_peer == NULL || layout_peer == NULL ||
+        swapped_role_peer == NULL) goto cleanup_instances;
+    SDK_CHECK_STATUS("sdk.state-identity.source-load", GN_STATUS_OK,
+                     gn_load_mvs_v3(source, &ordered));
+    SDK_CHECK_STATUS("sdk.state-identity.role-order-load", GN_STATUS_OK,
+                     gn_load_mvs_v3(role_peer, &reordered));
+    SDK_CHECK_STATUS("sdk.state-identity.layout-load", GN_STATUS_OK,
+                     gn_load_mvs_v3(layout_peer, &word_swapped));
+    SDK_CHECK_STATUS("sdk.state-identity.swapped-role-load", GN_STATUS_OK,
+                     gn_load_mvs_v3(swapped_role_peer, &swapped_roles));
+
+    gn_state_compatibility_info_v1 source_info, role_info, layout_info;
+    gn_state_compatibility_info_v1 swapped_role_info;
+    memset(&source_info, 0, sizeof(source_info));
+    memset(&role_info, 0, sizeof(role_info));
+    memset(&layout_info, 0, sizeof(layout_info));
+    memset(&swapped_role_info, 0, sizeof(swapped_role_info));
+    SDK_CHECK_STATUS("sdk.state-identity.source-compatibility", GN_STATUS_OK,
+        gn_state_compatibility_v1(source, &source_info, sizeof(source_info)));
+    SDK_CHECK_STATUS("sdk.state-identity.role-compatibility", GN_STATUS_OK,
+        gn_state_compatibility_v1(role_peer, &role_info, sizeof(role_info)));
+    SDK_CHECK_STATUS("sdk.state-identity.layout-compatibility", GN_STATUS_OK,
+        gn_state_compatibility_v1(layout_peer, &layout_info, sizeof(layout_info)));
+    SDK_CHECK_STATUS("sdk.state-identity.swapped-role-compatibility", GN_STATUS_OK,
+        gn_state_compatibility_v1(swapped_role_peer, &swapped_role_info,
+                                  sizeof(swapped_role_info)));
+    SDK_CHECK_U64("sdk.state-identity.profile-id", GN_MVS_PROFILE_MSX,
+                   source_info.profile_id);
+    SDK_CHECK_U64("sdk.state-identity.configuration-id", 2u,
+                   source_info.configuration_id);
+    SDK_CHECK_U64("sdk.state-identity.durable-id-enabled", 1u,
+                   source_info.durable_save_id);
+    SDK_CHECK_TRUE("sdk.state-identity.role-order-equivalent",
+        memcmp(source_info.media_identity_sha256,
+               role_info.media_identity_sha256, 32u) == 0);
+    SDK_CHECK_TRUE("sdk.state-identity.layout-equivalent",
+        memcmp(source_info.media_identity_sha256,
+               layout_info.media_identity_sha256, 32u) == 0);
+    SDK_CHECK_TRUE("sdk.state-identity.swapped-role-differs",
+        memcmp(source_info.media_identity_sha256,
+               swapped_role_info.media_identity_sha256, 32u) != 0);
+
+    size_t capacity = 0u, role_capacity = 0u, layout_capacity = 0u;
+    size_t swapped_role_capacity = 0u;
+    SDK_CHECK_STATUS("sdk.state-identity.source-capacity", GN_STATUS_OK,
+                     gn_state_capacity_v1(source, &capacity));
+    SDK_CHECK_STATUS("sdk.state-identity.role-capacity", GN_STATUS_OK,
+                     gn_state_capacity_v1(role_peer, &role_capacity));
+    SDK_CHECK_STATUS("sdk.state-identity.layout-capacity", GN_STATUS_OK,
+                     gn_state_capacity_v1(layout_peer, &layout_capacity));
+    SDK_CHECK_STATUS("sdk.state-identity.swapped-role-capacity", GN_STATUS_OK,
+                     gn_state_capacity_v1(swapped_role_peer,
+                                          &swapped_role_capacity));
+    SDK_CHECK_U64("sdk.state-identity.role-capacity-stable", capacity,
+                   role_capacity);
+    SDK_CHECK_U64("sdk.state-identity.layout-capacity-stable", capacity,
+                   layout_capacity);
+    SDK_CHECK_U64("sdk.state-identity.swapped-role-capacity-stable", capacity,
+                   swapped_role_capacity);
+
+    sdk_mvs_snapshot boundary;
+    SDK_CHECK_TRUE("sdk.state-identity.source-frame",
+                   sdk_mvs_capture_frame(source, 0u, 0u, 0u, &boundary));
+    uint8_t *state = (uint8_t *)malloc(capacity);
+    uint8_t *verify = (uint8_t *)malloc(capacity + 1u);
+    uint8_t *mutated = (uint8_t *)malloc(capacity);
+    SDK_CHECK_TRUE("sdk.state-identity.state-buffers",
+                   state != NULL && verify != NULL && mutated != NULL);
+    if (state == NULL || verify == NULL || mutated == NULL) {
+        free(mutated); free(verify); free(state);
+        goto cleanup_instances;
+    }
+    gn_state_detail_v1 detail;
+    size_t written = 0u;
+    SDK_CHECK_STATUS("sdk.state-identity.capture", GN_STATUS_OK,
+        gn_state_capture_v1(source, state, capacity, &written,
+                            &detail, sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-identity.capture-exact", capacity, written);
+    SDK_CHECK_TRUE("sdk.state-identity.swapped-role-reject-atomic",
+        sdk_mvs_restore_rejects_atomically(swapped_role_peer, state, capacity,
+            capacity, GN_STATUS_INVALID_MEDIA,
+            GN_STATE_REASON_MEDIA_IDENTITY));
+    SDK_CHECK_STATUS("sdk.state-identity.restore-reordered", GN_STATUS_OK,
+        gn_state_restore_v1(role_peer, state, capacity, &detail, sizeof(detail)));
+    SDK_CHECK_STATUS("sdk.state-identity.restore-word-swapped", GN_STATUS_OK,
+        gn_state_restore_v1(layout_peer, state, capacity, &detail, sizeof(detail)));
+    size_t verify_written = 0u;
+    SDK_CHECK_STATUS("sdk.state-identity.recapture-reordered", GN_STATUS_OK,
+        gn_state_capture_v1(role_peer, verify, capacity, &verify_written,
+                            &detail, sizeof(detail)));
+    SDK_CHECK_TRUE("sdk.state-identity.reordered-full-state-equal",
+                   verify_written == capacity && memcmp(state, verify, capacity) == 0);
+    SDK_CHECK_STATUS("sdk.state-identity.recapture-word-swapped", GN_STATUS_OK,
+        gn_state_capture_v1(layout_peer, verify, capacity, &verify_written,
+                            &detail, sizeof(detail)));
+    SDK_CHECK_TRUE("sdk.state-identity.word-swapped-full-state-equal",
+                   verify_written == capacity && memcmp(state, verify, capacity) == 0);
+
+    size_t z80_payload_offset = 0u, ym_payload_offset = 0u;
+    SDK_CHECK_TRUE("sdk.state-identity.z80-section-located",
+        sdk_mvs_state_section_payload_offset(state, capacity, 4u,
+                                             &z80_payload_offset));
+    SDK_CHECK_TRUE("sdk.state-identity.ym-section-located",
+        sdk_mvs_state_section_payload_offset(state, capacity, 5u,
+                                             &ym_payload_offset));
+    memcpy(mutated, state, capacity);
+    mutated[z80_payload_offset + 4u] = 2u;
+    SDK_CHECK_TRUE("sdk.state-identity.z80-schema-reject-atomic",
+        sdk_mvs_restore_rejects_atomically(role_peer, mutated, capacity,
+            capacity, GN_STATUS_INVALID_MEDIA, GN_STATE_REASON_CPU_STATE));
+    memcpy(mutated, state, capacity);
+    sdk_state_write_u32(mutated + ym_payload_offset + 4u, 2u);
+    SDK_CHECK_TRUE("sdk.state-identity.ym-schema-reject-atomic",
+        sdk_mvs_restore_rejects_atomically(role_peer, mutated, capacity,
+            capacity, GN_STATUS_INVALID_MEDIA, GN_STATE_REASON_CPU_STATE));
+
+    static const struct {
+        size_t offset;
+        uint32_t value;
+        gn_status status;
+        gn_state_reason reason;
+        const char *label;
+    } header_mismatches[] = {
+        {16u, 2u, GN_STATUS_INVALID_ARGUMENT, GN_STATE_REASON_FORMAT,
+         "format"},
+        {20u, 2u, GN_STATUS_UNSUPPORTED_PROFILE, GN_STATE_REASON_REPLAY_IDENTITY,
+         "replay"},
+        {24u, GN_PROFILE_DIAGNOSTIC, GN_STATUS_UNSUPPORTED_PROFILE,
+         GN_STATE_REASON_PROFILE_IDENTITY, "profile"},
+        {28u, 3u, GN_STATUS_UNSUPPORTED_PROFILE,
+         GN_STATE_REASON_CONFIGURATION_IDENTITY, "configuration"},
+        {64u, 4u, GN_STATUS_INVALID_MEDIA, GN_STATE_REASON_SECTION, "section"},
+        {68u, 1u, GN_STATUS_INVALID_MEDIA, GN_STATE_REASON_RESERVED, "reserved"}
+    };
+    for (size_t index = 0u;
+         index < sizeof(header_mismatches) / sizeof(header_mismatches[0]);
+         ++index) {
+        memcpy(mutated, state, capacity);
+        sdk_state_write_u32(mutated + header_mismatches[index].offset,
+                            header_mismatches[index].value);
+        SDK_CHECK_TRUE(header_mismatches[index].label,
+            sdk_mvs_restore_rejects_atomically(role_peer, mutated, capacity,
+                capacity,
+                header_mismatches[index].status,
+                header_mismatches[index].reason));
+    }
+
+    uint8_t *trailing_state = (uint8_t *)malloc(capacity + 1u);
+    SDK_CHECK_TRUE("sdk.state-identity.trailing-state-buffer",
+                   trailing_state != NULL);
+    if (trailing_state != NULL) {
+        memcpy(trailing_state, state, capacity);
+        trailing_state[capacity] = 0x91u;
+        SDK_CHECK_TRUE("sdk.state-identity.trailing-restore-atomic",
+            sdk_mvs_restore_rejects_atomically(role_peer, trailing_state,
+                capacity + 1u, capacity, GN_STATUS_INVALID_ARGUMENT,
+                GN_STATE_REASON_TRAILING_BYTES));
+        free(trailing_state);
+    }
+
+    memset(verify, 0x6du, capacity);
+    written = 123u;
+    SDK_CHECK_STATUS("sdk.state-identity.short-capture-rejected",
+                     GN_STATUS_INVALID_ARGUMENT,
+        gn_state_capture_v1(source, verify, capacity - 1u, &written,
+                            &detail, sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-identity.short-capture-zero-count", 0u, written);
+    SDK_CHECK_U64("sdk.state-identity.short-capture-reason",
+                   GN_STATE_REASON_CAPACITY, detail.reason);
+    SDK_CHECK_U64("sdk.state-identity.short-capture-buffer-untouched",
+                   0x6du, verify[0]);
+    SDK_CHECK_STATUS("sdk.state-identity.null-zero-capture-rejected",
+                     GN_STATUS_INVALID_ARGUMENT,
+        gn_state_capture_v1(source, NULL, 0u, &written,
+                            &detail, sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-identity.null-zero-capture-invalid-argument",
+                   GN_STATE_REASON_INVALID_ARGUMENT, detail.reason);
+    SDK_CHECK_U64("sdk.state-identity.null-zero-capture-zero-count", 0u,
+                   written);
+    memset(verify, 0x6du, capacity);
+    gn_state_detail_v1 alias_detail;
+    memset(&alias_detail, 0xa5, sizeof(alias_detail));
+    SDK_CHECK_STATUS("sdk.state-identity.count-payload-alias-rejected",
+                     GN_STATUS_INVALID_ARGUMENT,
+        gn_state_capture_v1(source, verify, capacity,
+                            (size_t *)verify, &alias_detail,
+                            sizeof(alias_detail)));
+    SDK_CHECK_U64("sdk.state-identity.count-payload-alias-untouched",
+                   0x6du, verify[0]);
+    SDK_CHECK_U64("sdk.state-identity.alias-detail-untouched",
+                   UINT32_C(0xa5a5a5a5), alias_detail.reason);
+    memcpy(verify, state, capacity);
+    SDK_CHECK_STATUS("sdk.state-identity.restore-input-detail-alias-rejected",
+                     GN_STATUS_INVALID_ARGUMENT,
+        gn_state_restore_v1(role_peer, verify, capacity,
+                            (gn_state_detail_v1 *)(void *)verify,
+                            sizeof(gn_state_detail_v1)));
+    SDK_CHECK_TRUE("sdk.state-identity.restore-input-detail-alias-untouched",
+                   memcmp(verify, state, capacity) == 0);
+    memset(verify, 0x6du, capacity + 1u);
+    written = 0u;
+    SDK_CHECK_STATUS("sdk.state-identity.oversized-capture", GN_STATUS_OK,
+        gn_state_capture_v1(source, verify, capacity + 1u, &written,
+                            &detail, sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-identity.oversized-capture-exact-count", capacity,
+                   written);
+    SDK_CHECK_TRUE("sdk.state-identity.oversized-capture-extra-untouched",
+                   verify[capacity] == 0x6du);
+    SDK_CHECK_TRUE("sdk.state-identity.capture-stable-after-rejected-calls",
+        gn_state_capture_v1(source, mutated, capacity, &verify_written,
+                            &detail, sizeof(detail)) == GN_STATUS_OK &&
+        verify_written == capacity && memcmp(state, mutated, capacity) == 0);
+
+    SDK_CHECK_STATUS("sdk.state-identity.reset-peer", GN_STATUS_OK,
+                     gn_reset(layout_peer));
+    size_t post_reset_capacity = 0u;
+    gn_state_compatibility_info_v1 post_reset_info;
+    SDK_CHECK_STATUS("sdk.state-identity.post-reset-capacity", GN_STATUS_OK,
+        gn_state_capacity_v1(layout_peer, &post_reset_capacity));
+    SDK_CHECK_U64("sdk.state-identity.capacity-survives-reset", capacity,
+                   post_reset_capacity);
+    SDK_CHECK_STATUS("sdk.state-identity.post-reset-compatibility", GN_STATUS_OK,
+        gn_state_compatibility_v1(layout_peer, &post_reset_info,
+                                  sizeof(post_reset_info)));
+    SDK_CHECK_TRUE("sdk.state-identity.digest-survives-reset",
+        memcmp(layout_info.media_identity_sha256,
+               post_reset_info.media_identity_sha256, 32u) == 0);
+
+    gn_mvs_manifest_v3 rejected_replacement = ordered;
+    rejected_replacement.region_count--;
+    SDK_CHECK_STATUS("sdk.state-identity.failed-replacement", GN_STATUS_INVALID_MEDIA,
+        gn_load_mvs_v3(source, &rejected_replacement));
+    gn_state_compatibility_info_v1 after_replacement;
+    size_t after_replacement_capacity = 0u;
+    SDK_CHECK_STATUS("sdk.state-identity.replacement-identity", GN_STATUS_OK,
+        gn_state_compatibility_v1(source, &after_replacement,
+                                  sizeof(after_replacement)));
+    SDK_CHECK_TRUE("sdk.state-identity.failed-load-keeps-digest",
+        memcmp(source_info.media_identity_sha256,
+               after_replacement.media_identity_sha256, 32u) == 0);
+    SDK_CHECK_STATUS("sdk.state-identity.replacement-capacity", GN_STATUS_OK,
+        gn_state_capacity_v1(source, &after_replacement_capacity));
+    SDK_CHECK_U64("sdk.state-identity.failed-load-keeps-capacity", capacity,
+                   after_replacement_capacity);
+
+    SDK_CHECK_TRUE("sdk.state-identity.foreign-instance-load",
+                   sdk_mvs_instance_load(&fixture.owners[1], &foreign));
+    if (foreign != NULL) {
+        gn_state_compatibility_info_v1 foreign_info;
+        size_t foreign_capacity = 0u;
+        SDK_CHECK_STATUS("sdk.state-identity.foreign-info", GN_STATUS_OK,
+            gn_state_compatibility_v1(foreign, &foreign_info,
+                                      sizeof(foreign_info)));
+        SDK_CHECK_TRUE("sdk.state-identity.foreign-digest-differs",
+            memcmp(source_info.media_identity_sha256,
+                   foreign_info.media_identity_sha256, 32u) != 0);
+        SDK_CHECK_STATUS("sdk.state-identity.foreign-capacity", GN_STATUS_OK,
+            gn_state_capacity_v1(foreign, &foreign_capacity));
+        SDK_CHECK_U64("sdk.state-identity.foreign-capacity-compatible",
+                       capacity, foreign_capacity);
+        SDK_CHECK_TRUE("sdk.state-identity.foreign-restore-atomic",
+            sdk_mvs_restore_rejects_atomically(foreign, state, capacity,
+                capacity,
+                GN_STATUS_INVALID_MEDIA, GN_STATE_REASON_MEDIA_IDENTITY));
+    }
+
+    gn_mvs_manifest_v3 without_audio_bios = ordered;
+    without_audio_bios.region_count = 0u;
+    for (size_t index = 0u; index < SDK_SOUND_REGION_COUNT; ++index) {
+        if (ordered.regions[index].role == GN_MVS_REGION_AUDIO_BIOS) continue;
+        without_audio_bios.regions[without_audio_bios.region_count++] =
+            ordered.regions[index];
+    }
+    SDK_CHECK_STATUS("sdk.state-identity.optional-role-instance", GN_STATUS_OK,
+                     gn_create(&optional_peer));
+    if (optional_peer != NULL) {
+        SDK_CHECK_STATUS("sdk.state-identity.optional-role-load", GN_STATUS_OK,
+            gn_load_mvs_v3(optional_peer, &without_audio_bios));
+        gn_state_compatibility_info_v1 optional_info;
+        SDK_CHECK_STATUS("sdk.state-identity.optional-role-info", GN_STATUS_OK,
+            gn_state_compatibility_v1(optional_peer, &optional_info,
+                                      sizeof(optional_info)));
+        SDK_CHECK_TRUE("sdk.state-identity.optional-presence-changes-digest",
+            memcmp(source_info.media_identity_sha256,
+                   optional_info.media_identity_sha256, 32u) != 0);
+    }
+    free(mutated); free(verify); free(state);
+cleanup_instances:
+    gn_destroy(optional_peer);
+    gn_destroy(foreign);
+    gn_destroy(layout_peer);
+    gn_destroy(role_peer);
+    gn_destroy(source);
+cleanup:
+    free(swapped_bundle.bytes);
+    sdk_mvs_fixture_destroy(&fixture);
+}
+
+static void mvs_status_ok_raw_guest_fault_rejects_capture_and_recovers(void) {
+    SDK_CASE("sdk.state-identity.mvs-raw-fault-recovery");
+    sdk_mvs_isolation_fixture fixture;
+    memset(&fixture, 0, sizeof(fixture));
+    SDK_CHECK_TRUE("sdk.state-identity.fault-fixture-ready",
+                   sdk_mvs_fixture_prepare(&fixture));
+    if (fixture.owners[0].bytes == NULL) return;
+
+    uint8_t *main_bios = fixture.owners[0].bytes +
+        fixture.owners[0].offsets[GN_MVS_REGION_BIOS - 1u];
+    static const uint8_t input_poll[] = {
+        0x10u, 0x39u, 0x00u, 0x30u, 0x00u, 0x00u,
+        0x0cu, 0x00u, 0x00u, 0xefu
+    };
+    static const uint8_t guest_fault[] = {
+        0x4au, 0xfcu, 0x00u, 0x00u, 0x00u,
+        0x00u, 0x00u, 0x00u, 0x00u, 0x00u
+    };
+    size_t patches = 0u;
+    SDK_CHECK_TRUE("sdk.state-identity.fault-fixture-patch",
+        sdk_sound_patch_sequence(main_bios,
+            fixture.owners[0].lengths[GN_MVS_REGION_BIOS - 1u],
+            input_poll, sizeof(input_poll), guest_fault, sizeof(guest_fault),
+            &patches));
+    SDK_CHECK_U64("sdk.state-identity.fault-fixture-single-patch", 1u,
+                   patches);
+
+    gn_mvs_manifest_v3 manifest;
+    SDK_CHECK_TRUE("sdk.state-identity.fault-manifest",
+                   sdk_mvs_manifest_make(&fixture.owners[0], &manifest));
+    gn_instance *target = NULL;
+    SDK_CHECK_STATUS("sdk.state-identity.fault-instance-create", GN_STATUS_OK,
+                     gn_create(&target));
+    if (target == NULL) {
+        sdk_mvs_fixture_destroy(&fixture);
+        return;
+    }
+    SDK_CHECK_STATUS("sdk.state-identity.fault-instance-load", GN_STATUS_OK,
+                     gn_load_mvs_v3(target, &manifest));
+
+    size_t capacity = 0u, written = 0u;
+    gn_state_detail_v1 detail;
+    SDK_CHECK_STATUS("sdk.state-identity.fault-capacity", GN_STATUS_OK,
+                     gn_state_capacity_v1(target, &capacity));
+    uint8_t *baseline = (uint8_t *)malloc(capacity);
+    uint8_t *after = (uint8_t *)malloc(capacity);
+    uint8_t *rejected = (uint8_t *)malloc(capacity);
+    SDK_CHECK_TRUE("sdk.state-identity.fault-state-buffers",
+                   baseline != NULL && after != NULL && rejected != NULL);
+    if (baseline == NULL || after == NULL || rejected == NULL) goto cleanup;
+    SDK_CHECK_STATUS("sdk.state-identity.fault-baseline-capture", GN_STATUS_OK,
+        gn_state_capture_v1(target, baseline, capacity, &written,
+                            &detail, sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-identity.fault-baseline-exact", capacity, written);
+
+    gn_run_result run;
+    SDK_CHECK_STATUS("sdk.state-identity.raw-fault-status-ok", GN_STATUS_OK,
+                     gn_run(target, 20000u, &run));
+    SDK_CHECK_STATUS("sdk.state-identity.raw-fault-reason", GN_RUN_FAULT,
+                     run.reason);
+    memset(rejected, 0x6du, capacity);
+    written = 77u;
+    SDK_CHECK_STATUS("sdk.state-identity.raw-fault-capture-rejected",
+                     GN_STATUS_INVALID_STATE,
+        gn_state_capture_v1(target, rejected, capacity, &written,
+                            &detail, sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-identity.raw-fault-reason-detail",
+                   GN_STATE_REASON_GUEST_FAULT, detail.reason);
+    SDK_CHECK_U64("sdk.state-identity.raw-fault-count-zero", 0u, written);
+    SDK_CHECK_U64("sdk.state-identity.raw-fault-payload-untouched",
+                   0x6du, rejected[0]);
+
+    SDK_CHECK_STATUS("sdk.state-identity.raw-fault-state-restore", GN_STATUS_OK,
+        gn_state_restore_v1(target, baseline, capacity, &detail, sizeof(detail)));
+    SDK_CHECK_STATUS("sdk.state-identity.raw-fault-recovered-capture", GN_STATUS_OK,
+        gn_state_capture_v1(target, after, capacity, &written,
+                            &detail, sizeof(detail)));
+    SDK_CHECK_TRUE("sdk.state-identity.raw-fault-recovery-restores-bytes",
+                   written == capacity && memcmp(baseline, after, capacity) == 0);
+    SDK_CHECK_STATUS("sdk.state-identity.raw-fault-repeat-status-ok", GN_STATUS_OK,
+                     gn_run(target, 20000u, &run));
+    SDK_CHECK_STATUS("sdk.state-identity.raw-fault-repeat-reason", GN_RUN_FAULT,
+                     run.reason);
+    SDK_CHECK_STATUS("sdk.state-identity.raw-fault-repeat-capture-rejected",
+                     GN_STATUS_INVALID_STATE,
+        gn_state_capture_v1(target, rejected, capacity, &written,
+                            &detail, sizeof(detail)));
+    SDK_CHECK_U64("sdk.state-identity.raw-fault-repeat-latch",
+                   GN_STATE_REASON_GUEST_FAULT, detail.reason);
+cleanup:
+    free(rejected);
+    free(after);
+    free(baseline);
+    gn_destroy(target);
+    sdk_mvs_fixture_destroy(&fixture);
+}
+
 static void repeat_split_and_interleaved_instances_match_isolated_boundaries(void) {
     SDK_CASE("sdk.isolation.equal-boundary-determinism");
     sdk_isolation_baselines baselines;
@@ -1059,7 +3839,8 @@ static void repeat_split_and_interleaved_instances_match_isolated_boundaries(voi
     SDK_CHECK_TRUE("sdk.isolation.interleaved-16-pairs",
                    sdk_interleaved_pairs_match(&baselines));
     SDK_CHECK_TRUE("sdk.isolation.barrier-concurrent-16-pairs",
-                   sdk_concurrent_pairs_match(&baselines));
+                   sdk_concurrent_pairs_match(&baselines) &&
+                       sdk_mvs_full_machine_isolation());
     (void)printf("SDK_ISOLATION boundaries=%u interleaved_pairs=%u "
                  "barrier_concurrent_pairs=%u "
                  "concurrent_candidate_failure_paths=%u\n",
@@ -1081,7 +3862,7 @@ static void cold_concurrent_instances_create_fail_recover_and_teardown(void) {
                        results[owner].recovery_ok != 0);
         SDK_CHECK_TRUE("sdk.cold.teardown-no-leaks",
                        results[owner].cleanup_ok != 0);
-        SDK_CHECK_U64("sdk.cold.final-cycles", 196u, final->elapsed_total);
+        SDK_CHECK_U64("sdk.cold.final-cycles", 172u, final->elapsed_total);
         SDK_CHECK_U64("sdk.cold.final-instructions", 12u,
                       final->instructions_total);
         SDK_CHECK_U64("sdk.cold.final-pc", 0x12eu, final->boundary_pc);
@@ -1102,7 +3883,7 @@ static void swapped_owner_control_fails_exact_owner_assertion(void) {
         return;
     }
     gn_run_result run;
-    (void)gn_run(wrong_owner, 196u, &run);
+    (void)gn_run(wrong_owner, 172u, &run);
     gn_observations observations;
     (void)gn_observe(wrong_owner, &observations);
     SDK_CHECK_U64("sdk.isolation.owner.arithmetic", 10u,
@@ -1117,8 +3898,8 @@ static void altered_split_progress_control_fails_equal_boundary_assertion(void) 
                                           GN_TEST_MUTATION_RUN_ELAPSED));
     gn_run_result run;
     SDK_CHECK_STATUS("sdk.isolation.control-run-status", GN_STATUS_OK,
-                     gn_run(instance, 64u, &run));
-    SDK_CHECK_U64("sdk.isolation.split-progress", 64u, run.elapsed_cycles);
+                     gn_run(instance, 40u, &run));
+    SDK_CHECK_U64("sdk.isolation.split-progress", 40u, run.elapsed_cycles);
 }
 
 static void unloaded_lifecycle_and_null_arguments_are_reported(void) {
@@ -1179,7 +3960,7 @@ static void unload_reload_and_repeated_reset_reproduce_results(void) {
         SDK_CHECK_STATUS("sdk.lifecycle.reset-loaded", GN_STATUS_OK,
                          gn_reset(created));
         SDK_CHECK_STATUS("sdk.lifecycle.run-after-reset", GN_STATUS_OK,
-                         gn_run(created, 196u, &run));
+                         gn_run(created, 172u, &run));
         SDK_CHECK_STATUS("sdk.lifecycle.observe-after-run", GN_STATUS_OK,
                          gn_observe(created, &observations));
         SDK_CHECK_STATUS("sdk.lifecycle.repeat-stop", GN_RUN_STOPPED, run.reason);
@@ -1196,7 +3977,7 @@ static void unload_reload_and_repeated_reset_reproduce_results(void) {
     gn_run_result run;
     gn_observations observations;
     SDK_CHECK_STATUS("sdk.lifecycle.run-after-reload", GN_STATUS_OK,
-                     gn_run(created, 196u, &run));
+                     gn_run(created, 172u, &run));
     SDK_CHECK_STATUS("sdk.lifecycle.observe-after-reload", GN_STATUS_OK,
                      gn_observe(created, &observations));
     SDK_CHECK_U64("sdk.lifecycle.reloaded-scenario", 16u,
@@ -1466,7 +4247,7 @@ static void successful_replacement_owns_source_and_reset_seed(void) {
     SDK_CHECK_STATUS("sdk.media.reset-after-source-release", GN_STATUS_OK,
                      gn_reset(instance));
     SDK_CHECK_STATUS("sdk.media.run-after-source-release", GN_STATUS_OK,
-                     gn_run(instance, 196u, &run));
+                     gn_run(instance, 172u, &run));
     SDK_CHECK_STATUS("sdk.media.observe-after-source-release", GN_STATUS_OK,
                      gn_observe(instance, &observations));
     SDK_CHECK_STATUS("sdk.media.replacement-stopped", GN_RUN_STOPPED, run.reason);
@@ -1483,7 +4264,7 @@ static void peer_start_at_first_instruction(gn_instance *peer,
     gn_run_result run;
     SDK_CHECK_STATUS(label, GN_STATUS_OK, gn_reset(peer));
     SDK_CHECK_STATUS("sdk.faults.peer-reset-budget", GN_STATUS_OK,
-                     gn_run(peer, 64u, &run));
+                     gn_run(peer, 40u, &run));
     SDK_CHECK_STATUS("sdk.faults.peer-reset-boundary", GN_RUN_BUDGET,
                      run.reason);
     SDK_CHECK_U64("sdk.faults.peer-reset-pc", 0x100u, run.boundary_pc);
@@ -1524,7 +4305,7 @@ static void assert_named_result(gn_instance *target, uint32_t arithmetic,
     gn_run_result run;
     gn_observations observations;
     SDK_CHECK_STATUS("sdk.faults.recovery-run", GN_STATUS_OK,
-                     gn_run(target, 196u, &run));
+                     gn_run(target, 172u, &run));
     SDK_CHECK_STATUS("sdk.faults.recovery-observe", GN_STATUS_OK,
                      gn_observe(target, &observations));
     SDK_CHECK_STATUS(label, GN_RUN_STOPPED, run.reason);
@@ -1773,14 +4554,14 @@ static void guest_fault_reset_and_invalid_requests_allow_recovery(void) {
                      gn_load(instance, &manifest));
     gn_run_result result;
     SDK_CHECK_STATUS("sdk.faults.guest-fault-run-status", GN_STATUS_OK,
-                     gn_run(instance, 196u, &result));
+                     gn_run(instance, 172u, &result));
     SDK_CHECK_STATUS("sdk.faults.guest-fault-reason", GN_RUN_FAULT,
                      result.reason);
     SDK_CHECK_U64("sdk.faults.guest-fault-pc", 0x100u, result.fault_pc);
     SDK_CHECK_STATUS("sdk.faults.reset-after-guest-fault", GN_STATUS_OK,
                      gn_reset(instance));
     SDK_CHECK_STATUS("sdk.faults.repeat-guest-fault-status", GN_STATUS_OK,
-                     gn_run(instance, 196u, &result));
+                     gn_run(instance, 172u, &result));
     SDK_CHECK_STATUS("sdk.faults.repeat-guest-fault-reason", GN_RUN_FAULT,
                      result.reason);
     SDK_CHECK_STATUS("sdk.faults.unload-after-guest-fault", GN_STATUS_OK,
@@ -1825,6 +4606,27 @@ static void sdk_diagnostic_suite(void) {
     RUN_TEST(original_instruction_boundaries_match_manual_recipe);
 }
 
+static void sdk_state_tracer_suite(void) {
+    RUN_TEST(diagnostic_native_state_tracer_round_trips_real_continuation);
+}
+
+static void sdk_state_identity_suite(void) {
+    RUN_TEST(diagnostic_identity_exposes_ids_and_rejects_mismatch);
+    RUN_TEST(mvs_native_state_identity_is_normalized_and_fail_closed);
+    RUN_TEST(mvs_status_ok_raw_guest_fault_rejects_capture_and_recovers);
+}
+
+static void sdk_state_ym_suite(void) {
+    RUN_TEST(ym2610_state_round_trip_continues_pcm_and_timer_after_source_destruction);
+    RUN_TEST(ym2610_state_uses_canonical_scalars_and_rejects_invalid_nested_input);
+    RUN_TEST(ym2610_state_allocation_failures_are_swept_and_atomic);
+}
+
+static void sdk_state_machine_suite(void) {
+    RUN_TEST(mvs_native_state_api_accepts_the_public_machine_profile);
+    RUN_TEST(mvs_native_state_restores_full_continuation_atomically);
+}
+
 static void sdk_run_suite(void) {
     RUN_TEST(bounded_run_reports_actual_progress_and_preserves_invalid_requests);
     RUN_TEST(stopped_guest_consumes_idle_budget_without_dispatches);
@@ -1860,10 +4662,12 @@ int main(int argc, char **argv) {
     if (argc != 2) {
         (void)fprintf(stderr,
                       "usage: %s <diagnostic|lifecycle|media|faults|run|controls|"
-                      "isolation|cold|control-...>\n",
+                      "isolation|cold|state-tracer|state-identity|state-ym|"
+                      "state-machine|control-...>\n",
                       argv[0]);
         return 2;
     }
+    sdk_sound_set_fixture_path(argv[0]);
     selected_suite = argv[1];
     UNITY_BEGIN();
     if (strcmp(selected_suite, "diagnostic") == 0) {
@@ -1882,6 +4686,14 @@ int main(int argc, char **argv) {
         sdk_isolation_suite();
     } else if (strcmp(selected_suite, "cold") == 0) {
         sdk_cold_suite();
+    } else if (strcmp(selected_suite, "state-tracer") == 0) {
+        sdk_state_tracer_suite();
+    } else if (strcmp(selected_suite, "state-identity") == 0) {
+        sdk_state_identity_suite();
+    } else if (strcmp(selected_suite, "state-ym") == 0) {
+        sdk_state_ym_suite();
+    } else if (strcmp(selected_suite, "state-machine") == 0) {
+        sdk_state_machine_suite();
     } else if (suite_is_control()) {
         sdk_control_suite();
     } else {
@@ -1889,6 +4701,11 @@ int main(int argc, char **argv) {
         return 2;
     }
     const int failures = UNITY_END();
+    if (sdk_cases == 0u) {
+        (void)fprintf(stderr, "suite executed zero named cases: %s\n",
+                       selected_suite);
+        return 2;
+    }
     sdk_test_result(selected_suite, failures, GLUEYNEO_SOURCE_REVISION,
                     GLUEYNEO_CONFIGURATION, GLUEYNEO_COMPILER_ID,
                     GLUEYNEO_COMPILER_VERSION);

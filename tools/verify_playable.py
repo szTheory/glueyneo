@@ -19,6 +19,7 @@ import platform
 import plistlib
 import posixpath
 import re
+import runpy
 import select
 import shutil
 import signal
@@ -51,6 +52,8 @@ class SnapshotError(RuntimeError):
     def __init__(self, reason: str, detail: str) -> None:
         super().__init__(detail)
         self.reason = reason
+        # Private diagnostic metadata is deliberately absent from public error text.
+        self.archive_mismatch: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -75,6 +78,7 @@ def clean_environment() -> dict[str, str]:
         "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES",
         "GIT_COMMON_DIR", "GIT_CEILING_DIRECTORIES", "GIT_CONFIG", "GIT_CONFIG_COUNT",
         "GIT_CONFIG_PARAMETERS", "GIT_CONFIG_GLOBAL", "GIT_ATTR_NOSYSTEM",
+        "GLUEYNEO_ARCHIVE_DIAGNOSTIC_DIR",
     }
     environment = {
         key: value for key, value in os.environ.items()
@@ -296,8 +300,29 @@ def _archive_members(
         **{path: ("file-executable" if executable else "file") for path, (_data, executable) in files.items()},
         **{path: "symlink" for path in symlinks},
     }
+    # A directory replacing a committed file is a type difference; ordinary
+    # parent directories remain outside the committed blob/symlink map.
+    archived_types.update({path: "directory" for path in directories if path in expected})
     if archived_types != expected:
-        raise SnapshotError("incomplete-archive", "Git archive does not contain the complete committed source tree")
+        missing = expected.keys() - archived_types.keys()
+        extra = archived_types.keys() - expected.keys()
+        changed = {path for path in expected.keys() & archived_types.keys()
+                   if expected[path] != archived_types[path]}
+        examples = []
+        for path in sorted(missing | extra | changed)[:5]:
+            example = {"path": path[:160], "expected": expected.get(path), "archived": archived_types.get(path)}
+            if len(path) > 160:
+                example["path_truncated"] = True
+            examples.append(example)
+        error = SnapshotError(
+            "incomplete-archive", "Git archive does not contain the complete committed source tree "
+            f"(missing={len(missing)}, extra={len(extra)}, type_mismatches={len(changed)})")
+        error.archive_mismatch = {
+            "expected_count": len(expected), "archived_count": len(archived_types),
+            "missing_count": len(missing), "extra_count": len(extra), "type_mismatch_count": len(changed),
+            "examples": examples,
+        }
+        raise error
     for path in directories:
         if path in expected or not any(candidate.startswith(path + "/") for candidate in expected):
             raise SnapshotError("ambiguous-archive", "Git archive contains an unexpected directory entry")
@@ -319,6 +344,49 @@ def _archive_members(
     return files, symlinks, tuple(rows)
 
 
+def _capture_archive_mismatch(repository: Path, commit: str, archive: bytes, error: SnapshotError) -> None:
+    """Opt-in private evidence; capture failure must not replace archive rejection."""
+    selected = os.environ.get("GLUEYNEO_ARCHIVE_DIAGNOSTIC_DIR")
+    if not selected or error.reason != "incomplete-archive":
+        return
+    directory_fd = None
+    temporary_name = None
+    recorded = False
+    try:
+        directory = Path(selected).resolve(strict=True)
+        if any(os.path.samefile(parent, root) for parent in (directory, *directory.parents)
+               for root in (repository, ROOT)):
+            raise ValueError("in-tree diagnostic directory")
+        directory_fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        name = f"glueyneo-archive-mismatch-{os.urandom(12).hex()}.json"
+        temporary_name = name + ".tmp"
+        descriptor = os.open(temporary_name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                             0o600, dir_fd=directory_fd)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            os.fchmod(stream.fileno(), 0o600)
+            json.dump({"schema": "glueyneo.archive-mismatch/v1", "commit": commit,
+                       "archive_sha256": hashlib.sha256(archive).hexdigest(),
+                       "mismatch": error.archive_mismatch}, stream, sort_keys=True, ensure_ascii=True)
+            stream.write("\n")
+        os.rename(temporary_name, name, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
+        recorded = True
+    except (OSError, ValueError, AttributeError, NotImplementedError):
+        pass
+    finally:
+        if directory_fd is not None:
+            if temporary_name is not None and not recorded:
+                try:
+                    os.unlink(temporary_name, dir_fd=directory_fd)
+                except OSError:
+                    pass
+            try:
+                os.close(directory_fd)
+            except OSError:
+                pass
+    status = "recorded" if recorded else "unavailable"
+    error.args = (f"{error} (private diagnostic {status})",)
+
+
 def create_snapshot(repository: Path, revision: str, destination: Path) -> SourceSnapshot:
     """Materialize and verify the complete committed Git archive without checkout inputs."""
     repository = repository.resolve()
@@ -326,7 +394,11 @@ def create_snapshot(repository: Path, revision: str, destination: Path) -> Sourc
     expected = _expected_tree(repository, commit)
     archive = _git_archive(repository, commit)
 
-    files, symlinks, archive_rows = _archive_members(archive, expected)
+    try:
+        files, symlinks, archive_rows = _archive_members(archive, expected)
+    except SnapshotError as error:
+        _capture_archive_mismatch(repository, commit, archive, error)
+        raise
 
     destination = destination.absolute()
     if destination.exists() or destination.is_symlink():
@@ -879,6 +951,9 @@ def run_consumer(runner: Runner, source_root: Path, prefix: Path, fixture: Path,
         sys.executable, str(source_root / "tests/consumers/test_playable_install.py"),
         "--prefix", str(prefix), "--consumer", str(consumer), "--fixture", str(diagnostic_fixture),
         "--core", str(core),
+        "--sound-consumer", str(consumer_build / "glueyneo-installed-sound"),
+        "--sound-reference-consumer", str(fixture.parent / "sound_consumer_reference"),
+        "--sound-fixture", str(fixture.parent / "public-sound-mvs.bin"),
     ])
 
 
@@ -914,11 +989,13 @@ def _markdown_table_rows(document: str, header: str) -> list[list[str]]:
     return rows
 
 
-FRONTEND_EVIDENCE = Path(
-    ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-FRONTEND-RECEIPT.json")
+# The accepted workstream is archived; its committed review ancestry retains
+# the original paths. Keep evidence lookup separate from historical Git lookup.
+PHASE_DIRECTORY = Path(".planning/milestones/ws-first-playable-game-2026-10-24/phases/04-public-playable-tracer")
+PHASE_HISTORY_DIRECTORY = Path(".planning/workstreams/first-playable-game/phases/04-public-playable-tracer")
+FRONTEND_EVIDENCE = PHASE_DIRECTORY / "04-FRONTEND-RECEIPT.json"
 GUIDE = Path("docs/first-playable-build.md")
-VALIDATION = Path(".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md")
-PHASE_DIRECTORY = Path(".planning/workstreams/first-playable-game/phases/04-public-playable-tracer")
+VALIDATION = PHASE_DIRECTORY / "04-VALIDATION.md"
 SECURITY = PHASE_DIRECTORY / "04-SECURITY.md"
 REVIEW = PHASE_DIRECTORY / "04-REVIEW.md"
 DISPOSITION = PHASE_DIRECTORY / "04-REVIEW-DISPOSITION.md"
@@ -1716,8 +1793,16 @@ def _review_round_anchor(finding_id: str, source_root: Path, repository: Path, h
         return _reviewed_revision((source_root / REVIEW).read_text(encoding="utf-8")), "04-REVIEW.md reviewed_revision"
     round_number = match.group("round")
     name = "04-REVIEW-GAPS.md" if not round_number else f"04-REVIEW-GAPS-R{round_number}.md"
-    added = _git_stdout(repository, ["log", "--diff-filter=A", "--format=%H", head, "--", (PHASE_DIRECTORY / name).as_posix()])
-    lines = added.split() if added else []
+    # Prefer the immutable original path so archiving cannot become a new
+    # review-round anchor. Avoid rename heuristics: separate rounds can have
+    # identical text. The archive path supports histories without the old path.
+    lines: list[str] = []
+    for directory in (PHASE_HISTORY_DIRECTORY, PHASE_DIRECTORY):
+        added = _git_stdout(repository, ["log", "--diff-filter=A", "--format=%H", head,
+                                         "--", (directory / name).as_posix()])
+        lines = added.split() if added else []
+        if lines:
+            break
     if not lines:
         return f"review round file {name} for {finding_id} is not committed at the checked head"
     return lines[-1], name
@@ -2061,6 +2146,7 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
         raise RuntimeError("unfinished placeholder in current frontend status")
     if not {"HOST-02", "QUAL-03"}.issubset(requirement_ids) or frontend_status != frontend_row_status(evidence):
         raise RuntimeError("HOST-02 and frontend QUAL-03 status in the validation map does not match the tracked evidence")
+    runpy.run_path(str(source_root / "tests/consumers/test_playable_install.py"))["validate_sound_recipe"](source_root)
     return notes
 
 
@@ -2115,6 +2201,7 @@ def _write_receipt(receipt: dict[str, Any]) -> str:
     text = json.dumps(safe_receipt, indent=2, sort_keys=True) + "\n"
     summary = json.dumps({
         "status": safe_receipt["status"], "receipt": "build/playable-qualification/receipt.json",
+        "qualification_scope": safe_receipt.get("qualification_scope", "frontend-integration"),
         "fixture_sha256": safe_receipt.get("fixture", {}).get("sha256", "unknown"),
         "retroarch_status": safe_receipt.get("retroarch_smoke", {}).get("status", "unknown"),
         "reason": safe_receipt.get("reason", ""),
@@ -2165,6 +2252,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--retroarch", type=Path)
     parser.add_argument("--clean", action="store_true", help="qualify a fresh committed-source snapshot and fresh build/install directories")
+    parser.add_argument("--headless", action="store_true",
+                        help="check public core/packages from committed source without launching RetroArch; no device evidence")
     parser.add_argument("--check-docs", action="store_true")
     parser.add_argument("--record-frontend-evidence", action="store_true",
                         help="write the public-safe summary of a passing receipt to the tracked Phase 04 evidence file")
@@ -2175,6 +2264,8 @@ def main() -> int:
                         help=f"revision or branch the allowlist excludes (default {HISTORY_DEFAULT_BASE}, which must be "
                              "fetched); only with --history-allowlist")
     args = parser.parse_args()
+    if args.headless and (not args.clean or args.retroarch is not None or args.record_frontend_evidence):
+        parser.error("--headless requires --clean and cannot acquire or publish frontend evidence")
     if args.base is not None and args.history_allowlist is None:
         parser.error("--base is only accepted with --history-allowlist")
     if args.history_allowlist is not None:
@@ -2243,7 +2334,7 @@ def main() -> int:
             print(f"unverifiable-history: {note}")
         print("Phase 04 documentation gate passed.")
         return 0
-    if args.retroarch is None:
+    if args.retroarch is None and not args.headless:
         parser.error("--retroarch is required unless --check-docs is used without --clean")
     try:
         OUTPUT.mkdir(parents=True, exist_ok=True)
@@ -2310,7 +2401,8 @@ def main() -> int:
                                        check=False, timeout=30)
         identity["cmake"] = cmake_version.stdout.splitlines()[0] if cmake_version.returncode == 0 and cmake_version.stdout else "unknown"
         identity["ninja"] = ninja_version.stdout.strip() if ninja_version.returncode == 0 else "unknown"
-        identity["retroarch"] = frontend_identity(args.retroarch.resolve())
+        identity["retroarch"] = (frontend_identity(args.retroarch.resolve()) if not args.headless else
+                                 {"status": "not-run", "reason": "explicit public-core headless mode"})
         if sys.platform == "darwin" and shutil.which("xcrun", path=environment.get("PATH", "")):
             sdk = subprocess.run(["xcrun", "--show-sdk-version"], cwd=source_root, env=environment,
                                  text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -2395,6 +2487,7 @@ def main() -> int:
     try:
         receipt: dict[str, object] = {
             "schema": "glueyneo.playable-qualification/v1",
+            "qualification_scope": "public-core-headless" if args.headless else "frontend-integration",
             "status": status,
             "identity": identity,
             "lanes": runner.lanes if runner is not None else {},
@@ -2418,7 +2511,9 @@ def main() -> int:
             receipt["identity"]["source_snapshot"] = {"status": "fail", "reason": reason}  # type: ignore[index]
         if runner is None:
             receipt["lanes"] = {}
-        if snapshot is not None and runner is not None and shared_core.is_file() and fixture_shared.is_file():
+        if args.headless:
+            receipt["retroarch_smoke"] = {"status": "not-run", "reason": "explicit public-core headless mode; no device evidence"}
+        elif snapshot is not None and runner is not None and shared_core.is_file() and fixture_shared.is_file():
             try:
                 smoke_record, lane_failure = run_frontend_smoke_lane(
                     runner, source_root, args.retroarch.resolve(), shared_core, fixture_shared)

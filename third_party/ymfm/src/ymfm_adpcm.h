@@ -126,7 +126,7 @@ private:
 
 // ======================> adpcm_a_channel
 
-class adpcm_a_channel
+class adpcm_a_channel : private ymfm_test_lifetime
 {
 public:
 	// constructor
@@ -296,7 +296,7 @@ private:
 
 // ======================> adpcm_b_channel
 
-class adpcm_b_channel
+class adpcm_b_channel : private ymfm_test_lifetime
 {
 	static constexpr int32_t STEP_MIN = 127;
 	static constexpr int32_t STEP_MAX = 24576;

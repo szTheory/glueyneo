@@ -16,6 +16,7 @@ DOCS_JOB = "public-content"
 AGGREGATE_JOB = "ci-policy"
 REQUIRED_JOBS = frozenset((MATRIX_JOB, DOCS_JOB))
 _COMMIT_SHA_LENGTH = 40
+_DOCUMENTATION_SUFFIXES = frozenset({".gif", ".jpeg", ".jpg", ".md", ".png", ".rst", ".svg", ".txt", ".webp"})
 
 
 def _is_commit_sha(value: Any) -> bool:
@@ -91,10 +92,9 @@ def classify_paths(paths: Iterable[str] | None, *, diff_error: bool = False) -> 
     rows = list(paths)
     if not rows:
         return set(REQUIRED_JOBS)
-    docs_only = all(
-        path.startswith("docs/") or path in {"README.md", "LICENSE"}
-        for path in rows
-    )
+    docs_only = all(path in {"README.md", "LICENSE"} or
+                    (path.startswith("docs/") and Path(path).suffix.lower() in _DOCUMENTATION_SUFFIXES)
+                    for path in rows)
     return {DOCS_JOB} if docs_only else set(REQUIRED_JOBS)
 
 

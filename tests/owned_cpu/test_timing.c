@@ -136,7 +136,7 @@ static void install_program(const uint8_t *program, size_t length) {
 static void run_reset_event(void) {
     owned_cpu_run_result result = owned_cpu_run(cpu, UINT64_C(1));
     TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, result.reason);
-    TEST_ASSERT_EQUAL_UINT64(64u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(40u, result.elapsed_cycles);
     TEST_ASSERT_EQUAL_UINT64(0u, result.instructions);
     TEST_ASSERT_EQUAL_HEX32(0x100u, result.pc);
     clear_trace();
@@ -162,8 +162,8 @@ static void reset_debt_is_consumed_once_and_nop_executes(void) {
     TEST_ASSERT_EQUAL_UINT64(0u, initial_observation.total_cycles);
 
     result = owned_cpu_run(cpu, UINT64_C(1));
-    TEST_ASSERT_EQUAL_UINT64(64u, result.elapsed_cycles);
-    TEST_ASSERT_EQUAL_UINT64(63u, result.overshoot_cycles);
+    TEST_ASSERT_EQUAL_UINT64(40u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(39u, result.overshoot_cycles);
     TEST_ASSERT_EQUAL_UINT64(0u, result.instructions);
     TEST_ASSERT_EQUAL_HEX32(0x100u, result.pc);
     TEST_ASSERT_EQUAL_UINT(0u, memory.accesses);
@@ -215,7 +215,7 @@ static void trap_stacks_next_pc_then_addq_rte_resumes_stop(void) {
 
     owned_cpu_run_result result = owned_cpu_run(cpu, UINT64_C(1));
     TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, result.reason);
-    TEST_ASSERT_EQUAL_UINT64(62u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(34u, result.elapsed_cycles);
     TEST_ASSERT_EQUAL_UINT64(1u, result.instructions);
     TEST_ASSERT_EQUAL_HEX32(0x180u, result.pc);
     TEST_ASSERT_EQUAL_UINT(6u, memory.accesses);
@@ -238,7 +238,7 @@ static void trap_stacks_next_pc_then_addq_rte_resumes_stop(void) {
     observe(&observation);
     TEST_ASSERT_EQUAL_HEX32(0x2ffau, observation.address_registers[7]);
     TEST_ASSERT_EQUAL_UINT8(32u, observation.last_exception_vector);
-    TEST_ASSERT_EQUAL_UINT64(62u, observation.exception_cycles);
+    TEST_ASSERT_EQUAL_UINT64(34u, observation.exception_cycles);
     TEST_ASSERT_EQUAL_UINT64(1u, observation.instructions);
 
     result = owned_cpu_run(cpu, UINT64_C(1));
@@ -314,8 +314,8 @@ static void illegal_eori_byte_reserved_ea_enters_vector_four(void) {
     run_reset_event();
     owned_cpu_run_result result = owned_cpu_run(cpu, 1u);
     TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, result.reason);
-    TEST_ASSERT_EQUAL_UINT64(62u, result.elapsed_cycles);
-    TEST_ASSERT_EQUAL_UINT64(61u, result.overshoot_cycles);
+    TEST_ASSERT_EQUAL_UINT64(34u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(33u, result.overshoot_cycles);
     TEST_ASSERT_EQUAL_UINT64(1u, result.instructions);
     TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x180), result.pc);
     TEST_ASSERT_EQUAL_HEX16(UINT16_C(0x0a3d), result.instruction_register);
@@ -338,9 +338,10 @@ static void illegal_eori_byte_reserved_ea_enters_vector_four(void) {
     TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x2ffa), observation.address_registers[7]);
     TEST_ASSERT_EQUAL_HEX16(UINT16_C(0x2700), observation.sr);
     TEST_ASSERT_EQUAL_UINT8(4u, observation.last_exception_vector);
-    TEST_ASSERT_EQUAL_UINT64(62u, observation.exception_cycles);
+    TEST_ASSERT_EQUAL_UINT64(34u, observation.exception_cycles);
 
-    const uint8_t valid_but_unimplemented[] = {0x0au, 0x00u, 0x00u, 0x12u};
+    /* EORI.W #imm,D0 remains a distinct unsupported size control. */
+    const uint8_t valid_but_unimplemented[] = {0x0au, 0x40u, 0x00u, 0x12u};
     install_program(valid_but_unimplemented, sizeof(valid_but_unimplemented));
     run_reset_event();
     result = owned_cpu_run(cpu, 1u);
@@ -358,8 +359,8 @@ static void illegal_eori_long_reserved_ea_enters_vector_four(void) {
     run_reset_event();
     owned_cpu_run_result result = owned_cpu_run(cpu, 1u);
     TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, result.reason);
-    TEST_ASSERT_EQUAL_UINT64(62u, result.elapsed_cycles);
-    TEST_ASSERT_EQUAL_UINT64(61u, result.overshoot_cycles);
+    TEST_ASSERT_EQUAL_UINT64(34u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(33u, result.overshoot_cycles);
     TEST_ASSERT_EQUAL_UINT64(1u, result.instructions);
     TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x180), result.pc);
     TEST_ASSERT_EQUAL_HEX16(UINT16_C(0x0abd), result.instruction_register);
@@ -373,25 +374,25 @@ static void illegal_eori_long_reserved_ea_enters_vector_four(void) {
     observe(&observation);
     TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x180), observation.pc);
     TEST_ASSERT_EQUAL_UINT8(4u, observation.last_exception_vector);
-    TEST_ASSERT_EQUAL_UINT64(62u, observation.exception_cycles);
+    TEST_ASSERT_EQUAL_UINT64(34u, observation.exception_cycles);
 }
 
 static void canonical_rejection_retains_prior_reset_irq_and_instruction_charges(void) {
     create_machine();
     const uint8_t program[] = {0x4a, 0xfc};
     install_program(program, sizeof(program));
-    owned_cpu_run_result result = owned_cpu_run(cpu, 65u);
+    owned_cpu_run_result result = owned_cpu_run(cpu, 41u);
     TEST_ASSERT_EQUAL(OWNED_CPU_UNSUPPORTED_OPCODE, result.reason);
-    TEST_ASSERT_EQUAL_UINT64(64u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(40u, result.elapsed_cycles);
     TEST_ASSERT_EQUAL_UINT64(0u, result.instructions);
     TEST_ASSERT_EQUAL_UINT64(0u, result.overshoot_cycles);
     put_vector(31u, 0x180u);
     put_word(0x180u, 0x4afcu);
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_set_irq(cpu, 7u));
     clear_trace();
-    result = owned_cpu_run(cpu, 73u);
+    result = owned_cpu_run(cpu, 45u);
     TEST_ASSERT_EQUAL(OWNED_CPU_UNSUPPORTED_OPCODE, result.reason);
-    TEST_ASSERT_EQUAL_UINT64(72u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(44u, result.elapsed_cycles);
     TEST_ASSERT_EQUAL_UINT64(0u, result.instructions);
     TEST_ASSERT_EQUAL_HEX32(0x180u, result.pc);
     TEST_ASSERT_EQUAL_HEX32(0x180u, result.fault_pc);
@@ -399,8 +400,8 @@ static void canonical_rejection_retains_prior_reset_irq_and_instruction_charges(
     TEST_ASSERT_EQUAL_HEX32(0x180u, memory.events[5].address);
     owned_cpu_observation after_irq;
     observe(&after_irq);
-    TEST_ASSERT_EQUAL_UINT64(72u, after_irq.exception_cycles);
-    TEST_ASSERT_EQUAL_UINT64(136u, after_irq.total_cycles);
+    TEST_ASSERT_EQUAL_UINT64(44u, after_irq.exception_cycles);
+    TEST_ASSERT_EQUAL_UINT64(84u, after_irq.total_cycles);
     TEST_ASSERT_EQUAL_UINT8(31u, after_irq.last_exception_vector);
     put_word(0x180u, 0x4e71u);
     put_word(0x182u, 0x4afcu);
@@ -410,9 +411,9 @@ static void canonical_rejection_retains_prior_reset_irq_and_instruction_charges(
     TEST_ASSERT_EQUAL_UINT64(1u, result.instructions);
     TEST_ASSERT_EQUAL_HEX32(0x182u, result.fault_pc);
     observe(&after_irq);
-    TEST_ASSERT_EQUAL_UINT64(140u, after_irq.total_cycles);
+    TEST_ASSERT_EQUAL_UINT64(88u, after_irq.total_cycles);
     TEST_ASSERT_EQUAL_UINT64(4u, after_irq.instruction_cycles);
-    TEST_ASSERT_EQUAL_UINT64(72u, after_irq.exception_cycles);
+    TEST_ASSERT_EQUAL_UINT64(44u, after_irq.exception_cycles);
 }
 
 static void canonical_failed_opcode_fetch_remains_a_host_fault(void) {
@@ -482,7 +483,7 @@ static void odd_word_source_stacks_manual_derived_address_error_frame(void) {
 
     owned_cpu_run_result result = owned_cpu_run(cpu, 1u);
     TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, result.reason);
-    TEST_ASSERT_EQUAL_UINT64(94u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(50u, result.elapsed_cycles);
     TEST_ASSERT_EQUAL_UINT64(0u, result.instructions);
     TEST_ASSERT_EQUAL_HEX32(0x180u, result.pc);
     TEST_ASSERT_EQUAL_HEX32(0x100u, result.fault_pc);
@@ -511,7 +512,7 @@ static void odd_word_source_stacks_manual_derived_address_error_frame(void) {
     owned_cpu_observation observation;
     observe(&observation);
     TEST_ASSERT_EQUAL_UINT8(3u, observation.last_exception_vector);
-    TEST_ASSERT_EQUAL_UINT64(94u, observation.exception_cycles);
+    TEST_ASSERT_EQUAL_UINT64(50u, observation.exception_cycles);
 }
 
 static void odd_long_destination_stacks_a_write_address_error(void) {
@@ -524,7 +525,7 @@ static void odd_long_destination_stacks_a_write_address_error(void) {
                       owned_cpu_test_seed_data_register(cpu, 0u, 0xaabbccddu));
     clear_trace();
     owned_cpu_run_result result = owned_cpu_run(cpu, 1u);
-    TEST_ASSERT_EQUAL_UINT64(94u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(50u, result.elapsed_cycles);
     TEST_ASSERT_EQUAL_UINT64(0u, result.instructions);
     TEST_ASSERT_EQUAL_UINT(12u, memory.accesses);
     TEST_ASSERT_EQUAL_HEX16(0x000du, get_word(0x2ff2u));
@@ -544,7 +545,7 @@ static void odd_instruction_fetch_enters_group_zero_without_an_odd_bus_read(void
                                         cpu, 0x2700u, 0u, 0x3000u, 0x101u));
     clear_trace();
     owned_cpu_run_result result = owned_cpu_run(cpu, 1u);
-    TEST_ASSERT_EQUAL_UINT64(94u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(50u, result.elapsed_cycles);
     TEST_ASSERT_EQUAL_UINT64(0u, result.instructions);
     TEST_ASSERT_EQUAL_UINT(9u, memory.accesses);
     TEST_ASSERT_EQUAL_HEX32(0x2ffcu, memory.events[0].address);
@@ -615,7 +616,7 @@ static void irq3_stays_masked_until_move_to_sr_then_enters_as_its_own_event(void
     TEST_ASSERT_EQUAL_UINT64(1u, result.instructions);
     TEST_ASSERT_EQUAL_HEX32(0x106u, result.pc);
     result = owned_cpu_run(cpu, 1u);
-    TEST_ASSERT_EQUAL_UINT64(72u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(44u, result.elapsed_cycles);
     TEST_ASSERT_EQUAL_UINT64(0u, result.instructions);
     TEST_ASSERT_EQUAL_HEX32(0x180u, result.pc);
     TEST_ASSERT_EQUAL_HEX16(0x2000u, get_word(0x2ffau));
@@ -624,7 +625,7 @@ static void irq3_stays_masked_until_move_to_sr_then_enters_as_its_own_event(void
     observe(&observation);
     TEST_ASSERT_EQUAL_HEX16(0x2300u, observation.sr);
     TEST_ASSERT_EQUAL_UINT8(27u, observation.last_exception_vector);
-    TEST_ASSERT_EQUAL_UINT64(72u, observation.exception_cycles);
+    TEST_ASSERT_EQUAL_UINT64(44u, observation.exception_cycles);
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_set_irq(cpu, 0u));
     result = owned_cpu_run(cpu, 1u);
     TEST_ASSERT_EQUAL_UINT64(8u, result.elapsed_cycles);
@@ -647,7 +648,7 @@ static void irq7_edge_is_unmasked_and_held_level_waits_for_mask_change(void) {
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_set_irq(cpu, 7u));
 
     owned_cpu_run_result result = owned_cpu_run(cpu, 1u);
-    TEST_ASSERT_EQUAL_UINT64(72u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(44u, result.elapsed_cycles);
     TEST_ASSERT_EQUAL_UINT64(0u, result.instructions);
     TEST_ASSERT_EQUAL_HEX32(0x180u, result.pc);
     owned_cpu_observation observation;
@@ -665,7 +666,7 @@ static void irq7_edge_is_unmasked_and_held_level_waits_for_mask_change(void) {
     observe(&observation);
     TEST_ASSERT_EQUAL_HEX16(0x2000u, observation.sr);
     result = owned_cpu_run(cpu, 1u);
-    TEST_ASSERT_EQUAL_UINT64(72u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(44u, result.elapsed_cycles);
     TEST_ASSERT_EQUAL_UINT64(0u, result.instructions);
     observe(&observation);
     TEST_ASSERT_EQUAL_UINT8(31u, observation.last_exception_vector);
@@ -677,7 +678,7 @@ static void irq7_edge_is_unmasked_and_held_level_waits_for_mask_change(void) {
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_set_irq(cpu, 7u));
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_set_irq(cpu, 0u));
     result = owned_cpu_run(cpu, 1u);
-    TEST_ASSERT_EQUAL_UINT64(72u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(44u, result.elapsed_cycles);
     observe(&observation);
     TEST_ASSERT_EQUAL_UINT8(31u, observation.last_exception_vector);
     TEST_ASSERT_EQUAL_HEX32(0x180u, observation.pc);
@@ -701,7 +702,7 @@ static void user_mode_privileged_instructions_raise_vector_eight(void) {
                                             cpu, 0u, 0x3800u, 0x3000u, 0x100u));
         clear_trace();
         owned_cpu_run_result result = owned_cpu_run(cpu, 1u);
-        TEST_ASSERT_EQUAL_UINT64(62u, result.elapsed_cycles);
+        TEST_ASSERT_EQUAL_UINT64(34u, result.elapsed_cycles);
         TEST_ASSERT_EQUAL_UINT64(1u, result.instructions);
         TEST_ASSERT_EQUAL_HEX32(0x180u, result.pc);
         TEST_ASSERT_EQUAL_HEX16(0u, get_word(0x2ffau));
@@ -731,7 +732,7 @@ static void stopped_cpu_idles_to_the_exact_request_without_bus_access(void) {
     owned_cpu_observation observation;
     observe(&observation);
     TEST_ASSERT_EQUAL_UINT64(9u, observation.idle_cycles);
-    TEST_ASSERT_EQUAL_UINT64(77u, observation.total_cycles);
+    TEST_ASSERT_EQUAL_UINT64(53u, observation.total_cycles);
     TEST_ASSERT_EQUAL_UINT64(4u, observation.instruction_cycles);
 }
 
@@ -766,8 +767,8 @@ static void event_limits_and_counter_overflow_are_explicit(void) {
 }
 
 static void reset_request_boundaries_never_split_the_reset_event(void) {
-    const uint64_t requests[] = {63u, 64u, 65u};
-    const uint64_t expected[] = {64u, 64u, 68u};
+    const uint64_t requests[] = {39u, 40u, 41u};
+    const uint64_t expected[] = {40u, 40u, 44u};
     const uint64_t overshoot[] = {1u, 0u, 3u};
     for (size_t index = 0u; index < sizeof(requests) / sizeof(requests[0]); ++index) {
         if (cpu != NULL) owned_cpu_destroy(cpu);
@@ -784,13 +785,13 @@ static void reset_request_boundaries_never_split_the_reset_event(void) {
     }
 }
 
-static void reset_and_four_named_guest_instructions_total_one_hundred_cycles(void) {
+static void reset_and_four_named_guest_instructions_total_seventy_six_cycles(void) {
     create_machine();
     const uint8_t program[] = {0x70, 0x0a, 0x5c, 0x80, 0x23, 0xc0,
                                0x00, 0x00, 0x10, 0x00, 0x4e, 0x72, 0x27, 0x00};
     install_program(program, sizeof(program));
     owned_cpu_run_result result = owned_cpu_run(cpu, 1u);
-    TEST_ASSERT_EQUAL_UINT64(64u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(40u, result.elapsed_cycles);
     result = owned_cpu_run(cpu, 36u);
     TEST_ASSERT_EQUAL_UINT64(36u, result.elapsed_cycles);
     TEST_ASSERT_EQUAL_UINT64(4u, result.instructions);
@@ -798,7 +799,7 @@ static void reset_and_four_named_guest_instructions_total_one_hundred_cycles(voi
     TEST_ASSERT_EQUAL_HEX32(16u, get_long(0x1000u));
     owned_cpu_observation observation;
     observe(&observation);
-    TEST_ASSERT_EQUAL_UINT64(100u, observation.total_cycles);
+    TEST_ASSERT_EQUAL_UINT64(76u, observation.total_cycles);
     TEST_ASSERT_EQUAL_UINT64(36u, observation.instruction_cycles);
 }
 
@@ -967,7 +968,7 @@ int main(int argc, char **argv) {
     RUN_TEST(stopped_cpu_idles_to_the_exact_request_without_bus_access);
     RUN_TEST(event_limits_and_counter_overflow_are_explicit);
     RUN_TEST(reset_request_boundaries_never_split_the_reset_event);
-    RUN_TEST(reset_and_four_named_guest_instructions_total_one_hundred_cycles);
+    RUN_TEST(reset_and_four_named_guest_instructions_total_seventy_six_cycles);
     RUN_TEST(nested_vector_callback_failure_is_terminal_without_recursion);
     RUN_TEST(odd_exception_stack_fault_is_terminal_without_recursive_entry);
     RUN_TEST(move_to_sr_switches_to_user_stack);

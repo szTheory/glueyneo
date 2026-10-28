@@ -9,7 +9,19 @@
 #include <pthread.h>
 #endif
 
-enum { TEST_MEMORY_SIZE = 65536, TEST_EVENT_CAPACITY = 256, TEST_PROGRAM_CYCLES = 96 };
+enum {
+    TEST_MEMORY_SIZE = 65536,
+    TEST_EVENT_CAPACITY = 256,
+    TEST_PROGRAM_CYCLES = 96,
+    TEST_Z80_STATE_BYTES = 76,
+    TEST_Z80_DDFD_M1_T2 = 1685,
+    TEST_Z80_DDFD_LDHLN_OVERLAPPED = 1699,
+    TEST_Z80_CB_M1_T2 = 1700,
+    TEST_Z80_CB_M1_T4 = 1702,
+    TEST_Z80_ED_M1_T2 = 1703,
+    TEST_Z80_ED_M1_T4 = 1705,
+    TEST_Z80_INT_IM1_STEP = 1642
+};
 
 typedef struct {
     uint8_t memory[TEST_MEMORY_SIZE];
@@ -32,6 +44,9 @@ typedef enum {
 } test_mutation;
 
 static test_mutation mutation;
+
+static void configure_im1_irq_program(test_bus *bus);
+static size_t find_event(const test_bus *bus, z80_candidate_bus_kind kind);
 
 void setUp(void) {}
 void tearDown(void) {}
@@ -175,6 +190,28 @@ static void cycle_counter_rejects_wrap_before_candidate_tick(void) {
     z80_candidate_destroy(candidate);
 }
 
+static void restore_rejects_decoder_steps_outside_the_pinned_switch(void) {
+    test_bus bus = {0};
+    z80_candidate *candidate = NULL;
+    z80_candidate_snapshot before = {0};
+    z80_candidate_snapshot invalid = {0};
+    z80_candidate_snapshot after = {0};
+
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_create(test_bus_access, &bus, &candidate));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_capture(candidate, &before));
+    invalid = before;
+    invalid.cpu.step = UINT16_MAX;
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_INVALID_SNAPSHOT,
+                          z80_candidate_restore(candidate, &invalid));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_capture(candidate, &after));
+    TEST_ASSERT_EQUAL_INT(0, memcmp(&before, &after, sizeof(before)));
+    TEST_ASSERT_EQUAL_UINT(0u, bus.event_count);
+    z80_candidate_destroy(candidate);
+}
+
 static int snapshots_equal(const z80_candidate_snapshot *left,
                            const z80_candidate_snapshot *right) {
     return memcmp(left, right, sizeof(*left)) == 0;
@@ -189,6 +226,691 @@ static int event_traces_equal(const test_bus *left, const test_bus *right) {
             left->event_cycles[index] != right->event_cycles[index]) return 0;
     }
     return 1;
+}
+
+static void write_test_u64_be(uint8_t *bytes, uint64_t value) {
+    for (size_t index = 0u; index < 8u; ++index) {
+        bytes[7u - index] = (uint8_t)value;
+        value >>= 8;
+    }
+}
+
+static void write_test_u16_be(uint8_t *bytes, uint16_t value) {
+    bytes[0] = (uint8_t)(value >> 8);
+    bytes[1] = (uint8_t)value;
+}
+
+static uint64_t read_test_u64_be(const uint8_t *bytes) {
+    uint64_t value = 0u;
+    for (size_t index = 0u; index < 8u; ++index) {
+        value = (value << 8) | bytes[index];
+    }
+    return value;
+}
+
+static void load_state_microprogram(test_bus *bus) {
+    static const uint8_t program[] = {
+        0xedu, 0x56u,             /* IM 1 */
+        0xfbu,                    /* EI */
+        0x00u,                    /* NOP */
+        0xddu, 0x21u, 0x00u, 0x20u, /* LD IX,0x2000 */
+        0xddu, 0x36u, 0x01u, 0x5au, /* LD (IX+1),0x5a */
+        0xedu, 0x44u,             /* NEG */
+        0xcbu, 0x07u,             /* RLC A */
+        0xddu, 0xcbu, 0x00u, 0x06u, /* RLC (IX+0) */
+        0x76u                     /* HALT */
+    };
+    memcpy(bus->memory, program, sizeof(program));
+    bus->memory[0x38u] = 0xc3u; /* bounded IM 1 handler: JP 0x0038 */
+    bus->memory[0x39u] = 0x38u;
+    bus->memory[0x3au] = 0x00u;
+}
+
+static void canonical_state_rebinds_across_live_decoder_microstates(void) {
+    static const unsigned capture_cycles[] = {
+        1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u,
+        13u, 14u, 15u, 16u, 17u, 18u, 19u, 20u, 21u, 22u, 23u,
+        24u, 25u, 26u, 27u, 28u, 29u, 30u, 31u, 32u, 33u, 34u,
+        35u, 36u, 37u, 38u, 39u, 40u, 41u, 42u, 43u, 44u, 45u,
+        46u, 47u, 48u, 49u, 50u, 51u, 52u, 53u, 54u, 55u, 56u,
+        57u, 58u, 59u, 60u, 61u, 62u, 63u, 64u, 65u, 66u, 67u,
+        68u, 69u, 70u, 71u, 72u, 73u, 74u, 75u, 76u, 77u, 78u,
+        79u, 80u
+    };
+    size_t ddfd_states = 0u;
+    size_t ddcb_states = 0u;
+    size_t ed_states = 0u;
+    size_t cb_states = 0u;
+
+    TEST_ASSERT_EQUAL_UINT(TEST_Z80_STATE_BYTES, z80_candidate_state_size());
+    for (size_t trial = 0u;
+         trial < sizeof(capture_cycles) / sizeof(capture_cycles[0]); ++trial) {
+        test_bus source_bus = {0};
+        test_bus destination_bus = {0};
+        z80_candidate *source = NULL;
+        z80_candidate *destination = NULL;
+        z80_candidate_state *staged = NULL;
+        z80_candidate_tick_result source_tick = {0};
+        z80_candidate_tick_result destination_tick = {0};
+        z80_candidate_snapshot source_snapshot = {0};
+        uint8_t bytes[TEST_Z80_STATE_BYTES] = {0};
+        uint8_t rebound_bytes[TEST_Z80_STATE_BYTES] = {0};
+        size_t written = 0u;
+        unsigned cut = capture_cycles[trial];
+
+        load_state_microprogram(&source_bus);
+        load_state_microprogram(&destination_bus);
+        TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                              z80_candidate_create(test_bus_access, &source_bus,
+                                                   &source));
+        TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                              z80_candidate_create(test_bus_access,
+                                                   &destination_bus,
+                                                   &destination));
+        TEST_ASSERT_TRUE(source_bus.memory != destination_bus.memory);
+        TEST_ASSERT_TRUE(tick_many(&source_bus, source, cut, false, &source_tick));
+        memcpy(destination_bus.memory, source_bus.memory,
+               sizeof(destination_bus.memory));
+        TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                              z80_candidate_capture(source, &source_snapshot));
+        TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                              z80_candidate_state_capture(source, bytes,
+                                                          sizeof(bytes), &written));
+        TEST_ASSERT_EQUAL_UINT(TEST_Z80_STATE_BYTES, written);
+        TEST_ASSERT_EQUAL_HEX8('G', bytes[0]);
+        TEST_ASSERT_EQUAL_HEX8('Z', bytes[1]);
+        TEST_ASSERT_EQUAL_HEX8('8', bytes[2]);
+        TEST_ASSERT_EQUAL_HEX8('0', bytes[3]);
+        TEST_ASSERT_EQUAL_HEX8(1u, bytes[4]);
+        TEST_ASSERT_EQUAL_HEX8((source_snapshot.cpu.step >> 8) & 0xffu,
+                               bytes[5]);
+        TEST_ASSERT_EQUAL_HEX8(source_snapshot.cpu.step & 0xffu, bytes[6]);
+        TEST_ASSERT_EQUAL_HEX8((source_snapshot.cpu.pc >> 8) & 0xffu,
+                               bytes[29]);
+        TEST_ASSERT_EQUAL_HEX8(source_snapshot.cpu.pc & 0xffu, bytes[30]);
+        TEST_ASSERT_EQUAL_UINT64(source_snapshot.pins,
+                                 read_test_u64_be(&bytes[60]));
+        TEST_ASSERT_EQUAL_UINT64(source_snapshot.cycles,
+                                 read_test_u64_be(&bytes[68]));
+        if (source_snapshot.cpu.step >= TEST_Z80_DDFD_M1_T2 &&
+            source_snapshot.cpu.step <= TEST_Z80_DDFD_LDHLN_OVERLAPPED) ++ddfd_states;
+        if (source_snapshot.cpu.step >= 1621u && source_snapshot.cpu.step <= 1635u) {
+            ++ddcb_states;
+        }
+        if ((source_snapshot.cpu.step >= TEST_Z80_ED_M1_T2 &&
+             source_snapshot.cpu.step <= TEST_Z80_ED_M1_T4) ||
+            (source_snapshot.cpu.step >= 256u && source_snapshot.cpu.step <= 511u)) {
+            ++ed_states;
+        }
+        if ((source_snapshot.cpu.step >= TEST_Z80_CB_M1_T2 &&
+             source_snapshot.cpu.step <= TEST_Z80_CB_M1_T4) ||
+            (source_snapshot.cpu.step >= 1612u && source_snapshot.cpu.step <= 1620u)) {
+            ++cb_states;
+        }
+        size_t event_count_before_stage = source_bus.event_count;
+        size_t destination_event_count_before_stage = destination_bus.event_count;
+        TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                              z80_candidate_state_stage(bytes, sizeof(bytes),
+                                                        &staged));
+        TEST_ASSERT_NOT_NULL(staged);
+        TEST_ASSERT_EQUAL_UINT(event_count_before_stage, source_bus.event_count);
+        TEST_ASSERT_EQUAL_UINT(destination_event_count_before_stage,
+                               destination_bus.event_count);
+        TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                              z80_candidate_state_rebind(staged, destination));
+        TEST_ASSERT_EQUAL_UINT(event_count_before_stage, source_bus.event_count);
+        TEST_ASSERT_EQUAL_UINT(destination_event_count_before_stage,
+                               destination_bus.event_count);
+        z80_candidate_state_apply(destination, staged);
+        z80_candidate_state_discard(staged);
+        staged = NULL;
+        TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                              z80_candidate_state_capture(destination,
+                                                          rebound_bytes,
+                                                          sizeof(rebound_bytes),
+                                                          &written));
+        TEST_ASSERT_EQUAL_MEMORY(bytes, rebound_bytes, sizeof(bytes));
+
+        source_bus.event_count = 0u;
+        destination_bus.event_count = 0u;
+        source_bus.current_cycle = cut;
+        destination_bus.current_cycle = cut;
+        memset(source_bus.kinds, 0, sizeof(source_bus.kinds));
+        memset(destination_bus.kinds, 0, sizeof(destination_bus.kinds));
+        memset(source_bus.addresses, 0, sizeof(source_bus.addresses));
+        memset(destination_bus.addresses, 0, sizeof(destination_bus.addresses));
+        memset(source_bus.values, 0, sizeof(source_bus.values));
+        memset(destination_bus.values, 0, sizeof(destination_bus.values));
+        memset(source_bus.event_cycles, 0, sizeof(source_bus.event_cycles));
+        memset(destination_bus.event_cycles, 0, sizeof(destination_bus.event_cycles));
+        for (unsigned cycle = 0u; cycle < 40u; ++cycle) {
+            bool irq = cycle < 4u;
+            bool nmi = cycle == 12u;
+            source_bus.current_cycle++;
+            destination_bus.current_cycle++;
+            TEST_ASSERT_EQUAL_INT(z80_candidate_tick(source, irq, nmi,
+                                                     &source_tick),
+                                  z80_candidate_tick(destination, irq, nmi,
+                                                     &destination_tick));
+            TEST_ASSERT_EQUAL_UINT64(source_tick.cycles, destination_tick.cycles);
+            TEST_ASSERT_EQUAL_UINT64(source_tick.pins, destination_tick.pins);
+            TEST_ASSERT_EQUAL_INT(source_tick.instruction_complete,
+                                  destination_tick.instruction_complete);
+        }
+        TEST_ASSERT_TRUE(event_traces_equal(&source_bus, &destination_bus));
+        TEST_ASSERT_EQUAL_MEMORY(source_bus.memory, destination_bus.memory,
+                                 sizeof(source_bus.memory));
+        z80_candidate_destroy(destination);
+        z80_candidate_destroy(source);
+    }
+    TEST_ASSERT_TRUE(ddfd_states > 0u);
+    TEST_ASSERT_TRUE(ddcb_states > 0u);
+    TEST_ASSERT_TRUE(ed_states > 0u);
+    TEST_ASSERT_TRUE(cb_states > 0u);
+    printf("z80_canonical_continuations=%zu ddfd=%zu ddcb=%zu ed=%zu cb=%zu bytes=%u\n",
+           sizeof(capture_cycles) / sizeof(capture_cycles[0]), ddfd_states,
+           ddcb_states, ed_states, cb_states, TEST_Z80_STATE_BYTES);
+}
+
+static void canonical_state_rejects_bad_lengths_bools_and_decoder_relations(void) {
+    enum {
+        STATE_STEP_OFFSET = 5,
+        STATE_HLX_INDEX_OFFSET = 11,
+        STATE_PREFIX_OFFSET = 12,
+        STATE_INT_BITS_OFFSET = 21,
+        STATE_IM_OFFSET = 57,
+        STATE_IFF1_OFFSET = 58,
+        STATE_IFF2_OFFSET = 59,
+        STATE_PINS_OFFSET = 60
+    };
+    test_bus bus = {0};
+    z80_candidate *candidate = NULL;
+    z80_candidate_state *staged = NULL;
+    uint8_t valid[TEST_Z80_STATE_BYTES] = {0};
+    uint8_t short_buffer[TEST_Z80_STATE_BYTES - 1u] = {0};
+    uint8_t invalid[TEST_Z80_STATE_BYTES];
+    size_t written = 0u;
+    size_t rejected = 0u;
+
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_create(test_bus_access, &bus, &candidate));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_state_capture(candidate, valid,
+                                                      sizeof(valid), &written));
+    TEST_ASSERT_EQUAL_UINT(TEST_Z80_STATE_BYTES, written);
+    written = 1u;
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_INVALID_ARGUMENT,
+                          z80_candidate_state_capture(candidate, short_buffer,
+                                                      sizeof(short_buffer), &written));
+    TEST_ASSERT_EQUAL_UINT(0u, written);
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_INVALID_SNAPSHOT,
+                          z80_candidate_state_stage(valid, sizeof(valid) - 1u,
+                                                   &staged));
+    TEST_ASSERT_NULL(staged);
+    ++rejected;
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_INVALID_SNAPSHOT,
+                          z80_candidate_state_stage(valid, sizeof(valid) + 1u,
+                                                   &staged));
+    TEST_ASSERT_NULL(staged);
+    ++rejected;
+
+#define ASSERT_INVALID_BYTE(field_offset, field_value) do { \
+        memcpy(invalid, valid, sizeof(invalid)); \
+        invalid[(field_offset)] = (uint8_t)(field_value); \
+        staged = NULL; \
+        TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_INVALID_SNAPSHOT, \
+                              z80_candidate_state_stage(invalid, sizeof(invalid), \
+                                                       &staged)); \
+        TEST_ASSERT_NULL(staged); \
+        ++rejected; \
+    } while (0)
+    memcpy(invalid, valid, sizeof(invalid));
+    invalid[STATE_STEP_OFFSET] = 0xffu;
+    invalid[STATE_STEP_OFFSET + 1u] = 0xffu;
+    staged = NULL;
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_INVALID_SNAPSHOT,
+                          z80_candidate_state_stage(invalid, sizeof(invalid),
+                                                   &staged));
+    TEST_ASSERT_NULL(staged);
+    ++rejected;
+
+    ASSERT_INVALID_BYTE(0u, 'X');
+    ASSERT_INVALID_BYTE(4u, 0u);
+    ASSERT_INVALID_BYTE(STATE_PREFIX_OFFSET, 2u);
+    ASSERT_INVALID_BYTE(STATE_IFF1_OFFSET, 2u);
+    ASSERT_INVALID_BYTE(STATE_IFF2_OFFSET, 2u);
+    ASSERT_INVALID_BYTE(STATE_HLX_INDEX_OFFSET, 1u);
+    memcpy(invalid, valid, sizeof(invalid));
+    invalid[STATE_HLX_INDEX_OFFSET] = 1u;
+    invalid[STATE_PREFIX_OFFSET] = 0u;
+    staged = NULL;
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_INVALID_SNAPSHOT,
+                          z80_candidate_state_stage(invalid, sizeof(invalid),
+                                                   &staged));
+    TEST_ASSERT_NULL(staged);
+    ++rejected;
+
+    memcpy(invalid, valid, sizeof(invalid));
+    invalid[STATE_STEP_OFFSET] = (uint8_t)(TEST_Z80_INT_IM1_STEP >> 8);
+    invalid[STATE_STEP_OFFSET + 1u] = (uint8_t)TEST_Z80_INT_IM1_STEP;
+    invalid[STATE_IM_OFFSET] = 0u;
+    staged = NULL;
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_INVALID_SNAPSHOT,
+                          z80_candidate_state_stage(invalid, sizeof(invalid),
+                                                   &staged));
+    TEST_ASSERT_NULL(staged);
+    ++rejected;
+
+    memcpy(invalid, valid, sizeof(invalid));
+    invalid[STATE_INT_BITS_OFFSET] = 1u;
+    staged = NULL;
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_INVALID_SNAPSHOT,
+                          z80_candidate_state_stage(invalid, sizeof(invalid),
+                                                   &staged));
+    TEST_ASSERT_NULL(staged);
+    ++rejected;
+
+    memcpy(invalid, valid, sizeof(invalid));
+    uint64_t pins = Z80_INT;
+    write_test_u64_be(&invalid[STATE_PINS_OFFSET], pins);
+    staged = NULL;
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_INVALID_SNAPSHOT,
+                          z80_candidate_state_stage(invalid, sizeof(invalid),
+                                                   &staged));
+    TEST_ASSERT_NULL(staged);
+    ++rejected;
+    TEST_ASSERT_EQUAL_UINT(0u, bus.event_count);
+    printf("z80_invalid_state_cases=%zu source_callbacks=0\n", rejected);
+#undef ASSERT_INVALID_BYTE
+    z80_candidate_destroy(candidate);
+}
+
+static void canonical_state_rejects_mismatched_prefix_entry_opcodes(void) {
+    test_bus bus = {0};
+    z80_candidate *candidate = NULL;
+    z80_candidate_state *staged = NULL;
+    z80_candidate_snapshot initial = {0};
+    uint8_t bytes[TEST_Z80_STATE_BYTES] = {0};
+    uint8_t invalid[TEST_Z80_STATE_BYTES];
+    size_t written = 0u;
+    z80_candidate_status status;
+
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_create(test_bus_access, &bus, &candidate));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_capture(candidate, &initial));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_state_capture(candidate, bytes,
+                                                      sizeof(bytes), &written));
+
+    /* _z80_fetch_dd/fd retains the prefix byte at decoder step 1685. */
+    memcpy(invalid, bytes, sizeof(invalid));
+    write_test_u16_be(&invalid[5], TEST_Z80_DDFD_M1_T2);
+    invalid[10] = 0x3eu;
+    invalid[11] = 1u;
+    invalid[12] = 1u;
+    status = z80_candidate_state_stage(invalid, sizeof(invalid), &staged);
+    z80_candidate_state_discard(staged);
+    staged = NULL;
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_INVALID_SNAPSHOT, status);
+
+    memcpy(invalid, bytes, sizeof(invalid));
+    write_test_u16_be(&invalid[5], TEST_Z80_DDFD_M1_T2);
+    invalid[10] = 0xfdu; /* FD cannot select IX. */
+    invalid[11] = 1u;
+    invalid[12] = 1u;
+    status = z80_candidate_state_stage(invalid, sizeof(invalid), &staged);
+    z80_candidate_state_discard(staged);
+    staged = NULL;
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_INVALID_SNAPSHOT, status);
+
+    memcpy(invalid, bytes, sizeof(invalid));
+    write_test_u16_be(&invalid[5], TEST_Z80_CB_M1_T2);
+    invalid[10] = 0x00u;
+    invalid[12] = 1u;
+    status = z80_candidate_state_stage(invalid, sizeof(invalid), &staged);
+    z80_candidate_state_discard(staged);
+    staged = NULL;
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_INVALID_SNAPSHOT, status);
+
+    memcpy(invalid, bytes, sizeof(invalid));
+    write_test_u16_be(&invalid[5], TEST_Z80_ED_M1_T2);
+    invalid[10] = 0x00u;
+    invalid[12] = 1u;
+    status = z80_candidate_state_stage(invalid, sizeof(invalid), &staged);
+    z80_candidate_state_discard(staged);
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_INVALID_SNAPSHOT, status);
+    z80_candidate_destroy(candidate);
+    printf("z80_prefix_opcode_invalid_cases=4\n");
+}
+
+static void canonical_state_resumes_a_pending_im1_acknowledgement(void) {
+    test_bus source_bus = {0};
+    test_bus destination_bus = {0};
+    z80_candidate *source = NULL;
+    z80_candidate *destination = NULL;
+    z80_candidate_state *staged = NULL;
+    z80_candidate_snapshot checkpoint = {0};
+    z80_candidate_tick_result source_tick = {0};
+    z80_candidate_tick_result destination_tick = {0};
+    uint8_t bytes[TEST_Z80_STATE_BYTES] = {0};
+    size_t written = 0u;
+    bool found_interrupt_step = false;
+
+    configure_im1_irq_program(&source_bus);
+    configure_im1_irq_program(&destination_bus);
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_create(test_bus_access, &source_bus,
+                                               &source));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_create(test_bus_access,
+                                               &destination_bus, &destination));
+    for (unsigned cycle = 1u; cycle <= 40u; ++cycle) {
+        TEST_ASSERT_TRUE(tick_once(&source_bus, source, cycle >= 16u,
+                                   &source_tick));
+        TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                              z80_candidate_capture(source, &checkpoint));
+        if (checkpoint.cpu.step >= TEST_Z80_INT_IM1_STEP &&
+            checkpoint.cpu.step <= 1654u) {
+            found_interrupt_step = true;
+            break;
+        }
+    }
+    TEST_ASSERT_TRUE(found_interrupt_step);
+    TEST_ASSERT_TRUE(checkpoint.cpu.iff1);
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_state_capture(source, bytes,
+                                                      sizeof(bytes), &written));
+    memcpy(destination_bus.memory, source_bus.memory,
+           sizeof(destination_bus.memory));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_state_stage(bytes, sizeof(bytes),
+                                                    &staged));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_state_rebind(staged, destination));
+    z80_candidate_state_apply(destination, staged);
+    z80_candidate_state_discard(staged);
+    source_bus.event_count = 0u;
+    destination_bus.event_count = 0u;
+    source_bus.current_cycle = checkpoint.cycles;
+    destination_bus.current_cycle = checkpoint.cycles;
+    for (unsigned cycle = 0u; cycle < 24u; ++cycle) {
+        source_bus.current_cycle++;
+        destination_bus.current_cycle++;
+        TEST_ASSERT_EQUAL_INT(z80_candidate_tick(source, true, false,
+                                                 &source_tick),
+                              z80_candidate_tick(destination, true, false,
+                                                 &destination_tick));
+        TEST_ASSERT_EQUAL_UINT64(source_tick.cycles, destination_tick.cycles);
+        TEST_ASSERT_EQUAL_UINT64(source_tick.pins, destination_tick.pins);
+    }
+    TEST_ASSERT_TRUE(event_traces_equal(&source_bus, &destination_bus));
+    TEST_ASSERT_TRUE(find_event(&source_bus, Z80_CANDIDATE_BUS_INTERRUPT_ACK) <
+                     source_bus.event_count);
+    TEST_ASSERT_EQUAL_MEMORY(source_bus.memory, destination_bus.memory,
+                             sizeof(source_bus.memory));
+    printf("z80_irq_microstate_step=%u irq_cycles=%llu ack_events=%zu\n",
+           (unsigned)checkpoint.cpu.step,
+           (unsigned long long)checkpoint.cycles,
+           source_bus.event_count);
+    z80_candidate_destroy(destination);
+    z80_candidate_destroy(source);
+}
+
+static void canonical_state_resumes_inside_nmi_entry(void) {
+    test_bus source_bus = {0};
+    test_bus destination_bus = {0};
+    z80_candidate *source = NULL;
+    z80_candidate *destination = NULL;
+    z80_candidate_state *staged = NULL;
+    z80_candidate_snapshot checkpoint = {0};
+    z80_candidate_tick_result source_tick = {0};
+    z80_candidate_tick_result destination_tick = {0};
+    uint8_t bytes[TEST_Z80_STATE_BYTES] = {0};
+    size_t written = 0u;
+    bool found_nmi_step = false;
+
+    source_bus.memory[0x66u] = 0xc3u; /* bounded NMI handler: JP 0x0066 */
+    source_bus.memory[0x67u] = 0x66u;
+    source_bus.memory[0x68u] = 0x00u;
+    memcpy(destination_bus.memory, source_bus.memory,
+           sizeof(destination_bus.memory));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_create(test_bus_access, &source_bus,
+                                               &source));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_create(test_bus_access,
+                                               &destination_bus, &destination));
+    TEST_ASSERT_TRUE(tick_once(&source_bus, source, false, &source_tick));
+    /* Re-arm with a low-to-high edge, then let the edge latch while the pin falls. */
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_tick(source, false, true, &source_tick));
+    source_bus.current_cycle++;
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_tick(source, false, false, &source_tick));
+    source_bus.current_cycle++;
+    for (unsigned cycle = 0u; cycle < 32u; ++cycle) {
+        TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                              z80_candidate_capture(source, &checkpoint));
+        if (checkpoint.cpu.step >= 1674u && checkpoint.cpu.step <= 1684u) {
+            found_nmi_step = true;
+            break;
+        }
+        TEST_ASSERT_TRUE(tick_once(&source_bus, source, false, &source_tick));
+    }
+    TEST_ASSERT_TRUE(found_nmi_step);
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_state_capture(source, bytes,
+                                                      sizeof(bytes), &written));
+    memcpy(destination_bus.memory, source_bus.memory,
+           sizeof(destination_bus.memory));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_state_stage(bytes, sizeof(bytes),
+                                                    &staged));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_state_rebind(staged, destination));
+    z80_candidate_state_apply(destination, staged);
+    z80_candidate_state_discard(staged);
+    source_bus.event_count = 0u;
+    destination_bus.event_count = 0u;
+    source_bus.current_cycle = checkpoint.cycles;
+    destination_bus.current_cycle = checkpoint.cycles;
+    for (unsigned cycle = 0u; cycle < 32u; ++cycle) {
+        source_bus.current_cycle++;
+        destination_bus.current_cycle++;
+        TEST_ASSERT_EQUAL_INT(z80_candidate_tick(source, false, false,
+                                                 &source_tick),
+                              z80_candidate_tick(destination, false, false,
+                                                 &destination_tick));
+        TEST_ASSERT_EQUAL_UINT64(source_tick.cycles, destination_tick.cycles);
+        TEST_ASSERT_EQUAL_UINT64(source_tick.pins, destination_tick.pins);
+    }
+    TEST_ASSERT_TRUE(event_traces_equal(&source_bus, &destination_bus));
+    TEST_ASSERT_TRUE(find_event(&source_bus, Z80_CANDIDATE_BUS_MEMORY_WRITE) <
+                     source_bus.event_count);
+    TEST_ASSERT_EQUAL_MEMORY(source_bus.memory, destination_bus.memory,
+                             sizeof(source_bus.memory));
+    printf("z80_nmi_microstate_step=%u cycles=%llu bus_events=%zu\n",
+           (unsigned)checkpoint.cpu.step,
+           (unsigned long long)checkpoint.cycles,
+           source_bus.event_count);
+    z80_candidate_destroy(destination);
+    z80_candidate_destroy(source);
+}
+
+static void canonical_staging_allocation_failures_preserve_destination_and_peer(void) {
+    test_bus source_bus = {0};
+    test_bus target_bus = {0};
+    test_bus peer_bus = {0};
+    test_bus create_failure_bus = {0};
+    test_bus success_bus = {0};
+    z80_candidate *source = NULL;
+    z80_candidate *target = NULL;
+    z80_candidate *peer = NULL;
+    z80_candidate *success = NULL;
+    z80_candidate_state *staged = NULL;
+    z80_candidate_snapshot before_target = {0};
+    z80_candidate_snapshot before_peer = {0};
+    z80_candidate_snapshot after_target = {0};
+    z80_candidate_snapshot after_peer = {0};
+    z80_candidate_tick_result source_tick = {0};
+    z80_candidate_tick_result target_tick = {0};
+    z80_candidate_tick_result peer_tick = {0};
+    uint8_t bytes[TEST_Z80_STATE_BYTES] = {0};
+    size_t written = 0u;
+    z80_candidate_test_failpoint create_failure = {.fail_at = 1u};
+    z80_candidate_test_failpoint stage_failure = {.fail_at = 2u};
+    z80_candidate_test_failpoint success_allocator = {0};
+    size_t target_events_before_stage;
+    size_t peer_events_before_stage;
+
+    load_state_microprogram(&source_bus);
+    load_state_microprogram(&target_bus);
+    load_state_microprogram(&peer_bus);
+    load_state_microprogram(&create_failure_bus);
+    load_state_microprogram(&success_bus);
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_create(test_bus_access, &source_bus,
+                                               &source));
+    TEST_ASSERT_TRUE(tick_many(&source_bus, source, 18u, false, &source_tick));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_state_capture(source, bytes,
+                                                      sizeof(bytes), &written));
+
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OUT_OF_MEMORY,
+                          z80_candidate_test_create(test_bus_access,
+                                                    &create_failure_bus,
+                                                    &create_failure, &target));
+    TEST_ASSERT_NULL(target);
+    TEST_ASSERT_EQUAL_UINT(1u, create_failure.attempts);
+    TEST_ASSERT_EQUAL_UINT(0u, create_failure.allocations);
+    TEST_ASSERT_EQUAL_UINT(0u, create_failure.frees);
+    TEST_ASSERT_EQUAL_UINT(0u, create_failure_bus.event_count);
+
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_test_create(test_bus_access, &target_bus,
+                                                    &stage_failure, &target));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_create(test_bus_access, &peer_bus, &peer));
+    TEST_ASSERT_TRUE(tick_many(&target_bus, target, 10u, false, &target_tick));
+    TEST_ASSERT_TRUE(tick_many(&peer_bus, peer, 10u, false, &peer_tick));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_capture(target, &before_target));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_capture(peer, &before_peer));
+    TEST_ASSERT_EQUAL_INT(1, snapshots_equal(&before_target, &before_peer));
+    target_events_before_stage = target_bus.event_count;
+    peer_events_before_stage = peer_bus.event_count;
+
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OUT_OF_MEMORY,
+                          z80_candidate_state_test_stage(bytes, sizeof(bytes),
+                                                        &stage_failure, &staged));
+    TEST_ASSERT_NULL(staged);
+    TEST_ASSERT_EQUAL_UINT(2u, stage_failure.attempts);
+    TEST_ASSERT_EQUAL_UINT(1u, stage_failure.allocations);
+    TEST_ASSERT_EQUAL_UINT(0u, stage_failure.frees);
+    TEST_ASSERT_EQUAL_UINT(target_events_before_stage, target_bus.event_count);
+    TEST_ASSERT_EQUAL_UINT(peer_events_before_stage, peer_bus.event_count);
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_capture(target, &after_target));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_capture(peer, &after_peer));
+    TEST_ASSERT_EQUAL_INT(1, snapshots_equal(&before_target, &after_target));
+    TEST_ASSERT_EQUAL_INT(1, snapshots_equal(&before_peer, &after_peer));
+
+    target_bus.event_count = 0u;
+    peer_bus.event_count = 0u;
+    target_bus.current_cycle = before_target.cycles;
+    peer_bus.current_cycle = before_peer.cycles;
+    TEST_ASSERT_TRUE(tick_many(&target_bus, target, 24u, true, &target_tick));
+    TEST_ASSERT_TRUE(tick_many(&peer_bus, peer, 24u, true, &peer_tick));
+    TEST_ASSERT_EQUAL_UINT64(target_tick.cycles, peer_tick.cycles);
+    TEST_ASSERT_TRUE(event_traces_equal(&target_bus, &peer_bus));
+    TEST_ASSERT_EQUAL_MEMORY(target_bus.memory, peer_bus.memory,
+                             sizeof(target_bus.memory));
+    z80_candidate_destroy(target);
+    target = NULL;
+    z80_candidate_destroy(peer);
+    peer = NULL;
+    TEST_ASSERT_EQUAL_UINT(1u, stage_failure.allocations);
+    TEST_ASSERT_EQUAL_UINT(1u, stage_failure.frees);
+
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_test_create(test_bus_access, &success_bus,
+                                                    &success_allocator, &success));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_state_test_stage(bytes, sizeof(bytes),
+                                                        &success_allocator, &staged));
+    TEST_ASSERT_EQUAL_UINT(2u, success_allocator.attempts);
+    TEST_ASSERT_EQUAL_UINT(2u, success_allocator.allocations);
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_state_rebind(staged, success));
+    z80_candidate_state_apply(success, staged);
+    z80_candidate_state_discard(staged);
+    staged = NULL;
+    z80_candidate_destroy(success);
+    success = NULL;
+    TEST_ASSERT_EQUAL_UINT(2u, success_allocator.frees);
+    printf("z80_allocation_sites=2 create_failures=1 stage_failures=1 "
+           "successful_allocations_after_sweep=2 leaks=0 unchanged_peer=1\n");
+    z80_candidate_destroy(source);
+}
+
+static void canonical_capture_and_rebind_reject_faulted_candidates(void) {
+    test_bus source_bus = {0};
+    test_bus target_bus = {0};
+    z80_candidate *source = NULL;
+    z80_candidate *faulted_source = NULL;
+    z80_candidate *faulted_target = NULL;
+    z80_candidate_state *staged = NULL;
+    z80_candidate_tick_result tick = {0};
+    uint8_t valid[TEST_Z80_STATE_BYTES] = {0};
+    uint8_t rejected[TEST_Z80_STATE_BYTES];
+    uint8_t before[TEST_Z80_STATE_BYTES];
+    size_t written = 0u;
+    size_t rejected_written = 1u;
+
+    memset(rejected, 0xa5, sizeof(rejected));
+    memcpy(before, rejected, sizeof(before));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_create(test_bus_access, &source_bus,
+                                               &source));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_state_capture(source, valid,
+                                                      sizeof(valid), &written));
+
+    source_bus.fail_on_event = 1u;
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_create(test_bus_access, &source_bus,
+                                               &faulted_source));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_BUS_FAILURE,
+                          z80_candidate_tick(faulted_source, false, false, &tick));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_BUS_FAILURE,
+                          z80_candidate_state_capture(faulted_source, rejected,
+                                                      sizeof(rejected),
+                                                      &rejected_written));
+    TEST_ASSERT_EQUAL_UINT(0u, rejected_written);
+    TEST_ASSERT_EQUAL_MEMORY(before, rejected, sizeof(before));
+
+    target_bus.fail_on_event = 1u;
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_create(test_bus_access, &target_bus,
+                                               &faulted_target));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_BUS_FAILURE,
+                          z80_candidate_tick(faulted_target, false, false, &tick));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_OK,
+                          z80_candidate_state_stage(valid, sizeof(valid), &staged));
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_BUS_FAILURE,
+                          z80_candidate_state_rebind(staged, faulted_target));
+    TEST_ASSERT_EQUAL_UINT(1u, target_bus.event_count);
+    TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_BUS_FAILURE,
+                          z80_candidate_tick(faulted_target, false, false, &tick));
+    TEST_ASSERT_EQUAL_UINT(1u, target_bus.event_count);
+    z80_candidate_state_discard(staged);
+    printf("z80_faulted_state_cases=2 source_capture_rejected=1 target_rebind_rejected=1 callbacks_after_failure=0\n");
+    z80_candidate_destroy(faulted_target);
+    z80_candidate_destroy(faulted_source);
+    z80_candidate_destroy(source);
 }
 
 static void continuation_replays_from_supported_instruction_boundary(void) {
@@ -485,6 +1207,14 @@ int main(int argc, char **argv) {
     RUN_TEST(bus_program_runs_documented_memory_write_cycles);
     RUN_TEST(reset_reinitializes_candidate_but_preserves_external_memory);
     RUN_TEST(cycle_counter_rejects_wrap_before_candidate_tick);
+    RUN_TEST(restore_rejects_decoder_steps_outside_the_pinned_switch);
+    RUN_TEST(canonical_state_rebinds_across_live_decoder_microstates);
+    RUN_TEST(canonical_state_rejects_bad_lengths_bools_and_decoder_relations);
+    RUN_TEST(canonical_state_rejects_mismatched_prefix_entry_opcodes);
+    RUN_TEST(canonical_state_resumes_a_pending_im1_acknowledgement);
+    RUN_TEST(canonical_state_resumes_inside_nmi_entry);
+    RUN_TEST(canonical_staging_allocation_failures_preserve_destination_and_peer);
+    RUN_TEST(canonical_capture_and_rebind_reject_faulted_candidates);
     RUN_TEST(continuation_replays_from_supported_instruction_boundary);
     RUN_TEST(irq_is_accepted_at_the_adjacent_documented_boundary);
     RUN_TEST(two_distinguishable_instances_match_isolated_baselines);

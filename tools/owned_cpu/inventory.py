@@ -221,6 +221,8 @@ def state_record_errors(root: Path, inventory: dict[str, Any]) -> list[str]:
     errors.extend(state_identity_errors(header, runtime_hash))
 
     record = inventory.get("private_state_record", {})
+    if record.get("core_identity_sha256") != runtime_hash:
+        errors.append("private state inventory core identity is stale against cpu.c SHA-256")
     try:
         actual = parse_state_record_fields(header)
     except InventoryError as error:
@@ -251,6 +253,33 @@ def state_identity_errors(header: str, runtime_hash: str) -> list[str]:
     if f'"{runtime_hash}"' not in header:
         return ["private state core identity is stale against cpu.c SHA-256"]
     return []
+
+
+def refresh_state_inventory(root: Path) -> None:
+    """Refresh current source identities without regenerating field metadata."""
+    runtime_hash = sha256(root / RUNTIME_PATH)
+    header_path = root / HEADER_PATH
+    header_lines = header_path.read_text(encoding="utf-8").splitlines()
+    matches = [index for index, line in enumerate(header_lines)
+               if line.startswith("#define OWNED_CPU_STATE_CORE_IDENTITY_SHA256")]
+    if len(matches) != 1 or matches[0] + 1 >= len(header_lines):
+        raise InventoryError("cannot locate private state core identity in cpu.h")
+    identity_line = matches[0] + 1
+    if re.fullmatch(r'\s+"[0-9a-f]{64}"', header_lines[identity_line]) is None:
+        raise InventoryError("private state core identity in cpu.h has an unexpected format")
+    header_lines[identity_line] = f'    "{runtime_hash}"'
+    header_path.write_text("\n".join(header_lines) + "\n", encoding="utf-8")
+
+    inventory_path = root / INVENTORY_PATH
+    inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+    inventory["core_identity_sha256"] = runtime_hash
+    inventory["private_state_record"]["core_identity_sha256"] = runtime_hash
+    inventory["source_hashes"] = {
+        name: sha256(root / name) for name in inventory["source_hashes"]
+    }
+    inventory_path.write_text(
+        json.dumps(inventory, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def mutable_file_scope_objects(source: str) -> list[str]:
@@ -505,7 +534,11 @@ def run_self_test(root: Path, inventory: dict[str, Any]) -> int:
     actual_fields = parse_cpu_fields(runtime)
 
     missing = copy.deepcopy(inventory["fields"])
-    missing.pop()
+    reset_signal_events = [entry for entry in missing
+                           if entry.get("name") == "reset_signal_events"]
+    if len(reset_signal_events) != 1:
+        raise InventoryError("self-test baseline must contain exactly one reset_signal_events field")
+    missing.remove(reset_signal_events[0])
     expect_named(field_errors(missing, runtime), "missing field inventory entry: reset_signal_events")
 
     extra = copy.deepcopy(inventory["fields"])
@@ -516,6 +549,13 @@ def run_self_test(root: Path, inventory: dict[str, Any]) -> int:
     missing_state["private_state_record"]["record_fields"].pop()
     expect_named(state_record_errors(root, missing_state),
                  "missing private state inventory entry: reset_signal_events")
+
+    stale_record_identity = copy.deepcopy(inventory)
+    stale_record_identity["private_state_record"]["core_identity_sha256"] = "0" * 64
+    expect_named(
+        state_record_errors(root, stale_record_identity),
+        "private state inventory core identity is stale against cpu.c SHA-256",
+    )
 
     current_header = (root / HEADER_PATH).read_text(encoding="utf-8")
     current_hash = sha256(root / RUNTIME_PATH)
@@ -562,12 +602,16 @@ def run_self_test(root: Path, inventory: dict[str, Any]) -> int:
 
 def main(arguments: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("check", "self-test", "refresh-manifest"))
+    parser.add_argument("command", choices=("check", "self-test", "refresh-manifest",
+                                              "refresh-state-inventory"))
     parser.add_argument("--build-dir", type=Path, default=Path("build/owned-cpu"))
     options = parser.parse_args(arguments)
     try:
         if options.command == "refresh-manifest":
             (ROOT / MANIFEST_PATH).write_text(json.dumps(make_manifest(ROOT), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            return 0
+        if options.command == "refresh-state-inventory":
+            refresh_state_inventory(ROOT)
             return 0
         inventory = json.loads((ROOT / INVENTORY_PATH).read_text(encoding="utf-8"))
         if options.command == "self-test":

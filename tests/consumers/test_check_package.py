@@ -79,18 +79,21 @@ class ConsumerVersionTest(unittest.TestCase):
             source = work / "source"
             source.mkdir()
             (source / ".release-please-manifest.json").write_text('{".":"9.8.7"}\n')
-            consumer = source / "tests/consumers"
-            consumer.mkdir(parents=True)
-            shutil.copy2(ROOT / "tests/consumers/CMakeLists.txt", consumer / "CMakeLists.txt")
-            shutil.copy2(ROOT / "tests/consumers/header.cpp", consumer / "header.cpp")
-            example = source / "examples"
-            example.mkdir()
-            shutil.copy2(ROOT / "examples/diagnostic.c", example / "diagnostic.c")
+            for name in (
+                "tests/consumers/CMakeLists.txt", "tests/consumers/header.cpp",
+                "tests/consumers/sound_consumer.c", "examples/diagnostic.c",
+                "examples/continuation.c", "examples/persistence.c",
+                "examples/persistence_host.c", "examples/persistence_host.h",
+                "tests/fixture/public_sound_guest.c",
+                "tests/fixture/public_persistence_guest.c",
+            ):
+                target = source / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(ROOT / name, target)
             staged = work / "relocated-consumer"
             with mock.patch.object(check_package, "ROOT", source):
                 check_package.stage_consumer_project(staged)
             shutil.rmtree(source)
-
             package = work / "package"
             package.mkdir()
             (package / "GlueyneoConfig.cmake").write_text(
@@ -99,7 +102,7 @@ class ConsumerVersionTest(unittest.TestCase):
                 with self.subTest(installed_version=version):
                     version_script = work / "version.cmake"
                     version_script.write_text(
-                        "include(CMakePackageConfigHelpers)\n"
+                        'include(CMakePackageConfigHelpers)\n'
                         f'write_basic_package_version_file("{(package / "GlueyneoConfigVersion.cmake").as_posix()}" '
                         f'VERSION "{version}" COMPATIBILITY SameMajorVersion ARCH_INDEPENDENT)\n')
                     subprocess.run(["cmake", "-P", str(version_script)], check=True,
@@ -112,6 +115,62 @@ class ConsumerVersionTest(unittest.TestCase):
                     self.assertEqual(result.returncode == 0, succeeds, result.stdout)
                     if not succeeds:
                         self.assertIn('requested version "9.8.7"', result.stdout)
+
+
+class DocumentationClosureTest(unittest.TestCase):
+    def source_tree(self, omitted: str | None = None) -> Path:
+        self.temporary = tempfile.TemporaryDirectory(prefix="glueyneo-doc-closure-")
+        self.addCleanup(self.temporary.cleanup)
+        source = Path(self.temporary.name) / "source"
+        for relative in (
+            "cmake", "include", "src", "experiments/owned_cpu",
+            "third_party/libretro", "third_party/zlib", "third_party/chips",
+            "third_party/ymfm", "third_party/unity",
+        ):
+            (source / relative).mkdir(parents=True, exist_ok=True)
+        files = (
+            "CMakeLists.txt", "LICENSE", ".release-please-manifest.json",
+            "docs/sdk-examples.md", "tools/diagnostic/main.c",
+            "docs/native-state.md", "docs/native-save.md", "docs/frontend-continuation.md",
+            "docs/testing.md", "docs/ownership-and-errors.md",
+            "tests/sdk/guest_fixture.c", "tests/sdk/guest_fixture.h",
+            "tests/consumers/CMakeLists.txt", "tests/consumers/header.cpp",
+            "tests/consumers/sound_consumer.c", "tests/fixture/public_sound_guest.c",
+            "tests/fixture/public_save_guest.c",
+            "examples/diagnostic.c", "examples/continuation.c",
+            "examples/persistence.c", "examples/persistence_host.c",
+            "examples/persistence_host.h", "tests/fixture/public_persistence_guest.c",
+            "third_party/libretro/NOTICE.md", "third_party/zlib/LICENSE",
+            "third_party/chips/NOTICE.md", "third_party/ymfm/LICENSE",
+            "third_party/ymfm/NOTICE.md", "third_party/unity/LICENSE.txt",
+        )
+        for relative in files:
+            if relative == omitted:
+                continue
+            path = source / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(f"fixture: {relative}\n", encoding="utf-8")
+        return source
+
+    def stage(self, source: Path) -> None:
+        with tempfile.TemporaryDirectory(prefix="glueyneo-doc-stage-") as temporary, \
+                mock.patch.object(check_package, "ROOT", source):
+            check_package.stage_documentation_project(Path(temporary) / "staged")
+
+    def test_missing_example_helper_fails_with_a_named_reason(self) -> None:
+        source = self.source_tree("examples/persistence_host.c")
+        with self.assertRaisesRegex(check_package.CheckError, "missing example helper"):
+            self.stage(source)
+
+    def test_missing_recipe_fails_with_a_named_reason(self) -> None:
+        source = self.source_tree("tests/fixture/public_persistence_guest.c")
+        with self.assertRaisesRegex(check_package.CheckError, "missing recipe"):
+            self.stage(source)
+
+    def test_missing_notice_fails_with_a_named_reason(self) -> None:
+        source = self.source_tree("third_party/ymfm/LICENSE")
+        with self.assertRaisesRegex(check_package.CheckError, "missing notice"):
+            self.stage(source)
 
 
 if __name__ == "__main__":

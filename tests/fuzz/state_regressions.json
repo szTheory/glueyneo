@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "source": {
+    "fixture": "tests/fixture/public_sound_guest.c",
+    "media": "locally generated from the authored diagnostic guest; no firmware or game bytes",
+    "format": "GNST v1, MVS profile 2",
+    "identity": "generated from public state capture at sdk-debug test runtime",
+    "oracle_ancestry": "native public state importer; candidate Z80 GZ80/v1 and YM2610 GYM1/v1 validators"
+  },
+  "accepted_controls": [
+    {
+      "id": "state.valid.capture-roundtrip",
+      "seed": 0,
+      "expected_status": "OK",
+      "meaning": "exact-capacity public capture is accepted and continuation matches an independent fixture"
+    }
+  ],
+  "recipes": [
+    {"id":"state.outer.empty","seed":0,"kind":"empty","section":0,"field":"whole GNST payload","expected_status":"INVALID_ARGUMENT","expected_reason":"TRUNCATED","expected_section":0,"expected_offset":"input length"},
+    {"id":"state.outer.truncated","seed":1,"kind":"truncate","section":0,"field":"whole GNST payload","expected_status":"INVALID_ARGUMENT","expected_reason":"TRUNCATED","expected_section":0,"expected_offset":"input length"},
+    {"id":"state.outer.extended","seed":2,"kind":"extend","section":0,"field":"whole GNST payload","expected_status":"INVALID_ARGUMENT","expected_reason":"TRAILING_BYTES","expected_section":0,"expected_offset":"trusted state capacity"},
+    {"id":"state.outer.overflow-length","seed":30,"kind":"oversize_length","section":0,"field":"size_t input length set to SIZE_MAX with readable pointer","expected_status":"INVALID_ARGUMENT","expected_reason":"INVALID_ARGUMENT","expected_section":0,"expected_offset":0},
+    {"id":"state.header.format","seed":3,"kind":"set_u32","section":0,"field":"format ID at header byte 16","value":0,"expected_status":"INVALID_ARGUMENT","expected_reason":"FORMAT","expected_section":0,"expected_offset":4},
+    {"id":"state.header.replay","seed":4,"kind":"set_u32","section":0,"field":"replay identity at header byte 20","value":0,"expected_status":"UNSUPPORTED_PROFILE","expected_reason":"REPLAY_IDENTITY","expected_section":0,"expected_offset":20},
+    {"id":"state.header.profile","seed":5,"kind":"set_u32","section":0,"field":"profile identity at header byte 24","value":0,"expected_status":"UNSUPPORTED_PROFILE","expected_reason":"PROFILE_IDENTITY","expected_section":0,"expected_offset":24},
+    {"id":"state.header.configuration","seed":6,"kind":"set_u32","section":0,"field":"configuration identity at header byte 28","value":0,"expected_status":"UNSUPPORTED_PROFILE","expected_reason":"CONFIGURATION_IDENTITY","expected_section":0,"expected_offset":28},
+    {"id":"state.header.media-identity","seed":7,"kind":"xor_byte","section":0,"field":"media identity at header byte 32","value":1,"expected_status":"INVALID_MEDIA","expected_reason":"MEDIA_IDENTITY","expected_section":0,"expected_offset":32},
+    {"id":"state.header.section-count","seed":8,"kind":"set_u32","section":0,"field":"section count at header byte 64","value":4,"expected_status":"INVALID_MEDIA","expected_reason":"SECTION","expected_section":0,"expected_offset":64},
+    {"id":"state.header.reserved","seed":9,"kind":"set_u32","section":0,"field":"reserved header bytes 68-71","value":1,"expected_status":"INVALID_MEDIA","expected_reason":"RESERVED","expected_section":0,"expected_offset":68},
+    {"id":"state.section.unknown","seed":10,"kind":"set_u32","section":5,"field":"fifth section identifier","value":99,"expected_status":"INVALID_MEDIA","expected_reason":"SECTION","expected_section":5,"expected_offset":"fifth section header"},
+    {"id":"state.section.duplicate","seed":11,"kind":"set_u32","section":2,"field":"second section identifier duplicates CPU section","value":1,"expected_status":"INVALID_MEDIA","expected_reason":"SECTION","expected_section":2,"expected_offset":"second section header"},
+    {"id":"state.section.length","seed":12,"kind":"decrement_section_length","section":1,"field":"CPU section declared length","expected_status":"INVALID_MEDIA","expected_reason":"SECTION","expected_section":1,"expected_offset":"first section header"},
+    {"id":"state.section.length-overflow","seed":31,"kind":"set_section_length","section":1,"field":"CPU section declared length set to UINT32_MAX","expected_status":"INVALID_MEDIA","expected_reason":"SECTION","expected_section":1,"expected_offset":"first section header"},
+    {"id":"state.board.program-bank","seed":13,"kind":"set_byte","section":3,"field":"program bank","offset":10,"value":4,"expected_status":"INVALID_MEDIA","expected_reason":"RESERVED","expected_section":3,"expected_offset":"board section start"},
+    {"id":"state.board.video-index","seed":14,"kind":"set_u16","section":3,"field":"video RAM index","offset":23,"value":65535,"expected_status":"INVALID_MEDIA","expected_reason":"RESERVED","expected_section":3,"expected_offset":"board section start"},
+    {"id":"state.board.boolean","seed":15,"kind":"set_byte","section":3,"field":"animation-disabled boolean","offset":30,"value":2,"expected_status":"INVALID_MEDIA","expected_reason":"RESERVED","expected_section":3,"expected_offset":"board section start"},
+    {"id":"state.board.display-control","seed":16,"kind":"set_byte","section":3,"field":"display interrupt control enum","offset":33,"value":1,"expected_status":"INVALID_MEDIA","expected_reason":"RESERVED","expected_section":3,"expected_offset":"board section start"},
+    {"id":"state.sound.boolean","seed":17,"kind":"set_byte","section":4,"field":"cart-selected boolean in fixed sound payload","offset":76,"value":2,"expected_status":"INVALID_MEDIA","expected_reason":"RESERVED","expected_section":4,"expected_offset":"sound section start plus Z80 payload size (76)"},
+    {"id":"state.sound.clock-remainder","seed":18,"kind":"set_byte","section":4,"field":"main clock remainder in fixed sound payload","offset":82,"value":3,"expected_status":"INVALID_MEDIA","expected_reason":"RESERVED","expected_section":4,"expected_offset":"sound section start plus Z80 payload size (76)"},
+    {"id":"state.sound.filter-index","seed":19,"kind":"set_u32","section":4,"field":"PCM history ring index","offset":2775,"value":80,"expected_status":"INVALID_MEDIA","expected_reason":"RESERVED","expected_section":4,"expected_offset":"sound section start plus Z80 payload size (76)"},
+    {"id":"state.sound.filter-phase","seed":20,"kind":"set_u16","section":4,"field":"PCM output phase","offset":2779,"value":125,"expected_status":"INVALID_MEDIA","expected_reason":"RESERVED","expected_section":4,"expected_offset":"sound section start plus Z80 payload size (76)"},
+    {"id":"state.sound.ym-irq-mismatch","seed":33,"kind":"xor_byte","section":4,"field":"sound-section YM IRQ line vs staged YM chip IRQ state","offset":77,"value":1,"expected_status":"INVALID_MEDIA","expected_reason":"CPU_STATE","expected_section":4,"expected_offset":"sound section start plus Z80 payload size (76) plus 77"},
+    {"id":"state.z80.magic","seed":21,"kind":"xor_byte","section":4,"field":"GZ80 magic byte 0","offset":0,"value":1,"expected_status":"INVALID_MEDIA","expected_reason":"CPU_STATE","expected_section":4,"expected_offset":"sound section start"},
+    {"id":"state.z80.interrupt-mode","seed":22,"kind":"set_byte","section":4,"field":"Z80 interrupt mode","offset":57,"value":3,"expected_status":"INVALID_MEDIA","expected_reason":"CPU_STATE","expected_section":4,"expected_offset":"sound section start"},
+    {"id":"state.z80.boolean","seed":23,"kind":"set_byte","section":4,"field":"Z80 IFF1 boolean","offset":58,"value":2,"expected_status":"INVALID_MEDIA","expected_reason":"CPU_STATE","expected_section":4,"expected_offset":"sound section start"},
+    {"id":"state.z80.decoder-step","seed":24,"kind":"set_u16","section":4,"field":"Z80 decoder step outside supported microstate","offset":5,"value":65535,"expected_status":"INVALID_MEDIA","expected_reason":"CPU_STATE","expected_section":4,"expected_offset":"sound section start"},
+    {"id":"state.ym.invalid-magic","seed":25,"kind":"xor_byte","section":5,"field":"GYM1 magic byte 0","offset":0,"value":1,"expected_status":"INVALID_MEDIA","expected_reason":"CPU_STATE","expected_section":5,"expected_offset":"YM section start plus nested checked field end"},
+    {"id":"state.ym.timer-boolean","seed":26,"kind":"set_byte","section":5,"field":"YM timer-active boolean","offset":40,"value":2,"expected_status":"INVALID_MEDIA","expected_reason":"CPU_STATE","expected_section":5,"expected_offset":"YM section start plus nested checked field end"},
+    {"id":"state.ym.timer-running-without-active","seed":34,"kind":"derived_from_capture","section":5,"field":"clear timer_active[t] for a captured active timer","expected_status":"INVALID_MEDIA","expected_reason":"CPU_STATE","expected_nested_reason":"INVARIANT","expected_section":5,"expected_offset":"YM section start plus nested validator error offset"},
+    {"id":"state.ym.timer-active-without-running","seed":35,"kind":"derived_from_capture","section":5,"field":"set timer_active[t] for a captured inactive timer and set timer_due[t] to now + 1","expected_status":"INVALID_MEDIA","expected_reason":"CPU_STATE","expected_nested_reason":"INVARIANT","expected_section":5,"expected_offset":"YM section start plus nested validator error offset"},
+    {"id":"state.ym.timer-due-beyond-period","seed":36,"kind":"derived_from_capture","section":5,"field":"set active timer_due[t] to now + source-derived timer maximum + 1","expected_status":"INVALID_MEDIA","expected_reason":"CPU_STATE","expected_nested_reason":"INVARIANT","expected_section":5,"expected_offset":"YM section start plus nested validator error offset"},
+    {"id":"state.ym.busy-end-beyond-window","seed":37,"kind":"derived_from_capture","section":5,"field":"set busy_end to now + 193 beyond the YM2610 write busy window","expected_status":"INVALID_MEDIA","expected_reason":"CPU_STATE","expected_nested_reason":"INVARIANT","expected_section":5,"expected_offset":"YM section start plus nested validator error offset"},
+    {"id":"state.ym.clock-range","seed":27,"kind":"xor_byte","section":5,"field":"YM clock range","offset":8,"value":128,"expected_status":"INVALID_MEDIA","expected_reason":"CPU_STATE","expected_section":5,"expected_offset":"YM section start plus nested checked field end"},
+    {"id":"state.ym.enum","seed":28,"kind":"deterministic_probe","section":5,"field":"first probe producing a YM enum validation error after GYM1 header","seed_values":[255,128,127,64,2,1,0],"expected_status":"INVALID_MEDIA","expected_reason":"CPU_STATE","expected_nested_reason":"ENUM","expected_section":5,"expected_offset":"YM section start plus nested validator error offset"},
+    {"id":"state.ym.adpcm-range","seed":29,"kind":"deterministic_probe","section":5,"field":"ADPCM suffix probe producing a YM range validation error","seed_values":[255,128,127,64,2,1,0],"search":"last 320 bytes excluding final checked-length bytes","expected_status":"INVALID_MEDIA","expected_reason":"CPU_STATE","expected_nested_reason":"RANGE","expected_section":5,"expected_offset":"YM section start plus nested validator error offset"},
+    {"id":"state.ym.ssg-held-range","seed":32,"kind":"set_u32","section":5,"field":"YM SSG resampler held output lane 0 (outside the 0..16382 amplitude table)","offset":921,"value":2147483647,"expected_status":"INVALID_MEDIA","expected_reason":"CPU_STATE","expected_nested_reason":"RANGE","expected_section":5,"expected_offset":"YM section start plus nested checked field end"}
+  ],
+  "limits": {
+    "state_payload_bytes": "read at runtime from public gn_state_capacity_v1; current authored-fixture measurement is 224113",
+    "mutation_recipe_count_minimum": 20,
+    "all_rejections_compare": ["future frame pixels", "PCM", "guest cycles", "video/calendar/sound observations", "save RAM retained address", "independent peer owner address"],
+    "private_media_or_captured_state_committed": false
+  }
+}

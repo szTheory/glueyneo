@@ -50,6 +50,24 @@
 namespace ymfm
 {
 
+#if defined(GLUEYNEO_YM2610_TEST_HOOKS) || defined(GLUEYNEO_SDK_TEST_HOOKS)
+// Test-only hooks let the private C boundary deterministically fail every
+// construction and vector-growth allocation. Production builds omit calls.
+void ymfm_test_allocation_point(size_t bytes, uint32_t site);
+void ymfm_test_lifetime_delta(int64_t delta) noexcept;
+
+class ymfm_test_lifetime
+{
+public:
+	ymfm_test_lifetime() noexcept { ymfm_test_lifetime_delta(1); }
+	~ymfm_test_lifetime() { ymfm_test_lifetime_delta(-1); }
+	ymfm_test_lifetime(const ymfm_test_lifetime &) = delete;
+	ymfm_test_lifetime &operator=(const ymfm_test_lifetime &) = delete;
+};
+#else
+class ymfm_test_lifetime { };
+#endif
+
 //*********************************************************
 //  DEBUGGING
 //*********************************************************
@@ -404,17 +422,144 @@ private:
 class ymfm_saved_state
 {
 public:
+	enum class format : uint8_t
+	{
+		legacy_little_endian,
+		canonical_big_endian
+	};
+
+	enum class error : uint8_t
+	{
+		none,
+		underflow,
+		trailing_data,
+		invalid_boolean,
+		invalid_enum,
+		invalid_range,
+		too_large
+	};
+
+	using growth_hook = void (*)(void *userdata);
+	using growth_observer = void (*)(void *userdata, size_t capacity);
+
 	// construction
 	ymfm_saved_state(std::vector<uint8_t> &buffer, bool saving) :
-		m_buffer(buffer),
-		m_offset(saving ? -1 : 0)
+		m_buffer(&buffer),
+		m_read_data(nullptr),
+		m_read_size(0),
+		m_offset(0),
+		m_saving(saving),
+		m_format(format::legacy_little_endian),
+		m_error(error::none),
+		m_error_offset(0),
+		m_limit(static_cast<size_t>(-1)),
+		m_growth_hook(nullptr),
+		m_growth_userdata(nullptr),
+		m_growth_observer(nullptr),
+		m_growth_observer_userdata(nullptr),
+		m_measurement(nullptr)
 	{
 		if (saving)
-			buffer.resize(0);
+			buffer.clear();
+		else
+			m_read_size = buffer.size();
+	}
+
+	// Glueyneo's checked state codec uses a separate, explicit mode. Legacy
+	// ymfm consumers keep their historical little-endian traversal behavior.
+	ymfm_saved_state(std::vector<uint8_t> &buffer, bool saving, format encoding,
+		size_t limit, growth_hook before_growth = nullptr,
+		void *growth_userdata = nullptr,
+		growth_observer after_growth = nullptr,
+		void *growth_observer_userdata = nullptr) :
+		m_buffer(&buffer),
+		m_read_data(nullptr),
+		m_read_size(0),
+		m_offset(0),
+		m_saving(saving),
+		m_format(encoding),
+		m_error(error::none),
+		m_error_offset(0),
+		m_limit(limit),
+		m_growth_hook(before_growth),
+		m_growth_userdata(growth_userdata),
+		m_growth_observer(after_growth),
+		m_growth_observer_userdata(growth_observer_userdata),
+		m_measurement(nullptr)
+	{
+		if (saving)
+			buffer.clear();
+		else
+			m_read_size = buffer.size();
+	}
+
+	// Reader over caller-owned bytes. It never copies or retains them after the
+	// synchronous traversal completes.
+	ymfm_saved_state(uint8_t const *bytes, size_t length, format encoding) :
+		m_buffer(nullptr),
+		m_read_data(bytes),
+		m_read_size(length),
+		m_offset(0),
+		m_saving(false),
+		m_format(encoding),
+		m_error(error::none),
+		m_error_offset(0),
+		m_limit(static_cast<size_t>(-1)),
+		m_growth_hook(nullptr),
+		m_growth_userdata(nullptr),
+		m_growth_observer(nullptr),
+		m_growth_observer_userdata(nullptr),
+		m_measurement(nullptr)
+	{
+		if (bytes == nullptr && length != 0)
+			fail(error::underflow);
+	}
+
+	// Count a canonical traversal without allocating a vector.
+	explicit ymfm_saved_state(size_t *measured_size) :
+		m_buffer(nullptr),
+		m_read_data(nullptr),
+		m_read_size(0),
+		m_offset(0),
+		m_saving(true),
+		m_format(format::canonical_big_endian),
+		m_error(error::none),
+		m_error_offset(0),
+		m_limit(static_cast<size_t>(-1)),
+		m_growth_hook(nullptr),
+		m_growth_userdata(nullptr),
+		m_growth_observer(nullptr),
+		m_growth_observer_userdata(nullptr),
+		m_measurement(measured_size)
+	{
+		if (measured_size == nullptr)
+			fail(error::invalid_range);
+		else
+			*measured_size = 0;
 	}
 
 	// are we saving or restoring?
-	bool saving() const { return (m_offset < 0); }
+	bool saving() const { return m_saving; }
+	bool checked() const { return m_format == format::canonical_big_endian; }
+	bool failed() const { return m_error != error::none; }
+	error failure() const { return m_error; }
+	size_t error_offset() const { return m_error_offset; }
+	size_t consumed() const { return m_offset; }
+	size_t input_size() const { return m_read_size; }
+
+	void finish()
+	{
+		if (!saving() && !failed() && m_offset != m_read_size)
+			fail(error::trailing_data);
+	}
+
+	void require(bool condition)
+	{
+		if (checked() && !saving() && !condition)
+			fail(error::invalid_range);
+	}
+
+	void reject(error value) { fail(value); }
 
 	// generic save/restore
 	template<typename DataType>
@@ -431,33 +576,184 @@ public:
 	void save(bool &data) { write(data ? 1 : 0); }
 	void save(int8_t &data) { write(data); }
 	void save(uint8_t &data) { write(data); }
-	void save(int16_t &data) { write(uint8_t(data)).write(data >> 8); }
-	void save(uint16_t &data) { write(uint8_t(data)).write(data >> 8); }
-	void save(int32_t &data) { write(data).write(data >> 8).write(data >> 16).write(data >> 24); }
-	void save(uint32_t &data) { write(data).write(data >> 8).write(data >> 16).write(data >> 24); }
+	void save(int16_t &data) { save_u16(static_cast<uint16_t>(data)); }
+	void save(uint16_t &data) { save_u16(data); }
+	void save(int32_t &data) { save_u32(static_cast<uint32_t>(data)); }
+	void save(uint32_t &data) { save_u32(data); }
+	void save(int64_t &data) { save_u64(static_cast<uint64_t>(data)); }
+	void save(uint64_t &data) { save_u64(data); }
 	void save(envelope_state &data) { write(uint8_t(data)); }
 	template<typename DataType, int Count>
 	void save(DataType (&data)[Count]) { for (uint32_t index = 0; index < Count; index++) save(data[index]); }
 
 	// restore data from the buffer
-	void restore(bool &data) { data = read() ? true : false; }
-	void restore(int8_t &data) { data = read(); }
+	void restore(bool &data)
+	{
+		uint8_t const raw = read();
+		if (checked() && raw > 1)
+			fail(error::invalid_boolean);
+		data = raw != 0;
+	}
+	void restore(int8_t &data) { data = signed8(read()); }
 	void restore(uint8_t &data) { data = read(); }
-	void restore(int16_t &data) { data = read(); data |= read() << 8; }
-	void restore(uint16_t &data) { data = read(); data |= read() << 8; }
-	void restore(int32_t &data) { data = read(); data |= read() << 8; data |= read() << 16; data |= read() << 24; }
-	void restore(uint32_t &data) { data = read(); data |= read() << 8; data |= read() << 16; data |= read() << 24; }
-	void restore(envelope_state &data) { data = envelope_state(read()); }
+	void restore(int16_t &data) { data = signed16(read_u16()); }
+	void restore(uint16_t &data) { data = read_u16(); }
+	void restore(int32_t &data) { data = signed32(read_u32()); }
+	void restore(uint32_t &data) { data = read_u32(); }
+	void restore(int64_t &data) { data = signed64(read_u64()); }
+	void restore(uint64_t &data) { data = read_u64(); }
+	void restore(envelope_state &data)
+	{
+		uint8_t const raw = read();
+		if (checked() && raw >= EG_STATES)
+			fail(error::invalid_enum);
+		data = envelope_state(raw);
+	}
 	template<typename DataType, int Count>
 	void restore(DataType (&data)[Count]) { for (uint32_t index = 0; index < Count; index++) restore(data[index]); }
 
 	// internal helper
-	ymfm_saved_state &write(uint8_t data) { m_buffer.push_back(data); return *this; }
-	uint8_t read() { return (m_offset < int32_t(m_buffer.size())) ? m_buffer[m_offset++] : 0; }
+	ymfm_saved_state &write(uint8_t data)
+	{
+		if (failed())
+			return *this;
+		if (m_offset >= m_limit)
+		{
+			fail(error::too_large);
+			return *this;
+		}
+		if (m_measurement != nullptr)
+		{
+			++m_offset;
+			*m_measurement = m_offset;
+			return *this;
+		}
+		if (m_buffer == nullptr)
+		{
+			fail(error::invalid_range);
+			return *this;
+		}
+		const bool grew = m_buffer->size() == m_buffer->capacity();
+		if (grew && m_growth_hook != nullptr)
+			m_growth_hook(m_growth_userdata);
+		m_buffer->push_back(data);
+		if (grew && m_growth_observer != nullptr)
+			m_growth_observer(m_growth_observer_userdata,
+			                  m_buffer->capacity());
+		++m_offset;
+		return *this;
+	}
+
+	uint8_t read()
+	{
+		if (failed())
+			return 0;
+		if (m_offset >= m_read_size)
+		{
+			fail(error::underflow);
+			return 0;
+		}
+		uint8_t const value = m_buffer != nullptr
+			? (*m_buffer)[m_offset] : m_read_data[m_offset];
+		++m_offset;
+		return value;
+	}
 
 	// internal state
-	std::vector<uint8_t> &m_buffer;
-	int32_t m_offset;
+	void fail(error value)
+	{
+		if (m_error == error::none) {
+			m_error = value;
+			m_error_offset = m_offset;
+		}
+	}
+
+private:
+	void save_u16(uint16_t data)
+	{
+		if (checked())
+			write(uint8_t(data >> 8)).write(uint8_t(data));
+		else
+			write(uint8_t(data)).write(uint8_t(data >> 8));
+	}
+	void save_u32(uint32_t data)
+	{
+		if (checked())
+			write(uint8_t(data >> 24)).write(uint8_t(data >> 16)).write(uint8_t(data >> 8)).write(uint8_t(data));
+		else
+			write(uint8_t(data)).write(uint8_t(data >> 8)).write(uint8_t(data >> 16)).write(uint8_t(data >> 24));
+	}
+	void save_u64(uint64_t data)
+	{
+		if (checked())
+			for (int shift = 56; shift >= 0; shift -= 8)
+				write(uint8_t(data >> shift));
+		else
+			for (int shift = 0; shift <= 56; shift += 8)
+				write(uint8_t(data >> shift));
+	}
+	uint16_t read_u16()
+	{
+		uint16_t const first = read();
+		uint16_t const second = read();
+		return checked() ? uint16_t((first << 8) | second)
+		                 : uint16_t(first | (second << 8));
+	}
+	uint32_t read_u32()
+	{
+		uint32_t const first = read();
+		uint32_t const second = read();
+		uint32_t const third = read();
+		uint32_t const fourth = read();
+		return checked()
+			? ((first << 24) | (second << 16) | (third << 8) | fourth)
+			: (first | (second << 8) | (third << 16) | (fourth << 24));
+	}
+	uint64_t read_u64()
+	{
+		uint64_t result = 0;
+		if (checked())
+			for (int index = 0; index < 8; ++index)
+				result = (result << 8) | read();
+		else
+			for (int index = 0; index < 8; ++index)
+				result |= uint64_t(read()) << (index * 8);
+		return result;
+	}
+	static int8_t signed8(uint8_t value)
+	{
+		return value <= 0x7f ? int8_t(value) : int8_t(int16_t(value) - 256);
+	}
+	static int16_t signed16(uint16_t value)
+	{
+		return value <= 0x7fff ? int16_t(value) : int16_t(int32_t(value) - 65536);
+	}
+	static int32_t signed32(uint32_t value)
+	{
+		return value <= 0x7fffffff ? int32_t(value)
+			: int32_t(int64_t(value) - INT64_C(4294967296));
+	}
+	static int64_t signed64(uint64_t value)
+	{
+		if (value <= uint64_t(INT64_MAX))
+			return int64_t(value);
+		return -1 - int64_t(~value);
+	}
+
+	std::vector<uint8_t> *m_buffer;
+	uint8_t const *m_read_data;
+	size_t m_read_size;
+	size_t m_offset;
+	bool m_saving;
+	format m_format;
+	error m_error;
+	size_t m_error_offset;
+	size_t m_limit;
+	growth_hook m_growth_hook;
+	void *m_growth_userdata;
+	growth_observer m_growth_observer;
+	void *m_growth_observer_userdata;
+	size_t *m_measurement;
 };
 
 

@@ -34,6 +34,20 @@ The process-heavy ThreadSanitizer CTest lane runs one test at a time; its receip
 retains the earlier parallel timeout and the serial diagnostic that identified
 host process/thread contention.
 
+Current SDK identities also carry an `mvs_importer` proof: the platform
+executable basename and SHA-256, sorted source rows and their digest, and a
+dirty flag for the exact importer closure. That closure includes the importer,
+the CMake build inputs and zlib provenance documentation, every vendored zlib
+implementation/header, and its license. The MVS CTest receipt copies the
+importer basename, artifact digest and source digest. Before and after the named
+MVS tests, the collector checks that generated CTest commands point to the
+identity's importer and that its artifact and source proof still match. MVS
+receipts without this proof fail validation. The field stays optional for
+legacy non-MVS evidence records. Before capturing the SDK identity, the Debug
+build removes any existing importer at that configured path and requires the
+build to recreate it, so a pre-capture same-path substitute cannot establish
+its own expected digest.
+
 `fixtures/diagnostic/manifest.json` records the MIT original C fixture recipe,
 source identities, build-local 522-byte ROM+RAM-prefix outputs, rights and
 notices, no-firmware requirement, Unity pin/file notices, independent Motorola
@@ -44,6 +58,41 @@ and stop reason. This avoids C-struct padding and host byte-order dependence.
 The manuals support the selected CPU instructions and timing, not board timing
 or physical bus behavior. The source fixture binaries are generated locally;
 they are not committed.
+
+## Collection row validation and stable errors
+
+Decoded JSON proves only that a value is valid JSON. It does not prove that a
+collection member is an object. Validators check collection members before
+sorting by a row field, reading a member, building path dictionaries, or
+comparing fixture scenarios. This order makes malformed-input reasons stable
+and keeps `AttributeError` or `TypeError` from escaping as the public result.
+
+| Evidence collection | Container / cardinality | Non-object member | Order or duplicate failure |
+| --- | --- | --- | --- |
+| Matrix `lanes` | `matrix-lanes-missing` for a non-array; an empty array continues to `matrix-revision-missing` | `matrix-lane-malformed` | Unknown or duplicate lane names use `matrix-lane-duplicate`; missing required lanes use `matrix-missing-lane` |
+| Identity `relevant_source_files` | `identity-order` for empty or non-array rows | `identity-malformed` | Unsorted rows use `identity-order`; duplicate paths use `duplicate-identity-row` |
+| Identity `unity_files` | `identity-order` for a non-array | `identity-malformed` | Unsorted rows use `identity-order`; a changed or incomplete pinned inventory uses `identity-mismatch` |
+| Identity `runtime_artifacts` | `identity-order` for empty or non-array rows | `identity-malformed` | Unsorted rows use `identity-order`; duplicate paths use `duplicate-identity-row` |
+| Importer `source_files` | `importer-identity-order` for empty or non-array rows | `importer-identity-malformed` | Unsorted rows use `importer-identity-order`; duplicate paths use `duplicate-identity-row` |
+| Importer comparison `relevant_rows` | `identity-malformed` for a non-array | `identity-malformed` | A missing or changed importer proof uses `importer-identity-mismatch` |
+| Manifest `source_inputs` | `manifest-empty` for empty or non-array rows | `manifest-identity` | Unsorted rows retain `manifest-empty`; duplicate or incomplete source inventories use `manifest-identity` |
+| Manifest `dependencies` | `manifest-dependency` for a non-array or a count other than one | `manifest-dependency` | The single dependency must retain its immutable Unity pin and MIT declaration (`manifest-dependency`) |
+| Manifest dependency `files` | `manifest-order` for a non-array | `manifest-dependency` | Unsorted rows use `manifest-order`; duplicate, incomplete, or unexpected files use `manifest-dependency` |
+| Manifest `fixtures` | `manifest-empty` for an empty or non-array collection; exactly two scenarios are required | `manifest-fixture` | Wrong count or noncanonical A-then-B order uses `manifest-order` |
+
+For manifest `source_inputs`, malformed members take precedence over sorting,
+path uniqueness and inventory comparison. Dependency members are checked before
+the exactly-one cardinality check; dependency file members are checked before
+sorting and inventory comparison; fixture members are checked before the
+two-row count and scenario comparison. Existing empty, order, cardinality,
+duplicate, and mismatch reasons remain in effect for object-shaped rows.
+
+Source-size fields remain positive JSON integers with their exact canonical
+decimal representation. Values around `2**53` are not rounded or converted
+through floating point; zero and negative sizes keep the `manifest-identity`
+rejection. Validation does not rewrite canonical valid input or retained
+failure evidence. The generated verifier suite binds every test case key to a
+unique CTest name and case ID, and fails when a case is missing or duplicated.
 
 The privacy scan rejects personal absolute paths, email addresses, and obvious
 serial/host identifier fields in public records. It is a conservative text

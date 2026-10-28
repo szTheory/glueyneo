@@ -49,9 +49,28 @@ relocates its static/shared SDK consumers at a synthetic `9.8.7` release
 version. The example carries the root manifest and keeps exact package-version
 matching, so a version bump does not rely on rewriting consumer source. The
 source archive includes the pinned runtime dependencies; installed SDKs retain
-their applicable dependency notices. This regression does not report a separate
-runtime measurement; see the aggregate hosted CI measurements in
-[the testing guide](testing.md#current-platform-and-cost-evidence).
+their applicable dependency notices. The current package builder stages the
+complete public continuation and persistence examples, their original guest
+recipes and host helper, the CMake consumer source, and the guides linked by
+those examples. The per-platform bundle keeps these source files under
+`consumer-example/source`, with separate static and shared installs beneath
+the same bundle. Its `artifact-manifest.json` hashes every shipped file.
+
+Run `docs/sdk-examples.md` from the extracted source archive root to build and
+execute both static and shared example routes. The repository verification
+command `python3 tools/verify_sdk.py --suite release-consumer` and the focused
+guide regression `python3 tests/consumers/test_example_docs.py --mode commands`
+are development tools; they require the extracted source archive or a full
+checkout. The installed SDK bundle contains only the example sources, required
+recipes/helpers, CMake consumer project, linked guides and notices. It does not
+claim that the broad repository test tree is an offline consumer suite. These
+local archive checks are not evidence of a new hosted or public release. The
+07-06 source archive rights-path failure was reconciled in 07-07; the current
+inventory now also includes this plan's delivery-contract test source. Actual
+publication and downloaded public-release qualification remain pending until the
+protected 07-08 route completes. The published v0.2.1 package remains
+diagnostic-only. See the aggregate hosted CI
+measurements in [the testing guide](testing.md#current-platform-and-cost-evidence).
 
 For a failed staging or verification run, rerun that workflow run or dispatch
 the workflow with the existing tag. Recovery still reads the root manifest and
@@ -135,8 +154,7 @@ passed, and [release run
 40222108594](https://github.com/szTheory/glueyneo/actions/runs/40222108594)
 published [v0.2.1](https://github.com/szTheory/glueyneo/releases/tag/v0.2.1)
 after all three downloaded platform consumers, the publisher, and release-policy
-job passed. Exact observations and failed attempts are recorded in the
-[hosted qualification receipt](../.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/phases/03-distributable-release-qualification/03-HOSTED-QUALIFICATION.md).
+job passed. Exact observed job outcomes are preserved in the linked run records.
 Recovery evidence also includes a one-of-five-asset partial-draft resume and two
 native job reruns in [workflow run
 40220803583](https://github.com/szTheory/glueyneo/actions/runs/40220803583),
@@ -151,8 +169,8 @@ The approved PROJECT-D-50 GSD review was bound to PR head
 `fdc241e0f554d61c7a270cad141fd51c2aa2b334`; the main CI and release outcomes
 above are separately bound to that merge commit. Under PROJECT-D-50, this review
 satisfied the independent review prerequisite without a second GitHub account.
-The first-time fork approval and execution remain deferred and unverified. The
-held v0.2.0 tag
+The first-time
+fork approval and execution remain deferred and unverified. The held v0.2.0 tag
 `be43c51350ba40a91d65c577c6c12bf477f340c1` remains unpublished. The one-hour
 installation-token lifetime is an API contract, not a measured expiry; hosted
 job logs observed the pinned token action's revocation. The effective job-token
@@ -286,3 +304,28 @@ no-op without claiming a newly tested artifact source. Consumer and publication
 jobs use `!cancelled()` with explicit dependency-result gates so cancellation
 is honored and a deliberately skipped build matrix
 does not suppress verification of reused archives.
+
+## Source-bound producer evidence and final public downloads
+
+Release control records both the workflow commit and the selected versioned
+source commit. A newly created version must identify the exact workflow commit;
+the manifest, build archives, staged consumers and published consumers all bind
+to that immutable source SHA. Release Please remains the only version authority.
+
+Each staged and post-publication platform job retains a producer record with
+the exact manifest rows, observed downloaded archive digests, source and SDK
+digests, 13 named consumer cases, compiler/CMake configuration, linkage, and
+exact workflow/job URLs. The evidence job queries only its own read-only
+Actions job metadata after the consumer processes have exited. It never gives
+that token or publisher credentials to downloaded examples. A second read-only
+matrix anonymously downloads the actual public tag assets after publication,
+revalidates them against the staged manifest, then rebuilds the source offline
+and repeats the static/shared relocated examples on Linux x86_64, macOS arm64,
+and Windows x86_64. The always-run release policy requires this final matrix to
+pass whenever publication is expected.
+
+`tests/consumers/test_delivery_contract.py --mode verify --receipt PATH`
+validates the durable delivery receipt against exact source, manifest, rights,
+review, check, run, job, and positive-case evidence. Local unit controls alone
+do not establish a hosted release, an anonymous public download, or any
+platform result.

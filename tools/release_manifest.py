@@ -355,14 +355,34 @@ def build_archives(repo: Path, commit: str, output_dir: Path,
             run(install_command, cwd=source_root)
         shutil.copy2(source_root / "README.md", sdk_root / "README.md")
         shutil.copy2(source_root / "LICENSE", sdk_root / "LICENSE")
+        guides = (
+            "sdk-examples.md", "native-state.md", "native-save.md",
+            "frontend-continuation.md", "testing.md", "ownership-and-errors.md",
+        )
+        docs = sdk_root / "docs"
+        docs.mkdir()
+        for guide in guides:
+            shutil.copy2(source_root / "docs" / guide, docs / guide)
         (sdk_root / "licenses").mkdir()
         shutil.copy2(source_root / "third_party/unity/LICENSE.txt", sdk_root / "licenses/Unity-LICENSE.txt")
         example = sdk_root / "consumer-example"
         (example / "source").mkdir(parents=True)
-        shutil.copy2(source_root / "tests/consumers/CMakeLists.txt", example / "source/CMakeLists.txt")
-        shutil.copy2(source_root / ".release-please-manifest.json", example / "source/.release-please-manifest.json")
-        shutil.copy2(source_root / "tests/consumers/header.cpp", example / "source/header.cpp")
-        shutil.copy2(source_root / "examples/diagnostic.c", example / "source/diagnostic.c")
+        example_sources = {
+            ".release-please-manifest.json": ".release-please-manifest.json",
+            "CMakeLists.txt": "tests/consumers/CMakeLists.txt",
+            "header.cpp": "tests/consumers/header.cpp",
+            "diagnostic.c": "examples/diagnostic.c",
+            "continuation.c": "examples/continuation.c",
+            "persistence.c": "examples/persistence.c",
+            "persistence_host.c": "examples/persistence_host.c",
+            "persistence_host.h": "examples/persistence_host.h",
+            "sound_consumer.c": "tests/consumers/sound_consumer.c",
+            "public_sound_guest.c": "tests/fixture/public_sound_guest.c",
+            "public_persistence_guest.c": "tests/fixture/public_persistence_guest.c",
+            "public_save_guest.c": "tests/fixture/public_save_guest.c",
+        }
+        for packaged, original in example_sources.items():
+            shutil.copy2(source_root / original, example / "source" / packaged)
         installed_files = [p for p in sorted(sdk_root.rglob("*")) if p.is_file()]
         assets = [{"path": p.relative_to(sdk_root).as_posix(), "size": p.stat().st_size,
                    "sha256": sha256_file(p)} for p in installed_files]
@@ -397,8 +417,15 @@ def safe_extract_raw_tar(archive: Path, destination: Path) -> None:
         raise ReleaseError(f"source tree archive is invalid: {archive.name}") from error
 
 
-def validate_member_info(members: list[tarfile.TarInfo]) -> None:
-    if not members or len(members) > MAX_MEMBERS:
+def validate_member_info(
+    members: list[tarfile.TarInfo], *, max_members: int | None = None,
+    max_member_bytes: int | None = None, max_archive_bytes: int | None = None,
+) -> None:
+    """Validate archive bounds, with injectable limits for small adjacency tests."""
+    member_limit = MAX_MEMBERS if max_members is None else max_members
+    member_bytes_limit = MAX_MEMBER_BYTES if max_member_bytes is None else max_member_bytes
+    archive_bytes_limit = MAX_ARCHIVE_BYTES if max_archive_bytes is None else max_archive_bytes
+    if not members or len(members) > member_limit:
         raise ReleaseError("archive member count is empty or exceeds the limit")
     seen: set[str] = set()
     total = 0
@@ -416,10 +443,10 @@ def validate_member_info(members: list[tarfile.TarInfo]) -> None:
             continue
         if not member.isfile():
             raise ReleaseError(f"archive member is not a regular file or directory: {name!r}")
-        if member.size < 0 or member.size > MAX_MEMBER_BYTES:
+        if member.size < 0 or member.size > member_bytes_limit:
             raise ReleaseError(f"archive member exceeds the per-file size limit: {name!r}")
         total += member.size
-        if total > MAX_ARCHIVE_BYTES:
+        if total > archive_bytes_limit:
             raise ReleaseError("archive exceeds the total uncompressed size limit")
 
 

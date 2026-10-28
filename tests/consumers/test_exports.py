@@ -12,8 +12,10 @@ import unittest
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests" / "consumers"))
 import check_package
+from tools import verify_sdk
 
 
 WINDOWS_EXPORTS = """
@@ -27,13 +29,35 @@ File Type: DLL
     ordinal hint RVA      name
           1    0 00001000 gn_create
           2    1 00001010 gn_load
-          3    2 00001020 gn_reset
-          4    3 00001030 gn_run
+          3    2 00001020 gn_load_mvs
+          4    3 00001030 gn_run_mvs
           5    4 00001040 gn_observe
-          6    5 00001050 gn_advance_frame
-          7    6 00001060 gn_unload
-          8    7 00001070 gn_destroy
-          9    8 00001080 gn_status_string
+          6    5 00001050 gn_observe_mvs_bus_fault
+          7    6 00001060 gn_set_mvs_inputs
+          8    7 00001070 gn_observe_mvs_progress
+          9    8 00001080 gn_reset
+         10    9 00001090 gn_run
+         11   10 000010a0 gn_advance_frame
+         12   11 000010b0 gn_unload
+         13   12 000010c0 gn_destroy
+         14   13 000010d0 gn_status_string
+         15   14 000010e0 gn_load_mvs_v3
+         16   15 000010f0 gn_mvs_audio_capacity_v1
+         17   16 00001100 gn_mvs_advance_frame_v1
+         18   17 00001110 gn_state_capacity_v1
+         19   18 00001120 gn_state_capture_v1
+         20   19 00001130 gn_state_restore_v1
+         21   20 00001140 gn_state_compatibility_v1
+         22   21 00001150 gn_state_reason_string
+         23   22 00001160 gn_mvs_save_query_v1
+         24   23 00001170 gn_mvs_save_export_v1
+         25   24 00001180 gn_mvs_save_import_baseline_v1
+         26   25 00001190 gn_mvs_save_ack_v1
+         27   26 000011a0 gn_mvs_save_scope_renew_v1
+         28   27 000011b0 gn_mvs_save_reason_string
+         29   28 000011c0 gn_load_mvs_v3_checked_v1
+         30   29 000011d0 gn_unload_checked_v1
+         31   30 000011e0 gn_destroy_checked_v1
 """
 
 WINDOWS_SYMBOLS = """
@@ -74,6 +98,8 @@ class WindowsRuntimeClosureTests(unittest.TestCase):
                 encoding="utf-8",
             )
             substitutions = {
+                "@CMAKE_CURRENT_SOURCE_DIR@": ROOT.as_posix(),
+                "@Python3_EXECUTABLE@": Path(sys.executable).as_posix(),
                 "@SDK_RUNTIME_ABSOLUTE_SOURCES@": ";".join(path.as_posix() for path in sources),
                 "$<TARGET_FILE:glueyneo>": library.as_posix(),
                 "@CMAKE_NM@": "unused-nm",
@@ -133,6 +159,94 @@ class WindowsRuntimeClosureTests(unittest.TestCase):
 
 
 class SharedExportTests(unittest.TestCase):
+    def test_instrumented_static_export_selects_only_the_sanitizer_runtime(self) -> None:
+        cmake_source = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        sanitizer_function = cmake_source.split(
+            "function(glueyneo_apply_sdk_sanitizer target)", 1)[1].split(
+                "endfunction()", 1)[0]
+        self.assertIn('if(target_type STREQUAL "STATIC_LIBRARY")', sanitizer_function)
+        self.assertIn(
+            "target_link_options(${target} INTERFACE "
+            "${GLUEYNEO_SDK_SANITIZER_RUNTIME_LINK_FLAG})",
+            sanitizer_function,
+            "instrumented static exports must select only the sanitizer runtime",
+        )
+
+
+class InstalledSanitizerInventoryTests(unittest.TestCase):
+    def validate(self, rows: list[dict[str, object]], *, require_supported: bool = False) -> None:
+        validator = getattr(verify_sdk, "validate_installed_sanitizer_inventory", None)
+        self.assertTrue(callable(validator),
+                        "sanitizer verifier must expose exact installed case validation")
+        if callable(validator):
+            validator(rows, require_supported=require_supported)
+
+    def rows(self) -> list[dict[str, object]]:
+        rows = []
+        case_ids = ("ordinary_none_export", "installed_c_chip",
+                    "installed_cxx_chip", "removed_runtime_usage")
+        for mode, run_id in (("ADDRESS_UNDEFINED", "asan-100"), ("THREAD", "tsan-200")):
+            for case_id in case_ids:
+                none_case = case_id == "ordinary_none_export"
+                rows.append({
+                    "schema_version": 1,
+                    "case_id": case_id,
+                    "mode": mode,
+                    "tested_mode": "NONE" if none_case else mode,
+                    "run_id": run_id,
+                    "prefix_id": f"installed/{mode}/{run_id}",
+                    "prefixes": ([f"installed/NONE/static/{run_id}",
+                                  f"installed/NONE/shared/{run_id}"] if none_case else None),
+                    "linkage": "static_shared" if none_case else "static",
+                    "configuration": "Debug",
+                    "outcome": "pass",
+                    "cases": 1,
+                    "assertions": 8,
+                    "duration_seconds": 0.1,
+                    "detail": "synthetic positive consumer record",
+                    "compiler": {"c_id": "Clang", "cxx_id": "Clang",
+                                 "c_version": "18.1.3", "cxx_version": "18.1.3",
+                                 "c_path": "/usr/bin/clang", "cxx_path": "/usr/bin/clang++",
+                                 "linker": "/usr/bin/ld.lld", "sanitizer": "NONE" if none_case else mode},
+                    "platform": {"system": "Linux", "release": "6.8", "machine": "x86_64"},
+                })
+        return rows
+
+    def test_accepts_exact_distinct_positive_mode_inventories(self) -> None:
+        self.validate(self.rows())
+
+    def test_rejects_missing_duplicate_and_zero_denominator_records(self) -> None:
+        valid = self.rows()
+        for broken in (
+            valid[:-1],
+            valid + [dict(valid[1])],
+            [dict(row, cases=0) if row["case_id"] == "installed_c_chip" else row
+             for row in valid],
+            [dict(row, assertions=0) if row["case_id"] == "installed_cxx_chip" else row
+             for row in valid],
+        ):
+            with self.subTest(rows=len(broken)):
+                with self.assertRaises(verify_sdk.VerificationError):
+                    self.validate(broken)
+
+    def test_rejects_prefix_reuse_and_unsupported_required_ci_rows(self) -> None:
+        reused_prefix = self.rows()
+        for row in reused_prefix:
+            if row["mode"] == "THREAD":
+                row["prefix_id"] = "installed/ADDRESS_UNDEFINED/asan-100"
+        with self.assertRaises(verify_sdk.VerificationError):
+            self.validate(reused_prefix)
+
+        unsupported = self.rows()
+        target = next(row for row in unsupported
+                      if row["mode"] == "ADDRESS_UNDEFINED" and
+                      row["case_id"] == "installed_cxx_chip")
+        target.update(outcome="unsupported", cases=0, assertions=0,
+                      unsupported_reason="C++ sanitizer runtime unavailable")
+        self.validate(unsupported)
+        with self.assertRaises(verify_sdk.VerificationError):
+            self.validate(unsupported, require_supported=True)
+
     def test_windows_version_is_bound_to_successful_dll_inspection(self) -> None:
         library = Path("glueyneo.dll")
         with mock.patch.object(check_package, "export_inspector",
@@ -179,11 +293,29 @@ class SharedExportTests(unittest.TestCase):
             return
         self.assertEqual(
             parser(WINDOWS_EXPORTS),
-            {
-                "gn_create", "gn_load", "gn_reset", "gn_run", "gn_observe",
-                "gn_advance_frame", "gn_unload", "gn_destroy", "gn_status_string",
-            },
+            check_package.EXPECTED_SHARED_EXPORTS,
         )
+
+    def test_all_additive_save_symbols_are_required_and_public(self) -> None:
+        parser = check_package.parse_windows_exports
+        contract = check_package.check_export_contract
+        observed = parser(WINDOWS_EXPORTS)
+        self.assertEqual(9, len(check_package.SAVE_API_EXPORTS))
+        self.assertTrue(check_package.SAVE_API_EXPORTS <= observed)
+        self.assertTrue(check_package.SAVE_API_EXPORTS <= check_package.EXPECTED_SHARED_EXPORTS)
+        for symbol in sorted(check_package.SAVE_API_EXPORTS):
+            with self.subTest(symbol=symbol):
+                with self.assertRaises(check_package.CheckError) as raised:
+                    contract(observed - {symbol})
+                self.assertIn(symbol, str(raised.exception))
+
+    def test_installed_save_consumer_references_each_exported_function(self) -> None:
+        source = check_package.SAVE_API_CONSUMER_SOURCE
+        for symbol in sorted(check_package.SAVE_API_EXPORTS):
+            with self.subTest(symbol=symbol):
+                self.assertIn(symbol, source)
+        self.assertIn("GN_STATUS_INVALID_STATE", source)
+        self.assertIn("SDK_SAVE_API pass symbols=9", source)
 
     def test_export_contract_rejects_extra_missing_and_private_names(self) -> None:
         parser = getattr(check_package, "parse_windows_exports", None)
@@ -194,9 +326,9 @@ class SharedExportTests(unittest.TestCase):
         expected = parser(WINDOWS_EXPORTS)
         self.assertEqual(contract(expected), sorted(expected))
         for output in (
-            WINDOWS_EXPORTS.replace("gn_status_string", "gn_status_string\n         10    9 00001090 gn_extra"),
-            WINDOWS_EXPORTS.replace("          9    8 00001080 gn_status_string\n", ""),
-            WINDOWS_EXPORTS.replace("          9    8 00001080 gn_status_string", "          9    8 00001080 owned_cpu_secret"),
+            WINDOWS_EXPORTS.replace("gn_status_string", "gn_status_string\n         16   15 000010f0 gn_extra"),
+            WINDOWS_EXPORTS.replace("         14   13 000010d0 gn_status_string\n", ""),
+            WINDOWS_EXPORTS.replace("         14   13 000010d0 gn_status_string", "         14   13 000010d0 owned_cpu_secret"),
         ):
             with self.assertRaises(check_package.CheckError):
                 contract(parser(output))

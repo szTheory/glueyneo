@@ -6,6 +6,8 @@ import json
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -56,6 +58,62 @@ class InventoryControls(unittest.TestCase):
             "private state core identity is stale against cpu.c SHA-256",
             inventory.state_identity_errors(stale, digest),
         )
+
+    def test_nested_private_state_identity_is_bound_to_exact_cpu_source(self):
+        stale = copy.deepcopy(self.document)
+        stale["private_state_record"]["core_identity_sha256"] = "0" * 64
+        self.assertIn(
+            "private state inventory core identity is stale against cpu.c SHA-256",
+            inventory.state_record_errors(ROOT, stale),
+        )
+
+    def test_refresh_state_inventory_preserves_field_metadata(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            cpu_dir = root / "experiments/owned_cpu"
+            cpu_dir.mkdir(parents=True)
+            runtime_path = cpu_dir / "cpu.c"
+            runtime_path.write_text("owned cpu\n", encoding="utf-8")
+            header_path = cpu_dir / "cpu.h"
+            header_text = (
+                "#define OWNED_CPU_STATE_CORE_IDENTITY_SHA256 " + chr(92) + "\n"
+                + '    "' + "0" * 64 + '"\n'
+            )
+            header_path.write_text(header_text, encoding="utf-8")
+            field = {"name": "reset_signal_events",
+                     "declaration": "uint64_t reset_signal_events",
+                     "classification": "guest-state"}
+            private_field = {"name": "reset_signal_events",
+                             "declaration": "uint64_t reset_signal_events"}
+            document = {
+                "core_identity_sha256": "0" * 64,
+                "fields": [field],
+                "private_state_record": {
+                    "core_identity_sha256": "0" * 64,
+                    "record_fields": [private_field],
+                },
+                "source_hashes": {
+                    "experiments/owned_cpu/cpu.c": "0" * 64,
+                    "experiments/owned_cpu/cpu.h": "0" * 64,
+                },
+            }
+            inventory_path = cpu_dir / "state-inventory.json"
+            inventory_path.write_text(json.dumps(document), encoding="utf-8")
+
+            inventory.refresh_state_inventory(root)
+
+            refreshed = json.loads(inventory_path.read_text(encoding="utf-8"))
+            runtime_hash = inventory.sha256(runtime_path)
+            self.assertEqual(runtime_hash, refreshed["core_identity_sha256"])
+            self.assertEqual(runtime_hash,
+                             refreshed["private_state_record"]["core_identity_sha256"])
+            self.assertEqual([field], refreshed["fields"])
+            self.assertEqual([private_field],
+                             refreshed["private_state_record"]["record_fields"])
+            self.assertEqual(runtime_hash,
+                             refreshed["source_hashes"]["experiments/owned_cpu/cpu.c"])
+            self.assertEqual(inventory.sha256(header_path),
+                             refreshed["source_hashes"]["experiments/owned_cpu/cpu.h"])
 
     def test_stale_source_hash_has_named_rejection(self):
         hashes = dict(self.document["source_hashes"])
@@ -157,6 +215,97 @@ class InventoryControls(unittest.TestCase):
             else:
                 broken["files"].append({"path": "third_party/musashi/m68kcpu.c"})
             self.assertTrue(any(kind in error for error in inventory.manifest_errors(ROOT, broken)), kind)
+
+    def test_self_test_reaches_every_mutation_control(self):
+        expected_named = [
+            "missing field inventory entry: reset_signal_events",
+            "extra field inventory entry: invented",
+            "missing private state inventory entry: reset_signal_events",
+            "private state inventory core identity is stale against cpu.c SHA-256",
+            "private state core identity is stale against cpu.c SHA-256",
+            "stale source hash: experiments/owned_cpu/cpu.c",
+            "hidden mutable global state: hidden_cpu_state",
+            "callback mutates owner binding: iso_read16",
+        ]
+        named_calls = []
+        manifest_controls = []
+        real_expect_named = inventory.expect_named
+        real_manifest_errors = inventory.manifest_errors
+        baseline_manifest = inventory.make_manifest(ROOT)
+
+        def observe_expect_named(errors, expected):
+            named_calls.append((expected, list(errors)))
+            return real_expect_named(errors, expected)
+
+        def observe_manifest_errors(root, document):
+            errors = real_manifest_errors(root, document)
+            if document != baseline_manifest:
+                kinds = [kind for kind in ("missing", "duplicate", "stale", "forbidden")
+                         if any(kind in error for error in errors)]
+                manifest_controls.append((kinds, list(errors), copy.deepcopy(document)))
+            return errors
+
+        output = StringIO()
+        raised = None
+        with (mock.patch.object(inventory, "expect_named", side_effect=observe_expect_named),
+              mock.patch.object(inventory, "manifest_errors", side_effect=observe_manifest_errors),
+              redirect_stdout(output)):
+            try:
+                result = inventory.run_self_test(ROOT, copy.deepcopy(self.document))
+            except inventory.InventoryError as error:
+                raised = str(error)
+                result = None
+
+        self.assertEqual(
+            0, result,
+            f"actual self-test must reach PASS after every named and manifest control; raised={raised!r}; "
+            f"first named errors={named_calls[0][1] if named_calls else None!r}",
+        )
+        self.assertEqual(expected_named, [expected for expected, _ in named_calls])
+        self.assertIn("PASS:", output.getvalue())
+        self.assertEqual(4, len(manifest_controls))
+        observed_kinds = []
+        for kinds, errors, document in manifest_controls:
+            self.assertEqual(1, len(kinds), f"manifest mutation must have one real rejection: {errors}")
+            observed_kinds.extend(kinds)
+            self.assertNotEqual(baseline_manifest, document)
+        self.assertCountEqual(["missing", "duplicate", "stale", "forbidden"], observed_kinds)
+
+    def test_self_test_rejects_suppressed_named_control(self):
+        target = "missing field inventory entry: reset_signal_events"
+        expected_error = f"self-test control missed named rejection: {target}"
+
+        for mode in ("suppressed", "misreported"):
+            with self.subTest(mode=mode):
+                reached = []
+                actual_error = None
+                real_field_errors = inventory.field_errors
+
+                def observe_field_errors(entries, source):
+                    errors = real_field_errors(entries, source)
+                    if len(entries) == len(self.document["fields"]) - 1:
+                        names = {entry.get("name") for entry in entries}
+                        reached.append(names)
+                        if "reset_signal_events" not in names:
+                            if mode == "suppressed":
+                                return [error for error in errors if error != target]
+                            return ["missing field inventory entry: bus_cycles"
+                                    if error == target else error for error in errors]
+                    return errors
+
+                with mock.patch.object(inventory, "field_errors", side_effect=observe_field_errors):
+                    try:
+                        inventory.run_self_test(ROOT, copy.deepcopy(self.document))
+                    except inventory.InventoryError as error:
+                        actual_error = str(error)
+
+                self.assertEqual(1, len(reached), "the real missing-field mutation must be exercised")
+                self.assertEqual(
+                    {entry["name"] for entry in self.document["fields"]
+                     if entry["name"] != "reset_signal_events"},
+                    reached[0],
+                )
+                self.assertEqual(expected_error, actual_error)
 
 
 if __name__ == "__main__":

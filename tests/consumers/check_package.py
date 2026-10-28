@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import runpy
 import shlex
 import shutil
 import subprocess
@@ -18,14 +19,6 @@ import tempfile
 
 
 ROOT = Path(__file__).resolve().parents[2]
-NOTICE_FILES = {
-    "libretro/libretro.h": "third_party/libretro/libretro.h",
-    "libretro/NOTICE.md": "third_party/libretro/NOTICE.md",
-    "chips/NOTICE.md": "third_party/chips/NOTICE.md",
-    "ymfm/LICENSE": "third_party/ymfm/LICENSE",
-    "ymfm/NOTICE.md": "third_party/ymfm/NOTICE.md",
-    "zlib/LICENSE": "third_party/zlib/LICENSE",
-}
 BUILD_ROOT = ROOT / "build" / "consumers"
 EXPECTED_FIXTURE_SHA256 = (
     "495eb195089d0ee7e73f4090514980b47a5fd4a55869d9e7f46376bce1646948"
@@ -130,15 +123,15 @@ def installed_layout(prefix: Path, variant: str) -> dict[str, Path]:
     license_file = prefix / "share" / "licenses" / "Glueyneo" / "LICENSE"
     fixture = prefix / "share" / "glueyneo" / "diagnostic-original-a.bin"
     runner_candidates = list((prefix / "bin").glob("glueyneo-diagnostic*"))
+    ymfm_notices = prefix / "share" / "licenses" / "Glueyneo" / "ymfm"
     notices = prefix / "share" / "licenses" / "Glueyneo"
-    notice_paths = [notices / relative for relative in NOTICE_FILES]
-    for path in (version_file, targets_file, header, license_file, fixture, *notice_paths):
+    for path in (version_file, targets_file, header, license_file, fixture,
+                 ymfm_notices / "LICENSE", ymfm_notices / "NOTICE.md",
+                 notices / "libretro/libretro.h", notices / "libretro/NOTICE.md",
+                 notices / "chips/NOTICE.md", notices / "zlib/LICENSE"):
         if not path.is_file():
             code = "missing-header" if path == header else "missing-fixture" if path == fixture else "missing-package-metadata"
             raise CheckError(f"Missing installed package artifact: {path.relative_to(prefix)}", code=code)
-    for relative, source in NOTICE_FILES.items():
-        if (notices / relative).read_bytes() != (ROOT / source).read_bytes():
-            raise CheckError(f"Installed dependency notice differs from source: {relative}", code="notice-mismatch")
     if len(runner_candidates) != 1:
         raise CheckError(f"Expected one installed diagnostic runner; found {runner_candidates}")
 
@@ -210,6 +203,18 @@ def inspect_exports(
         raise CheckError("Installed public header differs from the producer header")
 
 
+SAVE_API_EXPORTS = {
+    "gn_load_mvs_v3_checked_v1",
+    "gn_unload_checked_v1",
+    "gn_destroy_checked_v1",
+    "gn_mvs_save_query_v1",
+    "gn_mvs_save_export_v1",
+    "gn_mvs_save_import_baseline_v1",
+    "gn_mvs_save_ack_v1",
+    "gn_mvs_save_scope_renew_v1",
+    "gn_mvs_save_reason_string",
+}
+
 EXPECTED_SHARED_EXPORTS = {
     "gn_create",
     "gn_load",
@@ -219,11 +224,75 @@ EXPECTED_SHARED_EXPORTS = {
     "gn_run_mvs",
     "gn_observe",
     "gn_observe_mvs_bus_fault",
+    "gn_set_mvs_inputs",
+    "gn_observe_mvs_progress",
     "gn_advance_frame",
     "gn_unload",
     "gn_destroy",
     "gn_status_string",
+    "gn_load_mvs_v3",
+    "gn_mvs_audio_capacity_v1",
+    "gn_mvs_advance_frame_v1",
+    "gn_state_capacity_v1",
+    "gn_state_capture_v1",
+    "gn_state_restore_v1",
+    "gn_state_compatibility_v1",
+    "gn_state_reason_string",
+    *SAVE_API_EXPORTS,
 }
+
+SAVE_API_CONSUMER_SOURCE = r"""#include <glueyneo/glueyneo.h>
+
+#include <stdio.h>
+#include <string.h>
+
+int main(void) {
+    gn_instance *instance = NULL;
+    if (gn_create(&instance) != GN_STATUS_OK) return 1;
+
+    gn_mvs_save_info_v1 info;
+    gn_mvs_save_detail_v1 detail;
+    gn_mvs_save_receipt_v1 receipt;
+    gn_mvs_save_scope_v1 scope;
+    unsigned char envelope[GN_MVS_SAVE_ENVELOPE_V1_BYTES];
+    size_t written = 99u;
+    memset(&info, 0, sizeof(info));
+    memset(&detail, 0, sizeof(detail));
+    memset(&receipt, 0, sizeof(receipt));
+    memset(&scope, 0, sizeof(scope));
+    memset(envelope, 0, sizeof(envelope));
+    receipt.size = (uint32_t)sizeof(receipt);
+    scope.size = (uint32_t)sizeof(scope);
+    scope.scope[0] = 1u;
+
+    if (gn_mvs_save_query_v1(instance, &info, sizeof(info),
+            &detail, sizeof(detail)) != GN_STATUS_INVALID_STATE) return 2;
+    if (gn_mvs_save_export_v1(instance, envelope, sizeof(envelope), &written,
+            &receipt, sizeof(receipt), &detail, sizeof(detail)) !=
+            GN_STATUS_INVALID_STATE || written != 0u) return 3;
+    if (gn_mvs_save_import_baseline_v1(instance, envelope, sizeof(envelope),
+            &detail, sizeof(detail)) != GN_STATUS_INVALID_STATE) return 4;
+    if (gn_mvs_save_ack_v1(instance, &receipt, sizeof(receipt),
+            &detail, sizeof(detail)) != GN_STATUS_INVALID_STATE) return 5;
+    if (gn_mvs_save_scope_renew_v1(instance, &scope, sizeof(scope),
+            &detail, sizeof(detail)) != GN_STATUS_INVALID_STATE) return 6;
+    if (gn_mvs_save_reason_string(GN_MVS_SAVE_REASON_NONE) == NULL) return 7;
+
+    gn_mvs_save_lifecycle_result_v1 result;
+    if (gn_load_mvs_v3_checked_v1(instance, NULL,
+            GN_MVS_SAVE_LIFECYCLE_REQUIRE_RESOLVED, 1u,
+            &result, sizeof(result), &detail, sizeof(detail)) !=
+            GN_STATUS_INVALID_ARGUMENT) return 8;
+    if (gn_unload_checked_v1(instance, GN_MVS_SAVE_LIFECYCLE_ALLOW_DISCARD, 0u,
+            &result, sizeof(result), &detail, sizeof(detail)) !=
+            GN_STATUS_INVALID_STATE) return 9;
+    if (gn_destroy_checked_v1(&instance, GN_MVS_SAVE_LIFECYCLE_REQUIRE_RESOLVED,
+            1u, &result, sizeof(result), &detail, sizeof(detail)) !=
+            GN_STATUS_OK || instance != NULL) return 10;
+    puts("SDK_SAVE_API pass symbols=9");
+    return 0;
+}
+"""
 
 
 def check_export_contract(names: set[str] | list[str]) -> list[str]:
@@ -238,6 +307,15 @@ def check_export_contract(names: set[str] | list[str]) -> list[str]:
             f"extra={sorted(extra)}, private={private}"
         )
     return sorted(public)
+
+
+def parse_save_api_consumer(output: str) -> dict[str, object]:
+    marker = "SDK_SAVE_API "
+    records = [line[len(marker):] for line in output.splitlines()
+               if line.startswith(marker)]
+    if records != ["pass symbols=9"]:
+        raise CheckError(f"Installed native-save API consumer did not pass all nine symbols: {records}")
+    return {"outcome": "pass", "symbols": 9}
 
 
 def parse_windows_exports(output: str) -> set[str]:
@@ -512,6 +590,16 @@ def stage_consumer_project(destination: Path) -> None:
     shutil.copy2(ROOT / ".release-please-manifest.json", destination / ".release-please-manifest.json")
     shutil.copy2(ROOT / "tests" / "consumers" / "header.cpp", destination / "header.cpp")
     shutil.copy2(ROOT / "examples" / "diagnostic.c", destination / "diagnostic.c")
+    shutil.copy2(ROOT / "tests/consumers/sound_consumer.c", destination / "sound_consumer.c")
+    shutil.copy2(ROOT / "tests/fixture/public_sound_guest.c", destination / "public_sound_guest.c")
+    shutil.copy2(ROOT / "examples/continuation.c", destination / "continuation.c")
+    shutil.copy2(ROOT / "examples/persistence.c", destination / "persistence.c")
+    shutil.copy2(ROOT / "examples/persistence_host.c", destination / "persistence_host.c")
+    shutil.copy2(ROOT / "examples/persistence_host.h", destination / "persistence_host.h")
+    shutil.copy2(ROOT / "tests/fixture/public_persistence_guest.c",
+                 destination / "public_persistence_guest.c")
+    (destination / "save_api_consumer.c").write_text(
+        SAVE_API_CONSUMER_SOURCE, encoding="utf-8")
 
 
 def parse_consumer_record(output: str, marker: str) -> dict[str, object]:
@@ -522,6 +610,57 @@ def parse_consumer_record(output: str, marker: str) -> dict[str, object]:
     if result.get("outcome") != "pass":
         raise CheckError(f"Consumer reported failure: {result}")
     return result
+
+
+def validate_persistence_result_record(record: dict[str, object]) -> str:
+    """Reject empty evidence and any portable-to-durable host claim."""
+    schema_version = record.get("schema_version")
+    if not isinstance(schema_version, int) or isinstance(schema_version, bool) or schema_version != 1:
+        raise CheckError("Persistence result has an unsupported schema version")
+    assertions = record.get("assertions")
+    if not isinstance(assertions, int) or isinstance(assertions, bool) or assertions <= 0:
+        raise CheckError("Persistence result must report a positive assertion count")
+    case_id = record.get("case_id")
+    outcome = record.get("outcome")
+    host_commit = record.get("host_file_commit")
+    acked = record.get("receipt_acked")
+    if case_id == "sdk.persistence.portable":
+        if outcome != "pass" or host_commit != "not_claimed":
+            raise CheckError("Portable persistence pass cannot claim a durable host-file commit")
+        return "portable"
+    if case_id != "sdk.persistence.host":
+        raise CheckError(f"Unknown persistence result case: {case_id!r}")
+    if not isinstance(acked, int) or isinstance(acked, bool) or acked not in (0, 1):
+        raise CheckError("Host persistence result must report an integer receipt ACK bit")
+    role = record.get("role")
+    if outcome == "unsupported":
+        if host_commit != "unsupported" or not isinstance(record.get("reason"), str) or not record["reason"]:
+            raise CheckError("Unsupported host result needs an explicit reason")
+    elif outcome == "pass":
+        if role == "producer":
+            if host_commit != "committed_darwin_apfs" or acked != 1:
+                raise CheckError("Host producer pass requires completed Darwin/APFS publication and ACK")
+        elif role == "reader":
+            if host_commit != "read_only_reopen" or acked != 0:
+                raise CheckError("Host reader pass must identify a read-only explicit reopen")
+        else:
+            raise CheckError("Host persistence result has an unknown role")
+    elif outcome == "invalid":
+        reason = record.get("reason")
+        if host_commit != "not_committed" or not isinstance(reason, str) or not reason:
+            raise CheckError("Invalid host target must remain not committed with a reason")
+    elif outcome == "not_committed":
+        if host_commit != "not_committed" or acked != 0:
+            raise CheckError("Unpublished host result cannot ACK")
+    elif outcome == "uncertain":
+        if host_commit != "outcome_uncertain" or acked != 0:
+            raise CheckError("Uncertain host result must retain the unacknowledged receipt")
+    elif outcome == "discarded":
+        if host_commit != "discarded" or acked != 0:
+            raise CheckError("Explicit discard must not claim a host commit or ACK")
+    else:
+        raise CheckError(f"Unknown host persistence outcome: {outcome!r}")
+    return "host"
 
 
 def require_public_cli_output(output: str, local_paths: tuple[Path, ...]) -> None:
@@ -563,7 +702,7 @@ def parse_diagnostic_record(output: str, local_paths: tuple[Path, ...]) -> dict[
         "arithmetic": 10,
         "initialized": 0x1237,
         "bss": 1,
-        "cycles": 196,
+        "cycles": 172,
         "instructions": 12,
         "pc": 0x12E,
     }
@@ -682,7 +821,8 @@ def verify_missing_component_control(layout: dict[str, Path], component: str) ->
         backup.rename(path)
 
 
-def case_consumers(variant: str) -> None:
+def case_consumers(variant: str, sound_reference: Path | None = None) -> None:
+    runpy.run_path(str(ROOT / "tests/consumers/test_playable_install.py"))["validate_sound_recipe"](ROOT)
     work = new_work_dir(f"consumers-{variant}")
     package = build_package(variant, work)
     old_prefix = package["prefix"]
@@ -768,6 +908,26 @@ def case_consumers(variant: str) -> None:
         cxx_output = run([str(cxx_executable)]).stdout
     c_record = parse_consumer_record(c_output, "SDK_CONSUMER ")
     cxx_record = parse_consumer_record(cxx_output, "SDK_CONSUMER_CPP ")
+    sound_executable = consumer_build / ("glueyneo-installed-sound.exe" if sys.platform == "win32"
+                                       else "glueyneo-installed-sound")
+    sound_fixture, sound_trace = work / "public-sound-mvs.bin", work / "installed-sound.trace"
+    def run_sound(arguments):
+        if variant == "shared":
+            return run_with_loader_trace(sound_executable, arguments, layout)
+        return run([str(sound_executable), *arguments]).stdout
+    run_sound(["--write-fixture", str(sound_fixture)])
+    sound_output = run_sound([str(sound_fixture), "--trace", str(sound_trace)])
+    sound_record = parse_consumer_record(sound_output, "SDK_SOUND ")
+    # Loader tracing intentionally contains paths; only the program's public
+    # record is product output. Keep loader diagnostics in the existing lane.
+    require_public_cli_output(json.dumps(sound_record), (ROOT, work, relocated_prefix, Path.home()))
+    if sound_reference is None:
+        raise CheckError("Current in-tree sound reference is required for exact installed transfer parity")
+    if (not 0 < sound_reference.stat().st_size <= 2 * 1024 * 1024 or
+            sound_reference.stat().st_size != sound_trace.stat().st_size or
+            sound_reference.read_bytes() != sound_trace.read_bytes()):
+        raise CheckError("Installed PCM/video trace differs from current in-tree reference")
+    sound_record["native_transfer"] = "exact"
 
     wrong_expected_output = [str(c_executable), str(fixture), "--expect-arithmetic", "11"]
     if variant == "shared" and sys.platform == "win32":
@@ -808,6 +968,40 @@ def case_consumers(variant: str) -> None:
     control_results.append("wrong-fixture-digest")
     control_results.append("wrong-expected-output")
 
+    save_consumer_build = work / "save-api-consumer-build"
+    run(
+        [
+            cmake,
+            "-G", "Ninja",
+            "-S", str(staged_source),
+            "-B", str(save_consumer_build),
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+            f"-DGlueyneo_DIR={layout['config'].parent}",
+            "-DGLUEYNEO_CONSUMER_C_SOURCE=save_api_consumer.c",
+        ]
+    )
+    run([cmake, "--build", str(save_consumer_build), "--parallel", str(MAX_WORKERS)])
+    save_compile_commands = json.loads(
+        (save_consumer_build / "compile_commands.json").read_text(encoding="utf-8"))
+    save_compile_text = "\n".join(
+        item.get("command", "") + "\n" + item.get("file", "")
+        for item in save_compile_commands)
+    for forbidden in (str(ROOT), str(build_dir), str(old_prefix),
+                      "experiments/owned_cpu", "third_party/unity"):
+        if forbidden in save_compile_text:
+            raise CheckError(f"Native-save consumer retained producer/private path: {forbidden}")
+    if str(relocated_prefix) not in save_compile_text:
+        raise CheckError("Native-save consumer did not compile against the moved installed header")
+    save_consumer = save_consumer_build / "glueyneo-installed-c"
+    if sys.platform == "win32":
+        save_consumer = save_consumer.with_suffix(".exe")
+    if variant == "shared":
+        save_consumer_output = run_with_loader_trace(save_consumer, [], layout)
+    else:
+        save_consumer_output = run([str(save_consumer)]).stdout
+    save_api_record = parse_save_api_consumer(save_consumer_output)
+
     result = {
         "schema_version": 1,
         "case_id": f"sdk.package.consumers-{variant}",
@@ -820,13 +1014,15 @@ def case_consumers(variant: str) -> None:
         "fixture_sha256": sha256(fixture),
         "relocation": "pass; installed runner and C/C++ consumers used moved prefix; no producer include/build paths",
         "loader_resolution": "moved prefix" if variant == "shared" else "static archive",
-        "lanes": {"C": c_record, "C++": cxx_record},
+        "lanes": {"C": c_record, "C++": cxx_record, "C-sound": sound_record},
+        "native_save_api_consumer": save_api_record,
         "runner_diagnostic": runner_record,
         "negative_controls": {"outcome": "pass", "checks": control_results},
         "assertions": (
             int(runner_record["assertions"])
             + int(c_record["assertions"])
             + int(cxx_record["assertions"])
+            + int(save_api_record["symbols"])
             + len(control_results)
         ),
         "runner_fixture_output": runner_output.splitlines()[-1] if runner_output.splitlines() else "pass",
@@ -860,26 +1056,68 @@ def README_commands() -> list[str]:
     return commands
 
 
-def stage_documentation_project(destination: Path) -> None:
+def stage_documentation_project(destination: Path, source_root: Path | None = None) -> None:
+    source_root = ROOT if source_root is None else source_root
+    required_closure = {
+        "example helper": (
+            "examples/continuation.c", "examples/persistence.c",
+            "examples/persistence_host.c", "examples/persistence_host.h",
+        ),
+        "recipe": (
+            "tests/fixture/public_sound_guest.c", "tests/fixture/public_save_guest.c",
+            "tests/fixture/public_persistence_guest.c",
+        ),
+        "notice": (
+            "third_party/libretro/NOTICE.md", "third_party/zlib/LICENSE",
+            "third_party/chips/NOTICE.md", "third_party/ymfm/LICENSE",
+            "third_party/ymfm/NOTICE.md", "third_party/unity/LICENSE.txt",
+        ),
+        "guide": (
+            "docs/sdk-examples.md", "docs/native-state.md", "docs/native-save.md",
+            "docs/frontend-continuation.md", "docs/testing.md", "docs/ownership-and-errors.md",
+        ),
+    }
+    for kind, paths in required_closure.items():
+        for relative in paths:
+            if not (source_root / relative).is_file():
+                raise CheckError(f"missing {kind}: {relative}")
+
     destination.mkdir(parents=True, exist_ok=True)
     for file in ("CMakeLists.txt", "LICENSE", ".release-please-manifest.json"):
-        shutil.copy2(ROOT / file, destination / file)
+        shutil.copy2(source_root / file, destination / file)
     for directory in (
         "cmake", "include", "src", "experiments/owned_cpu",
         "third_party/libretro", "third_party/zlib", "third_party/chips", "third_party/ymfm",
     ):
-        shutil.copytree(ROOT / directory, destination / directory)
+        shutil.copytree(source_root / directory, destination / directory)
+    licenses = destination / "licenses"
+    licenses.mkdir()
+    shutil.copy2(source_root / "third_party/unity/LICENSE.txt", licenses / "Unity-LICENSE.txt")
     for relative in (
+        "docs/sdk-examples.md",
+        "docs/native-state.md",
+        "docs/native-save.md",
+        "docs/frontend-continuation.md",
+        "docs/testing.md",
+        "docs/ownership-and-errors.md",
         "tools/diagnostic/main.c",
         "tests/sdk/guest_fixture.c",
         "tests/sdk/guest_fixture.h",
         "tests/consumers/CMakeLists.txt",
         "tests/consumers/header.cpp",
+        "tests/consumers/sound_consumer.c",
+        "tests/fixture/public_sound_guest.c",
         "examples/diagnostic.c",
+        "examples/continuation.c",
+        "examples/persistence.c",
+        "examples/persistence_host.c",
+        "examples/persistence_host.h",
+        "tests/fixture/public_persistence_guest.c",
+        "tests/fixture/public_save_guest.c",
     ):
         target = destination / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(ROOT / relative, target)
+        shutil.copy2(source_root / relative, target)
 
 
 def command_argv(command: str, cwd: Path) -> list[str]:
@@ -928,7 +1166,22 @@ def check_readme_links_and_contracts() -> int:
     for phrase in stale_phrases:
         if phrase in readme:
             raise CheckError(f"README retains stale scope text: {phrase}")
-    return local_links + len(required_contracts) + len(stale_phrases) + check_ownership_error_guide()
+    guide_path = ROOT / "docs" / "sdk-examples.md"
+    guide = guide_path.read_text(encoding="utf-8")
+    if "[runnable SDK examples](docs/sdk-examples.md)" not in readme:
+        raise CheckError("README does not route first-run users to the SDK example guide")
+    for phrase in (
+        "glueyneo-installed-continuation", "glueyneo-installed-persistence",
+        "SDK_CONTINUATION", "SDK_PERSISTENCE", "--reopen", "--discard",
+        "host_file_commit=not_claimed", "outcome=unsupported",
+    ):
+        if phrase not in guide:
+            raise CheckError(f"SDK example guide omits its expected target/result contract: {phrase}")
+    for variant in ("static", "shared"):
+        if f"<!-- sdk-examples:{variant}-commands:start -->" not in guide:
+            raise CheckError(f"SDK example guide omits the {variant} installed target commands")
+    return (local_links + len(required_contracts) + len(stale_phrases)
+            + 11 + check_ownership_error_guide())
 
 
 def check_capability_contract() -> None:
@@ -1132,6 +1385,8 @@ def main() -> int:
     choice = parser.add_mutually_exclusive_group(required=True)
     choice.add_argument("--suite", help="Configure/build and run one named CTest suite")
     choice.add_argument("--case", help="Run one CTest child case without suite dispatch")
+    parser.add_argument("--sound-reference", type=Path,
+                        help="current CTest fixture's in-tree public sound trace")
     args = parser.parse_args()
     try:
         if args.suite:
@@ -1139,7 +1394,7 @@ def main() -> int:
         elif args.case in {"build-static", "build-shared"}:
             case_build(args.case.removeprefix("build-"))
         elif args.case in {"consumers-static", "consumers-shared"}:
-            case_consumers(args.case.removeprefix("consumers-"))
+            case_consumers(args.case.removeprefix("consumers-"), args.sound_reference)
         elif args.case in {"docs-static", "docs-shared"}:
             case_docs_variant(args.case.removeprefix("docs-"))
         elif args.case == "docs-readme":

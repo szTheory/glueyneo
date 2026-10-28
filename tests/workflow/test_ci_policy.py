@@ -9,7 +9,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
-from unittest import mock
+from unittest import TestCase, mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools" / "workflow"))
@@ -17,6 +17,60 @@ import ci_policy as policy  # noqa: E402
 sys.path.insert(0, str(ROOT / "tools"))
 import sdk_evidence as evidence  # noqa: E402
 import verify_sdk  # noqa: E402
+
+
+class ExampleRoutingTests(TestCase):
+    def test_example_helper_change_routes_runtime(self):
+        runtime_paths = (
+            "CMakeLists.txt",
+            "examples/continuation.c",
+            "examples/persistence.c",
+            "examples/persistence_host.c",
+            "examples/persistence_host.h",
+            "tests/fixture/public_persistence_guest.c",
+            "tests/consumers/test_example_docs.py",
+            "tests/consumers/test_continuation_install.py",
+            "tests/consumers/test_persistence_install.py",
+            "tests/consumers/test_release_consumer.py",
+            "tests/consumers/test_check_package.py",
+            "tools/release_manifest.py",
+            "tools/release_state.py",
+            "tools/sdk_evidence.py",
+            "tools/verify_sdk.py",
+            "tools/workflow/ci_policy.py",
+        )
+        for path in runtime_paths:
+            with self.subTest(path=path):
+                self.assertEqual(policy.classify_paths([path]), set(policy.REQUIRED_JOBS))
+        self.assertEqual(policy.classify_paths(["docs/sdk-examples.md"]), {policy.DOCS_JOB})
+        self.assertEqual(policy.classify_paths(["docs/new-helper.py"]), set(policy.REQUIRED_JOBS))
+        expected_sources = set(runtime_paths) | {
+            "docs/sdk-examples.md", "docs/native-state.md", "docs/native-save.md",
+            "docs/testing.md", "docs/frontend-continuation.md", "docs/releasing.md",
+            "docs/ownership-and-errors.md", "tests/fixture/public_save_guest.c",
+        }
+        self.assertTrue(expected_sources <= set(evidence.RELEVANT_FILES))
+
+    def test_exact_example_inventory(self):
+        expected = {
+            "sdk_example_continuation_static",
+            "sdk_example_continuation_shared",
+            "sdk_example_persistence_static",
+            "sdk_example_persistence_shared",
+            "sdk_example_persistence_faults",
+        }
+        self.assertEqual(verify_sdk.EXAMPLE_CTEST_CASES, expected)
+        self.assertEqual(verify_sdk.validate_example_inventory(len(expected), sorted(expected)), len(expected))
+        missing = sorted(expected - {"sdk_example_persistence_faults"})
+        duplicate = sorted(expected) + ["sdk_example_persistence_static"]
+        for denominator, names in (
+            (len(missing), missing),
+            (len(duplicate), duplicate),
+            (0, []),
+        ):
+            with self.subTest(denominator=denominator, names=names), self.assertRaises(
+                    verify_sdk.VerificationError):
+                verify_sdk.validate_example_inventory(denominator, names)
 
 
 def expect(value: bool, message: str) -> None:
@@ -175,8 +229,27 @@ def main() -> int:
         "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
         "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
         "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+        "Verify native save-state continuation and rejection suite",
+        "Verify native durable MVS backup-RAM save suite",
     ):
         expect(required in workflow, f"workflow omitted required contract: {required}")
+    state_command = "run: python3 tools/verify_sdk.py --suite state"
+    save_command = "run: python3 tools/verify_sdk.py --suite save"
+    expect(workflow.count(state_command) == 1 and workflow.count(save_command) == 1,
+           "Linux Clang lane must run each native continuation/save suite exactly once")
+    state_index = workflow.index(state_command)
+    save_index = workflow.index(save_command)
+    state_step_start = workflow.rfind("      - name:", 0, state_index)
+    next_step = workflow.find("      - name:", state_index)
+    save_step_start = workflow.rfind("      - name:", 0, save_index)
+    state_step = workflow[state_step_start:next_step]
+    save_step_end = workflow.find("      - name:", save_index)
+    save_step = workflow[save_step_start:save_step_end]
+    expect(save_index > state_index and next_step == save_step_start,
+           "native save suite must run immediately after the existing state suite")
+    expect("if: matrix.lane == 'linux-clang'" in state_step and
+           "if: matrix.lane == 'linux-clang'" in save_step,
+           "native state and save suites must stay in the existing bounded Linux Clang lane")
     expect("paths:" not in workflow, "workflow-level path filters can omit the required aggregate")
     expect("pull_request_target" not in workflow and "secrets." not in workflow,
            "untrusted PR workflow must not use privileged events or secrets")
@@ -204,13 +277,24 @@ def main() -> int:
     for required in (
         "Darwin-26", "Apple SDK 26.5", "1,440 assertions", "9.374 seconds",
         "runner-minutes", "A new SHA requires new evidence", "rights status unknown",
-        "release App", "archive/download evidence remain pending",
+        "release App", "passed the archive checks and all three downloaded consumers before publishing",
+        "PROJECT-D-50", "First-time fork approval and execution remain deferred and unverified",
+        "python3 tools/verify_sdk.py --suite save", "7/7 named tests",
+        "2,182 reported", "881 direct documentation assertions", "235.110 seconds",
+        "1,308", "Python assertion calls",
+        "macOS 26.6.2 / Darwin", "25.6.0 / APFS",
     ):
         expect(required in testing, f"qualification documentation omitted: {required}")
+    # Immutable Phase03 publication baseline; source archives need not ship the
+    # later local download receipts to retain this documentation regression.
+    published_source = "fdc241e0f554d61c7a270cad141fd51c2aa2b334"
+    published_tag = "v0.2.1"
+    expect(published_source in testing and published_tag in testing,
+           "published support docs must identify the exact released source and tag")
     # Hosted observations supersede the former unknown rows only for the exact
     # recorded source and identities. Keep the release/authority boundary above.
     hosted = evidence.load_canonical_json(
-        (ROOT / ".planning/workstreams/cpu-bus-diagnostic-sdk-alpha/phases/03-distributable-release-qualification/03-CI-HOSTED-RECEIPT.json").read_bytes(),
+        (ROOT / ".planning/workstreams/cpu-bus-diagnostic-sdk-alpha/milestones/v0.1-phases/03-distributable-release-qualification/03-CI-HOSTED-RECEIPT.json").read_bytes(),
         label="hosted CI observation")
     evidence.validate_matrix_report(hosted["aggregate"]["matrix"])
     expect(hosted["source_revision"] in testing, "hosted support docs must name the exact observed source")
