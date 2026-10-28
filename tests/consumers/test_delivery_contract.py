@@ -1625,8 +1625,8 @@ class DeliveryReceiptTests(unittest.TestCase):
 class DeliveryWorkflowTests(unittest.TestCase):
     def test_linux_clang_provenance_lanes_fetch_immutable_source_history(self) -> None:
         workflow = CI_WORKFLOW.read_text(encoding="utf-8")
-        rows = dict(re.findall(
-            r"(?m)^          - lane: ([a-z0-9-]+)\n((?:^            .*\n)+)", workflow))
+        lane_rows = re.findall(
+            r"(?m)^          - lane: ([a-z0-9-]+)\n((?:^            .*\n)+)", workflow)
         expected_depths = {
             "linux-clang": 0,
             "linux-gcc": 1,
@@ -1635,6 +1635,9 @@ class DeliveryWorkflowTests(unittest.TestCase):
             "linux-clang-sanitizer": 0,
             "linux-clang-fuzz": 1,
         }
+        self.assertEqual(len(lane_rows), len(expected_depths))
+        rows = dict(lane_rows)
+        self.assertEqual(len(rows), len(lane_rows))
         self.assertEqual(set(rows), set(expected_depths))
         self.assertIn("fetch-depth: ${{ matrix.fetch_depth }}", workflow)
         for lane, depth in expected_depths.items():
