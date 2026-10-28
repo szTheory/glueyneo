@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
 import release_manifest
 WORKFLOW = ROOT / ".github/workflows/release.yml"
+CI_WORKFLOW = ROOT / ".github/workflows/ci.yml"
 REPOSITORY = "szTheory/glueyneo"
 PROFILES = ("linux-x86_64", "macos-arm64", "windows-x86_64")
 ARCHIVES = {
@@ -1622,6 +1623,24 @@ class DeliveryReceiptTests(unittest.TestCase):
 
 
 class DeliveryWorkflowTests(unittest.TestCase):
+    def test_linux_clang_provenance_lanes_fetch_immutable_source_history(self) -> None:
+        workflow = CI_WORKFLOW.read_text(encoding="utf-8")
+        rows = dict(re.findall(
+            r"(?m)^          - lane: ([a-z0-9-]+)\n((?:^            .*\n)+)", workflow))
+        expected_depths = {
+            "linux-clang": 0,
+            "linux-gcc": 1,
+            "macos-appleclang": 1,
+            "windows-msvc": 1,
+            "linux-clang-sanitizer": 0,
+            "linux-clang-fuzz": 1,
+        }
+        self.assertEqual(set(rows), set(expected_depths))
+        self.assertIn("fetch-depth: ${{ matrix.fetch_depth }}", workflow)
+        for lane, depth in expected_depths.items():
+            with self.subTest(lane=lane):
+                self.assertRegex(rows[lane], rf"(?m)^            fetch_depth: {depth}$")
+
     def test_delivery_current_source_is_checked_and_recorded(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
         for job in ("build-release", "verify-downloaded-release", "verify-published-release"):

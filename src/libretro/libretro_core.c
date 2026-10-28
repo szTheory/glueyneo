@@ -161,7 +161,7 @@ static void continuation_note_raw(char kind, uint64_t frame,
 }
 
 static void continuation_note_frame(uint32_t input_mask,
-                                    const uint8_t *pixels,
+                                    const uint8_t *pixel_data,
                                     size_t pixel_bytes,
                                     const int16_t *audio,
                                     size_t audio_frames) {
@@ -186,7 +186,7 @@ static void continuation_note_frame(uint32_t input_mask,
         return;
     }
     continuation_log_line(line);
-    continuation_note_raw('V', frame, pixels, pixel_bytes);
+    continuation_note_raw('V', frame, pixel_data, pixel_bytes);
     continuation_note_raw('A', frame, (const uint8_t *)audio,
                           audio_frames * 2u * sizeof(int16_t));
     if (!continuation_observation.active) return;

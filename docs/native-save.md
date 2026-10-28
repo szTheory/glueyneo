@@ -304,7 +304,7 @@ for the original guest and its emulator-only assertion ancestry.
 | `child_timeout_bound_seconds` | bound | 15 |
 | `child_output_bound_bytes` | bound | 1,048,576 |
 | `tested_host_identity` | measured | macOS 26.6.2 / Darwin 25.6.0 / APFS |
-| `save_source_identity_sha256` | measured | `004106918669b66db881d97bc86c1823556e1e02c4e535d4f3160013ddcf7976` |
+| `save_source_identity_sha256` | measured | `d39e4ad899ec67d9a3c4ca23d01da1d598141987e7dfc61f573b4ccbecc6d0a1` |
 | `guest_fixture_source_sha256` | measured | `af74e58521d294c324c9510a2fba7432cbfcf57f2489f26c7d7045db5868734d` |
 | `build_identity` | measured | AppleClang 21.0.0.21000101; Debug; SDK sanitizer NONE |
 | `supported_sync_operations` | measured | F_FULLFSYNC, checked file close, atomic rename, directory fsync, and directory close |

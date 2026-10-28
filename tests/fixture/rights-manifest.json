@@ -560,8 +560,8 @@
     "source_files": [
       {
         "path": ".github/workflows/ci.yml",
-        "bytes": 10760,
-        "sha256": "bbe96d4dfbe9f27eba1b5ca19bb6ca92a35f4088df9c5bc6c91f5b257ea31eda",
+        "bytes": 10971,
+        "sha256": "26cd20507d81a345a301247e6d7e0010be28f8099d0487f97bc7897d3994b078",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
@@ -593,7 +593,7 @@
       {
         "path": "docs/native-save.md",
         "bytes": 27665,
-        "sha256": "76c89f9c6e0d43a8e0bbf14e0d6e68107a91c0d2d1ff769813f9bbc7f6c7c456",
+        "sha256": "f616849f8f578fb62029c5a5615aafa8554c14bb99e21197cb5e72f27b67d269",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
@@ -624,8 +624,8 @@
       },
       {
         "path": "src/libretro/libretro_core.c",
-        "bytes": 41520,
-        "sha256": "5fe8825e12bf19140e0b2c7b28db98d3720da43e2903fc16e2d503613b8f9680",
+        "bytes": 41528,
+        "sha256": "4d8247fcf302cf1964b7388f3cf34c948028fc5b7e55e66731a61d376dbf0567",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."

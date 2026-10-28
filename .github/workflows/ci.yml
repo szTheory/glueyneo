@@ -62,35 +62,42 @@ jobs:
             suite: matrix
             cc: clang
             cxx: clang++
+            fetch_depth: 0
           - lane: linux-gcc
             runner: ubuntu-24.04
             suite: matrix
             cc: gcc
             cxx: g++
+            fetch_depth: 1
           - lane: macos-appleclang
             runner: macos-15
             suite: matrix
             cc: ""
             cxx: ""
+            fetch_depth: 1
           - lane: windows-msvc
             runner: windows-2025
             suite: matrix
             cc: ""
             cxx: ""
+            fetch_depth: 1
           - lane: linux-clang-sanitizer
             runner: ubuntu-24.04
             suite: sanitizer
             cc: clang
             cxx: clang++
+            fetch_depth: 0
           - lane: linux-clang-fuzz
             runner: ubuntu-24.04
             suite: fuzz
             cc: clang
             cxx: clang++
+            fetch_depth: 1
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: ${{ matrix.fetch_depth }}
           persist-credentials: false
       - name: Record matrix lane and measured identity (sanitizer lane verifies installed consumers)
         if: runner.os != 'Windows'
