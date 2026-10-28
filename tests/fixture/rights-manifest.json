@@ -258,9 +258,9 @@
     "assertion_sources": [
       {
         "path": "CMakeLists.txt",
-        "sha256": "d431da6bf30bdd9583188453f8e0713659904621398fc4ab5c4e9b6729674993",
-        "bytes": 84271,
-        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "sha256": "b3762277bc1cc999f7499e35c46b47bdfcf94379fc4fa7a6de01f037c17e6217",
+        "bytes": 84309,
+        "source_revision": "dd39cd9e98b0ca1524858e7d9f6874892b0db28c",
         "license": "MIT",
         "role": "CMake target and platform registration for the focused save witness."
       },
@@ -394,9 +394,9 @@
       },
       {
         "path": "tools/verify_sdk.py",
-        "sha256": "15c4c16033be81148f5ae5c45c7202c6aaea20fd42535d85f2cc372c76a6289a",
-        "bytes": 158340,
-        "source_revision": "8dce0ea4714cf65b3d98381586ffbf5aecb927ff",
+        "sha256": "73b4023d462bd35e046b51370a1f2dee3cccc3539d2490f58a7fcbeed18350c0",
+        "bytes": 160378,
+        "source_revision": "dd39cd9e98b0ca1524858e7d9f6874892b0db28c",
         "license": "MIT",
         "role": "SDK route selection, measurement validation and source identity harness."
       }
@@ -568,8 +568,8 @@
       },
       {
         "path": "CMakeLists.txt",
-        "bytes": 84271,
-        "sha256": "d431da6bf30bdd9583188453f8e0713659904621398fc4ab5c4e9b6729674993",
+        "bytes": 84309,
+        "sha256": "b3762277bc1cc999f7499e35c46b47bdfcf94379fc4fa7a6de01f037c17e6217",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
@@ -640,8 +640,8 @@
       },
       {
         "path": "tests/libretro/callback_harness.c",
-        "bytes": 75089,
-        "sha256": "3de10d52a032078d43c7dc0cd27c155d87241c3690d20b005763094d2c67ec3d",
+        "bytes": 75149,
+        "sha256": "4062226423fee9b0dfcf7f587de55a72047d58074ecf1e7b2d1dc4879677791c",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
@@ -712,8 +712,8 @@
       },
       {
         "path": "tools/verify_sdk.py",
-        "bytes": 158340,
-        "sha256": "15c4c16033be81148f5ae5c45c7202c6aaea20fd42535d85f2cc372c76a6289a",
+        "bytes": 160378,
+        "sha256": "73b4023d462bd35e046b51370a1f2dee3cccc3539d2490f58a7fcbeed18350c0",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; exact SDK, state-isolation, and hostile CTest inventories are bound in the evidence selector."
