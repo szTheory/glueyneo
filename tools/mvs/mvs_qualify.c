@@ -1601,9 +1601,18 @@ int gn_mvs_qualify_execute(gn_instance *instance) {
 int gn_mvs_qualify_test_active(gn_instance *instance, int phase,
                               const char *capture_directory) {
     const input_script script = {1u, 2u};
-    const active_schedule active = {
-        3u, 2u, {{0u, 0u}, {1u, GN_MVS_INPUT_P1_RIGHT}},
-        2u, {0u, 1u}, capture_directory, 0u, {{0}}};
+    active_schedule active;
+    memset(&active, 0, sizeof(active));
+    active.active_frames = 3u;
+    active.input_count = 2u;
+    active.inputs[0].frame = 0u;
+    active.inputs[0].mask = 0u;
+    active.inputs[1].frame = 1u;
+    active.inputs[1].mask = GN_MVS_INPUT_P1_RIGHT;
+    active.capture_count = 2u;
+    active.captures[0] = 0u;
+    active.captures[1] = 1u;
+    active.capture_directory = capture_directory;
     if (phase == 0)
         return gn_mvs_qualify_execute_with_script(instance, &script, &active,
                                                  NULL, 0u);
