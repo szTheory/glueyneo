@@ -108,6 +108,34 @@ def sanitizer_failure_controls() -> None:
         failed = {"lane": "tsan", "preset": "sdk-tsan", "expected_tests": 3,
                   "ctest_parallel_jobs": 1, **changes}
         wire = "\n".join("SANITIZER_LANE " + json.dumps(row) for row in (passing, failed))
+        for mode in sorted(verify_sdk.INSTALLED_SANITIZER_MODES):
+            run_id = "fixture-" + mode.lower()
+            for case_id in sorted(verify_sdk.INSTALLED_SANITIZER_CASES):
+                tested_mode = "NONE" if case_id == "ordinary_none_export" else mode
+                row = {
+                    "case_id": case_id,
+                    "mode": mode,
+                    "tested_mode": tested_mode,
+                    "run_id": run_id,
+                    "prefix_id": f"installed/{mode}/{run_id}",
+                    "linkage": "static_shared" if case_id == "ordinary_none_export" else "static",
+                    "configuration": "Debug",
+                    "outcome": "pass",
+                    "cases": 1,
+                    "assertions": 1,
+                    "duration_seconds": 0.01,
+                    "detail": "synthetic installed-sanitizer failure-control fixture",
+                    "compiler": {
+                        "c_id": "Clang", "c_version": "18.1.8", "c_path": "clang",
+                        "cxx_id": "Clang", "cxx_version": "18.1.8", "cxx_path": "clang++",
+                        "linker": "ld", "sanitizer": tested_mode,
+                    },
+                    "platform": {"system": "Darwin", "release": "fixture", "machine": "arm64"},
+                }
+                if case_id == "ordinary_none_export":
+                    row["prefixes"] = [f"installed/NONE/static/{run_id}",
+                                       f"installed/NONE/shared/{run_id}"]
+                wire += "\nSDK_INSTALLED_SANITIZER " + json.dumps(row)
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
             runtime_path = base / "sdk-tsan/sanitizer-control/runtime.log"
@@ -116,10 +144,15 @@ def sanitizer_failure_controls() -> None:
             with mock.patch.object(verify_sdk, "BUILD", base / "sdk-debug"), \
                     mock.patch.object(verify_sdk, "TREE", base / "sdk-debug/verify-sdk"), \
                     mock.patch.object(verify_sdk, "preserve_output", return_value="c" * 64), \
+                    mock.patch.object(verify_sdk.evidence, "current_identity",
+                                      return_value=identity), \
                     mock.patch.object(verify_sdk, "run", return_value=subprocess.CompletedProcess([], 1, wire)):
                 result, _ = verify_sdk.sanitizer_summary(identity)
         assert result["outcome"] == "fail"
-        assert result["cases"] == 13 and result["assertions"] == 100
+        installed_positive_cases = (len(verify_sdk.INSTALLED_SANITIZER_CASES) *
+                                    len(verify_sdk.INSTALLED_SANITIZER_MODES))
+        assert result["cases"] == 13 + installed_positive_cases
+        assert result["assertions"] == 100 + installed_positive_cases
         assert result["attempted_tests"] == 13 + attempts
         assert result["reported_failed_assertions"] == failed_assertions
         failure = result["failed"][0]
@@ -630,8 +663,12 @@ class MvsLaneTests(unittest.TestCase):
 
 
 def main() -> int:
-    result = unittest.TextTestRunner(verbosity=1).run(
-        unittest.defaultTestLoader.loadTestsFromTestCase(MvsLaneTests))
+    loader = unittest.defaultTestLoader
+    suite = unittest.TestSuite([
+        loader.loadTestsFromTestCase(CtestLabelContractTests),
+        loader.loadTestsFromTestCase(MvsLaneTests),
+    ])
+    result = unittest.TextTestRunner(verbosity=1).run(suite)
     if not result.wasSuccessful():
         return 1
     mvs_lane_controls()
