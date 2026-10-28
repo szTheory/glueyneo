@@ -273,7 +273,7 @@ def mvs_lane_controls() -> None:
             return lane
 
     lane = collect(output_for(names))
-    assert lane["ctest_cases"] == 21 and len(names) == 21 and lane["named_tests"] == names
+    assert lane["ctest_cases"] == 25 and len(names) == 25 and lane["named_tests"] == names
     assert lane["source_revision"] == identity["source_revision"]
     verify_sdk.validate_mvs_lane(lane, identity)
 
@@ -321,6 +321,30 @@ class CtestLabelContractTests(unittest.TestCase):
         self.assertEqual(verify_sdk.CTEST_CASES["hostile"],
                          {"sdk_mutation_media", "sdk_mutation_sequence",
                           "sdk_mutation_minimizer", "sdk_state_minimizer"})
+
+    def test_mvs_inventory_includes_libretro_save_and_state_controls(self) -> None:
+        self.assertTrue({"libretro_mvs_state_contract", "libretro_mvs_save_ram_contract",
+                         "libretro_mvs_state_rejection", "libretro_mvs_retention"}.issubset(
+                             verify_sdk.CTEST_CASES["mvs"]))
+
+    def test_generated_ctest_bracket_arguments_bind_one_mvs_importer(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            build = Path(directory)
+            importer = (build / "mvs_importer").as_posix()
+            names = ("mvs_import_contract", "mvs_import_mutation", "mvs_import_fuzz_corpus")
+            lines = [f'add_test([=[{name}]=] [=[python3]=] [=[test.py]=] '
+                     f'[=[--importer]=] [=[{importer}]=])' for name in names]
+            (build / "CTestTestfile.cmake").write_text("\n".join(lines), encoding="utf-8")
+            self.assertEqual(verify_sdk.configured_mvs_importer_path(build),
+                             (build / "mvs_importer").resolve())
+            mismatched = list(lines)
+            mismatched[-1] = mismatched[-1].replace(importer, (build / "other_importer").as_posix())
+            (build / "CTestTestfile.cmake").write_text("\n".join(mismatched), encoding="utf-8")
+            with self.assertRaisesRegex(verify_sdk.VerificationError, "artifact basenames"):
+                verify_sdk.configured_mvs_importer_path(build)
+            (build / "CTestTestfile.cmake").write_text("\n".join(lines[:-1]), encoding="utf-8")
+            with self.assertRaisesRegex(verify_sdk.VerificationError, "missing named registrations"):
+                verify_sdk.configured_mvs_importer_path(build)
 
 
 class MvsLaneTests(unittest.TestCase):
@@ -434,7 +458,10 @@ class MvsLaneTests(unittest.TestCase):
             "mvs_board_cartridge", "mvs_board_video",
             "mvs_import_fuzz_corpus", "mvs_failure_diagnostics",
             "mvs_import_max_horizon", "mvs_input_observations", "public_sound_fixture",
-            "sdk_sound_reference", "libretro_audio_contract", "mvs_audio_call_corpus",
+            "sdk_sound_reference", "libretro_audio_contract",
+            "libretro_mvs_state_contract", "libretro_mvs_save_ram_contract",
+            "libretro_mvs_state_rejection", "libretro_mvs_retention",
+            "mvs_audio_call_corpus",
         }
         self.assertEqual(verify_sdk.CTEST_CASES.get("mvs"), expected)
 

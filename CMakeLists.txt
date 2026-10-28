@@ -1459,7 +1459,7 @@ if(GLUEYNEO_BUILD_TESTS)
   )
   set_tests_properties(sdk_save_lifecycle PROPERTIES
     LABELS "sdk-save"
-    TIMEOUT 60
+    TIMEOUT ${SDK_SAVE_CONTROL_TEST_TIMEOUT_SECONDS}
     PROCESSORS 1
   )
   add_test(NAME sdk_save_registration

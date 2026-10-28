@@ -390,17 +390,17 @@ static int write_save_fixture(const char *path) {
     return wrote_all && close_status == 0 ? 0 : 2;
 }
 
-static bool make_mvs_without_audio_bios(const uint8_t *content,
+static bool make_mvs_without_audio_bios(const uint8_t *input_content,
                                         size_t content_size,
                                         uint8_t **out_content,
                                         size_t *out_content_size) {
     if (out_content != NULL) *out_content = NULL;
     if (out_content_size != NULL) *out_content_size = 0u;
-    if (content == NULL || out_content == NULL || out_content_size == NULL ||
-        content_size < 16u || memcmp(content, "GNMV", 4u) != 0 ||
-        sound_read_u32_be(content + 4u) != GN_MVS_MANIFEST_VERSION_ZOOM ||
-        sound_read_u32_be(content + 8u) != GN_MVS_PROFILE_MSX ||
-        sound_read_u32_be(content + 12u) != GN_MVS_V3_MAX_REGIONS)
+    if (input_content == NULL || out_content == NULL || out_content_size == NULL ||
+        content_size < 16u || memcmp(input_content, "GNMV", 4u) != 0 ||
+        sound_read_u32_be(input_content + 4u) != GN_MVS_MANIFEST_VERSION_ZOOM ||
+        sound_read_u32_be(input_content + 8u) != GN_MVS_PROFILE_MSX ||
+        sound_read_u32_be(input_content + 12u) != GN_MVS_V3_MAX_REGIONS)
         return false;
 
     size_t cursor = 16u;
@@ -412,8 +412,8 @@ static bool make_mvs_without_audio_bios(const uint8_t *content,
         if (cursor > content_size || content_size - cursor < 12u)
             return false;
         const size_t descriptor = cursor;
-        const uint32_t role = sound_read_u32_be(content + cursor);
-        const uint32_t extent = sound_read_u32_be(content + cursor + 8u);
+        const uint32_t role = sound_read_u32_be(input_content + cursor);
+        const uint32_t extent = sound_read_u32_be(input_content + cursor + 8u);
         cursor += 12u;
         if (extent == 0u || (size_t)extent > content_size - cursor)
             return false;
@@ -436,8 +436,8 @@ static bool make_mvs_without_audio_bios(const uint8_t *content,
     const size_t variant_size = content_size - removed_size;
     uint8_t *variant = (uint8_t *)malloc(variant_size);
     if (variant == NULL) return false;
-    memcpy(variant, content, audio_descriptor);
-    memcpy(variant + audio_descriptor, content + after_audio,
+    memcpy(variant, input_content, audio_descriptor);
+    memcpy(variant + audio_descriptor, input_content + after_audio,
            content_size - after_audio);
     variant[12] = 0u;
     variant[13] = 0u;

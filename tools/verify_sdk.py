@@ -177,7 +177,9 @@ CTEST_CASES = {
             "mvs_board_cartridge", "mvs_board_video",
             "mvs_import_fuzz_corpus", "mvs_failure_diagnostics", "mvs_import_max_horizon",
             "mvs_input_observations", "public_sound_fixture", "sdk_sound_reference",
-            "libretro_audio_contract", "mvs_audio_call_corpus"},
+            "libretro_audio_contract", "libretro_mvs_state_contract",
+            "libretro_mvs_save_ram_contract", "libretro_mvs_state_rejection",
+            "libretro_mvs_retention", "mvs_audio_call_corpus"},
     "examples": set(EXAMPLE_CTEST_CASES),
 }
 
@@ -1304,6 +1306,52 @@ def run_existing_ctest(label: str, lane: str) -> tuple[int, str]:
     return total, output
 
 
+def _cmake_generated_arguments(line: str) -> list[str] | None:
+    """Tokenize one generated add_test command in CMake's quoted or bracket form."""
+    match = re.match(r"^\s*add_test\((.*)\)\s*$", line)
+    if match is None:
+        return None
+    text = match.group(1)
+    tokens: list[str] = []
+    index = 0
+    while index < len(text):
+        while index < len(text) and text[index].isspace():
+            index += 1
+        if index >= len(text):
+            break
+        if text[index] == '"':
+            index += 1
+            value: list[str] = []
+            while index < len(text) and text[index] != '"':
+                if text[index] == "\\" and index + 1 < len(text):
+                    index += 1
+                value.append(text[index])
+                index += 1
+            if index >= len(text):
+                return None
+            index += 1
+            tokens.append("".join(value))
+            continue
+        if text[index] == "[":
+            opening = re.match(r"\[(=*)\[", text[index:])
+            if opening is not None:
+                closing = "]" + opening.group(1) + "]"
+                start = index + opening.end()
+                end = text.find(closing, start)
+                if end < 0:
+                    return None
+                tokens.append(text[start:end])
+                index = end + len(closing)
+                continue
+        start = index
+        while index < len(text) and not text[index].isspace():
+            index += 1
+        token = text[start:index].rstrip(")")
+        if token:
+            tokens.append(token)
+    return tokens
+
+
 def configured_mvs_importer_path(build_dir: Path) -> Path:
     """Read the importer path from the generated commands CTest will execute."""
     ctest_file = build_dir / "CTestTestfile.cmake"
@@ -1312,15 +1360,22 @@ def configured_mvs_importer_path(build_dir: Path) -> Path:
     importer_tests = {"mvs_import_contract", "mvs_import_mutation", "mvs_import_fuzz_corpus"}
     observed: dict[str, Path] = {}
     for line in ctest_file.read_text(encoding="utf-8", errors="replace").splitlines():
-        match = re.match(r'^add_test\("([^\"]+)"\s+(.*)\)$', line)
-        if match is None or match.group(1) not in importer_tests:
+        arguments = _cmake_generated_arguments(line)
+        if not arguments or arguments[0] not in importer_tests:
             continue
-        paths = re.findall(r'"--importer"\s+"([^\"]+)"', match.group(2))
+        paths = [arguments[index + 1] for index, value in enumerate(arguments[:-1])
+                 if value == "--importer"]
         if len(paths) != 1:
             raise VerificationError("configured MVS importer test has no unique importer executable")
-        observed[match.group(1)] = Path(paths[0]).resolve()
-    if set(observed) != importer_tests or len(set(observed.values())) != 1:
-        raise VerificationError("configured MVS importer tests do not share the complete exact artifact")
+        observed[arguments[0]] = Path(paths[0]).resolve()
+    missing = sorted(importer_tests - observed.keys())
+    if missing:
+        raise VerificationError(
+            f"configured MVS importer tests are missing named registrations: {missing}")
+    if len(set(observed.values())) != 1:
+        basenames = sorted({path.name for path in observed.values()})
+        raise VerificationError(
+            f"configured MVS importer tests disagree on artifact basenames: {basenames}")
     return next(iter(observed.values()))
 
 
