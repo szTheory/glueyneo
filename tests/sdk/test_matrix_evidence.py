@@ -337,11 +337,16 @@ class CtestLabelContractTests(unittest.TestCase):
             (build / "CTestTestfile.cmake").write_text("\n".join(lines), encoding="utf-8")
             self.assertEqual(verify_sdk.configured_mvs_importer_path(build),
                              (build / "mvs_importer").resolve())
-            mismatched = list(lines)
-            mismatched[-1] = mismatched[-1].replace(importer, (build / "other_importer").as_posix())
-            (build / "CTestTestfile.cmake").write_text("\n".join(mismatched), encoding="utf-8")
-            with self.assertRaisesRegex(verify_sdk.VerificationError, "artifact basenames"):
-                verify_sdk.configured_mvs_importer_path(build)
+            for alternate in ((build / "other_importer").as_posix(),
+                              (build / "nested" / "mvs_importer").as_posix()):
+                with self.subTest(alternate=Path(alternate).name):
+                    mismatched = list(lines)
+                    mismatched[-1] = mismatched[-1].replace(importer, alternate)
+                    (build / "CTestTestfile.cmake").write_text(
+                        "\n".join(mismatched), encoding="utf-8")
+                    with self.assertRaisesRegex(
+                            verify_sdk.VerificationError, "resolve to .* different artifacts"):
+                        verify_sdk.configured_mvs_importer_path(build)
             (build / "CTestTestfile.cmake").write_text("\n".join(lines[:-1]), encoding="utf-8")
             with self.assertRaisesRegex(verify_sdk.VerificationError, "missing named registrations"):
                 verify_sdk.configured_mvs_importer_path(build)

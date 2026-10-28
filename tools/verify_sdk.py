@@ -1373,9 +1373,9 @@ def configured_mvs_importer_path(build_dir: Path) -> Path:
         raise VerificationError(
             f"configured MVS importer tests are missing named registrations: {missing}")
     if len(set(observed.values())) != 1:
-        basenames = sorted({path.name for path in observed.values()})
         raise VerificationError(
-            f"configured MVS importer tests disagree on artifact basenames: {basenames}")
+            "configured MVS importer tests resolve to "
+            f"{len(set(observed.values()))} different artifacts")
     return next(iter(observed.values()))
 
 
