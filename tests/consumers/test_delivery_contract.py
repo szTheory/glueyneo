@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+from pathlib import PurePosixPath
 import re
 import subprocess
 import sys
@@ -313,6 +314,56 @@ def validate_receipt(receipt: object) -> dict[str, object]:
     require(type(correspondence.get("path_count")) is int and correspondence["path_count"] > 0
             and correspondence.get("mapping_sha256") == mapping,
             "local/public source mapping does not have a positive exact path denominator")
+    source_map = correspondence.get("mapping")
+    require(isinstance(source_map, dict)
+            and set(source_map) == {"schema_version", "local_revision", "public_revision",
+                                   "public_tree_sha", "path_count", "rows"}
+            and source_map.get("schema_version") == 1
+            and isinstance(source_map.get("local_revision"), str)
+            and SHA_RE.fullmatch(source_map["local_revision"]) is not None
+            and source_map["local_revision"] != state_head
+            and source_map.get("public_revision") == pull_request["head_commit"]
+            and source_map.get("public_tree_sha") == pull_request["tree_sha"],
+            "local/public source-byte correspondence identities are malformed or stale")
+    map_rows = source_map.get("rows")
+    require(isinstance(map_rows, list) and source_map.get("path_count") == len(map_rows)
+            and correspondence.get("path_count") == len(map_rows),
+            "source-byte correspondence path denominator differs from its rows")
+    remapped_paths = {"docs/rights-inventory.md", "tests/fixture/rights-manifest.json",
+                      "tests/workflow/test_public_content.py"}
+    mapped_paths: list[str] = []
+    for index, row in enumerate(map_rows):
+        require(isinstance(row, dict)
+                and set(row) == {"path", "local_sha256", "public_sha256", "public_blob_sha1",
+                                 "mode", "transformation"},
+                f"source-byte correspondence row {index} is malformed")
+        path = row.get("path")
+        require(isinstance(path, str) and path and "\\" not in path and "\x00" not in path
+                and not path.startswith("/") and not path.startswith("-")
+                and all(part not in {"", ".", "..", ".git"} for part in PurePosixPath(path).parts)
+                and PurePosixPath(path).as_posix() == path,
+                f"source-byte correspondence path {index} is unsafe or non-canonical")
+        mapped_paths.append(path)
+        require(isinstance(row.get("local_sha256"), str)
+                and DIGEST_RE.fullmatch(row["local_sha256"]) is not None
+                and isinstance(row.get("public_sha256"), str)
+                and DIGEST_RE.fullmatch(row["public_sha256"]) is not None
+                and isinstance(row.get("public_blob_sha1"), str)
+                and SHA_RE.fullmatch(row["public_blob_sha1"]) is not None
+                and row.get("mode") in {"100644", "100755"},
+                f"source-byte correspondence digest or mode is malformed at {path}")
+        transformation = row.get("transformation")
+        if transformation == "exact":
+            require(row["local_sha256"] == row["public_sha256"],
+                    f"source-byte correspondence differs for exact path {path}")
+        else:
+            require(transformation == "sanitized-public-history-remap" and path in remapped_paths
+                    and row["local_sha256"] != row["public_sha256"],
+                    f"source-byte correspondence has an unapproved public transformation at {path}")
+    require(mapped_paths == sorted(set(mapped_paths)),
+            "source-byte correspondence paths must be unique and sorted")
+    require(digest(source_map) == correspondence.get("mapping_sha256") == mapping,
+            "source-byte correspondence digest does not bind the path rows")
 
     gates = receipt.get("gates")
     require(isinstance(gates, dict), "current-head release gates are missing")
@@ -464,6 +515,21 @@ def validate_live_observations(receipt: object, live: object) -> dict[str, objec
             and head_commit["commit"]["tree"].get("sha") == pull_request_identity["tree_sha"]
             and merge_commit["commit"]["tree"].get("sha") == pull_request_identity["tree_sha"],
             "reviewed pull request tree differs from the exact public release source tree")
+    mapping_rows = receipt["local_publication"]["mapping"]["rows"]
+    source_tree = live.get("public_source_tree")
+    require(isinstance(source_tree, list), "public Git tree observation is missing")
+    tree_by_path: dict[str, dict[str, object]] = {}
+    for row in source_tree:
+        require(isinstance(row, dict) and isinstance(row.get("path"), str)
+                and row["path"] not in tree_by_path,
+                "public Git tree observation has malformed or duplicate paths")
+        tree_by_path[row["path"]] = row
+    for row in mapping_rows:
+        observed = tree_by_path.get(row["path"])
+        require(isinstance(observed, dict) and observed.get("type") == "blob"
+                and observed.get("sha") == row["public_blob_sha1"]
+                and observed.get("mode") == row["mode"],
+                f"public Git tree differs from source-byte correspondence at {row['path']}")
     require(live.get("current_main_sha") == commit,
             "public main no longer points at the exact delivered source commit")
     require(live.get("tag_commit") == commit,
@@ -601,6 +667,38 @@ def _github_api_json(endpoint: str) -> object:
         raise DeliveryContractError("read-only GitHub API response is malformed") from error
 
 
+def _verify_local_source_mapping(mapping: dict[str, object]) -> None:
+    """Prove each local-side digest against the recorded immutable local commit."""
+    revision = mapping["local_revision"]
+    tree_result = subprocess.run(["git", "ls-tree", "-r", "-z", str(revision)], cwd=ROOT,
+                                 capture_output=True, check=False, timeout=60)
+    require(tree_result.returncode == 0, "recorded local source revision is unavailable")
+    local_tree: dict[str, tuple[str, str]] = {}
+    for entry in tree_result.stdout.split(b"\0"):
+        if not entry:
+            continue
+        try:
+            metadata, raw_path = entry.split(b"\t", 1)
+            mode, kind, blob = metadata.decode("ascii").split(" ")
+            path = raw_path.decode("utf-8")
+        except (UnicodeDecodeError, ValueError) as error:
+            raise DeliveryContractError("recorded local Git tree is malformed") from error
+        require(kind == "blob" and path not in local_tree,
+                "recorded local source tree contains an unexpected or duplicate entry")
+        local_tree[path] = (mode, blob)
+    for row in mapping["rows"]:
+        path = row["path"]
+        observed = local_tree.get(path)
+        require(observed is not None and observed[0] == row["mode"]
+                and SHA_RE.fullmatch(observed[1]) is not None,
+                f"local Git tree differs from source-byte correspondence at {path}")
+        blob_result = subprocess.run(["git", "cat-file", "blob", observed[1]], cwd=ROOT,
+                                     capture_output=True, check=False, timeout=30)
+        require(blob_result.returncode == 0
+                and hashlib.sha256(blob_result.stdout).hexdigest() == row["local_sha256"],
+                f"local source bytes differ from source-byte correspondence at {path}")
+
+
 def _download_run_artifact(run_id: int, name: str, destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     result = subprocess.run(["gh", "run", "download", str(run_id), "--repo", REPOSITORY,
@@ -665,6 +763,7 @@ def verify_receipt_live(receipt: object) -> dict[str, object]:
     validate_receipt(receipt)
     require(isinstance(receipt, dict), "delivery receipt must be an object")
     source = receipt["source"]
+    _verify_local_source_mapping(receipt["local_publication"]["mapping"])
     release = receipt["release"]
     run_record = release["run"]
     run_id, attempt = run_record["run_id"], run_record["attempt"]
@@ -760,6 +859,11 @@ def verify_receipt_live(receipt: object) -> dict[str, object]:
     pr_number = source["pull_request"]["number"]
     pull_request = _github_api_json(f"repos/{REPOSITORY}/pulls/{pr_number}")
     pr_head_commit = _github_api_json(f"repos/{REPOSITORY}/commits/{source['pull_request']['head_commit']}")
+    pr_source_tree = _github_api_json(
+        f"repos/{REPOSITORY}/git/trees/{source['pull_request']['tree_sha']}?recursive=1")
+    require(isinstance(pr_source_tree, dict) and pr_source_tree.get("truncated") is False
+            and isinstance(pr_source_tree.get("tree"), list),
+            "public Git tree API response is missing or truncated")
     pr_merge_commit = _github_api_json(f"repos/{REPOSITORY}/commits/{commit}")
     tag_ref = _github_api_json(f"repos/{REPOSITORY}/git/ref/tags/{release['tag']}")
     tag_obj = tag_ref.get("object") if isinstance(tag_ref, dict) else None
@@ -777,6 +881,7 @@ def verify_receipt_live(receipt: object) -> dict[str, object]:
             "current_main_sha": main_obj["sha"], "tag_commit": tag_obj.get("sha"),
             "release_api": release_api, "platform_artifacts": platform_artifacts,
             "pull_request": pull_request, "pull_request_head_commit": pr_head_commit,
+            "public_source_tree": pr_source_tree["tree"],
             "pull_request_merge_commit": pr_merge_commit,
             "public_content_report_artifact": public_content,
             "staged_manifest_artifact": staged_manifest,
@@ -960,8 +1065,14 @@ def _valid_receipt(version: str = "1.2.3") -> dict[str, object]:
                     "published_at": "2026-10-28T12:00:00Z", "run": run, "manifest": manifest,
                     "manifest_sha256": digest(manifest), "anonymous_download": True},
         "local_publication": {"status": "pass", "source_commit": "a" * 40, "clean_checkout": True,
-                              "private_refs_pushed": False, "path_count": 200,
-                              "mapping_sha256": "3" * 64},
+                              "private_refs_pushed": False, "path_count": 1,
+                              "mapping_sha256": "", "mapping": {
+                                  "schema_version": 1, "local_revision": "1" * 40,
+                                  "public_revision": "c" * 40, "public_tree_sha": "d" * 40,
+                                  "path_count": 1,
+                                  "rows": [{"path": "README.md", "local_sha256": "4" * 64,
+                                            "public_sha256": "4" * 64, "public_blob_sha1": "5" * 40,
+                                            "mode": "100644", "transformation": "exact"}]}},
         "gates": {"independent_review": {"review_type": "gsd-code-review", "sha": "c" * 40,
                                           "outcome": "pass", "url": f"https://github.com/{REPOSITORY}/pull/10",
                                           "report": "reviewed_commit: " + "c" * 40 + "\nstatus: clean\n",
@@ -986,6 +1097,9 @@ def _valid_receipt(version: str = "1.2.3") -> dict[str, object]:
         "platform_evidence": [_valid_evidence(profile, distribution, version)
                               for distribution in ("staged", "published") for profile in PROFILES],
     }
+    mapping = receipt["local_publication"]["mapping"]
+    receipt["local_publication"]["mapping_sha256"] = digest(mapping)
+    receipt["source"]["local_source_mapping_sha256"] = digest(mapping)
     return _seal_receipt_reports(receipt)
 
 
@@ -1048,6 +1162,9 @@ def _valid_live_observations(receipt: dict[str, object]) -> dict[str, object]:
         "ci_aggregate_artifact": {"source_revision": source["commit"], "outcome": "pass",
                                   "lane_count": ci["lane_count"], "assertion_count": ci["assertion_count"]},
         "publisher_authority": authority,
+        "public_source_tree": [{"path": row["path"], "sha": row["public_blob_sha1"],
+                                "type": "blob", "mode": row["mode"]}
+                               for row in receipt["local_publication"]["mapping"]["rows"]],
     }
 
 
@@ -1066,6 +1183,39 @@ class DeliveryReceiptTests(unittest.TestCase):
         live["publisher_authority"]["publish-release"]["installation_id"] = "84"
         with self.assertRaisesRegex(DeliveryContractError, "authority differs"):
             validate_live_observations(receipt, live)
+
+    def test_public_source_mapping_is_byte_and_live_tree_bound(self) -> None:
+        receipt = _valid_receipt()
+        mapping = receipt["local_publication"]["mapping"]
+        mapping["rows"][0]["public_sha256"] = "6" * 64
+        receipt["local_publication"]["mapping_sha256"] = digest(mapping)
+        receipt["source"]["local_source_mapping_sha256"] = digest(mapping)
+        with self.assertRaisesRegex(DeliveryContractError, "source-byte correspondence"):
+            validate_receipt(receipt)
+        receipt = _valid_receipt()
+        live = _valid_live_observations(receipt)
+        live["public_source_tree"][0]["sha"] = "f" * 40
+        with self.assertRaisesRegex(DeliveryContractError, "public Git tree"):
+            validate_live_observations(receipt, live)
+
+    def test_local_source_mapping_reads_immutable_revision_bytes(self) -> None:
+        revision = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT,
+                                  capture_output=True, text=True, check=True).stdout.strip()
+        path = "tests/consumers/test_delivery_contract.py"
+        entry = subprocess.run(["git", "ls-tree", "-r", revision, "--", path], cwd=ROOT,
+                               capture_output=True, text=True, check=True).stdout.strip()
+        metadata, observed_path = entry.split("\t", 1)
+        mode, kind, blob = metadata.split(" ")
+        self.assertEqual((observed_path, kind), (path, "blob"))
+        content = subprocess.run(["git", "cat-file", "blob", blob], cwd=ROOT,
+                                 capture_output=True, check=True).stdout
+        mapping = {"local_revision": revision,
+                   "rows": [{"path": path, "mode": mode,
+                             "local_sha256": hashlib.sha256(content).hexdigest()}]}
+        _verify_local_source_mapping(mapping)
+        mapping["rows"][0]["local_sha256"] = "0" * 64
+        with self.assertRaisesRegex(DeliveryContractError, "local source bytes"):
+            _verify_local_source_mapping(mapping)
 
     def test_release_manifest_prerelease_version_is_supported(self) -> None:
         receipt = _valid_receipt("0.3.0-rc.1")

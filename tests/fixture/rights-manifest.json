@@ -238,29 +238,29 @@
       "path": "tests/fixture/public_save_guest.c",
       "sha256": "af74e58521d294c324c9510a2fba7432cbfcf57f2489f26c7d7045db5868734d",
       "bytes": 6353,
-      "source_revision": "70c302daa25b7db0cb2851bd86c111092f76dcb4",
+      "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
       "license": "MIT",
-      "provenance": "Original Glueyneo MVS SRAM diagnostic guest extracted byte-for-byte from the runner recipe present at its recorded origin revision."
+      "provenance": "Original Glueyneo MVS SRAM diagnostic guest; exact source bytes are retained and hash-bound in the sanitized public snapshot."
     },
     "base_source": {
       "path": "tests/fixture/public_sound_guest.c",
       "sha256": "bcaa35ea32df09a5b3c2969d309f822472cef8ed86118fa2e1917f7a1b6113ef",
       "bytes": 10923,
-      "source_revision": "a0dd7db5ee217da35f167ba5df2ef24b1eaa0a08",
+      "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
       "license": "MIT",
       "role": "Original synthetic GNMV regions; only its BIOS-role bytes are replaced in memory by the save diagnostic guest."
     },
     "recipe_origin": {
       "path": "tests/sdk/save_process.c",
-      "source_revision": "988572fd4f4fd2b191d173cd4f9ba477b1e3366e",
-      "description": "Immutable pre-extraction revision containing the original in-runner guest recipe and media construction."
+      "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+      "description": "Sanitized public source snapshot retaining the runner implementation and media-construction source; the excluded private-history identity is not reproduced."
     },
     "assertion_sources": [
       {
         "path": "CMakeLists.txt",
         "sha256": "d431da6bf30bdd9583188453f8e0713659904621398fc4ab5c4e9b6729674993",
         "bytes": 84271,
-        "source_revision": "197810eb4c4b971020f593685795ebb343b8f2c6",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "license": "MIT",
         "role": "CMake target and platform registration for the focused save witness."
       },
@@ -268,7 +268,7 @@
         "path": "CMakePresets.json",
         "sha256": "ed2ecd6734c4cf1d8e22507dfb46ed4ebb5cfe51eed5629377d5005ecfc2f78a",
         "bytes": 3682,
-        "source_revision": "1aee4c0369f1efb8f7e244eadb8522124c063909",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "license": "MIT",
         "role": "Pinned SDK build configuration used by save verification."
       },
@@ -276,7 +276,7 @@
         "path": "include/glueyneo/glueyneo.h",
         "sha256": "67a0e3ade482a7d39dd210b3c04ff2c51b3393d90e26d464fe0250518d3970d1",
         "bytes": 24172,
-        "source_revision": "b9bc13641bd232888188030dcc64b20e80f378ad",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "license": "MIT",
         "role": "Public save API declarations and ABI record identities."
       },
@@ -284,7 +284,7 @@
         "path": "src/instance.c",
         "sha256": "dc859296c90b6a6167c4b88e326355b990ce84fea7034f9d9d27c826bf11161f",
         "bytes": 311481,
-        "source_revision": "08b8842fa66b2a564d3c7bcca1cc29a03c7f4da7",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "license": "MIT",
         "role": "Owned save implementation and lifecycle semantics."
       },
@@ -294,13 +294,13 @@
         "path": "src/sdk_private.h",
         "sha256": "a827a090eac61d9c0818dcf8f8752a64c8bc586ff251b770c787108315446ee9",
         "bytes": 27582,
-        "source_revision": "986ffaa35c756170883bc8087bdbcfbef00ebc3a"
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44"
       },
       {
         "path": "tests/fixture/ORACLE.md",
         "sha256": "0ba1e71d438e794d3647a013ba7ff01ef6bce1351e4734dd2f5bd41741e8f871",
         "bytes": 21659,
-        "source_revision": "dea230a6d84910a7f96e5a88c35bcc949a5d85c4",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "license": "MIT",
         "role": "Oracle ancestry and emulator-only save guest observation contract."
       },
@@ -310,7 +310,7 @@
         "path": "tests/sdk/save_controls.py",
         "sha256": "06552b5e744986a2a81ca5c0293bd7822e0221a8f570cdf8ae88d2101bf0a37f",
         "bytes": 3905,
-        "source_revision": "18a57d7e7a7eb1794c9ab80cb4fd7defb8111010"
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44"
       },
       {
         "license": "MIT",
@@ -318,7 +318,7 @@
         "path": "tests/sdk/save_fixture.c",
         "sha256": "613a419b05983a3f5262c2d3f7092a0ab95906446372c59c3b1e85c045abe868",
         "bytes": 8436,
-        "source_revision": "971028a1f8550b486489a696ca0a13cecbecfb5e"
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44"
       },
       {
         "license": "MIT",
@@ -326,13 +326,13 @@
         "path": "tests/sdk/save_fixture.h",
         "sha256": "42cf67e19f5b1a1e44e20a0cfe58d35db1aeeafc29fcef179a4bce66b843d60e",
         "bytes": 2165,
-        "source_revision": "971028a1f8550b486489a696ca0a13cecbecfb5e"
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44"
       },
       {
         "path": "tests/sdk/save_host.c",
         "sha256": "5cf5a701b05b60449fa0805252e40963e0aa5ed695763d3f5c00ff67de52c281",
         "bytes": 22222,
-        "source_revision": "a73a9f543d8743896a5e4b7d2b28d0189f3e94c8",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "license": "MIT",
         "role": "Darwin synchronous host writer and transition barriers."
       },
@@ -340,7 +340,7 @@
         "path": "tests/sdk/save_host.h",
         "sha256": "28c2daa9309ac7fbdaa93206a72c2d765658749e47d384c5fb215461931accf0",
         "bytes": 3720,
-        "source_revision": "a73a9f543d8743896a5e4b7d2b28d0189f3e94c8",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "license": "MIT",
         "role": "Private host transaction state and declarations."
       },
@@ -348,7 +348,7 @@
         "path": "tests/sdk/save_process.c",
         "sha256": "ec7bfb0da5d9644ad4cef07be3a0277fb3d58c07f0b9839088644226f2fb73cb",
         "bytes": 58509,
-        "source_revision": "a73a9f543d8743896a5e4b7d2b28d0189f3e94c8",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "license": "MIT",
         "role": "Bounded host process, interruption, failed-commit barriers and retry assertions."
       },
@@ -356,7 +356,7 @@
         "path": "tests/sdk/test_save.c",
         "sha256": "5053900983373801223b2e24447d69aa949a096afe99e01a796f73faee508cbb",
         "bytes": 56339,
-        "source_revision": "89ce737ffac56fcddc0511100060bf158cc0d421",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "license": "MIT",
         "role": "Native save API, receipt and guest assertions."
       },
@@ -364,7 +364,7 @@
         "path": "tests/sdk/test_save_lifecycle.c",
         "sha256": "8cc13629c37a44ff7917acd4a9ef9420c4252c0ad0f111e02eadde38b4808bde",
         "bytes": 53594,
-        "source_revision": "46e6242b6915187f287d01d7e4c43e0cf6606fe0",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "license": "MIT",
         "role": "Native save lifecycle and ownership assertions."
       },
@@ -372,7 +372,7 @@
         "path": "tests/sdk/test_save_process.py",
         "sha256": "caa7a94322275aee1335dda6ddbaac65903b7749135d85a50eff9cbcea493023",
         "bytes": 157602,
-        "source_revision": "1eb0f3687199651d3da63e1ac675ea3e0a0ca6f3",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "license": "MIT",
         "role": "Process, fault, interruption and direct documentation assertion harness."
       },
@@ -380,7 +380,7 @@
         "path": "tests/sdk/test_save_registration.py",
         "sha256": "e3fe6bcd293cf2fa110407487866b63b08c72a83276b328408a1f869d3662a75",
         "bytes": 34269,
-        "source_revision": "1eb0f3687199651d3da63e1ac675ea3e0a0ca6f3",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "license": "MIT",
         "role": "Case denominator, manifest, portable docs and failed-control harness."
       },
@@ -396,7 +396,7 @@
         "path": "tools/verify_sdk.py",
         "sha256": "fd54e5b50bd297618c15a56c8bb9408eaa31aeaea576c2085a92417f2af07e04",
         "bytes": 158256,
-        "source_revision": "9c0fb45f78ec1164219dcf885ec887d8c3c38be2",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "license": "MIT",
         "role": "SDK route selection, measurement validation and source identity harness."
       }
@@ -531,15 +531,15 @@
     "pinned_frontend": {
       "product": "RetroArch",
       "version": "1.22.2",
-      "source_revision": "69a4f0ea1e8aaf442ae4858f2e7f2b31a1776576",
+      "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
       "executable_sha256": "ed90b54434a2899de0ddbfed59f335255fb462c8691bd970a1a761ebb5656d65",
       "host_scope": "local macOS arm64",
       "status": "measured"
     },
     "public_fixture_ancestry": {
       "save_fixture_manifest_path": "mvs_save_fixture",
-      "save_guest_source_revision": "70c302daa25b7db0cb2851bd86c111092f76dcb4",
-      "recipe_origin_revision": "988572fd4f4fd2b191d173cd4f9ba477b1e3366e",
+      "save_guest_source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+      "recipe_origin_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
       "sound_fixture_source_path": "tests/fixture/public_sound_guest.c",
       "sound_fixture_source_sha256": "bcaa35ea32df09a5b3c2969d309f822472cef8ed86118fa2e1917f7a1b6113ef",
       "hardware_truth_established": false
@@ -726,7 +726,7 @@
       "path": "tests/fixture/public_persistence_guest.c",
       "sha256": "d937eec43c4ca9d205b1993e768c92ddbbc16b5cdec21abda514750fbbe944c0",
       "bytes": 6709,
-      "source_revision": "ff2a136bc9226580bd4476272ca902555de8ac1d",
+      "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
       "license": "MIT",
       "provenance": "Original source-defined Glueyneo persistence guest assembled from the source-bound public fixture; no imported guest bytes."
     },
@@ -734,13 +734,13 @@
       "path": "tests/fixture/public_sound_guest.c",
       "sha256": "bcaa35ea32df09a5b3c2969d309f822472cef8ed86118fa2e1917f7a1b6113ef",
       "bytes": 10923,
-      "source_revision": "a0dd7db5ee217da35f167ba5df2ef24b1eaa0a08",
+      "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
       "license": "MIT",
       "provenance": "Original source-bound synthetic fixture recipe used to construct public persistence input; no commercial media or production firmware."
     },
     "recipe_origin": {
       "path": "tests/fixture/public_persistence_guest.c",
-      "source_revision": "ff2a136bc9226580bd4476272ca902555de8ac1d",
+      "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
       "description": "Original standalone first-party recipe added for the public persistence consumer; no copied guest payload."
     },
     "rights": {
@@ -767,7 +767,7 @@
     "origin_sources": [
       {
         "path": "tests/sdk/save_host.c",
-        "source_revision": "a73a9f543d8743896a5e4b7d2b28d0189f3e94c8",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "sha256": "5cf5a701b05b60449fa0805252e40963e0aa5ed695763d3f5c00ff67de52c281",
         "bytes": 22222,
         "license": "MIT",
@@ -775,7 +775,7 @@
       },
       {
         "path": "tests/sdk/save_host.h",
-        "source_revision": "a73a9f543d8743896a5e4b7d2b28d0189f3e94c8",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "sha256": "28c2daa9309ac7fbdaa93206a72c2d765658749e47d384c5fb215461931accf0",
         "bytes": 3720,
         "license": "MIT",
@@ -787,7 +787,7 @@
         "path": "examples/persistence_host.c",
         "sha256": "e6485a8cd6f07806b5fa3f9847805fc254952bab4601ff503c1416fda38e68d8",
         "bytes": 29554,
-        "source_revision": "2f268cb6a3258e646c98f81a56a49b3f0f8201c0",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "license": "MIT",
         "notice": "LICENSE"
       },
@@ -795,7 +795,7 @@
         "path": "examples/persistence_host.h",
         "sha256": "1148ff863ca4d57ec23693c0c4046633e2b3d5fbdfef26f3f27312242c944dc5",
         "bytes": 4955,
-        "source_revision": "2f268cb6a3258e646c98f81a56a49b3f0f8201c0",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
         "license": "MIT",
         "notice": "LICENSE"
       }

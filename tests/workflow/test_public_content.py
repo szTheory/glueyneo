@@ -450,14 +450,18 @@ class PublicContentTests(unittest.TestCase):
         self.assertEqual(helper["license"], "MIT")
         self.assertEqual(helper["owner"], "Glueyneo Maintainers")
         self.assertIn("review drift", helper["drift_check"].lower())
-        origin_revision = "a73a9f543d8743896a5e4b7d2b28d0189f3e94c8"
-        for row in helper["origin_sources"]:
-            self.assertEqual(row["source_revision"], origin_revision)
+        origins = helper["origin_sources"]
+        self.assertTrue(origins)
+        origin_revision = origins[0]["source_revision"]
+        self.assertRegex(origin_revision, r"^[0-9a-f]{40}$")
+        self.assertTrue(all(row["source_revision"] == origin_revision for row in origins))
+        for row in origins:
             recorded = subprocess.check_output(
-                ["git", "show", f"{origin_revision}:{row['path']}"], cwd=ROOT)
+                ["git", "show", f"{row['source_revision']}:{row['path']}"], cwd=ROOT)
             self.assertEqual(len(recorded), row["bytes"])
             self.assertEqual(hashlib.sha256(recorded).hexdigest(), row["sha256"])
         for row in helper["sample_sources"]:
+            self.assertRegex(row["source_revision"], r"^[0-9a-f]{40}$")
             current = (ROOT / row["path"]).read_bytes()
             recorded = subprocess.check_output(
                 ["git", "show", f"{row['source_revision']}:{row['path']}"], cwd=ROOT)
