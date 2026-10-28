@@ -672,8 +672,8 @@
       },
       {
         "path": "tests/libretro/state_safety.c",
-        "bytes": 76618,
-        "sha256": "6d6f0e1f6270035dbfe8303b9168bd4f9645bd3dae72472b8592d9b9a30071b6",
+        "bytes": 78972,
+        "sha256": "3ff11c8c11660fcbb4bde61586e422be30c4646a4ea87911d5c9bef6c86d6fd8",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
