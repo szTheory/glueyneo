@@ -2492,10 +2492,10 @@ static void check_mvs_input_observations(const uint8_t *bundle, size_t size) {
     for (size_t frame = 0u; frame < 7u; ++frame) {
         adapter_video_calls = 0u;
         adapter_p1_joypad_state = (uint16_t)(
-            (UINT16_C(1) << RETRO_DEVICE_ID_JOYPAD_SELECT) |
-            (UINT16_C(1) << RETRO_DEVICE_ID_JOYPAD_START) |
-            (masks[frame] == 16u ? 0u : (UINT16_C(1) << masks[frame])) |
-            (frame == 4u ? (UINT16_C(1) << RETRO_DEVICE_ID_JOYPAD_B) : 0u));
+            (UINT32_C(1) << RETRO_DEVICE_ID_JOYPAD_SELECT) |
+            (UINT32_C(1) << RETRO_DEVICE_ID_JOYPAD_START) |
+            (masks[frame] == 16u ? UINT32_C(0) : (UINT32_C(1) << masks[frame])) |
+            (frame == 4u ? (UINT32_C(1) << RETRO_DEVICE_ID_JOYPAD_B) : UINT32_C(0)));
         retro_run();
         assert(adapter_video_calls == 1u);
         assert(adapter_video_pixels[0][1] == expected[frame]);

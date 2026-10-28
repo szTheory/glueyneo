@@ -164,7 +164,7 @@ CTEST_CASES = {
     "contract": {"sdk_diagnostic", "sdk_lifecycle", "sdk_media", "sdk_faults", "sdk_run"},
     "diagnostic": {"sdk_diagnostic"},
     "run": {"sdk_run"},
-    "controls": {"sdk_controls"},
+    "controls": {"sdk_controls", "sdk_state_controls"},
     "isolation": {"sdk_isolation", "sdk_cold"},
     "hostile": {"sdk_mutation_media", "sdk_mutation_sequence", "sdk_mutation_minimizer"},
     "provenance": {"sdk_fixture_write", "sdk_provenance"},

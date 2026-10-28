@@ -275,6 +275,12 @@ def mvs_lane_controls() -> None:
         raise AssertionError("MVS lane accepted a stale relevant-source digest")
 
 
+class CtestLabelContractTests(unittest.TestCase):
+    def test_sdk_controls_label_includes_state_negative_controls(self) -> None:
+        self.assertEqual(verify_sdk.CTEST_CASES["controls"],
+                         {"sdk_controls", "sdk_state_controls"})
+
+
 class MvsLaneTests(unittest.TestCase):
     def test_build_matrix_report_rejects_nonobject_rows_before_sorting(self) -> None:
         result = subprocess.run(

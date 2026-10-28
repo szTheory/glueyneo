@@ -1,4 +1,8 @@
 /* SPDX-License-Identifier: MIT */
+#if !defined(_WIN32) && !defined(_POSIX_C_SOURCE)
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include "glueyneo/glueyneo.h"
 #include "../../src/sdk_private.h"
 

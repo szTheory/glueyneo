@@ -790,7 +790,7 @@ static uint8_t gn_mvs_status_a_value(const gn_image *image) {
         ((unsigned)(image->mvs_calendar.data_out & 1u) <<
          GN_MVS_REG_STATUS_A_DATA_OUT_SHIFT));
     if ((image->mvs_inputs & GN_MVS_INPUT_COIN1) != 0u)
-        status = (uint8_t)(status & (uint8_t)~GN_MVS_INPUT_COIN1);
+        status = (uint8_t)(status & (UINT8_MAX ^ GN_MVS_INPUT_COIN1));
     return status;
 }
 
@@ -3625,7 +3625,7 @@ static int gn_state_decode_board(const uint8_t *bytes,
         board->animation_disabled > 1u ||
         board->display_interrupt_control > 0xf0u ||
         (board->display_interrupt_control & 0x0fu) != 0u ||
-        (board->irq_pending_mask & (uint8_t)~7u) != 0u ||
+        (board->irq_pending_mask & UINT8_C(0xf8)) != 0u ||
         board->frame_cycle >= GN_MVS_FRAME_CYCLES ||
         board->frame_cycle_carry >= GN_MVS_FRAME_BUDGET_CYCLES ||
         board->use_cart_vectors > 1u || board->cart_audio_selected > 1u ||
