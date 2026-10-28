@@ -114,6 +114,14 @@ SOURCE_FINDING_DISPOSITIONS = {
 # redaction tests contain synthetic identity/path canaries. A changed blob is
 # scanned.
 HISTORY_FINDING_DISPOSITIONS = {
+    "a66573bcf978e1bc8db8ff53dd121f38c894e31e": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact historical bytes are the offline documentation test's localhost port-9 proxy; the path and blob identity are bound",
+    },
+    "f5356b7f12b6876d2bbddca2fea22667a7257f84": {
+        "path": "tests/libretro/retroarch_smoke.py", "rules": {"machine-identifier"},
+        "reason": "exact historical bytes use a zero-initialized Carbon ProcessSerialNumber local, not a host identifier value",
+    },
     "007bd7fabaee7b0c171cb38a2581abeacf0f0c15": {
         "path": "third_party/musashi/m68kmake.c", "rules": {"private-identity"},
         "reason": "immutable upstream public copyright contact; preserved source and license history",
