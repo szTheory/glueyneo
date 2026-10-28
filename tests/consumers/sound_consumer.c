@@ -11,13 +11,23 @@ enum { WIDTH = 320, HEIGHT = 224, REGIONS = 8, HEADER = 16, DESCRIPTOR = 12 };
 #define PIXEL_BYTES ((size_t)WIDTH * HEIGHT * sizeof(uint32_t))
 #define CONTENT_LIMIT (GN_MVS_MAX_MEDIA_BYTES + HEADER + REGIONS * DESCRIPTOR)
 
+static FILE *open_file(const char *path, const char *mode) {
+#if defined(_MSC_VER)
+    FILE *file = NULL;
+    if (fopen_s(&file, path, mode) != 0) return NULL;
+    return file;
+#else
+    return fopen(path, mode);
+#endif
+}
+
 static uint32_t be32(const uint8_t *p) {
     return (uint32_t)p[0] << 24 | (uint32_t)p[1] << 16 |
            (uint32_t)p[2] << 8 | p[3];
 }
 
 static uint8_t *read_bundle(const char *path, size_t *size) {
-    FILE *f = fopen(path, "rb");
+    FILE *f = open_file(path, "rb");
     if (!f) return NULL;
     if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
     const long n = ftell(f);
@@ -108,7 +118,7 @@ int main(int argc, char **argv) {
         gn_mvs_audio_capacity_v1(instance, &capacity) != GN_STATUS_OK ||
         capacity != GN_MVS_AUDIO_CAPACITY_FRAMES_V1) goto done;
     audio = malloc(capacity * 2 * sizeof(*audio));
-    if (!audio || !(trace = fopen(argv[3], "wb"))) goto done;
+    if (!audio || !(trace = open_file(argv[3], "wb"))) goto done;
     int16_t neutral[GN_MVS_AUDIO_CAPACITY_FRAMES_V1 * 2];
     int16_t fired[GN_MVS_AUDIO_CAPACITY_FRAMES_V1 * 2];
     size_t neutral_frames = 0, fire_frames = 0;
