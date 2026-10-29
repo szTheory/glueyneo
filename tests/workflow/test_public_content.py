@@ -457,8 +457,13 @@ class PublicContentTests(unittest.TestCase):
             ["git", "rev-parse", "--is-shallow-repository"], cwd=ROOT, text=True).strip() == "true"
         if shallow:
             self.assertTrue(any("shallow" in note for note in identity_notes), identity_notes)
-        else:
-            self.assertFalse(any("historical commit unavailable" in note for note in identity_notes), identity_notes)
+        identities, _references, malformed = playable._fixture_source_records(manifest)
+        self.assertEqual(malformed, [])
+        for pointer, record in identities:
+            relation = playable._revision_relation(ROOT, record["source_revision"], "HEAD")
+            if relation != "ancestor":
+                self.assertTrue(any(pointer in note for note in identity_notes),
+                                f"non-ancestor source row was not reported: {pointer}; notes={identity_notes}")
         fixture = manifest["public_persistence_fixture"]
         self.assertEqual(fixture["rights"], {
             "status": "affirmative", "license": "MIT", "notice": "LICENSE",
