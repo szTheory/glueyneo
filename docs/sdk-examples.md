@@ -33,6 +33,7 @@ cmake --build build/sdk-static --config Release --parallel 2
 cmake --install build/sdk-static --config Release
 cmake -S tests/consumers -B build/examples-static \
   -DGlueyneo_DIR="$PWD/build/install-static/lib/cmake/Glueyneo" \
+  -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
   -DGLUEYNEO_CONSUMER_C_SOURCE="$PWD/examples/diagnostic.c"
 cmake --build build/examples-static --config Release --parallel 2
@@ -84,6 +85,7 @@ cmake --build build/sdk-shared --config Release --parallel 2
 cmake --install build/sdk-shared --config Release
 cmake -S tests/consumers -B build/examples-shared \
   -DGlueyneo_DIR="$PWD/build/install-shared/lib/cmake/Glueyneo" \
+  -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
   -DGLUEYNEO_CONSUMER_C_SOURCE="$PWD/examples/diagnostic.c"
 cmake --build build/examples-shared --config Release --parallel 2

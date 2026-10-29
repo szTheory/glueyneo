@@ -388,22 +388,37 @@ def validate_evidence_matrices(documents: dict[str, str]) -> int:
     return sum(len(rows) + 1 for rows in loaded.values()) + len(compatibility_rows)
 
 
-def _validate_compile_metadata(source: Path, variant: str, metadata: list[str]) -> None:
+GUIDE_CONSUMER_TARGETS = (
+    "glueyneo-installed-sound",
+    "glueyneo-installed-continuation",
+    "glueyneo-installed-persistence",
+)
+
+
+def _validate_compile_metadata(
+    source: Path, variant: str, metadata: list[str], include_paths: list[str] | None = None,
+) -> None:
     if (not isinstance(metadata, list) or not metadata or
             any(type(value) is not str for value in metadata)):
         raise CheckError("guide consumer build did not expose compile policy metadata")
     rendered = "\n".join(metadata)
     normalized = rendered.replace("\\", "/").casefold()
     private_checkout = str(ROOT).replace("\\", "/").casefold()
-    sdk_cmakefiles = str(source / f"build/sdk-{variant}" / "CMakeFiles")
-    if private_checkout in normalized or sdk_cmakefiles.replace("\\", "/").casefold() in normalized:
+    sdk_build = str(source / f"build/sdk-{variant}")
+    if private_checkout in normalized or sdk_build.replace("\\", "/").casefold() in normalized:
         raise CheckError("guide consumer compile metadata refers to a source checkout or producer build")
-    install_prefix = str(source / f"build/install-{variant}").replace("\\", "/").casefold()
-    if install_prefix not in normalized:
-        raise CheckError("guide consumer compile metadata does not use the installed package")
+    if include_paths is not None:
+        if (not isinstance(include_paths, list) or not include_paths or
+                any(type(value) is not str for value in include_paths)):
+            raise CheckError("guide consumer target did not expose SDK include directories")
+        install_include = str(source / f"build/install-{variant}" / "include")
+        expected = install_include.replace("\\", "/").casefold()
+        actual = {path.replace("\\", "/").casefold() for path in include_paths}
+        if expected not in actual:
+            raise CheckError("guide consumer target does not include the installed SDK headers")
 
 
-def _file_api_compile_metadata(source: Path, variant: str) -> list[str]:
+def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, list[str]]:
     reply_dir = source / f"build/examples-{variant}" / ".cmake" / "api" / "v1" / "reply"
     indexes = sorted(reply_dir.glob("index-*.json"))
     if not indexes:
@@ -414,29 +429,60 @@ def _file_api_compile_metadata(source: Path, variant: str) -> list[str]:
             entry for entry in index["reply"].values() if entry.get("kind") == "codemodel"
         )
         codemodel = json.loads((reply_dir / codemodel_entry["jsonFile"]).read_text(encoding="utf-8"))
-        metadata: list[str] = []
-        group_count = 0
-        for configuration in codemodel["configurations"]:
-            for target_ref in configuration["targets"]:
-                target = json.loads((reply_dir / target_ref["jsonFile"]).read_text(encoding="utf-8"))
-                for group in target.get("compileGroups", []):
-                    group_count += 1
-                    for fragment in group.get("compileCommandFragments", []):
-                        metadata.append(fragment["fragment"])
-                    metadata.extend(include["path"] for include in group.get("includes", []))
-                    metadata.extend(define["define"] for define in group.get("defines", []))
+        configurations = codemodel["configurations"]
+        release_configs = [config for config in configurations if config.get("name") == "Release"]
+        if len(release_configs) != 1:
+            raise CheckError("guide consumer CMake File API must contain exactly one Release configuration")
+        target_metadata: dict[str, list[str]] = {}
+        for target_ref in release_configs[0]["targets"]:
+            name = target_ref.get("name")
+            if name not in GUIDE_CONSUMER_TARGETS:
+                continue
+            if name in target_metadata:
+                raise CheckError("guide consumer CMake File API contains a duplicate Release target")
+            target = json.loads((reply_dir / target_ref["jsonFile"]).read_text(encoding="utf-8"))
+            if target.get("name") != name:
+                raise CheckError("guide consumer CMake File API target identity is inconsistent")
+            groups = target.get("compileGroups")
+            if not isinstance(groups, list) or not groups:
+                raise CheckError("guide consumer Release target has no compile groups")
+            metadata: list[str] = []
+            include_paths: list[str] = []
+            for group in groups:
+                if group.get("language") != "C":
+                    raise CheckError("guide consumer Release target must compile as C")
+                language_standard = group.get("languageStandard")
+                if not isinstance(language_standard, dict) or language_standard.get("standard") != "17":
+                    raise CheckError("guide consumer Release target must use C17 compile settings")
+                fragments = group.get("compileCommandFragments", [])
+                if not isinstance(fragments, list):
+                    raise CheckError("guide consumer Release compile flags are malformed")
+                for fragment in fragments:
+                    metadata.append(fragment["fragment"])
+                includes = group.get("includes", [])
+                if not isinstance(includes, list):
+                    raise CheckError("guide consumer Release include directories are malformed")
+                for include in includes:
+                    include_paths.append(include["path"])
+                    metadata.append(include["path"])
+                defines = group.get("defines", [])
+                if not isinstance(defines, list):
+                    raise CheckError("guide consumer Release compile definitions are malformed")
+                for define in defines:
+                    metadata.append(define["define"])
+            _validate_compile_metadata(source, variant, metadata, include_paths)
+            target_metadata[name] = metadata
     except (AttributeError, KeyError, TypeError, ValueError, OSError, StopIteration) as error:
         raise CheckError("guide consumer CMake File API compile metadata is malformed") from error
-    if group_count == 0:
-        raise CheckError("guide consumer CMake File API has no compiled targets")
-    return metadata
+    if set(target_metadata) != set(GUIDE_CONSUMER_TARGETS):
+        raise CheckError("guide consumer Release codemodel omits an executed example target")
+    return target_metadata
 
 
 def _check_guide_compile_metadata(source: Path, variant: str) -> None:
     build_dir = source / f"build/examples-{variant}"
     compile_db = build_dir / "compile_commands.json"
-    metadata = _file_api_compile_metadata(source, variant)
-    _validate_compile_metadata(source, variant, metadata)
+    _file_api_release_compile_metadata(source, variant)
     if compile_db.is_file():
         try:
             rows = json.loads(compile_db.read_text(encoding="utf-8"))
@@ -759,8 +805,13 @@ class ExampleGuideContractTests(unittest.TestCase):
         )
         for variant in ("static", "shared"):
             commands = guide_commands(variant)
+            configure_argv = shlex.split(next(
+                command for command in commands
+                if command.startswith("cmake -S tests/consumers -B build/examples-")
+            ))
             build_argv = shlex.split(next(command for command in commands if command.startswith("cmake --build")))
             install_argv = shlex.split(next(command for command in commands if command.startswith("cmake --install")))
+            self.assertIn("-DCMAKE_BUILD_TYPE=Release", configure_argv)
             self.assertIn("--config", build_argv)
             self.assertEqual(build_argv[build_argv.index("--config") + 1], "Release")
             self.assertIn("--config", install_argv)
@@ -769,14 +820,92 @@ class ExampleGuideContractTests(unittest.TestCase):
     def test_compile_metadata_requires_installed_include_and_rejects_build_paths(self) -> None:
         source = Path("/tmp/relocated-guide")
         installed_include = str(source / "build/install-static/include")
-        _validate_compile_metadata(source, "static", [installed_include, "/TC"])
+        _validate_compile_metadata(source, "static", ["/std:c17"], [installed_include])
         for invalid in (
-            [installed_include, str(ROOT / "src" / "instance.c")],
-            [installed_include, str(source / "build/sdk-static/CMakeFiles/Glueyneo.dir")],
-            ["/tmp/other/include", "/TC"],
+            ([str(ROOT / "src" / "instance.c")], [installed_include]),
+            ([str(source / "build/sdk-static/CMakeFiles/Glueyneo.dir")], [installed_include]),
+            (["/std:c17"], ["/tmp/other/include"]),
         ):
             with self.subTest(metadata=invalid), self.assertRaises(CheckError):
-                _validate_compile_metadata(source, "static", invalid)
+                _validate_compile_metadata(source, "static", *invalid)
+
+    def test_release_compile_metadata_cannot_be_masked_by_debug_or_other_target(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="guide-file-api-") as directory:
+            source = Path(directory)
+            reply = source / "build/examples-static/.cmake/api/v1/reply"
+            reply.mkdir(parents=True)
+            installed_include = str(source / "build/install-static/include")
+            required_targets = (
+                "glueyneo-installed-sound",
+                "glueyneo-installed-continuation",
+                "glueyneo-installed-persistence",
+            )
+
+            def write_target(name: str, include: str, standard: str = "17") -> dict[str, str]:
+                json_file = f"target-{name}.json"
+                (reply / json_file).write_text(json.dumps({
+                    "name": name,
+                    "compileGroups": [{
+                        "language": "C",
+                        "languageStandard": {"standard": standard},
+                        "compileCommandFragments": [{"fragment": "/std:c17"}],
+                        "includes": [{"path": include}],
+                    }],
+                }), encoding="utf-8")
+                return {"name": name, "jsonFile": json_file}
+
+            debug_refs = [write_target("debug-only-helper", installed_include)]
+            release_refs = [write_target(name, installed_include) for name in required_targets]
+
+            def write_codemodel(configurations: list[dict[str, object]]) -> None:
+                (reply / "codemodel-v2.json").write_text(json.dumps({
+                    "configurations": configurations,
+                }), encoding="utf-8")
+                (reply / "index-test.json").write_text(json.dumps({
+                    "reply": {"codemodel": {
+                        "kind": "codemodel", "jsonFile": "codemodel-v2.json",
+                    }},
+                }), encoding="utf-8")
+
+            write_codemodel([
+                {"name": "Debug", "targets": debug_refs},
+                {"name": "Release", "targets": release_refs},
+            ])
+            _check_guide_compile_metadata(source, "static")
+
+            write_target(required_targets[0], str(source / "build/sdk-static/include"))
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            for name in required_targets:
+                write_target(name, str(source / "build/sdk-static/include"))
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            for name in required_targets:
+                write_target(name, installed_include)
+            write_target(required_targets[2], installed_include, standard="20")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            release_refs.pop()
+            write_codemodel([
+                {"name": "Debug", "targets": debug_refs},
+                {"name": "Release", "targets": release_refs},
+            ])
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_codemodel([{"name": "Debug", "targets": debug_refs}])
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_codemodel([
+                {"name": "Debug", "targets": debug_refs},
+                {"name": "Release", "targets": [*release_refs, release_refs[0]]},
+            ])
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
 
     def _load_verify_sdk(self):
         return _load_verify_sdk_module()
