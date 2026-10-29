@@ -1645,8 +1645,11 @@ class ImporterTests(unittest.TestCase):
                     if os.name == "nt" and command[0] == str(launcher):
                         # Use a real child process so Python's Windows text
                         # decoder exercises the same invalid-output exception.
+                        # Pin UTF-8 here so the regression is independent of
+                        # the runner's active Windows code page.
                         command = [sys.executable, "-c",
                                    f"import sys; sys.{stream}.buffer.write(bytes([129]))"]
+                        kwargs["encoding"] = "utf-8"
                     return subprocess.run(command, **kwargs)
 
                 def run_selected(input_root: Path, importer_argument=None, **options: object):
