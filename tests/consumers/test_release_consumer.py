@@ -820,7 +820,23 @@ class ReleaseConsumerTests(unittest.TestCase):
             except public_content.ContentError as error:
                 content_errors.append(f"{label}: {error}")
             else:
-                self.assertEqual(report["findings"], [], label)
+                if report["findings"]:
+                    license_identities = []
+                    for variant in ("static", "shared"):
+                        license_path = (sdk_root / variant / "share/licenses/Glueyneo/zlib/LICENSE")
+                        license_data = license_path.read_bytes()
+                        license_identities.append({
+                            "path": f"{variant}/share/licenses/Glueyneo/zlib/LICENSE",
+                            "bytes": len(license_data),
+                            "sha256": hashlib.sha256(license_data).hexdigest(),
+                        })
+                    source_license = (source_root / "third_party/zlib/LICENSE").read_bytes()
+                    self.fail(
+                        f"{label} archive content findings={report['findings']}; "
+                        f"zlib license source bytes={len(source_license)} "
+                        f"sha256={hashlib.sha256(source_license).hexdigest()} "
+                        f"installed={license_identities}"
+                    )
         self.assertEqual(content_errors, [], "; ".join(content_errors))
 
     def test_archive_extraction_rejects_traversal_and_links(self) -> None:
