@@ -76,8 +76,8 @@
     {
       "key": "tests/consumers/test_example_docs.py",
       "kind": "rights",
-      "pin": "b302089d7a2982542864e461ae8d8785f44490c0f45e3145a57f08eb270c3040",
-      "revision": "3911e732980ef5d8b1ca4617a09383b0e7c48067"
+      "pin": "b4686014ac4f9ea3e3790fd16e3bbfc710cb040f0f2a43e3a7918ed4f4b30b7d",
+      "revision": "9dd80abdc426a1eb77bb107479d2e65ab86a1e33"
     },
     {
       "key": "tests/consumers/test_persistence_install.py",
