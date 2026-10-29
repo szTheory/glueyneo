@@ -12,6 +12,7 @@ import sys
 from typing import Any, Iterable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import private_paths  # noqa: E402
 
 MATRIX_JOB = "matrix"
 DOCS_JOB = "public-content"
@@ -144,18 +145,37 @@ def classify_diff(paths: list[str] | None, *, diff_error: bool = False) -> dict[
 def public_content_control_counts(root: Path) -> tuple[int, int]:
     """Return measured unittest case and TestCase assertion-method invocation counts."""
     counted_runner = r'''
-import unittest
+import io, inspect, json, re, unittest
 counts = {"assertions": 0}
 for name in dir(unittest.TestCase):
     method = getattr(unittest.TestCase, name)
-    if name.startswith(("assert", "fail")) and callable(method):
+    if name.startswith(("assert", "fail")) and inspect.isfunction(method):
         def counted(self, *args, _method=method, **kwargs):
             counts["assertions"] += 1
             return _method(self, *args, **kwargs)
         setattr(unittest.TestCase, name, counted)
 suite = unittest.defaultTestLoader.discover("tests/workflow", pattern="test_public_content.py")
-result = unittest.TextTestRunner(verbosity=2).run(suite)
-print("PUBLIC_CONTENT_ASSERTIONS=" + str(counts["assertions"]))
+result = unittest.TextTestRunner(stream=io.StringIO(), verbosity=0).run(suite)
+failures = result.failures + result.errors
+test_ids = []
+for test, _detail in failures:
+    try:
+        identifier = test.id()
+    except Exception:
+        identifier = ""
+    if isinstance(identifier, str) and re.fullmatch(r"[A-Za-z0-9_.]{1,160}", identifier):
+        test_ids.append(identifier)
+    else:
+        test_ids.append("unidentified-test")
+summary = {
+    "assertions": counts["assertions"],
+    "cases": result.testsRun,
+    "failure_count": len(failures),
+    "failure_test_ids": sorted(set(test_ids))[:5],
+    "failure_test_ids_truncated": len(set(test_ids)) > 5,
+    "outcome": "pass" if result.wasSuccessful() else "fail",
+}
+print("PUBLIC_CONTENT_RESULT=" + json.dumps(summary, sort_keys=True, separators=(",", ":")))
 raise SystemExit(0 if result.wasSuccessful() else 1)
 '''
     child_env = dict(os.environ)
@@ -163,15 +183,46 @@ raise SystemExit(0 if result.wasSuccessful() else 1)
     control_result = subprocess.run([sys.executable, "-c", counted_runner], cwd=root.resolve(),
                                     env=child_env, text=True, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT, timeout=60, check=False)
+    summaries = re.findall(r"(?m)^PUBLIC_CONTENT_RESULT=([^\r\n]{1,4096})$",
+                           control_result.stdout or "")
+    summary: dict[str, Any] | None = None
+    if summaries:
+        try:
+            candidate = json.loads(summaries[-1])
+            if isinstance(candidate, dict):
+                summary = candidate
+        except (ValueError, TypeError):
+            summary = None
     if control_result.returncode != 0:
-        raise ValueError("public-content control suite failed")
-    cases_match = re.search(r"(?m)^Ran (\d+) tests? in [\d.]+s$", control_result.stdout)
-    assertions_match = re.search(r"(?m)^PUBLIC_CONTENT_ASSERTIONS=(\d+)$", control_result.stdout)
-    if (cases_match is None or int(cases_match.group(1)) <= 0
-            or assertions_match is None or int(assertions_match.group(1)) <= 0
-            or "OK" not in control_result.stdout):
+        case_count = summary.get("cases") if summary is not None else None
+        failures = summary.get("failure_count") if summary is not None else None
+        raw_ids = summary.get("failure_test_ids") if summary is not None else None
+        safe_ids: list[str] = []
+        if isinstance(raw_ids, list):
+            for identifier in raw_ids[:5]:
+                if (type(identifier) is str and
+                        re.fullmatch(r"[A-Za-z0-9_.]{1,160}", identifier)):
+                    redacted = private_paths.redact(identifier)
+                    safe_ids.append(redacted if redacted == identifier else "unidentified-test")
+                else:
+                    safe_ids.append("unidentified-test")
+        cases_label = str(case_count) if type(case_count) is int and case_count >= 0 else "unknown"
+        failures_label = str(failures) if type(failures) is int and failures >= 0 else "unknown"
+        tests_label = ",".join(safe_ids) if safe_ids else "unavailable"
+        truncated = (summary.get("failure_test_ids_truncated") is True
+                     if summary is not None else False)
+        raise ValueError(
+            f"public-content control suite failed (returncode={control_result.returncode}; "
+            f"cases={cases_label}; failures={failures_label}; test_ids={tests_label}; "
+            f"test_ids_truncated={str(truncated).lower()})"
+        )
+    cases = summary.get("cases") if summary is not None else None
+    assertions = summary.get("assertions") if summary is not None else None
+    if (summary is None or summary.get("outcome") != "pass"
+            or type(cases) is not int or cases <= 0
+            or type(assertions) is not int or assertions <= 0):
         raise ValueError("public-content controls omitted positive case or assertion counts")
-    return int(cases_match.group(1)), int(assertions_match.group(1))
+    return cases, assertions
 
 
 def produce_public_content(root: Path, *, source_revision: str,

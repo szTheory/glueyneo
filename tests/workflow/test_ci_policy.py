@@ -78,6 +78,43 @@ def expect(value: bool, message: str) -> None:
         raise AssertionError(message)
 
 
+def check_public_content_failure_diagnostics() -> None:
+    with tempfile.TemporaryDirectory(prefix="ci-content-failure-") as temp:
+        root = Path(temp)
+        workflow_tests = root / "tests" / "workflow"
+        workflow_tests.mkdir(parents=True)
+        (root / "tests" / "__init__.py").write_text("", encoding="utf-8")
+        (workflow_tests / "__init__.py").write_text("", encoding="utf-8")
+        failure_methods = "".join(
+            f"    def test_failure_{index}(self):\n        self.fail(__file__)\n"
+            for index in range(7)
+        )
+        (workflow_tests / "test_public_content.py").write_text(
+            "import unittest\n"
+            "class FailureTests(unittest.TestCase):\n" + failure_methods,
+            encoding="utf-8",
+        )
+        try:
+            policy.public_content_control_counts(root)
+        except ValueError as error:
+            diagnostic = str(error)
+            expect("returncode=1" in diagnostic,
+                   "public-content failure diagnostics must include the child return code")
+            expect("failures=7" in diagnostic,
+                   "public-content failure diagnostics must count all failing controls")
+            expect("test_public_content.FailureTests.test_failure_0" in diagnostic and
+                   "test_public_content.FailureTests.test_failure_4" in diagnostic,
+                   "public-content failure diagnostics must include a safe failing test identifier")
+            expect("test_failure_5" not in diagnostic and "test_ids_truncated=true" in diagnostic,
+                   "public-content failure diagnostics must cap and mark its test identifier list")
+            expect(str(root) not in diagnostic,
+                   "public-content failure diagnostics must not include the temporary host path")
+            expect(len(diagnostic) <= 1024,
+                   "public-content failure diagnostics must remain bounded")
+        else:
+            raise AssertionError("failing public-content controls must remain a failure")
+
+
 def check_public_content_handoff() -> tuple[int, int]:
     """Exercise the public-content producer's serialized artifact through aggregation."""
     actual_cases, actual_assertions = policy.public_content_control_counts(ROOT)
@@ -113,9 +150,12 @@ def check_public_content_handoff() -> tuple[int, int]:
             if argv[:2] == ["git", "status"]:
                 return subprocess.CompletedProcess(argv, 0, "", "")
             if len(argv) > 1 and argv[1] == "-c":
-                return subprocess.CompletedProcess(argv, 0,
-                    f"Ran {actual_cases} tests in 0.001s\n\nOK\n"
-                    f"PUBLIC_CONTENT_ASSERTIONS={actual_assertions}\n", "")
+                result = {"assertions": actual_assertions, "cases": actual_cases,
+                          "failure_count": 0, "failure_test_ids": [],
+                          "failure_test_ids_truncated": False, "outcome": "pass"}
+                return subprocess.CompletedProcess(
+                    argv, 0, "PUBLIC_CONTENT_RESULT=" + json.dumps(result) + "\n", "",
+                )
             report_index = argv.index("--json") + 1
             Path(argv[report_index]).write_bytes(evidence.canonical_bytes(raw_report))
             return subprocess.CompletedProcess(argv, 0, "", "")
@@ -483,6 +523,7 @@ def main() -> int:
                     lane["os_image"], lane["architecture"])),
                    "passing support rows must match measured hosted identities")
 
+    check_public_content_failure_diagnostics()
     public_content_cases, public_content_assertions = check_public_content_handoff()
 
     revision = "a" * 40
