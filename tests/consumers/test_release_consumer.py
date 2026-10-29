@@ -376,8 +376,8 @@ class PackagedConsumerExecutableTests(unittest.TestCase):
             build.mkdir()
             outside.mkdir()
             suffix = ".exe" if os.name == "nt" else ""
-            executable = build / f"glueyneo-installed-c{suffix}"
-            external = outside / executable.name
+            executable = build.resolve() / f"glueyneo-installed-c{suffix}"
+            external = outside.resolve() / executable.name
             external.write_bytes(b"outside executable marker")
             try:
                 executable.symlink_to(external)
