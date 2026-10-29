@@ -95,10 +95,6 @@ SOURCE_FINDING_DISPOSITIONS = {
         "rules": {"private-identity"},
         "reason": "upstream public copyright contacts in the retained zlib license at da607da739fa6047df13e66a2af6b8bec7c2a498",
     },
-    ("third_party/zlib/LICENSE", "439c75ab12b340c5362b9d4b08ff05ec3a4d0eb7667a6fff49a9b16d8795c78e"): {
-        "rules": {"private-identity"},
-        "reason": "exact Windows CRLF bytes normalize to the retained upstream zlib license at da607da739fa6047df13e66a2af6b8bec7c2a498",
-    },
     ("third_party/zlib/zlib.h", "818667d6ab6a37fe7469cb06a7f0cb2c2cb2f2c948a03e5accf1a4a74bf3020a"): {
         "rules": {"private-identity"},
         "reason": "upstream public copyright contacts in unchanged zlib.h at da607da739fa6047df13e66a2af6b8bec7c2a498",

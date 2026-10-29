@@ -26,11 +26,16 @@ import public_content
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def copy_release_fixture(source: Path, destination: Path) -> None:
-    """Copy working bytes of tracked distributable paths, excluding local data."""
+def copy_release_fixture(
+    source: Path, destination: Path, *, include_git_attributes: bool = False,
+) -> None:
+    """Copy tracked release paths, optionally including Git attributes for a fixture repo."""
     source = source.resolve(strict=True)
+    source_paths = release_manifest.SOURCE_PATHS
+    if include_git_attributes:
+        source_paths = (*source_paths, ".gitattributes")
     paths = subprocess.run(
-        ["git", "ls-files", "-z", "--", *release_manifest.SOURCE_PATHS],
+        ["git", "ls-files", "-z", "--", *source_paths],
         cwd=source, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         timeout=30,
     ).stdout.split(b"\0")
@@ -692,11 +697,23 @@ class ReleaseConsumerTests(unittest.TestCase):
 
     def test_release_archive_rebuilds_offline_and_relocates_consumers(self) -> None:
         repo = Path(self.temp.name) / "repo"
-        copy_release_fixture(ROOT, repo)
+        copy_release_fixture(ROOT, repo, include_git_attributes=True)
+        canonical_zlib_license = subprocess.run(
+            ["git", "show", "HEAD:third_party/zlib/LICENSE"], cwd=ROOT,
+            check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10,
+        ).stdout
+        (repo / "third_party/zlib/LICENSE").write_bytes(
+            canonical_zlib_license.replace(b"\n", b"\r\n")
+        )
         subprocess.run(["git", "init", "--quiet", str(repo)], check=True,
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
         subprocess.run(["git", "add", "--all"], cwd=repo, check=True,
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+        indexed_zlib_license = subprocess.run(
+            ["git", "show", ":third_party/zlib/LICENSE"], cwd=repo,
+            check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10,
+        ).stdout
+        self.assertEqual(indexed_zlib_license, canonical_zlib_license)
         subprocess.run(
             ["git", "-c", "user.name=Glueyneo Tests", "-c", "user.email=tests@example.org",
              "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "test: snapshot release source"],
@@ -735,6 +752,10 @@ class ReleaseConsumerTests(unittest.TestCase):
         source_extract = Path(self.temp.name) / "source-extracted"
         release_manifest.safe_extract(source_archive, source_extract)
         source_root = source_extract / "glueyneo-source"
+        self.assertFalse((source_root / ".gitattributes").exists())
+        self.assertEqual(
+            (source_root / "third_party/zlib/LICENSE").read_bytes(), canonical_zlib_license,
+        )
         source_build = Path(self.temp.name) / "offline-build"
         configure = subprocess.run(
             ["cmake", "-S", str(source_root), "-B", str(source_build),

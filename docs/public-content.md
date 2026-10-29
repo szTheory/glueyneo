@@ -55,14 +55,13 @@ The scanner binds that one `private-url` disposition to the exact test path and
 source digest. A changed file, another source path, a log, or an archive member
 still receives ordinary detection.
 
-The zlib 1.3.2 license retains its upstream copyright contacts. Its canonical
-LF bytes have a path-and-digest-bound disposition; Windows release qualification
-also observed the exact CRLF form (1,024 bytes, SHA-256
-`439c75ab12b340c5362b9d4b08ff05ec3a4d0eb7667a6fff49a9b16d8795c78e`). Those
-bytes normalize from CRLF to LF exactly to the retained 1,002-byte upstream
-license. The CRLF disposition applies only to that notice at its source path or
-the static/shared SDK zlib-license paths. Changed bytes, other paths, logs, and
-archives retain ordinary detection; the notice is preserved unchanged.
+The zlib 1.3.2 license retains its upstream copyright contacts. Only its
+canonical 1,002-byte LF form has a path-and-digest-bound disposition. Windows
+release-fixture tests force CRLF working bytes, stage them with the repository's
+`.gitattributes`, and verify Git exports the canonical LF blob into the source
+archive and installed SDK. The attributes file remains excluded from shipped
+source paths. CRLF notice bytes, changed bytes, other paths, logs, and archives
+retain ordinary detection; the notice is preserved unchanged.
 
 The separate rights gate reads the JSON record in
 [`rights-inventory.md`](rights-inventory.md), compares every tracked fixture,
