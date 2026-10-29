@@ -492,7 +492,7 @@ static void canonical_state_rejects_bad_lengths_bools_and_decoder_relations(void
 
     memcpy(invalid, valid, sizeof(invalid));
     invalid[STATE_STEP_OFFSET] = (uint8_t)(TEST_Z80_INT_IM1_STEP >> 8);
-    invalid[STATE_STEP_OFFSET + 1u] = (uint8_t)TEST_Z80_INT_IM1_STEP;
+    invalid[STATE_STEP_OFFSET + 1u] = (uint8_t)(TEST_Z80_INT_IM1_STEP & 0xffu);
     invalid[STATE_IM_OFFSET] = 0u;
     staged = NULL;
     TEST_ASSERT_EQUAL_INT(Z80_CANDIDATE_INVALID_SNAPSHOT,
