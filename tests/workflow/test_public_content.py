@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
 import public_content as content  # noqa: E402
 import release_manifest as release  # noqa: E402
+import verify_playable as playable  # noqa: E402
 
 
 class PublicContentTests(unittest.TestCase):
@@ -449,6 +450,15 @@ class PublicContentTests(unittest.TestCase):
 
     def test_original_recipe_provenance_tracks_guest_and_sample_helper_copy(self) -> None:
         manifest = json.loads((ROOT / "tests/fixture/rights-manifest.json").read_text(encoding="utf-8"))
+        identity_notes: list[str] = []
+        self.assertEqual(playable.fixture_source_identity_errors(
+            ROOT, ROOT, "HEAD", manifest=manifest, unverifiable=identity_notes), [])
+        shallow = subprocess.check_output(
+            ["git", "rev-parse", "--is-shallow-repository"], cwd=ROOT, text=True).strip() == "true"
+        if shallow:
+            self.assertTrue(any("shallow" in note for note in identity_notes), identity_notes)
+        else:
+            self.assertFalse(any("historical commit unavailable" in note for note in identity_notes), identity_notes)
         fixture = manifest["public_persistence_fixture"]
         self.assertEqual(fixture["rights"], {
             "status": "affirmative", "license": "MIT", "notice": "LICENSE",
@@ -459,11 +469,8 @@ class PublicContentTests(unittest.TestCase):
         self.assertTrue(fixture["oracle"]["emulator_only"])
         for row in (fixture["generator_source"], fixture["base_source"]):
             current = (ROOT / row["path"]).read_bytes()
-            recorded = subprocess.check_output(
-                ["git", "show", f"{row['source_revision']}:{row['path']}"], cwd=ROOT)
             self.assertEqual(len(current), row["bytes"])
             self.assertEqual(hashlib.sha256(current).hexdigest(), row["sha256"])
-            self.assertEqual(recorded, current)
 
         helper = manifest["sample_owned_helper"]
         self.assertEqual(helper["license"], "MIT")
@@ -475,18 +482,14 @@ class PublicContentTests(unittest.TestCase):
         self.assertRegex(origin_revision, r"^[0-9a-f]{40}$")
         self.assertTrue(all(row["source_revision"] == origin_revision for row in origins))
         for row in origins:
-            recorded = subprocess.check_output(
-                ["git", "show", f"{row['source_revision']}:{row['path']}"], cwd=ROOT)
-            self.assertEqual(len(recorded), row["bytes"])
-            self.assertEqual(hashlib.sha256(recorded).hexdigest(), row["sha256"])
+            current = (ROOT / row["path"]).read_bytes()
+            self.assertEqual(len(current), row["bytes"])
+            self.assertEqual(hashlib.sha256(current).hexdigest(), row["sha256"])
         for row in helper["sample_sources"]:
             self.assertRegex(row["source_revision"], r"^[0-9a-f]{40}$")
             current = (ROOT / row["path"]).read_bytes()
-            recorded = subprocess.check_output(
-                ["git", "show", f"{row['source_revision']}:{row['path']}"], cwd=ROOT)
             self.assertEqual(len(current), row["bytes"])
             self.assertEqual(hashlib.sha256(current).hexdigest(), row["sha256"])
-            self.assertEqual(recorded, current)
 
     def test_rights_inventory_rejects_nonobjects_mixed_rows_and_noncanonical_paths(self) -> None:
         valid_item = {

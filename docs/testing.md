@@ -454,6 +454,24 @@ from the pull request history; after the squash the pins are self-attested,
 and signing them would be a policy change and is not done. A repeated (kind, key, revision) row is malformed. The tolerated rights
 branch hashes only a normalized path that is a regular file (not a symlink) in
 the checked head's tree.
+
+The fixture rights manifest also embeds first-party source identities that are
+not individual rights-inventory rows. On full history, `--check-docs`, the
+public-content tests, and the SDK save and frontend gates require each cited
+source revision to be an ancestor of the checked head and require its blob at
+the recorded path to match the manifest's byte count and SHA-256. They require
+the manifest itself to match the checked head and its exact affirmative outer
+rights row. If a nested source commit is absent after squash, the current path
+bytes must still match the recorded size and digest and the outer rights row
+must match its exact allowlist pin. The gate reports that ancestry as
+`unverifiable-history`; a current-byte match does not establish the absent
+commit's contents. Shallow checkouts perform that same pinned outer-row and
+checked-head byte check and report shallow history separately. The required
+full-history public-content job proves source ancestry before merge. An
+available source commit that is not an ancestor, an available blob with
+different bytes, an edited or unpinned outer row, and any nested path, size, or
+digest mismatch remain errors.
+
 CI runs `--history-allowlist ci --base <pull request base>` on every pull
 request, from a full-history checkout (G7WR-02). It runs the full `check`
 whenever `docs/history-allowlist.json` differs from the base or any listed

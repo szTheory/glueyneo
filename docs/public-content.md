@@ -108,6 +108,13 @@ the pinned `tests/sdk/save_host.[ch]` source at the revision recorded in the
 manifest. The manifest records exact current and origin bytes and requires
 maintainers to review drift against that source when the sample copy changes.
 The provenance record does not claim the two implementations remain identical.
+The manifest's nested source revisions are proved against their Git blobs by
+the full-history public-content check before merge. After squash makes a cited
+commit unavailable, checks require the exact pinned outer rights row and the
+source path's current checked-head bytes, while reporting the lost ancestry as
+`unverifiable-history`; this byte check does not claim to recover the missing
+historical blob. A shallow hosted policy checkout reports its limited history
+and relies on the separate full-history check for the ancestry proof.
 
 Rights are an evidence question distinct from pattern detection. A digest binds
 bytes to a record; it does not prove ownership, license scope, or permission.

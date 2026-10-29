@@ -1496,6 +1496,7 @@ def _git_bytes(repository: Path, arguments: list[str]) -> bytes | None:
 
 
 RIGHTS_INVENTORY = Path("docs/rights-inventory.md")
+FIXTURE_RIGHTS_MANIFEST = Path("tests/fixture/rights-manifest.json")
 RIGHTS_REVISION = re.compile(r"[0-9a-f]{40}")
 RIGHTS_EXEMPT_PREFIX = "third_party/"
 
@@ -1773,6 +1774,178 @@ def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
     return errors
 
 
+def _fixture_source_records(value: object) -> tuple[list[tuple[str, dict[str, Any]]],
+                                                    list[tuple[str, dict[str, Any]]], list[str]]:
+    """Return complete first-party source identities, short references, and malformed identity paths."""
+    identities: list[tuple[str, dict[str, Any]]] = []
+    references: list[tuple[str, dict[str, Any]]] = []
+    errors: list[str] = []
+
+    def escape(part: str) -> str:
+        return part.replace("~", "~0").replace("/", "~1")
+
+    def walk(item: object, pointer: str) -> None:
+        if isinstance(item, dict):
+            if "path" in item and "source_revision" in item:
+                if {"path", "source_revision", "sha256", "bytes"}.issubset(item):
+                    identities.append((pointer or "/", item))
+                elif "sha256" in item or "bytes" in item:
+                    errors.append(f"fixture source identity {pointer or '/'} is incomplete")
+                else:
+                    references.append((pointer or "/", item))
+            for key, child in item.items():
+                walk(child, f"{pointer}/{escape(str(key))}")
+        elif isinstance(item, list):
+            for index, child in enumerate(item):
+                walk(child, f"{pointer}/{index}")
+
+    walk(value, "")
+    return identities, references, errors
+
+
+def fixture_source_identity_errors(source_root: Path, repository: Path, head: str, *,
+                                   manifest: object | None = None,
+                                   allowlist: HistoryAllowlist | None = None,
+                                   unverifiable: list[str] | None = None) -> list[str]:
+    """Validate rights-manifest source rows against history or its exact outer rights row after squash.
+
+    Source revisions are strict when their commit is available: it must be an ancestor of `head` and
+    its path must hold the recorded bytes. If a cited commit is missing after the squash, the complete
+    manifest must still be pinned by a passing `rights_revision_errors` row and every source path at
+    the checked head must match its recorded byte count and digest. Missing history is reported as
+    unverifiable; it is never presented as proof of the original commit's contents. A depth-limited
+    checkout performs only the exact pin and checked-head byte checks; the required full-history
+    public-content job remains responsible for proving source ancestry before merge.
+    """
+    manifest_path = FIXTURE_RIGHTS_MANIFEST.as_posix()
+    checked_manifest = _head_blob(repository, head, manifest_path)
+    manifest_file = source_root / FIXTURE_RIGHTS_MANIFEST
+    if checked_manifest is None:
+        if not manifest_file.exists():
+            return []
+        return ["fixture rights manifest is absent from the checked head"]
+    try:
+        checked_value = json.loads(checked_manifest.decode("utf-8"))
+        working_bytes = manifest_file.read_bytes()
+        working_value = json.loads(working_bytes.decode("utf-8"))
+    except (OSError, UnicodeError, ValueError) as error:
+        return [f"fixture rights manifest is unreadable ({type(error).__name__})"]
+    value = working_value if manifest is None else manifest
+    if value != checked_value or working_value != checked_value:
+        return ["fixture rights manifest differs from the checked head"]
+
+    try:
+        inventory_text = (source_root / RIGHTS_INVENTORY).read_text(encoding="utf-8")
+        blocks = re.findall(r"```json\s*\n(.*?)\n```", inventory_text, re.DOTALL)
+        if len(blocks) != 1:
+            return ["rights inventory must contain one JSON record"]
+        inventory = json.loads(blocks[0])
+        items = inventory["items"]
+    except (OSError, UnicodeError, ValueError, KeyError, TypeError):
+        return ["rights inventory is malformed while binding the fixture manifest"]
+    if not isinstance(items, list):
+        return ["rights inventory is malformed while binding the fixture manifest"]
+    outer_rows = [item for item in items if isinstance(item, dict) and item.get("path") == manifest_path]
+    if len(outer_rows) != 1:
+        return ["fixture rights manifest must have exactly one outer rights row"]
+    outer = outer_rows[0]
+    if outer.get("rights") != "affirmative" or hashlib.sha256(checked_manifest).hexdigest() != outer.get("sha256"):
+        return ["fixture rights manifest does not match its affirmative outer rights row"]
+
+    selected_allowlist = allowlist if allowlist is not None else load_history_allowlist(source_root)
+    observed: list[str] = []
+    shallow_output = (_git_stdout(repository, ["rev-parse", "--is-shallow-repository"]) or "").strip()
+    if shallow_output not in {"true", "false"}:
+        return ["fixture source identity checkout depth could not be determined"]
+    shallow = shallow_output == "true"
+    if shallow:
+        anchored = selected_allowlist
+    else:
+        anchor_problems = history_allowlist_anchor_errors(selected_allowlist, repository, head)
+        if anchor_problems:
+            return [f"fixture rights manifest outer rights row is not verified: {anchor_problems[0]}"]
+        anchored = anchored_history_allowlist(selected_allowlist, repository, head)
+        right_problems = rights_revision_errors(source_root, repository, head, allowlist=anchored)
+        if right_problems:
+            return [f"fixture rights manifest outer rights row is not verified: {right_problems[0]}"]
+    outer_revision = outer.get("source_revision")
+    if not isinstance(outer_revision, str) or RIGHTS_REVISION.fullmatch(outer_revision) is None:
+        return ["fixture rights manifest outer source revision is malformed"]
+    outer_resolves = (_git_exit(repository, ["rev-parse", "--verify", "--quiet",
+                                             f"{outer_revision}^{{commit}}"]) == 0)
+    outer_ancestor = (_git_exit(repository, ["merge-base", "--is-ancestor", outer_revision, head]) == 0)
+    outer_allowed = anchored.covers("rights", manifest_path, outer_revision, _canonical_digest(outer))
+    if outer_resolves and not outer_ancestor:
+        return ["fixture rights manifest outer source revision is available but is not an ancestor of the checked head"]
+    if not outer_resolves and not outer_allowed:
+        return ["fixture rights manifest outer source revision is missing and its rights row is not allowlisted"]
+    if outer_resolves:
+        outer_bytes = _git_bytes(repository, ["cat-file", "blob", f"{outer_revision}:{manifest_path}"])
+        if outer_bytes != checked_manifest:
+            return ["fixture rights manifest outer source revision does not hold the checked-head manifest bytes"]
+    else:
+        _note_once(observed, "fixture rights-manifest source revision unavailable; its exact rights-row pin and checked-head bytes match")
+    if shallow:
+        _note_once(observed, "fixture source history is shallow; public full-history CI is required to prove available source ancestry")
+
+    identities, references, malformed = _fixture_source_records(value)
+    if malformed:
+        return malformed
+    if not identities:
+        return ["fixture rights manifest has no complete source identity records"]
+    errors: list[str] = []
+    by_path_revision: set[tuple[str, str]] = set()
+    for pointer, record in identities:
+        path = record.get("path")
+        revision = record.get("source_revision")
+        digest = record.get("sha256")
+        size = record.get("bytes")
+        if (not _rights_path_is_relative_posix(path) or path.startswith(RIGHTS_EXEMPT_PREFIX) or
+                not isinstance(revision, str) or RIGHTS_REVISION.fullmatch(revision) is None or
+                not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None or
+                type(size) is not int or size <= 0):
+            errors.append(f"fixture source identity {pointer} has malformed path, revision, digest, or byte count")
+            continue
+        by_path_revision.add((path, revision))
+        head_bytes = _head_blob(repository, head, path)
+        working_path = source_root / path
+        try:
+            current_bytes = working_path.read_bytes()
+            regular = working_path.is_file() and not working_path.is_symlink()
+        except OSError:
+            current_bytes = None
+            regular = False
+        if (not regular or head_bytes is None or current_bytes != head_bytes or
+                len(head_bytes) != size or hashlib.sha256(head_bytes).hexdigest() != digest):
+            errors.append(f"fixture source identity {pointer} does not match the checked-head path and bytes")
+            continue
+        resolves = (_git_exit(repository, ["rev-parse", "--verify", "--quiet",
+                                           f"{revision}^{{commit}}"] ) == 0)
+        if resolves:
+            if _git_exit(repository, ["merge-base", "--is-ancestor", revision, head]) != 0:
+                errors.append(f"fixture source identity {pointer} revision {revision[:12]} is available but not an ancestor of the checked head")
+                continue
+            recorded = _git_bytes(repository, ["cat-file", "blob", f"{revision}:{path}"])
+            if recorded is None or len(recorded) != size or hashlib.sha256(recorded).hexdigest() != digest:
+                errors.append(f"fixture source identity {pointer} revision {revision[:12]} does not hold the recorded bytes")
+        else:
+            if not outer_allowed:
+                errors.append(f"fixture source identity {pointer} is unavailable and the outer rights-manifest row is not pinned")
+                continue
+            _note_once(observed, f"fixture source identity {pointer} revision {revision[:12]}: historical commit unavailable; "
+                               "checked-head path and bytes match under the outer rights-manifest pin")
+
+    for pointer, reference in references:
+        path = reference.get("path")
+        revision = reference.get("source_revision")
+        if (not isinstance(path, str) or not isinstance(revision, str) or
+                (path, revision) not in by_path_revision):
+            errors.append(f"fixture source reference {pointer} has no matching complete identity row")
+    for note in observed:
+        _note_once(unverifiable, note)
+    return errors
+
+
 REVIEW_REVISION_FORMS = (
     re.compile(r"review \(04-\d{2}, ([0-9a-f]{12,40})\)"),
     re.compile(r"revision `([0-9a-f]{40})`"),
@@ -1995,7 +2168,10 @@ def history_allowlist_document(source_root: Path, repository: Path, head: str,
             review_problems = []
         problems = [*review_problems,
                     *rights_revision_errors(source_root, repository, head,
-                                            allowlist=HistoryAllowlist.EMPTY, unverifiable=notes)]  # type: ignore[attr-defined]
+                                            allowlist=HistoryAllowlist.EMPTY, unverifiable=notes),
+                    *fixture_source_identity_errors(source_root, repository, head,
+                                                    allowlist=HistoryAllowlist.EMPTY,
+                                                    unverifiable=notes)]  # type: ignore[attr-defined]
     except (RuntimeError, OSError, UnicodeError, ValueError) as error:
         raise _allowlist_refusal(str(error)) from error
     if problems or notes:
@@ -2153,6 +2329,10 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
                                                  allowlist=allowlist, unverifiable=notes)
         if rights_problems:
             raise RuntimeError(rights_problems[0])
+        source_identity_problems = fixture_source_identity_errors(
+            source_root, provenance_repository, head, allowlist=allowlist, unverifiable=notes)
+        if source_identity_problems:
+            raise RuntimeError(source_identity_problems[0])
 
     task_rows = _markdown_table_rows(
         validation,

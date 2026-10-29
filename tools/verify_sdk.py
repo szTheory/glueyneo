@@ -1147,10 +1147,34 @@ def _frontend_private_manifest_safe(section: dict[str, Any]) -> bool:
     return not has_digest_key(section)
 
 
+_SOURCE_HISTORY_REPORTS: set[str] = set()
+
+
+def _report_unverifiable_source_history(notes: list[str]) -> None:
+    if not notes:
+        return
+    payload = json.dumps({
+        "status": "unverifiable-history",
+        "manifest": "tests/fixture/rights-manifest.json",
+        "note": "current source bytes were checked; original ancestry is unavailable in this checkout",
+        "details": notes,
+    }, sort_keys=True)
+    if payload not in _SOURCE_HISTORY_REPORTS:
+        print(f"SOURCE_HISTORY {payload}")
+        _SOURCE_HISTORY_REPORTS.add(payload)
+
+
 def validate_frontend_phase_provenance(manifest: Any, root: Path = ROOT) -> int:
     """Bind phase-owned sources and first-party rights without publishing private inputs."""
     if not isinstance(manifest, dict):
         raise VerificationError("fixture rights manifest is not an object")
+    import verify_playable as source_provenance
+    source_notes: list[str] = []
+    source_errors = source_provenance.fixture_source_identity_errors(
+        root, root, "HEAD", manifest=manifest, unverifiable=source_notes)
+    if source_errors:
+        raise VerificationError(source_errors[0])
+    _report_unverifiable_source_history(source_notes)
     section = manifest.get("frontend_continuation")
     if not isinstance(section, dict):
         raise VerificationError("phase-specific frontend continuation provenance is missing")
@@ -1229,20 +1253,6 @@ def validate_frontend_phase_provenance(manifest: Any, root: Path = ROOT) -> int:
             ancestry.get("sound_fixture_source_sha256") != sound_generator.get("sha256") or
             ancestry.get("hardware_truth_established") is not False):
         raise VerificationError("public fixture ancestry was changed, misattributed, or promoted to hardware truth")
-    source_refs = ((generator.get("source_revision"), generator.get("path")),
-                   (origin.get("source_revision"), origin.get("path")))
-    if any(not isinstance(revision, str) or re.fullmatch(r"[0-9a-f]{40}", revision) is None or
-               not isinstance(relative, str) or Path(relative).is_absolute() or
-               ".." in Path(relative).parts for revision, relative in source_refs):
-        raise VerificationError("frontend public fixture ancestry is not recorded as immutable Git refs")
-    shallow = run(["git", "rev-parse", "--is-shallow-repository"], cwd=root, check=False)
-    if shallow.returncode != 0 or shallow.stdout.strip() not in {"true", "false"}:
-        raise VerificationError("frontend fixture ancestry checkout state could not be determined")
-    if shallow.stdout.strip() == "false":
-        for revision, relative in source_refs:
-            if (run(["git", "cat-file", "-e", f"{revision}^{{commit}}"], cwd=root, check=False).returncode != 0 or
-                    run(["git", "cat-file", "-e", f"{revision}:{relative}"], cwd=root, check=False).returncode != 0):
-                raise VerificationError("frontend public fixture ancestry does not resolve to immutable source")
     history = section.get("historical_results")
     if (not isinstance(history, dict) or history.get("phase04_accepted_results") != "preserved" or
             history.get("phase05_original_regression") != {
@@ -1929,6 +1939,13 @@ def verify_save_fixture_rights(root: Path = ROOT, document: Any | None = None) -
         if not condition:
             raise VerificationError(f"save rights manifest: {message}")
 
+    import verify_playable as source_provenance
+    source_notes: list[str] = []
+    source_errors = source_provenance.fixture_source_identity_errors(
+        root, root, "HEAD", manifest=manifest, unverifiable=source_notes)
+    require(not source_errors, "embedded source history or checked-head bytes are unverified")
+    _report_unverifiable_source_history(source_notes)
+
     rights = fixture.get("rights")
     require(isinstance(rights, dict), "rights record is missing")
     if not isinstance(rights, dict):
@@ -1975,11 +1992,6 @@ def verify_save_fixture_rights(root: Path = ROOT, document: Any | None = None) -
         require(current.is_file() and isinstance(size, int) and not isinstance(size, bool) and
                 current.stat().st_size == size and evidence.sha256_file(current) == digest,
                 f"{relative} current size/hash differs from the rights record")
-        if isinstance(revision, str) and re.fullmatch(r"[0-9a-f]{40}", revision):
-            recorded = run(["git", "show", f"{revision}:{relative}"], timeout=10).stdout.encode("utf-8")
-            require(len(recorded) == size and evidence.sha256_bytes(recorded) == digest,
-                    f"{relative} does not match its recorded immutable Git revision")
-
     recipe = fixture.get("recipe")
     artifact = fixture.get("artifact")
     require(isinstance(recipe, dict) and isinstance(artifact, dict),

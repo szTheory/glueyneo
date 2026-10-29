@@ -3154,6 +3154,69 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         return self.squashed(Path(temporary.name), base_row)
 
+    def source_identity_fixture(self) -> "SimpleNamespace":
+        """A source record and its outer rights row across a full branch, squash, and fresh clone."""
+        from types import SimpleNamespace
+
+        temporary = tempfile.TemporaryDirectory(prefix="playable-source-identity-squash-")
+        self.addCleanup(temporary.cleanup)
+        base_dir = Path(temporary.name)
+        repo = base_dir / "repo"
+        repo.mkdir()
+        self.git(repo, "init", "-q", "-b", "main")
+        (repo / "base.txt").write_text("base\n", encoding="utf-8")
+        base = self.commit(repo, "base", "base.txt")
+        self.git(repo, "checkout", "-q", "-b", "feature")
+
+        source_path = "tests/source.c"
+        source_bytes = b"source identity bytes\n"
+        (repo / source_path).parent.mkdir(parents=True)
+        (repo / source_path).write_bytes(source_bytes)
+        source_revision = self.commit(repo, "source", source_path)
+
+        manifest_path = playable.FIXTURE_RIGHTS_MANIFEST.as_posix()
+        record = {
+            "path": source_path, "source_revision": source_revision,
+            "sha256": hashlib.sha256(source_bytes).hexdigest(), "bytes": len(source_bytes),
+            "license": "MIT", "notice": "LICENSE",
+        }
+        manifest = {"mvs_save_fixture": {"generator_source": record}}
+        manifest_bytes = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        manifest_file = repo / manifest_path
+        manifest_file.parent.mkdir(parents=True)
+        manifest_file.write_bytes(manifest_bytes)
+        manifest_revision = self.commit(repo, "manifest", manifest_path)
+
+        outer = {
+            "path": manifest_path, "sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+            "kind": "fixture-rights-manifest", "license": "MIT", "rights": "affirmative",
+            "source_revision": manifest_revision, "provenance": "fixture manifest",
+            "notice": "LICENSE",
+        }
+        self.write_inventory(repo, [outer])
+        self.commit(repo, "outer rights row", playable.RIGHTS_INVENTORY.as_posix())
+        generated = json.loads(self.generate(repo, base="main"))
+        self.assertEqual(generated["rows"], [{
+            "kind": "rights", "key": manifest_path, "revision": manifest_revision,
+            "pin": self.canonical(outer),
+        }])
+        (repo / playable.HISTORY_ALLOWLIST).write_text(
+            json.dumps(generated, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        self.commit(repo, "allowlist outer rights row", playable.HISTORY_ALLOWLIST.as_posix())
+
+        self.git(repo, "checkout", "-q", "main")
+        self.git(repo, "merge", "--squash", "feature")
+        self.git(repo, "commit", "-q", "-m", "squash feature")
+        clone = base_dir / "clone"
+        self.git(base_dir, "clone", "-q", "--no-local", "--single-branch", "--branch", "main",
+                 str(repo), str(clone))
+        shallow_clone = base_dir / "shallow-clone"
+        self.git(base_dir, "clone", "-q", "--depth=1", "--no-local", "--single-branch", "--branch", "main",
+                 repo.as_uri(), str(shallow_clone))
+        return SimpleNamespace(repo=repo, clone=clone, base=base, source_revision=source_revision,
+                               shallow_clone=shallow_clone, manifest_revision=manifest_revision,
+                               manifest_path=manifest_path)
+
     def gate(self, function_name: str, root: Path, *extra: object) -> tuple[list[str], list[str]]:
         function = getattr(playable, function_name, None)
         self.assertIsNotNone(function, f"{function_name} is missing")
@@ -3180,6 +3243,46 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
                 self.assertIn(expected, notes[0])
             results.append((errors, notes))
         self.assertEqual(results[0], results[1])
+
+    def test_squash_source_identity_uses_only_pinned_outer_manifest_and_checked_head_bytes(self) -> None:
+        fx = self.source_identity_fixture()
+        errors = playable.fixture_source_identity_errors(fx.repo, fx.repo, "HEAD")
+        self.assertTrue(any("not an ancestor of the checked head" in error for error in errors), errors)
+
+        for revision in (fx.source_revision, fx.manifest_revision):
+            absent = subprocess.run(["git", "-C", str(fx.clone), "rev-parse", "--verify", "--quiet",
+                                     f"{revision}^{{commit}}"], stdout=subprocess.DEVNULL, check=False)
+            self.assertNotEqual(absent.returncode, 0, "fresh clone must not retain feature-history objects")
+        notes: list[str] = []
+        self.assertEqual(playable.fixture_source_identity_errors(
+            fx.clone, fx.clone, "HEAD", unverifiable=notes), [])
+        self.assertTrue(any("historical commit unavailable" in note for note in notes), notes)
+        self.assertTrue(any("outer rights-row pin" in note or "rights-row pin" in note for note in notes), notes)
+
+        shallow_notes: list[str] = []
+        self.assertEqual(playable.fixture_source_identity_errors(
+            fx.shallow_clone, fx.shallow_clone, "HEAD", unverifiable=shallow_notes), [])
+        self.assertTrue(any("shallow" in note for note in shallow_notes), shallow_notes)
+        self.assertTrue(any("outer rights-row pin" in note or "rights-row pin" in note for note in shallow_notes),
+                        shallow_notes)
+
+        allowlist_path = fx.clone / playable.HISTORY_ALLOWLIST
+        valid_allowlist = allowlist_path.read_text(encoding="utf-8")
+        allowlist = json.loads(valid_allowlist)
+        allowlist["rows"] = []
+        allowlist_path.write_text(json.dumps(allowlist, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        errors = playable.fixture_source_identity_errors(fx.clone, fx.clone, "HEAD")
+        self.assertTrue(errors, "source identity must fail if the outer rights row is unpinned")
+        allowlist_path.write_text(valid_allowlist, encoding="utf-8")
+
+        manifest_path = fx.clone / fx.manifest_path
+        original = manifest_path.read_text(encoding="utf-8")
+        for field, replacement in (("path", "tests/substituted.c"), ("sha256", "0" * 64), ("bytes", 1)):
+            mutated = json.loads(original)
+            mutated["mvs_save_fixture"]["generator_source"][field] = replacement
+            with self.subTest(field=field):
+                problems = playable.fixture_source_identity_errors(fx.clone, fx.clone, "HEAD", manifest=mutated)
+                self.assertTrue(problems, f"mutated source record {field} passed")
 
     def test_g5wr_01_cli_prints_one_line_per_tolerated_row(self) -> None:
         with mock.patch.object(playable, "check_docs", return_value=["note one", "note two"]), \
