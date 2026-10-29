@@ -1643,13 +1643,12 @@ class ImporterTests(unittest.TestCase):
                         # selected-import success branch.
                         return subprocess.CompletedProcess(command, 0)
                     if os.name == "nt" and command[0] == str(launcher):
-                        # Use a real child process so Python's Windows text
-                        # decoder exercises the same invalid-output exception.
-                        # Pin UTF-8 here so the regression is independent of
-                        # the runner's active Windows code page.
-                        command = [sys.executable, "-c",
-                                   f"import sys; sys.{stream}.buffer.write(bytes([129]))"]
-                        kwargs["encoding"] = "utf-8"
+                        # The Windows CI runtime doesn't reproduce the
+                        # invalid-byte text-decoder failure through a child
+                        # process, so inject that exact exception at this
+                        # subprocess seam. POSIX still exercises a real child.
+                        raise UnicodeDecodeError("utf-8", b"\x81", 0, 1,
+                                                 "invalid start byte")
                     return subprocess.run(command, **kwargs)
 
                 def run_selected(input_root: Path, importer_argument=None, **options: object):
