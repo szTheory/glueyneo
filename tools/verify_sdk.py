@@ -335,7 +335,9 @@ BASELINE_FAILURE_HISTORY = [{
 
 
 class VerificationError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, failure_diagnostics: dict[str, Any] | None = None):
+        super().__init__(message)
+        self.failure_diagnostics = failure_diagnostics
 
 
 def clean_environment() -> dict[str, str]:
@@ -347,6 +349,8 @@ def clean_environment() -> dict[str, str]:
 
 def run(argv: list[str], *, timeout: int = CHILD_TIMEOUT_SECONDS,
         cwd: Path = ROOT, check: bool = True) -> subprocess.CompletedProcess[str]:
+    ctest_log_path = ctest_last_test_path(argv, cwd) if Path(argv[0]).stem.casefold() == "ctest" else None
+    ctest_log_before = ctest_last_test_signature(ctest_log_path) if ctest_log_path else None
     try:
         result = subprocess.run(argv, cwd=cwd, env=clean_environment(), text=True,
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -367,6 +371,20 @@ def run(argv: list[str], *, timeout: int = CHILD_TIMEOUT_SECONDS,
             preserve_output(f"command-failed-{Path(argv[0]).stem}", result.stdout)
         except OSError:
             pass
+        if Path(argv[0]).stem.casefold() == "ctest":
+            try:
+                ctest_log_after = ctest_last_test_signature(ctest_log_path) if ctest_log_path else None
+                diagnostics = ctest_failure_diagnostics(
+                    result.stdout or "", ctest_log_path,
+                    last_test_log_current=(ctest_log_after is not None and
+                                           ctest_log_after != ctest_log_before))
+            except (OSError, UnicodeError, ValueError):
+                diagnostics = None
+            if diagnostics is not None:
+                failed = ", ".join(diagnostics["failed_tests"]) or "unknown"
+                raise VerificationError(
+                    f"command failed ({result.returncode}): ctest; failed tests: {failed}\n"
+                    f"{diagnostics['excerpt']}", failure_diagnostics=diagnostics)
         raise VerificationError(f"command failed ({result.returncode}): {' '.join(argv)}\n{result.stdout[-8000:]}")
     return result
 
@@ -411,14 +429,155 @@ def redacted_failure_diagnostic(output: str, *, limit: int = 8000) -> str:
     return value
 
 
+CTEST_FAILURE_DIAGNOSTIC_LIMIT = 5000
+CTEST_LAST_TEST_LOG_LIMIT = 64 * 1024 * 1024
+
+
+def ctest_last_test_path(argv: list[str], cwd: Path) -> Path:
+    """Resolve the CTest log CTest just wrote for a preset or explicit test dir."""
+    for index, value in enumerate(argv):
+        if value == "--test-dir" and index + 1 < len(argv):
+            directory = Path(argv[index + 1])
+            return (directory if directory.is_absolute() else cwd / directory) / "Testing/Temporary/LastTest.log"
+        if value.startswith("--test-dir="):
+            directory = Path(value.partition("=")[2])
+            return (directory if directory.is_absolute() else cwd / directory) / "Testing/Temporary/LastTest.log"
+    for index, value in enumerate(argv):
+        if value == "--preset" and index + 1 < len(argv):
+            return ROOT / "build" / argv[index + 1] / "Testing/Temporary/LastTest.log"
+        if value.startswith("--preset="):
+            return ROOT / "build" / value.partition("=")[2] / "Testing/Temporary/LastTest.log"
+    return BUILD / "Testing/Temporary/LastTest.log"
+
+
+def ctest_last_test_signature(path: Path) -> tuple[int, int, int, int] | None:
+    """Return file metadata so a prior invocation's LastTest.log cannot be reused."""
+    try:
+        stat = path.stat()
+    except FileNotFoundError:
+        return None
+    return (stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size, getattr(stat, "st_ino", 0))
+
+
+def _ctest_failed_names(output: str) -> set[str]:
+    names: set[str] = set()
+    patterns = (
+        re.compile(r"(?m)^\s*\d+/\d+\s+Test\s+#\d+:\s*([^\s.]+).*?\*{3}Failed\b"),
+        re.compile(r"(?m)^\s*\d+\s+-\s+([^\s]+)\s+\(Failed\)\s*$"),
+    )
+    for pattern in patterns:
+        names.update(match.group(1) for match in pattern.finditer(output)
+                     if re.fullmatch(r"[A-Za-z0-9_.+-]{1,128}", match.group(1)))
+    return set(sorted(names)[:128])
+
+
+def _ctest_failed_blocks(last_test_text: str, expected_names: set[str]) -> tuple[list[str], str]:
+    starts = list(re.finditer(r"(?m)^\d+/\d+\s+Testing:\s*([^\s]+)\s*$", last_test_text))
+    names: set[str] = set()
+    blocks: list[str] = []
+    for index, match in enumerate(starts):
+        end = starts[index + 1].start() if index + 1 < len(starts) else len(last_test_text)
+        block = last_test_text[match.start():end]
+        name = match.group(1)
+        if not re.fullmatch(r"[A-Za-z0-9_.+-]{1,128}", name):
+            continue
+        if not re.search(r"(?m)^Test Failed\.\s*$", block):
+            continue
+        if expected_names and name not in expected_names:
+            continue
+        names.add(name)
+        blocks.append(block.rstrip())
+    return sorted(names), "\n\n".join(blocks)
+
+
+def _bounded_redacted_ctest_excerpt(output: str) -> tuple[str, bool]:
+    encoded = output.encode("utf-8", errors="replace")
+    truncated = len(encoded) > CTEST_FAILURE_DIAGNOSTIC_LIMIT
+    if truncated:
+        head_size = CTEST_FAILURE_DIAGNOSTIC_LIMIT * 3 // 4
+        tail_size = CTEST_FAILURE_DIAGNOSTIC_LIMIT - head_size - 24
+        text = (encoded[:head_size].decode("utf-8", errors="replace") +
+                "\n[... failed-test output truncated ...]\n" +
+                encoded[-tail_size:].decode("utf-8", errors="replace"))
+    else:
+        text = output
+    return redacted_failure_diagnostic(text, limit=CTEST_FAILURE_DIAGNOSTIC_LIMIT), truncated
+
+
+def ctest_failure_diagnostics(output: str, last_test_path: Path, *,
+                              last_test_log_current: bool = True) -> dict[str, Any]:
+    """Build a safe, bounded receipt from failed CTest blocks before the log is overwritten."""
+    output_bytes = output.encode("utf-8", errors="replace")
+    expected_names = _ctest_failed_names(output)
+    source = "ctest-output"
+    last_test_log_status = "missing"
+    selected = ""
+    failed_names = sorted(expected_names)
+    try:
+        if not last_test_log_current:
+            raise FileNotFoundError
+        with last_test_path.open("rb") as stream:
+            last_test_bytes = stream.read(CTEST_LAST_TEST_LOG_LIMIT + 1)
+    except FileNotFoundError:
+        if last_test_path.exists() and not last_test_log_current:
+            last_test_log_status = "stale"
+        last_test_bytes = b""
+    else:
+        if len(last_test_bytes) > CTEST_LAST_TEST_LOG_LIMIT:
+            last_test_log_status = "over-limit"
+            last_test_bytes = b""
+        else:
+            last_test_log_status = "read"
+    if last_test_bytes:
+        last_test = last_test_bytes.decode("utf-8", errors="replace")
+        logged_names, blocks = _ctest_failed_blocks(last_test, expected_names)
+        if blocks:
+            source = "ctest-last-test-log"
+            selected = blocks
+            failed_names = sorted(set(failed_names) | set(logged_names))
+    if not selected:
+        selected = output
+    excerpt, truncated = _bounded_redacted_ctest_excerpt(selected)
+    return {
+        "source": source,
+        "last_test_log_status": last_test_log_status,
+        "failed_tests": failed_names,
+        "output_sha256": evidence.sha256_bytes(output_bytes),
+        "output_bytes": len(output_bytes),
+        "output_excerpt_truncated": len(output_bytes) > CTEST_FAILURE_DIAGNOSTIC_LIMIT,
+        "excerpt_truncated": truncated,
+        "excerpt": excerpt,
+    }
+
+
 def failure_receipt(suite: str, lane: str | None, error: BaseException) -> dict[str, Any]:
     detail = redacted_failure_diagnostic(str(error))
     revision = os.environ.get("SDK_SOURCE_REVISION") or os.environ.get("GITHUB_SHA", "")
     if not re.fullmatch(r"[0-9a-f]{40,64}", revision):
         revision = ""
-    return {"schema": "sdk-verify-failure/v1", "suite": suite,
-            "stage": lane or suite, "outcome": "fail", "source_revision": revision or None,
-            "detail": detail or "verification failed; no diagnostic output was captured"}
+    receipt = {"schema": "sdk-verify-failure/v1", "suite": suite,
+               "stage": lane or suite, "outcome": "fail", "source_revision": revision or None,
+               "detail": detail or "verification failed; no diagnostic output was captured"}
+    diagnostics = getattr(error, "failure_diagnostics", None)
+    if isinstance(diagnostics, dict):
+        receipt["ctest_failure_diagnostics"] = diagnostics
+    try:
+        evidence.scan_public_value(receipt)
+        findings = public_content.scan_bytes(
+            evidence.canonical_bytes(receipt), "ci-failure-receipt")["findings"]
+        if findings:
+            raise evidence.EvidenceError(
+                "privacy-contamination", "failure receipt contains a public-content finding")
+    except evidence.EvidenceError:
+        receipt = {"schema": "sdk-verify-failure/v1", "suite": suite,
+                   "stage": lane or suite, "outcome": "fail", "source_revision": revision or None,
+                   "detail": "failure diagnostics withheld by the public-value privacy guard"}
+        evidence.scan_public_value(receipt)
+        if public_content.scan_bytes(
+                evidence.canonical_bytes(receipt), "ci-failure-receipt-fallback")["findings"]:
+            raise evidence.EvidenceError(
+                "privacy-contamination", "minimal failure receipt did not pass the public-content scan")
+    return receipt
 
 
 def ensure_debug_build() -> float:

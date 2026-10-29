@@ -103,7 +103,7 @@ SOURCE_FINDING_DISPOSITIONS = {
         "rules": {"machine-identifier"},
         "reason": "serial is a zero-initialized Carbon ProcessSerialNumber local variable, not a host identifier value",
     },
-    ("tests/consumers/test_example_docs.py", "cf577a320bc9c9178418f112f71298644374cec4a848b55f7cfd9d19a8966450"): {
+    ("tests/consumers/test_example_docs.py", "282d0a56bd249e60b4d509984f9b0137aefb7bee23289ba3ac86a88f3ecce61a"): {
         "rules": {"private-url"},
         "reason": "synthetic localhost port-9 proxy blocks network access in the example-doc test; exact path and bytes are bound",
     },

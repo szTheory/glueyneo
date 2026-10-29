@@ -965,12 +965,14 @@ safeguard remains active where repository settings require it. There is no
 privileged PR job that consumes or executes an uploaded PR artifact.
 
 Successful hosted runs retain per-lane receipts and an aggregate under
-`evidence/sdk/ci-aggregate.json`. A failed sanitizer lane receipt preserves the
-parsed failed test and redacted assertion detail. When runtime CTest ran, it
-also preserves bounded original output, its SHA-256 and byte count, and an
-explicit truncation flag; those fields may be null for configure or build
-failures. A local parser fixture proves rejection behavior; it does not
-establish a hosted result. GitHub Actions run
+`evidence/sdk/ci-aggregate.json`. Failed matrix commands upload a bounded
+failure receipt. CTest failures preserve the named failed test's redacted
+`LastTest.log` block before a later CTest invocation can replace it, alongside
+the original CTest output SHA-256, byte count, and truncation status. The
+sanitizer lane also carries its parsed per-test diagnostics into the aggregate.
+A local artifact-path fixture verifies that a failed assertion survives
+redaction and canonical JSON serialization; it does not establish a hosted
+result. GitHub Actions run
 `37618668537` passed the six named matrix lanes and `ci-policy` at exact PR head
 `2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1`; the detailed toolchain and
 assertion receipt above belongs to the earlier exact source revision. A

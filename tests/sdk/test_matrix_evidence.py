@@ -491,6 +491,7 @@ def sanitizer_failure_controls() -> None:
     assert supervised["tests_attempted"] == 2 and supervised["tests_passed"] == 1
     assert supervised["failed_tests"] == ["sdk_isolation"]
 
+
     identity_record = {
         "suite": "sdk-state", "outcome": "pass", "cases": 1,
         "assertions": 67,
@@ -560,6 +561,129 @@ def sanitizer_failure_controls() -> None:
     assert supervised["status"] == "passed", supervised
     assert supervised["tests_passed"] == 3
     assert supervised["sdk_assertions"] == 97
+
+
+def ctest_failure_receipt_controls() -> None:
+    """The uploaded failure artifact retains the failed test body, not later log tail."""
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        build = root / "build/sdk-debug"
+        last_test = build / "Testing/Temporary/LastTest.log"
+        last_test.parent.mkdir(parents=True)
+        win_separator = chr(92)
+        private_windows_path = ("C:" + win_separator + "Users" + win_separator + "runneradmin" +
+                                win_separator + "work" + win_separator + "glueyneo")
+        failed_block = (
+            "Start testing: Oct 28 03:47 UTC\n"
+            "----------------------------------------------------------\n"
+            "17/25 Testing: mvs_import_contract\n"
+            "17/25 Test: mvs_import_contract\n"
+            "Command: python tests/mvs/test_mvs_qualification.py\n"
+            f"Directory: {private_windows_path}{win_separator}build{win_separator}sdk-debug\n"
+            "Output:\n"
+            "Traceback (most recent call last):\n"
+            "WINDOWS-ASSERTION-MARKER expected=1 observed=0\n"
+            f"{private_windows_path}{win_separator}tests{win_separator}mvs{win_separator}test.py:42\n"
+            "Test Failed.\n"
+            "----------------------------------------------------------\n")
+        later_block = (
+            "18/25 Testing: later_passing_test\n"
+            "18/25 Test: later_passing_test\n"
+            "Output:\n" + "\n".join(
+                f"LATER-PASS-ROW-{index}" for index in range(300)) +
+            "\nTest Passed.\n")
+        last_test.write_text(failed_block + later_block, encoding="utf-8")
+        ctest_stdout = (
+            "Start 17: mvs_import_contract\n"
+            "17/25 Test #17: mvs_import_contract ........***Failed  1.00 sec\n" +
+            "\n".join(f"later verbose pass row {index}" for index in range(500)) +
+            "\n96% tests passed, 1 tests failed out of 25\n"
+            "The following tests FAILED:\n"
+            "\t17 - mvs_import_contract (Failed)\n")
+        ctest_bytes = ctest_stdout.encode("utf-8")
+
+        ctest_attempt = {"stdout": ctest_stdout, "rewrite_last_test": True}
+
+        def failed_ctest(argv, **_kwargs):
+            if ctest_attempt["rewrite_last_test"]:
+                last_test.write_text(failed_block + later_block, encoding="utf-8")
+            return subprocess.CompletedProcess(argv, 8, ctest_attempt["stdout"])
+
+        def fail_from_ctest():
+            verify_sdk.run(["ctest", "--preset", "sdk-debug", "--verbose",
+                            "--output-on-failure", "--no-tests=error", "-L", "mvs"])
+
+        receipt_path = root / "matrix-windows-msvc.json"
+        argv = ["verify_sdk.py", "--suite", "matrix", "--lane", "windows-msvc",
+                "--output", str(receipt_path)]
+        with mock.patch.object(verify_sdk, "ROOT", root), \
+                mock.patch.object(verify_sdk, "BUILD", build), \
+                mock.patch.object(verify_sdk, "LOG_DIR", root / "logs"), \
+                mock.patch.object(verify_sdk, "suite_matrix", side_effect=fail_from_ctest), \
+                mock.patch.object(verify_sdk.subprocess, "run", side_effect=failed_ctest), \
+                mock.patch.object(sys, "argv", argv), \
+                mock.patch.dict(os.environ, {"GITHUB_SHA": "a" * 40}, clear=False), \
+                contextlib.redirect_stderr(io.StringIO()):
+            assert verify_sdk.main() == 1
+
+        produced = evidence.load_canonical_json(
+            receipt_path.read_bytes(), label="Windows matrix failure artifact")
+        assert produced["schema"] == "sdk-verify-failure/v1"
+        details = produced["ctest_failure_diagnostics"]
+        assert details["source"] == "ctest-last-test-log"
+        assert details["last_test_log_status"] == "read"
+        assert details["failed_tests"] == ["mvs_import_contract"]
+        assert details["output_sha256"] == hashlib.sha256(ctest_bytes).hexdigest()
+        assert details["output_bytes"] == len(ctest_bytes)
+        assert details["output_excerpt_truncated"] is True
+        excerpt = details["excerpt"]
+        assert "WINDOWS-ASSERTION-MARKER expected=1 observed=0" in excerpt
+        assert "mvs_import_contract" in excerpt
+        assert "[private-path-redacted]" in excerpt
+        assert "runneradmin" not in excerpt
+        assert "LATER-PASS-ROW" not in excerpt
+        assert "later verbose pass row" not in excerpt
+
+        last_test.write_text(failed_block, encoding="utf-8")
+        stale_stdout = ("CMake Error: No such test preset: unknown\n"
+                        "1/25 tests failed\n")
+        ctest_attempt["stdout"] = stale_stdout
+        ctest_attempt["rewrite_last_test"] = False
+        stale_receipt_path = root / "matrix-windows-msvc-stale-log.json"
+        stale_argv = ["verify_sdk.py", "--suite", "matrix", "--lane", "windows-msvc",
+                      "--output", str(stale_receipt_path)]
+        with mock.patch.object(verify_sdk, "ROOT", root), \
+                mock.patch.object(verify_sdk, "BUILD", build), \
+                mock.patch.object(verify_sdk, "LOG_DIR", root / "logs"), \
+                mock.patch.object(verify_sdk, "suite_matrix", side_effect=fail_from_ctest), \
+                mock.patch.object(verify_sdk.subprocess, "run", side_effect=failed_ctest), \
+                mock.patch.object(sys, "argv", stale_argv), \
+                mock.patch.dict(os.environ, {"GITHUB_SHA": "a" * 40}, clear=False), \
+                contextlib.redirect_stderr(io.StringIO()):
+            assert verify_sdk.main() == 1
+        stale_receipt = evidence.load_canonical_json(
+            stale_receipt_path.read_bytes(), label="stale LastTest matrix failure artifact")
+        stale_details = stale_receipt["ctest_failure_diagnostics"]
+        assert stale_details["last_test_log_status"] == "stale"
+        assert stale_details["source"] == "ctest-output"
+        assert "WINDOWS-ASSERTION-MARKER" not in stale_details["excerpt"]
+        assert "mvs_import_contract" not in stale_details["failed_tests"]
+
+        credential_name = "ghp_" + "A" * 36
+        unsafe_error = verify_sdk.VerificationError("test failed")
+        unsafe_error.failure_diagnostics = {"failed_tests": [credential_name]}
+        guarded = verify_sdk.failure_receipt("matrix", "windows-msvc", unsafe_error)
+        assert "ctest_failure_diagnostics" not in guarded
+        assert credential_name not in json.dumps(guarded)
+        assert "withheld" in guarded["detail"]
+        evidence.scan_public_value(guarded)
+        assert not verify_sdk.public_content.scan_bytes(
+            evidence.canonical_bytes(guarded), "test-failure-receipt")["findings"]
+
+        with mock.patch.object(verify_sdk, "CTEST_LAST_TEST_LOG_LIMIT", 8):
+            over_limit = verify_sdk.ctest_failure_diagnostics(ctest_stdout, last_test)
+        assert over_limit["last_test_log_status"] == "over-limit"
+        assert over_limit["source"] == "ctest-output"
 
 
 def mvs_lane_controls() -> None:
@@ -1140,6 +1264,8 @@ def main() -> int:
     sanitizer_failure_controls()
     print("PASS: matrix evidence positive identity, outcome, count, timing, and cost controls")
     print("PASS: sanitizer non-timeout, timeout, and startup failures preserve identity and excluded counts")
+    ctest_failure_receipt_controls()
+    print("PASS: failed CTest bodies survive redaction and canonical CI artifact serialization")
     return 0
 
 
