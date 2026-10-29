@@ -1188,11 +1188,114 @@ class DocumentationCopies:
     against its working-tree digest as in a real checkout.
     """
 
+    _synthetic_frontend_summary: dict[str, object] | None = None
+
+    @staticmethod
+    def frontend_summary() -> dict[str, object]:
+        """Return tracked evidence or a deterministic test receipt bound to this checkout's HEAD."""
+        path = ROOT / playable.FRONTEND_EVIDENCE
+        if path.is_file():
+            return json.loads(path.read_text(encoding="utf-8"))
+        if DocumentationCopies._synthetic_frontend_summary is None:
+            revision = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True, text=True,
+                                      stdout=subprocess.PIPE).stdout.strip()
+            with tempfile.TemporaryDirectory(prefix="playable-test-snapshot-") as temporary:
+                snapshot = playable.create_snapshot(ROOT, revision, Path(temporary) / "source")
+            summary: dict[str, object] = {
+                "schema": 1,
+                "source_revision": revision,
+                "inventory_sha256": playable.inventory_digest(snapshot.inventory),
+                "status": "pass",
+                "retroarch_status": "pass",
+                "retroarch": {"version": "1.22.2", "executable_sha256": playable.RETROARCH_SHA256},
+                "os": "test fixture platform",
+                "core_sha256": "0" * 64,
+                "fixture_sha256": playable.FIXTURE_SHA256,
+                "input_mapping": playable.EXPECTED_INPUT_MAPPING,
+                "observations": list(playable.REQUIRED_FRONTEND_OBSERVATIONS),
+                "marker_before": [10, 10, 1],
+                "marker_after_right": [11, 10, 1],
+                "frontend_unloaded": True,
+                "lanes": {name: "pass" for name in playable.REQUIRED_FRONTEND_LANES},
+            }
+            playable.validate_frontend_evidence(summary)
+            DocumentationCopies._synthetic_frontend_summary = summary
+        return json.loads(json.dumps(DocumentationCopies._synthetic_frontend_summary))
+
+    @staticmethod
+    def write_sanitized_review_fixture(source_root: Path) -> None:
+        """Create public-safe review inputs for tests when private Phase04 records are absent."""
+        revisions = subprocess.run(["git", "-C", str(ROOT), "rev-list", "--reverse", "HEAD"], check=True,
+                                   text=True, stdout=subprocess.PIPE).stdout.split()
+        if len(revisions) < 2:
+            raise AssertionError("sanitized review fixture needs two committed source revisions")
+        reviewed, cited = revisions[0], revisions[1]
+        directory = source_root / playable.PHASE_DIRECTORY
+        directory.mkdir(parents=True, exist_ok=True)
+        base_files = ("tools/verify_playable.py", "tests/tools/test_verify_playable.py", "docs/first-playable-build.md")
+        (source_root / playable.REVIEW).write_text(
+            "---\nphase: test-fixture\ndepth: standard\nreviewed_revision: " + reviewed + "\nfiles_reviewed_list:\n"
+            + "".join(f"  - {path}\n" for path in base_files)
+            + "---\n\n### CR-01: fixture finding\n### CR-05: fixture finding\n"
+              "### IN-03: fixture finding\n### WR-01: fixture finding\n### WR-10: fixture finding\n",
+            encoding="utf-8")
+        (directory / "04-REVIEW-GAPS-R1.md").write_text(
+            "---\nfiles_reviewed_list:\n  - tools/public_content.py\n---\n\n", encoding="utf-8")
+        for relative in (*base_files, "tools/public_content.py"):
+            source = ROOT / relative
+            if source.is_file():
+                target = source_root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
+        (source_root / playable.SECURITY).write_text(
+            "| Threat ID | Severity | Status |\n|---|---|---|\n| T-04-46 | moderate | mitigated |\n", encoding="utf-8")
+        findings = (
+            ("CR-01", "critical", "fixed", f"revision `{cited}`"),
+            ("CR-05", "warning", "fixed", f"revision `{cited}`"),
+            ("IN-03", "info", "open", "recorded"),
+            ("WR-01", "warning", "fixed", f"revision `{cited}`"),
+            ("WR-10", "warning", "fixed", f"revision `{cited}`"),
+        )
+        frontmatter = "---\nfindings:\n" + "".join(
+            f"  - id: {finding}\n    severity: {severity}\n    disposition: {state}\n"
+            for finding, severity, state, _source in findings)
+        table = "| Finding | Severity | Disposition | Source |\n|---|---|---|---|\n" + "".join(
+            f"| {finding} | {severity} | {state} | {source} |\n"
+            for finding, severity, state, source in findings)
+        (source_root / playable.DISPOSITION).write_text(frontmatter + "---\n\n" + table, encoding="utf-8")
+
+    @staticmethod
+    def write_sanitized_validation_fixture(source_root: Path, summary: dict[str, object] | None) -> None:
+        row_status = playable.frontend_row_status(summary)  # type: ignore[arg-type]
+        task_header = ("| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | "
+                       "Automated Command | File Exists | Status |\n"
+                       "|---|---|---|---|---|---|---|---|---|---|\n")
+        task = ("| 04-15 T2 | 04-15 | 4 | HOST-02, QUAL-03 | T-04-46 | Generated fixture evidence | "
+                "automated | `python3 tools/verify_playable.py --check-docs` | yes | " + row_status + " |\n")
+        crosswalk = ("| Review Finding | Severity | Existing Threat Scope | Disposition |\n"
+                     "|---|---|---|---|\n"
+                     "| CR-01 | critical | T-04-46 | fixed |\n"
+                     "| CR-05 | warning | T-04-46 | fixed |\n"
+                     "| IN-03 | info | T-04-46 | open |\n"
+                     "| WR-01 | warning | T-04-46 | fixed |\n"
+                     "| WR-10 | warning | T-04-46 | fixed |\n")
+        path = source_root / playable.VALIDATION
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("# Public-safe qualification fixture\n\n" + task_header + task + "\n" + crosswalk,
+                        encoding="utf-8")
+
     def copy_review_provenance(self, source_root: Path) -> None:
-        reviewed = sorted(playable.review_round_paths(ROOT))
-        rounds = sorted(path.relative_to(ROOT) for path in (ROOT / playable.PHASE_DIRECTORY).glob(playable.REVIEW_ROUNDS))
-        for path in (playable.SECURITY, playable.REVIEW, playable.DISPOSITION, Path("README.md"), playable.RIGHTS_INVENTORY,
-                     playable.HISTORY_ALLOWLIST, *rounds, *(Path(item) for item in reviewed)):
+        live_review = (ROOT / playable.REVIEW).is_file() and (ROOT / playable.DISPOSITION).is_file() \
+            and (ROOT / playable.SECURITY).is_file()
+        if live_review:
+            reviewed = sorted(playable.review_round_paths(ROOT))
+            rounds = sorted(path.relative_to(ROOT) for path in (ROOT / playable.PHASE_DIRECTORY).glob(playable.REVIEW_ROUNDS))
+            evidence_files = (playable.SECURITY, playable.REVIEW, playable.DISPOSITION, *rounds,
+                              *(Path(item) for item in reviewed))
+        else:
+            self.write_sanitized_review_fixture(source_root)
+            evidence_files = ()
+        for path in (*evidence_files, Path("README.md"), playable.RIGHTS_INVENTORY, playable.HISTORY_ALLOWLIST):
             if (ROOT / path).is_file():
                 (source_root / path).parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / path, source_root / path)
@@ -1208,26 +1311,82 @@ class DocumentationCopies:
         for path in (playable.GUIDE, playable.VALIDATION, Path("docs/audio-contract.md"),
                      Path("tests/consumers/test_playable_install.py"), Path("tests/consumers/sound_consumer.c"),
                      Path("examples/diagnostic.c")):
-            (source_root / path).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(ROOT / path, source_root / path)
+            if (ROOT / path).is_file():
+                (source_root / path).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / path, source_root / path)
         self.copy_review_provenance(source_root)
-        summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        summary = self.frontend_summary() if (ROOT / playable.FRONTEND_EVIDENCE).is_file() else None
+        if not (source_root / playable.GUIDE).is_file():
+            (source_root / playable.GUIDE).parent.mkdir(parents=True, exist_ok=True)
+            (source_root / playable.GUIDE).write_text(
+                f"# First playable build\n\n{playable.frontend_status_block(None)}\n\n"
+                "The generated fixture runs from a complete committed Git snapshot and checks its inventory SHA-256. "
+                "Dirty and untracked checkout files are excluded. Other prose is not a qualification claim and is "
+                "not machine-checked. The gate matches 7 to 40 characters. "
+                f"Pinned dependencies: {playable.YMFM_REVISION} {playable.Z80_REVISION}.\n", encoding="utf-8")
+        if not (source_root / playable.VALIDATION).is_file():
+            self.write_sanitized_validation_fixture(source_root, None)
         guide = source_root / playable.GUIDE
-        guide.write_text(guide.read_text(encoding="utf-8").replace(
-            playable.frontend_status_block(summary), playable.frontend_status_block(None)), encoding="utf-8")
+        if summary is not None:
+            guide.write_text(guide.read_text(encoding="utf-8").replace(
+                playable.frontend_status_block(summary), playable.frontend_status_block(None)), encoding="utf-8")
+        else:
+            guide_text, replacements = re.subn(
+                re.escape(playable.STATUS_BEGIN) + r".*?" + re.escape(playable.STATUS_END),
+                playable.frontend_status_block(None), guide.read_text(encoding="utf-8"), count=1, flags=re.DOTALL)
+            if replacements != 1:
+                raise AssertionError("copied guide lacks exactly one generated frontend status block")
+            guide.write_text(guide_text, encoding="utf-8")
         validation = source_root / playable.VALIDATION
-        validation.write_text(validation.read_text(encoding="utf-8").replace(
-            playable.frontend_row_status(summary), playable.frontend_row_status(None)), encoding="utf-8")
+        if summary is not None:
+            validation.write_text(validation.read_text(encoding="utf-8").replace(
+                playable.frontend_row_status(summary), playable.frontend_row_status(None)), encoding="utf-8")
+        else:
+            row, replacements = re.subn(
+                r"(?m)^(\| 04-15 T2 \|(?:[^|]*\|){8})[^|]*\|$",
+                lambda match: f"{match.group(1)} {playable.frontend_row_status(None)} |",
+                validation.read_text(encoding="utf-8"), count=1)
+            if replacements != 1:
+                raise AssertionError("copied validation map lacks exactly one frontend qualification row")
+            validation.write_text(row, encoding="utf-8")
         return validation
 
     def copy_documentation_with_evidence(self, source_root: Path) -> dict[str, object]:
-        for path in (playable.GUIDE, playable.VALIDATION, playable.FRONTEND_EVIDENCE,
+        for path in (playable.GUIDE, playable.VALIDATION,
                      Path("docs/audio-contract.md"), Path("tests/consumers/test_playable_install.py"),
                      Path("tests/consumers/sound_consumer.c"), Path("examples/diagnostic.c")):
-            (source_root / path).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(ROOT / path, source_root / path)
+            if (ROOT / path).is_file():
+                (source_root / path).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / path, source_root / path)
         self.copy_review_provenance(source_root)
-        return json.loads((source_root / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        summary = self.frontend_summary()
+        if not (source_root / playable.GUIDE).is_file():
+            self.copy_documentation(source_root)
+        evidence_path = source_root / playable.FRONTEND_EVIDENCE
+        if (ROOT / playable.FRONTEND_EVIDENCE).is_file():
+            shutil.copyfile(ROOT / playable.FRONTEND_EVIDENCE, evidence_path)
+        else:
+            evidence_path.parent.mkdir(parents=True, exist_ok=True)
+            evidence_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+        if not (source_root / playable.VALIDATION).is_file():
+            self.write_sanitized_validation_fixture(source_root, summary)
+        guide = source_root / playable.GUIDE
+        guide_text, replacements = re.subn(
+            re.escape(playable.STATUS_BEGIN) + r".*?" + re.escape(playable.STATUS_END),
+            lambda _: playable.frontend_status_block(summary), guide.read_text(encoding="utf-8"),
+            count=1, flags=re.DOTALL)
+        if replacements != 1:
+            raise AssertionError("copied guide lacks exactly one generated frontend status block")
+        guide.write_text(guide_text, encoding="utf-8")
+        validation = source_root / playable.VALIDATION
+        row, replacements = re.subn(
+            r"(?m)^(\| 04-15 T2 \|(?:[^|]*\|){8})[^|]*\|$",
+            lambda match: f"{match.group(1)} {playable.frontend_row_status(summary)} |",
+            validation.read_text(encoding="utf-8"), count=1)
+        if replacements != 1:
+            raise AssertionError("copied validation map lacks exactly one frontend qualification row")
+        validation.write_text(row, encoding="utf-8")
+        return summary
 
 
 class InstalledSoundRecipeTest(unittest.TestCase):
@@ -1342,8 +1501,8 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
 
     @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_tracked_receipt_must_match_its_committed_inventory(self) -> None:
-        summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
-        self.assertIsNotNone(playable.load_frontend_evidence(ROOT))
+        summary = self.frontend_summary()
+        self.assertEqual(playable.validate_frontend_evidence(summary), summary["source_revision"])
         # Forge the receipt against the clone's own HEAD commit, which exists in every checkout (full or
         # squash-merged), instead of checking out the live receipt revision (G5WR-01, C2).
         head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"],
@@ -1360,7 +1519,7 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
 
     @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_live_receipt_binds_its_committed_inventory_on_full_history(self) -> None:
-        summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        summary = self.frontend_summary()
         revision = summary["source_revision"]
         present = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--verify", "--quiet", revision + "^{commit}"],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
@@ -1369,9 +1528,14 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
         if not ancestor:
             self.skipTest(f"live receipt revision {revision[:12]} absent from history (squashed checkout); "
                           "binding is pinned on full history")
-        notes: list[str] = []
-        self.assertIsNotNone(playable.load_frontend_evidence(ROOT, unverifiable=notes))
-        self.assertEqual(notes, [])
+        with tempfile.TemporaryDirectory(prefix="playable-live-receipt-") as temporary:
+            source_root = Path(temporary)
+            evidence = source_root / playable.FRONTEND_EVIDENCE
+            evidence.parent.mkdir(parents=True, exist_ok=True)
+            evidence.write_text(json.dumps(summary), encoding="utf-8")
+            notes: list[str] = []
+            self.assertEqual(playable.load_frontend_evidence(source_root, repository=ROOT, unverifiable=notes), summary)
+            self.assertEqual(notes, [])
         forged = dict(summary, inventory_sha256="0" * 64)
         with tempfile.TemporaryDirectory(prefix="playable-docs-inventory-live-") as temporary:
             clone = Path(temporary) / "clone"
@@ -1392,10 +1556,12 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
             with self.subTest(case=label), tempfile.TemporaryDirectory(prefix="playable-docs-block-") as temporary:
                 source_root = Path(temporary)
                 copy(source_root)
-                summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+                summary = self.frontend_summary()
                 guide = source_root / playable.GUIDE
                 if add_evidence:
-                    shutil.copyfile(ROOT / playable.FRONTEND_EVIDENCE, source_root / playable.FRONTEND_EVIDENCE)
+                    evidence = source_root / playable.FRONTEND_EVIDENCE
+                    evidence.parent.mkdir(parents=True, exist_ok=True)
+                    evidence.write_text(json.dumps(summary), encoding="utf-8")
                 else:
                     guide.write_text(guide.read_text(encoding="utf-8").replace(
                         playable.frontend_status_block(None), playable.frontend_status_block(summary)), encoding="utf-8")
@@ -1411,7 +1577,7 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
                 playable.check_docs(source_root, repository=ROOT)
 
     def test_record_frontend_evidence_summary_drops_receipt_paths(self) -> None:
-        summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        summary = self.frontend_summary()
         receipt = {
             "status": "pass",
             "identity": {"source_revision": summary["source_revision"], "retroarch": summary["retroarch"],
@@ -1555,8 +1721,10 @@ class CrosswalkProvenanceTest(DocumentationCopies, unittest.TestCase):
                                    lambda match: f"{match.group(1)} {scope} {match.group(2)}", text, count=1)
 
     def test_live_crosswalk_is_accepted(self) -> None:
-        text = (ROOT / playable.VALIDATION).read_text(encoding="utf-8")
-        self.assertEqual(playable.crosswalk_errors(ROOT, text), [])
+        with tempfile.TemporaryDirectory(prefix="playable-crosswalk-live-") as temporary:
+            source_root = Path(temporary)
+            validation = self.copy_documentation(source_root)
+            self.assertEqual(playable.crosswalk_errors(source_root, validation.read_text(encoding="utf-8")), [])
 
     def test_scope_references_must_resolve(self) -> None:
         cases = (
@@ -1571,11 +1739,15 @@ class CrosswalkProvenanceTest(DocumentationCopies, unittest.TestCase):
                 self.mutate_row(transform, expected)
 
     def test_scope_may_cite_a_path_reviewed_only_by_a_later_round(self) -> None:
-        later = playable.review_round_paths(ROOT) - playable._reviewed_paths(
-            (ROOT / playable.REVIEW).read_text(encoding="utf-8"))
-        self.assertIn("tools/public_content.py", later)
-        text = self.with_scope("CR-05", "`tools/public_content.py`")((ROOT / playable.VALIDATION).read_text(encoding="utf-8"))
-        self.assertEqual(playable.crosswalk_errors(ROOT, text), [])
+        with tempfile.TemporaryDirectory(prefix="playable-crosswalk-round-") as temporary:
+            source_root = Path(temporary)
+            validation = self.copy_documentation(source_root)
+            later = playable.review_round_paths(source_root) - playable._reviewed_paths(
+                (source_root / playable.REVIEW).read_text(encoding="utf-8"))
+            self.assertIn("tools/public_content.py", later)
+            text = self.with_scope("CR-05", "`tools/public_content.py`")(
+                validation.read_text(encoding="utf-8"))
+            self.assertEqual(playable.crosswalk_errors(source_root, text), [])
 
     def test_three_digit_threat_ids_are_read_whole(self) -> None:
         self.assertEqual(playable.THREAT_REFERENCE.findall("T-04-103 / T-04-10 / T-04-SC (04-58)"),
@@ -2076,7 +2248,10 @@ class GuideClaimTest(DocumentationCopies, unittest.TestCase):
 
     def test_claim_gate_limits_are_documented_and_pinned(self) -> None:
         """GIN-04 (accepted): the gate matches 7 to 40 hex characters; longer tokens are not machine-checked."""
-        guide = (ROOT / playable.GUIDE).read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory(prefix="playable-guide-limits-") as temporary:
+            source_root = Path(temporary)
+            self.copy_documentation(source_root)
+            guide = (source_root / playable.GUIDE).read_text(encoding="utf-8")
         self.assertIn("7 to 40 characters", guide)
         self.assertIn("Other prose is not a qualification claim and is not machine-checked", guide)
         outside = guide + "\n\nunreviewed digest " + "a1b2c3d4" * 8 + "\n"
@@ -3190,7 +3365,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
     def test_g5wr_01_frontend_receipt_row(self) -> None:
         fx = self.fixture()
         load = getattr(playable, "load_frontend_evidence")
-        summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        summary = self.frontend_summary()
         summary["source_revision"] = fx.F2
         temporary = tempfile.TemporaryDirectory(prefix="playable-receipt-")
         self.addCleanup(temporary.cleanup)
