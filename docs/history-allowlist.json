@@ -130,8 +130,8 @@
     {
       "key": "tests/fixture/rights-manifest.json",
       "kind": "rights",
-      "pin": "8125d6f32e63c6ff8eed83e73d9b6cacb61d44978694e8bd1f98f13aef9b3738",
-      "revision": "ef047cce7cc6bc63a44329b04467d489530aa24b"
+      "pin": "b6ca344583324980182cd469b6957be74247fffcde1047d046209f08e55e3f92",
+      "revision": "0c4fb910b950692adeb23cb7a2e9e5710a89743b"
     },
     {
       "key": "tests/fixture/test_public_guest.c",
@@ -244,8 +244,8 @@
     {
       "key": "tests/mvs/test_mvs_qualification.py",
       "kind": "rights",
-      "pin": "a6d46c031973141a0bb1fce9ccd32273137de4096c2c6c2e518448242bea0408",
-      "revision": "363445e41b8d80583a52e3819858c3f13e7767dc"
+      "pin": "11318f79e4e79992d17466d09d91e3b9c08ced88d63a08a88dc805e402d63cdd",
+      "revision": "6b69495005c94f07fe3987b00a391d90ef35c3c0"
     },
     {
       "key": "tests/mvs/test_strict_producer_proof.py",
