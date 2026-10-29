@@ -13,6 +13,7 @@ from typing import Any, Iterable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import private_paths  # noqa: E402
+import public_content  # noqa: E402
 
 MATRIX_JOB = "matrix"
 DOCS_JOB = "public-content"
@@ -20,6 +21,17 @@ AGGREGATE_JOB = "ci-policy"
 REQUIRED_JOBS = frozenset((MATRIX_JOB, DOCS_JOB))
 _COMMIT_SHA_LENGTH = 40
 _DOCUMENTATION_SUFFIXES = frozenset({".gif", ".jpeg", ".jpg", ".md", ".png", ".rst", ".svg", ".txt", ".webp"})
+_PUBLIC_CONTROL_SUMMARY_KEYS = frozenset({
+    "schema_version", "assertions", "cases", "failure_count", "failure_test_ids",
+    "failure_test_ids_truncated", "outcome",
+})
+_MAX_PUBLIC_CONTROL_CASES = 1_000_000
+_MAX_PUBLIC_CONTROL_ASSERTIONS = 10_000_000
+_MAX_PUBLIC_CONTROL_FAILURES = 1_000_000
+_MAX_PUBLIC_CONTROL_FAILURE_IDS = 5
+_MAX_PUBLIC_CONTROL_FAILURE_ID_LENGTH = 96
+_MAX_PUBLIC_CONTROL_DIAGNOSTIC_BYTES = 1024
+_PUBLIC_CONTROL_FAILURE_ID = re.compile(r"[A-Za-z0-9_.]{1,96}")
 
 
 def _is_commit_sha(value: Any) -> bool:
@@ -142,6 +154,51 @@ def classify_diff(paths: list[str] | None, *, diff_error: bool = False) -> dict[
             "public_content": DOCS_JOB in selected}
 
 
+def _valid_public_content_summary(summary: Any) -> bool:
+    if type(summary) is not dict or frozenset(summary) != _PUBLIC_CONTROL_SUMMARY_KEYS:
+        return False
+    if (type(summary.get("schema_version")) is not int or summary["schema_version"] != 1
+            or type(summary.get("cases")) is not int
+            or not 0 < summary["cases"] <= _MAX_PUBLIC_CONTROL_CASES
+            or type(summary.get("assertions")) is not int
+            or not 0 < summary["assertions"] <= _MAX_PUBLIC_CONTROL_ASSERTIONS
+            or type(summary.get("failure_count")) is not int
+            or not 0 <= summary["failure_count"] <= _MAX_PUBLIC_CONTROL_FAILURES
+            or type(summary.get("failure_test_ids")) is not list
+            or len(summary["failure_test_ids"]) > _MAX_PUBLIC_CONTROL_FAILURE_IDS
+            or type(summary.get("failure_test_ids_truncated")) is not bool
+            or type(summary.get("outcome")) is not str
+            or summary["outcome"] not in {"pass", "fail"}):
+        return False
+    identifiers = summary["failure_test_ids"]
+    if any(type(identifier) is not str for identifier in identifiers):
+        return False
+    if identifiers != sorted(set(identifiers)):
+        return False
+    if any(not _PUBLIC_CONTROL_FAILURE_ID.fullmatch(identifier)
+           or private_paths.redact(identifier) != identifier
+           or public_content.scan_bytes(
+               identifier.encode("utf-8"), "ci-policy-failure-test-id")["findings"]
+           for identifier in identifiers):
+        return False
+    if summary["outcome"] == "pass":
+        return (summary["failure_count"] == 0 and not identifiers
+                and summary["failure_test_ids_truncated"] is False)
+    if summary["failure_count"] == 0:
+        return False
+    return len(identifiers) == _MAX_PUBLIC_CONTROL_FAILURE_IDS or not summary[
+        "failure_test_ids_truncated"]
+
+
+def _bounded_public_content_diagnostic(message: str) -> str:
+    redacted = private_paths.redact(message)
+    if (len(redacted.encode("utf-8")) > _MAX_PUBLIC_CONTROL_DIAGNOSTIC_BYTES
+            or public_content.scan_bytes(
+                redacted.encode("utf-8"), "ci-policy-failure-diagnostic")["findings"]):
+        return "public-content control suite failed (details=redacted)"
+    return redacted
+
+
 def public_content_control_counts(root: Path) -> tuple[int, int]:
     """Return measured unittest case and TestCase assertion-method invocation counts."""
     counted_runner = r'''
@@ -168,6 +225,7 @@ for test, _detail in failures:
     else:
         test_ids.append("unidentified-test")
 summary = {
+    "schema_version": 1,
     "assertions": counts["assertions"],
     "cases": result.testsRun,
     "failure_count": len(failures),
@@ -183,12 +241,16 @@ raise SystemExit(0 if result.wasSuccessful() else 1)
     control_result = subprocess.run([sys.executable, "-c", counted_runner], cwd=root.resolve(),
                                     env=child_env, text=True, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT, timeout=60, check=False)
-    summaries = re.findall(r"(?m)^PUBLIC_CONTENT_RESULT=([^\r\n]{1,4096})$",
-                           control_result.stdout or "")
+    summary_lines = []
+    for match in re.finditer(r"(?m)^PUBLIC_CONTENT_RESULT=([^\r\n]{1,4096})$",
+                             control_result.stdout or ""):
+        summary_lines.append(match.group(1))
+        if len(summary_lines) > 1:
+            break
     summary: dict[str, Any] | None = None
-    if summaries:
+    if len(summary_lines) == 1:
         try:
-            candidate = json.loads(summaries[-1])
+            candidate = json.loads(summary_lines[0])
             if isinstance(candidate, dict):
                 summary = candidate
         except (ValueError, TypeError):
@@ -199,29 +261,39 @@ raise SystemExit(0 if result.wasSuccessful() else 1)
         raw_ids = summary.get("failure_test_ids") if summary is not None else None
         safe_ids: list[str] = []
         if isinstance(raw_ids, list):
-            for identifier in raw_ids[:5]:
+            for identifier in raw_ids[:_MAX_PUBLIC_CONTROL_FAILURE_IDS]:
                 if (type(identifier) is str and
-                        re.fullmatch(r"[A-Za-z0-9_.]{1,160}", identifier)):
+                        _PUBLIC_CONTROL_FAILURE_ID.fullmatch(identifier)):
                     redacted = private_paths.redact(identifier)
-                    safe_ids.append(redacted if redacted == identifier else "unidentified-test")
+                    findings = public_content.scan_bytes(
+                        redacted.encode("utf-8"), "ci-policy-failure-test-id")["findings"]
+                    safe_ids.append(redacted if redacted == identifier and not findings
+                                    else "unidentified-test")
                 else:
                     safe_ids.append("unidentified-test")
-        cases_label = str(case_count) if type(case_count) is int and case_count >= 0 else "unknown"
-        failures_label = str(failures) if type(failures) is int and failures >= 0 else "unknown"
+        cases_label = (str(case_count) if type(case_count) is int and
+                       0 <= case_count <= _MAX_PUBLIC_CONTROL_CASES else "unknown")
+        failures_label = (str(failures) if type(failures) is int and
+                          0 <= failures <= _MAX_PUBLIC_CONTROL_FAILURES else "unknown")
         tests_label = ",".join(safe_ids) if safe_ids else "unavailable"
-        truncated = (summary.get("failure_test_ids_truncated") is True
-                     if summary is not None else False)
-        raise ValueError(
-            f"public-content control suite failed (returncode={control_result.returncode}; "
-            f"cases={cases_label}; failures={failures_label}; test_ids={tests_label}; "
-            f"test_ids_truncated={str(truncated).lower()})"
+        truncated = (str(summary["failure_test_ids_truncated"]).lower()
+                     if summary is not None and
+                     type(summary.get("failure_test_ids_truncated")) is bool else "unknown")
+        records = "2+" if len(summary_lines) > 1 else str(len(summary_lines))
+        returncode = control_result.returncode
+        returncode_label = (str(returncode) if type(returncode) is int
+                            and -255 <= returncode <= 255 else "unknown")
+        message = (
+            f"public-content control suite failed (returncode={returncode_label}; "
+            f"result_records={records}; cases={cases_label}; failures={failures_label}; "
+            f"test_ids={tests_label}; test_ids_truncated={truncated})"
         )
+        raise ValueError(_bounded_public_content_diagnostic(message))
     cases = summary.get("cases") if summary is not None else None
     assertions = summary.get("assertions") if summary is not None else None
-    if (summary is None or summary.get("outcome") != "pass"
-            or type(cases) is not int or cases <= 0
-            or type(assertions) is not int or assertions <= 0):
-        raise ValueError("public-content controls omitted positive case or assertion counts")
+    if (len(summary_lines) != 1 or not _valid_public_content_summary(summary)
+            or summary.get("outcome") != "pass"):
+        raise ValueError("public-content controls omitted one valid, positive, failure-free result")
     return cases, assertions
 
 

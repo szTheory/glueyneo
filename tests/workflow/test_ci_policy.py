@@ -93,11 +93,30 @@ class PublicContentSummaryTests(TestCase):
         with self.assertRaisesRegex(ValueError, "failed|omitted|invalid"):
             self.run_summary(summary, returncode=0)
 
+    def test_pass_summary_requires_exact_schema_and_field_types(self):
+        valid = {
+            "schema_version": 1, "assertions": 1, "cases": 1,
+            "failure_count": 0, "failure_test_ids": [],
+            "failure_test_ids_truncated": False, "outcome": "pass",
+        }
+        invalid_rows = (
+            dict(valid, schema_version=True),
+            dict(valid, cases=True),
+            dict(valid, assertions=False),
+            dict(valid, failure_count=False),
+            dict(valid, failure_test_ids=[{}]),
+            dict(valid, failure_test_ids_truncated=0),
+            dict(valid, unexpected="extra"),
+        )
+        for row in invalid_rows:
+            with self.subTest(row=row), self.assertRaises(ValueError):
+                self.run_summary(row, returncode=0)
+
     def test_failure_identifier_is_scanned_before_diagnostic(self):
         summary = {
             "schema_version": 1, "assertions": 1, "cases": 1,
             "failure_count": 1,
-            "failure_test_ids": ["module.Tests.test_ghp_" + ("A" * 36)],
+            "failure_test_ids": ["module.Tests.ghp_" + ("A" * 36)],
             "failure_test_ids_truncated": False, "outcome": "fail",
         }
         with self.assertRaises(ValueError) as caught:
@@ -107,8 +126,8 @@ class PublicContentSummaryTests(TestCase):
 
     def test_large_failure_counts_keep_diagnostic_bounded(self):
         summary = {
-            "schema_version": 1, "assertions": 1, "cases": 10 ** 3000,
-            "failure_count": 10 ** 3000,
+            "schema_version": 1, "assertions": 1, "cases": 10 ** 1400,
+            "failure_count": 10 ** 1400,
             "failure_test_ids": ["module.Tests.test_failure"],
             "failure_test_ids_truncated": False, "outcome": "fail",
         }
@@ -211,7 +230,8 @@ def check_public_content_handoff() -> tuple[int, int]:
             if argv[:2] == ["git", "status"]:
                 return subprocess.CompletedProcess(argv, 0, "", "")
             if len(argv) > 1 and argv[1] == "-c":
-                result = {"assertions": actual_assertions, "cases": actual_cases,
+                result = {"schema_version": 1,
+                          "assertions": actual_assertions, "cases": actual_cases,
                           "failure_count": 0, "failure_test_ids": [],
                           "failure_test_ids_truncated": False, "outcome": "pass"}
                 return subprocess.CompletedProcess(
