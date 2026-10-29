@@ -23,6 +23,16 @@ import unittest
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def has_two_committed_revisions(root: Path = ROOT) -> bool:
+    """Whether root-bound review fixtures can enforce strict parent-to-head ordering."""
+    if not (root / ".git").exists():
+        return False
+    return subprocess.run(["git", "-C", str(root), "rev-parse", "--verify", "--quiet", "HEAD^"],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False).returncode == 0
+
+
 sys.path.insert(0, str(ROOT / "tools"))
 import public_content  # noqa: E402
 import verify_playable as playable  # noqa: E402
@@ -1207,7 +1217,7 @@ class DocumentationCopies:
                 # Source archives have no commit inventory to bind. These fixtures exercise document shape only;
                 # repository-binding tests are skipped there and use real Git evidence in checkouts.
                 revision = "a" * 40
-                inventory_sha256 = "0" * 64
+                inventory_sha256 = "1" * 64
             summary: dict[str, object] = {
                 "schema": 1,
                 "source_revision": revision,
@@ -1234,12 +1244,18 @@ class DocumentationCopies:
     def write_sanitized_review_fixture(source_root: Path) -> None:
         """Create public-safe review inputs for tests when private Phase04 records are absent."""
         if (ROOT / ".git").exists():
-            revision = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True, text=True,
-                                      stdout=subprocess.PIPE).stdout.strip()
+            revisions = subprocess.run(["git", "-C", str(ROOT), "rev-list", "--max-count=2", "HEAD"],
+                                       check=True, text=True, stdout=subprocess.PIPE).stdout.split()
+            if not revisions:
+                raise AssertionError("Git-backed sanitized review fixture needs a committed HEAD")
+            # Full checkouts get a real parent-to-HEAD order. A depth-one checkout still creates valid fixture
+            # shape; tests that bind review ordering to this checkout are skipped until a parent is available.
+            revision = revisions[0]
+            reviewed = revisions[1] if len(revisions) > 1 else revision
         else:
             # Keep fixture references structurally valid without inventing Git history in a source archive.
-            revision = "a" * 40
-        reviewed = cited = revision
+            revision = reviewed = "a" * 40
+        cited = revision
         directory = source_root / playable.PHASE_DIRECTORY
         directory.mkdir(parents=True, exist_ok=True)
         base_files = ("tools/verify_playable.py", "tests/tools/test_verify_playable.py", "docs/first-playable-build.md")
@@ -1469,7 +1485,7 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
                     mock.patch.object(subprocess, "run", side_effect=AssertionError("source archive called Git")):
                 summary = DocumentationCopies.frontend_summary()
                 self.assertEqual(summary["source_revision"], "a" * 40)
-                self.assertEqual(summary["inventory_sha256"], "0" * 64)
+                self.assertEqual(summary["inventory_sha256"], "1" * 64)
                 DocumentationCopies.write_sanitized_review_fixture(Path(review_dir))
             review = (Path(review_dir) / playable.REVIEW).read_text(encoding="utf-8")
             self.assertIn("reviewed_revision: " + "a" * 40, review)
@@ -1481,7 +1497,7 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
             self.copy_documentation(Path(temporary))
             playable.check_docs(Path(temporary))
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_two_committed_revisions(), "needs a parent commit for strict review ordering")
     def test_check_docs_accepts_complete_status_generated_from_tracked_receipt(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-docs-evidence-") as temporary:
             self.copy_documentation_with_evidence(Path(temporary))
@@ -1575,7 +1591,7 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "inventory digest does not match"):
                 playable.load_frontend_evidence(clone)
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_two_committed_revisions(), "needs a parent commit for strict review ordering")
     def test_check_docs_requires_generated_status_to_match_evidence(self) -> None:
         cases = (
             ("evidence with pending block", self.copy_documentation, True, "status block does not match"),
@@ -1684,7 +1700,7 @@ class EvidenceBindingTest(DocumentationCopies, unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "cannot be bound to committed bytes"):
                     playable.check_docs(source_root)
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_two_committed_revisions(), "needs HEAD^ for a bounded ancestor comparison")
     def test_explicit_repository_binds_the_copied_evidence(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-bound-") as temporary:
             source_root = Path(temporary)
