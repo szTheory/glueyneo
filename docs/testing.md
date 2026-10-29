@@ -469,7 +469,14 @@ unrefreshed edit to a listed rights file already fails the tolerated branch's
 digest check, a refreshed row cites a main commit and is evaluated strictly, and
 an orphaned allowlist row is inert. The allowlist cannot be edited after the
 squash because `ci` mode refuses on squashed history, so a gate that failed on
-orphaned rows could never be satisfied. The CTest `qualification_history_allowlist` runs the same
+orphaned rows could never be satisfied. In the sanitized public checkout,
+the private review, disposition and frontend receipt records are absent from
+both the checked commit and the working tree. There the generator omits those
+unavailable records, but still verifies every rights row strictly and emits
+only rights rows. Unrelated public `.planning` documents do not change this
+mode. If any private evidence record is present or tracked, the full review,
+frontend and rights checks apply; a missing tracked record fails closed. The
+CTest `qualification_history_allowlist` runs the same
 check locally against `-DGLUEYNEO_HISTORY_BASE=<ref>` (default `origin/main`,
 which must be fetched) and is registered only with
 `-DGLUEYNEO_PRE_SHIP_HISTORY_CHECK=ON`.

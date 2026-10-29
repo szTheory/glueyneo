@@ -1955,7 +1955,11 @@ def history_allowlist_document(source_root: Path, repository: Path, head: str,
     be listed and nothing can be generated on a squashed history, where listed rows are absent. A row is
     listed only when its cited revision is not an ancestor of M (rows reachable from main stay strict),
     with the per-record pin the gates compare. A listed rights row must also pass the post-squash
-    predicate now: the file at the checked head holds the recorded SHA-256 (G7CR-01). The text has no timestamp, host or absolute path.
+    predicate now: the file at the checked head holds the recorded SHA-256 (G7CR-01). In a sanitized public
+    checkout with no private review, disposition or frontend receipt record in either the checkout or
+    checked commit, only the rights gate is available; it still runs strictly, and the resulting allowlist
+    contains rights rows only. Any present or partially checked-out private evidence retains the full
+    review, frontend and rights checks. The text has no timestamp, host or absolute path.
     """
     if not isinstance(base, str) or (RIGHTS_REVISION.fullmatch(base) is None and HISTORY_BASE_NAME.fullmatch(base) is None):
         raise _allowlist_refusal("base is not a revision or branch name")
@@ -1966,11 +1970,30 @@ def history_allowlist_document(source_root: Path, repository: Path, head: str,
     if RIGHTS_REVISION.fullmatch(merge_base) is None:
         raise _allowlist_refusal(f"base {base} has no merge-base with the checked head")
     notes: list[str] = []
+    planning_records = (REVIEW, DISPOSITION, FRONTEND_EVIDENCE)
+    tracked_planning_records = {
+        relative: _git_exit(repository, ["cat-file", "-e", f"{head}:{relative.as_posix()}"]) == 0
+        for relative in planning_records
+    }
+    missing_tracked_records = [relative.as_posix() for relative, tracked in tracked_planning_records.items()
+                               if tracked and not (source_root / relative).is_file()]
+    if missing_tracked_records:
+        raise _allowlist_refusal("private planning record is missing from the checked-out source")
+    has_planning_history = any(tracked_planning_records.values()) or any(
+        (source_root / relative).is_file() for relative in planning_records)
     try:
-        load_frontend_evidence(source_root, repository=repository, head=head,
-                               allowlist=HistoryAllowlist.EMPTY, unverifiable=notes)  # type: ignore[attr-defined]
-        problems = [*review_provenance_errors(source_root, repository, head,
-                                              allowlist=HistoryAllowlist.EMPTY, unverifiable=notes),  # type: ignore[attr-defined]
+        if has_planning_history:
+            load_frontend_evidence(source_root, repository=repository, head=head,
+                                   allowlist=HistoryAllowlist.EMPTY, unverifiable=notes)  # type: ignore[attr-defined]
+            review_problems = review_provenance_errors(
+                source_root, repository, head, allowlist=HistoryAllowlist.EMPTY,
+                unverifiable=notes)  # type: ignore[attr-defined]
+        else:
+            # Sanitized public histories omit all three private evidence records. Unrelated .planning
+            # documents may remain public, but any one of these paths makes the full gate apply. The
+            # rights rows below still have to prove their bytes.
+            review_problems = []
+        problems = [*review_problems,
                     *rights_revision_errors(source_root, repository, head,
                                             allowlist=HistoryAllowlist.EMPTY, unverifiable=notes)]  # type: ignore[attr-defined]
     except (RuntimeError, OSError, UnicodeError, ValueError) as error:
@@ -1985,18 +2008,19 @@ def history_allowlist_document(source_root: Path, repository: Path, head: str,
         return _git_exit(repository, ["merge-base", "--is-ancestor", full, merge_base]) != 0
 
     rows: set[tuple[str, str, str, str]] = set()
-    review_text = (source_root / REVIEW).read_text(encoding="utf-8")
-    reviewed = _reviewed_revision(review_text)
-    if introduced(reviewed):
-        rows.add(("reviewed_revision", "04-REVIEW.md", reviewed, _reviewed_revision_pin(reviewed)))
-    disposition = (source_root / DISPOSITION).read_text(encoding="utf-8")
-    for row in _markdown_table_rows(disposition, "| Finding | Severity | Disposition | Source |"):
-        finding_id, _severity, state, source = row
-        if state.strip().lower() == "open":
-            continue
-        for revision in {match for form in REVIEW_REVISION_FORMS for match in form.findall(source)}:
-            if introduced(revision):
-                rows.add(("review_citation", finding_id, revision, _disposition_row_pin(disposition, finding_id) or ""))
+    if has_planning_history:
+        review_text = (source_root / REVIEW).read_text(encoding="utf-8")
+        reviewed = _reviewed_revision(review_text)
+        if introduced(reviewed):
+            rows.add(("reviewed_revision", "04-REVIEW.md", reviewed, _reviewed_revision_pin(reviewed)))
+        disposition = (source_root / DISPOSITION).read_text(encoding="utf-8")
+        for row in _markdown_table_rows(disposition, "| Finding | Severity | Disposition | Source |"):
+            finding_id, _severity, state, source = row
+            if state.strip().lower() == "open":
+                continue
+            for revision in {match for form in REVIEW_REVISION_FORMS for match in form.findall(source)}:
+                if introduced(revision):
+                    rows.add(("review_citation", finding_id, revision, _disposition_row_pin(disposition, finding_id) or ""))
     receipt_path = source_root / FRONTEND_EVIDENCE
     if receipt_path.is_file():
         receipt = json.loads(receipt_path.read_text(encoding="utf-8"))

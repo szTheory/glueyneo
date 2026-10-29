@@ -3318,6 +3318,57 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, self.GENERATOR_REFUSAL):
             self.generate(fx.repo, base="nosuchref")
 
+    def test_sanitized_checkout_generates_strict_rights_only_allowlist(self) -> None:
+        """A public checkout without private planning history can still bind rights rows for squash."""
+        with tempfile.TemporaryDirectory(prefix="playable-sanitized-allowlist-") as temporary:
+            repo = Path(temporary) / "repo"
+            repo.mkdir()
+            self.git(repo, "init", "-q", "-b", "main")
+            (repo / "src").mkdir()
+            (repo / "src/source.c").write_text("one\n", encoding="utf-8")
+            base = self.commit(repo, "public base", "src/source.c")
+            public_plan = repo / ".planning/public-context.md"
+            public_plan.parent.mkdir()
+            public_plan.write_text("Public source-plan metadata.\n", encoding="utf-8")
+            self.commit(repo, "public planning context", ".planning/public-context.md")
+
+            self.write_inventory(repo, [self.item("src/source.c", "one\n", base)])
+            self.commit(repo, "rights inventory", playable.RIGHTS_INVENTORY.as_posix())
+            (repo / "src/source.c").write_text("two\n", encoding="utf-8")
+            source_commit = self.commit(repo, "source change", "src/source.c")
+            self.write_inventory(repo, [self.item("src/source.c", "two\n", source_commit)])
+            self.commit(repo, "updated rights inventory", playable.RIGHTS_INVENTORY.as_posix())
+
+            self.assertTrue(public_plan.is_file())
+            document = json.loads(self.generate(repo, base=base))
+            self.assertEqual(document["base_revision"], base)
+            self.assertEqual(document["rows"], [{
+                "kind": "rights", "key": "src/source.c", "revision": source_commit,
+                "pin": self.canonical(self.item("src/source.c", "two\n", source_commit)),
+            }])
+
+            allowlist_path = repo / playable.HISTORY_ALLOWLIST
+            allowlist_path.write_text(self.generate(repo, base=base), encoding="utf-8")
+            self.commit(repo, "generated sanitized allowlist", playable.HISTORY_ALLOWLIST.as_posix())
+            status, out, err = self.run_cli(repo, "--history-allowlist", "ci", "--base", base)
+            self.assertEqual(status, 0, err)
+            self.assertIn("History allowlist is current", out)
+
+            # An unrelated public .planning document does not select the private evidence path, but
+            # one present review record does and an incomplete set fails closed.
+            self.write_review(repo, base)
+            with self.assertRaisesRegex(RuntimeError, self.GENERATOR_REFUSAL):
+                self.generate(repo, base=base)
+            (repo / playable.REVIEW).unlink()
+
+            # Rights-only generation remains strict: changed recorded bytes cannot be pinned.
+            inventory = repo / playable.RIGHTS_INVENTORY
+            text = inventory.read_text(encoding="utf-8")
+            inventory.write_text(text.replace(self.sha("two\n"), "0" * 64), encoding="utf-8")
+            self.commit(repo, "tampered rights digest", playable.RIGHTS_INVENTORY.as_posix())
+            with self.assertRaisesRegex(RuntimeError, self.GENERATOR_REFUSAL + ".*does not hold"):
+                self.generate(repo, base=base)
+
     def test_g5wr_01_generator_skips_open_and_third_party_rows(self) -> None:
         fx = self.on_feature()
         self.append_disposition(fx.repo, "| CR-03 | info | open | recorded |")
