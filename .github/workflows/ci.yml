@@ -57,6 +57,18 @@ jobs:
       max-parallel: 2
       matrix:
         include:
+          - lane: windows-msvc
+            runner: windows-2025
+            suite: matrix
+            cc: ""
+            cxx: ""
+            fetch_depth: 1
+          - lane: linux-clang-sanitizer
+            runner: ubuntu-24.04
+            suite: sanitizer
+            cc: clang
+            cxx: clang++
+            fetch_depth: 0
           - lane: linux-clang
             runner: ubuntu-24.04
             suite: matrix
@@ -75,18 +87,6 @@ jobs:
             cc: ""
             cxx: ""
             fetch_depth: 1
-          - lane: windows-msvc
-            runner: windows-2025
-            suite: matrix
-            cc: ""
-            cxx: ""
-            fetch_depth: 1
-          - lane: linux-clang-sanitizer
-            runner: ubuntu-24.04
-            suite: sanitizer
-            cc: clang
-            cxx: clang++
-            fetch_depth: 0
           - lane: linux-clang-fuzz
             runner: ubuntu-24.04
             suite: fuzz
