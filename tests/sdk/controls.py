@@ -400,7 +400,7 @@ INSTALLED_SANITIZER_FLAGS = {
 
 def sanitizer_runtime_diagnostic_tail(ctest_output: str, test_details: str,
                                       limit: int = 60) -> list[str]:
-    """Keep CTest's failure names visible when appending verbose LastTest.log."""
+    """Retain each failed test's output and CTest summary within a line bound."""
     ctest_lines = ctest_output.splitlines()
     detail_lines = test_details.splitlines()
     failure_start = next((index for index in range(len(ctest_lines) - 1, -1, -1)
@@ -409,14 +409,58 @@ def sanitizer_runtime_diagnostic_tail(ctest_output: str, test_details: str,
     if failure_start is None:
         return (ctest_lines + detail_lines)[-limit:]
 
-    failure_summary = ctest_lines[failure_start:]
-    if len(failure_summary) > limit:
+    failure_names = re.findall(
+        r"(?m)^\s*\d+\s+-\s+(sdk_\w+)\s+\([^\n]+\)\s*$",
+        "\n".join(ctest_lines[failure_start + 1:]))
+    failure_summary = [
+        line for line in ctest_lines[:failure_start]
+        if re.search(r"\d+% tests passed, \d+ tests? failed", line) or
+        "Total Test time" in line
+    ]
+    failure_summary.append(ctest_lines[failure_start])
+    failure_summary.extend(
+        line for line in ctest_lines[failure_start + 1:]
+        if re.match(r"^\s*\d+\s+-\s+sdk_\w+\s+\([^\n]+\)\s*$", line))
+
+    starts = list(re.finditer(r"(?m)^\d+/\d+ Testing: (sdk_\w+)\s*$", test_details))
+    test_output: dict[str, list[str]] = {}
+    for index, match in enumerate(starts):
+        name = match.group(1)
+        if name not in failure_names:
+            continue
+        section_end = starts[index + 1].start() if index + 1 < len(starts) else len(test_details)
+        section = test_details[match.start():section_end].splitlines()
+        output_start = next((line_index for line_index, line in enumerate(section)
+                             if line.strip() == "Output:"), None)
+        if output_start is None:
+            continue
+        output_end = next((line_index for line_index in range(output_start + 1, len(section))
+                           if re.match(rf'^"{re.escape(name)}" (?:end time|time elapsed):',
+                                       section[line_index]) or
+                           section[line_index] in {"Test Passed.", "Test Failed."}),
+                          len(section))
+        output = [line for line in section[output_start + 1:output_end]
+                  if line.strip() and not re.fullmatch(r"[-=]{3,}", line.strip())]
+        if output:
+            test_output[name] = output
+
+    if len(failure_summary) >= limit:
         failure_summary = [failure_summary[0], *failure_summary[-(limit - 1):]]
-    context_budget = limit - len(failure_summary)
-    detail_budget = context_budget // 2
-    context_budget -= detail_budget
-    details = detail_lines[-detail_budget:] if detail_budget else []
-    context = ctest_lines[:failure_start][-context_budget:] if context_budget else []
+    detail_budget = limit - len(failure_summary)
+    details: list[str] = []
+    selected_names = [name for name in failure_names if name in test_output]
+    if selected_names and detail_budget > 0:
+        per_test_budget = max(1, detail_budget // len(selected_names))
+        for name in selected_names:
+            output = test_output[name]
+            if len(output) > per_test_budget:
+                output = output[-per_test_budget:]
+            details.extend(output)
+    elif detail_budget > 0:
+        details = detail_lines[-detail_budget:]
+
+    remaining = limit - len(failure_summary) - len(details)
+    context = ctest_lines[:failure_start][-remaining:] if remaining > 0 else []
     return (details + context + failure_summary)[-limit:]
 
 

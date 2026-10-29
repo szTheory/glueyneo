@@ -6,6 +6,7 @@
 #include "chips/ym2610_candidate.h"
 
 #include <assert.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -47,6 +48,88 @@ static char observation_lines[OBSERVATION_RECORDS_MAX][128];
 static size_t observation_line_count;
 static size_t observation_video_callbacks;
 static size_t observation_callback_at_log[OBSERVATION_RECORDS_MAX];
+
+static bool is_log_whitespace(char value) {
+    return value == ' ' || value == '\t' || value == '\n' ||
+           value == '\r' || value == '\v' || value == '\f';
+}
+
+static void skip_log_whitespace(const char **cursor) {
+    while (is_log_whitespace(**cursor)) ++*cursor;
+}
+
+static bool parse_log_decimal(const char **cursor,
+                              unsigned long long *out_value) {
+    skip_log_whitespace(cursor);
+    if (**cursor < '0' || **cursor > '9') return false;
+    unsigned long long value = 0u;
+    do {
+        const unsigned digit = (unsigned)(**cursor - '0');
+        if (value > (ULLONG_MAX - digit) / 10u) return false;
+        value = value * 10u + digit;
+        ++*cursor;
+    } while (**cursor >= '0' && **cursor <= '9');
+    *out_value = value;
+    return true;
+}
+
+static bool parse_log_decimal_fields(const char *text,
+                                     unsigned long long *values,
+                                     size_t count) {
+    const char *cursor = text;
+    for (size_t index = 0u; index < count; ++index)
+        if (!parse_log_decimal(&cursor, &values[index])) return false;
+    skip_log_whitespace(&cursor);
+    return *cursor == '\0';
+}
+
+static bool parse_log_labeled_decimals(const char *text,
+                                       const char *const *labels,
+                                       unsigned long long *values,
+                                       size_t count) {
+    const char *cursor = text;
+    for (size_t index = 0u; index < count; ++index) {
+        skip_log_whitespace(&cursor);
+        const size_t label_length = strlen(labels[index]);
+        if (strncmp(cursor, labels[index], label_length) != 0) return false;
+        cursor += label_length;
+        if (!parse_log_decimal(&cursor, &values[index])) return false;
+    }
+    skip_log_whitespace(&cursor);
+    return *cursor == '\0';
+}
+
+static void copy_log_line(char *destination, size_t capacity,
+                          const char *source) {
+    const size_t length = strlen(source);
+    if (length >= capacity) abort();
+    memcpy(destination, source, length + 1u);
+}
+
+static void check_log_parser_controls(void) {
+    unsigned long long values[5] = {0u};
+    if (!parse_log_decimal_fields(" 1 10 18446744073709551615", values, 3u) ||
+        values[0] != 1u || values[1] != 10u || values[2] != ULLONG_MAX)
+        abort();
+    if (parse_log_decimal_fields("1 2", values, 3u) ||
+        parse_log_decimal_fields("1 2x 3", values, 3u) ||
+        parse_log_decimal_fields("18446744073709551616", values, 1u))
+        abort();
+
+    const char *const labels[] = {
+        "generated=", "submitted=", "processed=", "discarded=", "overreports="};
+    if (!parse_log_labeled_decimals(
+            " generated=99 submitted=0 processed=0 discarded=99 overreports=0",
+            labels, values, 5u) ||
+        values[0] != 99u || values[1] != 0u || values[2] != 0u ||
+        values[3] != 99u || values[4] != 0u)
+        abort();
+    if (parse_log_labeled_decimals(
+            "generated=99 processed=0 submitted=0 discarded=99 overreports=0",
+            labels, values, 5u))
+        abort();
+}
+
 #define ADAPTER_INPUT_DESCRIPTORS_MAX 16u
 static struct retro_input_descriptor
     adapter_input_descriptors[ADAPTER_INPUT_DESCRIPTORS_MAX];
@@ -86,19 +169,16 @@ static void RETRO_CALLCONV capture_log(enum retro_log_level level, const char *f
     const size_t length = strlen(formatted);
     if (length != 0u && formatted[length - 1u] == '\n') formatted[length - 1u] = '\0';
     if (strncmp(formatted, "glueyneo: mvs ", 13u) == 0) {
-        assert(observation_line_count < OBSERVATION_RECORDS_MAX);
+        if (observation_line_count >= OBSERVATION_RECORDS_MAX) abort();
         observation_callback_at_log[observation_line_count] = observation_video_callbacks;
-        strcpy(observation_lines[observation_line_count++], formatted);
+        copy_log_line(observation_lines[observation_line_count],
+                      sizeof(observation_lines[observation_line_count]), formatted);
+        ++observation_line_count;
     } else if (strncmp(formatted, "glueyneo: MVS audio frame:",
                        sizeof("glueyneo: MVS audio frame:") - 1u) == 0) {
         const char *cursor = formatted + sizeof("glueyneo: MVS audio frame:") - 1u;
         unsigned long long values[18];
-        for (size_t index = 0u; index < 18u; ++index) {
-            int used = 0;
-            assert(sscanf(cursor, " %llu%n", &values[index], &used) == 1 && used > 0);
-            cursor += used;
-        }
-        assert(*cursor == '\0');
+        if (!parse_log_decimal_fields(cursor, values, 18u)) abort();
         if (values[0] == 1u) {
             audio_frame_line_count = 0u;
             audio_frame_sample_total = 0u;
@@ -111,11 +191,12 @@ static void RETRO_CALLCONV capture_log(enum retro_log_level level, const char *f
         audio_frame_last_mask = values[1];
     } else if (strncmp(formatted, "glueyneo: MVS audio final delivery:",
                        sizeof("glueyneo: MVS audio final delivery:") - 1u) == 0) {
-        strcpy(audio_delivery_line, formatted);
+        copy_log_line(audio_delivery_line, sizeof(audio_delivery_line), formatted);
         ++audio_delivery_line_count;
     } else {
         if (log_line_count < LOG_LINES_MAX)
-            strcpy(log_lines[log_line_count], formatted);
+            copy_log_line(log_lines[log_line_count], sizeof(log_lines[log_line_count]),
+                          formatted);
         ++log_line_count;
     }
     va_end(arguments);
@@ -1950,6 +2031,12 @@ static unsigned adapter_video_width[4];
 static unsigned adapter_video_height[4];
 static size_t adapter_video_pitch[4];
 
+static void clear_adapter_video_data(void) {
+    for (size_t index = 0u; index < sizeof(adapter_video_data) /
+                                   sizeof(adapter_video_data[0]); ++index)
+        adapter_video_data[index] = NULL;
+}
+
 static void RETRO_CALLCONV adapter_input_poll(void) {
     ++adapter_input_polls;
 }
@@ -2205,7 +2292,7 @@ static void check_mvs_adapter_start_response(const uint8_t *bundle,
     uint8_t *native_pixels = (uint8_t *)malloc(frame_bytes);
     assert(native_pixels != NULL);
     size_t native_produced = 0u;
-    memset(adapter_video_data, 0, sizeof(adapter_video_data));
+    clear_adapter_video_data();
     memset(adapter_video_width, 0, sizeof(adapter_video_width));
     memset(adapter_video_height, 0, sizeof(adapter_video_height));
     memset(adapter_video_pitch, 0, sizeof(adapter_video_pitch));
@@ -2296,7 +2383,7 @@ static void check_mvs_adapter_start_response(const uint8_t *bundle,
     free(native_pixels);
 
     /* Unload and a rejected load submit no frame. A new valid instance follows. */
-    memset(adapter_video_data, 0, sizeof(adapter_video_data));
+    clear_adapter_video_data();
     memset(adapter_video_pixels, 0xa5, sizeof(adapter_video_pixels));
     adapter_video_calls = 0u;
     retro_run();
@@ -2336,7 +2423,7 @@ static void check_mvs_adapter_start_response(const uint8_t *bundle,
     adapter_bundle = make_adapter_input_bundle(bundle, bundle_size, 1, 0);
     game.data = adapter_bundle;
     adapter_video_calls = 0u;
-    memset(adapter_video_data, 0, sizeof(adapter_video_data));
+    clear_adapter_video_data();
     memset(adapter_video_pixels, 0xa5, sizeof(adapter_video_pixels));
     adapter_joypad_state = 0u;
     assert(retro_load_game(&game));
@@ -2366,7 +2453,7 @@ static void check_mvs_adapter_right_guest_pixels(const uint8_t *bundle,
     uint8_t *native_pixels = (uint8_t *)malloc(frame_bytes);
     uint8_t *neutral_pixels = (uint8_t *)malloc(frame_bytes);
     assert(native_pixels != NULL && neutral_pixels != NULL);
-    memset(adapter_video_data, 0, sizeof(adapter_video_data));
+    clear_adapter_video_data();
     memset(adapter_video_pixels, 0xa5, sizeof(adapter_video_pixels));
     adapter_video_calls = 0u;
     adapter_input_polls = 0u;
@@ -2452,11 +2539,19 @@ typedef struct {
 static input_observation read_input_observation(size_t index) {
     assert(index < observation_line_count);
     input_observation record;
-    int consumed = 0;
-    assert(sscanf(observation_lines[index], "glueyneo: mvs %c %llu %llu %llu %llu%n",
-        &record.kind, &record.sample, &record.mask, &record.video,
-        &record.cycles, &consumed) == 5);
-    assert(observation_lines[index][consumed] == '\0');
+    const char prefix[] = "glueyneo: mvs ";
+    const char *cursor = observation_lines[index];
+    if (strncmp(cursor, prefix, sizeof(prefix) - 1u) != 0) abort();
+    cursor += sizeof(prefix) - 1u;
+    if (*cursor == '\0' || is_log_whitespace(*cursor)) abort();
+    record.kind = *cursor++;
+    if (!is_log_whitespace(*cursor)) abort();
+    unsigned long long values[4];
+    if (!parse_log_decimal_fields(cursor, values, 4u)) abort();
+    record.sample = values[0];
+    record.mask = values[1];
+    record.video = values[2];
+    record.cycles = values[3];
     return record;
 }
 
@@ -2634,11 +2729,19 @@ static void check_mvs_input_observations(const uint8_t *bundle, size_t size) {
     retro_unload_game();
 #ifdef GLUEYNEO_MVS_INPUT_OBSERVATIONS
     assert(audio_delivery_line_count == 1u);
-    unsigned long long generated, submitted, processed, discarded, overreports;
-    assert(sscanf(audio_delivery_line,
-        "glueyneo: MVS audio final delivery: generated=%llu submitted=%llu "
-        "processed=%llu discarded=%llu overreports=%llu",
-        &generated, &submitted, &processed, &discarded, &overreports) == 5);
+    const char prefix[] = "glueyneo: MVS audio final delivery:";
+    const char *cursor = audio_delivery_line;
+    if (strncmp(cursor, prefix, sizeof(prefix) - 1u) != 0) abort();
+    cursor += sizeof(prefix) - 1u;
+    const char *const labels[] = {
+        "generated=", "submitted=", "processed=", "discarded=", "overreports="};
+    unsigned long long values[5];
+    if (!parse_log_labeled_decimals(cursor, labels, values, 5u)) abort();
+    const unsigned long long generated = values[0];
+    const unsigned long long submitted = values[1];
+    const unsigned long long processed = values[2];
+    const unsigned long long discarded = values[3];
+    const unsigned long long overreports = values[4];
     /* This original observer guest has no audio callback: every generated
      * frame is deliberately discarded, rather than submitted or queued. */
     assert(generated > 0u && submitted == 0u && processed == 0u &&
@@ -2720,7 +2823,7 @@ static void check_mvs_adapter_composition(const uint8_t *bundle,
     const size_t frame_bytes = (size_t)320u * 224u * sizeof(uint32_t);
     uint8_t *native_pixels = (uint8_t *)malloc(frame_bytes);
     assert(native_pixels != NULL);
-    memset(adapter_video_data, 0, sizeof(adapter_video_data));
+    clear_adapter_video_data();
     memset(adapter_video_pixels, 0xa5, sizeof(adapter_video_pixels));
     adapter_video_calls = 0u;
     adapter_input_polls = 0u;
@@ -3525,7 +3628,8 @@ static void check_calendar(const uint8_t *bundle, size_t size) {
     uint16_t counter = 0u;
     assert(gn_test_mvs_read_work_ram(instance, CAL_COUNTER, &counter) == GN_STATUS_OK);
     assert(counter == 0x1234u);
-    assert(cal_state(instance).shift_reg[6] == 0x08u);
+    gn_mvs_calendar state = cal_state(instance);
+    assert(state.shift_reg[6] == 0x08u);
     gn_destroy(instance);
     free(media.copy);
 
@@ -3533,14 +3637,15 @@ static void check_calendar(const uint8_t *bundle, size_t size) {
      * leaves the latched command untouched (wrong-behavior control). */
     instance = cal_start_idle(&media, bundle, size);
     gn_instance *other = bb_start(&media);
-    gn_mvs_calendar state = cal_state(instance);
+    state = cal_state(instance);
     assert(memcmp(state.time_counter, cal_epoch, sizeof(cal_epoch)) == 0);
     assert(state.command == 0u && state.stb == 0u && state.clk == 0u);
     assert(memcmp(cal_state(other).time_counter, cal_epoch, sizeof(cal_epoch)) == 0);
     for (unsigned bit = 0u; bit < 4u; ++bit) cal_clock_bit(instance, (CAL_TIME_READ >> bit) & 1u);
     state = cal_state(instance);
     assert(state.shift_reg[6] == CAL_TIME_READ && state.command == 0u);
-    assert(cal_state(other).shift_reg[6] == 0u);
+    const gn_mvs_calendar other_state = cal_state(other);
+    assert(other_state.shift_reg[6] == 0u);
 
     /* TIME READ then SHIFT presents the 48 time bits, least significant
      * first, on data out; the seed is read back. */
@@ -3621,12 +3726,14 @@ static void check_calendar_timing(const uint8_t *bundle, size_t size) {
     uint64_t total = cal_run(instance, UINT64_C(1000));
     total += cal_run(instance, CAL_SECOND_CYCLES - UINT64_C(1) - total);
     assert(total == CAL_SECOND_CYCLES - UINT64_C(1));
-    assert(cal_state(instance).time_counter[0] == 0x00u);
+    gn_mvs_calendar state = cal_state(instance);
+    assert(state.time_counter[0] == 0x00u);
     total += cal_run(instance, UINT64_C(1));
-    assert(cal_state(instance).time_counter[0] == 0x01u);
+    state = cal_state(instance);
+    assert(state.time_counter[0] == 0x01u);
     /* Carry into minutes after 60 seconds. */
     total += cal_run(instance, UINT64_C(59) * CAL_SECOND_CYCLES);
-    gn_mvs_calendar state = cal_state(instance);
+    state = cal_state(instance);
     assert(total == UINT64_C(60) * CAL_SECOND_CYCLES);
     assert(state.time_counter[0] == 0x00u && state.time_counter[1] == 0x01u);
     /* An instance that never ran keeps the seed. */
@@ -6653,6 +6760,7 @@ static void check_board_behavior(const uint8_t *bundle, size_t size) {
 }
 
 int main(int argc, char **argv) {
+    check_log_parser_controls();
     const size_t zip_capacity = (size_t)64u * 1024u * 1024u;
     uint8_t *zip = (uint8_t *)malloc(zip_capacity);
     assert(zip != NULL);

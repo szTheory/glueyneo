@@ -103,6 +103,48 @@ def sanitizer_failure_controls() -> None:
     assert "The following tests FAILED:" in bounded_diagnostic
     assert any("10 - sdk_state (Failed)" in line for line in bounded_diagnostic)
     assert bounded_diagnostic[-1] == " 10 - sdk_state (Failed)"
+
+    failed_body = (
+        "save receipt control failed: positive suite exited 1\n"
+        "# ASSERT save.pending-newer expected=1 observed=0\n"
+        "native failure at " + native_path + "\n")
+    native_build = "/" + "home/" + "private-account/build"
+    failed_last_test = (
+        "Start testing: Oct 29 00:23 UTC\n"
+        "----------------------------------------------------------\n"
+        "55/13 Testing: sdk_save_receipts\n"
+        "55/13 Test: sdk_save_receipts\n"
+        f"Command: \"{native_build}/sdk_save_test\" receipts\n"
+        f"Directory: {native_build}\n"
+        "Output:\n"
+        "----------------------------------------------------------\n" + failed_body +
+        "\"sdk_save_receipts\" end time: Oct 29 00:23 UTC\n"
+        "\"sdk_save_receipts\" time elapsed: 00:00:01\n"
+        "Test Failed.\n"
+        "----------------------------------------------------------\n"
+        "56/13 Testing: sdk_run\n"
+        "56/13 Test: sdk_run\n"
+        "Output:\n" + "\n".join(
+            f"later passing log row {index}" for index in range(120)) + "\n"
+        "Test Passed.\n")
+    failed_ctest_output = (
+        "Start 55: sdk_save_receipts\n"
+        "1/13 Test #55: sdk_save_receipts ........***Failed    1.00 sec\n"
+        "2/13 Test #56: sdk_run ..................   Passed    0.01 sec\n"
+        "92% tests passed, 1 tests failed out of 13\n"
+        "Total Test time (real) = 72.55 sec\n"
+        "The following tests FAILED:\n"
+        " 55 - sdk_save_receipts (Failed)\n")
+    failed_case_diagnostic = controls.sanitizer_runtime_diagnostic_tail(
+        failed_ctest_output, failed_last_test)
+    assert len(failed_case_diagnostic) <= 60
+    failed_case_text = "\n".join(failed_case_diagnostic)
+    assert "save receipt control failed: positive suite exited 1" in failed_case_text
+    assert "# ASSERT save.pending-newer expected=1 observed=0" in failed_case_text
+    assert "55 - sdk_save_receipts (Failed)" in failed_case_text
+    safe_failed_case = verify_sdk.redacted_failure_diagnostic(failed_case_text)
+    assert native_path not in safe_failed_case
+    assert "[private-path-redacted]" in safe_failed_case
     variants = [
         ({"status": "failed_runtime", "runtime_status": "failed",
           "error": "runtime CTest suite exited 8", "tests_passed": 1,
