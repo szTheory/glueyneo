@@ -886,8 +886,8 @@
     {
       "key": "tests/mvs/test_mvs_qualification.py",
       "kind": "rights",
-      "pin": "c60b9b0f75c1cf8324783436eed9864ae05f61796f2f3941adb3946bc282bf0c",
-      "revision": "7e67db1660c8a6c2e668674b5ae76eca7f3f3be3"
+      "pin": "c6d98c2cb31504a6151caa3ca534d761118336fa05aa079deeda4b65f54cecb8",
+      "revision": "b55b73e062e1027d076b225299c5b2bc53e2f3a9"
     },
     {
       "key": "tests/owned_cpu/ORACLE.md",
