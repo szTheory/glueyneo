@@ -4922,9 +4922,13 @@ class FrontendAudioCaptureTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             path = root / "capture.wav"
-            before = time.time_ns()
             self.make_wave(path, struct.pack("<hhhh", 1, -1, 2, -2))
-            after = time.time_ns() + 1_000_000
+            # Anchor the positive interval to the stored timestamp. A
+            # filesystem may round mtime down past a wall-clock sample taken
+            # immediately before writing the fixture.
+            capture_mtime = path.stat().st_mtime_ns
+            before = capture_mtime
+            after = max(time.time_ns(), capture_mtime) + 1_000_000
             receipt = parse(path, owned_directory=root, started_ns=before, finished_ns=after)
             self.assertEqual(receipt["stage"], "frontend_libretro_audio_callback_pre_flush")
             self.assertEqual(receipt["format"], "pcm_s16le_interleaved_stereo")
@@ -4933,6 +4937,9 @@ class FrontendAudioCaptureTests(unittest.TestCase):
             self.assertEqual(receipt["sample_frames"], 2)
             self.assertEqual(receipt["nonzero_samples"], 4)
             self.assertEqual(len(receipt["pcm_sha256"]), 64)
+            with self.assertRaises(smoke.SmokeBlocked):
+                parse(path, owned_directory=root, started_ns=capture_mtime + 1,
+                      finished_ns=after)
 
             self.make_wave(path, bytes(8))
             with self.assertRaises(smoke.SmokeBlocked):
