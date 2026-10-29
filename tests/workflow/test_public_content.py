@@ -25,7 +25,12 @@ class PublicContentTests(unittest.TestCase):
     def test_current_source_dispositions_bind_path_bytes_and_rule(self) -> None:
         for (path, digest), disposition in content.SOURCE_FINDING_DISPOSITIONS.items():
             with self.subTest(path=path):
-                data = (ROOT / path).read_bytes()
+                source_data = (ROOT / path).read_bytes()
+                data = source_data
+                if digest == "439c75ab12b340c5362b9d4b08ff05ec3a4d0eb7667a6fff49a9b16d8795c78e":
+                    self.assertEqual(path, "third_party/zlib/LICENSE")
+                    data = source_data.replace(b"\n", b"\r\n")
+                    self.assertEqual(data.replace(b"\r\n", b"\n"), source_data)
                 self.assertEqual(hashlib.sha256(data).hexdigest(), digest)
                 for location in (path, "glueyneo-source/" + path):
                     result = content.scan_bytes(data, location)
@@ -35,9 +40,25 @@ class PublicContentTests(unittest.TestCase):
                 self.assertTrue(content.scan_bytes(data, "ci-log-1")["findings"])
                 self.assertTrue(content.scan_bytes(data, "other/" + path)["findings"])
         license_data = (ROOT / "third_party/zlib/LICENSE").read_bytes()
-        location = "glueyneo-sdk-9.8.7/static/share/licenses/Glueyneo/zlib/LICENSE"
-        self.assertEqual(content.scan_bytes(license_data, location)["findings"], [])
-        self.assertTrue(content.scan_bytes(license_data + b"\n", location)["findings"])
+        license_variants = (
+            license_data,
+            license_data.replace(b"\n", b"\r\n"),
+        )
+        for data in license_variants:
+            for variant in ("static", "shared"):
+                location = (
+                    f"glueyneo-sdk-9.8.7/{variant}/share/licenses/Glueyneo/zlib/LICENSE"
+                )
+                result = content.scan_bytes(data, location)
+                self.assertEqual(result["findings"], [])
+                self.assertEqual(result["dispositions"][0]["rules"], ["private-identity"])
+                self.assertTrue(content.scan_bytes(data + b"\n", location)["findings"])
+            for location in (
+                "ci-log-1",
+                "glueyneo-sdk-9.8.7/static/share/licenses/Other/zlib/LICENSE",
+                "other/third_party/zlib/LICENSE",
+            ):
+                self.assertTrue(content.scan_bytes(data, location)["findings"])
 
     def test_source_scan_tracks_release_archive_policy(self) -> None:
         self.assertEqual(tuple(content.SOURCE_PATHS), release.SOURCE_PATHS)
