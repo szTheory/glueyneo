@@ -361,12 +361,20 @@ static int slot_directory(const char *slot, char *directory, size_t capacity) {
     if (length == 0u || length >= capacity) return 0;
     memcpy(directory, slot, length + 1u);
     char *slash = strrchr(directory, '/');
+#if defined(_WIN32)
+    char *backslash = strrchr(directory, '\\');
+    if (backslash != NULL && (slash == NULL || backslash > slash)) slash = backslash;
+#endif
     if (slash == NULL) {
         if (capacity < 2u) return 0;
         directory[0] = '.';
         directory[1] = '\0';
     } else if (slash == directory) {
         slash[1] = '\0';
+#if defined(_WIN32)
+    } else if (slash == directory + 2 && directory[1] == ':') {
+        slash[1] = '\0';
+#endif
     } else {
         *slash = '\0';
     }

@@ -5,16 +5,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
+from pathlib import PureWindowsPath
 import re
 import shutil
 import subprocess
 import sys
 import unittest
+from unittest import mock
 
 from check_package import (
     ROOT,
     build_package,
+    clean_environment,
     installed_layout,
     new_work_dir,
     run,
@@ -25,6 +29,28 @@ from check_package import (
 
 def _exe(build: Path, name: str) -> Path:
     return build / (name + (".exe" if sys.platform == "win32" else ""))
+
+
+def _serialized_compile_command(row: dict[str, object]) -> str:
+    """Normalize JSON-escaped Windows separators before path identity checks."""
+    return json.dumps(row, sort_keys=True).replace("\\\\", "/")
+
+
+def _normalized_compile_path(value: object) -> str:
+    return value.replace("\\", "/") if isinstance(value, str) else ""
+
+
+def _consumer_process_environment(variant: str, library_directory: Path, *,
+                                  platform: str | None = None) -> dict[str, str]:
+    env = clean_environment()
+    current_platform = sys.platform if platform is None else platform
+    if variant == "shared":
+        for name in ("DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH",
+                     "LD_LIBRARY_PATH"):
+            env.pop(name, None)
+        if current_platform == "win32":
+            env["PATH"] = str(library_directory) + os.pathsep + env.get("PATH", "")
+    return env
 
 
 class ContinuationInstallTests(unittest.TestCase):
@@ -80,6 +106,8 @@ class ContinuationInstallTests(unittest.TestCase):
         child = subprocess.Popen(
             [str(executable), *(str(arg) for arg in args)],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+            env=_consumer_process_environment(
+                self.variant, self.layout["library"].parent),
         )
         try:
             output, _ = child.communicate(timeout=30)
@@ -186,13 +214,44 @@ class ContinuationInstallTests(unittest.TestCase):
         self.assertEqual(staged.read_bytes(), source.read_bytes())
         compile_commands = json.loads(
             (self.consumer_build / "compile_commands.json").read_text(encoding="utf-8"))
+        expected_source = (self.consumer_source / "continuation.c").as_posix()
         continuation_rows = [row for row in compile_commands
-                             if row.get("file", "").endswith("/continuation.c")]
+                             if _normalized_compile_path(row.get("file")) == expected_source]
         self.assertEqual(len(continuation_rows), 1)
-        compile_text = json.dumps(continuation_rows[0], sort_keys=True)
-        self.assertIn(str(self.relocated_prefix), compile_text)
-        for forbidden in (str(ROOT), str(self.package_build), str(self.work / "producer")):
+        compile_text = _serialized_compile_command(continuation_rows[0])
+        self.assertIn(self.relocated_prefix.as_posix(), compile_text)
+        for forbidden in (ROOT.as_posix(), self.package_build.as_posix(),
+                          (self.work / "producer").as_posix()):
             self.assertNotIn(forbidden, compile_text)
+
+    def test_windows_compile_command_paths_are_separator_independent(self) -> None:
+        prefix = PureWindowsPath(r"D:\agent\relocated\sdk-prefix")
+        source = PureWindowsPath(r"D:\agent\consumer-source\continuation.c")
+        row = {
+            "command": f'cl.exe /I"{prefix / "include"}" /c "{source}"',
+            "directory": str(PureWindowsPath(r"D:\agent\consumer-build")),
+            "file": str(source),
+        }
+        command = _serialized_compile_command(row)
+        self.assertIn((prefix / "include").as_posix(), command)
+        self.assertEqual(_normalized_compile_path(row["file"]), source.as_posix())
+        self.assertNotIn(PureWindowsPath(r"D:\agent\glueyneo").as_posix(), command)
+        self.assertNotIn(PureWindowsPath(r"D:\agent\sdk-debug").as_posix(), command)
+        self.assertNotIn(PureWindowsPath(r"D:\agent\producer").as_posix(), command)
+
+    def test_shared_windows_child_searches_the_relocated_library(self) -> None:
+        library_directory = PureWindowsPath(r"D:\agent\relocated\sdk-prefix\bin")
+        with mock.patch.object(os, "pathsep", ";"), mock.patch.dict(
+                os.environ, {"LD_LIBRARY_PATH": "synthetic-loader-a",
+                             "DYLD_LIBRARY_PATH": "synthetic-loader-b",
+                             "DYLD_FALLBACK_LIBRARY_PATH": "synthetic-loader-c"},
+                clear=False):
+            env = _consumer_process_environment(
+                "shared", Path(str(library_directory)), platform="win32")
+        self.assertTrue(env["PATH"].startswith(str(library_directory) + ";"))
+        self.assertNotIn("LD_LIBRARY_PATH", env)
+        self.assertNotIn("DYLD_LIBRARY_PATH", env)
+        self.assertNotIn("DYLD_FALLBACK_LIBRARY_PATH", env)
 
     def test_fresh_process_continuation(self) -> None:
         producer, reader, expected, observed = self._process_pair("fresh")

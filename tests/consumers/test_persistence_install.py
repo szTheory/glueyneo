@@ -8,6 +8,7 @@ from collections import Counter
 import json
 import os
 from pathlib import Path
+from pathlib import PureWindowsPath
 import re
 import secrets
 import shutil
@@ -34,6 +35,15 @@ from check_package import (
 
 def _exe(build: Path, name: str) -> Path:
     return build / (name + (".exe" if sys.platform == "win32" else ""))
+
+
+def _serialized_compile_command(row: dict[str, object]) -> str:
+    """Normalize JSON-escaped Windows separators before path identity checks."""
+    return json.dumps(row, sort_keys=True).replace("\\\\", "/")
+
+
+def _normalized_compile_path(value: object) -> str:
+    return value.replace("\\", "/") if isinstance(value, str) else ""
 
 
 class PersistenceInstallTests(unittest.TestCase):
@@ -332,8 +342,9 @@ class PersistenceInstallTests(unittest.TestCase):
                          (ROOT / "tests/fixture/public_sound_guest.c").read_bytes())
         compile_commands = json.loads(
             (self.consumer_build / "compile_commands.json").read_text(encoding="utf-8"))
+        expected_source = (self.consumer_source / "persistence.c").as_posix()
         rows = [row for row in compile_commands
-                if row.get("file", "").endswith("/persistence.c")]
+                if _normalized_compile_path(row.get("file")) == expected_source]
         self.assertEqual(len(rows), 2)
         normal_rows = [row for row in rows
                        if "GLUEYNEO_PERSISTENCE_TESTING" not in
@@ -342,9 +353,10 @@ class PersistenceInstallTests(unittest.TestCase):
         self.assertEqual(len(normal_rows), 1)
         self.assertEqual(len(fault_rows), 1)
         for row in rows:
-            command = json.dumps(row, sort_keys=True)
-            self.assertIn(str(self.relocated_prefix), command)
-            for forbidden in (str(ROOT), str(self.package_build), str(self.work / "producer")):
+            command = _serialized_compile_command(row)
+            self.assertIn(self.relocated_prefix.as_posix(), command)
+            for forbidden in (ROOT.as_posix(), self.package_build.as_posix(),
+                              (self.work / "producer").as_posix()):
                 self.assertNotIn(forbidden, command)
         nm = shutil.which("nm")
         if nm is not None:
@@ -352,6 +364,21 @@ class PersistenceInstallTests(unittest.TestCase):
                 capture_output=True, text=True, timeout=10).stdout
             self.assertNotIn("persistence_host_test_set_faults", symbols)
             self.assertNotIn("persistence_host_set_stage_callback", symbols)
+
+    def test_windows_compile_command_paths_are_separator_independent(self) -> None:
+        prefix = PureWindowsPath(r"D:\agent\relocated\sdk-prefix")
+        source = PureWindowsPath(r"D:\agent\consumer-source\persistence.c")
+        row = {
+            "command": f'cl.exe /I"{prefix / "include"}" /c "{source}"',
+            "directory": str(PureWindowsPath(r"D:\agent\consumer-build")),
+            "file": str(source),
+        }
+        command = _serialized_compile_command(row)
+        self.assertIn((prefix / "include").as_posix(), command)
+        self.assertEqual(_normalized_compile_path(row["file"]), source.as_posix())
+        self.assertNotIn(PureWindowsPath(r"D:\agent\glueyneo").as_posix(), command)
+        self.assertNotIn(PureWindowsPath(r"D:\agent\sdk-debug").as_posix(), command)
+        self.assertNotIn(PureWindowsPath(r"D:\agent\producer").as_posix(), command)
 
     def test_publish_before_ack(self) -> None:
         with self.subTest(mode="host"):
@@ -423,6 +450,10 @@ class PersistenceInstallTests(unittest.TestCase):
             code, first, output = self._host_call("host", slot, "producer", value="A")
             if first.get("outcome") == "unsupported":
                 self.assertTrue(first.get("reason"))
+                self.assertEqual(first.get("host_file_commit"), "unsupported")
+                self.assertEqual(first.get("receipt_acked"), 0)
+                self.assertFalse(slot.exists())
+                self.assertEqual(list(Path(directory).iterdir()), [])
                 return
             self.assertEqual(code, 0, output)
             original = slot.read_bytes()
@@ -437,6 +468,10 @@ class PersistenceInstallTests(unittest.TestCase):
             code, first, output = self._host_call("host", slot, "producer", value="A")
             if first.get("outcome") == "unsupported":
                 self.assertTrue(first.get("reason"))
+                self.assertEqual(first.get("host_file_commit"), "unsupported")
+                self.assertEqual(first.get("receipt_acked"), 0)
+                self.assertFalse(slot.exists())
+                self.assertEqual(list(Path(directory).iterdir()), [])
                 return
             self.assertEqual(code, 0, output)
             code, reopened, output = self._host_call(
@@ -454,6 +489,9 @@ class PersistenceInstallTests(unittest.TestCase):
             if record.get("outcome") == "unsupported":
                 self.assertTrue(record.get("reason"))
                 self.assertEqual(record.get("host_file_commit"), "unsupported")
+                self.assertEqual(record.get("receipt_acked"), 0)
+                self.assertFalse(slot.exists())
+                self.assertEqual(list(Path(directory).iterdir()), [])
                 return
             self.assertEqual(code, 4, output)
             self.assertEqual(record.get("host_file_commit"), "outcome_uncertain")
@@ -471,6 +509,10 @@ class PersistenceInstallTests(unittest.TestCase):
                 discard=True)
             if record.get("outcome") == "unsupported":
                 self.assertTrue(record.get("reason"))
+                self.assertEqual(record.get("host_file_commit"), "unsupported")
+                self.assertEqual(record.get("receipt_acked"), 0)
+                self.assertFalse(slot.exists())
+                self.assertEqual(list(Path(directory).iterdir()), [])
                 return
             self.assertEqual(code, 0, output)
             self.assertEqual(record.get("outcome"), "discarded")
@@ -489,6 +531,9 @@ class PersistenceInstallTests(unittest.TestCase):
             if record.get("outcome") == "unsupported":
                 self.assertTrue(record.get("reason"))
                 self.assertEqual(record.get("host_file_commit"), "unsupported")
+                self.assertEqual(record.get("receipt_acked"), 0)
+                self.assertFalse(slot.exists())
+                self.assertEqual(list(Path(directory).iterdir()), [])
             else:
                 self.assertEqual(record.get("host_file_commit"), "committed_darwin_apfs")
                 self.assertEqual(record.get("receipt_acked"), 1)
@@ -507,6 +552,9 @@ class PersistenceInstallTests(unittest.TestCase):
                 if record.get("outcome") == "unsupported":
                     self.assertTrue(record.get("reason"))
                     self.assertEqual(record.get("host_file_commit"), "unsupported")
+                    self.assertEqual(record.get("receipt_acked"), 0)
+                    self.assertFalse(slot.exists())
+                    self.assertEqual(list(Path(directory).iterdir()), [])
                     return
                 self.assertEqual(code, 4, output)
                 self.assertEqual(record.get("receipt_acked"), 0)
