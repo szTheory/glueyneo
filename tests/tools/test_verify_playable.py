@@ -33,6 +33,21 @@ def has_two_committed_revisions(root: Path = ROOT) -> bool:
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False).returncode == 0
 
 
+def has_bound_documentation_history(root: Path = ROOT) -> bool:
+    """Whether copied-document tests can bind review order and the allowlist base in this checkout."""
+    if not has_two_committed_revisions(root):
+        return False
+    try:
+        allowlist = json.loads((root / "docs/history-allowlist.json").read_text(encoding="utf-8"))
+        base = allowlist.get("base_revision") if isinstance(allowlist, dict) else None
+    except (OSError, ValueError):
+        return False
+    if not isinstance(base, str) or not base:
+        return False
+    return subprocess.run(["git", "-C", str(root), "rev-parse", "--verify", "--quiet", f"{base}^{{commit}}"],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False).returncode == 0
+
+
 sys.path.insert(0, str(ROOT / "tools"))
 import public_content  # noqa: E402
 import verify_playable as playable  # noqa: E402
@@ -1492,12 +1507,22 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
             disposition = (Path(review_dir) / playable.DISPOSITION).read_text(encoding="utf-8")
             self.assertEqual(disposition.count("`" + "a" * 40 + "`"), 5)
 
+    def test_root_history_predicate_rejects_source_archive_and_depth_one(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-one-commit-") as temporary:
+            repository = Path(temporary)
+            subprocess.run(["git", "init", "-q", "-b", "main", str(repository)], check=True)
+            subprocess.run(["git", "-C", str(repository), "-c", "user.name=t", "-c",
+                            "user.email=t@example.invalid", "commit", "-q", "--allow-empty", "-m", "one"],
+                           check=True)
+            self.assertFalse(has_two_committed_revisions(repository))
+            self.assertFalse(has_bound_documentation_history(repository))
+
     def test_check_docs_accepts_pending_status_without_evidence(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-docs-pending-") as temporary:
             self.copy_documentation(Path(temporary))
             playable.check_docs(Path(temporary))
 
-    @unittest.skipUnless(has_two_committed_revisions(), "needs a parent commit for strict review ordering")
+    @unittest.skipUnless(has_bound_documentation_history(), "needs a parent commit and allowlist base for review binding")
     def test_check_docs_accepts_complete_status_generated_from_tracked_receipt(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-docs-evidence-") as temporary:
             self.copy_documentation_with_evidence(Path(temporary))
@@ -1591,7 +1616,7 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "inventory digest does not match"):
                 playable.load_frontend_evidence(clone)
 
-    @unittest.skipUnless(has_two_committed_revisions(), "needs a parent commit for strict review ordering")
+    @unittest.skipUnless(has_bound_documentation_history(), "needs a parent commit and allowlist base for review binding")
     def test_check_docs_requires_generated_status_to_match_evidence(self) -> None:
         cases = (
             ("evidence with pending block", self.copy_documentation, True, "status block does not match"),
@@ -1700,7 +1725,7 @@ class EvidenceBindingTest(DocumentationCopies, unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "cannot be bound to committed bytes"):
                     playable.check_docs(source_root)
 
-    @unittest.skipUnless(has_two_committed_revisions(), "needs HEAD^ for a bounded ancestor comparison")
+    @unittest.skipUnless(has_bound_documentation_history(), "needs HEAD^ and the history allowlist base")
     def test_explicit_repository_binds_the_copied_evidence(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-bound-") as temporary:
             source_root = Path(temporary)
@@ -2020,7 +2045,7 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
             rows = "".join(f"| {finding} | warning | open | recorded |\n" for finding in ("WR-01", "GWR-01", "G2WR-01", "G3WR-01", "XX-01"))
             self.assertEqual(self.errors(rows, commits[4], repository=repository, reviewed=commits[0]), [])
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_two_committed_revisions(), "needs at least two commits for the descendant comparison")
     def test_t_04_38_unresolvable_reviewed_revision_fails(self) -> None:
         head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True, text=True,
                               stdout=subprocess.PIPE).stdout.strip()
@@ -2061,7 +2086,7 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
         errors = self.errors(f"| WR-01 | warning | fixed | digest `{'a1' * 32}` and 0123abcd |\n")
         self.assertEqual(errors, ["review finding WR-01 disposition cites no review revision"])
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_two_committed_revisions(), "needs a later revision after the first commit")
     def test_ancestor_revision_in_either_recognized_form_is_accepted(self) -> None:
         # G3WR-05: the reviewed revision defaults to the first commit and a citation must strictly follow it,
         # so cite the second commit; the recognized forms under test are unchanged.
@@ -2076,7 +2101,7 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
         errors = self.errors("| CR-01 | critical | fixed | revision `" + "f" * 40 + "` |\n")
         self.assertEqual(errors, [f"review finding CR-01 cites revision {'f' * 12} that is not a committed ancestor"])
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_two_committed_revisions(), "needs distinct first and current commits")
     def test_revision_that_is_not_an_ancestor_of_head_is_rejected(self) -> None:
         first = self.first_commit()
         head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True, text=True,
@@ -2085,7 +2110,7 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
         errors = self.errors(f"| CR-01 | critical | fixed | revision `{head}` |\n", head=first)
         self.assertEqual(errors, [f"review finding CR-01 cites revision {head[:12]} that is not a committed ancestor"])
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_bound_documentation_history(), "needs a parent commit and allowlist base for review binding")
     def test_check_docs_binds_the_live_record_and_rejects_a_stripped_revision(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-provenance-docs-") as temporary:
             root = Path(temporary)
@@ -2228,7 +2253,7 @@ class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
             self.assertEqual(len(errors), 1, errors)
             self.assertIn("is not an ancestor of the checked head", errors[0])
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the inventory is bound to")
+    @unittest.skipUnless(has_bound_documentation_history(), "needs committed rights origins and the allowlist base")
     def test_g4wr_04_check_docs_raises_the_first_rights_error(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-rights-docs-") as temporary:
             root = Path(temporary)
@@ -2238,8 +2263,8 @@ class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
                     playable.check_docs(root, repository=ROOT)
 
     def test_g4wr_04_repository_rights_revisions_resolve(self) -> None:
-        if not (ROOT / ".git").exists():
-            self.skipTest("no .git: source archive")
+        if not has_bound_documentation_history():
+            self.skipTest("checkout lacks the history and allowlist base needed to resolve rights origins")
         function = self.helper()
         self.assertEqual(function(ROOT, ROOT, "HEAD"), [])
 
@@ -2260,7 +2285,7 @@ class GuideClaimTest(DocumentationCopies, unittest.TestCase):
         guide = source_root / playable.GUIDE
         guide.write_text(guide.read_text(encoding="utf-8") + "\n" + extra + "\n", encoding="utf-8")
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_bound_documentation_history(), "needs a parent commit and allowlist base for review binding")
     def test_claims_appended_after_the_generated_block_are_rejected(self) -> None:
         for claim in self.CLAIMS:
             with self.subTest(claim=claim), tempfile.TemporaryDirectory(prefix="playable-claim-") as temporary:
@@ -2269,7 +2294,7 @@ class GuideClaimTest(DocumentationCopies, unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "status claim outside the generated block"):
                     playable.check_docs(source_root, repository=ROOT)
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_bound_documentation_history(), "needs a parent commit and allowlist base for review binding")
     def test_digests_and_pinned_revisions_outside_the_block_are_allowed(self) -> None:
         extra = f"Digest {'ab12' * 16} and pins {playable.YMFM_REVISION} {playable.Z80_REVISION}."
         with tempfile.TemporaryDirectory(prefix="playable-claim-ok-") as temporary:
@@ -2277,12 +2302,11 @@ class GuideClaimTest(DocumentationCopies, unittest.TestCase):
             self.guide_with(source_root, extra)
             playable.check_docs(source_root, repository=ROOT)
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_live_guide_has_no_outside_block_claims(self) -> None:
         guide = (ROOT / playable.GUIDE).read_text(encoding="utf-8")
         self.assertEqual(playable.guide_claims_outside_block(guide), [])
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_bound_documentation_history(), "needs a parent commit and allowlist base for review binding")
     def test_guide_with_a_private_checkout_path_is_rejected(self) -> None:
         private = str(playable.ROOT).replace("/", "\u2215")
         with tempfile.TemporaryDirectory(prefix="playable-claim-path-") as temporary:
