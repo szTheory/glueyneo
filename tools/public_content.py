@@ -103,9 +103,9 @@ SOURCE_FINDING_DISPOSITIONS = {
         "rules": {"machine-identifier"},
         "reason": "serial is a zero-initialized Carbon ProcessSerialNumber local variable, not a host identifier value",
     },
-    ("tests/consumers/test_example_docs.py", "f548e592fc3a34320d12b56eced090f4cfdb10cbb3d445717798b377c624cb89"): {
+    ("tests/consumers/test_example_docs.py", "3f0c8794b643abd939dff09529789e41b5e8ba76bcd5ba9065f2d98cab57123b"): {
         "rules": {"private-url"},
-        "reason": "the offline guide regression now checks CMake File API compile policy and retains a synthetic localhost port-9 proxy; exact path and bytes are bound",
+        "reason": "the offline guide regression binds CMake File API compile policy to each Release target and retains a synthetic localhost port-9 proxy; exact path and bytes are bound",
     },
 }
 # Exact immutable history objects audited as bounded false positives. These
@@ -114,6 +114,10 @@ SOURCE_FINDING_DISPOSITIONS = {
 # redaction tests contain synthetic identity/path canaries. A changed blob is
 # scanned.
 HISTORY_FINDING_DISPOSITIONS = {
+    "2e70f80d961045ec8f6476e4cb0cbc3b04407a06": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact per-target Release compile metadata regression retains the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
     "6e5a3ec0fb8fdc78cf0aef433f78d18e9d502356": {
         "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
         "reason": "exact generator-neutral compile metadata regression retains the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
