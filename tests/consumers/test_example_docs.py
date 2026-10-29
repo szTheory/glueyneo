@@ -407,6 +407,31 @@ GUIDE_CONSUMER_SOURCES = {
         "tests/fixture/public_sound_guest.c",
     },
 }
+GUIDE_SDK_HEADER_SOURCES = {
+    name: paths - {"examples/persistence_host.c"}
+    for name, paths in GUIDE_CONSUMER_SOURCES.items()
+}
+
+
+def _c_standard_options(fragment: str) -> list[str]:
+    try:
+        tokens = shlex.split(fragment, posix=True)
+    except ValueError:
+        raise CheckError("guide consumer Release compile flags are malformed") from None
+    options: list[str] = []
+    index = 0
+    while index < len(tokens):
+        token = tokens[index].casefold()
+        if token == "-std":
+            index += 1
+            if index < len(tokens):
+                options.append("-std=" + tokens[index].casefold())
+            else:
+                options.append("-std=")
+        elif token.startswith(("-std=", "/std:")):
+            options.append(token)
+        index += 1
+    return options
 
 
 def _validate_compile_metadata(
@@ -479,6 +504,7 @@ def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, 
             metadata: list[str] = []
             include_paths: list[str] = []
             observed_sources: set[str] = set()
+            source_paths: list[str] = []
             for source_entry in target_sources:
                 source_path = source_entry["path"]
                 if type(source_path) is not str or not source_path:
@@ -501,14 +527,24 @@ def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, 
                         "guide consumer Release target source is outside the staged project"
                     ) from None
                 observed_sources.add(relative_source)
+                source_paths.append(relative_source)
                 metadata.append(str(resolved_source))
             if observed_sources != GUIDE_CONSUMER_SOURCES[name]:
                 raise CheckError(
                     "guide consumer Release target source is not in its documented consumer closure"
                 )
+            grouped_source_indexes: set[int] = set()
             for group in groups:
                 if group.get("language") != "C":
                     raise CheckError("guide consumer Release target must compile as C")
+                source_indexes = group.get("sourceIndexes")
+                if (not isinstance(source_indexes, list) or not source_indexes or
+                        any(type(index) is not int or index < 0 or index >= len(source_paths)
+                            for index in source_indexes) or
+                        len(set(source_indexes)) != len(source_indexes) or
+                        grouped_source_indexes.intersection(source_indexes)):
+                    raise CheckError("guide consumer Release compile group has malformed source bindings")
+                grouped_source_indexes.update(source_indexes)
                 language_standard = group.get("languageStandard")
                 if not isinstance(language_standard, dict) or language_standard.get("standard") != "17":
                     raise CheckError("guide consumer Release target must use C17 compile settings")
@@ -516,29 +552,37 @@ def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, 
                 if not isinstance(fragments, list):
                     raise CheckError("guide consumer Release compile flags are malformed")
                 dialect_flags = []
+                group_metadata = [str(staged_root / source_paths[index]) for index in source_indexes]
+                group_include_paths: list[str] = []
                 for fragment in fragments:
                     fragment_text = fragment["fragment"]
                     metadata.append(fragment_text)
-                    dialect_flags.extend(
-                        match.group(0).casefold()
-                        for match in re.finditer(
-                            r"(?<![\w.-])(?:-std=[^\s\"']+|/std:[^\s\"']+)",
-                            fragment_text, re.IGNORECASE,
-                        )
-                    )
+                    group_metadata.append(fragment_text)
+                    dialect_flags.extend(_c_standard_options(fragment_text))
                 if not dialect_flags or dialect_flags[-1] not in {"-std=c17", "/std:c17"}:
                     raise CheckError("guide consumer Release target is missing its strict C17 compiler flag")
                 includes = group.get("includes", [])
                 if not isinstance(includes, list):
                     raise CheckError("guide consumer Release include directories are malformed")
                 for include in includes:
-                    include_paths.append(include["path"])
-                    metadata.append(include["path"])
+                    include_path = include["path"]
+                    include_paths.append(include_path)
+                    group_include_paths.append(include_path)
+                    metadata.append(include_path)
+                    group_metadata.append(include_path)
                 defines = group.get("defines", [])
                 if not isinstance(defines, list):
                     raise CheckError("guide consumer Release compile definitions are malformed")
                 for define in defines:
                     metadata.append(define["define"])
+                    group_metadata.append(define["define"])
+                if any(source_paths[index] in GUIDE_SDK_HEADER_SOURCES[name]
+                       for index in source_indexes):
+                    _validate_compile_metadata(
+                        source, variant, group_metadata, group_include_paths,
+                    )
+            if grouped_source_indexes != set(range(len(source_paths))):
+                raise CheckError("guide consumer Release compile groups omit target source files")
             _validate_compile_metadata(source, variant, metadata, include_paths)
             target_metadata[name] = metadata
     except (AttributeError, KeyError, TypeError, ValueError, OSError, StopIteration):
@@ -934,23 +978,41 @@ class ExampleGuideContractTests(unittest.TestCase):
                 standard: str = "17",
                 source_paths: list[str] | None = None,
                 fragment: str = "/std:c17",
+                compile_groups: list[dict[str, object]] | None = None,
             ) -> dict[str, str]:
                 if source_paths is None:
                     source_paths = [str(source / relative) for relative in sorted(
                         GUIDE_CONSUMER_SOURCES.get(name, {"tests/consumers/sound_consumer.c"}),
                     )]
+                if compile_groups is None:
+                    compile_groups = [{
+                        "language": "C",
+                        "languageStandard": {"standard": standard},
+                        "sourceIndexes": list(range(len(source_paths))),
+                        "compileCommandFragments": [{"fragment": fragment}],
+                        "includes": [{"path": include}],
+                    }]
                 json_file = f"target-{name}.json"
                 (reply / json_file).write_text(json.dumps({
                     "name": name,
                     "sources": [{"path": source_path} for source_path in source_paths],
-                    "compileGroups": [{
-                        "language": "C",
-                        "languageStandard": {"standard": standard},
-                        "compileCommandFragments": [{"fragment": fragment}],
-                        "includes": [{"path": include}],
-                    }],
+                    "compileGroups": compile_groups,
                 }), encoding="utf-8")
                 return {"name": name, "jsonFile": json_file}
+
+            def compile_group(
+                source_indexes: list[int],
+                include_paths: list[str],
+                fragment: str = "/std:c17",
+                standard: str = "17",
+            ) -> dict[str, object]:
+                return {
+                    "language": "C",
+                    "languageStandard": {"standard": standard},
+                    "sourceIndexes": source_indexes,
+                    "compileCommandFragments": [{"fragment": fragment}],
+                    "includes": [{"path": path} for path in include_paths],
+                }
 
             debug_refs = [write_target("debug-only-helper", installed_include)]
             release_refs = [write_target(name, installed_include) for name in required_targets]
@@ -996,6 +1058,45 @@ class ExampleGuideContractTests(unittest.TestCase):
 
             write_target(required_targets[2], installed_include,
                          fragment="-std=c17 -std=gnu17")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_target(required_targets[2], installed_include,
+                         fragment='-std=c17 -std="gnu17"')
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_target(required_targets[2], installed_include,
+                         fragment="-std=gnu17 -DFAKE=-std=c17")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            persistence_sources = sorted(GUIDE_CONSUMER_SOURCES[required_targets[2]])
+            persistence_indexes = {
+                relative: index for index, relative in enumerate(persistence_sources)
+            }
+            sdk_indexes = [index for relative, index in persistence_indexes.items()
+                           if relative in GUIDE_SDK_HEADER_SOURCES[required_targets[2]]]
+            host_index = persistence_indexes["examples/persistence_host.c"]
+            write_target(
+                required_targets[2], installed_include,
+                source_paths=[str(source / relative) for relative in persistence_sources],
+                compile_groups=[
+                    compile_group(sdk_indexes, [installed_include]),
+                    compile_group([host_index], []),
+                ],
+            )
+            _check_guide_compile_metadata(source, "static")
+
+            write_target(
+                required_targets[2], installed_include,
+                source_paths=[str(source / relative) for relative in persistence_sources],
+                compile_groups=[
+                    compile_group(sdk_indexes[:-1], [installed_include]),
+                    compile_group([sdk_indexes[-1]], []),
+                    compile_group([host_index], []),
+                ],
+            )
             with self.assertRaises(CheckError):
                 _check_guide_compile_metadata(source, "static")
 
