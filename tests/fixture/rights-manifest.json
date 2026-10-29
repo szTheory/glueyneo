@@ -561,7 +561,7 @@
       {
         "path": ".github/workflows/ci.yml",
         "bytes": 10971,
-        "sha256": "26cd20507d81a345a301247e6d7e0010be28f8099d0487f97bc7897d3994b078",
+        "sha256": "84ae91127ebc91113fad3ef8f5b323dbb5ce5a0ca5b47491e538275058cfe49c",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
