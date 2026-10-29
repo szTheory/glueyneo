@@ -1395,7 +1395,8 @@ class ImporterTests(unittest.TestCase):
                 valid = original_safe(path, **kwargs)
                 if path == run_directory and valid:
                     validations[0] += 1
-                    if validations[0] == 2:
+                    if (validations[0] == 2 and
+                            qualification._private_active_capture_directory_open_supported()):
                         run_directory.rename(moved_directory)
                         run_directory.symlink_to(redirected, target_is_directory=True)
                 return valid
@@ -1435,9 +1436,10 @@ class ImporterTests(unittest.TestCase):
                     expected_media_identity=expected_identity)
 
             if not qualification._private_active_capture_directory_open_supported():
-                self.assertEqual(validations[0], 1)
+                self.assertEqual(validations[0], 2)
                 self.assertEqual(result["status"], "media_identity_rejected")
                 self.assertTrue(run_directory.is_dir())
+                self.assertFalse(run_directory.is_symlink())
                 self.assertFalse(moved_directory.exists())
                 self.assertEqual(sentinel.read_bytes(), expected_sentinel)
                 self.assertEqual({path.name for path in redirected.iterdir()},
@@ -1447,6 +1449,8 @@ class ImporterTests(unittest.TestCase):
 
             self.assertEqual(validations[0], 2)
             self.assertEqual(result["status"], "media_identity_rejected")
+            self.assertTrue(moved_directory.is_dir())
+            self.assertTrue(run_directory.is_symlink())
             self.assertEqual(sentinel.read_bytes(), expected_sentinel)
             self.assertEqual({path.name for path in redirected.iterdir()},
                              {"sentinel.bin"})
