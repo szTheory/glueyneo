@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
 from pathlib import Path
@@ -22,12 +23,16 @@ REQUIRED_JOBS = frozenset((MATRIX_JOB, DOCS_JOB))
 _COMMIT_SHA_LENGTH = 40
 _DOCUMENTATION_SUFFIXES = frozenset({".gif", ".jpeg", ".jpg", ".md", ".png", ".rst", ".svg", ".txt", ".webp"})
 _PUBLIC_CONTROL_SUMMARY_KEYS = frozenset({
-    "schema_version", "assertions", "cases", "failure_count", "failure_test_ids",
-    "failure_test_ids_truncated", "outcome",
+    "schema_version", "assertions", "cases", "failure_count",
+    "expected_failure_count", "skipped_count", "unexpected_success_count",
+    "nonpassing_test_ids", "nonpassing_test_ids_truncated", "outcome",
 })
 _MAX_PUBLIC_CONTROL_CASES = 1_000_000
 _MAX_PUBLIC_CONTROL_ASSERTIONS = 10_000_000
 _MAX_PUBLIC_CONTROL_FAILURES = 1_000_000
+_MAX_PUBLIC_CONTROL_EXPECTED_FAILURES = 1_000_000
+_MAX_PUBLIC_CONTROL_SKIPS = 1_000_000
+_MAX_PUBLIC_CONTROL_UNEXPECTED_SUCCESSES = 1_000_000
 _MAX_PUBLIC_CONTROL_FAILURE_IDS = 5
 _MAX_PUBLIC_CONTROL_FAILURE_ID_LENGTH = 96
 _MAX_PUBLIC_CONTROL_DIAGNOSTIC_BYTES = 1024
@@ -164,13 +169,19 @@ def _valid_public_content_summary(summary: Any) -> bool:
             or not 0 < summary["assertions"] <= _MAX_PUBLIC_CONTROL_ASSERTIONS
             or type(summary.get("failure_count")) is not int
             or not 0 <= summary["failure_count"] <= _MAX_PUBLIC_CONTROL_FAILURES
-            or type(summary.get("failure_test_ids")) is not list
-            or len(summary["failure_test_ids"]) > _MAX_PUBLIC_CONTROL_FAILURE_IDS
-            or type(summary.get("failure_test_ids_truncated")) is not bool
+            or type(summary.get("expected_failure_count")) is not int
+            or not 0 <= summary["expected_failure_count"] <= _MAX_PUBLIC_CONTROL_EXPECTED_FAILURES
+            or type(summary.get("skipped_count")) is not int
+            or not 0 <= summary["skipped_count"] <= _MAX_PUBLIC_CONTROL_SKIPS
+            or type(summary.get("unexpected_success_count")) is not int
+            or not 0 <= summary["unexpected_success_count"] <= _MAX_PUBLIC_CONTROL_UNEXPECTED_SUCCESSES
+            or type(summary.get("nonpassing_test_ids")) is not list
+            or len(summary["nonpassing_test_ids"]) > _MAX_PUBLIC_CONTROL_FAILURE_IDS
+            or type(summary.get("nonpassing_test_ids_truncated")) is not bool
             or type(summary.get("outcome")) is not str
             or summary["outcome"] not in {"pass", "fail"}):
         return False
-    identifiers = summary["failure_test_ids"]
+    identifiers = summary["nonpassing_test_ids"]
     if any(type(identifier) is not str for identifier in identifiers):
         return False
     if identifiers != sorted(set(identifiers)):
@@ -182,12 +193,17 @@ def _valid_public_content_summary(summary: Any) -> bool:
            for identifier in identifiers):
         return False
     if summary["outcome"] == "pass":
-        return (summary["failure_count"] == 0 and not identifiers
-                and summary["failure_test_ids_truncated"] is False)
-    if summary["failure_count"] == 0:
+        return (summary["failure_count"] == 0
+                and summary["expected_failure_count"] == 0
+                and summary["skipped_count"] == 0
+                and summary["unexpected_success_count"] == 0
+                and not identifiers
+                and summary["nonpassing_test_ids_truncated"] is False)
+    if not (summary["failure_count"] or summary["expected_failure_count"]
+            or summary["skipped_count"] or summary["unexpected_success_count"]):
         return False
-    return len(identifiers) == _MAX_PUBLIC_CONTROL_FAILURE_IDS or not summary[
-        "failure_test_ids_truncated"]
+    return bool(identifiers) and (len(identifiers) == _MAX_PUBLIC_CONTROL_FAILURE_IDS
+                                  or not summary["nonpassing_test_ids_truncated"])
 
 
 def _bounded_public_content_diagnostic(message: str) -> str:
@@ -197,6 +213,15 @@ def _bounded_public_content_diagnostic(message: str) -> str:
                 redacted.encode("utf-8"), "ci-policy-failure-diagnostic")["findings"]):
         return "public-content control suite failed (details=redacted)"
     return redacted
+
+
+def _reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate result field")
+        result[key] = value
+    return result
 
 
 def public_content_control_counts(root: Path) -> tuple[int, int]:
@@ -214,13 +239,20 @@ for name in dir(unittest.TestCase):
 suite = unittest.defaultTestLoader.discover("tests/workflow", pattern="test_public_content.py")
 result = unittest.TextTestRunner(stream=io.StringIO(), verbosity=0).run(suite)
 failures = result.failures + result.errors
+expected_failures = result.expectedFailures
+skipped_tests = result.skipped
+unexpected_successes = result.unexpectedSuccesses
+nonpassing_tests = ([test for test, _detail in failures]
+                    + [test for test, _detail in expected_failures]
+                    + [test for test, _detail in skipped_tests]
+                    + list(unexpected_successes))
 test_ids = []
-for test, _detail in failures:
+for test in nonpassing_tests:
     try:
         identifier = test.id()
     except Exception:
         identifier = ""
-    if isinstance(identifier, str) and re.fullmatch(r"[A-Za-z0-9_.]{1,160}", identifier):
+    if isinstance(identifier, str) and re.fullmatch(r"[A-Za-z0-9_.]{1,96}", identifier):
         test_ids.append(identifier)
     else:
         test_ids.append("unidentified-test")
@@ -229,28 +261,32 @@ summary = {
     "assertions": counts["assertions"],
     "cases": result.testsRun,
     "failure_count": len(failures),
-    "failure_test_ids": sorted(set(test_ids))[:5],
-    "failure_test_ids_truncated": len(set(test_ids)) > 5,
-    "outcome": "pass" if result.wasSuccessful() else "fail",
+    "expected_failure_count": len(expected_failures),
+    "skipped_count": len(skipped_tests),
+    "unexpected_success_count": len(unexpected_successes),
+    "nonpassing_test_ids": sorted(set(test_ids))[:5],
+    "nonpassing_test_ids_truncated": len(set(test_ids)) > 5,
+    "outcome": "pass" if not nonpassing_tests else "fail",
 }
 print("PUBLIC_CONTENT_RESULT=" + json.dumps(summary, sort_keys=True, separators=(",", ":")))
-raise SystemExit(0 if result.wasSuccessful() else 1)
+raise SystemExit(0 if summary["outcome"] == "pass" else 1)
 '''
     child_env = dict(os.environ)
     child_env["PYTHONDONTWRITEBYTECODE"] = "1"
     control_result = subprocess.run([sys.executable, "-c", counted_runner], cwd=root.resolve(),
                                     env=child_env, text=True, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT, timeout=60, check=False)
-    summary_lines = []
-    for match in re.finditer(r"(?m)^PUBLIC_CONTENT_RESULT=([^\r\n]{1,4096})$",
-                             control_result.stdout or ""):
-        summary_lines.append(match.group(1))
-        if len(summary_lines) > 1:
+    result_prefix = "PUBLIC_CONTENT_RESULT="
+    result_lines = []
+    for line in io.StringIO(control_result.stdout or ""):
+        if line.startswith(result_prefix):
+            result_lines.append(line[len(result_prefix):])
+        if len(result_lines) > 1:
             break
     summary: dict[str, Any] | None = None
-    if len(summary_lines) == 1:
+    if len(result_lines) == 1 and 0 < len(result_lines[0].encode("utf-8")) <= 4096:
         try:
-            candidate = json.loads(summary_lines[0])
+            candidate = json.loads(result_lines[0], object_pairs_hook=_reject_duplicate_json_keys)
             if isinstance(candidate, dict):
                 summary = candidate
         except (ValueError, TypeError):
@@ -258,7 +294,12 @@ raise SystemExit(0 if result.wasSuccessful() else 1)
     if control_result.returncode != 0:
         case_count = summary.get("cases") if summary is not None else None
         failures = summary.get("failure_count") if summary is not None else None
-        raw_ids = summary.get("failure_test_ids") if summary is not None else None
+        expected_failures = (summary.get("expected_failure_count")
+                             if summary is not None else None)
+        skipped_count = summary.get("skipped_count") if summary is not None else None
+        unexpected_successes = (summary.get("unexpected_success_count")
+                                if summary is not None else None)
+        raw_ids = summary.get("nonpassing_test_ids") if summary is not None else None
         safe_ids: list[str] = []
         if isinstance(raw_ids, list):
             for identifier in raw_ids[:_MAX_PUBLIC_CONTROL_FAILURE_IDS]:
@@ -271,27 +312,35 @@ raise SystemExit(0 if result.wasSuccessful() else 1)
                                     else "unidentified-test")
                 else:
                     safe_ids.append("unidentified-test")
-        cases_label = (str(case_count) if type(case_count) is int and
-                       0 <= case_count <= _MAX_PUBLIC_CONTROL_CASES else "unknown")
-        failures_label = (str(failures) if type(failures) is int and
-                          0 <= failures <= _MAX_PUBLIC_CONTROL_FAILURES else "unknown")
+        def count_label(value: Any, maximum: int) -> str:
+            return str(value) if type(value) is int and 0 <= value <= maximum else "unknown"
+
+        cases_label = count_label(case_count, _MAX_PUBLIC_CONTROL_CASES)
+        failures_label = count_label(failures, _MAX_PUBLIC_CONTROL_FAILURES)
+        expected_failures_label = count_label(
+            expected_failures, _MAX_PUBLIC_CONTROL_EXPECTED_FAILURES)
+        skipped_label = count_label(skipped_count, _MAX_PUBLIC_CONTROL_SKIPS)
+        unexpected_successes_label = count_label(
+            unexpected_successes, _MAX_PUBLIC_CONTROL_UNEXPECTED_SUCCESSES)
         tests_label = ",".join(safe_ids) if safe_ids else "unavailable"
-        truncated = (str(summary["failure_test_ids_truncated"]).lower()
+        truncated = (str(summary["nonpassing_test_ids_truncated"]).lower()
                      if summary is not None and
-                     type(summary.get("failure_test_ids_truncated")) is bool else "unknown")
-        records = "2+" if len(summary_lines) > 1 else str(len(summary_lines))
+                     type(summary.get("nonpassing_test_ids_truncated")) is bool else "unknown")
+        records = "2+" if len(result_lines) > 1 else str(len(result_lines))
         returncode = control_result.returncode
         returncode_label = (str(returncode) if type(returncode) is int
                             and -255 <= returncode <= 255 else "unknown")
         message = (
             f"public-content control suite failed (returncode={returncode_label}; "
             f"result_records={records}; cases={cases_label}; failures={failures_label}; "
-            f"test_ids={tests_label}; test_ids_truncated={truncated})"
+            f"expected_failures={expected_failures_label}; skipped={skipped_label}; "
+            f"unexpected_successes={unexpected_successes_label}; "
+            f"nonpassing_test_ids={tests_label}; test_ids_truncated={truncated})"
         )
         raise ValueError(_bounded_public_content_diagnostic(message))
     cases = summary.get("cases") if summary is not None else None
     assertions = summary.get("assertions") if summary is not None else None
-    if (len(summary_lines) != 1 or not _valid_public_content_summary(summary)
+    if (len(result_lines) != 1 or not _valid_public_content_summary(summary)
             or summary.get("outcome") != "pass"):
         raise ValueError("public-content controls omitted one valid, positive, failure-free result")
     return cases, assertions
