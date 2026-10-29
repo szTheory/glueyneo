@@ -332,23 +332,43 @@ def packaged_record(output: str, marker: str, *, role: str | None = None) -> dic
     return record
 
 
+_PACKAGED_CONSUMER_TARGETS = frozenset({
+    "glueyneo-installed-c",
+    "glueyneo-installed-cxx",
+    "glueyneo-installed-sound",
+    "glueyneo-installed-continuation",
+    "glueyneo-installed-persistence",
+})
+
+
+def packaged_consumer_executable(consumer_build: Path, target: str) -> Path:
+    """Resolve a staged consumer target at its declared config-independent output root."""
+    if target not in _PACKAGED_CONSUMER_TARGETS:
+        raise release_manifest.ReleaseError("unknown packaged consumer target")
+    suffix = ".exe" if os.name == "nt" else ""
+    build_root = consumer_build.resolve(strict=True)
+    executable = build_root / f"{target}{suffix}"
+    if executable.is_file():
+        return executable.resolve(strict=True)
+    release_executable = build_root / "Release" / f"{target}{suffix}"
+    if release_executable.is_file():
+        raise release_manifest.ReleaseError(
+            f"packaged consumer target used a config-specific output directory: {target}"
+        )
+    raise release_manifest.ReleaseError(f"packaged SDK omitted consumer executable: {target}")
+
+
 def run_packaged_examples(
     consumer_build: Path, prefix: Path, run_root: Path, *,
     environment: dict[str, str] | None = None,
 ) -> dict[str, object]:
     """Run the packaged continuation and persistence examples against a relocated SDK."""
-    cache = (consumer_build / "CMakeCache.txt").read_text(encoding="utf-8")
-    multi_config = any(line.startswith("CMAKE_CONFIGURATION_TYPES:") for line in cache.splitlines())
-    executable_dir = consumer_build / "Release" if multi_config else consumer_build
-    suffix = ".exe" if os.name == "nt" else ""
     env = dict(os.environ if environment is None else environment)
     env["PATH"] = str(prefix / "bin") + os.pathsep + env.get("PATH", "")
     run_root.mkdir(parents=True)
 
     def invoke(name: str, arguments: list[str], *, timeout: int = 120) -> str:
-        executable = executable_dir / f"{name}{suffix}"
-        if not executable.is_file():
-            raise release_manifest.ReleaseError(f"packaged SDK omitted example executable: {name}")
+        executable = packaged_consumer_executable(consumer_build, name)
         result = subprocess.run(
             [str(executable), *arguments], cwd=run_root, env=env,
             text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -688,9 +708,15 @@ class ReleaseConsumerTests(unittest.TestCase):
             cache = (consumer_build / "CMakeCache.txt").read_text(encoding="utf-8")
             multi_config = any(line.startswith("CMAKE_CONFIGURATION_TYPES:")
                                for line in cache.splitlines())
-            exe_dir = consumer_build / "Release" if multi_config else consumer_build
-            exe_suffix = ".exe" if os.name == "nt" else ""
-            consumer_exe = exe_dir / f"glueyneo-installed-c{exe_suffix}"
+            consumer_exe = packaged_consumer_executable(
+                consumer_build, "glueyneo-installed-c"
+            )
+            consumer_cxx_exe = packaged_consumer_executable(
+                consumer_build, "glueyneo-installed-cxx"
+            )
+            if multi_config:
+                self.assertEqual(consumer_exe.parent, consumer_build.resolve())
+                self.assertEqual(consumer_cxx_exe.parent, consumer_build.resolve())
             consumer_env = os.environ.copy()
             consumer_env["PATH"] = (str(prefix / "bin") + os.pathsep
                                      + consumer_env.get("PATH", ""))
@@ -699,8 +725,16 @@ class ReleaseConsumerTests(unittest.TestCase):
                 text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 check=False, timeout=30, env=consumer_env,
             )
-            self.assertEqual(consumer.returncode, 0, consumer.stdout)
+            self.assertEqual(consumer.returncode, 0, "installed C consumer failed")
             self.assertIn('"outcome":"pass"', consumer.stdout)
+            consumer_cxx = subprocess.run(
+                [str(consumer_cxx_exe)],
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                check=False, timeout=30, env=consumer_env,
+            )
+            self.assertEqual(consumer_cxx.returncode, 0, "installed C++ consumer failed")
+            self.assertIn('SDK_CONSUMER_CPP {"schema_version":1,"case_id":"sdk.consumer.cpp","outcome":"pass"',
+                          consumer_cxx.stdout)
             examples = run_packaged_examples(
                 consumer_build, prefix, Path(self.temp.name) / f"examples-{variant}",
             )
@@ -860,8 +894,9 @@ def verify_downloaded_release(download: Path, staged_manifest: Path, *, commit: 
                  f"-DGlueyneo_DIR={prefix / 'lib/cmake/Glueyneo'}",
                  "-DGLUEYNEO_CONSUMER_C_SOURCE=diagnostic.c", "-DCMAKE_BUILD_TYPE=Release"], cwd=work)
             run([cmake, "--build", str(consumer_build), "--config", "Release", "--parallel", "2"], cwd=work)
-            exe_dir = consumer_build / "Release" if platform.system() == "Windows" else consumer_build
-            consumer_exe = exe_dir / ("glueyneo-installed-c.exe" if platform.system() == "Windows" else "glueyneo-installed-c")
+            consumer_exe = packaged_consumer_executable(
+                consumer_build, "glueyneo-installed-c"
+            )
             process_env = dict(__import__("os").environ)
             binary_dir = str(prefix / "bin")
             process_env["PATH"] = binary_dir + __import__("os").pathsep + process_env.get("PATH", "")
