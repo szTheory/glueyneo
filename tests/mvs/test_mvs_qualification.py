@@ -1053,6 +1053,56 @@ class ImporterTests(unittest.TestCase):
                     self.assertNotIn("input_response", result)
                     self.assertEqual(len(calls), 1 if stage == "after-import" else 0)
 
+    def test_serialized_executable_paths_use_posix_separators_on_windows(self) -> None:
+        from pathlib import PureWindowsPath
+        from tools.mvs import qualify_local_boot as qualification
+
+        class WindowsExecutablePath:
+            def __init__(self, value: str) -> None:
+                self.path = PureWindowsPath(value)
+
+            def as_posix(self) -> str:
+                return self.path.as_posix()
+
+            def read_bytes(self) -> bytes:
+                return b"synthetic executable bytes"
+
+        executable = WindowsExecutablePath(
+            r"C:\Program Files\Glueyneo\mvs_qualify.exe")
+        expected_path = "C:/Program Files/Glueyneo/mvs_qualify.exe"
+        expected_digest = hashlib.sha256(executable.read_bytes()).hexdigest()
+
+        with mock.patch.object(qualification, "_resolve_executable_path",
+                               return_value=executable), \
+             mock.patch("os.path.samefile", return_value=True):
+            qualifier_identity = qualification._production_qualifier_identity()
+            self.assertEqual(qualifier_identity, {
+                "scope": "production", "path": expected_path,
+                "sha256": expected_digest,
+            })
+            self.assertEqual(qualification.checked_qualifier_command(
+                identity=qualifier_identity), expected_path)
+
+            importer_identity = qualification._production_importer_identity()
+            self.assertEqual(importer_identity, {
+                "scope": "production", "path": expected_path,
+                "sha256": expected_digest,
+            })
+            self.assertEqual(qualification._canonical_importer_command(),
+                             expected_path)
+
+            synthetic_identity = qualification.synthetic_importer_identity(
+                executable, expected_path=executable,
+                expected_sha256=expected_digest)
+            self.assertEqual(synthetic_identity, {
+                "importer_identity_scope": "synthetic",
+                "synthetic_importer_identity": {
+                    "path": expected_path, "sha256": expected_digest,
+                },
+            })
+            self.assertEqual(qualification.checked_synthetic_importer_command(
+                executable, synthetic_identity), expected_path)
+
     def test_media_identity_accepts_native_absolute_paths_and_rejects_relative_paths(self) -> None:
         from tools.mvs import qualify_local_boot as qualification
 
@@ -6951,6 +7001,7 @@ def main() -> int:
             ImporterTests("test_phase06_evaluator_identity_tracks_acceptance_source_bytes"),
             ImporterTests("test_scripted_start_keeps_qualifier_freshness"),
             ImporterTests("test_selected_qualification_rejects_qualifier_substitution"),
+            ImporterTests("test_serialized_executable_paths_use_posix_separators_on_windows"),
             ImporterTests("test_selected_qualification_binds_execution_to_configured_importer"),
             ImporterTests("test_nonzero_native_positive_is_rejected"),
             ImporterTests("test_nonzero_main_bus_guest_fault_preserves_validated_diagnostic"),
