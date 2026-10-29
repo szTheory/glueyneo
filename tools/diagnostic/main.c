@@ -20,6 +20,17 @@
 #define GLUEYNEO_COMPILER_VERSION "unknown"
 #endif
 
+/* Keep the public source-package diagnostic independent of tests/support. */
+static FILE *diagnostic_fopen(const char *path, const char *mode) {
+#if defined(_MSC_VER)
+    FILE *file = NULL;
+    if (fopen_s(&file, path, mode) != 0) return NULL;
+    return file;
+#else
+    return fopen(path, mode);
+#endif
+}
+
 static uint64_t assertion_count;
 
 static int check_u64(const char *id, uint64_t expected, uint64_t observed) {
@@ -31,7 +42,7 @@ static int check_u64(const char *id, uint64_t expected, uint64_t observed) {
 
 static int write_fixture(const char *path, const guest_fixture_image *fixture,
                          char scenario_id) {
-    FILE *output = fopen(path, "wb");
+    FILE *output = diagnostic_fopen(path, "wb");
     if (output == NULL) {
         (void)fprintf(stderr, "fixture write failed\n");
         return EXIT_FAILURE;
@@ -53,7 +64,7 @@ static int write_fixture(const char *path, const guest_fixture_image *fixture,
 static int check_fixture(const char *path, const guest_fixture_image *fixture,
                          char scenario_id) {
     uint8_t observed[sizeof(fixture->rom) + sizeof(fixture->ram_seed)];
-    FILE *input = fopen(path, "rb");
+    FILE *input = diagnostic_fopen(path, "rb");
     if (input == NULL) {
         (void)fprintf(stderr, "fixture check could not read expected file\n");
         return EXIT_FAILURE;

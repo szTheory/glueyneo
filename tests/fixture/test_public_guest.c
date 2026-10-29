@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: MIT */
+#include "../support/portable_stdio.h"
+
 #include "glueyneo/glueyneo.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,7 +41,7 @@ static uint32_t pixel_at(uint32_t x, uint32_t y) {
 }
 
 static int read_fixture(const char *path) {
-    FILE *file = fopen(path, "rb");
+    FILE *file = gn_portable_fopen(path, "rb");
     if (file == NULL) return 0;
     const size_t count = fread(content, 1u, sizeof(content), file);
     const int extra = fgetc(file);

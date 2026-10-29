@@ -970,12 +970,16 @@ class MvsLaneTests(unittest.TestCase):
             importer_path.write_bytes(b"synthetic configured importer")
             zlib_header = root / "third_party/zlib/zlib.h"
             original_header = zlib_header.read_bytes()
+            stdio_header = root / "tests/support/portable_stdio.h"
+            original_stdio = stdio_header.read_bytes()
+            mutated_paths: set[str] = set()
 
             def git_output(*args: str, cwd: Path = ROOT) -> str:
                 if args[0] == "rev-parse":
                     return "a" * 40
                 if args[0] == "status":
-                    return "" if zlib_header.read_bytes() == original_header else " M third_party/zlib/zlib.h"
+                    return "\n".join(f" M {path}" for path in sorted(mutated_paths)
+                                     if path in args)
                 raise AssertionError(f"unexpected git query: {args[0]}")
 
             with mock.patch.object(evidence.sys, "platform", "win32"), \
@@ -989,13 +993,20 @@ class MvsLaneTests(unittest.TestCase):
                 self.assertEqual(importer["basename"], "mvs_importer.exe")
                 self.assertEqual(importer["sha256"], evidence.sha256_file(importer_path))
                 zlib_header.write_bytes(original_header + b"\nheader mutation")
+                mutated_paths.add("third_party/zlib/zlib.h")
                 after = evidence.public_source_identity(root)
+                stdio_header.write_bytes(original_stdio + b"\nhelper mutation")
+                mutated_paths.add("tests/support/portable_stdio.h")
+                after_helper = evidence.public_source_identity(root)
 
         self.assertNotEqual(before["relevant_source_sha256"], after["relevant_source_sha256"])
         self.assertNotEqual(before["mvs_importer"]["source_sha256"],
                             after["mvs_importer"]["source_sha256"])
+        self.assertNotEqual(after["mvs_importer"]["source_sha256"],
+                            after_helper["mvs_importer"]["source_sha256"])
         self.assertFalse(before["mvs_importer"]["working_tree_dirty"])
         self.assertTrue(after["mvs_importer"]["working_tree_dirty"])
+        self.assertTrue(after_helper["mvs_importer"]["working_tree_dirty"])
 
     def test_mvs_collector_rejects_importer_substitution_during_ctest(self) -> None:
         proof = {"basename": "mvs_importer", "sha256": "a" * 64,
@@ -1031,6 +1042,7 @@ def main() -> int:
         "src/libretro/libretro_core.c", "experiments/owned_cpu/cpu.c",
         "tests/mvs/test_mvs.c", "tests/mvs/test_mvs_qualification.py",
         "tests/mvs/qualification_failure_driver.c",
+        "tests/support/portable_stdio.h",
             "src/chips/ym2610_candidate.cpp", "src/chips/ym2610_candidate.h",
             "third_party/ymfm/src/ymfm_opn.cpp", "third_party/ymfm/NOTICE.md",
         "tests/mvs/fuzz_import.c", "tests/libretro/retroarch_smoke.py",

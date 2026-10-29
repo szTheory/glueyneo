@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: MIT */
+#include "../support/portable_stdio.h"
+
 #include "glueyneo/glueyneo.h"
 #include "libretro.h"
 
@@ -218,7 +220,7 @@ static bool advance_native_reference(uint32_t input, uint32_t *pixels) {
 }
 
 static bool read_content(const char *path) {
-    FILE *file = fopen(path, "rb");
+    FILE *file = gn_portable_fopen(path, "rb");
     if (file == NULL) return false;
     const size_t count = fread(content, 1u, sizeof(content), file);
     const int extra = fgetc(file);
@@ -258,7 +260,7 @@ static uint32_t sound_read_u32_be(const uint8_t *bytes) {
 }
 
 static bool read_sound_content(const char *path) {
-    FILE *file = fopen(path, "rb");
+    FILE *file = gn_portable_fopen(path, "rb");
     if (file == NULL) return false;
     if (fseek(file, 0L, SEEK_END) != 0) {
         (void)fclose(file);
@@ -379,7 +381,7 @@ static int write_save_fixture(const char *path) {
         free(bundle);
         return 2;
     }
-    FILE *file = fopen(path, "wb");
+    FILE *file = gn_portable_fopen(path, "wb");
     if (file == NULL) {
         free(bundle);
         return 2;
@@ -1333,7 +1335,7 @@ static int run_continuation_observer_contract(const char *content_path,
     uint8_t *const state = capture_adapter_state(
         capacity, "observer checkpoint captures the exact GNST state");
     if (state == NULL) goto done;
-    FILE *const output = fopen(state_path, "wb");
+    FILE *const output = gn_portable_fopen(state_path, "wb");
     bool wrote_state = false;
     if (output != NULL) {
         wrote_state = fwrite(state, 1u, capacity, output) == capacity;
@@ -1390,7 +1392,7 @@ static bool harness_read_state(const char *path, uint8_t **out_state,
                                size_t *out_size) {
     *out_state = NULL;
     *out_size = 0u;
-    FILE *const file = fopen(path, "rb");
+    FILE *const file = gn_portable_fopen(path, "rb");
     if (file == NULL) return false;
     bool ok = fseek(file, 0L, SEEK_END) == 0;
     const long measured = ok ? ftell(file) : -1L;
@@ -1440,7 +1442,7 @@ static int run_continuation_production_contract(const char *content_path,
               "production native reference restores the same checkpoint");
     }
     FILE *const trace = state != NULL && native_reference != NULL
-        ? fopen(trace_path, "wb") : NULL;
+        ? gn_portable_fopen(trace_path, "wb") : NULL;
     static const uint8_t header[12] = {
         'G', 'N', 'F', 'O', 0u, 0u, 0u, 1u, 0u, 0u, 0u, 4u};
     CHECK(trace != NULL && fwrite(header, 1u, sizeof(header), trace) == sizeof(header),

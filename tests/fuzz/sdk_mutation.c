@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: MIT; deterministic original diagnostic inputs. */
+#include "../support/portable_stdio.h"
+
 #include "glueyneo/glueyneo.h"
 #include "guest_fixture.h"
 #include "test_support.h"
@@ -944,7 +946,7 @@ static void sequence_mutation_entrypoint(void) {
 
 static int read_input_file(const char *path, uint8_t input[MUTATION_INPUT_LIMIT],
                            size_t *length) {
-    FILE *file = fopen(path, "rb");
+    FILE *file = gn_portable_fopen(path, "rb");
     if (file == NULL) return 0;
     const size_t count = fread(input, 1u, MUTATION_INPUT_LIMIT, file);
     const int extra_byte = fgetc(file);

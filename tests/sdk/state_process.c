@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: MIT */
+#include "../support/portable_stdio.h"
+
 #include "guest_fixture.h"
 #include "state_fixture.h"
 
@@ -124,7 +126,7 @@ static int write_trace_header(FILE *file, const char magic[4],
 
 static int write_state_file(const char *path, const uint8_t *state,
                             size_t state_size) {
-    FILE *file = fopen(path, "wb");
+    FILE *file = gn_portable_fopen(path, "wb");
     if (file == NULL) return 0;
     int ok = write_bytes(file, state, state_size);
     if (fclose(file) != 0) ok = 0;
@@ -136,7 +138,7 @@ static int read_state_file(const char *path, uint8_t **out_state,
     if (out_state == NULL || out_size == NULL) return 0;
     *out_state = NULL;
     *out_size = 0u;
-    FILE *file = fopen(path, "rb");
+    FILE *file = gn_portable_fopen(path, "rb");
     if (file == NULL) return 0;
     int ok = fseek(file, 0L, SEEK_END) == 0;
     const long end = ok ? ftell(file) : -1L;
@@ -158,8 +160,8 @@ static int read_state_file(const char *path, uint8_t **out_state,
 
 static int file_contents_equal(const char *left_path,
                                const char *right_path) {
-    FILE *left = fopen(left_path, "rb");
-    FILE *right = fopen(right_path, "rb");
+    FILE *left = gn_portable_fopen(left_path, "rb");
+    FILE *right = gn_portable_fopen(right_path, "rb");
     int equal = left != NULL && right != NULL;
     uint8_t left_bytes[8192];
     uint8_t right_bytes[8192];
@@ -253,7 +255,7 @@ static int load_diagnostic(gn_instance **out_instance, unsigned scenario) {
 
 static int run_diagnostic(gn_instance *instance, const char *trace_path,
                           process_metrics *metrics) {
-    FILE *trace = fopen(trace_path, "wb");
+    FILE *trace = gn_portable_fopen(trace_path, "wb");
     if (trace == NULL) return 0;
     int ok = write_trace_header(trace, "GNSD",
         (uint32_t)(sizeof(diagnostic_future_budgets) /
@@ -300,7 +302,7 @@ static int run_diagnostic(gn_instance *instance, const char *trace_path,
 
 static int run_mvs(gn_instance *instance, const char *trace_path,
                    process_metrics *metrics) {
-    FILE *trace = fopen(trace_path, "wb");
+    FILE *trace = gn_portable_fopen(trace_path, "wb");
     if (trace == NULL) return 0;
     const uint32_t count = (uint32_t)(sizeof(mvs_future_inputs) /
                                       sizeof(mvs_future_inputs[0]));
@@ -689,7 +691,7 @@ static int state_local_read_file(const char *path, size_t maximum,
                                  uint8_t **out_bytes, size_t *out_size) {
     *out_bytes = NULL;
     *out_size = 0u;
-    FILE *file = fopen(path, "rb");
+    FILE *file = gn_portable_fopen(path, "rb");
     if (file == NULL || fseek(file, 0, SEEK_END) != 0) {
         if (file != NULL) fclose(file);
         return 0;
@@ -996,7 +998,7 @@ static int state_local_trace_future(gn_instance *instance,
     *out_elapsed = 0u;
     *out_nonzero_audio = 0u;
     *out_nonzero_video = 0u;
-    FILE *trace = fopen(trace_path, "wb");
+    FILE *trace = gn_portable_fopen(trace_path, "wb");
     if (trace == NULL || !write_trace_header(trace, "GNSL",
                                              schedule->future_frames)) {
         if (trace != NULL) fclose(trace);
@@ -1110,7 +1112,7 @@ static int state_frontend_import(const char *bundle_path, const char *state_path
             (24u + STATE_FIXTURE_WIDTH * STATE_FIXTURE_HEIGHT * 4u +
              GN_MVS_AUDIO_CAPACITY_FRAMES_V1 * 2u * sizeof(int16_t));
         ok = maximum_trace <= STATE_FRONTEND_MAX_TRACE_BYTES;
-        if (ok) trace = fopen(trace_path, "wb");
+        if (ok) trace = gn_portable_fopen(trace_path, "wb");
         ok = ok && trace != NULL && write_trace_header(
             trace, "GNFO", STATE_FRONTEND_WINDOW_FRAMES);
         ok = process_check("sdk.state.frontend.trace-output-is-bounded", ok) && ok;

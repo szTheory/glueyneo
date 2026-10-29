@@ -198,6 +198,7 @@ def cases() -> dict[str, Callable[[], dict[str, Any]]]:
         expected = {
             "src/instance.c", "src/sdk_private.h", "src/mvs/mvs_bus.c",
             "tools/mvs/mvs_qualify.c", "tools/mvs/qualify_local_boot.py",
+            "tests/support/portable_stdio.h",
             "tests/mvs/test_mvs.c", "tests/mvs/test_mvs_qualification.py",
             "tests/mvs/qualification_failure_driver.c",
             "src/chips/ym2610_candidate.cpp", "src/chips/ym2610_candidate.h",

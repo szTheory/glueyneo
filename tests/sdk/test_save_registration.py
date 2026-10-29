@@ -28,6 +28,12 @@ DOC_SPEC.loader.exec_module(DOCS)
 class SaveRegistrationTests(unittest.TestCase):
     assertion_count = 0
 
+    def test_save_suite_runs_serial_after_parallel_recovery_timeout(self) -> None:
+        source = (ROOT / "tools/verify_sdk.py").read_text(encoding="utf-8")
+        save_suite = source.split("def suite_save()", 1)[1].split("def suite_frontend()", 1)[0]
+        self.assertEqual(VERIFY.SAVE_CTEST_WORKERS, 1)
+        self.assertIn('"--parallel", str(SAVE_CTEST_WORKERS)', save_suite)
+
     def __getattribute__(self, name: str):
         attribute = super().__getattribute__(name)
         if name.startswith("assert") and callable(attribute):

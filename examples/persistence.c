@@ -7,6 +7,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+static inline FILE *gn_portable_fopen(const char *path, const char *mode) {
+#if defined(_MSC_VER)
+    FILE *file = NULL;
+    if (fopen_s(&file, path, mode) != 0) return NULL;
+    return file;
+#else
+    return fopen(path, mode);
+#endif
+}
+
 size_t public_persistence_guest_size(void);
 int public_persistence_guest_build(uint8_t *bundle, size_t capacity);
 
@@ -177,7 +187,7 @@ static int create_guest(gn_instance **out_instance, size_t *out_fixture_bytes) {
 }
 
 static int write_slot_new(const char *path, const uint8_t *bytes, size_t size) {
-    FILE *file = fopen(path, "wbx");
+    FILE *file = gn_portable_fopen(path, "wbx");
     if (file == NULL) return 0;
     const size_t written = fwrite(bytes, 1u, size, file);
     const int write_error = ferror(file);
@@ -188,7 +198,7 @@ static int write_slot_new(const char *path, const uint8_t *bytes, size_t size) {
 }
 
 static int read_slot(const char *path, uint8_t *bytes, size_t size) {
-    FILE *file = fopen(path, "rb");
+    FILE *file = gn_portable_fopen(path, "rb");
     if (file == NULL) return 0;
     const size_t count = fread(bytes, 1u, size, file);
     const int extra = fgetc(file);

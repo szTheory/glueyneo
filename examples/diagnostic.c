@@ -6,6 +6,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+static inline FILE *gn_portable_fopen(const char *path, const char *mode) {
+#if defined(_MSC_VER)
+    FILE *file = NULL;
+    if (fopen_s(&file, path, mode) != 0) return NULL;
+    return file;
+#else
+    return fopen(path, mode);
+#endif
+}
+
 enum {
     DIAGNOSTIC_ROM_BYTES = 512,
     DIAGNOSTIC_RAM_SEED_BYTES = 10,
@@ -15,7 +25,7 @@ enum {
 static uint64_t assertion_count;
 
 static int read_fixture(const char *path, uint8_t bytes[DIAGNOSTIC_FIXTURE_BYTES]) {
-    FILE *input = fopen(path, "rb");
+    FILE *input = gn_portable_fopen(path, "rb");
     if (input == NULL) {
         (void)fprintf(stderr, "cannot open diagnostic fixture: %s\n", path);
         return 0;

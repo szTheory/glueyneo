@@ -24,6 +24,9 @@ import sdk_evidence as evidence  # noqa: E402
 import public_content  # noqa: E402
 
 MAX_WORKERS = 2
+# Recovery finishes below its 60-second CTest limit when isolated; parallel save
+# cases delayed its first output and exceeded the limit on the measured host.
+SAVE_CTEST_WORKERS = 1
 CHILD_TIMEOUT_SECONDS = 600
 FILTERED_ENVIRONMENT = {
     "CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS", "CMAKE_PREFIX_PATH",
@@ -115,6 +118,7 @@ FRONTEND_PHASE_SOURCE_FILES = (
     "tests/libretro/retroarch_smoke.py", "tests/libretro/test_frontend_registration.py",
     "tests/libretro/state_safety.c", "tests/libretro/test_frontend_replay.py",
     "tests/libretro/test_retroarch_smoke.py", "tests/sdk/state_process.c",
+    "tests/support/portable_stdio.h",
     "tools/mvs/frontend_replay.py", "tools/verify_sdk.py",
 )
 FRONTEND_DOC_PATHS = {
@@ -137,6 +141,7 @@ FRONTEND_SOURCE_PATHS = (
     "tests/libretro/retroarch_smoke.py", "tests/libretro/state_safety.c",
     "tests/libretro/test_frontend_registration.py", "tests/libretro/test_frontend_replay.py",
     "tests/libretro/test_retroarch_smoke.py", "tests/sdk/state_process.c",
+    "tests/support/portable_stdio.h",
     "tools/mvs/frontend_replay.py", "tools/verify_sdk.py",
 )
 FRONTEND_CMAKE_PACKAGES = frozenset({"Python3", "Threads"})
@@ -2511,7 +2516,7 @@ def suite_save() -> dict[str, Any]:
     host_supported = sys.platform == "darwin"
     result = run([
         "ctest", "--preset", "sdk-debug", "--verbose", "--output-on-failure",
-        "--no-tests=error", "--parallel", str(MAX_WORKERS),
+        "--no-tests=error", "--parallel", str(SAVE_CTEST_WORKERS),
         "-R", "^sdk_save_(api|receipts|lifecycle|registration|process|host_faults|recovery)$",
     ], timeout=900)
     observed = validate_save_ctest_output(

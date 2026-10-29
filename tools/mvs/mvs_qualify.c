@@ -2,6 +2,7 @@
 #if !defined(_WIN32) && !defined(_POSIX_C_SOURCE)
 #define _POSIX_C_SOURCE 200809L
 #endif
+#include "../../tests/support/portable_stdio.h"
 
 #include "glueyneo/glueyneo.h"
 #include "../../src/sdk_private.h"
@@ -328,7 +329,7 @@ static int write_private_ppm(const char *path, const uint32_t *pixels,
     if (pixel_count != (size_t)320u * (size_t)224u ||
         (!valid_frame_output_path(path) &&
          !valid_active_capture_path(path))) return 0;
-    FILE *file = fopen(path, "wbx");
+    FILE *file = gn_portable_fopen(path, "wbx");
     if (file == NULL) return 0;
     int ok = fwrite(header, 1u, sizeof(header) - 1u, file) ==
              sizeof(header) - 1u;
@@ -2112,7 +2113,7 @@ int main(int argc, char **argv) {
          (script_pointer == NULL || video_advance_frames_set != 0 ||
           frame_output_path != NULL || video_state_diagnostic != 0)) ||
         (video_state_diagnostic != 0 && frame_output_path == NULL)) return 2;
-    FILE *file = fopen(argv[1], "rb");
+    FILE *file = gn_portable_fopen(argv[1], "rb");
     if (file == NULL || fseek(file, 0, SEEK_END) != 0) {
         if (file != NULL) fclose(file);
         puts("{\"status\":\"normalized_bundle_unavailable\"}");

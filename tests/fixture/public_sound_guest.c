@@ -7,6 +7,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+static inline FILE *gn_portable_fopen(const char *path, const char *mode) {
+#if defined(_MSC_VER)
+    FILE *file = NULL;
+    if (fopen_s(&file, path, mode) != 0) return NULL;
+    return file;
+#else
+    return fopen(path, mode);
+#endif
+}
+
 enum {
     SOUND_HEADER_BYTES = 16u,
     SOUND_REGION_COUNT = 8u,
@@ -273,7 +283,7 @@ int public_sound_guest_write(const char *path) {
         free(bundle);
         return 0;
     }
-    FILE *file = fopen(path, "wb");
+    FILE *file = gn_portable_fopen(path, "wb");
     if (file == NULL) {
         free(bundle);
         return 0;

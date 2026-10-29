@@ -6,6 +6,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+static inline FILE *gn_portable_fopen(const char *path, const char *mode) {
+#if defined(_MSC_VER)
+    FILE *file = NULL;
+    if (fopen_s(&file, path, mode) != 0) return NULL;
+    return file;
+#else
+    return fopen(path, mode);
+#endif
+}
+
 enum {
     WIDTH = 320,
     HEIGHT = 224,
@@ -32,7 +42,7 @@ static uint32_t read_be32(const uint8_t *bytes) {
 }
 
 static uint8_t *read_bundle(const char *path, size_t *out_size) {
-    FILE *file = fopen(path, "rb");
+    FILE *file = gn_portable_fopen(path, "rb");
     if (file == NULL) return NULL;
     if (fseek(file, 0, SEEK_END) != 0) {
         (void)fclose(file);
@@ -220,7 +230,7 @@ static int read_file(const char *path, size_t limit, uint8_t **out_bytes,
                      size_t *out_size) {
     *out_bytes = NULL;
     *out_size = 0u;
-    FILE *file = fopen(path, "rb");
+    FILE *file = gn_portable_fopen(path, "rb");
     if (file == NULL) return 0;
     if (fseek(file, 0, SEEK_END) != 0) {
         (void)fclose(file);
@@ -251,7 +261,7 @@ static int read_file(const char *path, size_t limit, uint8_t **out_bytes,
 }
 
 static int write_file(const char *path, const uint8_t *bytes, size_t size) {
-    FILE *file = fopen(path, "wb");
+    FILE *file = gn_portable_fopen(path, "wb");
     if (file == NULL) return 0;
     const int written = fwrite(bytes, 1u, size, file) == size;
     const int closed = fclose(file) == 0;
@@ -314,7 +324,7 @@ static int run_future_trace(gn_instance *control, gn_instance *restored,
                             size_t *out_assertions, size_t *out_audio_frames,
                             size_t *out_nonzero_samples,
                             uint64_t *out_elapsed_cycles) {
-    FILE *trace = fopen(trace_path, "wb");
+    FILE *trace = gn_portable_fopen(trace_path, "wb");
     if (trace == NULL) return 0;
     int ok = write_trace_header(trace);
     size_t assertions = 10u;
@@ -700,7 +710,7 @@ static int run_instance_mode(const char *media_path, const char *trace_path) {
         goto done;
     }
 
-    trace = fopen(trace_path, "wb");
+    trace = gn_portable_fopen(trace_path, "wb");
     if (trace == NULL) {
         exit_code = 2;
         goto done;

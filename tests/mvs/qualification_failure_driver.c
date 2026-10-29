@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: MIT */
+#include "../support/portable_stdio.h"
+
 #include "glueyneo/glueyneo.h"
 #include "sdk_private.h"
 
@@ -16,7 +18,7 @@ int gn_mvs_qualify_test_active(gn_instance *instance, int phase,
 static int load_bytes(const char *path, uint8_t **out_bytes, size_t *out_size) {
     *out_bytes = NULL;
     *out_size = 0u;
-    FILE *file = fopen(path, "rb");
+    FILE *file = gn_portable_fopen(path, "rb");
     if (file == NULL || fseek(file, 0, SEEK_END) != 0) {
         if (file != NULL) fclose(file);
         return 0;

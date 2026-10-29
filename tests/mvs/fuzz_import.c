@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: MIT */
+#include "../support/portable_stdio.h"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,7 +47,7 @@ static int load_audio(gn_instance *instance, const uint8_t *bytes, size_t size) 
 static int audio_calls(const char *path) {
     int ok=0;
     unsigned success=0, rejected=0;
-    FILE *file=fopen(path,"rb");
+    FILE *file=gn_portable_fopen(path,"rb");
     uint8_t *bytes=NULL;
     gn_instance *a=NULL,*b=NULL;
     uint32_t *pa=NULL,*pb=NULL;
@@ -148,7 +150,7 @@ done:
 int main(int argc, char **argv) {
     if (argc==3 && strcmp(argv[1],"--audio-calls")==0) return audio_calls(argv[2]);
     if (argc != 2) return 2;
-    FILE *file = fopen(argv[1], "rb");
+    FILE *file = gn_portable_fopen(argv[1], "rb");
     if (file == NULL || fseek(file, 0, SEEK_END) != 0) {
         if (file != NULL) fclose(file);
         return 2;

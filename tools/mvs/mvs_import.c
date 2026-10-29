@@ -2,6 +2,7 @@
 #ifndef _WIN32
 #define _POSIX_C_SOURCE 200809L
 #endif
+#include "../../tests/support/portable_stdio.h"
 #include <zlib.h>
 
 #include <stdint.h>
@@ -706,7 +707,7 @@ static const char *status_message(int status) {
 /* Reads one selected input. An absent or unreadable path is IMPORT_MISSING_INPUT,
  * kept separate from a file over SOURCE_ZIP_MAX (IMPORT_LIMIT). */
 static int read_bounded(const char *path, uint8_t **bytes, size_t *length) {
-    FILE *input = fopen(path, "rb");
+    FILE *input = gn_portable_fopen(path, "rb");
     if (input == NULL) return IMPORT_MISSING_INPUT;
     int ok = fseek(input, 0, SEEK_END) == 0;
     const long measured = ok ? ftell(input) : -1L;
@@ -778,7 +779,7 @@ int main(int argc, char **argv) {
         return 0;
     }
     if (argc != 3) { fputs("usage: mvs_importer input.zip output.gnmv\n", stderr); return 2; }
-    FILE *input = fopen(argv[1], "rb");
+    FILE *input = gn_portable_fopen(argv[1], "rb");
     if (input == NULL) { fputs("input archive is unavailable\n", stderr); return 1; }
     if (fseek(input, 0, SEEK_END) != 0) {
         fclose(input); fputs("input archive could not be inspected\n", stderr); return 1;
@@ -799,7 +800,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "%s\n", status_message(status));
         return status;
     }
-    FILE *output = fopen(argv[2], "wb");
+    FILE *output = gn_portable_fopen(argv[2], "wb");
     if (output == NULL) {
         free(bundle); fputs("normalized media could not be written\n", stderr); return 1;
     }

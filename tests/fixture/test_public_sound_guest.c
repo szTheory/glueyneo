@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: MIT */
+#include "../support/portable_stdio.h"
+
 #include "glueyneo/glueyneo.h"
 
 #include <stdio.h>
@@ -58,7 +60,7 @@ static uint32_t read_u32_be(const uint8_t *bytes) {
 }
 
 static int read_fixture(void) {
-    FILE *file = fopen(fixture_path, "rb");
+    FILE *file = gn_portable_fopen(fixture_path, "rb");
     if (file == NULL) return 0;
     if (fseek(file, 0L, SEEK_END) != 0) {
         (void)fclose(file);

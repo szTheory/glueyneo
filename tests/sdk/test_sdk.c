@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: MIT */
+#include "../support/portable_stdio.h"
+
 #include "glueyneo/glueyneo.h"
 #include "chips/ym2610_candidate.h"
 #include "guest_fixture.h"
@@ -71,7 +73,7 @@ static void sdk_sound_set_fixture_path(const char *executable) {
 static int sdk_sound_bundle_read(sdk_sound_bundle *bundle) {
     memset(bundle, 0, sizeof(*bundle));
     if (sdk_sound_fixture_path[0] == '\0') return 0;
-    FILE *file = fopen(sdk_sound_fixture_path, "rb");
+    FILE *file = gn_portable_fopen(sdk_sound_fixture_path, "rb");
     if (file == NULL) return 0;
     if (fseek(file, 0L, SEEK_END) != 0) {
         (void)fclose(file);
