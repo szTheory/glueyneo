@@ -1630,13 +1630,23 @@ class ImporterTests(unittest.TestCase):
                 launcher.parent.mkdir(parents=True)
                 launcher.write_text(
                     "#!/usr/bin/env python3\nimport sys\n"
-                    f"sys.{stream}.buffer.write(bytes([255]))\n",
+                    f"sys.{stream}.buffer.write(bytes([129]))\n",
                     encoding="utf-8")
                 launcher.chmod(0o755)
                 calls: list[list[str]] = []
 
                 def execute(command: list[str], **kwargs: object):
                     calls.append(command)
+                    if os.name == "nt" and command[0] == str(importer):
+                        # The checked command is synthetic; avoid launching a
+                        # POSIX shebang script on Windows while preserving the
+                        # selected-import success branch.
+                        return subprocess.CompletedProcess(command, 0)
+                    if os.name == "nt" and command[0] == str(launcher):
+                        # Use a real child process so Python's Windows text
+                        # decoder exercises the same invalid-output exception.
+                        command = [sys.executable, "-c",
+                                   f"import sys; sys.{stream}.buffer.write(bytes([129]))"]
                     return subprocess.run(command, **kwargs)
 
                 def run_selected(input_root: Path, importer_argument=None, **options: object):
@@ -1679,7 +1689,7 @@ class ImporterTests(unittest.TestCase):
                         "retroarch_observation": "manual-only-unknown",
                         "status": "native_qualification_failed",
                     })
-                    self.assertNotIn(bytes([255]), report_bytes)
+                    self.assertNotIn(bytes([129]), report_bytes)
                     self.assertNotIn(str(root), report_bytes.decode("utf-8"))
                 finally:
                     os.chdir(previous_cwd)
@@ -1822,6 +1832,27 @@ class ImporterTests(unittest.TestCase):
                 self.assertEqual(report_paths[0].read_bytes(), report_bytes[0])
             finally:
                 os.chdir(previous_cwd)
+
+    def test_windows_report_uses_atomic_no_replace_rename(self) -> None:
+        from tools.mvs import qualify_local_boot as qualification
+        with tempfile.TemporaryDirectory(prefix="mvs-windows-report-") as directory:
+            report = Path(directory) / "receipt.json"
+            with mock.patch.object(qualification.sys, "platform", "win32"), \
+                    mock.patch.object(qualification.os, "rename",
+                                      wraps=os.rename) as rename, \
+                    mock.patch.object(qualification.os, "link") as link:
+                self.assertTrue(qualification.write_report(report, {"status": "first"}))
+            rename.assert_called_once()
+            link.assert_not_called()
+            original = report.read_bytes()
+            with mock.patch.object(qualification.sys, "platform", "win32"), \
+                    mock.patch.object(qualification.os, "rename",
+                                      side_effect=FileExistsError("destination exists")) as rename, \
+                    mock.patch.object(qualification.os, "link") as link:
+                self.assertFalse(qualification.write_report(report, {"status": "replacement"}))
+            rename.assert_called_once()
+            link.assert_not_called()
+            self.assertEqual(report.read_bytes(), original)
 
     def test_simultaneous_selected_invocations_use_distinct_bundles(self) -> None:
         from tools.mvs import qualify_local_boot as qualification
@@ -3059,7 +3090,7 @@ class ImporterTests(unittest.TestCase):
                  "--active-frames", "3600", "--capture-frames", "0,3599",
                  "--capture-directory", capture_arg],
                 cwd=capture_root, capture_output=True, text=True, check=False,
-                timeout=120)
+                timeout=240 if os.name == "nt" else 120)
             self.assertEqual(execution.returncode, 0, execution.stdout)
             report = json.loads(execution.stdout)
             self.assertEqual(report["status"], "active_frames_completed")

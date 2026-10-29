@@ -6687,10 +6687,16 @@ def write_report(report_path: Path, result: dict[str, object]) -> bool:
             handle.write(payload)
             handle.flush()
             os.fsync(handle.fileno())
-        # The same-directory hard link publishes complete contents atomically
-        # and fails if the destination exists, preserving earlier diagnostics.
-        os.link(temporary_report, report_path)
-        temporary_report.unlink()
+        # Same-directory rename on Windows is atomic and fails when the
+        # destination exists. Other hosts use a hard link for atomic
+        # no-replace publication because POSIX rename would overwrite it.
+        if sys.platform == "win32":
+            os.rename(temporary_report, report_path)
+            temporary_report = None
+        else:
+            os.link(temporary_report, report_path)
+            temporary_report.unlink()
+            temporary_report = None
     except (OSError, TypeError, ValueError):
         if temporary_report is not None:
             temporary_report.unlink(missing_ok=True)

@@ -908,11 +908,17 @@ if(GLUEYNEO_BUILD_TESTS)
   # bound; shorter guest, input and maximum-bound rejection checks remain in
   # mvs_import_contract under ASan/UBSan.
   if(GLUEYNEO_SDK_SANITIZER STREQUAL "NONE")
+    set(_GLUEYNEO_MAX_HORIZON_CTEST_TIMEOUT 180)
+    if(MSVC)
+      # A Windows Debug runner previously reached the 120-second child bound
+      # before completing the fixed 3,600-frame boundary case.
+      set(_GLUEYNEO_MAX_HORIZON_CTEST_TIMEOUT 300)
+    endif()
     add_test(NAME mvs_import_max_horizon
       COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/mvs/test_mvs_qualification.py
               --importer $<TARGET_FILE:mvs_importer> --mode maximum-horizon)
     set_tests_properties(mvs_import_max_horizon PROPERTIES
-      LABELS "mvs;resource-boundary" TIMEOUT 180)
+      LABELS "mvs;resource-boundary" TIMEOUT ${_GLUEYNEO_MAX_HORIZON_CTEST_TIMEOUT})
   endif()
   add_test(NAME mvs_failure_diagnostics
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/mvs/test_mvs_qualification.py
