@@ -397,7 +397,7 @@
         "path": "tools/verify_sdk.py",
         "sha256": "139f1628aa0c8fea1837afcf917868d72a39c2c7efa76930482c21569fe19cc0",
         "bytes": 169375,
-        "source_revision": "bdca1240ef48752c7fd9838393de150866344826",
+        "source_revision": "2a2becfed954adadb8e19988f425314cad613a50",
         "license": "MIT",
         "role": "SDK route selection, measurement validation and source identity harness."
       }
@@ -597,7 +597,8 @@
         "sha256": "481b0d99f26ecd9ae4275d162b570a1de1dcf55dc17e946dae279abf325d67a3",
         "license": "MIT",
         "notice": "LICENSE",
-        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract.",
+        "source_revision": "2a2becfed954adadb8e19988f425314cad613a50"
       },
       {
         "path": "docs/native-state.md",
@@ -613,7 +614,8 @@
         "sha256": "d060b4a5000fe147d23cd82ec42d7c106563ab47bbbe4d50cac0b87b4628a2d0",
         "license": "MIT",
         "notice": "LICENSE",
-        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract.",
+        "source_revision": "2a2becfed954adadb8e19988f425314cad613a50"
       },
       {
         "path": "src/instance.c",
@@ -725,7 +727,8 @@
         "sha256": "139f1628aa0c8fea1837afcf917868d72a39c2c7efa76930482c21569fe19cc0",
         "license": "MIT",
         "notice": "LICENSE",
-        "provenance": "Original Glueyneo first-party source; exact SDK, state-isolation, and hostile CTest inventories are bound in the evidence selector."
+        "provenance": "Original Glueyneo first-party source; exact SDK, state-isolation, and hostile CTest inventories are bound in the evidence selector.",
+        "source_revision": "2a2becfed954adadb8e19988f425314cad613a50"
       }
     ]
   },
