@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import traceback
 import unittest
 from unittest import mock
 
@@ -105,6 +106,37 @@ def command_argv(
     if str(ROOT) in " ".join(expanded):
         raise CheckError("Guide command refers to the original source checkout")
     return expanded
+
+
+def _raise_guide_launch_failure(command_index: int, executable_token: str, cwd: Path) -> None:
+    executable = PureWindowsPath(executable_token)
+    if executable.drive or executable.root or executable.is_absolute():
+        relative_executable = "<absolute executable>"
+        expected_path = None
+        expected_type = "not-inspected"
+        windows_exe_type = "not-inspected"
+    else:
+        relative_executable = executable.as_posix().removeprefix("./")
+        expected_path = cwd.joinpath(*executable.parts) if len(executable.parts) > 1 else None
+        expected_type = (
+            "file" if expected_path is not None and expected_path.is_file()
+            else "directory" if expected_path is not None and expected_path.is_dir()
+            else "missing" if expected_path is not None
+            else "path-search"
+        )
+        windows_exe_type = "not-applicable"
+        if expected_path is not None:
+            windows_exe = (expected_path if expected_path.suffix.lower() == ".exe"
+                           else expected_path.with_suffix(".exe"))
+            windows_exe_type = (
+                "file" if windows_exe.is_file()
+                else "directory" if windows_exe.is_dir() else "missing"
+            )
+    raise CheckError(
+        f"guide command {command_index}/14 could not start "
+        f"{relative_executable}; cwd=guide-root; path={expected_type}; "
+        f"windows-exe={windows_exe_type}"
+    ) from None
 
 
 def result_record(output: str, prefix: str, role: str) -> dict[str, object]:
@@ -366,6 +398,25 @@ class ExampleGuideCommandTests(unittest.TestCase):
                 self.assertEqual(PureWindowsPath(argv[0]).suffix, ".exe",
                                  f"Windows command must name its executable: {argv[0]}")
 
+    def test_launch_failure_diagnostic_suppresses_absolute_paths(self) -> None:
+        source = Path("C:/hosted/guide")
+        private_paths = (
+            r"C:\Users\synthetic-user\AppData\Local\Temp\missing.exe",
+            "/Users/synthetic-user/Library/Caches/missing.exe",
+        )
+        for private_path in private_paths:
+            with self.subTest(path_kind="absolute executable"):
+                try:
+                    try:
+                        raise FileNotFoundError(2, "missing executable", private_path)
+                    except FileNotFoundError:
+                        _raise_guide_launch_failure(7, private_path, source)
+                except CheckError as error:
+                    rendered = "".join(traceback.format_exception(error))
+                self.assertIn("<absolute executable>", rendered)
+                self.assertNotIn("synthetic-user", rendered)
+                self.assertNotIn(private_path, rendered)
+
     def test_documented_commands(self) -> None:
         type(self).assertion_count = 0
         self.assertTrue(GUIDE.is_file(), "the task-oriented guide must exist at docs/sdk-examples.md")
@@ -390,33 +441,8 @@ class ExampleGuideCommandTests(unittest.TestCase):
                 try:
                     result = run(argv, cwd=source, env=network_env,
                                  timeout=COMMAND_TIMEOUT_SECONDS)
-                except FileNotFoundError as error:
-                    executable = PureWindowsPath(argv[0])
-                    if executable.drive or executable.is_absolute() or len(executable.parts) == 1:
-                        relative_executable = executable.name
-                        expected_path = None
-                    else:
-                        relative_executable = executable.as_posix().removeprefix("./")
-                        expected_path = source.joinpath(*executable.parts)
-                    expected_type = (
-                        "file" if expected_path is not None and expected_path.is_file()
-                        else "directory" if expected_path is not None and expected_path.is_dir()
-                        else "missing" if expected_path is not None
-                        else "path-search"
-                    )
-                    windows_exe_type = "not-applicable"
-                    if expected_path is not None:
-                        windows_exe = (expected_path if expected_path.suffix.lower() == ".exe"
-                                       else expected_path.with_suffix(".exe"))
-                        windows_exe_type = (
-                            "file" if windows_exe.is_file()
-                            else "directory" if windows_exe.is_dir() else "missing"
-                        )
-                    raise CheckError(
-                        f"guide command {command_index}/14 could not start "
-                        f"{relative_executable}; cwd=guide-root; path={expected_type}; "
-                        f"windows-exe={windows_exe_type}"
-                    ) from error
+                except FileNotFoundError:
+                    _raise_guide_launch_failure(command_index, argv[0], source)
                 executed += 1
                 last_outputs.append((argv, result.stdout))
                 executable = argv[0]
