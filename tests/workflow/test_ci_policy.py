@@ -248,12 +248,9 @@ def check_public_content_handoff() -> tuple[int, int]:
 
 
 def main() -> int:
-    if sys.argv[1:] == ["--handoff-only"]:
-        cases, assertions = check_public_content_handoff()
-        print(f"PASS: public-content handoff controls ({cases} cases, {assertions} assertion calls)")
-        return 0
-    if sys.argv[1:]:
-        raise SystemExit("usage: test_ci_policy.py [--handoff-only]")
+    hosted = sys.argv[1:] == ["--hosted"]
+    if sys.argv[1:] and not hosted:
+        raise SystemExit("usage: test_ci_policy.py [--hosted]")
 
     with tempfile.TemporaryDirectory(prefix="ci-prepare-cli-") as temp:
         output_dir = Path(temp) / "inputs"
@@ -408,7 +405,7 @@ def main() -> int:
         "Verify native save-state continuation and rejection suite",
         "Verify native durable MVS backup-RAM save suite",
         "produce-public-content", "SDK_SOURCE_REVISION", "public-content-receipt.json",
-        "tests/workflow/test_ci_policy.py --handoff-only",
+        "tests/workflow/test_ci_policy.py --hosted",
     ):
         expect(required in workflow, f"workflow omitted required contract: {required}")
     state_command = "run: python3 tools/verify_sdk.py --suite state"
@@ -471,17 +468,20 @@ def main() -> int:
            "published support docs must identify the exact released source and tag")
     # Hosted observations supersede the former unknown rows only for the exact
     # recorded source and identities. Keep the release/authority boundary above.
-    hosted_paths = sorted((ROOT / ".planning/workstreams/cpu-bus-diagnostic-sdk-alpha").rglob(
-        "03-CI-HOSTED-RECEIPT.json"))
-    expect(len(hosted_paths) == 1, "exactly one canonical hosted CI observation must be available")
-    hosted = evidence.load_canonical_json(hosted_paths[0].read_bytes(), label="hosted CI observation")
-    evidence.validate_matrix_report(hosted["aggregate"]["matrix"])
-    expect(hosted["source_revision"] in testing, "hosted support docs must name the exact observed source")
-    for lane in hosted["aggregate"]["matrix"]["lanes"]:
-        expect(lane["outcome"] == "pass" and all(value in testing for value in
-               (lane["lane"], lane["compiler"]["version"], lane["sdk"]["version"],
-                lane["os_image"], lane["architecture"])),
-               "passing support rows must match measured hosted identities")
+    if not hosted:
+        hosted_paths = sorted((ROOT / ".planning/workstreams/cpu-bus-diagnostic-sdk-alpha").rglob(
+            "03-CI-HOSTED-RECEIPT.json"))
+        expect(len(hosted_paths) == 1, "exactly one canonical hosted CI observation must be available")
+        hosted_receipt = evidence.load_canonical_json(hosted_paths[0].read_bytes(),
+                                                      label="hosted CI observation")
+        evidence.validate_matrix_report(hosted_receipt["aggregate"]["matrix"])
+        expect(hosted_receipt["source_revision"] in testing,
+               "hosted support docs must name the exact observed source")
+        for lane in hosted_receipt["aggregate"]["matrix"]["lanes"]:
+            expect(lane["outcome"] == "pass" and all(value in testing for value in
+                   (lane["lane"], lane["compiler"]["version"], lane["sdk"]["version"],
+                    lane["os_image"], lane["architecture"])),
+                   "passing support rows must match measured hosted identities")
 
     public_content_cases, public_content_assertions = check_public_content_handoff()
 
@@ -531,7 +531,8 @@ def main() -> int:
         }
         expect(policy.assemble_aggregate(docs_only, docs_plan, matrix_dir)["outcome"] == "pass",
                "documented classifier skip must pass only with positive docs evidence")
-    print("PASS: conservative CI classification and aggregate controls")
+    print("PASS: hosted CI policy contracts" if hosted else
+          "PASS: conservative CI classification and aggregate controls")
     return 0
 
 
