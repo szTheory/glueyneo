@@ -37,8 +37,31 @@ static const uint8_t saved_b[SAVE_FIXTURE_OUTPUT_COUNT] = {
 static int stale_clean_negative_control;
 static int invalid_suite;
 
+typedef struct {
+    gn_instance *instance;
+    gn_instance *peer;
+    uint8_t *buffer;
+    uint8_t *state_a;
+    uint8_t *state_b;
+} save_receipt_test_resources;
+
+static save_receipt_test_resources active_save_receipt_resources;
+
+static void release_save_receipt_test_resources(void) {
+    free(active_save_receipt_resources.state_a);
+    free(active_save_receipt_resources.state_b);
+    free(active_save_receipt_resources.buffer);
+    gn_destroy(active_save_receipt_resources.peer);
+    gn_destroy(active_save_receipt_resources.instance);
+    memset(&active_save_receipt_resources, 0,
+           sizeof(active_save_receipt_resources));
+}
+
 void setUp(void) {}
-void tearDown(void) {}
+void tearDown(void) {
+    /* Unity calls tearDown even after an assertion returns early. */
+    release_save_receipt_test_resources();
+}
 
 static int save_state_equal(gn_instance *instance, const uint8_t *expected,
                             size_t expected_size) {
@@ -626,8 +649,13 @@ static void save_receipts_reject_stale_and_preserve_pending(void) {
     gn_mvs_save_info_v1 info, peer_info;
     uint8_t output[SAVE_FIXTURE_OUTPUT_COUNT];
     uint8_t readback[SAVE_FIXTURE_OUTPUT_COUNT];
-    SDK_CHECK_TRUE("save.receipts.load-instance", save_fixture_load(&instance));
-    SDK_CHECK_TRUE("save.receipts.load-peer", save_fixture_load(&peer));
+    active_save_receipt_resources.buffer = buffer;
+    const int instance_loaded = save_fixture_load(&instance);
+    active_save_receipt_resources.instance = instance;
+    SDK_CHECK_TRUE("save.receipts.load-instance", instance_loaded);
+    const int peer_loaded = save_fixture_load(&peer);
+    active_save_receipt_resources.peer = peer;
+    SDK_CHECK_TRUE("save.receipts.load-peer", peer_loaded);
     SDK_CHECK_TRUE("save.receipts.transfer-allocation", buffer != NULL);
     if (instance == NULL || peer == NULL || buffer == NULL) goto cleanup;
     SDK_CHECK_STATUS("save.receipts.scope-instance", GN_STATUS_OK,
@@ -704,15 +732,19 @@ static void save_receipts_reject_stale_and_preserve_pending(void) {
     SDK_CHECK_U64("save.receipts-latest-ack-baseline", 1u,
                   info.baseline_known);
 
-    SDK_CHECK_TRUE("save.receipts-capture-a", save_fixture_capture(
-                       instance, &state_a, &state_a_size));
+    const int state_a_captured = save_fixture_capture(
+        instance, &state_a, &state_a_size);
+    active_save_receipt_resources.state_a = state_a;
+    SDK_CHECK_TRUE("save.receipts-capture-a", state_a_captured);
     SDK_CHECK_TRUE("save.receipts-peer-b-run",
                    save_fixture_run_guest(peer, GN_MVS_INPUT_P1_B));
     SDK_CHECK_TRUE("save.receipts-peer-b-readback",
                    save_fixture_read_sram(peer, readback) &&
                    memcmp(readback, saved_b, sizeof(saved_b)) == 0);
-    SDK_CHECK_TRUE("save.receipts-capture-b", save_fixture_capture(
-                       peer, &state_b, &state_b_size));
+    const int state_b_captured = save_fixture_capture(
+        peer, &state_b, &state_b_size);
+    active_save_receipt_resources.state_b = state_b;
+    SDK_CHECK_TRUE("save.receipts-capture-b", state_b_captured);
     SDK_CHECK_STATUS("save.receipts-peer-export", GN_STATUS_OK,
                      save_fixture_export(peer, buffer,
                          GN_MVS_SAVE_ENVELOPE_V1_BYTES, &written,
@@ -771,11 +803,7 @@ static void save_receipts_reject_stale_and_preserve_pending(void) {
                    save_fixture_scope(instance, 23u, &detail) == GN_STATUS_OK);
 
 cleanup:
-    free(state_a);
-    free(state_b);
-    free(buffer);
-    gn_destroy(peer);
-    gn_destroy(instance);
+    release_save_receipt_test_resources();
 }
 
 static void save_receipt_scope_survives_allocator_address_reuse(void) {

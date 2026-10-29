@@ -421,7 +421,7 @@ static int report_attract_start(gn_instance *instance, unsigned chunk,
     if (!get_attract_start(instance, &verdict)) return 0;
     for (uint32_t frame = 0u; frame < video_advance_frames; ++frame) {
         const gn_status input_status = gn_set_mvs_inputs(instance, 0u);
-        gn_run_result result;
+        gn_run_result result = {.reason = GN_RUN_ERROR};
         const gn_status run_status = input_status == GN_STATUS_OK
             ? gn_mvs_run_frame_budget(instance, &result)
             : input_status;
