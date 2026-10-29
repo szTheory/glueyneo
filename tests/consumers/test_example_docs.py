@@ -71,6 +71,20 @@ def guide_commands(variant: str, guide: Path = GUIDE) -> list[str]:
     return commands
 
 
+def _reports_missing_target(output: str, target: str) -> bool:
+    lowered = output.lower()
+    if re.search(r"(?:no rule|unknown target|could not be found)", lowered):
+        return True
+    # MSBuild reports an omitted CMake target as a missing generated project.
+    # Bind that diagnostic to the requested target so unrelated project-file
+    # failures cannot satisfy the negative control.
+    project_file = f"switch: {target}.vcxproj"
+    return (
+        "msb1009: project file does not exist" in lowered
+        and project_file in lowered
+    )
+
+
 def command_argv(
     command: str, cwd: Path, *, cmake_generator: str | None = None,
 ) -> list[str]:
@@ -995,7 +1009,10 @@ class ExampleGuideCommandTests(unittest.TestCase):
             timeout=COMMAND_TIMEOUT_SECONDS, check=False)
         self.assertNotEqual(missing_target.returncode, 0,
                             "withholding a documented helper must remove its target")
-        self.assertRegex(missing_target.stdout.lower(), r"(no rule|unknown target|could not be found)")
+        self.assertTrue(
+            _reports_missing_target(missing_target.stdout, target),
+            "withholding the helper must produce a generator-specific missing-target diagnostic",
+        )
 
 
 class ExampleGuideContractTests(unittest.TestCase):
@@ -1015,6 +1032,26 @@ class ExampleGuideContractTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.assertion_count = 0
         cls.mutation_count = 0
+
+    def test_missing_helper_control_recognizes_only_expected_generator_errors(self) -> None:
+        self.assertTrue(_reports_missing_target(
+            "ninja: error: unknown target 'glueyneo-installed-persistence'",
+            "glueyneo-installed-persistence",
+        ))
+        self.assertTrue(_reports_missing_target(
+            "MSBuild : error MSB1009: Project file does not exist.\n"
+            "Switch: glueyneo-installed-persistence.vcxproj",
+            "glueyneo-installed-persistence",
+        ))
+        self.assertFalse(_reports_missing_target(
+            "MSBuild : error MSB1009: Project file does not exist.\n"
+            "Switch: glueyneo-installed-sound.vcxproj",
+            "glueyneo-installed-persistence",
+        ))
+        self.assertFalse(_reports_missing_target(
+            "MSBuild : error MSB4019: imported project was not found",
+            "glueyneo-installed-persistence",
+        ))
 
     def test_command_argv_preserves_expanded_path_separators(self) -> None:
         windows_root = PureWindowsPath(r"C:\build\guide with spaces\project")
