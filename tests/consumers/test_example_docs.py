@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 import importlib.util
-from pathlib import Path, PureWindowsPath
+from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath
 import re
 import shlex
 import shutil
@@ -394,6 +394,20 @@ GUIDE_CONSUMER_TARGETS = (
     "glueyneo-installed-persistence",
 )
 
+GUIDE_CONSUMER_SOURCES = {
+    "glueyneo-installed-sound": {
+        "tests/consumers/sound_consumer.c",
+        "tests/fixture/public_sound_guest.c",
+    },
+    "glueyneo-installed-continuation": {"examples/continuation.c"},
+    "glueyneo-installed-persistence": {
+        "examples/persistence.c",
+        "examples/persistence_host.c",
+        "tests/fixture/public_persistence_guest.c",
+        "tests/fixture/public_sound_guest.c",
+    },
+}
+
 
 def _validate_compile_metadata(
     source: Path, variant: str, metadata: list[str], include_paths: list[str] | None = None,
@@ -416,6 +430,14 @@ def _validate_compile_metadata(
         actual = {path.replace("\\", "/").casefold() for path in include_paths}
         if expected not in actual:
             raise CheckError("guide consumer target does not include the installed SDK headers")
+
+
+def _path_is_within(root: PurePath, candidate: PurePath) -> bool:
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return False
+    return True
 
 
 def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, list[str]]:
@@ -456,6 +478,7 @@ def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, 
                 raise CheckError("guide consumer Release target has no source-origin metadata")
             metadata: list[str] = []
             include_paths: list[str] = []
+            observed_sources: set[str] = set()
             for source_entry in target_sources:
                 source_path = source_entry["path"]
                 if type(source_path) is not str or not source_path:
@@ -467,14 +490,22 @@ def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, 
                     resolved_source = source_file.resolve(strict=True)
                 except OSError:
                     raise CheckError("guide consumer Release target source is missing or unreadable") from None
-                resolved_text = resolved_source.as_posix().rstrip("/").casefold()
-                staged_text = staged_root.as_posix().rstrip("/").casefold()
-                if (resolved_text != staged_text and
-                        not resolved_text.startswith(staged_text + "/")):
+                if not _path_is_within(staged_root, resolved_source):
                     raise CheckError("guide consumer Release target source is outside the staged project")
                 if not resolved_source.is_file():
                     raise CheckError("guide consumer Release target source is not a file")
+                try:
+                    relative_source = resolved_source.relative_to(staged_root).as_posix()
+                except ValueError:
+                    raise CheckError(
+                        "guide consumer Release target source is outside the staged project"
+                    ) from None
+                observed_sources.add(relative_source)
                 metadata.append(str(resolved_source))
+            if observed_sources != GUIDE_CONSUMER_SOURCES[name]:
+                raise CheckError(
+                    "guide consumer Release target source is not in its documented consumer closure"
+                )
             for group in groups:
                 if group.get("language") != "C":
                     raise CheckError("guide consumer Release target must compile as C")
@@ -484,11 +515,18 @@ def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, 
                 fragments = group.get("compileCommandFragments", [])
                 if not isinstance(fragments, list):
                     raise CheckError("guide consumer Release compile flags are malformed")
+                dialect_flags = []
                 for fragment in fragments:
-                    metadata.append(fragment["fragment"])
-                if not any(re.search(r"(?:^|\s)(?:-std=c17|/std:c17)(?=\s|$)",
-                                     fragment["fragment"], re.IGNORECASE)
-                           for fragment in fragments):
+                    fragment_text = fragment["fragment"]
+                    metadata.append(fragment_text)
+                    dialect_flags.extend(
+                        match.group(0).casefold()
+                        for match in re.finditer(
+                            r"(?<![\w.-])(?:-std=[^\s\"']+|/std:[^\s\"']+)",
+                            fragment_text, re.IGNORECASE,
+                        )
+                    )
+                if not dialect_flags or dialect_flags[-1] not in {"-std=c17", "/std:c17"}:
                     raise CheckError("guide consumer Release target is missing its strict C17 compiler flag")
                 includes = group.get("includes", [])
                 if not isinstance(includes, list):
@@ -860,6 +898,14 @@ class ExampleGuideContractTests(unittest.TestCase):
             with self.subTest(metadata=invalid), self.assertRaises(CheckError):
                 _validate_compile_metadata(source, "static", *invalid)
 
+    def test_staged_source_path_boundary_preserves_posix_case(self) -> None:
+        self.assertTrue(_path_is_within(
+            PurePosixPath("/tmp/guide"), PurePosixPath("/tmp/guide/examples/continuation.c"),
+        ))
+        self.assertFalse(_path_is_within(
+            PurePosixPath("/tmp/guide"), PurePosixPath("/tmp/GUIDE/private-source.c"),
+        ))
+
     def test_release_compile_metadata_cannot_be_masked_by_debug_or_other_target(self) -> None:
         with tempfile.TemporaryDirectory(prefix="guide-file-api-") as directory:
             source = Path(directory)
@@ -867,26 +913,36 @@ class ExampleGuideContractTests(unittest.TestCase):
             reply.mkdir(parents=True)
             consumer_source_root = source / "tests/consumers"
             consumer_source_root.mkdir(parents=True)
-            (consumer_source_root / "sound_consumer.c").write_text("int main(void) { return 0; }\n",
-                                                                      encoding="utf-8")
-            installed_include = str(source / "build/install-static/include")
             required_targets = (
                 "glueyneo-installed-sound",
                 "glueyneo-installed-continuation",
                 "glueyneo-installed-persistence",
             )
+            for relative in {
+                *GUIDE_CONSUMER_SOURCES[required_targets[0]],
+                *GUIDE_CONSUMER_SOURCES[required_targets[1]],
+                *GUIDE_CONSUMER_SOURCES[required_targets[2]],
+            }:
+                path = source / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("int main(void) { return 0; }\n", encoding="utf-8")
+            installed_include = str(source / "build/install-static/include")
 
             def write_target(
                 name: str,
                 include: str,
                 standard: str = "17",
-                source_path: str = "sound_consumer.c",
+                source_paths: list[str] | None = None,
                 fragment: str = "/std:c17",
             ) -> dict[str, str]:
+                if source_paths is None:
+                    source_paths = [str(source / relative) for relative in sorted(
+                        GUIDE_CONSUMER_SOURCES.get(name, {"tests/consumers/sound_consumer.c"}),
+                    )]
                 json_file = f"target-{name}.json"
                 (reply / json_file).write_text(json.dumps({
                     "name": name,
-                    "sources": [{"path": source_path}],
+                    "sources": [{"path": source_path} for source_path in source_paths],
                     "compileGroups": [{
                         "language": "C",
                         "languageStandard": {"standard": standard},
@@ -938,9 +994,27 @@ class ExampleGuideContractTests(unittest.TestCase):
             with self.assertRaises(CheckError):
                 _check_guide_compile_metadata(source, "static")
 
+            write_target(required_targets[2], installed_include,
+                         fragment="-std=c17 -std=gnu17")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
             write_target(
                 required_targets[0], installed_include,
-                source_path=str(ROOT / "tests/consumers/sound_consumer.c"),
+                source_paths=[str(ROOT / "tests/consumers/sound_consumer.c")],
+            )
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            for name in required_targets:
+                write_target(name, installed_include)
+            producer_source = source / "src/instance.c"
+            producer_source.parent.mkdir(parents=True, exist_ok=True)
+            producer_source.write_text("int producer_source;\n", encoding="utf-8")
+            write_target(
+                required_targets[0], installed_include,
+                source_paths=[str(producer_source),
+                              str(source / "tests/fixture/public_sound_guest.c")],
             )
             with self.assertRaises(CheckError):
                 _check_guide_compile_metadata(source, "static")
@@ -973,7 +1047,7 @@ class ExampleGuideContractTests(unittest.TestCase):
             with self.assertRaises(CheckError):
                 _check_guide_compile_metadata(source, "static")
 
-            release_refs.pop()
+            release_refs = [write_target(name, installed_include) for name in required_targets]
             write_codemodel([
                 {"name": "Debug", "targets": debug_refs},
                 {"name": "Release", "targets": release_refs},
