@@ -103,7 +103,7 @@ SOURCE_FINDING_DISPOSITIONS = {
         "rules": {"machine-identifier"},
         "reason": "serial is a zero-initialized Carbon ProcessSerialNumber local variable, not a host identifier value",
     },
-    ("tests/consumers/test_example_docs.py", "fda38173bf3fd48942b60fa1b401337a0761776439fa3d44ffc56df4edd21d87"): {
+    ("tests/consumers/test_example_docs.py", "a82692722951e21ff5078360281b25378e90be651f77000d87b931c6db6a8345"): {
         "rules": {"private-url"},
         "reason": "the Windows launcher regression retains a synthetic localhost port-9 proxy; exact path and bytes are bound",
     },
@@ -114,6 +114,10 @@ SOURCE_FINDING_DISPOSITIONS = {
 # redaction tests contain synthetic identity/path canaries. A changed blob is
 # scanned.
 HISTORY_FINDING_DISPOSITIONS = {
+    "289e06a48018d46bdf571800c4b10ef05a56633b": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact Windows child-process fix retains the offline test synthetic localhost port-9 proxy; path and blob are bound",
+    },
     "3d0b0de0ee4b7ccb132edd0f0d39d41f101b55b0": {
         "path": "tests/consumers/test_example_docs.py",
         "rules": {"personal-path", "private-url"},
