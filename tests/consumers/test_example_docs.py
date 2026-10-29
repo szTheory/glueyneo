@@ -429,6 +429,11 @@ def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, 
             entry for entry in index["reply"].values() if entry.get("kind") == "codemodel"
         )
         codemodel = json.loads((reply_dir / codemodel_entry["jsonFile"]).read_text(encoding="utf-8"))
+        staged_root = source.resolve(strict=True)
+        expected_source_root = (staged_root / "tests" / "consumers").resolve(strict=True)
+        reported_source_root = Path(codemodel["paths"]["source"]).resolve(strict=True)
+        if reported_source_root != expected_source_root:
+            raise CheckError("guide consumer codemodel is not rooted at the staged consumer source")
         configurations = codemodel["configurations"]
         release_configs = [config for config in configurations if config.get("name") == "Release"]
         if len(release_configs) != 1:
@@ -446,8 +451,30 @@ def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, 
             groups = target.get("compileGroups")
             if not isinstance(groups, list) or not groups:
                 raise CheckError("guide consumer Release target has no compile groups")
+            target_sources = target.get("sources")
+            if not isinstance(target_sources, list) or not target_sources:
+                raise CheckError("guide consumer Release target has no source-origin metadata")
             metadata: list[str] = []
             include_paths: list[str] = []
+            for source_entry in target_sources:
+                source_path = source_entry["path"]
+                if type(source_path) is not str or not source_path:
+                    raise CheckError("guide consumer Release target has malformed source-origin metadata")
+                source_file = Path(source_path)
+                if not source_file.is_absolute():
+                    source_file = reported_source_root / source_file
+                try:
+                    resolved_source = source_file.resolve(strict=True)
+                except OSError:
+                    raise CheckError("guide consumer Release target source is missing or unreadable") from None
+                resolved_text = resolved_source.as_posix().rstrip("/").casefold()
+                staged_text = staged_root.as_posix().rstrip("/").casefold()
+                if (resolved_text != staged_text and
+                        not resolved_text.startswith(staged_text + "/")):
+                    raise CheckError("guide consumer Release target source is outside the staged project")
+                if not resolved_source.is_file():
+                    raise CheckError("guide consumer Release target source is not a file")
+                metadata.append(str(resolved_source))
             for group in groups:
                 if group.get("language") != "C":
                     raise CheckError("guide consumer Release target must compile as C")
@@ -459,6 +486,10 @@ def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, 
                     raise CheckError("guide consumer Release compile flags are malformed")
                 for fragment in fragments:
                     metadata.append(fragment["fragment"])
+                if not any(re.search(r"(?:^|\s)(?:-std=c17|/std:c17)(?=\s|$)",
+                                     fragment["fragment"], re.IGNORECASE)
+                           for fragment in fragments):
+                    raise CheckError("guide consumer Release target is missing its strict C17 compiler flag")
                 includes = group.get("includes", [])
                 if not isinstance(includes, list):
                     raise CheckError("guide consumer Release include directories are malformed")
@@ -472,8 +503,8 @@ def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, 
                     metadata.append(define["define"])
             _validate_compile_metadata(source, variant, metadata, include_paths)
             target_metadata[name] = metadata
-    except (AttributeError, KeyError, TypeError, ValueError, OSError, StopIteration) as error:
-        raise CheckError("guide consumer CMake File API compile metadata is malformed") from error
+    except (AttributeError, KeyError, TypeError, ValueError, OSError, StopIteration):
+        raise CheckError("guide consumer CMake File API compile metadata is malformed") from None
     if set(target_metadata) != set(GUIDE_CONSUMER_TARGETS):
         raise CheckError("guide consumer Release codemodel omits an executed example target")
     return target_metadata
@@ -834,6 +865,10 @@ class ExampleGuideContractTests(unittest.TestCase):
             source = Path(directory)
             reply = source / "build/examples-static/.cmake/api/v1/reply"
             reply.mkdir(parents=True)
+            consumer_source_root = source / "tests/consumers"
+            consumer_source_root.mkdir(parents=True)
+            (consumer_source_root / "sound_consumer.c").write_text("int main(void) { return 0; }\n",
+                                                                      encoding="utf-8")
             installed_include = str(source / "build/install-static/include")
             required_targets = (
                 "glueyneo-installed-sound",
@@ -841,14 +876,21 @@ class ExampleGuideContractTests(unittest.TestCase):
                 "glueyneo-installed-persistence",
             )
 
-            def write_target(name: str, include: str, standard: str = "17") -> dict[str, str]:
+            def write_target(
+                name: str,
+                include: str,
+                standard: str = "17",
+                source_path: str = "sound_consumer.c",
+                fragment: str = "/std:c17",
+            ) -> dict[str, str]:
                 json_file = f"target-{name}.json"
                 (reply / json_file).write_text(json.dumps({
                     "name": name,
+                    "sources": [{"path": source_path}],
                     "compileGroups": [{
                         "language": "C",
                         "languageStandard": {"standard": standard},
-                        "compileCommandFragments": [{"fragment": "/std:c17"}],
+                        "compileCommandFragments": [{"fragment": fragment}],
                         "includes": [{"path": include}],
                     }],
                 }), encoding="utf-8")
@@ -857,8 +899,12 @@ class ExampleGuideContractTests(unittest.TestCase):
             debug_refs = [write_target("debug-only-helper", installed_include)]
             release_refs = [write_target(name, installed_include) for name in required_targets]
 
-            def write_codemodel(configurations: list[dict[str, object]]) -> None:
+            def write_codemodel(
+                configurations: list[dict[str, object]],
+                source_root: str = str(consumer_source_root),
+            ) -> None:
                 (reply / "codemodel-v2.json").write_text(json.dumps({
+                    "paths": {"source": source_root},
                     "configurations": configurations,
                 }), encoding="utf-8")
                 (reply / "index-test.json").write_text(json.dumps({
@@ -888,6 +934,26 @@ class ExampleGuideContractTests(unittest.TestCase):
             with self.assertRaises(CheckError):
                 _check_guide_compile_metadata(source, "static")
 
+            write_target(required_targets[2], installed_include, fragment="-std=gnu17")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_target(
+                required_targets[0], installed_include,
+                source_path=str(ROOT / "tests/consumers/sound_consumer.c"),
+            )
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            for name in required_targets:
+                write_target(name, installed_include)
+            write_codemodel([
+                {"name": "Debug", "targets": debug_refs},
+                {"name": "Release", "targets": release_refs},
+            ], source_root=str(ROOT / "tests/consumers"))
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
             release_refs.pop()
             write_codemodel([
                 {"name": "Debug", "targets": debug_refs},
@@ -903,6 +969,15 @@ class ExampleGuideContractTests(unittest.TestCase):
             write_codemodel([
                 {"name": "Debug", "targets": debug_refs},
                 {"name": "Release", "targets": [*release_refs, release_refs[0]]},
+            ])
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            release_refs.pop()
+            write_codemodel([
+                {"name": "Debug", "targets": debug_refs},
+                {"name": "Release", "targets": release_refs},
+                {"name": "Release", "targets": release_refs},
             ])
             with self.assertRaises(CheckError):
                 _check_guide_compile_metadata(source, "static")
