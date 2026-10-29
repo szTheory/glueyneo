@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/szTheory/glueyneo/compare/v0.2.1...v0.2.2) (2026-10-29)
+
+
+### Bug Fixes
+
+* **release:** bind delivery evidence to source and public downloads ([#15](https://github.com/szTheory/glueyneo/issues/15)) ([691b3ca](https://github.com/szTheory/glueyneo/commit/691b3cada9041e6e24006a4089916717c995a1df))
+
 ## [0.2.1](https://github.com/szTheory/glueyneo/compare/v0.2.0...v0.2.1) (2026-10-25)
 
 
