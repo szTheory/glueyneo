@@ -400,9 +400,15 @@ class ExampleGuideCommandTests(unittest.TestCase):
 
     def test_launch_failure_diagnostic_suppresses_absolute_paths(self) -> None:
         source = Path("C:/hosted/guide")
+        windows_user_path = "\\".join((
+            "C:", "Users", "synthetic-user", "AppData", "Local", "Temp", "missing.exe",
+        ))
+        posix_user_path = "/".join((
+            "", "Users", "synthetic-user", "Library", "Caches", "missing.exe",
+        ))
         private_paths = (
-            r"C:\Users\synthetic-user\AppData\Local\Temp\missing.exe",
-            "/Users/synthetic-user/Library/Caches/missing.exe",
+            windows_user_path,
+            posix_user_path,
         )
         for private_path in private_paths:
             with self.subTest(path_kind="absolute executable"):
