@@ -157,8 +157,7 @@ wall-clock service.
 
 ## Evidence and limits
 
-The fresh [Phase 01 whole-phase verification](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/milestones/v0.1-phases/01-cpu-acceptance-experiment/01-VERIFICATION.md)
-passed 10/10 must-haves at source revision
+The Phase 01 whole-phase verification record reports 10/10 must-haves at source revision
 `09476ed57ee29c0798f8be8f082e05ad73776e3b` and admitted the bounded candidate
 for Phase 02 integration. The frozen candidate receipt remains
 `unqualified` with `phase_admitted: false`; it records a candidate-level
