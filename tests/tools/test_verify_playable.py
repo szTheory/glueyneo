@@ -3246,8 +3246,18 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
 
     def test_squash_source_identity_uses_only_pinned_outer_manifest_and_checked_head_bytes(self) -> None:
         fx = self.source_identity_fixture()
-        errors = playable.fixture_source_identity_errors(fx.repo, fx.repo, "HEAD")
-        self.assertTrue(any("not an ancestor of the checked head" in error for error in errors), errors)
+        retained_notes: list[str] = []
+        self.assertEqual(playable.fixture_source_identity_errors(
+            fx.repo, fx.repo, "HEAD", unverifiable=retained_notes), [])
+        self.assertTrue(any("available but not ordered with the checked head" in note for note in retained_notes),
+                        retained_notes)
+        self.assertTrue(any("cited blob matches under the exact outer rights-manifest pin" in note
+                            for note in retained_notes), retained_notes)
+
+        unpinned_retained = playable.HistoryAllowlist(rows={}, base_revision=fx.base)
+        errors = playable.fixture_source_identity_errors(
+            fx.repo, fx.repo, "HEAD", allowlist=unpinned_retained)
+        self.assertTrue(errors, "available unrelated source objects must still require the exact outer pin")
 
         for revision in (fx.source_revision, fx.manifest_revision):
             absent = subprocess.run(["git", "-C", str(fx.clone), "rev-parse", "--verify", "--quiet",
@@ -3283,6 +3293,33 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
             with self.subTest(field=field):
                 problems = playable.fixture_source_identity_errors(fx.clone, fx.clone, "HEAD", manifest=mutated)
                 self.assertTrue(problems, f"mutated source record {field} passed")
+
+        # An exact outer-manifest pin still cannot excuse an available unrelated commit
+        # whose cited source blob differs from the checked-head bytes.
+        wrong_source = b"different historical source bytes\n"
+        self.git(fx.repo, "checkout", "-q", "-b", "wrong-source-origin", "main")
+        (fx.repo / "tests/source.c").write_bytes(wrong_source)
+        wrong_revision = self.commit(fx.repo, "wrong source blob", "tests/source.c")
+        self.git(fx.repo, "checkout", "-q", "main")
+        manifest_path = fx.repo / fx.manifest_path
+        changed_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        changed_manifest["mvs_save_fixture"]["generator_source"]["source_revision"] = wrong_revision
+        manifest_path.write_text(json.dumps(changed_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        manifest_revision = self.commit(fx.repo, "substitute unrelated source revision", fx.manifest_path)
+        inventory_path = fx.repo / playable.RIGHTS_INVENTORY
+        inventory_text = inventory_path.read_text(encoding="utf-8")
+        inventory = json.loads(re.search(r"```json\s*\n(.*?)\n```", inventory_text, re.DOTALL).group(1))
+        outer = next(item for item in inventory["items"] if item["path"] == fx.manifest_path)
+        outer["sha256"] = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+        outer["source_revision"] = manifest_revision
+        self.write_inventory(fx.repo, [outer])
+        self.commit(fx.repo, "refresh substituted outer rights row", playable.RIGHTS_INVENTORY.as_posix())
+        wrong_origin_pin = playable.HistoryAllowlist(
+            rows={("rights", fx.manifest_path, manifest_revision): playable._canonical_digest(outer)},
+            base_revision=fx.base)
+        problems = playable.fixture_source_identity_errors(
+            fx.repo, fx.repo, "HEAD", allowlist=wrong_origin_pin)
+        self.assertTrue(any("does not hold the recorded bytes" in problem for problem in problems), problems)
 
     def test_g5wr_01_cli_prints_one_line_per_tolerated_row(self) -> None:
         with mock.patch.object(playable, "check_docs", return_value=["note one", "note two"]), \

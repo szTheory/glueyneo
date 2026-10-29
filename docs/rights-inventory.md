@@ -43,13 +43,14 @@ convention, not part of the definition, and the gate does not check it.
 
 The nested first-party source identities in `tests/fixture/rights-manifest.json`
 are additionally checked against their cited source commits and blobs on full
-history. If squash removes those commit objects, the exact canonical pin of the
-manifest's affirmative outer rights row plus the checked-head path, byte count,
-and SHA-256 are still required; the gate reports unavailable ancestry as
-`unverifiable-history`. That fallback proves current bytes under the pinned
-manifest, not the historical source commit's contents. A full-history
-public-content check is required before merge, and available non-ancestor
-revisions or mismatching blobs still fail.
+history. After squash, an absent or available-but-unrelated cited commit is
+tolerated only under the exact canonical pin of the manifest's affirmative
+outer rights row. If its object remains available, the cited path blob and the
+checked-head path, byte count, and SHA-256 must all match; if absent, the
+checked-head bytes must match. Either state reports ancestry as
+`unverifiable-history` and does not prove ancestor status. A full-history
+public-content check is required before merge. Descendant revisions, unpinned
+or changed outer rows, and mismatching blobs still fail.
 
 The machine-readable list below is the scanner's canonical item-level record.
 Update it only with exact source revision, digest, license/permission evidence,

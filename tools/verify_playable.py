@@ -1873,16 +1873,18 @@ def fixture_source_identity_errors(source_root: Path, repository: Path, head: st
         return ["fixture rights manifest outer source revision is malformed"]
     outer_resolves = (_git_exit(repository, ["rev-parse", "--verify", "--quiet",
                                              f"{outer_revision}^{{commit}}"]) == 0)
-    outer_ancestor = (_git_exit(repository, ["merge-base", "--is-ancestor", outer_revision, head]) == 0)
+    outer_relation = _revision_relation(repository, outer_revision, head)
     outer_allowed = anchored.covers("rights", manifest_path, outer_revision, _canonical_digest(outer))
-    if outer_resolves and not outer_ancestor:
-        return ["fixture rights manifest outer source revision is available but is not an ancestor of the checked head"]
-    if not outer_resolves and not outer_allowed:
+    if outer_relation == "descendant":
+        return ["fixture rights manifest outer source revision is a descendant of the checked head"]
+    if outer_relation == "absent" and not outer_allowed:
         return ["fixture rights manifest outer source revision is missing and its rights row is not allowlisted"]
-    if outer_resolves:
+    if outer_relation == "ancestor" or outer_resolves:
         outer_bytes = _git_bytes(repository, ["cat-file", "blob", f"{outer_revision}:{manifest_path}"])
         if outer_bytes != checked_manifest:
             return ["fixture rights manifest outer source revision does not hold the checked-head manifest bytes"]
+        if outer_relation == "absent":
+            _note_once(observed, "fixture rights-manifest source revision resolves but is not ordered with the checked head; its exact rights-row pin and cited manifest blob match")
     else:
         _note_once(observed, "fixture rights-manifest source revision unavailable; its exact rights-row pin and checked-head bytes match")
     if shallow:
@@ -1921,13 +1923,23 @@ def fixture_source_identity_errors(source_root: Path, repository: Path, head: st
             continue
         resolves = (_git_exit(repository, ["rev-parse", "--verify", "--quiet",
                                            f"{revision}^{{commit}}"] ) == 0)
-        if resolves:
-            if _git_exit(repository, ["merge-base", "--is-ancestor", revision, head]) != 0:
-                errors.append(f"fixture source identity {pointer} revision {revision[:12]} is available but not an ancestor of the checked head")
+        relation = _revision_relation(repository, revision, head)
+        if relation == "descendant":
+            errors.append(f"fixture source identity {pointer} revision {revision[:12]} is a descendant of the checked head")
+            continue
+        if relation == "ancestor":
+            recorded = _git_bytes(repository, ["cat-file", "blob", f"{revision}:{path}"])
+            if recorded is None or len(recorded) != size or hashlib.sha256(recorded).hexdigest() != digest:
+                errors.append(f"fixture source identity {pointer} revision {revision[:12]} does not hold the recorded bytes")
+        elif resolves:
+            if not outer_allowed:
+                errors.append(f"fixture source identity {pointer} is available but unordered with the checked head and the outer rights-manifest row is not pinned")
                 continue
             recorded = _git_bytes(repository, ["cat-file", "blob", f"{revision}:{path}"])
             if recorded is None or len(recorded) != size or hashlib.sha256(recorded).hexdigest() != digest:
                 errors.append(f"fixture source identity {pointer} revision {revision[:12]} does not hold the recorded bytes")
+            else:
+                _note_once(observed, f"fixture source identity {pointer} revision {revision[:12]}: historical commit is available but not ordered with the checked head; cited blob matches under the exact outer rights-manifest pin")
         else:
             if not outer_allowed:
                 errors.append(f"fixture source identity {pointer} is unavailable and the outer rights-manifest row is not pinned")

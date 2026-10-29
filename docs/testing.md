@@ -461,16 +461,18 @@ public-content tests, and the SDK save and frontend gates require each cited
 source revision to be an ancestor of the checked head and require its blob at
 the recorded path to match the manifest's byte count and SHA-256. They require
 the manifest itself to match the checked head and its exact affirmative outer
-rights row. If a nested source commit is absent after squash, the current path
-bytes must still match the recorded size and digest and the outer rights row
-must match its exact allowlist pin. The gate reports that ancestry as
-`unverifiable-history`; a current-byte match does not establish the absent
-commit's contents. Shallow checkouts perform that same pinned outer-row and
-checked-head byte check and report shallow history separately. The required
-full-history public-content job proves source ancestry before merge. An
-available source commit that is not an ancestor, an available blob with
-different bytes, an edited or unpinned outer row, and any nested path, size, or
-digest mismatch remain errors.
+rights row. After squash, if a nested source commit is absent or remains
+available but unrelated to the checked head, the outer rights row must match
+its exact allowlist pin. An available unrelated commit must also contain the
+recorded blob; when the object is absent, the current checked-head path must
+match the recorded size and digest. Both cases report ancestry as
+`unverifiable-history`; a matching blob or current byte record does not prove
+that the source revision is an ancestor. Shallow checkouts perform the same
+pinned outer-row check, verify any available cited blob, check current bytes,
+and report shallow history separately. The required full-history
+public-content job proves source ancestry before merge. A descendant revision,
+an available blob with different bytes, an edited or unpinned outer row, and
+any nested path, size, or digest mismatch remain errors.
 
 CI runs `--history-allowlist ci --base <pull request base>` on every pull
 request, from a full-history checkout (G7WR-02). It runs the full `check`
