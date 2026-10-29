@@ -130,8 +130,8 @@
     {
       "key": "tests/fixture/rights-manifest.json",
       "kind": "rights",
-      "pin": "1914caea5032bba989bc08f3f1c334ee723cae0b05e119d74d45eac0d35b6d22",
-      "revision": "30a69642da21ebb22d0485916075883d78468c07"
+      "pin": "bcaa3d03c0649d03aae6c02d0151e9bbf6ed14ed7ab73bf50e271a34eab13afe",
+      "revision": "2d87ceaea72e09ba462eb96495f1de284ea3aae3"
     },
     {
       "key": "tests/fixture/test_public_guest.c",
