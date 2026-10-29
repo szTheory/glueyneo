@@ -178,12 +178,9 @@ The declared CMake floor is 3.20 and remains unqualified. The published unsigned
 v0.2.1 diagnostic SDK has exact-source hosted and downloaded-consumer evidence
 for Linux x86_64, macOS arm64 and Windows x86_64; see [support identities](docs/testing.md).
 Broader platform combinations and the later local gameplay/audio implementation
-are not qualified by that release. Planning milestone v0.1 closed with an explicit
-[identity/debt override](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/milestones/v0.1-CLOSEOUT.md).
-See the [CPU/bus SDK workstream state](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/STATE.md)
-for that deliverable's contributor workflow, and its [requirements](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/milestones/v0.1-REQUIREMENTS.md)
-and [roadmap](.planning/workstreams/cpu-bus-diagnostic-sdk-alpha/ROADMAP.md)
-for scope and next steps.
+are not qualified by that release. The public release lifecycle and retained-source
+checks are documented in the [release process](docs/releasing.md) and
+[public-content policy](docs/public-content.md).
 
 The original project is MIT licensed. Imported code retains its own notices;
 see [Unity provenance](third_party/unity/PROVENANCE.md) and
