@@ -348,14 +348,80 @@ def packaged_consumer_executable(consumer_build: Path, target: str) -> Path:
     suffix = ".exe" if os.name == "nt" else ""
     build_root = consumer_build.resolve(strict=True)
     executable = build_root / f"{target}{suffix}"
+    if executable.is_symlink():
+        raise release_manifest.ReleaseError(
+            f"packaged consumer target is not a direct build output: {target}"
+        )
     if executable.is_file():
-        return executable.resolve(strict=True)
+        resolved = executable.resolve(strict=True)
+        if resolved.parent != build_root:
+            raise release_manifest.ReleaseError(
+                f"packaged consumer target resolved outside its output root: {target}"
+            )
+        return resolved
     release_executable = build_root / "Release" / f"{target}{suffix}"
     if release_executable.is_file():
         raise release_manifest.ReleaseError(
             f"packaged consumer target used a config-specific output directory: {target}"
         )
     raise release_manifest.ReleaseError(f"packaged SDK omitted consumer executable: {target}")
+
+
+class PackagedConsumerExecutableTests(unittest.TestCase):
+    def test_target_symlink_cannot_select_an_outside_executable(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="glueyneo-consumer-symlink-") as temporary:
+            root = Path(temporary)
+            build = root / "consumer-build"
+            outside = root / "outside"
+            build.mkdir()
+            outside.mkdir()
+            suffix = ".exe" if os.name == "nt" else ""
+            executable = build / f"glueyneo-installed-c{suffix}"
+            external = outside / executable.name
+            external.write_bytes(b"outside executable marker")
+            try:
+                executable.symlink_to(external)
+            except (OSError, NotImplementedError):
+                # Model a Windows symlink when the current account lacks the
+                # privilege; the production path must still reject it before launch.
+                executable.write_bytes(b"modeled symlink target")
+                original_is_symlink = Path.is_symlink
+
+                def is_symlink(path: Path) -> bool:
+                    return path == executable or original_is_symlink(path)
+
+                with mock.patch.object(Path, "is_symlink", is_symlink):
+                    with self.assertRaisesRegex(
+                            release_manifest.ReleaseError, "not a direct build output"):
+                        packaged_consumer_executable(build, "glueyneo-installed-c")
+            else:
+                with self.assertRaisesRegex(
+                        release_manifest.ReleaseError, "not a direct build output"):
+                    packaged_consumer_executable(build, "glueyneo-installed-c")
+
+    def test_resolved_target_must_remain_at_the_staged_output_root(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="glueyneo-consumer-alias-") as temporary:
+            root = Path(temporary)
+            build = root / "consumer-build"
+            outside = root / "outside"
+            build.mkdir()
+            outside.mkdir()
+            suffix = ".exe" if os.name == "nt" else ""
+            executable = build.resolve() / f"glueyneo-installed-c{suffix}"
+            executable.write_bytes(b"regular staged output")
+            resolved_elsewhere = outside.resolve() / executable.name
+            resolved_elsewhere.write_bytes(b"external target")
+            original_resolve = Path.resolve
+
+            def resolve(path: Path, *args, **kwargs) -> Path:
+                if path == executable:
+                    return resolved_elsewhere
+                return original_resolve(path, *args, **kwargs)
+
+            with mock.patch.object(Path, "resolve", resolve):
+                with self.assertRaisesRegex(
+                        release_manifest.ReleaseError, "outside its output root"):
+                    packaged_consumer_executable(build, "glueyneo-installed-c")
 
 
 def run_packaged_examples(
