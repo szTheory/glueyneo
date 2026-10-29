@@ -130,8 +130,8 @@
     {
       "key": "tests/fixture/rights-manifest.json",
       "kind": "rights",
-      "pin": "b6ca344583324980182cd469b6957be74247fffcde1047d046209f08e55e3f92",
-      "revision": "0c4fb910b950692adeb23cb7a2e9e5710a89743b"
+      "pin": "58805b8255e0b2629565c5924940fdef56f443e631437f44646715084399e6a9",
+      "revision": "c7365e3db8741d194ba173019294bb89573fe14f"
     },
     {
       "key": "tests/fixture/test_public_guest.c",
@@ -202,8 +202,8 @@
     {
       "key": "tests/libretro/test_retroarch_smoke.py",
       "kind": "rights",
-      "pin": "c895cf0da3bfdd428b1b61e3d8d95cc0390023ec7bf35a5be0112af734695de8",
-      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+      "pin": "ed1118717cd607707602461e7f561eb192e66d5c44f77ee236b65a434250a5d2",
+      "revision": "7b2e070ee6d85c23f64a5c187a8cca91827f9cb3"
     },
     {
       "key": "tests/mvs/fuzz_import.c",
