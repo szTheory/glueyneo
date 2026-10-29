@@ -89,6 +89,20 @@ def sanitizer_failure_controls() -> None:
         "The following tests FAILED:\n"
         " 10 - sdk_isolation (Timeout)\n"
         " 11 - sdk_cold (Timeout)\n")
+    long_passing_log = "\n".join(
+        f"passed test output row {index}" for index in range(120))
+    failure_summary = (
+        "Start 10: sdk_state\n"
+        "1/2 Test #10: sdk_state ................***Failed 0.01 sec\n"
+        "50% tests passed, 1 tests failed out of 2\n"
+        "The following tests FAILED:\n"
+        " 10 - sdk_state (Failed)\n")
+    bounded_diagnostic = controls.sanitizer_runtime_diagnostic_tail(
+        failure_summary, long_passing_log)
+    assert len(bounded_diagnostic) <= 60
+    assert "The following tests FAILED:" in bounded_diagnostic
+    assert any("10 - sdk_state (Failed)" in line for line in bounded_diagnostic)
+    assert bounded_diagnostic[-1] == " 10 - sdk_state (Failed)"
     variants = [
         ({"status": "failed_runtime", "runtime_status": "failed",
           "error": "runtime CTest suite exited 8", "tests_passed": 1,

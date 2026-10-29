@@ -398,6 +398,28 @@ INSTALLED_SANITIZER_FLAGS = {
 }
 
 
+def sanitizer_runtime_diagnostic_tail(ctest_output: str, test_details: str,
+                                      limit: int = 60) -> list[str]:
+    """Keep CTest's failure names visible when appending verbose LastTest.log."""
+    ctest_lines = ctest_output.splitlines()
+    detail_lines = test_details.splitlines()
+    failure_start = next((index for index in range(len(ctest_lines) - 1, -1, -1)
+                          if ctest_lines[index].strip() == "The following tests FAILED:"),
+                         None)
+    if failure_start is None:
+        return (ctest_lines + detail_lines)[-limit:]
+
+    failure_summary = ctest_lines[failure_start:]
+    if len(failure_summary) > limit:
+        failure_summary = [failure_summary[0], *failure_summary[-(limit - 1):]]
+    context_budget = limit - len(failure_summary)
+    detail_budget = context_budget // 2
+    context_budget -= detail_budget
+    details = detail_lines[-detail_budget:] if detail_budget else []
+    context = ctest_lines[:failure_start][-context_budget:] if context_budget else []
+    return (details + context + failure_summary)[-limit:]
+
+
 def stage_consumer_project(destination: Path) -> None:
     """Copy only public consumer inputs so final links cannot use source-tree paths."""
     destination.mkdir(parents=True, exist_ok=True)
@@ -1095,7 +1117,8 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
         report["runtime_status"] = "failed"
         report["status"] = "failed_runtime"
         report["error"] = f"runtime CTest suite exited {ctest_status}"
-        report["runtime_log_tail"] = ctest_log.splitlines()[-60:]
+        report["runtime_log_tail"] = sanitizer_runtime_diagnostic_tail(
+            ctest_output, test_details)
         return report
     if report["tests_passed"] != report["expected_tests"]:
         report["failure_stage"] = "runtime"
