@@ -16,6 +16,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+typedef union {
+    long double long_double_value;
+    uintmax_t widest_integer_value;
+    void *object_pointer_value;
+    void (*function_pointer_value)(void);
+} save_test_max_alignment;
+
 #ifndef GLUEYNEO_SOURCE_REVISION
 #define GLUEYNEO_SOURCE_REVISION "unknown"
 #endif
@@ -184,7 +191,8 @@ static void save_api_query_export_bounds_and_atomic_outputs(void) {
                      gn_mvs_save_query_v1(instance, &info, sizeof(info), NULL,
                                           sizeof(detail)));
 
-    _Alignas(max_align_t) uint8_t overlap[sizeof(info) + sizeof(detail) + 16u];
+    _Alignas(save_test_max_alignment) uint8_t overlap[
+        sizeof(info) + sizeof(detail) + 16u];
     SDK_CHECK_STATUS("save.api.query-info-detail-overlap",
                      GN_STATUS_INVALID_ARGUMENT,
                      gn_mvs_save_query_v1(instance,
@@ -288,8 +296,8 @@ static void save_api_entrypoint_arguments_and_aliases(void) {
     gn_mvs_save_info_v1 info;
     gn_mvs_save_detail_v1 detail;
     size_t written = 0u;
-    _Alignas(max_align_t) uint8_t scratch[256];
-    _Alignas(max_align_t) uint8_t pair_storage[
+    _Alignas(save_test_max_alignment) uint8_t scratch[256];
+    _Alignas(save_test_max_alignment) uint8_t pair_storage[
         sizeof(gn_mvs_save_receipt_v1) + sizeof(gn_mvs_save_detail_v1) + 16u];
     SDK_CHECK_TRUE("save.args.load", save_fixture_load(&instance));
     SDK_CHECK_TRUE("save.args-envelope-allocation", envelope != NULL);
