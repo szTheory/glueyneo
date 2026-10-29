@@ -3,11 +3,13 @@
 
 from __future__ import annotations
 
+import io
 import sys
 import tempfile
 import json
 import os
 import subprocess
+import unittest
 from pathlib import Path
 from unittest import TestCase, mock
 
@@ -73,6 +75,59 @@ class ExampleRoutingTests(TestCase):
                 verify_sdk.validate_example_inventory(denominator, names)
 
 
+class PublicContentSummaryTests(TestCase):
+    def run_summary(self, summary, returncode, *, extra_output=""):
+        result = subprocess.CompletedProcess(
+            [sys.executable, "-c", "synthetic"], returncode,
+            "PUBLIC_CONTENT_RESULT=" + json.dumps(summary) + "\n" + extra_output, "",
+        )
+        with mock.patch.object(policy.subprocess, "run", return_value=result):
+            return policy.public_content_control_counts(ROOT)
+
+    def test_pass_summary_rejects_nonzero_failure_count(self):
+        summary = {
+            "schema_version": 1, "assertions": 1, "cases": 1,
+            "failure_count": 1, "failure_test_ids": ["module.Tests.test_failure"],
+            "failure_test_ids_truncated": False, "outcome": "pass",
+        }
+        with self.assertRaisesRegex(ValueError, "failed|omitted|invalid"):
+            self.run_summary(summary, returncode=0)
+
+    def test_failure_identifier_is_scanned_before_diagnostic(self):
+        summary = {
+            "schema_version": 1, "assertions": 1, "cases": 1,
+            "failure_count": 1,
+            "failure_test_ids": ["module.Tests.test_ghp_" + ("A" * 36)],
+            "failure_test_ids_truncated": False, "outcome": "fail",
+        }
+        with self.assertRaises(ValueError) as caught:
+            self.run_summary(summary, returncode=1)
+        self.assertNotIn("ghp_", str(caught.exception))
+        self.assertLessEqual(len(str(caught.exception)), 1024)
+
+    def test_large_failure_counts_keep_diagnostic_bounded(self):
+        summary = {
+            "schema_version": 1, "assertions": 1, "cases": 10 ** 3000,
+            "failure_count": 10 ** 3000,
+            "failure_test_ids": ["module.Tests.test_failure"],
+            "failure_test_ids_truncated": False, "outcome": "fail",
+        }
+        with self.assertRaises(ValueError) as caught:
+            self.run_summary(summary, returncode=1)
+        self.assertLessEqual(len(str(caught.exception)), 1024)
+
+    def test_duplicate_result_records_are_rejected(self):
+        actual = {
+            "schema_version": 1, "assertions": 0, "cases": 27,
+            "failure_count": 0, "failure_test_ids": [],
+            "failure_test_ids_truncated": False, "outcome": "pass",
+        }
+        forged = dict(actual, assertions=1)
+        extra = "PUBLIC_CONTENT_RESULT=" + json.dumps(forged) + "\n"
+        with self.assertRaisesRegex(ValueError, "duplicate|invalid|omitted"):
+            self.run_summary(actual, returncode=0, extra_output=extra)
+
+
 def expect(value: bool, message: str) -> None:
     if not value:
         raise AssertionError(message)
@@ -113,6 +168,12 @@ def check_public_content_failure_diagnostics() -> None:
                    "public-content failure diagnostics must remain bounded")
         else:
             raise AssertionError("failing public-content controls must remain a failure")
+
+
+def check_public_content_summary_controls() -> None:
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(PublicContentSummaryTests)
+    result = unittest.TextTestRunner(stream=io.StringIO(), verbosity=0).run(suite)
+    expect(result.wasSuccessful(), "public-content result summary controls must pass")
 
 
 def check_public_content_handoff() -> tuple[int, int]:
@@ -523,6 +584,7 @@ def main() -> int:
                     lane["os_image"], lane["architecture"])),
                    "passing support rows must match measured hosted identities")
 
+    check_public_content_summary_controls()
     check_public_content_failure_diagnostics()
     public_content_cases, public_content_assertions = check_public_content_handoff()
 
