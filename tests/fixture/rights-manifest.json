@@ -599,7 +599,7 @@
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract.",
-        "source_revision": "809b151d764ff709d1d50799b5e8c20381819044"
+        "source_revision": "16921e82ed9faa42119ca2f0b85b4b609b6604a5"
       },
       {
         "path": "docs/native-state.md",
