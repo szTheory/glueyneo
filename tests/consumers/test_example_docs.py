@@ -422,14 +422,20 @@ def _c_standard_options(fragment: str) -> list[str]:
     index = 0
     while index < len(tokens):
         token = tokens[index].casefold()
-        if token == "-std":
+        if token in {"-std", "--std"}:
             index += 1
             if index < len(tokens):
                 options.append("-std=" + tokens[index].casefold())
             else:
                 options.append("-std=")
-        elif token.startswith(("-std=", "/std:")):
+        elif token.startswith(("-std=", "--std=")):
+            options.append("-std=" + token.split("=", 1)[1])
+        elif token == "-ansi":
+            options.append("-std=ansi")
+        elif token.startswith("/std:"):
             options.append(token)
+        elif token == "/std":
+            options.append("/std=<separated-selector>")
         index += 1
     return options
 
@@ -1070,6 +1076,20 @@ class ExampleGuideContractTests(unittest.TestCase):
                          fragment="-std=gnu17 -DFAKE=-std=c17")
             with self.assertRaises(CheckError):
                 _check_guide_compile_metadata(source, "static")
+
+            for fragment in (
+                "-std=c17 --std=gnu17",
+                "-std=c17 --std gnu17",
+                "-std=c17 -ansi",
+                "/std:c17 /std gnu17",
+            ):
+                with self.subTest(fragment=fragment):
+                    write_target(required_targets[2], installed_include, fragment=fragment)
+                    with self.assertRaises(CheckError):
+                        _check_guide_compile_metadata(source, "static")
+
+            write_target(required_targets[2], installed_include, fragment='--std "c17"')
+            _check_guide_compile_metadata(source, "static")
 
             persistence_sources = sorted(GUIDE_CONSUMER_SOURCES[required_targets[2]])
             persistence_indexes = {
