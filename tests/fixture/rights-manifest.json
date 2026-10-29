@@ -394,9 +394,9 @@
       },
       {
         "path": "tools/verify_sdk.py",
-        "sha256": "93d0c2546062e10ffc39e0d1df1362c252451742120ed2aac0582b729dc965fc",
-        "bytes": 160340,
-        "source_revision": "dc0218f62936a0ac53741d1750dd08052f3a39de",
+        "sha256": "f0b4de9c5b28f8dcaf20d23cf607fab39f143528c9b2036769974a65d99e2732",
+        "bytes": 161232,
+        "source_revision": "f1567c4fa554c976b9837b5ec11a1ffd5cec8769",
         "license": "MIT",
         "role": "SDK route selection, measurement validation and source identity harness."
       }
@@ -712,8 +712,8 @@
       },
       {
         "path": "tools/verify_sdk.py",
-        "bytes": 160340,
-        "sha256": "93d0c2546062e10ffc39e0d1df1362c252451742120ed2aac0582b729dc965fc",
+        "bytes": 161232,
+        "sha256": "f0b4de9c5b28f8dcaf20d23cf607fab39f143528c9b2036769974a65d99e2732",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; exact SDK, state-isolation, and hostile CTest inventories are bound in the evidence selector."
