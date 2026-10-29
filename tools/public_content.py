@@ -103,9 +103,9 @@ SOURCE_FINDING_DISPOSITIONS = {
         "rules": {"machine-identifier"},
         "reason": "serial is a zero-initialized Carbon ProcessSerialNumber local variable, not a host identifier value",
     },
-    ("tests/consumers/test_example_docs.py", "086388184681fdba215878e0c2a7576d6363ebeda9745ea11231df5e1b13097f"): {
+    ("tests/consumers/test_example_docs.py", "ab2ef7e8b818ea387b97028d4f3ce9993b71a565bedc75117680b3137901ee19"): {
         "rules": {"private-url"},
-        "reason": "the offline guide regression binds each target to its exact staged public source closure and Release compile policy, while retaining a synthetic localhost port-9 proxy; exact path and bytes are bound",
+        "reason": "the offline guide regression binds exact staged target sources and tokenized per-source Release compile policy, while retaining a synthetic localhost port-9 proxy; exact path and bytes are bound",
     },
 }
 # Exact immutable history objects audited as bounded false positives. These
@@ -114,6 +114,10 @@ SOURCE_FINDING_DISPOSITIONS = {
 # redaction tests contain synthetic identity/path canaries. A changed blob is
 # scanned.
 HISTORY_FINDING_DISPOSITIONS = {
+    "90216ee3217f034dac3d19bee5918b9c86cfda5a": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact tokenized compile-policy regression retains the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
     "568f4b5e118528b9550925ed93b1c57047a86111": {
         "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
         "reason": "exact staged source-closure regression retains the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
