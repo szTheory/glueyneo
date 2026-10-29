@@ -114,6 +114,10 @@ SOURCE_FINDING_DISPOSITIONS = {
 # redaction tests contain synthetic identity/path canaries. A changed blob is
 # scanned.
 HISTORY_FINDING_DISPOSITIONS = {
+    "a3d2ee98203fc48c505323f163aa4388f92b743e": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact Windows launcher regression bytes retain the offline documentation test synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
     "8ebe5d0c04f914d2aeb92b3947c877fba746cc16": {
         "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
         "reason": "exact updated multi-config guide regression bytes retain the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
