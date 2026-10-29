@@ -3,12 +3,12 @@
   "fixture": "GNFX v1 public playable tracer",
   "source": {
     "path": "tests/fixture/public_guest.c",
-    "sha256": "597b3e01b9fc0d58328e37573d945a3b067e55604017683a084ffc1028788555",
-    "bytes": 2653
+    "sha256": "2da2be7f99ca9587e4a5198edfe8063d305fd35d11afd588b37a95cdc00c46ff",
+    "bytes": 2903
   },
   "assertions": {
     "path": "tests/fixture/test_public_guest.c",
-    "sha256": "7c5c7a0e87cd339f885b7c8092737c13322462c1c352a66b1ce66f3c919981e1"
+    "sha256": "a8300be5806237e8424ee9c55763857e1b4f697a32d5b19efb7b3d8ca504bd4a"
   },
   "generator": {
     "target": "glueyneo-public-fixture",
@@ -28,7 +28,7 @@
   },
   "oracle_document": {
     "path": "tests/fixture/ORACLE.md",
-    "sha256": "d064f0e2e27af282e40b2091729db3d774d2276b44e9aed09c872709104bea26"
+    "sha256": "0ba1e71d438e794d3647a013ba7ff01ef6bce1351e4734dd2f5bd41741e8f871"
   },
   "artifact": {
     "path": "build/sdk-debug/public-playable.bin",
@@ -63,15 +63,15 @@
     "name": "GNMV v3 public synthetic MVS sound fixture",
     "generator_source": {
       "path": "tests/fixture/public_sound_guest.c",
-      "sha256": "bcaa35ea32df09a5b3c2969d309f822472cef8ed86118fa2e1917f7a1b6113ef",
-      "bytes": 10923,
+      "sha256": "db13f2dbeee318f4cb4d1da77a9e2f37e89461a8df0551bae42f77ac3c7404a0",
+      "bytes": 11173,
       "license": "MIT",
       "provenance": "Original Glueyneo fixture launch code, Z80 sound program, tile bytes, and generated sample formula."
     },
     "assertion_source": {
       "path": "tests/fixture/test_public_sound_guest.c",
-      "sha256": "bfaa5840459fc1a795e031f573109bbc9b5cc787b12ce0b8657d6af518cde212",
-      "bytes": 25207,
+      "sha256": "9662f817bcc191e8aafbc452720a0714fc64ef0d9c49ac25833379e3d78f4a9e",
+      "bytes": 25259,
       "license": "MIT",
       "provenance": "Original Glueyneo native consumer and executable GNMV layout, launch, sample, signal, and negative-control assertions."
     },
@@ -126,8 +126,8 @@
       },
       {
         "path": "src/mvs/mvs_bus.c",
-        "sha256": "da58423aa17d932daf9282f8469d6b869d9ac2e3ffcca9621de75850f81d44a0",
-        "bytes": 42427,
+        "sha256": "7ee70aa47074ef7eb23b89e30760fb3c73fe5a228be0bd4f592b36c36408537a",
+        "bytes": 46279,
         "license": "MIT",
         "role": "Glueyneo runtime mixer, fixed-point coefficient table, and streaming converter."
       },
@@ -187,15 +187,15 @@
         "path": "tests/sdk/state_fixture.h",
         "license": "MIT",
         "provenance": "Original Glueyneo in-memory reuse and bounded patch recipe for the public_sound_guest fixture; no third-party guest or firmware bytes.",
-        "sha256": "a27c5335411951b9abb16e1f229cd93f7f9a0f800e2679aa8cd0843f83766435",
-        "bytes": 13996
+        "sha256": "72ce83de88d7a0c5b543aeac81a0f0d408bb6edb2edf009380066acb3226721b",
+        "bytes": 15011
       },
       "assertion_source": {
         "path": "tests/sdk/test_state.c",
         "license": "MIT",
         "provenance": "Original Glueyneo continuation, observation, repeated-restore, isolation, and future-effect omission assertions.",
-        "sha256": "c2a3b760f3c20e664cf4a953f32a56029692ff4955f856bf99669e752a9d49dd",
-        "bytes": 28266
+        "sha256": "c5f39a73ff4243e6d500adb193abb1369941e9020b1b5aea9e6f5be3e7c3a8f0",
+        "bytes": 30641
       },
       "control_supervisor": {
         "path": "tests/sdk/state_controls.py",
@@ -244,9 +244,9 @@
     },
     "base_source": {
       "path": "tests/fixture/public_sound_guest.c",
-      "sha256": "bcaa35ea32df09a5b3c2969d309f822472cef8ed86118fa2e1917f7a1b6113ef",
-      "bytes": 10923,
-      "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+      "sha256": "db13f2dbeee318f4cb4d1da77a9e2f37e89461a8df0551bae42f77ac3c7404a0",
+      "bytes": 11173,
+      "source_revision": "bdca1240ef48752c7fd9838393de150866344826",
       "license": "MIT",
       "role": "Original synthetic GNMV regions; only its BIOS-role bytes are replaced in memory by the save diagnostic guest."
     },
@@ -378,9 +378,9 @@
       },
       {
         "path": "tests/sdk/test_save_registration.py",
-        "sha256": "e3fe6bcd293cf2fa110407487866b63b08c72a83276b328408a1f869d3662a75",
-        "bytes": 34269,
-        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "sha256": "af5eee1b2cce826c8e4ecf112f21a508136196c9f830a02ab2f1a2f6e9543544",
+        "bytes": 34655,
+        "source_revision": "bdca1240ef48752c7fd9838393de150866344826",
         "license": "MIT",
         "role": "Case denominator, manifest, portable docs and failed-control harness."
       },
@@ -394,9 +394,9 @@
       },
       {
         "path": "tools/verify_sdk.py",
-        "sha256": "09b161e5b9f690438d12925fcb5aa3b86623d2c78fefe2bd199ad2a5c2511325",
-        "bytes": 161427,
-        "source_revision": "2385acdb5d2f559fb5e8d1bca55d83edb240c010",
+        "sha256": "3944ae761ceae6cbc2ec0bb58578d4974ed0d548325fa0075565ab1fd893397e",
+        "bytes": 161692,
+        "source_revision": "bdca1240ef48752c7fd9838393de150866344826",
         "license": "MIT",
         "role": "SDK route selection, measurement validation and source identity harness."
       }
@@ -541,7 +541,7 @@
       "save_guest_source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
       "recipe_origin_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
       "sound_fixture_source_path": "tests/fixture/public_sound_guest.c",
-      "sound_fixture_source_sha256": "bcaa35ea32df09a5b3c2969d309f822472cef8ed86118fa2e1917f7a1b6113ef",
+      "sound_fixture_source_sha256": "db13f2dbeee318f4cb4d1da77a9e2f37e89461a8df0551bae42f77ac3c7404a0",
       "hardware_truth_established": false
     },
     "historical_results": {
@@ -593,7 +593,7 @@
       {
         "path": "docs/native-save.md",
         "bytes": 27665,
-        "sha256": "ee8c676336fd82b97ef47a6e126da76290d68579566c6c47e0f0800e3c93a832",
+        "sha256": "400b2f869c2c0c35f930289c2433cb79f0f4c7902b7df51e0a5c676160edb070",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
@@ -640,8 +640,8 @@
       },
       {
         "path": "tests/libretro/callback_harness.c",
-        "bytes": 75149,
-        "sha256": "4062226423fee9b0dfcf7f587de55a72047d58074ecf1e7b2d1dc4879677791c",
+        "bytes": 75261,
+        "sha256": "70519ff0776f76dfc9085762105226fa18c35d8a76339fb273e6e943774f5386",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
@@ -696,8 +696,8 @@
       },
       {
         "path": "tests/sdk/state_process.c",
-        "bytes": 64804,
-        "sha256": "3ad8df8bf731e61dcdd19626ee1a56fa33e9fe93ea0e745bf124839eabeb44c8",
+        "bytes": 64952,
+        "sha256": "9607539482a24ff62eefc7944de8a47359b4aa0bfe8693eeb28208a5415d1d4e",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
@@ -712,8 +712,8 @@
       },
       {
         "path": "tools/verify_sdk.py",
-        "bytes": 161427,
-        "sha256": "09b161e5b9f690438d12925fcb5aa3b86623d2c78fefe2bd199ad2a5c2511325",
+        "bytes": 161692,
+        "sha256": "3944ae761ceae6cbc2ec0bb58578d4974ed0d548325fa0075565ab1fd893397e",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; exact SDK, state-isolation, and hostile CTest inventories are bound in the evidence selector."
@@ -732,9 +732,9 @@
     },
     "base_source": {
       "path": "tests/fixture/public_sound_guest.c",
-      "sha256": "bcaa35ea32df09a5b3c2969d309f822472cef8ed86118fa2e1917f7a1b6113ef",
-      "bytes": 10923,
-      "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+      "sha256": "db13f2dbeee318f4cb4d1da77a9e2f37e89461a8df0551bae42f77ac3c7404a0",
+      "bytes": 11173,
+      "source_revision": "bdca1240ef48752c7fd9838393de150866344826",
       "license": "MIT",
       "provenance": "Original source-bound synthetic fixture recipe used to construct public persistence input; no commercial media or production firmware."
     },
