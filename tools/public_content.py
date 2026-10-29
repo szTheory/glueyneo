@@ -103,7 +103,7 @@ SOURCE_FINDING_DISPOSITIONS = {
         "rules": {"machine-identifier"},
         "reason": "serial is a zero-initialized Carbon ProcessSerialNumber local variable, not a host identifier value",
     },
-    ("tests/consumers/test_example_docs.py", "8ede21b6d43dd22f6d5d04675c0da1467f2b2352fe38f79a8bd621b235114a1e"): {
+    ("tests/consumers/test_example_docs.py", "5dcfdcf13cfeff8d9529ecfc7746edce959bb505305ed7de2bdae3cb03f20d5b"): {
         "rules": {"private-url"},
         "reason": "the offline guide regression binds staged target sources and C17 metadata emitted by CMake, while retaining a synthetic localhost port-9 proxy; exact path and bytes are bound",
     },
@@ -221,6 +221,10 @@ HISTORY_FINDING_DISPOSITIONS = {
         "reason": "exact current guide test blob retains its synthetic localhost proxy; path and blob identity are bound",
     },
     "1d9fad38ddd7043dd8bd69b7110b18a311c55b93": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact current guide test blob retains its synthetic localhost proxy; path and blob identity are bound",
+    },
+    "108f34893a947120147108ebad7e8be6d9057fd8": {
         "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
         "reason": "exact current guide test blob retains its synthetic localhost proxy; path and blob identity are bound",
     },

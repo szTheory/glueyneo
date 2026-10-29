@@ -76,16 +76,23 @@ def guide_commands(variant: str, guide: Path = GUIDE) -> list[str]:
 
 def _reports_missing_target(output: str, target: str) -> bool:
     lowered = output.lower()
-    if re.search(r"(?:no rule|unknown target|could not be found)", lowered):
-        return True
-    # MSBuild reports an omitted CMake target as a missing generated project.
-    # Bind that diagnostic to the requested target so unrelated project-file
-    # failures cannot satisfy the negative control.
-    project_file = f"switch: {target}.vcxproj"
-    return (
-        "msb1009: project file does not exist" in lowered
-        and project_file in lowered
+    if re.search(r"\bmsb\d+\s*:", lowered):
+        # MSBuild reports an omitted CMake target as a missing generated
+        # project. Bind both its code and complete switch line to that target;
+        # unrelated project failures and target-name prefixes are not controls.
+        return (
+            re.search(r"\bmsb1009\s*:\s*project file does not exist\b", lowered) is not None
+            and re.search(
+                rf"(?im)^\s*switch:\s*{re.escape(target)}\.vcxproj\s*$", output,
+            ) is not None
+        )
+    escaped_target = re.escape(target)
+    generic_target_diagnostics = (
+        rf"\bunknown target\s+[`'\"]{escaped_target}[`'\"]",
+        rf"\bno rule to make target\s+[`'\"]{escaped_target}[`'\"]",
     )
+    return any(re.search(pattern, lowered) is not None
+               for pattern in generic_target_diagnostics)
 
 
 def command_argv(
@@ -1065,6 +1072,10 @@ class ExampleGuideContractTests(unittest.TestCase):
             "glueyneo-installed-persistence",
         ))
         self.assertTrue(_reports_missing_target(
+            "make: *** No rule to make target `glueyneo-installed-persistence'. Stop.",
+            "glueyneo-installed-persistence",
+        ))
+        self.assertTrue(_reports_missing_target(
             "MSBuild : error MSB1009: Project file does not exist.\n"
             "Switch: glueyneo-installed-persistence.vcxproj",
             "glueyneo-installed-persistence",
@@ -1075,7 +1086,24 @@ class ExampleGuideContractTests(unittest.TestCase):
             "glueyneo-installed-persistence",
         ))
         self.assertFalse(_reports_missing_target(
-            "MSBuild : error MSB4019: imported project was not found",
+            "MSBuild : error MSB1009: Project file does not exist.\n"
+            "Switch: glueyneo-installed-persistence.vcxproj.backup",
+            "glueyneo-installed-persistence",
+        ))
+        self.assertFalse(_reports_missing_target(
+            "MSBuild : error MSB4019: imported project could not be found",
+            "glueyneo-installed-persistence",
+        ))
+        self.assertFalse(_reports_missing_target(
+            "ninja: error: unknown target 'glueyneo-installed-sound'",
+            "glueyneo-installed-persistence",
+        ))
+        self.assertFalse(_reports_missing_target(
+            "make: *** No rule to make target `missing-dependency.h', needed by `sound_consumer.c'. Stop.",
+            "glueyneo-installed-persistence",
+        ))
+        self.assertFalse(_reports_missing_target(
+            "target 'glueyneo-installed-sound' could not be found",
             "glueyneo-installed-persistence",
         ))
 
