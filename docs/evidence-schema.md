@@ -158,11 +158,12 @@ of these lanes.
 The sanitizer command's per-lane JSON artifact may include a `failure_diagnostics`
 array when a sanitizer lane fails. It carries only allowlisted test names and
 counts, failure stage and source digests, a redacted failure summary bounded to
-8 KB, and the original CTest-output SHA-256, byte count, truncation flag, and
-redacted excerpt bounded to 16 KB. The producer scans the complete report for
-private paths and identifiers before writing the lane artifact. Passing
-sanitizer lanes and other matrix lanes omit this optional field; raw logs and
-environment values are not included.
+8 KB, and, when runtime CTest ran, the original CTest-output SHA-256, byte
+count, truncation flag, and redacted excerpt bounded to 16 KB. These CTest
+fields may be null for configure or build failures. The producer scans the
+complete report for private paths and identifiers before writing the lane
+artifact. Passing sanitizer lanes and other matrix lanes omit this optional
+field; raw logs and environment values are not included.
 
 Local runs may record the actual host and successful diagnostic results, but
 remain `unknown` as platform-matrix evidence unless the run supplies the

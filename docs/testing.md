@@ -966,10 +966,11 @@ privileged PR job that consumes or executes an uploaded PR artifact.
 
 Successful hosted runs retain per-lane receipts and an aggregate under
 `evidence/sdk/ci-aggregate.json`. A failed sanitizer lane receipt preserves the
-parsed failed test and redacted assertion detail, with bounded original CTest
-output, its SHA-256 and byte count, and an explicit truncation flag. A local
-parser fixture proves rejection behavior; it does not establish a hosted
-result. GitHub Actions run
+parsed failed test and redacted assertion detail. When runtime CTest ran, it
+also preserves bounded original output, its SHA-256 and byte count, and an
+explicit truncation flag; those fields may be null for configure or build
+failures. A local parser fixture proves rejection behavior; it does not
+establish a hosted result. GitHub Actions run
 `37618668537` passed the six named matrix lanes and `ci-policy` at exact PR head
 `2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1`; the detailed toolchain and
 assertion receipt above belongs to the earlier exact source revision. A
