@@ -235,7 +235,7 @@ def validate_evidence_matrices(documents: dict[str, str]) -> int:
 
     save_rows = loaded["docs/native-save.md"]
     save_text = " ".join(documents["docs/native-save.md"].casefold().split())
-    if (not any("e245d182af32434ea08436b3baca57a3f07be701a0d3c1a31a0bf1bec6aaab6c" in
+    if (not any("ec630c3ee18c1f90593bd1e0c01a0a0defd209c3d305af8473540f44c114d96d" in
                 row["Source/build identity"] and "Darwin 25.6.0" in row["OS / filesystem"]
                 and "APFS" in row["OS / filesystem"] and row["Outcome"] == "pass"
                 for row in save_rows) or
@@ -564,7 +564,7 @@ class ExampleGuideContractTests(unittest.TestCase):
         save_counts = save_docs.check_save_contract_docs(
             save_documents, (ROOT / "include/glueyneo/glueyneo.h").read_text(encoding="utf-8"),
             (ROOT / "src/instance.c").read_text(encoding="utf-8"), manifest,
-            "e245d182af32434ea08436b3baca57a3f07be701a0d3c1a31a0bf1bec6aaab6c")
+            "ec630c3ee18c1f90593bd1e0c01a0a0defd209c3d305af8473540f44c114d96d")
         self.assertGreater(sum(save_counts.values()), 0)
         self.assertGreater(verify.frontend_docs_checks(ROOT)["assertions"], 0)
         self.assertGreater(check_package.check_readme_links_and_contracts(), 0)
