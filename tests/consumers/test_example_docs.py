@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 import check_package
 from check_package import (
@@ -91,6 +92,14 @@ def command_argv(
             raise CheckError("Guide $PWD suffix must use normalized path components")
         path = cwd.joinpath(*components) if components else cwd
         expanded.append(prefix + str(path))
+    if sys.platform == "win32" and expanded:
+        executable = PureWindowsPath(expanded[0])
+        if (len(executable.parts) == 3 and executable.parts[0] == "build" and
+                executable.parts[1] in {"examples-static", "examples-shared"} and
+                executable.name in {"glueyneo-installed-sound",
+                                    "glueyneo-installed-continuation",
+                                    "glueyneo-installed-persistence"}):
+            expanded[0] = str(executable.with_suffix(".exe"))
     if cmake_generator and expanded[0] == "cmake" and "-S" in expanded and "-B" in expanded:
         expanded[1:1] = ["-G", cmake_generator]
     if str(ROOT) in " ".join(expanded):
@@ -345,6 +354,18 @@ class ExampleGuideCommandTests(unittest.TestCase):
             return count_assertion
         return attribute
 
+    def test_windows_guide_executable_tokens_include_native_extension(self) -> None:
+        for variant in ("static", "shared"):
+            marker = f"./build/examples-{variant}/glueyneo-installed-"
+            executable_commands = [command for command in guide_commands(variant)
+                                   if marker in command]
+            self.assertEqual(len(executable_commands), 7)
+            for command in executable_commands:
+                with mock.patch.object(sys, "platform", "win32"):
+                    argv = command_argv(command, Path("C:/guide"))
+                self.assertEqual(PureWindowsPath(argv[0]).suffix, ".exe",
+                                 f"Windows command must name its executable: {argv[0]}")
+
     def test_documented_commands(self) -> None:
         type(self).assertion_count = 0
         self.assertTrue(GUIDE.is_file(), "the task-oriented guide must exist at docs/sdk-examples.md")
@@ -364,10 +385,38 @@ class ExampleGuideCommandTests(unittest.TestCase):
             persistence_executable: Path | None = None
             host_producer: dict[str, object] | None = None
             fixture: Path | None = None
-            for command in commands:
+            for command_index, command in enumerate(commands, start=1):
                 argv = command_argv(command, source, cmake_generator=self.cmake_generator)
-                result = run(argv, cwd=source, env=network_env,
-                             timeout=COMMAND_TIMEOUT_SECONDS)
+                try:
+                    result = run(argv, cwd=source, env=network_env,
+                                 timeout=COMMAND_TIMEOUT_SECONDS)
+                except FileNotFoundError as error:
+                    executable = PureWindowsPath(argv[0])
+                    if executable.drive or executable.is_absolute() or len(executable.parts) == 1:
+                        relative_executable = executable.name
+                        expected_path = None
+                    else:
+                        relative_executable = executable.as_posix().removeprefix("./")
+                        expected_path = source.joinpath(*executable.parts)
+                    expected_type = (
+                        "file" if expected_path is not None and expected_path.is_file()
+                        else "directory" if expected_path is not None and expected_path.is_dir()
+                        else "missing" if expected_path is not None
+                        else "path-search"
+                    )
+                    windows_exe_type = "not-applicable"
+                    if expected_path is not None:
+                        windows_exe = (expected_path if expected_path.suffix.lower() == ".exe"
+                                       else expected_path.with_suffix(".exe"))
+                        windows_exe_type = (
+                            "file" if windows_exe.is_file()
+                            else "directory" if windows_exe.is_dir() else "missing"
+                        )
+                    raise CheckError(
+                        f"guide command {command_index}/14 could not start "
+                        f"{relative_executable}; cwd=guide-root; path={expected_type}; "
+                        f"windows-exe={windows_exe_type}"
+                    ) from error
                 executed += 1
                 last_outputs.append((argv, result.stdout))
                 executable = argv[0]
