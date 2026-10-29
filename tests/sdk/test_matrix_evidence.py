@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import copy
+import contextlib
 import hashlib
+import io
 import json
 import os
 import re
@@ -75,6 +77,9 @@ def sanitizer_failure_controls() -> None:
     colored_failure = ("The following tests FAILED:\r\n"
                        "\t\x1b[0;31m  1 - sdk_save_receipts (Failed)\x1b[0;0m\r\n")
     assert controls.sanitizer_failed_test_names(colored_failure, "") == ["sdk_save_receipts"]
+    ansi_split_path = "/ho\x1b[31mme/synthetic-review-account/file.c\x1b[0m"
+    assert verify_sdk.redacted_failure_diagnostic(ansi_split_path) == "[private-path-redacted]"
+    assert controls._redacted_ctest_excerpt(ansi_split_path) == "[private-path-redacted]"
 
     def installed_sanitizer_records() -> str:
         wire = ""
@@ -244,6 +249,7 @@ def sanitizer_failure_controls() -> None:
             "if sys.argv[1] == 'fail':\n"
             " print('FAILED-BODY-MARKER expected=1 observed=0')\n"
             " print('PRIVATE-CHILD-PATH ' + sys.argv[2])\n"
+            " print('PRIVATE-ANSI-PATH /ho\\x1b[31mme/synthetic-review-account/file.c\\x1b[0m')\n"
             " sys.exit(1)\n"
             "for i in range(120): print('LATER-PASS-ROW-%d' % i)\n",
             encoding="utf-8")
@@ -307,6 +313,7 @@ def sanitizer_failure_controls() -> None:
             "runtime_ctest_output_excerpt"]
         assert str(root) not in produced_json["runtime_ctest_output_excerpt"]
         assert "[private-path-redacted]" in produced_json["runtime_ctest_output_excerpt"]
+        assert "synthetic-review-account" not in produced_json["runtime_ctest_output_excerpt"]
 
         summaryless_root = root / "summaryless"
         summaryless_build = summaryless_root / "build/sdk-asan-ubsan"
@@ -373,6 +380,99 @@ def sanitizer_failure_controls() -> None:
         assert failure["runtime_ctest_output_sha256"] == summaryless_report[
             "runtime_ctest_output_sha256"]
         assert str(root) not in json.dumps(aggregate)
+
+        # Drive the actual sanitizer CLI path through matrix-lane creation and
+        # the canonical file writer consumed by the CI artifact upload step.
+        lane_identity = {
+            "source_revision": identity["source_revision"],
+            "relevant_source_sha256": identity["relevant_source_sha256"],
+            "working_tree_dirty": False,
+            "compiler": {"id": "Clang", "version": "18.1.8"},
+            "architecture": "arm64",
+            "configuration": "Debug",
+            "cmake": "cmake version 3.31.6",
+            "generator": {"name": "Ninja", "version": "1.12"},
+            "fixture_manifest_sha256": "f" * 64,
+            "runtime_artifacts": [{"path": "libglueyneo.a", "sha256": "e" * 64}],
+            "sdk": {"version": "unknown"},
+        }
+        with tempfile.TemporaryDirectory() as output_directory:
+            lane_path = Path(output_directory) / "matrix-lane.json"
+            public_scan = verify_sdk.evidence.scan_public_value
+
+            def scan_before_lane_write(value):
+                assert not lane_path.exists(), "CI lane output must be scanned before the artifact is written"
+                public_scan(value)
+
+            argv = ["verify_sdk.py", "--suite", "sanitizer", "--lane",
+                    "linux-clang-sanitizer", "--output", str(lane_path)]
+            hosted = {
+                "GITHUB_ACTIONS": "true", "GITHUB_RUN_ID": "12345",
+                "GITHUB_RUN_ATTEMPT": "1", "GITHUB_RUNNER": "ubuntu-24.04",
+                "ImageOS": "ubuntu24", "ImageVersion": "2026.10.1",
+            }
+            with mock.patch.object(verify_sdk, "ensure_debug_build", return_value=1.0), \
+                    mock.patch.object(verify_sdk.evidence, "current_identity",
+                                      return_value=lane_identity), \
+                    mock.patch.object(verify_sdk, "sanitizer_summary",
+                                      return_value=(aggregate, "")), \
+                    mock.patch.object(verify_sdk, "collect_sanitized_audio_calls",
+                                      return_value={"ctest_cases": 0}), \
+                    mock.patch.object(verify_sdk.evidence, "scan_public_value",
+                                      side_effect=scan_before_lane_write), \
+                    mock.patch.object(sys, "argv", argv), \
+                    mock.patch.dict(os.environ, hosted, clear=False), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                assert verify_sdk.main() == 1
+            serialized_lane = evidence.load_canonical_json(
+                lane_path.read_bytes(), label="sanitizer CI matrix lane")
+            failure_rows = serialized_lane["failure_diagnostics"]
+            assert len(failure_rows) == 1
+            failure_row = failure_rows[0]
+            assert failure_row["failed_tests"] == ["sdk_save_receipts"]
+            assert "# ASSERT save.pending-newer expected=1 observed=0" in \
+                failure_row["failure_diagnostic"]
+            assert "[private-path-redacted]" in failure_row["failure_diagnostic"]
+            assert failure_row["runtime_ctest_output_sha256"] == summaryless_report[
+                "runtime_ctest_output_sha256"]
+            assert failure_row["runtime_ctest_output_bytes"] == summaryless_report[
+                "runtime_ctest_output_bytes"]
+            assert failure_row["runtime_ctest_output_excerpt_truncated"] == summaryless_report[
+                "runtime_ctest_output_excerpt_truncated"]
+            assert str(root) not in lane_path.read_text(encoding="utf-8")
+
+        diagnostic_row = {
+            "lane": "asan-ubsan", "stage": "runtime",
+            "failure_diagnostic": "sdk_save_receipts: expected=1 observed=0",
+            "failed_tests": ["sdk_save_receipts"], "attempted_tests": 2, "passed_tests": 1,
+            "source_revision": "a" * 40, "relevant_source_sha256": "b" * 64,
+            "runtime_log_sha256": None, "runtime_ctest_output_sha256": "c" * 64,
+            "runtime_ctest_output_bytes": 128,
+            "runtime_ctest_output_excerpt_truncated": False,
+            "runtime_ctest_output_excerpt": "bounded CTest detail",
+        }
+
+        def require_bad_diagnostic(rows, reason):
+            with mock.patch.object(evidence, "current_identity", return_value=lane_identity):
+                try:
+                    evidence.matrix_lane_from_environment(
+                        "linux-clang-sanitizer",
+                        {"suite": "sanitizer", "outcome": "fail", "lanes": {"failed": rows}},
+                        1.0)
+                except evidence.EvidenceError as error:
+                    assert error.reason == reason, (error.reason, reason)
+                else:
+                    raise AssertionError(f"malformed sanitizer diagnostics accepted: {reason}")
+
+        require_bad_diagnostic([None], "sanitizer-diagnostics-malformed")
+        require_bad_diagnostic([diagnostic_row] * 3, "sanitizer-diagnostics-malformed")
+        require_bad_diagnostic([{**diagnostic_row, "attempted_tests": True}],
+                               "sanitizer-diagnostics-malformed")
+        require_bad_diagnostic([{**diagnostic_row, "stage": []}],
+                               "sanitizer-diagnostics-malformed")
+        require_bad_diagnostic([{**diagnostic_row,
+                                 "runtime_ctest_output_excerpt": "x" * 16_001}],
+                               "sanitizer-diagnostic-too-large")
 
     # Exercise the native supervisor's partial CTest counts without running a
     # native sanitizer or relying on a particular host's runtime availability.

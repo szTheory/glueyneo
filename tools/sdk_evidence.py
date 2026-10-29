@@ -321,7 +321,7 @@ def matrix_lane_from_environment(lane: str, verification: dict[str, Any],
     cold_seconds = float(verification.get("cold_build_seconds", 0))
     if not cold_seconds and cold_samples:
         cold_seconds = float(sorted(cold_samples)[len(cold_samples) // 2]) / 1_000_000_000
-    return {
+    lane_record = {
         "lane": lane,
         "compiler": identity["compiler"],
         "sdk": {"name": sdk_name, "version": sdk_version},
@@ -346,6 +346,76 @@ def matrix_lane_from_environment(lane: str, verification: dict[str, Any],
         "runner_id": runner_id,
         "runner_minutes": duration_seconds / 60,
     }
+    if verification.get("suite") == "sanitizer":
+        sanitizer = verification.get("lanes")
+        require(isinstance(sanitizer, dict), "sanitizer-diagnostics-malformed",
+                "sanitizer lane report must be an object")
+        failures = sanitizer.get("failed", [])
+        require(isinstance(failures, list) and len(failures) <= 2
+                and all(isinstance(row, dict) for row in failures),
+                "sanitizer-diagnostics-malformed",
+                "sanitizer failures must be at most two lane records")
+        diagnostics = []
+        seen_lanes = set()
+        fields = (
+            "lane", "stage", "failure_diagnostic", "failed_tests", "attempted_tests",
+            "passed_tests", "source_revision", "relevant_source_sha256", "runtime_log_sha256",
+            "runtime_ctest_output_sha256", "runtime_ctest_output_bytes",
+            "runtime_ctest_output_excerpt_truncated", "runtime_ctest_output_excerpt",
+        )
+        for failure in failures:
+            failure_lane = failure.get("lane")
+            require(isinstance(failure_lane, str)
+                    and failure_lane in {"asan-ubsan", "tsan"}
+                    and failure_lane not in seen_lanes,
+                    "sanitizer-diagnostics-malformed", "sanitizer failure lane is invalid or duplicated")
+            seen_lanes.add(failure_lane)
+            stage = failure.get("stage")
+            message = failure.get("failure_diagnostic")
+            failed_tests = failure.get("failed_tests")
+            attempted = failure.get("attempted_tests")
+            passed = failure.get("passed_tests")
+            revision = failure.get("source_revision")
+            source_sha256 = failure.get("relevant_source_sha256")
+            require(isinstance(stage, str)
+                    and stage in {"configure", "build", "startup", "runtime", "unknown"}
+                    and isinstance(message, str)
+                    and isinstance(failed_tests, list)
+                    and all(isinstance(name, str) and re.fullmatch(r"sdk_\w+", name)
+                            for name in failed_tests)
+                    and isinstance(attempted, int) and not isinstance(attempted, bool)
+                    and isinstance(passed, int) and not isinstance(passed, bool)
+                    and isinstance(revision, str) and re.fullmatch(r"[0-9a-f]{40}", revision)
+                    and isinstance(source_sha256, str) and re.fullmatch(r"[0-9a-f]{64}", source_sha256),
+                    "sanitizer-diagnostics-malformed", "sanitizer failure fields have invalid types or identities")
+            maximum_tests = 13 if failure_lane == "asan-ubsan" else 3
+            require(len(failed_tests) <= maximum_tests
+                    and 0 <= passed <= attempted <= maximum_tests,
+                    "sanitizer-diagnostics-malformed", "sanitizer failure counts exceed the lane inventory")
+            for hash_field in ("runtime_log_sha256", "runtime_ctest_output_sha256"):
+                digest = failure.get(hash_field)
+                require(digest is None or (isinstance(digest, str)
+                        and re.fullmatch(r"[0-9a-f]{64}", digest)),
+                        "sanitizer-diagnostics-malformed", f"{hash_field} must be a SHA-256 digest")
+            output_bytes = failure.get("runtime_ctest_output_bytes")
+            excerpt_truncated = failure.get("runtime_ctest_output_excerpt_truncated")
+            excerpt = failure.get("runtime_ctest_output_excerpt")
+            require(output_bytes is None or (isinstance(output_bytes, int)
+                    and not isinstance(output_bytes, bool) and 0 <= output_bytes <= 2**63 - 1),
+                    "sanitizer-diagnostics-malformed", "CTest output byte count is invalid")
+            require(excerpt_truncated is None or isinstance(excerpt_truncated, bool),
+                    "sanitizer-diagnostics-malformed", "CTest excerpt truncation flag is invalid")
+            require(excerpt is None or isinstance(excerpt, str),
+                    "sanitizer-diagnostics-malformed", "CTest excerpt must be text")
+            require(len(message.encode("utf-8", errors="replace")) <= 8_000,
+                    "sanitizer-diagnostic-too-large", "sanitizer failure detail exceeds the public bound")
+            require(excerpt is None or len(excerpt.encode("utf-8", errors="replace")) <= 16_000,
+                    "sanitizer-diagnostic-too-large", "sanitizer CTest excerpt exceeds the public bound")
+            diagnostic = {key: failure[key] for key in fields if key in failure}
+            diagnostics.append(diagnostic)
+        if diagnostics:
+            lane_record["failure_diagnostics"] = diagnostics
+    return lane_record
 
 
 def build_matrix_report(lanes: list[dict[str, Any]]) -> dict[str, Any]:

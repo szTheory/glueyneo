@@ -383,11 +383,12 @@ _DIAGNOSTIC_SECRET_PATTERNS = (
     (re.compile(r"(?i)(?:[A-Z]:[\\/](?:Users|Documents and Settings)[\\/])[^\s\"']+"), "[private-path-redacted]"),
     (re.compile(r"/(?:Users|home|private/var|private/tmp|tmp|var/folders)/[^\s\"']+"), "[private-path-redacted]"),
 )
+DIAGNOSTIC_ANSI_ESCAPE = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 
 def redacted_failure_diagnostic(output: str, *, limit: int = 8000) -> str:
     """Return bounded diagnostics only after path/identity/secret redaction and scan."""
-    value = output[-limit:]
+    value = DIAGNOSTIC_ANSI_ESCAPE.sub("", output)[-limit:]
     for private_path in sorted({str(ROOT), str(Path.home())}, key=len, reverse=True):
         if private_path and private_path != "/":
             value = value.replace(private_path, "[private-path-redacted]")
@@ -2778,15 +2779,17 @@ def main() -> int:
         else:
             report = suite_all()
         report["duration_seconds"] = round(time.monotonic() - start, 6)
+        lane_receipt = None
         if args.suite in {"matrix", "fuzz", "sanitizer"} and args.lane:
             lane = evidence.matrix_lane_from_environment(args.lane, report, report["duration_seconds"], ROOT)
             report["matrix_lane"] = lane
+            lane_receipt = lane
             if lane["outcome"] != "pass":
                 report["outcome"] = lane["outcome"]
-            if args.output:
-                args.output.parent.mkdir(parents=True, exist_ok=True)
-                args.output.write_bytes(evidence.canonical_bytes(lane))
         evidence.scan_public_value(report)
+        if args.output and lane_receipt is not None:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_bytes(evidence.canonical_bytes(lane_receipt))
         print("SDK_VERIFY " + json.dumps(report, sort_keys=True, separators=(",", ":")))
         return 0 if report.get("outcome") == "pass" else 1
     except (VerificationError, evidence.EvidenceError, OSError, ValueError, RuntimeError) as error:
