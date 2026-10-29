@@ -6,6 +6,8 @@ import argparse
 import json
 import os
 from pathlib import Path
+import re
+import subprocess
 import sys
 from typing import Any, Iterable
 
@@ -139,6 +141,111 @@ def classify_diff(paths: list[str] | None, *, diff_error: bool = False) -> dict[
             "public_content": DOCS_JOB in selected}
 
 
+def public_content_control_counts(root: Path) -> tuple[int, int]:
+    """Return measured unittest case and TestCase assertion-method invocation counts."""
+    counted_runner = r'''
+import unittest
+counts = {"assertions": 0}
+for name in dir(unittest.TestCase):
+    method = getattr(unittest.TestCase, name)
+    if name.startswith(("assert", "fail")) and callable(method):
+        def counted(self, *args, _method=method, **kwargs):
+            counts["assertions"] += 1
+            return _method(self, *args, **kwargs)
+        setattr(unittest.TestCase, name, counted)
+suite = unittest.defaultTestLoader.discover("tests/workflow", pattern="test_public_content.py")
+result = unittest.TextTestRunner(verbosity=2).run(suite)
+print("PUBLIC_CONTENT_ASSERTIONS=" + str(counts["assertions"]))
+raise SystemExit(0 if result.wasSuccessful() else 1)
+'''
+    child_env = dict(os.environ)
+    child_env["PYTHONDONTWRITEBYTECODE"] = "1"
+    control_result = subprocess.run([sys.executable, "-c", counted_runner], cwd=root.resolve(),
+                                    env=child_env, text=True, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT, timeout=60, check=False)
+    if control_result.returncode != 0:
+        raise ValueError("public-content control suite failed")
+    cases_match = re.search(r"(?m)^Ran (\d+) tests? in [\d.]+s$", control_result.stdout)
+    assertions_match = re.search(r"(?m)^PUBLIC_CONTENT_ASSERTIONS=(\d+)$", control_result.stdout)
+    if (cases_match is None or int(cases_match.group(1)) <= 0
+            or assertions_match is None or int(assertions_match.group(1)) <= 0
+            or "OK" not in control_result.stdout):
+        raise ValueError("public-content controls omitted positive case or assertion counts")
+    return int(cases_match.group(1)), int(assertions_match.group(1))
+
+
+def produce_public_content(root: Path, *, source_revision: str,
+                           report_path: Path, output_path: Path) -> dict[str, Any]:
+    """Run public-content controls and bind their counts to the exact source scan."""
+    from sdk_evidence import canonical_bytes, load_canonical_json, sha256_bytes
+
+    root = root.resolve()
+    if not _is_commit_sha(source_revision):
+        raise ValueError("public-content event revision is not a full commit SHA")
+
+    def git(*args: str) -> str:
+        result = subprocess.run(["git", *args], cwd=root, text=True,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+        if result.returncode != 0:
+            raise ValueError("public-content source identity is unavailable")
+        return result.stdout.strip()
+
+    if git("rev-parse", "HEAD") != source_revision:
+        raise ValueError("public-content checkout does not match the workflow event SHA")
+    if git("status", "--porcelain", "--untracked-files=all"):
+        raise ValueError("public-content checkout is not a clean immutable source tree")
+    control_cases, assertion_count = public_content_control_counts(root)
+    scan_env = dict(os.environ)
+    scan_env["PYTHONDONTWRITEBYTECODE"] = "1"
+
+    report_path = report_path if report_path.is_absolute() else root / report_path
+    output_path = output_path if output_path.is_absolute() else root / output_path
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    scan_result = subprocess.run(
+        [sys.executable, "tools/public_content.py", "--root", str(root),
+         "--history-revision=--all", "--json", str(report_path)], cwd=root,
+        env=scan_env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        timeout=300, check=False)
+    if scan_result.returncode != 0:
+        raise ValueError("public-content source/history scan failed")
+    report_bytes = report_path.read_bytes()
+    report = load_canonical_json(report_bytes, label="public-content scan artifact")
+    if (not isinstance(report, dict) or report.get("schema") != 1
+            or report.get("outcome") != "pass" or report.get("findings") != []
+            or report.get("detector_negative_only") is not True):
+        raise ValueError("public-content scanner artifact is not a passing detector-only report")
+    counts = report.get("counts")
+    coverage = report.get("coverage")
+    if not isinstance(counts, dict) or not isinstance(coverage, dict):
+        raise ValueError("public-content scanner artifact omitted counts or coverage")
+    scanned_files = 0
+    for category in ("source", "history", "logs", "archives"):
+        row = counts.get(category)
+        files = row.get("files") if isinstance(row, dict) else None
+        if not isinstance(files, int) or isinstance(files, bool) or files < 0:
+            raise ValueError("public-content scanner emitted a malformed category count")
+        scanned_files += files
+    if (scanned_files <= 0 or counts["source"]["files"] <= 0 or counts["history"]["files"] <= 0
+            or coverage.get("history_mode") != "all reachable refs"
+            or coverage.get("history_revision") != "--all"):
+        raise ValueError("public-content scanner omitted the required history/count evidence")
+    if git("rev-parse", "HEAD") != source_revision or git("status", "--porcelain", "--untracked-files=all"):
+        raise ValueError("public-content source changed while evidence was collected")
+    receipt = {
+        "schema_version": 1, "suite": "public-content", "outcome": "pass",
+        "source_revision": source_revision, "working_tree_dirty": False,
+        "lane_execution_count": 1, "control_cases": control_cases,
+        "assertion_count": assertion_count,
+        "assertion_count_basis": "unittest.TestCase assertion/fail method calls",
+        "scanned_files": scanned_files,
+        "report_sha256": sha256_bytes(report_bytes), "coverage": coverage,
+        "detector_negative_only": True,
+    }
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(canonical_bytes(receipt))
+    return receipt
+
+
 def assemble_aggregate(results: dict[str, Any], selected: dict[str, Any],
                        matrix_dir: Path) -> dict[str, Any]:
     from sdk_evidence import (EvidenceError, build_matrix_report, canonical_bytes,
@@ -165,15 +272,37 @@ def assemble_aggregate(results: dict[str, Any], selected: dict[str, Any],
     else:
         matrix_error = "matrix job did not succeed"
     docs_receipt = results.get("public_content_receipt", {})
+    docs_receipt_errors: list[str] = []
     if results.get(DOCS_JOB) == "success":
+        if not isinstance(docs_receipt, dict):
+            docs_receipt = {}
+        if docs_receipt.get("schema_version") != 1 or isinstance(docs_receipt.get("schema_version"), bool):
+            docs_receipt_errors.append("producer schema is missing or unsupported")
+        if docs_receipt.get("artifact_verified") is not True:
+            docs_receipt_errors.append("producer artifact or scanner digest was not verified")
+        if docs_receipt.get("assertion_count_basis") != "unittest.TestCase assertion/fail method calls":
+            docs_receipt_errors.append("producer assertion count basis is missing or unsupported")
         if docs_receipt.get("outcome") != "pass" or docs_receipt.get("detector_negative_only") is not True:
-            docs_receipt = dict(docs_receipt, lane_count=0, assertion_count=0)
-        if MATRIX_JOB in planned and docs_receipt.get("coverage", {}).get("logs_supplied", 0) <= 0:
-            docs_receipt = dict(docs_receipt, lane_count=0, assertion_count=0)
-        docs_assertions = docs_receipt.get("assertion_count", 0)
+            docs_receipt_errors.append("producer did not report a passing detector-only scan")
+        if docs_receipt.get("source_revision") != results.get("source_revision"):
+            docs_receipt_errors.append("producer source revision does not match the workflow event SHA")
+        if docs_receipt.get("working_tree_dirty") is not False:
+            docs_receipt_errors.append("producer source tree is not recorded clean")
+        for field in ("lane_count", "assertion_count", "control_cases"):
+            value = docs_receipt.get(field)
+            if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+                docs_receipt_errors.append(f"producer has no positive {field}")
+        if (MATRIX_JOB in planned and results.get(MATRIX_JOB) == "success"
+                and docs_receipt.get("matrix_logs_verified") is not True):
+            docs_receipt_errors.append("successful matrix logs were not scanned and bound to the current source")
+        if docs_receipt_errors:
+            docs_receipt = dict(docs_receipt, lane_count=0, assertion_count=0,
+                                receipt_errors=docs_receipt_errors)
         jobs[DOCS_JOB].update(lane_count=docs_receipt.get("lane_count", 0),
-                               assertion_count=docs_assertions)
+                               assertion_count=docs_receipt.get("assertion_count", 0))
     aggregate = validate_aggregate(jobs, planned=planned)
+    aggregate["issues"].extend(
+        f"public-content producer receipt invalid: {error}" for error in docs_receipt_errors)
     if results.get("classify") != "success":
         aggregate["issues"].append("path classifier did not succeed; required plan is untrusted")
         aggregate["outcome"] = "fail"
@@ -195,6 +324,8 @@ def assemble_aggregate(results: dict[str, Any], selected: dict[str, Any],
 
 def prepare_workflow_inputs(output_dir: Path) -> tuple[Path, Path]:
     """Turn GitHub job outputs and redacted scan summaries into aggregate inputs."""
+    from sdk_evidence import load_canonical_json, sha256_bytes
+
     output_dir.mkdir(parents=True, exist_ok=True)
     matrix_planned = os.environ.get("MATRIX_PLANNED") == "true"
     content_planned = os.environ.get("CONTENT_PLANNED") == "true"
@@ -208,22 +339,107 @@ def prepare_workflow_inputs(output_dir: Path) -> tuple[Path, Path]:
         DOCS_JOB: os.environ.get("PUBLIC_CONTENT_RESULT", "missing"),
         "source_revision": os.environ.get("SOURCE_REVISION", "unknown"),
     }
-    matrix_result = results[MATRIX_JOB]
-    content_file = output_dir / "public-content" / (
-        "matrix-logs.json" if matrix_result == "success" else "public-content.json")
-    scan = {}
-    if content_file.is_file():
-        scan = json.loads(content_file.read_text(encoding="utf-8"))
-    counts = scan.get("counts", {})
-    scan_count = sum(value.get("files", 0) for value in counts.values()
-                     if isinstance(value, dict) and isinstance(value.get("files", 0), int))
-    results["public_content_receipt"] = {
-        "lane_count": 1 if scan.get("outcome") == "pass" else 0,
-        "assertion_count": scan_count if scan.get("outcome") == "pass" else 0,
-        "outcome": scan.get("outcome", "missing"),
-        "coverage": scan.get("coverage"),
-        "detector_negative_only": scan.get("detector_negative_only", False),
-    }
+    content_dir = output_dir / "public-content"
+    report_path = content_dir / "public-content.json"
+    producer_path = content_dir / "public-content-receipt.json"
+    receipt: dict[str, Any] = {"schema_version": 0, "outcome": "missing",
+                               "lane_count": 0, "assertion_count": 0, "control_cases": 0,
+                               "artifact_verified": False, "matrix_logs_verified": False}
+    if report_path.is_file() and producer_path.is_file():
+        try:
+            report_bytes = report_path.read_bytes()
+            scan = load_canonical_json(report_bytes, label="public-content scan artifact")
+            producer = load_canonical_json(producer_path.read_bytes(), label="public-content producer receipt")
+            if not isinstance(scan, dict) or not isinstance(producer, dict):
+                raise ValueError("producer artifacts must be JSON objects")
+            counts = scan.get("counts")
+            if not isinstance(counts, dict):
+                raise ValueError("scan counts are missing")
+            scan_coverage = scan.get("coverage")
+            producer_coverage = producer.get("coverage")
+            if not isinstance(scan_coverage, dict) or not isinstance(producer_coverage, dict):
+                raise ValueError("scan coverage is malformed")
+            scan_count = 0
+            for category in ("source", "history", "logs", "archives"):
+                row = counts.get(category)
+                files = row.get("files") if isinstance(row, dict) else None
+                if not isinstance(files, int) or isinstance(files, bool) or files < 0:
+                    raise ValueError("scan category file count is malformed")
+                scan_count += files
+            if counts["source"]["files"] <= 0 or counts["history"]["files"] <= 0:
+                raise ValueError("scan source or history count is empty")
+            valid_producer = (
+                producer.get("schema_version") == 1
+                and not isinstance(producer.get("schema_version"), bool)
+                and producer.get("suite") == "public-content"
+                and producer.get("outcome") == "pass"
+                and producer.get("source_revision") == results["source_revision"]
+                and producer.get("working_tree_dirty") is False
+                and producer.get("lane_execution_count") == 1
+                and not isinstance(producer.get("lane_execution_count"), bool)
+                and isinstance(producer.get("control_cases"), int)
+                and not isinstance(producer.get("control_cases"), bool)
+                and producer.get("control_cases", 0) > 0
+                and producer.get("scanned_files") == scan_count
+                and isinstance(producer.get("scanned_files"), int)
+                and not isinstance(producer.get("scanned_files"), bool)
+                and producer.get("scanned_files", 0) > 0
+                and isinstance(producer.get("assertion_count"), int)
+                and not isinstance(producer.get("assertion_count"), bool)
+                and producer.get("assertion_count", 0) > 0
+                and producer.get("assertion_count_basis") ==
+                    "unittest.TestCase assertion/fail method calls"
+                and producer.get("report_sha256") == sha256_bytes(report_bytes)
+                and producer_coverage == scan_coverage
+                and producer.get("detector_negative_only") is True
+                and scan.get("schema") == 1
+                and not isinstance(scan.get("schema"), bool)
+                and scan.get("outcome") == "pass"
+                and scan.get("findings") == []
+                and scan.get("detector_negative_only") is True
+                and scan_coverage.get("history_mode") == "all reachable refs"
+                and scan_coverage.get("history_revision") == "--all"
+            )
+            if valid_producer:
+                receipt = {
+                    "schema_version": 1, "suite": "public-content",
+                    "outcome": producer["outcome"], "source_revision": producer["source_revision"],
+                    "working_tree_dirty": producer["working_tree_dirty"],
+                    "lane_count": producer["lane_execution_count"],
+                    "assertion_count": producer["assertion_count"],
+                    "assertion_count_basis": producer["assertion_count_basis"],
+                    "control_cases": producer["control_cases"],
+                    "scanned_files": producer["scanned_files"],
+                    "report_sha256": producer["report_sha256"],
+                    "coverage": producer["coverage"],
+                    "detector_negative_only": producer["detector_negative_only"],
+                    "artifact_verified": True, "matrix_logs_verified": False,
+                }
+        except (OSError, ValueError, TypeError):
+            pass
+
+    if results[MATRIX_JOB] == "success":
+        matrix_logs_path = content_dir / "matrix-logs.json"
+        try:
+            matrix_logs = load_canonical_json(matrix_logs_path.read_bytes(), label="matrix log scan")
+            coverage = matrix_logs.get("coverage", {}) if isinstance(matrix_logs, dict) else None
+            log_count = coverage.get("logs_supplied") if isinstance(coverage, dict) else None
+            logs_verified = (
+                isinstance(coverage, dict) and isinstance(matrix_logs, dict)
+                and matrix_logs.get("schema") == 1
+                and not isinstance(matrix_logs.get("schema"), bool)
+                and matrix_logs.get("outcome") == "pass"
+                and matrix_logs.get("findings") == []
+                and matrix_logs.get("detector_negative_only") is True
+                and isinstance(log_count, int) and not isinstance(log_count, bool) and log_count > 0
+                and coverage.get("history_revision") == results["source_revision"]
+                and coverage.get("history_mode") == "selected revision"
+            )
+            receipt["matrix_logs_verified"] = bool(logs_verified)
+            receipt["matrix_log_coverage"] = coverage if logs_verified else {}
+        except (OSError, ValueError, TypeError):
+            receipt["matrix_logs_verified"] = False
+    results["public_content_receipt"] = receipt
     plan_path.write_text(json.dumps(plan, sort_keys=True), encoding="utf-8")
     results_path.write_text(json.dumps(results, sort_keys=True), encoding="utf-8")
     return plan_path, results_path
@@ -243,6 +459,11 @@ def main(argv: list[str] | None = None) -> int:
     aggregate.add_argument("--output", type=Path, required=True)
     prepare = commands.add_parser("prepare")
     prepare.add_argument("--output-dir", type=Path, required=True)
+    content_producer = commands.add_parser("produce-public-content")
+    content_producer.add_argument("--root", type=Path, required=True)
+    content_producer.add_argument("--source-revision", required=True)
+    content_producer.add_argument("--report-output", type=Path, required=True)
+    content_producer.add_argument("--output", type=Path, required=True)
     readiness = commands.add_parser("merge-readiness")
     readiness.add_argument("--receipt", type=Path, required=True)
     readiness.add_argument("--head-sha", required=True)
@@ -258,6 +479,9 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "merge-readiness":
             report = validate_merge_readiness(json.loads(args.receipt.read_text()),
                                               proposed_sha=args.head_sha)
+        elif args.command == "produce-public-content":
+            report = produce_public_content(args.root, source_revision=args.source_revision,
+                                            report_path=args.report_output, output_path=args.output)
         else:
             report = assemble_aggregate(json.loads(args.results.read_text()),
                                         json.loads(args.plan.read_text()), args.matrix_dir)
@@ -265,12 +489,14 @@ def main(argv: list[str] | None = None) -> int:
         scan_public_value(report)
         output = canonical_bytes(report)
         output_path = getattr(args, "output", None)
+        if args.command == "produce-public-content":
+            output_path = None
         if output_path is not None:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_bytes(output)
         print(output.decode(), end="")
         return 0 if report.get("outcome") == "pass" else 1
-    except (OSError, ValueError, TypeError) as error:
+    except (OSError, ValueError, TypeError, subprocess.TimeoutExpired) as error:
         print(json.dumps({"outcome": "fail", "reason": type(error).__name__}), file=sys.stderr)
         return 2
 

@@ -179,7 +179,13 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Scan public source, history, notices, and rights inventory
-        run: python3 tools/verify_sdk.py --suite public-content
+        env:
+          SDK_SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python3 tools/workflow/ci_policy.py produce-public-content --root .
+          --source-revision "$SDK_SOURCE_REVISION"
+          --report-output build/verify-sdk/public-content.json
+          --output build/verify-sdk/public-content-receipt.json
       # G7WR-02: runs on every pull request; the tool applies the check whenever the
       # allowlist changed or any listed revision is in this history (the pre-ship
       # branch), so an edit to any pinned record cannot merge a stale allowlist.
@@ -195,7 +201,9 @@ jobs:
         if: always()
         with:
           name: public-content-receipt
-          path: build/verify-sdk/public-content.json
+          path: |
+            build/verify-sdk/public-content.json
+            build/verify-sdk/public-content-receipt.json
           if-no-files-found: ignore
           retention-days: 7
 
@@ -209,6 +217,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      - name: Run CI policy producer and aggregation controls
+        run: python3 tests/workflow/test_ci_policy.py
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         if: needs.matrix.result == 'success'
         with:
