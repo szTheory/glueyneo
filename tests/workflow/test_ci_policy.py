@@ -248,6 +248,13 @@ def check_public_content_handoff() -> tuple[int, int]:
 
 
 def main() -> int:
+    if sys.argv[1:] == ["--handoff-only"]:
+        cases, assertions = check_public_content_handoff()
+        print(f"PASS: public-content handoff controls ({cases} cases, {assertions} assertion calls)")
+        return 0
+    if sys.argv[1:]:
+        raise SystemExit("usage: test_ci_policy.py [--handoff-only]")
+
     with tempfile.TemporaryDirectory(prefix="ci-prepare-cli-") as temp:
         output_dir = Path(temp) / "inputs"
         completed = subprocess.run(
@@ -401,6 +408,7 @@ def main() -> int:
         "Verify native save-state continuation and rejection suite",
         "Verify native durable MVS backup-RAM save suite",
         "produce-public-content", "SDK_SOURCE_REVISION", "public-content-receipt.json",
+        "tests/workflow/test_ci_policy.py --handoff-only",
     ):
         expect(required in workflow, f"workflow omitted required contract: {required}")
     state_command = "run: python3 tools/verify_sdk.py --suite state"
