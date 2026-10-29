@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 import importlib.util
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import re
 import shlex
 import shutil
@@ -69,8 +69,10 @@ def guide_commands(variant: str, guide: Path = GUIDE) -> list[str]:
 
 
 def command_argv(command: str, cwd: Path) -> list[str]:
-    expanded = command.replace('"$PWD"', str(cwd)).replace("$PWD", str(cwd))
-    argv = shlex.split(expanded)
+    # Parse the controlled shell syntax before expanding the host path so a
+    # Windows cwd never passes through POSIX shlex as source text.
+    argv = shlex.split(command)
+    argv = [argument.replace("$PWD", str(cwd)) for argument in argv]
     if str(ROOT) in " ".join(argv):
         raise CheckError("Guide command refers to the original source checkout")
     return argv
@@ -127,6 +129,17 @@ MATRIX_SPECS = {
 
 def read_contract_documents() -> dict[str, str]:
     return {path: (ROOT / path).read_text(encoding="utf-8") for path in MATRIX_SPECS}
+
+
+def _load_verify_sdk_module():
+    path = ROOT / "tools" / "verify_sdk.py"
+    spec = importlib.util.spec_from_file_location("example_docs_verify_sdk", path)
+    if spec is None or spec.loader is None:
+        raise CheckError("could not load the SDK source-identity provider")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def parse_matrix(
@@ -233,9 +246,10 @@ def validate_evidence_matrices(documents: dict[str, str]) -> int:
     if "source revision and content hashes identify the tested builds and provenance; they are not import gates" not in state_text:
         raise CheckError("native state source hashes must remain provenance, not import conditions")
 
+    save_source_identity = _load_verify_sdk_module().save_source_identity(ROOT)
     save_rows = loaded["docs/native-save.md"]
     save_text = " ".join(documents["docs/native-save.md"].casefold().split())
-    if (not any("ec630c3ee18c1f90593bd1e0c01a0a0defd209c3d305af8473540f44c114d96d" in
+    if (not any(save_source_identity in
                 row["Source/build identity"] and "Darwin 25.6.0" in row["OS / filesystem"]
                 and "APFS" in row["OS / filesystem"] and row["Outcome"] == "pass"
                 for row in save_rows) or
@@ -510,16 +524,23 @@ class ExampleGuideContractTests(unittest.TestCase):
         cls.assertion_count = 0
         cls.mutation_count = 0
 
+    def test_command_argv_preserves_expanded_path_separators(self) -> None:
+        windows_root = PureWindowsPath(r"C:\build\guide with spaces\project")
+        windows_command = 'cmake -S "$PWD" -DCMAKE_INSTALL_PREFIX="$PWD/build/install-static"'
+        windows_argv = command_argv(windows_command, windows_root)
+        self.assertEqual(windows_argv, [
+            "cmake",
+            "-S",
+            str(windows_root),
+            "-DCMAKE_INSTALL_PREFIX=" + str(windows_root) + "/build/install-static",
+        ])
+
+        posix_root = Path("/tmp/guide\\literal")
+        posix_argv = command_argv('cmake -S "$PWD" -DROOT="$PWD/build"', posix_root)
+        self.assertEqual(posix_argv, ["cmake", "-S", str(posix_root), "-DROOT=" + str(posix_root) + "/build"])
+
     def _load_verify_sdk(self):
-        path = ROOT / "tools" / "verify_sdk.py"
-        spec = importlib.util.spec_from_file_location("example_docs_verify_sdk", path)
-        self.assertIsNotNone(spec)
-        self.assertIsNotNone(spec.loader)
-        assert spec is not None and spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = module
-        spec.loader.exec_module(module)
-        return module
+        return _load_verify_sdk_module()
 
     def _assert_matrix_rejects(self, documents: dict[str, str], detail: str) -> None:
         with self.subTest(mutation=detail), self.assertRaises(CheckError):
@@ -561,10 +582,11 @@ class ExampleGuideContractTests(unittest.TestCase):
                          "docs/state-inventory.md", "docs/ownership-and-errors.md")
         }
         manifest = json.loads((ROOT / "tests/fixture/rights-manifest.json").read_text(encoding="utf-8"))
+        save_source_identity = verify.save_source_identity(ROOT)
         save_counts = save_docs.check_save_contract_docs(
             save_documents, (ROOT / "include/glueyneo/glueyneo.h").read_text(encoding="utf-8"),
             (ROOT / "src/instance.c").read_text(encoding="utf-8"), manifest,
-            "ec630c3ee18c1f90593bd1e0c01a0a0defd209c3d305af8473540f44c114d96d")
+            save_source_identity)
         self.assertGreater(sum(save_counts.values()), 0)
         self.assertGreater(verify.frontend_docs_checks(ROOT)["assertions"], 0)
         self.assertGreater(check_package.check_readme_links_and_contracts(), 0)
