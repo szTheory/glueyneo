@@ -2158,6 +2158,10 @@ class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
         (repository / "docs/rights-inventory.md").write_text(
             "# Inventory\n\n```json\n" + json.dumps({"schema": 1, "items": items}) + "\n```\n", encoding="utf-8")
 
+    def commit_inventory(self, repository: Path) -> None:
+        self.git(repository, "add", "docs/rights-inventory.md")
+        self.git(repository, "commit", "-q", "-m", "rights inventory fixture")
+
     @staticmethod
     def digest(text: str) -> str:
         return hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -2165,6 +2169,7 @@ class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
     def errors(self, repository: Path, items: list[dict[str, str]], head: str = "HEAD") -> list[str]:
         function = self.helper()
         self.write_inventory(repository, items)
+        self.commit_inventory(repository)
         try:
             return function(repository, repository, head)
         except Exception as error:  # noqa: BLE001 - a red run must fail on the assertion, not on an exception
@@ -2199,9 +2204,12 @@ class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
         for bad in ("--output=x", "HEAD", "a" * 39, "A" * 40, ""):
             with self.subTest(revision=bad), tempfile.TemporaryDirectory(prefix="playable-rights-") as temporary:
                 repository, _first, _second = self.make_repository(Path(temporary))
+                self.write_inventory(repository, [{"path": "tests/a.txt", "sha256": self.digest("two\n"),
+                                                   "source_revision": bad}])
+                self.commit_inventory(repository)
                 real = subprocess.run
                 with mock.patch.object(subprocess, "run", wraps=real) as run:
-                    errors = self.errors(repository, [{"path": "tests/a.txt", "sha256": self.digest("two\n"), "source_revision": bad}])
+                    errors = self.helper()(repository, repository, "HEAD")
                 self.assertEqual(len(errors), 1, errors)
                 self.assertIn("not 40 hex", errors[0])
                 arguments = [argument for call in run.call_args_list for argument in call.args[0]]
@@ -2211,9 +2219,12 @@ class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
         for bad in ("", "/etc/passwd", "tests/../x", "-x"):
             with self.subTest(path=bad), tempfile.TemporaryDirectory(prefix="playable-rights-") as temporary:
                 repository, _first, second = self.make_repository(Path(temporary))
+                self.write_inventory(repository, [{"path": bad, "sha256": self.digest("two\n"),
+                                                   "source_revision": second}])
+                self.commit_inventory(repository)
                 real = subprocess.run
                 with mock.patch.object(subprocess, "run", wraps=real) as run:
-                    errors = self.errors(repository, [{"path": bad, "sha256": self.digest("two\n"), "source_revision": second}])
+                    errors = self.helper()(repository, repository, "HEAD")
                 self.assertEqual(len(errors), 1, errors)
                 self.assertIn("not a relative POSIX path", errors[0])
                 arguments = [argument for call in run.call_args_list for argument in call.args[0]]
@@ -2241,7 +2252,7 @@ class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "rights inventory JSON is malformed"):
                     self.helper()(repository, repository, "HEAD")
 
-    def test_g4wr_04_revision_outside_the_checked_head_is_rejected(self) -> None:
+    def test_g4wr_04_uncommitted_authority_cannot_inject_a_side_revision(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-rights-") as temporary:
             repository, first, second = self.make_repository(Path(temporary))
             self.git(repository, "checkout", "-q", "-b", "side", first)
@@ -2249,9 +2260,13 @@ class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
             self.git(repository, "add", "tests/a.txt")
             self.git(repository, "commit", "-q", "-m", "side")
             side = self.git(repository, "rev-parse", "HEAD")
-            errors = self.errors(repository, [{"path": "tests/a.txt", "sha256": self.digest("three\n"), "source_revision": side}], head=second)
+            self.write_inventory(repository, [{"path": "tests/a.txt", "sha256": self.digest("three\n"),
+                                               "source_revision": side}])
+            self.commit_inventory(repository)
+            errors = self.helper()(repository, repository, second)
             self.assertEqual(len(errors), 1, errors)
-            self.assertIn("is not an ancestor of the checked head", errors[0])
+            self.assertIn("rights inventory is absent from the checked head", errors[0])
+            self.assertEqual(playable._revision_relation(repository, side, second), "absent")
 
     @unittest.skipUnless(has_bound_documentation_history(), "needs committed rights origins and the allowlist base")
     def test_g4wr_04_check_docs_raises_the_first_rights_error(self) -> None:
@@ -3217,12 +3232,12 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
                                shallow_clone=shallow_clone, manifest_revision=manifest_revision,
                                manifest_path=manifest_path)
 
-    def gate(self, function_name: str, root: Path, *extra: object) -> tuple[list[str], list[str]]:
+    def gate(self, function_name: str, root: Path, **kwargs: object) -> tuple[list[str], list[str]]:
         function = getattr(playable, function_name, None)
         self.assertIsNotNone(function, f"{function_name} is missing")
         notes: list[str] = []
         try:
-            return function(root, root, "HEAD", unverifiable=notes), notes
+            return function(root, root, "HEAD", unverifiable=notes, **kwargs), notes
         except Exception as error:  # noqa: BLE001 - red must fail on an assertion, not on an exception
             self.fail(f"uncaught {type(error).__name__}")
 
@@ -3268,6 +3283,32 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
             fx.clone, fx.clone, "HEAD", unverifiable=notes), [])
         self.assertTrue(any("historical commit unavailable" in note for note in notes), notes)
         self.assertTrue(any("outer rights-row pin" in note or "rights-row pin" in note for note in notes), notes)
+
+        manifest_path = fx.clone / fx.manifest_path
+        exact_manifest = manifest_path.read_bytes()
+        manifest_path.write_bytes(exact_manifest + b"\n")
+        self.assertTrue(any(("differs from the checked head" in error or
+                             "checked-head size and mode" in error) for error in
+                            playable.fixture_source_identity_errors(fx.clone, fx.clone, "HEAD")),
+                        "whitespace-only manifest edits must not pass the exact checked-head pin")
+        manifest_path.write_bytes(exact_manifest)
+
+        inventory_path = fx.clone / playable.RIGHTS_INVENTORY
+        exact_inventory = inventory_path.read_bytes()
+        inventory_path.write_bytes(exact_inventory + b"\n")
+        self.assertTrue(any(("rights inventory differs from the checked head" in error or
+                             "checked-head size and mode" in error) for error in
+                            playable.fixture_source_identity_errors(fx.clone, fx.clone, "HEAD")),
+                        "whitespace-only inventory edits must not pass the exact checked-head pin")
+        inventory_path.write_bytes(exact_inventory)
+
+        allowlist_path = fx.clone / playable.HISTORY_ALLOWLIST
+        exact_allowlist = allowlist_path.read_bytes()
+        allowlist_path.write_bytes(exact_allowlist + b"\n")
+        self.assertTrue(any("history allowlist differs from the checked head" in error for error in
+                            playable.fixture_source_identity_errors(fx.clone, fx.clone, "HEAD")),
+                        "whitespace-only allowlist edits must not alter provenance authority")
+        allowlist_path.write_bytes(exact_allowlist)
 
         shallow_notes: list[str] = []
         self.assertEqual(playable.fixture_source_identity_errors(
@@ -3320,6 +3361,58 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         problems = playable.fixture_source_identity_errors(
             fx.repo, fx.repo, "HEAD", allowlist=wrong_origin_pin)
         self.assertTrue(any("does not hold the recorded bytes" in problem for problem in problems), problems)
+
+    def test_source_identity_manifest_symlink_is_rejected_before_read(self) -> None:
+        fx = self.source_identity_fixture()
+        manifest_path = fx.clone / fx.manifest_path
+        outside = manifest_path.parent.parent / "outside-manifest.json"
+        outside.write_bytes(manifest_path.read_bytes())
+        manifest_path.unlink()
+        manifest_path.symlink_to(outside)
+        attempted = False
+        original_read_bytes = Path.read_bytes
+
+        def guarded_read(path: Path) -> bytes:
+            nonlocal attempted
+            if path == manifest_path:
+                attempted = True
+                raise AssertionError("symlink target must not be opened")
+            return original_read_bytes(path)
+
+        with mock.patch.object(Path, "read_bytes", guarded_read):
+            errors = playable.fixture_source_identity_errors(fx.clone, fx.clone, "HEAD")
+        self.assertTrue(any("not a regular file" in error for error in errors), errors)
+        self.assertFalse(attempted, "manifest symlink was opened before its leaf type was checked")
+
+    def test_source_identity_requires_checked_head_git_mode(self) -> None:
+        fx = self.source_identity_fixture()
+        source = fx.clone / "tests/source.c"
+        original_mode = source.stat().st_mode & 0o777
+        source.chmod(original_mode | 0o111)
+        try:
+            errors = playable.fixture_source_identity_errors(fx.clone, fx.clone, "HEAD")
+        finally:
+            source.chmod(original_mode)
+        self.assertTrue(any("checked-head path and bytes" in error for error in errors), errors)
+
+    def test_bounded_source_reader_rejects_symlinked_ancestor_and_nonregular_leaf_before_open(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-bounded-read-") as temporary:
+            base = Path(temporary)
+            source_root = base / "source"
+            outside = base / "outside"
+            source_root.mkdir()
+            outside.mkdir()
+            (outside / "item.txt").write_bytes(b"source bytes\n")
+            (source_root / "nested").symlink_to(outside, target_is_directory=True)
+            with mock.patch.object(playable.os, "open", side_effect=AssertionError("must reject before open")) as opened:
+                self.assertIsNone(playable._read_regular_source_bytes(source_root, "nested/item.txt"))
+                opened.assert_not_called()
+
+            (source_root / "nested").unlink()
+            (source_root / "item.txt").mkdir()
+            with mock.patch.object(playable.os, "open", side_effect=AssertionError("must reject before open")) as opened:
+                self.assertIsNone(playable._read_regular_source_bytes(source_root, "item.txt"))
+                opened.assert_not_called()
 
     def test_g5wr_01_cli_prints_one_line_per_tolerated_row(self) -> None:
         with mock.patch.object(playable, "check_docs", return_value=["note one", "note two"]), \
@@ -3375,6 +3468,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         disposition = (root / playable.DISPOSITION).read_text(encoding="utf-8")
         # (1) a fabricated rights revision
         self.add_rights_row(root, "tests/b.txt", "b\n", "f" * 40)
+        self.commit(root, "commit fabricated rights authority", playable.RIGHTS_INVENTORY.as_posix())
         errors, notes = self.gate("rights_revision_errors", root)
         self.assertEqual(len(errors), 1, errors)
         self.assertIn("tests/b.txt", errors[0])
@@ -3416,6 +3510,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         fx = self.fixture()
         for root, rights_message in ((fx.repo, "is not an ancestor of the checked head"), (fx.clone, "does not resolve")):
             self.add_rights_row(root, "tests/c.txt", "c\n", fx.F1)
+            self.commit(root, "commit unrelated rights row", playable.RIGHTS_INVENTORY.as_posix())
             self.append_disposition(root, f"| CR-04 | warning | fixed | revision `{fx.F1}` |")
             rights_errors, rights_notes, review_errors, review_notes = self.both(root)
             self.assertEqual(len(rights_errors), 1, rights_errors)
@@ -3447,14 +3542,16 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         side = self.commit(fx.repo, "side", "tests/a.txt")
         self.git(fx.repo, "checkout", "-q", "feature")
         self.write_inventory(fx.repo, [self.item("tests/a.txt", "two\n", side)])
+        self.commit(fx.repo, "commit side-branch rights row", playable.RIGHTS_INVENTORY.as_posix())
         errors, notes = self.gate("rights_revision_errors", fx.repo)
         self.assertEqual(len(errors), 1, errors)
         self.assertTrue(errors[0].endswith("is not an ancestor of the checked head"), errors[0])
         self.assertEqual(notes, [])
         self.git(fx.repo, "checkout", "-q", "--", playable.RIGHTS_INVENTORY.as_posix())
         self.git(fx.repo, "checkout", "-q", "--detach", fx.F2)
+        self.assertEqual(playable._revision_relation(fx.repo, fx.F3, fx.F2), "descendant")
         self.write_inventory(fx.repo, [self.item("tests/a.txt", "two\n", fx.F3)])
-        self.allowlist(fx.repo, [("rights", "tests/a.txt", fx.F3)], fx.B)
+        self.commit(fx.repo, "commit future-origin rights authority", playable.RIGHTS_INVENTORY.as_posix())
         errors, notes = self.gate("rights_revision_errors", fx.repo)
         self.assertEqual(len(errors), 1, errors)
         self.assertTrue(errors[0].endswith("is not an ancestor of the checked head"), errors[0])
@@ -3475,6 +3572,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         self.assertEqual(self.stale(root), ["review_citation CR-01"])
         (root / playable.DISPOSITION).write_text(text, encoding="utf-8")
         self.write_inventory(root, [self.item("tests/a.txt", "two\n", fx.F2, license="Apache-2.0")])
+        self.commit(root, "commit edited rights row", playable.RIGHTS_INVENTORY.as_posix())
         errors, notes = self.gate("rights_revision_errors", root)
         self.assertEqual(len(errors), 1, errors)
         self.assertTrue(errors[0].endswith("does not resolve"), errors[0])
@@ -3558,6 +3656,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         root = fx.clone
         bad = "a" * 39
         self.write_inventory(root, [self.item("tests/a.txt", "two\n", bad)])
+        self.commit(root, "commit malformed rights revision", playable.RIGHTS_INVENTORY.as_posix())
         real = subprocess.run
         with mock.patch("subprocess.run", wraps=real) as run:
             errors, _notes = self.gate("rights_revision_errors", root)
@@ -3588,7 +3687,8 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         self.allowlist(root, [("frontend_receipt", "source_revision", fx.F2)], fx.B)
         notes: list[str] = []
         try:
-            loaded = load(root, repository=fx.clone, head="HEAD", unverifiable=notes)
+            loaded = load(root, repository=fx.clone, head="HEAD", allowlist=playable.load_history_allowlist(root),
+                          unverifiable=notes)
         except Exception as error:  # noqa: BLE001
             self.fail(f"uncaught {type(error).__name__}")
         self.assertEqual(loaded, summary)
@@ -3599,21 +3699,25 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         write({**summary, "inventory_sha256": "0" * 64})
         notes = []
         with self.assertRaisesRegex(RuntimeError, "^frontend evidence revision cannot be checked$"):
-            load(root, repository=fx.clone, head="HEAD", unverifiable=notes)
+            load(root, repository=fx.clone, head="HEAD", allowlist=playable.load_history_allowlist(root),
+                 unverifiable=notes)
         self.assertEqual(notes, [])
         # Unrelated-but-resolving revision, not listed after the edit: today's not-an-ancestor message.
         with self.assertRaisesRegex(RuntimeError, "^frontend evidence revision is not a committed ancestor of the checked head$"):
-            load(root, repository=fx.repo, head="HEAD", unverifiable=notes)
+            load(root, repository=fx.repo, head="HEAD", allowlist=playable.load_history_allowlist(root),
+                 unverifiable=notes)
         # No allowlist at all: strict.
         write(summary)
         (root / "docs/history-allowlist.json").unlink()
         with self.assertRaisesRegex(RuntimeError, "^frontend evidence revision cannot be checked$"):
-            load(root, repository=fx.clone, head="HEAD", unverifiable=notes)
+            load(root, repository=fx.clone, head="HEAD", allowlist=playable.HistoryAllowlist.EMPTY,
+                 unverifiable=notes)
         # An ancestor revision is never tolerated: it takes the snapshot-binding path and today's error.
         self.allowlist(root, [("frontend_receipt", "source_revision", fx.F2)], fx.B)
         self.git(fx.repo, "checkout", "-q", "feature")
         with self.assertRaises(RuntimeError) as caught:
-            load(root, repository=fx.repo, head="HEAD", unverifiable=notes)
+            load(root, repository=fx.repo, head="HEAD", allowlist=playable.load_history_allowlist(root),
+                 unverifiable=notes)
         self.assertNotIn("allowlisted", str(caught.exception))
         self.assertEqual(notes, [])
 
@@ -3758,6 +3862,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         self.append_disposition(fx.repo, "| CR-03 | info | open | recorded |")
         third_party = self.item("third_party/x", "x\n", "upstream-pin")
         self.write_inventory(fx.repo, [*self.items(fx.repo), third_party])
+        self.commit(fx.repo, "commit inventory fixture", playable.RIGHTS_INVENTORY.as_posix())
         document = json.loads(self.generate(fx.repo))
         keys = [row["key"] for row in document["rows"]]
         self.assertEqual(len(keys), 4, keys)
@@ -3878,6 +3983,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         """An unresolvable base_revision (as in a shallow clone) is reported before any other docs check."""
         fx = self.fixture()
         self.allowlist(fx.repo, self.all_rows(fx), "e" * 40)
+        self.commit(fx.repo, "commit unanchored allowlist", playable.HISTORY_ALLOWLIST.as_posix())
         with self.assertRaisesRegex(RuntimeError, "^history allowlist base_revision is not a commit"):
             playable.check_docs(fx.repo)
 
@@ -3909,6 +4015,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         self.allowlist(root, [("reviewed_revision", "04-REVIEW.md", fx.F1), ("review_citation", "CR-01", fx.F2),
                               ("review_citation", "CR-01", short), ("review_citation", "GWR-01", fx.F2),
                               ("rights", "tests/a.txt", fx.F2)], fx.B)
+        self.commit(root, "commit allowlist test authority", playable.HISTORY_ALLOWLIST.as_posix())
         errors, notes = self.gate("review_provenance_errors", root)
         self.assertEqual(errors, [])
         self.assertEqual(len([note for note in notes if "CR-01" in note]), 2, notes)
@@ -3938,6 +4045,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         for label, base in (("unresolvable", "e" * 40), ("not an ancestor of head", fx.F4)):
             with self.subTest(label):
                 self.allowlist(fx.repo, self.all_rows(fx), base)
+                self.commit(fx.repo, "commit forged allowlist base", playable.HISTORY_ALLOWLIST.as_posix())
                 rights_errors, rights_notes, review_errors, review_notes = self.both(fx.repo)
                 self.assertEqual((rights_notes, review_notes), ([], []))
                 self.assertTrue(rights_errors and review_errors, (rights_errors, review_errors))
@@ -3945,6 +4053,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
                     playable.load_history_allowlist(fx.repo), fx.repo, "HEAD")
                 self.assertTrue(reported and "base_revision" in reported[0], reported)
         self.allowlist(fx.repo, self.all_rows(fx), fx.B)
+        self.commit(fx.repo, "restore valid allowlist base", playable.HISTORY_ALLOWLIST.as_posix())
         errors, notes = self.gate("rights_revision_errors", fx.repo)
         self.assertEqual((errors, len(notes)), ([], 1))
 
@@ -4024,6 +4133,8 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         # An untracked file holding the recorded bytes does not stand in for a missing tracked file.
         self.add_rights_row(fx.clone, "tests/untracked.txt", "u\n", fx.F2)
         self.allowlist(fx.clone, [*self.all_rows(fx), ("rights", "tests/untracked.txt", fx.F2)], fx.B)
+        self.commit(fx.clone, "commit untracked rights authority", playable.RIGHTS_INVENTORY.as_posix(),
+                    playable.HISTORY_ALLOWLIST.as_posix())
         errors, _notes = self.gate("rights_revision_errors", fx.clone)
         self.assertEqual(len(errors), 1, errors)
         self.assertIn("tests/untracked.txt", errors[0])

@@ -43,6 +43,7 @@ Z80_REVISION = "9e88298ce56319953ac7a43213a1120359f7a3a6"
 RETROARCH_SHA256 = "ed90b54434a2899de0ddbfed59f335255fb462c8691bd970a1a761ebb5656d65"
 INVENTORY_SCHEMA = "glueyneo.source-inventory/v1"
 MAX_ARCHIVE_BYTES = 256 * 1024 * 1024
+MAX_SOURCE_FILE_BYTES = 64 * 1024 * 1024
 MAX_GIT_COMMAND_SECONDS = 120
 
 
@@ -1137,7 +1138,7 @@ def load_frontend_evidence(source_root: Path, *, repository: Path | None = None,
         raise RuntimeError("frontend evidence revision cannot be checked") from error
     if ancestor.returncode != 0:
         if allowlist is None:
-            allowlist = load_history_allowlist(source_root)
+            allowlist = load_history_allowlist(source_root, repository=repository, head=head)
         allowlist = anchored_history_allowlist(allowlist, repository, head)
         if (_revision_relation(repository, revision, head) == "absent"
                 and allowlist.covers("frontend_receipt", "source_revision", revision, _canonical_digest(summary))):
@@ -1542,15 +1543,41 @@ class HistoryAllowlist:
 HistoryAllowlist.EMPTY = HistoryAllowlist(rows={})  # type: ignore[attr-defined]
 
 
-def load_history_allowlist(source_root: Path) -> HistoryAllowlist:
-    """Read `docs/history-allowlist.json`: an absent file is the empty allowlist, a malformed one fails closed."""
+def load_history_allowlist(source_root: Path, *, repository: Path | None = None,
+                           head: str | None = None) -> HistoryAllowlist:
+    """Read a bounded regular allowlist, optionally binding it to the exact checked-head blob and mode."""
     path = source_root / HISTORY_ALLOWLIST
-    if not path.is_file():
-        return HistoryAllowlist.EMPTY  # type: ignore[attr-defined]
     malformed = RuntimeError("history allowlist is malformed")
+    mismatch = RuntimeError("history allowlist differs from the checked head")
+    if (repository is None) != (head is None):
+        raise ValueError("history allowlist binding requires both repository and head")
     try:
-        document = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as error:
+        relative = HISTORY_ALLOWLIST.as_posix()
+        if repository is None:
+            raw = _read_regular_source_bytes(source_root, relative)
+            if raw is None:
+                try:
+                    path.lstat()
+                except FileNotFoundError:
+                    return HistoryAllowlist.EMPTY  # type: ignore[attr-defined]
+                raise malformed
+        else:
+            checked = _head_blob_entry(repository, head or "HEAD", relative)
+            if checked is None:
+                try:
+                    path.lstat()
+                except FileNotFoundError:
+                    return HistoryAllowlist.EMPTY  # type: ignore[attr-defined]
+                raise mismatch
+            checked_bytes, checked_mode = checked
+            raw = _read_regular_source_bytes(source_root, relative,
+                                             expected_size=len(checked_bytes), expected_mode=checked_mode)
+            if raw is None or raw != checked_bytes:
+                raise mismatch
+        document = json.loads(raw.decode("utf-8"))
+    except (OSError, UnicodeError, ValueError) as error:
+        if error is mismatch:
+            raise
         raise malformed from error
     if (not isinstance(document, dict) or type(document.get("schema")) is not int or document["schema"] != 1
             or not isinstance(document.get("scope"), str) or not isinstance(document.get("rows"), list)
@@ -1687,6 +1714,14 @@ def _head_blob(repository: Path, head: str, path: str) -> bytes | None:
     path through a symlinked directory (which Git does not resolve), a submodule or a missing entry
     yields None. `path` is form-validated by `_rights_path_is_relative_posix` before this call.
     """
+    entry = _head_blob_entry(repository, head, path)
+    return entry[0] if entry is not None else None
+
+
+def _head_blob_entry(repository: Path, head: str, path: str) -> tuple[bytes, str] | None:
+    """Committed bytes and Git regular-file mode for a path at `head`, or None."""
+    if not _rights_path_is_relative_posix(path):
+        return None
     listing = _git_stdout(repository, ["ls-tree", "-z", head, "--", path])
     if not listing:
         return None
@@ -1698,7 +1733,98 @@ def _head_blob(repository: Path, head: str, path: str) -> bytes | None:
     if (listed != path or len(fields) != 3 or fields[0] not in ("100644", "100755") or fields[1] != "blob"
             or re.fullmatch(r"[0-9a-f]{40,64}", fields[2]) is None):
         return None
-    return _git_bytes(repository, ["cat-file", "blob", fields[2]])
+    size_text = _git_stdout(repository, ["cat-file", "-s", fields[2]])
+    if size_text is None or re.fullmatch(r"[0-9]+", size_text.strip()) is None:
+        return None
+    size = int(size_text.strip())
+    if size > MAX_SOURCE_FILE_BYTES:
+        return None
+    data = _git_bytes(repository, ["cat-file", "blob", fields[2]])
+    return (data, fields[0]) if data is not None and len(data) == size else None
+
+
+def _read_regular_source_bytes(source_root: Path, relative: str, *, expected_size: int | None = None,
+                               expected_mode: str | None = None) -> bytes | None:
+    """Read a bounded regular file under the declared root without following path symlinks."""
+    if (not _rights_path_is_relative_posix(relative) or
+            (expected_size is not None and (type(expected_size) is not int or expected_size <= 0 or
+                                            expected_size > MAX_SOURCE_FILE_BYTES)) or
+            (expected_mode is not None and expected_mode not in {"100644", "100755"})):
+        return None
+    limit = expected_size if expected_size is not None else MAX_SOURCE_FILE_BYTES
+    descriptor: int | None = None
+    directory_fd: int | None = None
+    try:
+        root = source_root.resolve(strict=True)
+        root_info = root.lstat()
+        if not stat.S_ISDIR(root_info.st_mode):
+            return None
+        parts = relative.split("/")
+        target = root
+        for component in parts[:-1]:
+            target = target / component
+            parent_info = target.lstat()
+            if not stat.S_ISDIR(parent_info.st_mode):
+                return None
+        target = target / parts[-1]
+        before_info = target.lstat()
+        before = _regular_source_signature(before_info)
+        working_mode = "100755" if before_info.st_mode & 0o111 else "100644"
+        if (before is None or before_info.st_size > limit or
+                (expected_mode is not None and working_mode != expected_mode) or
+                (expected_size is not None and before_info.st_size != expected_size)):
+            return None
+
+        nofollow = getattr(os, "O_NOFOLLOW", 0)
+        nonblock = getattr(os, "O_NONBLOCK", 0)
+        leaf_flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | nofollow | nonblock
+        use_directory_fds = (os.open in getattr(os, "supports_dir_fd", set()) and
+                             hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"))
+        if use_directory_fds:
+            directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+            directory_fd = os.open(root, directory_flags)
+            for component in parts[:-1]:
+                next_fd = os.open(component, directory_flags, dir_fd=directory_fd)
+                os.close(directory_fd)
+                directory_fd = next_fd
+            descriptor = os.open(parts[-1], leaf_flags, dir_fd=directory_fd)
+        else:
+            descriptor = os.open(target, leaf_flags)
+
+        opened = _regular_source_signature(os.fstat(descriptor))
+        if opened is None or opened != before:
+            return None
+        with os.fdopen(descriptor, "rb") as stream:
+            descriptor = None
+            data = stream.read(limit + 1)
+            after = _regular_source_signature(os.fstat(stream.fileno()))
+        try:
+            path_after = _regular_source_signature(target.lstat())
+        except OSError:
+            return None
+        if (after != before or path_after != before or len(data) > limit or
+                (expected_size is not None and len(data) != expected_size)):
+            return None
+        return data
+    except (OSError, RuntimeError, ValueError):
+        return None
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        if directory_fd is not None:
+            try:
+                os.close(directory_fd)
+            except OSError:
+                pass
+
+
+def _regular_source_signature(file_stat: os.stat_result) -> tuple[int, int, int, int, int, int] | None:
+    if not stat.S_ISREG(file_stat.st_mode) or file_stat.st_nlink != 1:
+        return None
+    return (file_stat.st_dev, getattr(file_stat, "st_ino", 0),
+            getattr(file_stat, "st_mtime_ns", int(file_stat.st_mtime * 1_000_000_000)),
+            getattr(file_stat, "st_ctime_ns", int(file_stat.st_ctime * 1_000_000_000)),
+            file_stat.st_size, int(bool(file_stat.st_mode & 0o111)))
 
 
 def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
@@ -1723,10 +1849,11 @@ def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
     listed pre-ship rows of the first-playable-game milestone branch. `allowlist=None` reads the file
     under `source_root`.
     """
-    if allowlist is None:
-        allowlist = load_history_allowlist(source_root)
-    allowlist = anchored_history_allowlist(allowlist, repository, head)
-    text = (source_root / RIGHTS_INVENTORY).read_text(encoding="utf-8")
+    inventory_path = RIGHTS_INVENTORY.as_posix()
+    inventory_bytes = _read_regular_source_bytes(source_root, inventory_path)
+    if inventory_bytes is None:
+        return ["rights inventory is not a regular file without symlinked path components"]
+    text = inventory_bytes.decode("utf-8")
     blocks = re.findall(r"```json\s*\n(.*?)\n```", text, re.DOTALL)
     if len(blocks) != 1:
         raise RuntimeError("rights inventory must contain one JSON record")
@@ -1736,6 +1863,29 @@ def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
         raise RuntimeError("rights inventory JSON is malformed") from error
     if not isinstance(items, list):
         raise RuntimeError("rights inventory JSON is malformed")
+    for item in items:
+        path = item.get("path") if isinstance(item, dict) else None
+        if not _rights_path_is_relative_posix(path):
+            return [f"rights path {path} is not a relative POSIX path"]
+        if path.startswith(RIGHTS_EXEMPT_PREFIX):
+            continue
+        revision = item.get("source_revision")
+        if not isinstance(revision, str) or RIGHTS_REVISION.fullmatch(revision) is None:
+            return [f"rights source_revision for {path} is not 40 hex"]
+
+    inventory_entry = _head_blob_entry(repository, head, inventory_path)
+    if inventory_entry is None:
+        return ["rights inventory is absent from the checked head"]
+    verified_inventory = _read_regular_source_bytes(
+        source_root, inventory_path, expected_size=len(inventory_entry[0]), expected_mode=inventory_entry[1])
+    if inventory_bytes != inventory_entry[0] or verified_inventory != inventory_entry[0]:
+        return ["rights inventory differs from the checked head"]
+    if allowlist is None:
+        try:
+            allowlist = load_history_allowlist(source_root, repository=repository, head=head)
+        except RuntimeError as error:
+            return [str(error)]
+    allowlist = anchored_history_allowlist(allowlist, repository, head)
     errors: list[str] = []
     for item in items:
         path = item.get("path") if isinstance(item, dict) else None
@@ -1818,24 +1968,41 @@ def fixture_source_identity_errors(source_root: Path, repository: Path, head: st
     public-content job remains responsible for proving source ancestry before merge.
     """
     manifest_path = FIXTURE_RIGHTS_MANIFEST.as_posix()
-    checked_manifest = _head_blob(repository, head, manifest_path)
+    checked_entry = _head_blob_entry(repository, head, manifest_path)
     manifest_file = source_root / FIXTURE_RIGHTS_MANIFEST
-    if checked_manifest is None:
-        if not manifest_file.exists():
+    if checked_entry is None:
+        try:
+            manifest_file.lstat()
+        except FileNotFoundError:
             return []
         return ["fixture rights manifest is absent from the checked head"]
+    checked_manifest, checked_mode = checked_entry
     try:
         checked_value = json.loads(checked_manifest.decode("utf-8"))
-        working_bytes = manifest_file.read_bytes()
+        working_bytes = _read_regular_source_bytes(
+            source_root, manifest_path, expected_size=len(checked_manifest), expected_mode=checked_mode)
+        if working_bytes is None:
+            return ["fixture rights manifest is not a regular file with checked-head size and mode"]
         working_value = json.loads(working_bytes.decode("utf-8"))
     except (OSError, UnicodeError, ValueError) as error:
         return [f"fixture rights manifest is unreadable ({type(error).__name__})"]
     value = working_value if manifest is None else manifest
-    if value != checked_value or working_value != checked_value:
+    if working_bytes != checked_manifest or value != checked_value:
         return ["fixture rights manifest differs from the checked head"]
 
     try:
-        inventory_text = (source_root / RIGHTS_INVENTORY).read_text(encoding="utf-8")
+        inventory_path = RIGHTS_INVENTORY.as_posix()
+        checked_inventory_entry = _head_blob_entry(repository, head, inventory_path)
+        if checked_inventory_entry is None:
+            return ["rights inventory is absent from the checked head"]
+        checked_inventory, inventory_mode = checked_inventory_entry
+        inventory_bytes = _read_regular_source_bytes(
+            source_root, inventory_path, expected_size=len(checked_inventory), expected_mode=inventory_mode)
+        if inventory_bytes is None:
+            return ["rights inventory is not a regular file with checked-head size and mode"]
+        if inventory_bytes != checked_inventory:
+            return ["rights inventory differs from the checked head"]
+        inventory_text = inventory_bytes.decode("utf-8")
         blocks = re.findall(r"```json\s*\n(.*?)\n```", inventory_text, re.DOTALL)
         if len(blocks) != 1:
             return ["rights inventory must contain one JSON record"]
@@ -1852,7 +2019,11 @@ def fixture_source_identity_errors(source_root: Path, repository: Path, head: st
     if outer.get("rights") != "affirmative" or hashlib.sha256(checked_manifest).hexdigest() != outer.get("sha256"):
         return ["fixture rights manifest does not match its affirmative outer rights row"]
 
-    selected_allowlist = allowlist if allowlist is not None else load_history_allowlist(source_root)
+    try:
+        selected_allowlist = (allowlist if allowlist is not None else
+                              load_history_allowlist(source_root, repository=repository, head=head))
+    except RuntimeError as error:
+        return [str(error)]
     observed: list[str] = []
     shallow_output = (_git_stdout(repository, ["rev-parse", "--is-shallow-repository"]) or "").strip()
     if shallow_output not in {"true", "false"}:
@@ -1880,8 +2051,8 @@ def fixture_source_identity_errors(source_root: Path, repository: Path, head: st
     if outer_relation == "absent" and not outer_allowed:
         return ["fixture rights manifest outer source revision is missing and its rights row is not allowlisted"]
     if outer_relation == "ancestor" or outer_resolves:
-        outer_bytes = _git_bytes(repository, ["cat-file", "blob", f"{outer_revision}:{manifest_path}"])
-        if outer_bytes != checked_manifest:
+        outer_entry = _head_blob_entry(repository, outer_revision, manifest_path)
+        if outer_entry is None or outer_entry[0] != checked_manifest:
             return ["fixture rights manifest outer source revision does not hold the checked-head manifest bytes"]
         if outer_relation == "absent":
             _note_once(observed, "fixture rights-manifest source revision resolves but is not ordered with the checked head; its exact rights-row pin and cited manifest blob match")
@@ -1909,15 +2080,14 @@ def fixture_source_identity_errors(source_root: Path, repository: Path, head: st
             errors.append(f"fixture source identity {pointer} has malformed path, revision, digest, or byte count")
             continue
         by_path_revision.add((path, revision))
-        head_bytes = _head_blob(repository, head, path)
-        working_path = source_root / path
-        try:
-            current_bytes = working_path.read_bytes()
-            regular = working_path.is_file() and not working_path.is_symlink()
-        except OSError:
-            current_bytes = None
-            regular = False
-        if (not regular or head_bytes is None or current_bytes != head_bytes or
+        head_entry = _head_blob_entry(repository, head, path)
+        if head_entry is None:
+            errors.append(f"fixture source identity {pointer} does not match the checked-head path and bytes")
+            continue
+        head_bytes, source_mode = head_entry
+        current_bytes = _read_regular_source_bytes(
+            source_root, path, expected_size=size, expected_mode=source_mode)
+        if (current_bytes is None or current_bytes != head_bytes or
                 len(head_bytes) != size or hashlib.sha256(head_bytes).hexdigest() != digest):
             errors.append(f"fixture source identity {pointer} does not match the checked-head path and bytes")
             continue
@@ -1928,14 +2098,16 @@ def fixture_source_identity_errors(source_root: Path, repository: Path, head: st
             errors.append(f"fixture source identity {pointer} revision {revision[:12]} is a descendant of the checked head")
             continue
         if relation == "ancestor":
-            recorded = _git_bytes(repository, ["cat-file", "blob", f"{revision}:{path}"])
+            historical_entry = _head_blob_entry(repository, revision, path)
+            recorded = historical_entry[0] if historical_entry is not None else None
             if recorded is None or len(recorded) != size or hashlib.sha256(recorded).hexdigest() != digest:
                 errors.append(f"fixture source identity {pointer} revision {revision[:12]} does not hold the recorded bytes")
         elif resolves:
             if not outer_allowed:
                 errors.append(f"fixture source identity {pointer} is available but unordered with the checked head and the outer rights-manifest row is not pinned")
                 continue
-            recorded = _git_bytes(repository, ["cat-file", "blob", f"{revision}:{path}"])
+            historical_entry = _head_blob_entry(repository, revision, path)
+            recorded = historical_entry[0] if historical_entry is not None else None
             if recorded is None or len(recorded) != size or hashlib.sha256(recorded).hexdigest() != digest:
                 errors.append(f"fixture source identity {pointer} revision {revision[:12]} does not hold the recorded bytes")
             else:
@@ -2023,7 +2195,7 @@ def review_provenance_errors(source_root: Path, repository: Path, head: str, *,
     under `source_root`.
     """
     if allowlist is None:
-        allowlist = load_history_allowlist(source_root)
+        allowlist = load_history_allowlist(source_root, repository=repository, head=head)
     allowlist = anchored_history_allowlist(allowlist, repository, head)
     reviewed = _reviewed_revision((source_root / REVIEW).read_text(encoding="utf-8"))
     anchor_unverifiable = False
@@ -2073,13 +2245,15 @@ def review_provenance_errors(source_root: Path, repository: Path, head: str, *,
     return errors
 
 
-def history_allowlist_stale(source_root: Path) -> list[str]:
+def history_allowlist_stale(source_root: Path, *, repository: Path | None = None,
+                            head: str | None = None) -> list[str]:
     """`<kind> <key>` of each listed row whose current record is missing or no longer matches its pin (report only).
 
     A voided row is already evaluated strictly by the gates, so `check_docs` does not fail on it; this
     report feeds the pre-ship regeneration step. Empty when no allowlist is tracked.
     """
-    allowlist = load_history_allowlist(source_root)
+    allowlist = (load_history_allowlist(source_root, repository=repository, head=head)
+                 if repository is not None and head is not None else load_history_allowlist(source_root))
     if not allowlist.rows:
         return []
     current: dict[tuple[str, str], str | None] = {}
@@ -2237,14 +2411,10 @@ def history_allowlist_document(source_root: Path, repository: Path, head: str,
 def history_allowlist_is_current(source_root: Path, repository: Path, head: str,
                                  base: str = HISTORY_DEFAULT_BASE) -> bool:
     """True only when the tracked allowlist file equals what `history_allowlist_document` produces now."""
-    path = source_root / HISTORY_ALLOWLIST
-    if not path.is_file():
-        return False
     document = history_allowlist_document(source_root, repository, head, base)
-    try:
-        return path.read_bytes() == document.encode("utf-8")
-    except OSError:
-        return False
+    working = _read_regular_source_bytes(source_root, HISTORY_ALLOWLIST.as_posix(),
+                                         expected_size=len(document.encode("utf-8")))
+    return working == document.encode("utf-8")
 
 
 def history_allowlist_check_applies(source_root: Path, repository: Path, head: str, base: str) -> str | None:
@@ -2266,7 +2436,8 @@ def history_allowlist_check_applies(source_root: Path, repository: Path, head: s
         raise RuntimeError("history allowlist base is not a revision or branch name")
     if _git_exit(repository, ["diff", "--quiet", base, head, "--", HISTORY_ALLOWLIST.as_posix()]) != 0:
         return f"{HISTORY_ALLOWLIST.as_posix()} differs from {base}"
-    for _kind, _key, revision in sorted(load_history_allowlist(source_root).rows):
+    for _kind, _key, revision in sorted(
+            load_history_allowlist(source_root, repository=repository, head=head).rows):
         if _revision_relation(repository, revision, head) == "ancestor":
             return f"listed revision {revision[:12]} is in this history"
     return None
@@ -2285,11 +2456,12 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
     Returns the tolerated items: one note per listed pre-ship row of `docs/history-allowlist.json`
     whose cited revision is history-absent (G5WR-01); empty on full history or with no allowlist.
     """
-    allowlist = load_history_allowlist(source_root)
-    notes: list[str] = []
     binding = repository
     if binding is None and (source_root / ".git").exists():
         binding = source_root
+    allowlist = (load_history_allowlist(source_root, repository=binding, head=head)
+                 if binding is not None else load_history_allowlist(source_root))
+    notes: list[str] = []
     if binding is not None:
         # G7IN-01: a base_revision missing from this repository (for example a shallow clone) is
         # reported before the frontend gate turns the emptied allowlist into a less specific error;
@@ -2512,7 +2684,7 @@ def main() -> int:
                 print(f"History allowlist is current ({len(load_history_allowlist(ROOT).rows)} rows).")
                 return 0
             message = "history allowlist is stale or missing; run --history-allowlist write"
-            stale = history_allowlist_stale(ROOT) if (ROOT / HISTORY_ALLOWLIST).is_file() else []
+            stale = history_allowlist_stale(ROOT)
             if stale:
                 message += "; stale rows: " + ", ".join(stale)
             emit_error("", message)
