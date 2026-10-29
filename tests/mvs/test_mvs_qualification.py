@@ -1053,6 +1053,28 @@ class ImporterTests(unittest.TestCase):
                     self.assertNotIn("input_response", result)
                     self.assertEqual(len(calls), 1 if stage == "after-import" else 0)
 
+    def test_media_identity_accepts_native_absolute_paths_and_rejects_relative_paths(self) -> None:
+        from tools.mvs import qualify_local_boot as qualification
+
+        def identity(path: str, digest: str) -> dict[str, object]:
+            return {"path": path, "size": 1, "sha256": digest * 64}
+
+        self.assertTrue(qualification._media_identity_is_valid([
+            identity("/private/game.zip", "a"),
+            identity("/private/bios.zip", "b"),
+        ]))
+        self.assertTrue(qualification._media_identity_is_valid([
+            identity("C:/private/game.zip", "a"),
+            identity("D:/private/bios.zip", "b"),
+        ]))
+        for path in ("relative/game.zip", "C:relative/game.zip",
+                     "C:/../game.zip", "C:\\private\\game.zip"):
+            with self.subTest(path=path):
+                self.assertFalse(qualification._media_identity_is_valid([
+                    identity(path, "a"),
+                    identity("/private/bios.zip", "b"),
+                ]))
+
     def test_selected_qualification_uses_expected_media_snapshots(self) -> None:
         from tools.mvs import qualify_local_boot as qualification
 
@@ -1132,6 +1154,15 @@ class ImporterTests(unittest.TestCase):
                     active_frames=1, capture_frames=[0],
                     capture_directory=new_run_directory(),
                     expected_media_identity=expected_identity)
+
+            if not qualification._private_active_capture_directory_open_supported():
+                self.assertEqual(result["status"], "media_identity_rejected")
+                self.assertEqual(importer_arguments, [])
+                self.assertTrue(all(
+                    not (run_directory / name).exists()
+                    for run_directory in run_directories
+                    for name in ("media-game.zip", "media-bios.zip")))
+                return
 
             self.assertEqual(result["status"], "active_frames_completed")
             self.assertEqual(len(importer_arguments), 1)
@@ -1226,6 +1257,14 @@ class ImporterTests(unittest.TestCase):
                     capture_directory=run_directory,
                     expected_media_identity=expected_identity)
 
+            if not qualification._private_active_capture_directory_open_supported():
+                self.assertEqual(result["status"], "media_identity_rejected")
+                self.assertFalse(injected[0])
+                self.assertFalse(snapshot.exists())
+                self.assertEqual(victim.read_bytes(), expected_victim)
+                self.assertEqual(calls, [])
+                return
+
             self.assertTrue(injected[0])
             self.assertEqual(result["status"], "media_identity_rejected")
             self.assertEqual(victim.read_bytes(), expected_victim)
@@ -1293,6 +1332,14 @@ class ImporterTests(unittest.TestCase):
                     scripted_start=True, active_frames=1, capture_frames=[0],
                     capture_directory=run_directory,
                     expected_media_identity=expected_identity)
+
+            if not qualification._private_active_capture_directory_open_supported():
+                self.assertEqual(result["status"], "media_identity_rejected")
+                self.assertFalse(expanded[0])
+                self.assertFalse(snapshot.exists())
+                self.assertEqual(game.stat().st_size, expected_size)
+                self.assertEqual(calls, [])
+                return
 
             self.assertTrue(expanded[0])
             self.assertEqual(result["status"], "media_identity_rejected")
@@ -1386,6 +1433,17 @@ class ImporterTests(unittest.TestCase):
                     scripted_start=True, active_frames=1, capture_frames=[0],
                     capture_directory=run_directory,
                     expected_media_identity=expected_identity)
+
+            if not qualification._private_active_capture_directory_open_supported():
+                self.assertEqual(validations[0], 1)
+                self.assertEqual(result["status"], "media_identity_rejected")
+                self.assertTrue(run_directory.is_dir())
+                self.assertFalse(moved_directory.exists())
+                self.assertEqual(sentinel.read_bytes(), expected_sentinel)
+                self.assertEqual({path.name for path in redirected.iterdir()},
+                                 {"sentinel.bin"})
+                self.assertEqual(commands, [])
+                return
 
             self.assertEqual(validations[0], 2)
             self.assertEqual(result["status"], "media_identity_rejected")
@@ -4830,6 +4888,16 @@ class ImporterTests(unittest.TestCase):
             .encode("utf-8")).hexdigest()
         self.assertTrue(active_scene_native_contract_is_valid(contract))
 
+        windows_paths = copy.deepcopy(contract)
+        windows_paths["code_identity"]["importer"]["path"] = "C:/local/importer"
+        windows_paths["code_identity"]["qualifier"]["path"] = "D:/local/qualifier"
+        windows_paths["evaluator_identity"]["path"] = "E:/local/evaluator.py"
+        windows_paths["contract_identity"] = hashlib.sha256(
+            json.dumps({key: value for key, value in windows_paths.items()
+                        if key != "contract_identity"}, sort_keys=True,
+                       separators=(",", ":")).encode("utf-8")).hexdigest()
+        self.assertTrue(active_scene_native_contract_is_valid(windows_paths))
+
         release_at_t0 = {**contract,
                          "schedule": {**contract["schedule"],
                                       "entry_inputs": "30:0x2,600:0x0"},
@@ -6778,6 +6846,7 @@ def main() -> int:
     elif args.mode == "positive":
         suite = unittest.TestSuite([
             ImporterTests("test_identity_importer_links_configured_sdk_sanitizer"),
+            ImporterTests("test_media_identity_accepts_native_absolute_paths_and_rejects_relative_paths"),
             ImporterTests("test_selected_import_output_reaches_frontend_bundle_validator"),
             ImporterTests("test_deflated_archive_normalizes_selected_profile"),
             ImporterTests("test_optional_audio_bios_emits_v2_bundle_and_preserves_exact_bytes"),

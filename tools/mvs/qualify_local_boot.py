@@ -8,7 +8,7 @@ import importlib.util
 import json
 import math
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import re
 import shutil
 import stat
@@ -1576,11 +1576,24 @@ def _file_identity(path: Path) -> dict[str, object] | None:
         return None
 
 
+def _absolute_identity_path(value: object) -> bool:
+    """Accept canonical absolute identities from POSIX and Windows hosts."""
+    if not isinstance(value, str) or not value or "\\" in value or "\x00" in value:
+        return False
+    posix = PurePosixPath(value)
+    windows = PureWindowsPath(value)
+    return (
+        posix.as_posix() == value and
+        (posix.is_absolute() or windows.is_absolute()) and
+        ".." not in posix.parts and ".." not in windows.parts
+    )
+
+
 def _media_identity_is_valid(value: object) -> bool:
     return (
         isinstance(value, list) and len(value) == 2 and
         all(isinstance(item, dict) and set(item) == {"path", "size", "sha256"} and
-            isinstance(item.get("path"), str) and item["path"].startswith("/") and
+            _absolute_identity_path(item.get("path")) and
             type(item.get("size")) is int and item["size"] > 0 and
             isinstance(item.get("sha256"), str) and
             re.fullmatch(r"[0-9a-f]{64}", item["sha256"]) is not None
@@ -1597,10 +1610,14 @@ def _media_identity_content_matches(actual: object, expected: object) -> bool:
             for actual_item, expected_item in zip(actual, expected)))
 
 
+def _private_active_capture_directory_open_supported() -> bool:
+    return (os.open in getattr(os, "supports_dir_fd", set()) and
+            hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"))
+
+
 def _open_private_active_capture_directory(path: Path) -> int | None:
     if (path.is_absolute() or not path.parts or ".." in path.parts or
-            os.open not in getattr(os, "supports_dir_fd", set()) or
-            not hasattr(os, "O_DIRECTORY") or not hasattr(os, "O_NOFOLLOW")):
+            not _private_active_capture_directory_open_supported()):
         return None
     directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
     directory_fd: int | None = None
@@ -2959,8 +2976,7 @@ def active_scene_contract_is_valid(contract: object) -> bool:
     evaluator_identity = contract.get("evaluator_identity")
     if (not isinstance(evaluator_identity, dict) or
             set(evaluator_identity) != {"path", "scope", "sha256"} or
-            not isinstance(evaluator_identity.get("path"), str) or
-            not evaluator_identity["path"].startswith("/") or
+            not _absolute_identity_path(evaluator_identity.get("path")) or
             evaluator_identity.get("scope") != "production" or
             not isinstance(evaluator_identity.get("sha256"), str) or
             re.fullmatch(r"[0-9a-f]{64}", evaluator_identity["sha256"]) is None):
@@ -3162,8 +3178,7 @@ def active_scene_native_contract_is_valid(contract: object) -> bool:
     if (not isinstance(identity, dict) or set(identity) != {"importer", "qualifier"} or
             any(not isinstance(value, dict) or
                 set(value) != {"path", "scope", "sha256"} or
-                not isinstance(value.get("path"), str) or
-                not value["path"].startswith("/") or
+                not _absolute_identity_path(value.get("path")) or
                 value.get("scope") != "production" or
                 not isinstance(value.get("sha256"), str) or
                 re.fullmatch(r"[0-9a-f]{64}", value["sha256"]) is None
