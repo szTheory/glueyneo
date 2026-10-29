@@ -395,9 +395,9 @@
       },
       {
         "path": "tools/verify_sdk.py",
-        "sha256": "e44831e11922cea2ed73c2e31bed3d54571185b9881dc0183d8bc2fd7388b68d",
-        "bytes": 177191,
-        "source_revision": "1ab88c0e25501067e56321d375a2aa8281230c6b",
+        "sha256": "ef35d6f30a84c2370987b20f32c15f73396bb0e0ea32d5bcb816f8b3d49d5ed7",
+        "bytes": 177953,
+        "source_revision": "830f94eb8303f51a024a82121d3a0341f9454c31",
         "license": "MIT",
         "role": "SDK route selection, measurement validation and source identity harness."
       }
@@ -595,11 +595,11 @@
       {
         "path": "docs/native-save.md",
         "bytes": 27665,
-        "sha256": "e8133a7666ae3501ff82712bbe2844ec512d8931214223e349398af154ba3415",
+        "sha256": "91028f806ebcbfcf571d3027fc8daeb6142c04bdf332240983cc0cfc8ac39e65",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract.",
-        "source_revision": "16921e82ed9faa42119ca2f0b85b4b609b6604a5"
+        "source_revision": "830f94eb8303f51a024a82121d3a0341f9454c31"
       },
       {
         "path": "docs/native-state.md",
@@ -676,11 +676,12 @@
       },
       {
         "path": "tests/libretro/test_frontend_registration.py",
-        "bytes": 21863,
-        "sha256": "abff59e691a24d4c86588d268ec10c96dad190dc891477b92873ae01ee8ff9dc",
+        "bytes": 22837,
+        "sha256": "9c55fc6d26c5c49759e37a689ed34d2c94fb8577910d84345259da43c72297de",
         "license": "MIT",
         "notice": "LICENSE",
-        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract.",
+        "source_revision": "830f94eb8303f51a024a82121d3a0341f9454c31"
       },
       {
         "path": "tests/libretro/test_frontend_replay.py",
@@ -724,12 +725,12 @@
       },
       {
         "path": "tools/verify_sdk.py",
-        "bytes": 177191,
-        "sha256": "e44831e11922cea2ed73c2e31bed3d54571185b9881dc0183d8bc2fd7388b68d",
+        "bytes": 177953,
+        "sha256": "ef35d6f30a84c2370987b20f32c15f73396bb0e0ea32d5bcb816f8b3d49d5ed7",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; exact SDK, state-isolation, and hostile CTest inventories are bound in the evidence selector.",
-        "source_revision": "1ab88c0e25501067e56321d375a2aa8281230c6b"
+        "source_revision": "830f94eb8303f51a024a82121d3a0341f9454c31"
       }
     ]
   },
