@@ -367,6 +367,87 @@ def packaged_consumer_executable(consumer_build: Path, target: str) -> Path:
     raise release_manifest.ReleaseError(f"packaged SDK omitted consumer executable: {target}")
 
 
+def archive_scan_failure_identity(
+    label: str, findings: list[dict[str, object]], source_root: Path, sdk_root: Path,
+) -> str:
+    """Summarize source/install notice identity without exposing contents or host paths."""
+    safe_findings = []
+    for finding in findings[:8]:
+        location = finding.get("location")
+        normalized_location = location.replace("\\", "/") if isinstance(location, str) else ""
+        drive_absolute = (len(normalized_location) >= 3 and normalized_location[0].isalpha()
+                          and normalized_location[1:3] == ":/")
+        if (normalized_location.startswith("/") or drive_absolute
+                or ".." in normalized_location.split("/")):
+            normalized_location = "<redacted-location>"
+        safe_findings.append({
+            "location": normalized_location[:240] if normalized_location else "<redacted-location>",
+            "rules": sorted(rule for rule in finding.get("rules", []) if isinstance(rule, str))[:8],
+        })
+    summary: dict[str, object] = {
+        "archive": label,
+        "finding_count": len(findings),
+        "findings": safe_findings,
+    }
+    try:
+        identities = []
+        for variant in ("static", "shared"):
+            data = (sdk_root / variant / "share/licenses/Glueyneo/zlib/LICENSE").read_bytes()
+            identities.append({
+                "path": f"{variant}/share/licenses/Glueyneo/zlib/LICENSE",
+                "bytes": len(data),
+                "sha256": hashlib.sha256(data).hexdigest(),
+            })
+        source_license = (source_root / "third_party/zlib/LICENSE").read_bytes()
+    except OSError:
+        summary["license_identity_status"] = "unavailable"
+    else:
+        summary["source_license"] = {
+            "bytes": len(source_license),
+            "sha256": hashlib.sha256(source_license).hexdigest(),
+        }
+        summary["installed_licenses"] = identities
+    return json.dumps(summary, sort_keys=True, separators=(",", ":"))
+
+
+class ReleaseArchiveScanDiagnosticTests(unittest.TestCase):
+    def test_failure_summary_is_path_safe_and_binds_exact_license_bytes(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="glueyneo-archive-scan-diagnostic-") as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            sdk = root / "sdk"
+            (source / "third_party/zlib").mkdir(parents=True)
+            license_bytes = b"upstream license fixture\n"
+            (source / "third_party/zlib/LICENSE").write_bytes(license_bytes)
+            for variant in ("static", "shared"):
+                target = sdk / variant / "share/licenses/Glueyneo/zlib/LICENSE"
+                target.parent.mkdir(parents=True)
+                target.write_bytes(license_bytes)
+            findings = [
+                {"location": str(root / "private"), "rules": ["private-identity"]},
+                {"location": "Q:\\fixture\\private", "rules": ["private-identity"]},
+            ]
+
+            summary = archive_scan_failure_identity("SDK", findings, source, sdk)
+
+            self.assertNotIn(str(root), summary)
+            self.assertNotIn("Q:", summary)
+            self.assertIn("<redacted-location>", summary)
+            self.assertIn(hashlib.sha256(license_bytes).hexdigest(), summary)
+            self.assertIn('"finding_count":2', summary)
+
+    def test_failure_summary_has_value_free_fallback_when_license_reads_fail(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="glueyneo-archive-scan-fallback-") as temporary:
+            root = Path(temporary)
+            findings = [{"location": str(root / "private"), "rules": ["private-identity"]}]
+            with mock.patch.object(Path, "read_bytes", side_effect=OSError("host path must not escape")):
+                summary = archive_scan_failure_identity("SDK", findings, root, root)
+
+            self.assertNotIn(str(root), summary)
+            self.assertNotIn("host path must not escape", summary)
+            self.assertIn('"license_identity_status":"unavailable"', summary)
+
+
 class PackagedConsumerExecutableTests(unittest.TestCase):
     def test_target_symlink_cannot_select_an_outside_executable(self) -> None:
         with tempfile.TemporaryDirectory(prefix="glueyneo-consumer-symlink-") as temporary:
@@ -821,22 +902,9 @@ class ReleaseConsumerTests(unittest.TestCase):
                 content_errors.append(f"{label}: {error}")
             else:
                 if report["findings"]:
-                    license_identities = []
-                    for variant in ("static", "shared"):
-                        license_path = (sdk_root / variant / "share/licenses/Glueyneo/zlib/LICENSE")
-                        license_data = license_path.read_bytes()
-                        license_identities.append({
-                            "path": f"{variant}/share/licenses/Glueyneo/zlib/LICENSE",
-                            "bytes": len(license_data),
-                            "sha256": hashlib.sha256(license_data).hexdigest(),
-                        })
-                    source_license = (source_root / "third_party/zlib/LICENSE").read_bytes()
-                    self.fail(
-                        f"{label} archive content findings={report['findings']}; "
-                        f"zlib license source bytes={len(source_license)} "
-                        f"sha256={hashlib.sha256(source_license).hexdigest()} "
-                        f"installed={license_identities}"
-                    )
+                    self.fail(archive_scan_failure_identity(
+                        label, report["findings"], disabled_source, moved_sdk
+                    ))
         self.assertEqual(content_errors, [], "; ".join(content_errors))
 
     def test_archive_extraction_rejects_traversal_and_links(self) -> None:
