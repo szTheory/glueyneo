@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/szTheory/glueyneo/compare/v0.2.2...v0.2.3) (2026-10-29)
+
+
+### Bug Fixes
+
+* **release:** read compiler identity from generated CMake metadata ([#17](https://github.com/szTheory/glueyneo/issues/17)) ([1f9db03](https://github.com/szTheory/glueyneo/commit/1f9db03c67f1bc52cabb3adf0c4ac1c3f22baeb6))
+
 ## [0.2.2](https://github.com/szTheory/glueyneo/compare/v0.2.1...v0.2.2) (2026-10-29)
 
 
