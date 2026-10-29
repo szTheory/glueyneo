@@ -29,13 +29,13 @@ cmake -S . -B build/sdk-static \
   -DGLUEYNEO_BUILD_TESTS=OFF \
   -DBUILD_TESTING=OFF \
   -DCMAKE_INSTALL_PREFIX="$PWD/build/install-static"
-cmake --build build/sdk-static --parallel 2
-cmake --install build/sdk-static
+cmake --build build/sdk-static --config Release --parallel 2
+cmake --install build/sdk-static --config Release
 cmake -S tests/consumers -B build/examples-static \
   -DGlueyneo_DIR="$PWD/build/install-static/lib/cmake/Glueyneo" \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
   -DGLUEYNEO_CONSUMER_C_SOURCE="$PWD/examples/diagnostic.c"
-cmake --build build/examples-static --parallel 2
+cmake --build build/examples-static --config Release --parallel 2
 mkdir build/sdk-static-first-run
 ./build/examples-static/glueyneo-installed-sound \
   --write-fixture build/sdk-static-first-run/public-sound-mvs.bin
@@ -80,13 +80,13 @@ cmake -S . -B build/sdk-shared \
   -DGLUEYNEO_BUILD_TESTS=OFF \
   -DBUILD_TESTING=OFF \
   -DCMAKE_INSTALL_PREFIX="$PWD/build/install-shared"
-cmake --build build/sdk-shared --parallel 2
-cmake --install build/sdk-shared
+cmake --build build/sdk-shared --config Release --parallel 2
+cmake --install build/sdk-shared --config Release
 cmake -S tests/consumers -B build/examples-shared \
   -DGlueyneo_DIR="$PWD/build/install-shared/lib/cmake/Glueyneo" \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
   -DGLUEYNEO_CONSUMER_C_SOURCE="$PWD/examples/diagnostic.c"
-cmake --build build/examples-shared --parallel 2
+cmake --build build/examples-shared --config Release --parallel 2
 mkdir build/sdk-shared-first-run
 ./build/examples-shared/glueyneo-installed-sound \
   --write-fixture build/sdk-shared-first-run/public-sound-mvs.bin

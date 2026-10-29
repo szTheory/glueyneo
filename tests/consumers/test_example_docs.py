@@ -70,12 +70,28 @@ def guide_commands(variant: str, guide: Path = GUIDE) -> list[str]:
 
 def command_argv(command: str, cwd: Path) -> list[str]:
     # Parse the controlled shell syntax before expanding the host path so a
-    # Windows cwd never passes through POSIX shlex as source text.
+    # Windows cwd never passes through POSIX shlex as source text. Join the
+    # documented POSIX suffix as path components to preserve native separators.
     argv = shlex.split(command)
-    argv = [argument.replace("$PWD", str(cwd)) for argument in argv]
-    if str(ROOT) in " ".join(argv):
+    expanded: list[str] = []
+    for argument in argv:
+        count = argument.count("$PWD")
+        if count == 0:
+            expanded.append(argument)
+            continue
+        if count != 1:
+            raise CheckError("Guide command must expand $PWD at most once per argument")
+        prefix, suffix = argument.split("$PWD", 1)
+        if suffix and not suffix.startswith("/"):
+            raise CheckError("Guide $PWD suffix must use the documented POSIX path separator")
+        components = suffix[1:].split("/") if suffix else []
+        if any(component in {"", ".", ".."} for component in components):
+            raise CheckError("Guide $PWD suffix must use normalized path components")
+        path = cwd.joinpath(*components) if components else cwd
+        expanded.append(prefix + str(path))
+    if str(ROOT) in " ".join(expanded):
         raise CheckError("Guide command refers to the original source checkout")
-    return argv
+    return expanded
 
 
 def result_record(output: str, prefix: str, role: str) -> dict[str, object]:
@@ -354,6 +370,11 @@ class ExampleGuideCommandTests(unittest.TestCase):
                     fixture = source / argv[-1]
                     self.assertTrue(fixture.is_file(), "the public fixture command must create its input")
                     self.assertGreater(fixture.stat().st_size, 0)
+                elif argv[:2] == ["cmake", "--install"]:
+                    installed = source / "build" / f"install-{variant}"
+                    package = installed / "lib" / "cmake" / "Glueyneo"
+                    self.assertTrue((package / "GlueyneoConfig.cmake").is_file())
+                    self.assertTrue((package / "GlueyneoTargets-release.cmake").is_file())
                 elif "glueyneo-installed-continuation" in executable:
                     role = "producer" if "--produce" in argv else "reader"
                     record = result_record(result.stdout, "SDK_CONTINUATION ", role)
@@ -532,12 +553,25 @@ class ExampleGuideContractTests(unittest.TestCase):
             "cmake",
             "-S",
             str(windows_root),
-            "-DCMAKE_INSTALL_PREFIX=" + str(windows_root) + "/build/install-static",
+            "-DCMAKE_INSTALL_PREFIX=" + str(windows_root / "build" / "install-static"),
         ])
 
         posix_root = Path("/tmp/guide\\literal")
         posix_argv = command_argv('cmake -S "$PWD" -DROOT="$PWD/build"', posix_root)
         self.assertEqual(posix_argv, ["cmake", "-S", str(posix_root), "-DROOT=" + str(posix_root) + "/build"])
+
+        self.assertEqual(
+            command_argv("cmake --install build/sdk-static", windows_root),
+            ["cmake", "--install", "build/sdk-static"],
+        )
+        for variant in ("static", "shared"):
+            commands = guide_commands(variant)
+            build_argv = shlex.split(next(command for command in commands if command.startswith("cmake --build")))
+            install_argv = shlex.split(next(command for command in commands if command.startswith("cmake --install")))
+            self.assertIn("--config", build_argv)
+            self.assertEqual(build_argv[build_argv.index("--config") + 1], "Release")
+            self.assertIn("--config", install_argv)
+            self.assertEqual(install_argv[install_argv.index("--config") + 1], "Release")
 
     def _load_verify_sdk(self):
         return _load_verify_sdk_module()
