@@ -1207,7 +1207,8 @@ class DocumentationCopies:
                 "inventory_sha256": playable.inventory_digest(snapshot.inventory),
                 "status": "pass",
                 "retroarch_status": "pass",
-                "retroarch": {"version": "1.22.2", "executable_sha256": playable.RETROARCH_SHA256},
+                "retroarch": {"bundle_id": None, "version": "1.22.2",
+                              "executable_sha256": playable.RETROARCH_SHA256},
                 "os": "test fixture platform",
                 "core_sha256": "0" * 64,
                 "fixture_sha256": playable.FIXTURE_SHA256,
@@ -1236,7 +1237,7 @@ class DocumentationCopies:
         (source_root / playable.REVIEW).write_text(
             "---\nphase: test-fixture\ndepth: standard\nreviewed_revision: " + reviewed + "\nfiles_reviewed_list:\n"
             + "".join(f"  - {path}\n" for path in base_files)
-            + "---\n\n### CR-01: fixture finding\n### CR-05: fixture finding\n"
+            + "---\n\n### CR-01: fixture finding\n### CR-03: fixture finding\n### CR-05: fixture finding\n"
               "### IN-03: fixture finding\n### WR-01: fixture finding\n### WR-10: fixture finding\n",
             encoding="utf-8")
         (directory / "04-REVIEW-GAPS-R1.md").write_text(
@@ -1251,6 +1252,7 @@ class DocumentationCopies:
             "| Threat ID | Severity | Status |\n|---|---|---|\n| T-04-46 | moderate | mitigated |\n", encoding="utf-8")
         findings = (
             ("CR-01", "critical", "fixed", f"revision `{cited}`"),
+            ("CR-03", "warning", "fixed", f"revision `{cited}`"),
             ("CR-05", "warning", "fixed", f"revision `{cited}`"),
             ("IN-03", "info", "open", "recorded"),
             ("WR-01", "warning", "fixed", f"revision `{cited}`"),
@@ -1275,6 +1277,7 @@ class DocumentationCopies:
         crosswalk = ("| Review Finding | Severity | Existing Threat Scope | Disposition |\n"
                      "|---|---|---|---|\n"
                      "| CR-01 | critical | T-04-46 | fixed |\n"
+                     "| CR-03 | warning | T-04-46 | fixed |\n"
                      "| CR-05 | warning | T-04-46 | fixed |\n"
                      "| IN-03 | info | T-04-46 | open |\n"
                      "| WR-01 | warning | T-04-46 | fixed |\n"
