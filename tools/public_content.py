@@ -103,9 +103,9 @@ SOURCE_FINDING_DISPOSITIONS = {
         "rules": {"machine-identifier"},
         "reason": "serial is a zero-initialized Carbon ProcessSerialNumber local variable, not a host identifier value",
     },
-    ("tests/consumers/test_example_docs.py", "93ccb5be700aa08e9d5e8024c66e78965447ee215e082c549cea4f3361ea6d4b"): {
+    ("tests/consumers/test_example_docs.py", "2468a2a71ae9f7aeef4550c5530b22cb3e49d62c617d156ac50164c44e3cf8d2"): {
         "rules": {"private-url"},
-        "reason": "synthetic localhost port-9 proxy blocks network access in the example-doc test; exact path and bytes are bound",
+        "reason": "the updated offline guide regression retains a synthetic localhost port-9 proxy; exact path and bytes are bound",
     },
 }
 # Exact immutable history objects audited as bounded false positives. These
@@ -114,6 +114,14 @@ SOURCE_FINDING_DISPOSITIONS = {
 # redaction tests contain synthetic identity/path canaries. A changed blob is
 # scanned.
 HISTORY_FINDING_DISPOSITIONS = {
+    "8ebe5d0c04f914d2aeb92b3947c877fba746cc16": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact updated multi-config guide regression bytes retain the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
+    "e4e09163a26c3f43455177765ac4922b888fdce3": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact updated guide regression bytes retain the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
     "7cbfaa1a5e5b4c0cda12642be5364fb05215010c": {
         "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
         "reason": "exact current documentation-command regression bytes retain the offline test's synthetic localhost port-9 proxy; path and blob identity are bound",

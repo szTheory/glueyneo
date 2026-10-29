@@ -76,8 +76,8 @@
     {
       "key": "tests/consumers/test_example_docs.py",
       "kind": "rights",
-      "pin": "5799b15f05bfe0fd5394c798ad0a9eba3356ad79b131c285bfc2f459e29fc728",
-      "revision": "809b151d764ff709d1d50799b5e8c20381819044"
+      "pin": "b302089d7a2982542864e461ae8d8785f44490c0f45e3145a57f08eb270c3040",
+      "revision": "3911e732980ef5d8b1ca4617a09383b0e7c48067"
     },
     {
       "key": "tests/consumers/test_persistence_install.py",
@@ -130,8 +130,8 @@
     {
       "key": "tests/fixture/rights-manifest.json",
       "kind": "rights",
-      "pin": "56e29c3795ecd6afc00aecb25cf89ecb948b0173324f6122c7ee2ba2a1e0aa7d",
-      "revision": "2c4750c7dd50782de5dec8f70932228b3ffa3df2"
+      "pin": "0503ea21e14faba88c31c2e87032100142370501378d44c94a1f986e492e48d8",
+      "revision": "698c3e53f991ed4308f561098b9f1fd3d5db1ae5"
     },
     {
       "key": "tests/fixture/test_public_guest.c",
