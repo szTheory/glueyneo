@@ -2195,7 +2195,7 @@ class ImporterTests(unittest.TestCase):
                 str(executable), expected_path=executable, expected_sha256=expected_digest)
             self.assertEqual(identity["importer_identity_scope"], "synthetic")
             self.assertEqual(identity["synthetic_importer_identity"], {
-                "path": str(executable.resolve()), "sha256": expected_digest})
+                "path": executable.resolve().as_posix(), "sha256": expected_digest})
             self.assertIsNone(qualification.synthetic_importer_identity(
                 str(executable), expected_path=executable, expected_sha256="0" * 64))
             self.assertIsNone(qualification.synthetic_importer_identity(

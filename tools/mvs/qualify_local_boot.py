@@ -296,7 +296,7 @@ def checked_synthetic_importer_command(
             return None
     except OSError:
         return None
-    return str(expected_path)
+    return expected_path.as_posix()
 
 
 def synthetic_importer_identity(
@@ -320,7 +320,7 @@ def synthetic_importer_identity(
     return {
         "importer_identity_scope": "synthetic",
         "synthetic_importer_identity": {
-            "path": str(candidate),
+            "path": candidate.as_posix(),
             "sha256": digest,
         },
     }
