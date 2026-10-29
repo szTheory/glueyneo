@@ -430,8 +430,8 @@ def validate_receipt(receipt: object) -> dict[str, object]:
     require(isinstance(map_rows, list) and source_map.get("path_count") == len(map_rows)
             and correspondence.get("path_count") == len(map_rows),
             "source-byte correspondence path denominator differs from its rows")
-    remapped_paths = {"docs/rights-inventory.md", "tests/fixture/rights-manifest.json",
-                      "tests/workflow/test_public_content.py"}
+    remapped_paths = {"docs/rights-inventory.md", "docs/history-allowlist.json",
+                      "tests/fixture/rights-manifest.json", "tests/workflow/test_public_content.py"}
     mapped_paths: list[str] = []
     for index, row in enumerate(map_rows):
         require(isinstance(row, dict)
@@ -1469,6 +1469,28 @@ class DeliveryReceiptTests(unittest.TestCase):
         correspondence["mapping_sha256"] = digest(mapping)
         receipt["source"]["local_source_mapping_sha256"] = digest(mapping)
         with self.assertRaisesRegex(DeliveryContractError, "exact expanded SOURCE_PATHS"):
+            validate_receipt(receipt)
+
+    def test_sanitized_history_remap_is_limited_to_exact_allowlist_path(self) -> None:
+        receipt = _valid_receipt()
+        correspondence = receipt["local_publication"]
+        mapping = correspondence["mapping"]
+        row = next(item for item in mapping["rows"] if item["path"] == "docs/history-allowlist.json")
+        row["transformation"] = "sanitized-public-history-remap"
+        row["local_sha256"] = "1" * 64
+        correspondence["mapping_sha256"] = digest(mapping)
+        receipt["source"]["local_source_mapping_sha256"] = digest(mapping)
+        self.assertEqual(validate_receipt(receipt)["status"], "pass")
+
+        receipt = _valid_receipt()
+        correspondence = receipt["local_publication"]
+        mapping = correspondence["mapping"]
+        row = next(item for item in mapping["rows"] if item["path"] == "docs/testing.md")
+        row["transformation"] = "sanitized-public-history-remap"
+        row["local_sha256"] = "1" * 64
+        correspondence["mapping_sha256"] = digest(mapping)
+        receipt["source"]["local_source_mapping_sha256"] = digest(mapping)
+        with self.assertRaisesRegex(DeliveryContractError, "unapproved public transformation"):
             validate_receipt(receipt)
 
     def test_source_archive_hashes_bytes_as_git_blobs(self) -> None:
