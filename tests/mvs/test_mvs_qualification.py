@@ -1045,7 +1045,7 @@ class ImporterTests(unittest.TestCase):
                         execute=execute, scripted_start=True)
                 if stage == "unchanged":
                     self.assertEqual(result["input_response"], "observed")
-                    self.assertEqual(calls[1][0], str(runner.resolve()))
+                    self.assertEqual(calls[1][0], runner.resolve().as_posix())
                 else:
                     self.assertEqual(result["status"], "qualifier_stale")
                     self.assertEqual(result["qualifier_build"], "stale")
