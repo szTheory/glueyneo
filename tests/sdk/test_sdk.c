@@ -2400,7 +2400,7 @@ static int sdk_mvs_instance_load(const sdk_sound_bundle *bundle,
     return 1;
 }
 
-static int sdk_mvs_capture_frame(gn_instance *instance, unsigned owner,
+static int sdk_mvs_capture_frame(gn_instance *subject, unsigned owner,
                                  size_t boundary, uint64_t prior_elapsed,
                                  sdk_mvs_snapshot *snapshot) {
     const size_t pixel_bytes = (size_t)SDK_SOUND_WIDTH * SDK_SOUND_HEIGHT *
@@ -2422,7 +2422,7 @@ static int sdk_mvs_capture_frame(gn_instance *instance, unsigned owner,
     };
     memset(snapshot, 0, sizeof(*snapshot));
     const gn_status status = gn_mvs_advance_frame_v1(
-        instance, &request, sizeof(request), &snapshot->result,
+        subject, &request, sizeof(request), &snapshot->result,
         sizeof(snapshot->result));
     int passed = status == GN_STATUS_OK &&
         snapshot->result.audio_frames_generated ==
@@ -2439,13 +2439,13 @@ static int sdk_mvs_capture_frame(gn_instance *instance, unsigned owner,
         if (byte != 0x5au || byte2 != 0x5au) passed = 0;
     }
     if (passed != 0 &&
-        (gn_private_mvs_video_activity(instance, &snapshot->video) !=
+        (gn_private_mvs_video_activity(subject, &snapshot->video) !=
              GN_STATUS_OK ||
-         gn_observe_mvs_bus_fault(instance, &snapshot->bus,
+         gn_observe_mvs_bus_fault(subject, &snapshot->bus,
                                    sizeof(snapshot->bus)) != GN_STATUS_OK ||
-         gn_test_mvs_sound_state_read(instance, &snapshot->sound) !=
+         gn_test_mvs_sound_state_read(subject, &snapshot->sound) !=
              GN_STATUS_OK ||
-         gn_test_mvs_read_bus8(instance, UINT32_C(0x320000),
+         gn_test_mvs_read_bus8(subject, UINT32_C(0x320000),
                                &snapshot->guest_reply) != GN_STATUS_OK))
         passed = 0;
     if (passed != 0) {
@@ -2476,7 +2476,7 @@ static int sdk_mvs_snapshot_equal(const sdk_mvs_snapshot *expected,
 }
 
 static int sdk_mvs_capture_discard_matches(
-    gn_instance *instance, unsigned owner, size_t boundary,
+    gn_instance *subject, unsigned owner, size_t boundary,
     uint64_t prior_elapsed, const sdk_mvs_snapshot *expected) {
     const size_t pixel_bytes = (size_t)SDK_SOUND_WIDTH * SDK_SOUND_HEIGHT *
                                sizeof(uint32_t);
@@ -2492,7 +2492,7 @@ static int sdk_mvs_capture_discard_matches(
     sdk_mvs_snapshot actual;
     memset(&actual, 0, sizeof(actual));
     const gn_status status = gn_mvs_advance_frame_v1(
-        instance, &request, sizeof(request), &actual.result,
+        subject, &request, sizeof(request), &actual.result,
         sizeof(actual.result));
     int passed = status == GN_STATUS_OK &&
         actual.result.audio_frames_generated != 0u &&
@@ -2501,11 +2501,11 @@ static int sdk_mvs_capture_discard_matches(
             actual.result.audio_frames_generated &&
         actual.result.video_pixels_produced ==
             (size_t)SDK_SOUND_WIDTH * SDK_SOUND_HEIGHT &&
-        gn_private_mvs_video_activity(instance, &actual.video) == GN_STATUS_OK &&
-        gn_observe_mvs_bus_fault(instance, &actual.bus, sizeof(actual.bus)) ==
+        gn_private_mvs_video_activity(subject, &actual.video) == GN_STATUS_OK &&
+        gn_observe_mvs_bus_fault(subject, &actual.bus, sizeof(actual.bus)) ==
             GN_STATUS_OK &&
-        gn_test_mvs_sound_state_read(instance, &actual.sound) == GN_STATUS_OK &&
-        gn_test_mvs_read_bus8(instance, UINT32_C(0x320000),
+        gn_test_mvs_sound_state_read(subject, &actual.sound) == GN_STATUS_OK &&
+        gn_test_mvs_read_bus8(subject, UINT32_C(0x320000),
                               &actual.guest_reply) == GN_STATUS_OK;
     if (passed != 0) {
         actual.elapsed_total = prior_elapsed + actual.result.elapsed_cycles;
@@ -2528,7 +2528,7 @@ static int sdk_mvs_capture_discard_matches(
     return passed;
 }
 
-static int sdk_mvs_injected_sound_failure_is_bounded(gn_instance *instance,
+static int sdk_mvs_injected_sound_failure_is_bounded(gn_instance *subject,
                                                      unsigned owner,
                                                      size_t boundary) {
     const size_t pixel_bytes = (size_t)SDK_SOUND_WIDTH * SDK_SOUND_HEIGHT *
@@ -2544,7 +2544,7 @@ static int sdk_mvs_injected_sound_failure_is_bounded(gn_instance *instance,
     memset(pixels, 0xa5, pixel_bytes);
     memset(audio, 0x5a, storage_frames * 2u * sizeof(int16_t));
     int passed = gn_test_mvs_set_failure(
-        instance, GN_TEST_MVS_FAILURE_SOUND_TICK_LIMIT) == GN_STATUS_OK;
+        subject, GN_TEST_MVS_FAILURE_SOUND_TICK_LIMIT) == GN_STATUS_OK;
     gn_mvs_frame_result_v1 result;
     memset(&result, 0, sizeof(result));
     const gn_mvs_frame_request_v1 request = {
@@ -2555,7 +2555,7 @@ static int sdk_mvs_injected_sound_failure_is_bounded(gn_instance *instance,
     };
     if (passed != 0) {
         const gn_status status = gn_mvs_advance_frame_v1(
-            instance, &request, sizeof(request), &result, sizeof(result));
+            subject, &request, sizeof(request), &result, sizeof(result));
         passed = status == GN_STATUS_CPU_FAILURE &&
             result.reason == GN_RUN_ERROR && result.elapsed_cycles != 0u &&
             result.elapsed_cycles < result.requested_cycles &&
@@ -2571,7 +2571,7 @@ static int sdk_mvs_injected_sound_failure_is_bounded(gn_instance *instance,
         if (((const uint8_t *)audio)[index] != 0x5au) passed = 0;
     gn_test_mvs_sound_state failed_state;
     if (passed != 0 &&
-        (gn_test_mvs_sound_state_read(instance, &failed_state) != GN_STATUS_OK ||
+        (gn_test_mvs_sound_state_read(subject, &failed_state) != GN_STATUS_OK ||
          failed_state.failed == 0u)) passed = 0;
     free(audio);
     free(pixels);
@@ -2579,7 +2579,7 @@ static int sdk_mvs_injected_sound_failure_is_bounded(gn_instance *instance,
 }
 
 static int sdk_mvs_short_preflight_preserves_boundary(
-    gn_instance *instance, unsigned owner, size_t boundary,
+    gn_instance *subject, unsigned owner, size_t boundary,
     const sdk_mvs_snapshot *expected) {
     const size_t pixel_bytes = (size_t)SDK_SOUND_WIDTH * SDK_SOUND_HEIGHT *
                                sizeof(uint32_t);
@@ -2602,7 +2602,7 @@ static int sdk_mvs_short_preflight_preserves_boundary(
         audio, GN_MVS_AUDIO_CAPACITY_FRAMES_V1 - 1u
     };
     int passed = gn_mvs_advance_frame_v1(
-        instance, &request, sizeof(request), &result, sizeof(result)) ==
+        subject, &request, sizeof(request), &result, sizeof(result)) ==
             GN_STATUS_INVALID_ARGUMENT;
     const uint8_t *result_bytes = (const uint8_t *)&result;
     for (size_t index = 0u; passed != 0 && index < sizeof(result); ++index)
@@ -2614,7 +2614,7 @@ static int sdk_mvs_short_preflight_preserves_boundary(
         if (((const uint8_t *)audio)[index] != 0x5au) passed = 0;
     gn_test_mvs_sound_state state;
     if (passed != 0 &&
-        (gn_test_mvs_sound_state_read(instance, &state) != GN_STATUS_OK ||
+        (gn_test_mvs_sound_state_read(subject, &state) != GN_STATUS_OK ||
          memcmp(&state, &expected->sound, sizeof(state)) != 0)) passed = 0;
     free(audio);
     free(pixels);
@@ -3301,7 +3301,7 @@ cleanup:
 }
 
 static int sdk_mvs_restore_rejects_atomically(
-    gn_instance *instance, const uint8_t *rejected_state, size_t rejected_length,
+    gn_instance *subject, const uint8_t *rejected_state, size_t rejected_length,
     size_t capacity,
     gn_status expected_status, gn_state_reason expected_reason) {
     uint8_t *before = (uint8_t *)malloc(capacity);
@@ -3313,13 +3313,13 @@ static int sdk_mvs_restore_rejects_atomically(
     }
     gn_state_detail_v1 detail;
     size_t before_written = 0u, after_written = 0u;
-    int passed = gn_state_capture_v1(instance, before, capacity,
+    int passed = gn_state_capture_v1(subject, before, capacity,
         &before_written, &detail, sizeof(detail)) == GN_STATUS_OK &&
         before_written == capacity &&
-        gn_state_restore_v1(instance, rejected_state, rejected_length,
+        gn_state_restore_v1(subject, rejected_state, rejected_length,
             &detail, sizeof(detail)) == expected_status &&
         detail.reason == expected_reason &&
-        gn_state_capture_v1(instance, after, capacity,
+        gn_state_capture_v1(subject, after, capacity,
             &after_written, &detail, sizeof(detail)) == GN_STATUS_OK &&
         after_written == capacity && memcmp(before, after, capacity) == 0;
     free(after);
