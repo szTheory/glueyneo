@@ -103,9 +103,9 @@ SOURCE_FINDING_DISPOSITIONS = {
         "rules": {"machine-identifier"},
         "reason": "serial is a zero-initialized Carbon ProcessSerialNumber local variable, not a host identifier value",
     },
-    ("tests/consumers/test_example_docs.py", "2468a2a71ae9f7aeef4550c5530b22cb3e49d62c617d156ac50164c44e3cf8d2"): {
+    ("tests/consumers/test_example_docs.py", "03e7e12086fa4b476e577b964b0d694b03673182351728bb77510970e3349bd0"): {
         "rules": {"private-url"},
-        "reason": "the updated offline guide regression retains a synthetic localhost port-9 proxy; exact path and bytes are bound",
+        "reason": "the Windows launcher regression retains a synthetic localhost port-9 proxy; exact path and bytes are bound",
     },
 }
 # Exact immutable history objects audited as bounded false positives. These
