@@ -692,8 +692,8 @@
       },
       {
         "path": "tests/libretro/test_retroarch_smoke.py",
-        "bytes": 282598,
-        "sha256": "0fa3d30ebfe4aeeae24a98a27e99dfed99aaa2fd8faf35cbb22f8387691c6ec8",
+        "bytes": 283047,
+        "sha256": "aea20e3ac7a4eb4272fc48bbb1e91d74cece891cb7c85278290ebefe67355d9b",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
