@@ -103,7 +103,7 @@ SOURCE_FINDING_DISPOSITIONS = {
         "rules": {"machine-identifier"},
         "reason": "serial is a zero-initialized Carbon ProcessSerialNumber local variable, not a host identifier value",
     },
-    ("tests/consumers/test_example_docs.py", "03e7e12086fa4b476e577b964b0d694b03673182351728bb77510970e3349bd0"): {
+    ("tests/consumers/test_example_docs.py", "fda38173bf3fd48942b60fa1b401337a0761776439fa3d44ffc56df4edd21d87"): {
         "rules": {"private-url"},
         "reason": "the Windows launcher regression retains a synthetic localhost port-9 proxy; exact path and bytes are bound",
     },
