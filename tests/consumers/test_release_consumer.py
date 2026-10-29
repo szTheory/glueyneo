@@ -659,6 +659,49 @@ class ReleaseManifestCompilerIdentityTests(unittest.TestCase):
                         release_manifest.generated_compiler_identity(generated.parents[2])
 
 
+class ReleaseConsumerCompilerIdentityTests(unittest.TestCase):
+    def test_consumer_identity_uses_generated_cmake_file_when_cache_omits_compiler_id(self):
+        compiler = "/usr/bin/clang"
+        with tempfile.TemporaryDirectory(prefix="glueyneo-consumer-compiler-id-") as temp:
+            build = Path(temp)
+            generated = build / "CMakeFiles/3.31.6/CMakeCCompiler.cmake"
+            generated.parent.mkdir(parents=True)
+            generated.write_text(
+                f'set(CMAKE_C_COMPILER "{compiler}")\n'
+                'set(CMAKE_C_COMPILER_ID "Clang")\n'
+                'set(CMAKE_C_COMPILER_VERSION "18.1.3")\n',
+                encoding="utf-8",
+            )
+            (build / "CMakeCache.txt").write_text(
+                "CMAKE_GENERATOR:INTERNAL=Ninja\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                _consumer_cache_values(build / "CMakeCache.txt"),
+                {"CMAKE_GENERATOR": "Ninja", "CMAKE_C_COMPILER_ID": "Clang",
+                 "CMAKE_C_COMPILER_VERSION": "18.1.3"},
+            )
+
+    def test_consumer_identity_rejects_missing_generated_compiler_metadata(self):
+        with tempfile.TemporaryDirectory(prefix="glueyneo-consumer-compiler-id-missing-") as temp:
+            build = Path(temp)
+            generated = build / "CMakeFiles/3.31.6/CMakeCCompiler.cmake"
+            generated.parent.mkdir(parents=True)
+            generated.write_text(
+                'set(CMAKE_C_COMPILER "/usr/bin/clang")\n'
+                'set(CMAKE_C_COMPILER_ID "Clang")\n',
+                encoding="utf-8",
+            )
+            (build / "CMakeCache.txt").write_text(
+                "CMAKE_GENERATOR:INTERNAL=Ninja\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(release_manifest.ReleaseError, "compiler identity"):
+                _consumer_cache_values(build / "CMakeCache.txt")
+
+
 class ReleaseConsumerTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory(prefix="glueyneo-release-red-")
@@ -984,6 +1027,19 @@ class ReleaseConsumerTests(unittest.TestCase):
             release_state.validate_downloaded_assets(download, staged_manifest)
 
 
+def _consumer_cache_values(cache: Path) -> dict[str, str]:
+    """Read cached generator settings and compiler identity from CMake's generated compiler file."""
+    values: dict[str, str] = {}
+    for line in cache.read_text(encoding="utf-8").splitlines():
+        if line.startswith("CMAKE_GENERATOR:"):
+            key, value = line.split("=", 1)
+            values[key.split(":", 1)[0]] = value
+    compiler = release_manifest.generated_compiler_identity(cache.parent)
+    values["CMAKE_C_COMPILER_ID"] = compiler["id"]
+    values["CMAKE_C_COMPILER_VERSION"] = compiler["version"]
+    return values
+
+
 def verify_downloaded_release(download: Path, staged_manifest: Path, *, commit: str, version: str,
                               platform_name: str | None = None) -> dict[str, object]:
     """Rebuild source offline and execute consumers from this host's downloaded SDK bytes."""
@@ -1006,14 +1062,6 @@ def verify_downloaded_release(download: Path, staged_manifest: Path, *, commit: 
         except release_manifest.ReleaseError as error:
             raise RuntimeError(str(error)) from error
 
-    def cache_values(cache: Path) -> dict[str, str]:
-        values: dict[str, str] = {}
-        for line in cache.read_text(encoding="utf-8").splitlines():
-            if line.startswith(("CMAKE_C_COMPILER_ID:", "CMAKE_C_COMPILER_VERSION:", "CMAKE_GENERATOR:")):
-                key, value = line.split("=", 1)
-                values[key.split(":", 1)[0]] = value
-        return values
-
     with tempfile.TemporaryDirectory(prefix="glueyneo-downloaded-consumer-") as temp_name:
         work = Path(temp_name)
         source_dir = work / "source"
@@ -1030,7 +1078,7 @@ def verify_downloaded_release(download: Path, staged_manifest: Path, *, commit: 
         run([cmake, "--build", str(build), "--config", "Release", "--parallel", "2"], cwd=source_root)
         cases.append({"id": "offline-source-build", "status": "pass",
                       "detail": "the downloaded source archive configured and built offline"})
-        source_toolchain = cache_values(build / "CMakeCache.txt")
+        source_toolchain = _consumer_cache_values(build / "CMakeCache.txt")
         if not source_toolchain.get("CMAKE_C_COMPILER_ID") or not source_toolchain.get("CMAKE_C_COMPILER_VERSION"):
             raise RuntimeError("offline source build did not record its C compiler identity")
         guide = run(
@@ -1090,7 +1138,7 @@ def verify_downloaded_release(download: Path, staged_manifest: Path, *, commit: 
             cases.append({"id": f"{variant}-host-persistence", "status": host_status,
                           "detail": "host file-commit route is unsupported on this platform" if host_status == "unsupported"
                           else "host file persistence committed and reopened in a fresh process"})
-            cache = cache_values(consumer_build / "CMakeCache.txt")
+            cache = _consumer_cache_values(consumer_build / "CMakeCache.txt")
             if not cache.get("CMAKE_C_COMPILER_ID") or not cache.get("CMAKE_C_COMPILER_VERSION"):
                 raise RuntimeError(f"{variant} installed consumer build did not record its C compiler identity")
             toolchain_builds.append({"linkage": variant, "compiler_id": cache["CMAKE_C_COMPILER_ID"],
