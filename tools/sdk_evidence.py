@@ -131,6 +131,7 @@ RELEVANT_FILES = (
     "tests/fuzz/minimize.py", "tests/consumers/CMakeLists.txt",
     "tests/consumers/check_package.py", "tests/consumers/header.cpp",
     "tests/consumers/sound_consumer.c", "tests/consumers/test_playable_install.py",
+    "tests/fixture/public_guest.c", "tests/fixture/test_public_guest.c",
     "tests/fixture/public_sound_guest.c", "tests/fixture/test_public_sound_guest.c",
     "tests/support/portable_stdio.h",
     "tests/libretro/callback_harness.c",

@@ -1224,9 +1224,10 @@ class MvsLaneTests(unittest.TestCase):
         self.assertTrue(expected.issubset(set(evidence.RELEVANT_FILES)))
         self.assertTrue(expected.issubset(set(evidence.MVS_IMPORTER_SOURCE_FILES)))
 
-    def test_replay_and_sound_recipe_mutations_change_identity_and_dirty_flag(self) -> None:
+    def test_replay_and_public_fixture_mutations_change_identity_and_dirty_flag(self) -> None:
         targets = {"tools/mvs/frontend_replay.py", "tests/libretro/test_frontend_replay.py",
-                   "docs/audio-contract.md"}
+                   "docs/audio-contract.md", "tests/fixture/public_guest.c",
+                   "tests/fixture/test_public_guest.c"}
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             for name in set(evidence.RELEVANT_FILES) | targets:
