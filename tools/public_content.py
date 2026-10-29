@@ -103,9 +103,9 @@ SOURCE_FINDING_DISPOSITIONS = {
         "rules": {"machine-identifier"},
         "reason": "serial is a zero-initialized Carbon ProcessSerialNumber local variable, not a host identifier value",
     },
-    ("tests/consumers/test_example_docs.py", "a82692722951e21ff5078360281b25378e90be651f77000d87b931c6db6a8345"): {
+    ("tests/consumers/test_example_docs.py", "f548e592fc3a34320d12b56eced090f4cfdb10cbb3d445717798b377c624cb89"): {
         "rules": {"private-url"},
-        "reason": "the Windows launcher regression retains a synthetic localhost port-9 proxy; exact path and bytes are bound",
+        "reason": "the offline guide regression now checks CMake File API compile policy and retains a synthetic localhost port-9 proxy; exact path and bytes are bound",
     },
 }
 # Exact immutable history objects audited as bounded false positives. These
@@ -114,6 +114,10 @@ SOURCE_FINDING_DISPOSITIONS = {
 # redaction tests contain synthetic identity/path canaries. A changed blob is
 # scanned.
 HISTORY_FINDING_DISPOSITIONS = {
+    "6e5a3ec0fb8fdc78cf0aef433f78d18e9d502356": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact generator-neutral compile metadata regression retains the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
     "289e06a48018d46bdf571800c4b10ef05a56633b": {
         "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
         "reason": "exact Windows child-process fix retains the offline test synthetic localhost port-9 proxy; path and blob are bound",
