@@ -968,9 +968,13 @@ Successful hosted runs retain per-lane receipts and an aggregate under
 `evidence/sdk/ci-aggregate.json`. Failed matrix commands upload a bounded
 failure receipt. CTest failures and outer CTest timeouts preserve the named
 failed test's redacted `LastTest.log` block when it is fresh, regular, and still
-has the same file identity when opened. The collector rejects symbolic links,
-substituted files, stale logs, and oversized logs. Each receipt also records
-the captured CTest output SHA-256, byte count, and truncation status. The
+has the same file identity when opened. For failed cases missing from a partial
+log, and when that log is missing, stale, unsafe, or oversized, the collector
+selects output from the captured verbose CTest stream when it can bind it to a
+non-passing result row, including an exception. If no failed-case block can be
+bound safely, unrelated verbose output is withheld. The collector rejects symbolic links, substituted
+files, stale logs, and oversized logs. Each receipt also records the captured
+CTest output SHA-256, byte count, and truncation status. The
 sanitizer lane carries parsed per-test diagnostics into the aggregate. A local
 artifact-path fixture verifies that a failed assertion survives redaction and
 canonical JSON serialization, and that a substituted log cannot expose its

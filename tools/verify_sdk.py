@@ -528,21 +528,33 @@ def _read_ctest_last_test_log(path: Path, expected_signature: tuple[int, int, in
 
 
 def _ctest_failed_names(output: str) -> set[str]:
+    normalized = DIAGNOSTIC_ANSI_ESCAPE.sub("", output).replace("\r\n", "\n").replace("\r", "\n")
+    starts = {
+        match.group(1): match.group(2)
+        for line in normalized.splitlines()
+        if (match := re.match(r"^\s*Start\s+(\d+):\s*(\S+)\s*$", line))
+    }
     names: set[str] = set()
-    patterns = (
-        re.compile(r"(?m)^\s*\d+/\d+\s+Test\s+#\d+:\s*([^\s.]+).*?\*{3}Failed\b"),
-        re.compile(r"(?m)^\s*\d+\s+-\s+([^\s]+)\s+\(Failed\)\s*$"),
-    )
-    for pattern in patterns:
-        names.update(match.group(1) for match in pattern.finditer(output)
-                     if re.fullmatch(r"[A-Za-z0-9_.+-]{1,128}", match.group(1)))
+    result_ids = re.compile(
+        r"^\s*\d+/\d+\s+Test\s+#(\d+):.*?\*{3}(?:Failed|Timeout|Not Run|Exception)\b")
+    for line in normalized.splitlines():
+        match = result_ids.match(line)
+        if match:
+            name = starts.get(match.group(1))
+            if name and re.fullmatch(r"[A-Za-z0-9_.+-]{1,128}", name):
+                names.add(name)
+    summary_names = re.compile(
+        r"(?m)^\s*\d+\s+-\s+([A-Za-z0-9_.+-]{1,128})\s+\((?:Failed|Timeout|Not Run|Exception)\)\s*$")
+    names.update(match.group(1) for match in summary_names.finditer(normalized))
     return set(sorted(names)[:128])
 
 
-def _ctest_failed_blocks(last_test_text: str, expected_names: set[str]) -> tuple[list[str], str]:
+def _ctest_failed_blocks(
+    last_test_text: str, expected_names: set[str],
+) -> tuple[list[str], list[tuple[str, str]]]:
     starts = list(re.finditer(r"(?m)^\d+/\d+\s+Testing:\s*([^\s]+)\s*$", last_test_text))
     names: set[str] = set()
-    blocks: list[str] = []
+    blocks: list[tuple[str, str]] = []
     for index, match in enumerate(starts):
         end = starts[index + 1].start() if index + 1 < len(starts) else len(last_test_text)
         block = last_test_text[match.start():end]
@@ -554,22 +566,87 @@ def _ctest_failed_blocks(last_test_text: str, expected_names: set[str]) -> tuple
         if expected_names and name not in expected_names:
             continue
         names.add(name)
-        blocks.append(block.rstrip())
-    return sorted(names), "\n\n".join(blocks)
+        blocks.append((name, block.rstrip()))
+    return sorted(names), blocks
 
 
-def _bounded_redacted_ctest_excerpt(output: str) -> tuple[str, bool]:
-    encoded = output.encode("utf-8", errors="replace")
-    truncated = len(encoded) > CTEST_FAILURE_DIAGNOSTIC_LIMIT
-    if truncated:
-        head_size = CTEST_FAILURE_DIAGNOSTIC_LIMIT * 3 // 4
-        tail_size = CTEST_FAILURE_DIAGNOSTIC_LIMIT - head_size - 24
-        text = (encoded[:head_size].decode("utf-8", errors="replace") +
-                "\n[... failed-test output truncated ...]\n" +
-                encoded[-tail_size:].decode("utf-8", errors="replace"))
-    else:
-        text = output
-    return redacted_failure_diagnostic(text, limit=CTEST_FAILURE_DIAGNOSTIC_LIMIT), truncated
+def _ctest_output_failed_blocks(output: str, expected_names: set[str]) -> list[tuple[str, str]]:
+    """Extract verbose CTest rows for failed tests without trusting its log path."""
+    normalized = DIAGNOSTIC_ANSI_ESCAPE.sub("", output).replace("\r\n", "\n").replace("\r", "\n")
+    lines = normalized.splitlines()
+    starts = {
+        match.group(1): match.group(2)
+        for line in lines
+        if (match := re.match(r"^\s*Start\s+(\d+):\s*(\S+)\s*$", line))
+    }
+    failed_rows: dict[str, str] = {}
+    result_pattern = re.compile(
+        r"^\s*\d+/\d+\s+Test\s+#(\d+):.*?\*{3}(?:Failed|Timeout|Not Run|Exception)\b")
+    for line in lines:
+        match = result_pattern.match(line)
+        if match:
+            name = starts.get(match.group(1))
+            if name and (not expected_names or name in expected_names):
+                failed_rows[match.group(1)] = name
+    # Some CTest versions report the names only in the final summary. Bind those
+    # names to their captured Start rows while keeping the test's prefixed body.
+    for test_id, name in starts.items():
+        if name in expected_names:
+            failed_rows.setdefault(test_id, name)
+
+    blocks: list[tuple[str, str]] = []
+    for test_id, name in sorted(failed_rows.items(), key=lambda item: int(item[0])):
+        selected: list[str] = []
+        start_pattern = re.compile(rf"^\s*Start\s+{re.escape(test_id)}:\s*{re.escape(name)}\s*$")
+        result_pattern_for_id = re.compile(
+            rf"^\s*\d+/\d+\s+Test\s+#{re.escape(test_id)}:.*?\*{{3}}(?:Failed|Timeout|Not Run|Exception)\b")
+        output_prefix = re.compile(rf"^\s*{re.escape(test_id)}:\s?(.*)$")
+        test_start = re.compile(rf"^\s*test\s+{re.escape(test_id)}\s*$", re.IGNORECASE)
+        for line in lines:
+            if start_pattern.match(line) or result_pattern_for_id.match(line) or test_start.match(line):
+                selected.append(line)
+                continue
+            prefix = output_prefix.match(line)
+            if prefix:
+                selected.append(prefix.group(1))
+        if selected:
+            blocks.append((name, "\n".join(selected)))
+    return blocks
+
+
+def _bounded_ctest_failed_blocks(blocks: list[tuple[str, str]]) -> tuple[str, bool]:
+    """Keep a bounded excerpt for each failure rather than clipping away middle tests."""
+    if not blocks:
+        return "", False
+    headers = [f"Failed test: {name}\n" for name, _ in blocks]
+    header_bytes = sum(len(header.encode("utf-8")) for header in headers)
+    separator_bytes = 2 * (len(blocks) - 1)
+    body_budget = max(
+        0, (CTEST_FAILURE_DIAGNOSTIC_LIMIT - header_bytes - separator_bytes) // len(blocks))
+    parts: list[str] = []
+    truncated = False
+    for header, (_, body) in zip(headers, blocks):
+        encoded = body.encode("utf-8", errors="replace")
+        if len(encoded) > body_budget:
+            truncated = True
+            marker = b"\n[... failed-test body clipped ...]\n"
+            available = max(0, body_budget - len(marker))
+            head_size = available * 3 // 4
+            tail_size = available - head_size
+            if available:
+                clipped = encoded[:head_size] + marker + (encoded[-tail_size:] if tail_size else b"")
+            else:
+                clipped = b""
+            body = clipped.decode("utf-8", errors="replace")
+        parts.append(header + body)
+    excerpt = "\n\n".join(parts)
+    if len(excerpt.encode("utf-8", errors="replace")) > CTEST_FAILURE_DIAGNOSTIC_LIMIT:
+        # Large failure counts can leave too little room for bodies. Preserve
+        # every named test deterministically; the row list remains untruncated.
+        excerpt = excerpt.encode("utf-8", errors="replace")[:CTEST_FAILURE_DIAGNOSTIC_LIMIT].decode(
+            "utf-8", errors="replace")
+        truncated = True
+    return redacted_failure_diagnostic(excerpt, limit=CTEST_FAILURE_DIAGNOSTIC_LIMIT), truncated
 
 
 def ctest_failure_diagnostics(output: str, last_test_path: Path, *,
@@ -580,7 +657,7 @@ def ctest_failure_diagnostics(output: str, last_test_path: Path, *,
     expected_names = _ctest_failed_names(output)
     source = "ctest-output"
     last_test_log_status = "missing"
-    selected = ""
+    selected_blocks: dict[str, str] = {}
     failed_names = sorted(expected_names)
     if last_test_log_current:
         last_test_bytes, last_test_log_status = _read_ctest_last_test_log(
@@ -602,11 +679,33 @@ def ctest_failure_diagnostics(output: str, last_test_path: Path, *,
         logged_names, blocks = _ctest_failed_blocks(last_test, expected_names)
         if blocks:
             source = "ctest-last-test-log"
-            selected = blocks
+            selected_blocks.update(blocks)
             failed_names = sorted(set(failed_names) | set(logged_names))
-    if not selected:
-        selected = output
-    excerpt, truncated = _bounded_redacted_ctest_excerpt(selected)
+    output_blocks = _ctest_output_failed_blocks(output, expected_names)
+    missing_names = {name for name, _ in output_blocks} - set(selected_blocks)
+    if missing_names:
+        selected_blocks.update((name, block) for name, block in output_blocks
+                               if name in missing_names)
+        source = ("ctest-last-test-log+ctest-output" if source == "ctest-last-test-log"
+                  else "ctest-output")
+        failed_names = sorted(set(failed_names) | missing_names)
+    if selected_blocks:
+        excerpt, truncated = _bounded_ctest_failed_blocks(sorted(selected_blocks.items()))
+        return {
+            "source": source,
+            "last_test_log_status": last_test_log_status,
+            "failed_tests": failed_names or sorted(selected_blocks),
+            "output_sha256": evidence.sha256_bytes(output_bytes),
+            "output_bytes": len(output_bytes),
+            "output_excerpt_truncated": len(output_bytes) > CTEST_FAILURE_DIAGNOSTIC_LIMIT,
+            "excerpt_truncated": truncated or len(output_bytes) > CTEST_FAILURE_DIAGNOSTIC_LIMIT,
+            "excerpt": excerpt,
+        }
+    names_summary = ", ".join(failed_names) if failed_names else "unknown"
+    excerpt = redacted_failure_diagnostic(
+        f"Failed CTest tests: {names_summary}. "
+        "Captured output withheld because no failed-test block could be bound safely.",
+        limit=CTEST_FAILURE_DIAGNOSTIC_LIMIT)
     return {
         "source": source,
         "last_test_log_status": last_test_log_status,
@@ -614,7 +713,7 @@ def ctest_failure_diagnostics(output: str, last_test_path: Path, *,
         "output_sha256": evidence.sha256_bytes(output_bytes),
         "output_bytes": len(output_bytes),
         "output_excerpt_truncated": len(output_bytes) > CTEST_FAILURE_DIAGNOSTIC_LIMIT,
-        "excerpt_truncated": truncated,
+        "excerpt_truncated": True,
         "excerpt": excerpt,
     }
 

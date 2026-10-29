@@ -594,12 +594,29 @@ def ctest_failure_receipt_controls() -> None:
             "\nTest Passed.\n")
         last_test.write_text(failed_block + later_block, encoding="utf-8")
         ctest_stdout = (
-            "Start 17: mvs_import_contract\n"
-            "17/25 Test #17: mvs_import_contract ........***Failed  1.00 sec\n" +
-            "\n".join(f"later verbose pass row {index}" for index in range(500)) +
-            "\n96% tests passed, 1 tests failed out of 25\n"
-            "The following tests FAILED:\n"
-            "\t17 - mvs_import_contract (Failed)\n")
+            "test 1\nStart 1: earlier_passing_test\n" +
+            "\n".join(f"1: EARLY-PASS-ROW-{index}" for index in range(260)) +
+            "\n1/25 Test #1: earlier_passing_test ........   Passed  1.00 sec\n"
+            "test 17\nStart 17: mvs_import_contract\n"
+            "17: Test command: python tests/mvs/test_mvs_qualification.py\n"
+            f"17: WINDOWS-ASSERTION-MARKER expected=1 observed=0 at {private_windows_path}{win_separator}tests{win_separator}mvs{win_separator}test.py:42\n"
+            "17/25 Test #17: mvs_import_contract ........***Failed  1.00 sec\n"
+            "test 18\nStart 18: mvs_import_max_horizon\n"
+            "18: Test command: python tests/mvs/test_mvs_qualification.py --mode maximum-horizon\n"
+            f"18: WINDOWS-HORIZON-MARKER expected=3600 observed=3599 at {private_windows_path}{win_separator}tests{win_separator}mvs{win_separator}test.py:84\n"
+            "18/25 Test #18: mvs_import_max_horizon ......***Failed  1.25 sec\n"
+            "test 21\nStart 21: mvs_import.contract.v2\n"
+            "21: Test command: python tests/mvs/test_mvs_qualification.py --mode revision-two\n"
+            f"21: WINDOWS-DOTTED-MARKER expected=2 observed=1 at {private_windows_path}{win_separator}tests{win_separator}mvs{win_separator}test.py:96\n"
+            "21/25 Test #21: mvs_import.contract.v2 ......***Failed  1.50 sec\n"
+            "test 22\nStart 22: mvs_import.exception_case\n"
+            f"22: AddressSanitizer: heap-use-after-free at {private_windows_path}{win_separator}tests{win_separator}mvs{win_separator}test.py:103\n"
+            "22: WINDOWS-EXCEPTION-MARKER signal=Segmentation fault\n"
+            "22/25 Test #22: mvs_import.exception_case ...***Exception: SegFault 1.50 sec\n"
+            "test 25\nStart 25: later_passing_test\n" +
+            "\n".join(f"25: LATER-PASS-ROW-{index}" for index in range(500)) +
+            "\n25/25 Test #25: later_passing_test ..........   Passed  1.00 sec\n"
+            "CTest exited with code 8; final summary omitted failed test names\n")
         ctest_bytes = ctest_stdout.encode("utf-8")
 
         ctest_attempt = {"stdout": ctest_stdout, "rewrite_last_test": True}
@@ -630,14 +647,19 @@ def ctest_failure_receipt_controls() -> None:
             receipt_path.read_bytes(), label="Windows matrix failure artifact")
         assert produced["schema"] == "sdk-verify-failure/v1"
         details = produced["ctest_failure_diagnostics"]
-        assert details["source"] == "ctest-last-test-log"
+        assert details["source"] == "ctest-last-test-log+ctest-output"
         assert details["last_test_log_status"] == "read"
-        assert details["failed_tests"] == ["mvs_import_contract"]
+        assert details["failed_tests"] == [
+            "mvs_import.contract.v2", "mvs_import.exception_case",
+            "mvs_import_contract", "mvs_import_max_horizon"]
         assert details["output_sha256"] == hashlib.sha256(ctest_bytes).hexdigest()
         assert details["output_bytes"] == len(ctest_bytes)
         assert details["output_excerpt_truncated"] is True
         excerpt = details["excerpt"]
         assert "WINDOWS-ASSERTION-MARKER expected=1 observed=0" in excerpt
+        assert "WINDOWS-HORIZON-MARKER expected=3600 observed=3599" in excerpt
+        assert "WINDOWS-DOTTED-MARKER expected=2 observed=1" in excerpt
+        assert "WINDOWS-EXCEPTION-MARKER signal=Segmentation fault" in excerpt
         assert "mvs_import_contract" in excerpt
         assert "[private-path-redacted]" in excerpt
         assert "runneradmin" not in excerpt
@@ -645,8 +667,7 @@ def ctest_failure_receipt_controls() -> None:
         assert "later verbose pass row" not in excerpt
 
         last_test.write_text(failed_block, encoding="utf-8")
-        stale_stdout = ("CMake Error: No such test preset: unknown\n"
-                        "1/25 tests failed\n")
+        stale_stdout = ctest_stdout
         ctest_attempt["stdout"] = stale_stdout
         ctest_attempt["rewrite_last_test"] = False
         stale_receipt_path = root / "matrix-windows-msvc-stale-log.json"
@@ -666,8 +687,15 @@ def ctest_failure_receipt_controls() -> None:
         stale_details = stale_receipt["ctest_failure_diagnostics"]
         assert stale_details["last_test_log_status"] == "stale"
         assert stale_details["source"] == "ctest-output"
-        assert "WINDOWS-ASSERTION-MARKER" not in stale_details["excerpt"]
-        assert "mvs_import_contract" not in stale_details["failed_tests"]
+        assert stale_details["failed_tests"] == [
+            "mvs_import.contract.v2", "mvs_import.exception_case",
+            "mvs_import_contract", "mvs_import_max_horizon"]
+        assert "WINDOWS-ASSERTION-MARKER expected=1 observed=0" in stale_details["excerpt"]
+        assert "WINDOWS-HORIZON-MARKER expected=3600 observed=3599" in stale_details["excerpt"]
+        assert "WINDOWS-DOTTED-MARKER expected=2 observed=1" in stale_details["excerpt"]
+        assert "WINDOWS-EXCEPTION-MARKER signal=Segmentation fault" in stale_details["excerpt"]
+        assert "EARLY-PASS-ROW" not in stale_details["excerpt"]
+        assert "LATER-PASS-ROW" not in stale_details["excerpt"]
 
         # A test can change the log path after CTest's return but before the
         # receipt collector opens it. Exercise that exact producer race: the
@@ -711,6 +739,10 @@ def ctest_failure_receipt_controls() -> None:
         attacked_details = attacked_receipt["ctest_failure_diagnostics"]
         assert attacked_details["last_test_log_status"] in {"unsafe", "stale"}
         assert attacked_details["source"] == "ctest-output"
+        assert "WINDOWS-ASSERTION-MARKER expected=1 observed=0" in attacked_details["excerpt"]
+        assert "WINDOWS-HORIZON-MARKER expected=3600 observed=3599" in attacked_details["excerpt"]
+        assert "WINDOWS-DOTTED-MARKER expected=2 observed=1" in attacked_details["excerpt"]
+        assert "WINDOWS-EXCEPTION-MARKER signal=Segmentation fault" in attacked_details["excerpt"]
         assert attacker_marker not in attacked_details["excerpt"]
         assert attacker_marker not in attacked_receipt["detail"]
         assert attacker_marker not in attacked_receipt_path.read_text(encoding="utf-8")
@@ -754,6 +786,10 @@ def ctest_failure_receipt_controls() -> None:
         hardlink_details = hardlink_receipt["ctest_failure_diagnostics"]
         assert hardlink_details["last_test_log_status"] in {"unsafe", "stale"}
         assert hardlink_details["source"] == "ctest-output"
+        assert "WINDOWS-ASSERTION-MARKER expected=1 observed=0" in hardlink_details["excerpt"]
+        assert "WINDOWS-HORIZON-MARKER expected=3600 observed=3599" in hardlink_details["excerpt"]
+        assert "WINDOWS-DOTTED-MARKER expected=2 observed=1" in hardlink_details["excerpt"]
+        assert "WINDOWS-EXCEPTION-MARKER signal=Segmentation fault" in hardlink_details["excerpt"]
         assert attacker_marker not in hardlink_details["excerpt"]
         assert attacker_marker not in hardlink_receipt["detail"]
         assert attacker_marker not in hardlink_receipt_path.read_text(encoding="utf-8")
@@ -761,6 +797,40 @@ def ctest_failure_receipt_controls() -> None:
             assert last_test.stat().st_nlink == 2
             last_test.unlink()
         last_test.write_text(failed_block, encoding="utf-8")
+
+        # Unparseable CTest output must not fall back to verbose passing output
+        # that cannot be tied to a failed result row.
+        malformed_stdout = (
+            "test 21\nStart 21: mvs_import.contract.v2\n"
+            "21: LATER-PASS-MARKER private details from an unbound row\n"
+            "CTest exited before emitting a result row\n")
+        ctest_attempt["stdout"] = malformed_stdout
+        ctest_attempt["rewrite_last_test"] = False
+        malformed_receipt_path = root / "matrix-windows-msvc-unbound-output.json"
+        malformed_argv = ["verify_sdk.py", "--suite", "matrix", "--lane", "windows-msvc",
+                          "--output", str(malformed_receipt_path)]
+        with mock.patch.object(verify_sdk, "ROOT", root), \
+                mock.patch.object(verify_sdk, "BUILD", build), \
+                mock.patch.object(verify_sdk, "LOG_DIR", root / "logs"), \
+                mock.patch.object(verify_sdk, "suite_matrix", side_effect=fail_from_ctest), \
+                mock.patch.object(verify_sdk.subprocess, "run", side_effect=failed_ctest), \
+                mock.patch.object(sys, "argv", malformed_argv), \
+                mock.patch.dict(os.environ, {"GITHUB_SHA": "a" * 40}, clear=False), \
+                contextlib.redirect_stderr(io.StringIO()):
+            assert verify_sdk.main() == 1
+        malformed_receipt = evidence.load_canonical_json(
+            malformed_receipt_path.read_bytes(), label="unbound CTest output failure artifact")
+        malformed_details = malformed_receipt["ctest_failure_diagnostics"]
+        assert malformed_details["source"] == "ctest-output"
+        assert malformed_details["last_test_log_status"] == "stale"
+        assert malformed_details["failed_tests"] == []
+        assert malformed_details["output_sha256"] == hashlib.sha256(
+            malformed_stdout.encode("utf-8")).hexdigest()
+        assert malformed_details["output_bytes"] == len(malformed_stdout.encode("utf-8"))
+        assert "withheld because no failed-test block could be bound safely" in malformed_details["excerpt"]
+        assert "LATER-PASS-MARKER" not in malformed_details["excerpt"]
+        assert "LATER-PASS-MARKER" not in malformed_receipt["detail"]
+        assert "LATER-PASS-MARKER" not in malformed_receipt_path.read_text(encoding="utf-8")
 
         credential_name = "ghp_" + "A" * 36
         unsafe_error = verify_sdk.VerificationError("test failed")
@@ -777,6 +847,12 @@ def ctest_failure_receipt_controls() -> None:
             over_limit = verify_sdk.ctest_failure_diagnostics(ctest_stdout, last_test)
         assert over_limit["last_test_log_status"] == "over-limit"
         assert over_limit["source"] == "ctest-output"
+        assert "WINDOWS-ASSERTION-MARKER expected=1 observed=0" in over_limit["excerpt"]
+        assert "WINDOWS-HORIZON-MARKER expected=3600 observed=3599" in over_limit["excerpt"]
+        assert "WINDOWS-DOTTED-MARKER expected=2 observed=1" in over_limit["excerpt"]
+        assert "WINDOWS-EXCEPTION-MARKER signal=Segmentation fault" in over_limit["excerpt"]
+        assert "EARLY-PASS-ROW" not in over_limit["excerpt"]
+        assert "LATER-PASS-ROW" not in over_limit["excerpt"]
 
         # A command-level timeout follows the same structured receipt path;
         # preserve both the timed-out CTest output and its fresh failed block.
@@ -1135,6 +1211,7 @@ class MvsLaneTests(unittest.TestCase):
         expected = {
             "CMakeLists.txt", "CMakePresets.json", "docs/mvs-media.md",
             "tools/mvs/mvs_import.c", "third_party/zlib/LICENSE",
+            "tools/verify_sdk.py",
             "third_party/zlib/adler32.c", "third_party/zlib/crc32.c",
             "third_party/zlib/crc32.h", "third_party/zlib/gzguts.h",
             "third_party/zlib/inffast.c", "third_party/zlib/inffast.h",
@@ -1145,6 +1222,7 @@ class MvsLaneTests(unittest.TestCase):
             "third_party/zlib/zutil.h",
         }
         self.assertTrue(expected.issubset(set(evidence.RELEVANT_FILES)))
+        self.assertTrue(expected.issubset(set(evidence.MVS_IMPORTER_SOURCE_FILES)))
 
     def test_replay_and_sound_recipe_mutations_change_identity_and_dirty_flag(self) -> None:
         targets = {"tools/mvs/frontend_replay.py", "tests/libretro/test_frontend_replay.py",
@@ -1206,6 +1284,7 @@ class MvsLaneTests(unittest.TestCase):
 
     def test_public_identity_binds_windows_importer_and_zlib_mutations(self) -> None:
         source_files = set(evidence.MVS_IMPORTER_SOURCE_FILES)
+        source_files.add("tools/verify_sdk.py")
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             for relative in source_files | {"experiments/owned_cpu/cpu.c"}:
@@ -1225,6 +1304,8 @@ class MvsLaneTests(unittest.TestCase):
             original_header = zlib_header.read_bytes()
             stdio_header = root / "tests/support/portable_stdio.h"
             original_stdio = stdio_header.read_bytes()
+            verifier = root / "tools/verify_sdk.py"
+            original_verifier = verifier.read_bytes()
             mutated_paths: set[str] = set()
 
             def git_output(*args: str, cwd: Path = ROOT) -> str:
@@ -1251,15 +1332,23 @@ class MvsLaneTests(unittest.TestCase):
                 stdio_header.write_bytes(original_stdio + b"\nhelper mutation")
                 mutated_paths.add("tests/support/portable_stdio.h")
                 after_helper = evidence.public_source_identity(root)
+                verifier.write_bytes(original_verifier + b"\ncollector mutation")
+                mutated_paths.add("tools/verify_sdk.py")
+                after_collector = evidence.public_source_identity(root)
 
         self.assertNotEqual(before["relevant_source_sha256"], after["relevant_source_sha256"])
         self.assertNotEqual(before["mvs_importer"]["source_sha256"],
                             after["mvs_importer"]["source_sha256"])
         self.assertNotEqual(after["mvs_importer"]["source_sha256"],
                             after_helper["mvs_importer"]["source_sha256"])
+        self.assertNotEqual(after_helper["mvs_importer"]["source_sha256"],
+                            after_collector["mvs_importer"]["source_sha256"])
+        self.assertNotEqual(after_helper["relevant_source_sha256"],
+                            after_collector["relevant_source_sha256"])
         self.assertFalse(before["mvs_importer"]["working_tree_dirty"])
         self.assertTrue(after["mvs_importer"]["working_tree_dirty"])
         self.assertTrue(after_helper["mvs_importer"]["working_tree_dirty"])
+        self.assertTrue(after_collector["mvs_importer"]["working_tree_dirty"])
 
     def test_mvs_collector_rejects_importer_substitution_during_ctest(self) -> None:
         proof = {"basename": "mvs_importer", "sha256": "a" * 64,

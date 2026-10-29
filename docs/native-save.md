@@ -304,7 +304,7 @@ for the original guest and its emulator-only assertion ancestry.
 | `child_timeout_bound_seconds` | bound | 15 |
 | `child_output_bound_bytes` | bound | 1,048,576 |
 | `tested_host_identity` | measured | macOS 26.6.2 / Darwin 25.6.0 / APFS |
-| `save_source_identity_sha256` | measured | `e245d182af32434ea08436b3baca57a3f07be701a0d3c1a31a0bf1bec6aaab6c` |
+| `save_source_identity_sha256` | measured | `ec630c3ee18c1f90593bd1e0c01a0a0defd209c3d305af8473540f44c114d96d` |
 | `guest_fixture_source_sha256` | measured | `af74e58521d294c324c9510a2fba7432cbfcf57f2489f26c7d7045db5868734d` |
 | `build_identity` | measured | AppleClang 21.0.0.21000101; Debug; SDK sanitizer NONE |
 | `supported_sync_operations` | measured | F_FULLFSYNC, checked file close, atomic rename, directory fsync, and directory close |
@@ -348,7 +348,7 @@ and [GNST matrix](native-state.md#native-state-exchange-support-matrix).
 
 | Source/build identity | OS / filesystem | Host and slot ownership | Commit / failure evidence | Outcome | Limit |
 |---|---|---|---|---|---|
-| Save source SHA-256 `e245d182af32434ea08436b3baca57a3f07be701a0d3c1a31a0bf1bec6aaab6c`; fixture source SHA-256 `af74e58521d294c324c9510a2fba7432cbfcf57f2489f26c7d7045db5868734d`; fixture 67,108,976 bytes; AppleClang 21.0.0.21000101, Debug, sanitizer NONE | macOS 26.6.2 / Darwin 25.6.0 / APFS | One owning writer per authoritative slot; trusted directory | Nine checked commit stages; 18 syscall-fault cases; 20 process-interruption stage cases; explicit ACK after directory sync and close | `pass` | Local process interruption and fresh-reader evidence only; not physical power-loss qualification |
+| Save source SHA-256 `ec630c3ee18c1f90593bd1e0c01a0a0defd209c3d305af8473540f44c114d96d`; fixture source SHA-256 `af74e58521d294c324c9510a2fba7432cbfcf57f2489f26c7d7045d86c350c`; fixture 67,108,976 bytes; AppleClang 21.0.0.21000101, Debug, sanitizer NONE | macOS 26.6.2 / Darwin 25.6.0 / APFS | One owning writer per authoritative slot; trusted directory | Nine checked commit stages; 18 syscall-fault cases; 20 process-interruption stage cases; explicit ACK after directory sync and close | `pass` | Local process interruption and fresh-reader evidence only; not physical power-loss qualification |
 | Non-Darwin host commit protocol | Linux / Windows host implementation boundary | No supported native host writer in this sample; portable save API has separate evidence | Non-Darwin host commit operation returns unsupported; host tests are marked skipped where the Darwin-only process path cannot run | `unsupported` | Does not assert that each listed OS/compiler pair was built by this host row |
 | Physical power-loss recovery and commercial board/game save behavior | No physical hardware/filesystem observation | No physical owner or storage path exercised | No matching measurement | `unknown` | Not qualified by emulator process termination |
 

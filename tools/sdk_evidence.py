@@ -46,6 +46,7 @@ MVS_IMPORTER_SOURCE_FILES = tuple(sorted(set((
     "tests/mvs/qualification_failure_driver.c",
     "tests/mvs/test_mvs.c",
     "tests/mvs/test_mvs_qualification.py",
+    "tools/verify_sdk.py",
     "tools/mvs/mvs_import.c",
     "tools/mvs/mvs_qualify.c",
     "tools/mvs/qualify_local_boot.py",
