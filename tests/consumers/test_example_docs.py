@@ -100,7 +100,7 @@ def command_argv(
                 executable.name in {"glueyneo-installed-sound",
                                     "glueyneo-installed-continuation",
                                     "glueyneo-installed-persistence"}):
-            expanded[0] = str(executable.with_suffix(".exe"))
+            expanded[0] = str(PureWindowsPath(cwd) / executable.with_suffix(".exe"))
     if cmake_generator and expanded[0] == "cmake" and "-S" in expanded and "-B" in expanded:
         expanded[1:1] = ["-G", cmake_generator]
     if str(ROOT) in " ".join(expanded):
@@ -111,10 +111,24 @@ def command_argv(
 def _raise_guide_launch_failure(command_index: int, executable_token: str, cwd: Path) -> None:
     executable = PureWindowsPath(executable_token)
     if executable.drive or executable.root or executable.is_absolute():
-        relative_executable = "<absolute executable>"
-        expected_path = None
-        expected_type = "not-inspected"
-        windows_exe_type = "not-inspected"
+        try:
+            relative = executable.relative_to(PureWindowsPath(cwd))
+        except ValueError:
+            relative_executable = "<absolute executable>"
+            expected_path = None
+            expected_type = "not-inspected"
+            windows_exe_type = "not-inspected"
+        else:
+            relative_executable = relative.as_posix()
+            expected_path = cwd.joinpath(*relative.parts)
+            expected_type = (
+                "file" if expected_path.is_file()
+                else "directory" if expected_path.is_dir() else "missing"
+            )
+            windows_exe_type = (
+                "file" if expected_path.suffix.lower() == ".exe" and expected_path.is_file()
+                else "missing"
+            )
     else:
         relative_executable = executable.as_posix().removeprefix("./")
         expected_path = cwd.joinpath(*executable.parts) if len(executable.parts) > 1 else None
@@ -387,6 +401,7 @@ class ExampleGuideCommandTests(unittest.TestCase):
         return attribute
 
     def test_windows_guide_executable_tokens_include_native_extension(self) -> None:
+        source = Path("C:/guide")
         for variant in ("static", "shared"):
             marker = f"./build/examples-{variant}/glueyneo-installed-"
             executable_commands = [command for command in guide_commands(variant)
@@ -394,7 +409,11 @@ class ExampleGuideCommandTests(unittest.TestCase):
             self.assertEqual(len(executable_commands), 7)
             for command in executable_commands:
                 with mock.patch.object(sys, "platform", "win32"):
-                    argv = command_argv(command, Path("C:/guide"))
+                    argv = command_argv(command, source)
+                documented = PureWindowsPath(shlex.split(command)[0]).with_suffix(".exe")
+                expected = PureWindowsPath(source) / documented
+                self.assertTrue(PureWindowsPath(argv[0]).is_absolute(), argv[0])
+                self.assertEqual(PureWindowsPath(argv[0]), expected)
                 self.assertEqual(PureWindowsPath(argv[0]).suffix, ".exe",
                                  f"Windows command must name its executable: {argv[0]}")
 
@@ -422,6 +441,13 @@ class ExampleGuideCommandTests(unittest.TestCase):
                 self.assertIn("<absolute executable>", rendered)
                 self.assertNotIn("synthetic-user", rendered)
                 self.assertNotIn(private_path, rendered)
+        guide_executable = PureWindowsPath(source) / "build" / "examples-static" / "missing.exe"
+        try:
+            _raise_guide_launch_failure(7, str(guide_executable), source)
+        except CheckError as error:
+            rendered = "".join(traceback.format_exception(error))
+        self.assertIn("build/examples-static/missing.exe", rendered)
+        self.assertNotIn(str(PureWindowsPath(source)), rendered)
 
     def test_documented_commands(self) -> None:
         type(self).assertion_count = 0
@@ -444,6 +470,14 @@ class ExampleGuideCommandTests(unittest.TestCase):
             fixture: Path | None = None
             for command_index, command in enumerate(commands, start=1):
                 argv = command_argv(command, source, cmake_generator=self.cmake_generator)
+                if sys.platform == "win32" and "glueyneo-installed-" in argv[0]:
+                    selected = PureWindowsPath(argv[0])
+                    relative = selected.relative_to(PureWindowsPath(source))
+                    selected_file = Path(argv[0])
+                    expected_file = source.joinpath(*relative.parts)
+                    self.assertEqual(selected_file, expected_file)
+                    self.assertTrue(selected_file.is_file(),
+                                    "Windows launch must select the built example executable")
                 try:
                     result = run(argv, cwd=source, env=network_env,
                                  timeout=COMMAND_TIMEOUT_SECONDS)
