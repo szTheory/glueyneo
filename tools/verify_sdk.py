@@ -10,6 +10,7 @@ from pathlib import Path
 import platform
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -363,6 +364,22 @@ def run(argv: list[str], *, timeout: int = CHILD_TIMEOUT_SECONDS,
             preserve_output(f"command-timeout-{Path(argv[0]).stem}", output)
         except OSError:
             pass
+        diagnostics = None
+        if ctest_log_path:
+            try:
+                ctest_log_after = ctest_last_test_signature(ctest_log_path)
+                diagnostics = ctest_failure_diagnostics(
+                    output, ctest_log_path,
+                    last_test_log_current=(ctest_log_after is not None and
+                                           ctest_log_after != ctest_log_before),
+                    last_test_log_signature=ctest_log_after)
+            except (OSError, UnicodeError, ValueError):
+                diagnostics = None
+        if diagnostics is not None:
+            failed = ", ".join(diagnostics["failed_tests"]) or "unknown"
+            raise VerificationError(
+                f"command timed out after {timeout}s: ctest; failed tests: {failed}\n"
+                f"{diagnostics['excerpt']}", failure_diagnostics=diagnostics) from error
         raise VerificationError(f"command timed out after {timeout}s: {Path(argv[0]).name}\n{output[-6000:]}") from error
     except OSError as error:
         raise VerificationError(f"could not execute required command: {Path(argv[0]).name}") from error
@@ -377,7 +394,8 @@ def run(argv: list[str], *, timeout: int = CHILD_TIMEOUT_SECONDS,
                 diagnostics = ctest_failure_diagnostics(
                     result.stdout or "", ctest_log_path,
                     last_test_log_current=(ctest_log_after is not None and
-                                           ctest_log_after != ctest_log_before))
+                                           ctest_log_after != ctest_log_before),
+                    last_test_log_signature=ctest_log_after)
             except (OSError, UnicodeError, ValueError):
                 diagnostics = None
             if diagnostics is not None:
@@ -450,13 +468,63 @@ def ctest_last_test_path(argv: list[str], cwd: Path) -> Path:
     return BUILD / "Testing/Temporary/LastTest.log"
 
 
-def ctest_last_test_signature(path: Path) -> tuple[int, int, int, int] | None:
-    """Return file metadata so a prior invocation's LastTest.log cannot be reused."""
+def _ctest_regular_file_signature(file_stat: os.stat_result) -> tuple[int, int, int, int, int] | None:
+    if not stat.S_ISREG(file_stat.st_mode):
+        return None
+    return (file_stat.st_dev, getattr(file_stat, "st_ino", 0), file_stat.st_mtime_ns,
+            file_stat.st_ctime_ns, file_stat.st_size)
+
+
+def ctest_last_test_signature(path: Path) -> tuple[int, int, int, int, int] | None:
+    """Return non-following metadata so a prior or linked log cannot be reused."""
     try:
-        stat = path.stat()
+        file_stat = path.lstat()
     except FileNotFoundError:
         return None
-    return (stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size, getattr(stat, "st_ino", 0))
+    return _ctest_regular_file_signature(file_stat)
+
+
+def _read_ctest_last_test_log(path: Path, expected_signature: tuple[int, int, int, int, int] | None,
+                              limit: int) -> tuple[bytes, str]:
+    """Read only the expected regular log file, rejecting links and path races."""
+    try:
+        before = _ctest_regular_file_signature(path.lstat())
+    except FileNotFoundError:
+        return b"", "missing"
+    except OSError:
+        return b"", "unsafe"
+    if before is None:
+        return b"", "unsafe"
+    if expected_signature is None:
+        expected_signature = before
+    if before != expected_signature:
+        return b"", "stale"
+
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except FileNotFoundError:
+        return b"", "missing"
+    except OSError:
+        return b"", "unsafe"
+    try:
+        with os.fdopen(descriptor, "rb") as stream:
+            opened = _ctest_regular_file_signature(os.fstat(stream.fileno()))
+            if opened is None or opened != expected_signature:
+                return b"", "unsafe"
+            data = stream.read(limit + 1)
+            after = _ctest_regular_file_signature(os.fstat(stream.fileno()))
+        try:
+            path_after = _ctest_regular_file_signature(path.lstat())
+        except OSError:
+            return b"", "unsafe"
+        if after != expected_signature or path_after != expected_signature:
+            return b"", "stale"
+    except OSError:
+        return b"", "unsafe"
+    if len(data) > limit:
+        return b"", "over-limit"
+    return data, "read"
 
 
 def _ctest_failed_names(output: str) -> set[str]:
@@ -505,7 +573,8 @@ def _bounded_redacted_ctest_excerpt(output: str) -> tuple[str, bool]:
 
 
 def ctest_failure_diagnostics(output: str, last_test_path: Path, *,
-                              last_test_log_current: bool = True) -> dict[str, Any]:
+                              last_test_log_current: bool = True,
+                              last_test_log_signature: tuple[int, int, int, int, int] | None = None) -> dict[str, Any]:
     """Build a safe, bounded receipt from failed CTest blocks before the log is overwritten."""
     output_bytes = output.encode("utf-8", errors="replace")
     expected_names = _ctest_failed_names(output)
@@ -513,21 +582,21 @@ def ctest_failure_diagnostics(output: str, last_test_path: Path, *,
     last_test_log_status = "missing"
     selected = ""
     failed_names = sorted(expected_names)
-    try:
-        if not last_test_log_current:
-            raise FileNotFoundError
-        with last_test_path.open("rb") as stream:
-            last_test_bytes = stream.read(CTEST_LAST_TEST_LOG_LIMIT + 1)
-    except FileNotFoundError:
-        if last_test_path.exists() and not last_test_log_current:
-            last_test_log_status = "stale"
-        last_test_bytes = b""
+    if last_test_log_current:
+        last_test_bytes, last_test_log_status = _read_ctest_last_test_log(
+            last_test_path, last_test_log_signature, CTEST_LAST_TEST_LOG_LIMIT)
     else:
-        if len(last_test_bytes) > CTEST_LAST_TEST_LOG_LIMIT:
-            last_test_log_status = "over-limit"
-            last_test_bytes = b""
-        else:
-            last_test_log_status = "read"
+        try:
+            current_signature = ctest_last_test_signature(last_test_path)
+            if current_signature is not None:
+                last_test_log_status = "stale"
+            elif last_test_path.lstat():
+                last_test_log_status = "unsafe"
+        except FileNotFoundError:
+            pass
+        except OSError:
+            last_test_log_status = "unsafe"
+        last_test_bytes = b""
     if last_test_bytes:
         last_test = last_test_bytes.decode("utf-8", errors="replace")
         logged_names, blocks = _ctest_failed_blocks(last_test, expected_names)

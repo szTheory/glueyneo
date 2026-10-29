@@ -669,6 +669,56 @@ def ctest_failure_receipt_controls() -> None:
         assert "WINDOWS-ASSERTION-MARKER" not in stale_details["excerpt"]
         assert "mvs_import_contract" not in stale_details["failed_tests"]
 
+        # A test can change the log path after CTest's return but before the
+        # receipt collector opens it. Exercise that exact producer race: the
+        # collector must reject a symlink (or a substituted file where the
+        # platform cannot create symlinks) and serialize no target contents.
+        attacker_file = root / "runner-private-data.txt"
+        attacker_marker = "UNRELATED-RUNNER-FILE-MUST-NOT-ENTER-RECEIPT"
+        attacker_file.write_text(attacker_marker, encoding="utf-8")
+        last_test.write_text("prior invocation\n", encoding="utf-8")
+        ctest_attempt["rewrite_last_test"] = True
+        attacked = {"done": False, "symlink": False}
+        original_open = os.open
+
+        def substitute_log_before_open(path, flags, *args, **kwargs):
+            if Path(path) == last_test and not attacked["done"]:
+                attacked["done"] = True
+                last_test.unlink()
+                try:
+                    last_test.symlink_to(attacker_file)
+                    attacked["symlink"] = True
+                except OSError:
+                    last_test.write_text(attacker_marker, encoding="utf-8")
+            return original_open(path, flags, *args, **kwargs)
+
+        attacked_receipt_path = root / "matrix-windows-msvc-substituted-log.json"
+        attacked_argv = ["verify_sdk.py", "--suite", "matrix", "--lane", "windows-msvc",
+                         "--output", str(attacked_receipt_path)]
+        with mock.patch.object(verify_sdk, "ROOT", root), \
+                mock.patch.object(verify_sdk, "BUILD", build), \
+                mock.patch.object(verify_sdk, "LOG_DIR", root / "logs"), \
+                mock.patch.object(verify_sdk, "suite_matrix", side_effect=fail_from_ctest), \
+                mock.patch.object(verify_sdk.subprocess, "run", side_effect=failed_ctest), \
+                mock.patch.object(verify_sdk.os, "open", side_effect=substitute_log_before_open), \
+                mock.patch.object(sys, "argv", attacked_argv), \
+                mock.patch.dict(os.environ, {"GITHUB_SHA": "a" * 40}, clear=False), \
+                contextlib.redirect_stderr(io.StringIO()):
+            assert verify_sdk.main() == 1
+        assert attacked["done"]
+        attacked_receipt = evidence.load_canonical_json(
+            attacked_receipt_path.read_bytes(), label="substituted LastTest matrix failure artifact")
+        attacked_details = attacked_receipt["ctest_failure_diagnostics"]
+        assert attacked_details["last_test_log_status"] in {"unsafe", "stale"}
+        assert attacked_details["source"] == "ctest-output"
+        assert attacker_marker not in attacked_details["excerpt"]
+        assert attacker_marker not in attacked_receipt["detail"]
+        assert attacker_marker not in attacked_receipt_path.read_text(encoding="utf-8")
+        if attacked["symlink"]:
+            assert last_test.is_symlink()
+            last_test.unlink()
+        last_test.write_text(failed_block, encoding="utf-8")
+
         credential_name = "ghp_" + "A" * 36
         unsafe_error = verify_sdk.VerificationError("test failed")
         unsafe_error.failure_diagnostics = {"failed_tests": [credential_name]}
@@ -684,6 +734,42 @@ def ctest_failure_receipt_controls() -> None:
             over_limit = verify_sdk.ctest_failure_diagnostics(ctest_stdout, last_test)
         assert over_limit["last_test_log_status"] == "over-limit"
         assert over_limit["source"] == "ctest-output"
+
+        # A command-level timeout follows the same structured receipt path;
+        # preserve both the timed-out CTest output and its fresh failed block.
+        timeout_build = root / "build/timeout"
+        timeout_log = timeout_build / "Testing/Temporary/LastTest.log"
+        timeout_log.parent.mkdir(parents=True, exist_ok=True)
+        timeout_receipt_path = root / "matrix-timeout.json"
+        timeout_argv = ["verify_sdk.py", "--suite", "matrix", "--lane", "linux-clang",
+                        "--output", str(timeout_receipt_path)]
+        timeout_output = ("Start 17: mvs_import_contract\n"
+                          "mvs_import_contract timed out after partial output\n").encode("utf-8")
+
+        def timeout_ctest(argv, **_kwargs):
+            timeout_log.write_text(failed_block, encoding="utf-8")
+            raise subprocess.TimeoutExpired(argv, 1, output=timeout_output)
+
+        def fail_from_timed_out_ctest():
+            verify_sdk.run(["ctest", "--test-dir", str(timeout_build), "--output-on-failure"])
+
+        with mock.patch.object(verify_sdk, "ROOT", root), \
+                mock.patch.object(verify_sdk, "BUILD", timeout_build), \
+                mock.patch.object(verify_sdk, "LOG_DIR", root / "logs"), \
+                mock.patch.object(verify_sdk, "suite_matrix", side_effect=fail_from_timed_out_ctest), \
+                mock.patch.object(verify_sdk.subprocess, "run", side_effect=timeout_ctest), \
+                mock.patch.object(sys, "argv", timeout_argv), \
+                mock.patch.dict(os.environ, {"GITHUB_SHA": "a" * 40}, clear=False), \
+                contextlib.redirect_stderr(io.StringIO()):
+            assert verify_sdk.main() == 1
+        timeout_receipt = evidence.load_canonical_json(
+            timeout_receipt_path.read_bytes(), label="timed-out CTest matrix failure artifact")
+        timeout_details = timeout_receipt["ctest_failure_diagnostics"]
+        assert timeout_details["source"] == "ctest-last-test-log"
+        assert timeout_details["failed_tests"] == ["mvs_import_contract"]
+        assert timeout_details["output_sha256"] == hashlib.sha256(timeout_output).hexdigest()
+        assert timeout_details["output_bytes"] == len(timeout_output)
+        assert "WINDOWS-ASSERTION-MARKER expected=1 observed=0" in timeout_details["excerpt"]
 
 
 def mvs_lane_controls() -> None:

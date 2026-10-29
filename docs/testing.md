@@ -966,13 +966,15 @@ privileged PR job that consumes or executes an uploaded PR artifact.
 
 Successful hosted runs retain per-lane receipts and an aggregate under
 `evidence/sdk/ci-aggregate.json`. Failed matrix commands upload a bounded
-failure receipt. CTest failures preserve the named failed test's redacted
-`LastTest.log` block before a later CTest invocation can replace it, alongside
-the original CTest output SHA-256, byte count, and truncation status. The
-sanitizer lane also carries its parsed per-test diagnostics into the aggregate.
-A local artifact-path fixture verifies that a failed assertion survives
-redaction and canonical JSON serialization; it does not establish a hosted
-result. GitHub Actions run
+failure receipt. CTest failures and outer CTest timeouts preserve the named
+failed test's redacted `LastTest.log` block when it is fresh, regular, and still
+has the same file identity when opened. The collector rejects symbolic links,
+substituted files, stale logs, and oversized logs. Each receipt also records
+the captured CTest output SHA-256, byte count, and truncation status. The
+sanitizer lane carries parsed per-test diagnostics into the aggregate. A local
+artifact-path fixture verifies that a failed assertion survives redaction and
+canonical JSON serialization, and that a substituted log cannot expose its
+target; it does not establish a hosted result. GitHub Actions run
 `37618668537` passed the six named matrix lanes and `ci-policy` at exact PR head
 `2c1b40bc27980da6d3d29fd3ef42436ce8e6b8e1`; the detailed toolchain and
 assertion receipt above belongs to the earlier exact source revision. A
