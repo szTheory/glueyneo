@@ -663,17 +663,17 @@
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
       },
       {
-        "path": "tests/libretro/test_frontend_registration.py",
-        "bytes": 21863,
-        "sha256": "abff59e691a24d4c86588d268ec10c96dad190dc891477b92873ae01ee8ff9dc",
+        "path": "tests/libretro/state_safety.c",
+        "bytes": 78972,
+        "sha256": "3ff11c8c11660fcbb4bde61586e422be30c4646a4ea87911d5c9bef6c86d6fd8",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
       },
       {
-        "path": "tests/libretro/state_safety.c",
-        "bytes": 78972,
-        "sha256": "3ff11c8c11660fcbb4bde61586e422be30c4646a4ea87911d5c9bef6c86d6fd8",
+        "path": "tests/libretro/test_frontend_registration.py",
+        "bytes": 21863,
+        "sha256": "abff59e691a24d4c86588d268ec10c96dad190dc891477b92873ae01ee8ff9dc",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
@@ -701,6 +701,14 @@
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+      },
+      {
+        "path": "tests/support/portable_stdio.h",
+        "bytes": 449,
+        "sha256": "56efd4de7698020d7fbce4ad571c34e4ac0416069139927050f24762ae4f7705",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo host-side test portability helper used by frontend contract harnesses."
       },
       {
         "path": "tools/mvs/frontend_replay.py",
