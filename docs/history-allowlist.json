@@ -130,8 +130,8 @@
     {
       "key": "tests/fixture/rights-manifest.json",
       "kind": "rights",
-      "pin": "71a5ad0458a7bd96d153101eff6041c9078e07d3c2769c0ea933cf6553856778",
-      "revision": "28157a82052ba23e1c940f26ce5eb261a00258c8"
+      "pin": "e882d79f850ccbfefdfa394065366d40386d9d9fe8456907ea2c7ca4221a19ef",
+      "revision": "db913f30ef4bf8fdd2191a1a69e744b833146728"
     },
     {
       "key": "tests/fixture/test_public_guest.c",
@@ -184,8 +184,8 @@
     {
       "key": "tests/libretro/test_frontend_registration.py",
       "kind": "rights",
-      "pin": "efb3aad3a22b080085f1af2674be13289b495800711d09d7eeefa16d5790fc3d",
-      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+      "pin": "bfaf87c113ebfa1344f9e804fd0acb9893f6da363a4942dae7057ccae2edd671",
+      "revision": "830f94eb8303f51a024a82121d3a0341f9454c31"
     },
     {
       "key": "tests/libretro/test_frontend_replay.py",
@@ -406,8 +406,8 @@
     {
       "key": "tests/tools/test_verify_playable.py",
       "kind": "rights",
-      "pin": "cba0c7818ec90c4e7731844941c6d7860b33b9c079ab56fa807de0abc71a1e5d",
-      "revision": "8f978510f063c4d4c35791d87629294e62abb70c"
+      "pin": "4bf425164cef5f75187aa308b58e5bc491e8038270c4863a912056265fda87f6",
+      "revision": "830f94eb8303f51a024a82121d3a0341f9454c31"
     }
   ],
   "schema": 1,
