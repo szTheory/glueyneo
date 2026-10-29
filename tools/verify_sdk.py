@@ -2111,15 +2111,24 @@ def sanitizer_summary(identity: dict[str, Any], *,
                 row["tests_attempted"] = 0
                 row["assertions_status"] = "runtime tests did not start; no passing assertion count"
             row["failed_tests"] = sorted(set(failures))
+            if isinstance(row.get("runtime_ctest_output_excerpt"), str):
+                row["runtime_ctest_output_excerpt"] = redacted_failure_diagnostic(
+                    row["runtime_ctest_output_excerpt"], limit=16_000)
             failed.append({"lane": name, "outcome": "fail", "reason": row["error"],
                            "stage": stage, "failure_diagnostic": row["failure_diagnostic"],
                            "failed_tests": row["failed_tests"],
                            "attempted_tests": row["tests_attempted"], "passed_tests": row.get("tests_passed", 0),
                            "source_revision": row.get("result_source_revision"),
                            "relevant_source_sha256": row.get("result_relevant_source_sha256"),
-                           "runtime_log_sha256": row.get("runtime_log_sha256")})
+                           "runtime_log_sha256": row.get("runtime_log_sha256"),
+                           "runtime_ctest_output_sha256": row.get("runtime_ctest_output_sha256"),
+                           "runtime_ctest_output_bytes": row.get("runtime_ctest_output_bytes"),
+                           "runtime_ctest_output_excerpt_truncated": row.get(
+                               "runtime_ctest_output_excerpt_truncated"),
+                           "runtime_ctest_output_excerpt": row.get("runtime_ctest_output_excerpt")})
         else:
-            raise VerificationError(f"sanitizer lane {name} ended with {status!r}")
+            if status not in {"passed", "unsupported"}:
+                raise VerificationError(f"sanitizer lane {name} ended with {status!r}")
         # The producer includes local argv and build paths. Keep only public-safe
         # outcome, toolchain, count, timing, and bounded RSS status fields.
         safe_rows.append({key: row.get(key) for key in (
@@ -2128,6 +2137,8 @@ def sanitizer_summary(identity: dict[str, Any], *,
             "runtime_log_sha256", "ctest_wall_seconds", "per_test_wall_seconds",
             "configured_test_timeout_seconds", "child_process_timeout_seconds", "ctest_parallel_jobs",
             "failed_tests", "failure_stage", "failure_diagnostic", "tests_attempted",
+            "runtime_ctest_output_sha256", "runtime_ctest_output_bytes",
+            "runtime_ctest_output_excerpt_truncated", "runtime_ctest_output_excerpt",
             "assertions_status", "configure_seconds",
             "build_seconds", "startup_seconds", "runtime_seconds", "platform", "compiler",
             "expected_tests", "tests_passed", "sdk_assertions", "startup",

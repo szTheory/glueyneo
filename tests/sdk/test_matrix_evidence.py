@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -70,6 +72,42 @@ def valid_report() -> dict:
 def sanitizer_failure_controls() -> None:
     identity = {"source_revision": "a" * 40, "relevant_source_sha256": "b" * 64,
                 "compiler": {"id": "Clang", "version": "18.1.8"}}
+    colored_failure = ("The following tests FAILED:\r\n"
+                       "\t\x1b[0;31m  1 - sdk_save_receipts (Failed)\x1b[0;0m\r\n")
+    assert controls.sanitizer_failed_test_names(colored_failure, "") == ["sdk_save_receipts"]
+
+    def installed_sanitizer_records() -> str:
+        wire = ""
+        for mode in sorted(verify_sdk.INSTALLED_SANITIZER_MODES):
+            run_id = "fixture-" + mode.lower()
+            for case_id in sorted(verify_sdk.INSTALLED_SANITIZER_CASES):
+                tested_mode = "NONE" if case_id == "ordinary_none_export" else mode
+                row = {
+                    "case_id": case_id,
+                    "mode": mode,
+                    "tested_mode": tested_mode,
+                    "run_id": run_id,
+                    "prefix_id": f"installed/{mode}/{run_id}",
+                    "linkage": "static_shared" if case_id == "ordinary_none_export" else "static",
+                    "configuration": "Debug",
+                    "outcome": "pass",
+                    "cases": 1,
+                    "assertions": 1,
+                    "duration_seconds": 0.01,
+                    "detail": "synthetic installed-sanitizer failure-control fixture",
+                    "compiler": {
+                        "c_id": "Clang", "c_version": "18.1.8", "c_path": "clang",
+                        "cxx_id": "Clang", "cxx_version": "18.1.8", "cxx_path": "clang++",
+                        "linker": "ld", "sanitizer": tested_mode,
+                    },
+                    "platform": {"system": "Darwin", "release": "fixture", "machine": "arm64"},
+                }
+                if case_id == "ordinary_none_export":
+                    row["prefixes"] = [f"installed/NONE/static/{run_id}",
+                                        f"installed/NONE/shared/{run_id}"]
+                wire += "\nSDK_INSTALLED_SANITIZER " + json.dumps(row)
+        return wire
+
     passing = {"lane": "asan-ubsan", "preset": "sdk-asan-ubsan", "status": "passed",
                "runtime_status": "passed", "startup_status": "passed",
                "expected_tests": 13, "tests_passed": 13, "sdk_assertions": 100,
@@ -102,7 +140,7 @@ def sanitizer_failure_controls() -> None:
     assert len(bounded_diagnostic) <= 60
     assert "The following tests FAILED:" in bounded_diagnostic
     assert any("10 - sdk_state (Failed)" in line for line in bounded_diagnostic)
-    assert bounded_diagnostic[-1] == " 10 - sdk_state (Failed)"
+    assert any("10 - sdk_state (Failed)" in line for line in bounded_diagnostic)
 
     failed_body = (
         "save receipt control failed: positive suite exited 1\n"
@@ -164,34 +202,7 @@ def sanitizer_failure_controls() -> None:
         failed = {"lane": "tsan", "preset": "sdk-tsan", "expected_tests": 3,
                   "ctest_parallel_jobs": 1, **changes}
         wire = "\n".join("SANITIZER_LANE " + json.dumps(row) for row in (passing, failed))
-        for mode in sorted(verify_sdk.INSTALLED_SANITIZER_MODES):
-            run_id = "fixture-" + mode.lower()
-            for case_id in sorted(verify_sdk.INSTALLED_SANITIZER_CASES):
-                tested_mode = "NONE" if case_id == "ordinary_none_export" else mode
-                row = {
-                    "case_id": case_id,
-                    "mode": mode,
-                    "tested_mode": tested_mode,
-                    "run_id": run_id,
-                    "prefix_id": f"installed/{mode}/{run_id}",
-                    "linkage": "static_shared" if case_id == "ordinary_none_export" else "static",
-                    "configuration": "Debug",
-                    "outcome": "pass",
-                    "cases": 1,
-                    "assertions": 1,
-                    "duration_seconds": 0.01,
-                    "detail": "synthetic installed-sanitizer failure-control fixture",
-                    "compiler": {
-                        "c_id": "Clang", "c_version": "18.1.8", "c_path": "clang",
-                        "cxx_id": "Clang", "cxx_version": "18.1.8", "cxx_path": "clang++",
-                        "linker": "ld", "sanitizer": tested_mode,
-                    },
-                    "platform": {"system": "Darwin", "release": "fixture", "machine": "arm64"},
-                }
-                if case_id == "ordinary_none_export":
-                    row["prefixes"] = [f"installed/NONE/static/{run_id}",
-                                       f"installed/NONE/shared/{run_id}"]
-                wire += "\nSDK_INSTALLED_SANITIZER " + json.dumps(row)
+        wire += installed_sanitizer_records()
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
             runtime_path = base / "sdk-tsan/sanitizer-control/runtime.log"
@@ -219,6 +230,150 @@ def sanitizer_failure_controls() -> None:
         if stage == "startup" or failed_assertions:
             assert "ThreadSanitizer" in failure["failure_diagnostic"]
             assert "[private-path-redacted]" in failure["failure_diagnostic"]
+
+    # Exercise the production CTest -> sanitizer lane -> receipt path. The later
+    # passing test has a long LastTest block, while the final CTest summary omits
+    # the failed name; the failure row and LastTest block must still survive.
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        build = root / "build/sdk-asan-ubsan"
+        build.mkdir(parents=True)
+        child = root / "ctest-child.py"
+        child.write_text(
+            "import sys\n"
+            "if sys.argv[1] == 'fail':\n"
+            " print('FAILED-BODY-MARKER expected=1 observed=0')\n"
+            " print('PRIVATE-CHILD-PATH ' + sys.argv[2])\n"
+            " sys.exit(1)\n"
+            "for i in range(120): print('LATER-PASS-ROW-%d' % i)\n",
+            encoding="utf-8")
+
+        def cmake_quote(value: str) -> str:
+            return '"' + value.replace("\\", "/").replace('"', '\\"') + '"'
+
+        ctest_file = (
+            f"add_test(sdk_save_receipts {cmake_quote(sys.executable)} "
+            f"{cmake_quote(str(child))} fail {cmake_quote(str(root))})\n"
+            f"add_test(sdk_save_lifecycle {cmake_quote(sys.executable)} "
+            f"{cmake_quote(str(child))} pass)\n")
+        (build / "CTestTestfile.cmake").write_text(ctest_file, encoding="utf-8")
+        startup = "SANITIZER_STARTUP " + json.dumps({
+            "outcome": "pass", "lane": "asan-ubsan", "startup_checks": 17,
+            "sanitizer": "ADDRESS_UNDEFINED", "compiler": "Clang 18.1.8"})
+        original_run_logged = controls.run_logged
+
+        def run_production_ctest(command, log_path, sample_rss=False, timeout=600.0):
+            if command[0] == "cmake" and ("--preset" in command or "--build" in command):
+                output = ""
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+                log_path.write_text(output, encoding="utf-8")
+                return 0, 0.01, None, output
+            if "--startup-probe" in command:
+                output = startup
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+                log_path.write_text(output, encoding="utf-8")
+                return 0, 0.01, None, output
+            return original_run_logged(
+                ["ctest", "--test-dir", str(build), "--parallel", "1",
+                 "--output-on-failure", "--no-tests=error"],
+                log_path, sample_rss, timeout,
+                environment=dict(os.environ, CTEST_COLOR_OUTPUT="1", CLICOLOR_FORCE="1"))
+
+        with mock.patch.object(controls, "__file__", str(root / "tests/sdk/controls.py")), \
+                mock.patch.object(controls, "cache_values", return_value={
+                    "GLUEYNEO_SDK_SANITIZER": "ADDRESS_UNDEFINED",
+                    "CMAKE_C_COMPILER_ID": "Clang",
+                    "CMAKE_C_COMPILER_VERSION": "18.1.8",
+                    "CMAKE_BUILD_TYPE": "Debug"}), \
+                mock.patch.object(controls, "verify_target_scoped_flags",
+                                  return_value=(True, "verified")), \
+                mock.patch.object(controls, "run_logged", side_effect=run_production_ctest):
+            production_report = controls.sanitizer_lane(
+                "sdk-asan-ubsan", "asan-ubsan", "ADDRESS_UNDEFINED",
+                "-fsanitize=address,undefined", "^sdk_")
+
+        assert production_report["status"] == "failed_runtime", production_report
+        assert production_report["failed_tests"] == ["sdk_save_receipts"]
+        produced_json = json.loads(json.dumps(production_report))
+        assert "FAILED-BODY-MARKER expected=1 observed=0" in "\n".join(
+            produced_json["runtime_log_tail"])
+        assert "LATER-PASS-ROW" not in "\n".join(produced_json["runtime_log_tail"])
+        raw_ctest = (build / "sanitizer-control/runtime.log").read_bytes()
+        assert produced_json["runtime_ctest_output_sha256"] == hashlib.sha256(raw_ctest).hexdigest()
+        assert produced_json["runtime_ctest_output_bytes"] == len(raw_ctest)
+        assert produced_json["runtime_ctest_output_excerpt_truncated"] == (
+            len(raw_ctest) > controls.RUNTIME_CTEST_OUTPUT_LIMIT)
+        assert "FAILED-BODY-MARKER expected=1 observed=0" in produced_json[
+            "runtime_ctest_output_excerpt"]
+        assert str(root) not in produced_json["runtime_ctest_output_excerpt"]
+        assert "[private-path-redacted]" in produced_json["runtime_ctest_output_excerpt"]
+
+        summaryless_root = root / "summaryless"
+        summaryless_build = summaryless_root / "build/sdk-asan-ubsan"
+        summaryless_build.mkdir(parents=True)
+        summaryless_output = (
+            "Start 55: sdk_save_receipts\n"
+            "92% tests passed, 1 tests failed out of 13\n"
+            "Total Test time (real) = 72.55 sec\n")
+        summaryless_details = failed_last_test
+
+        def run_summaryless_ctest(command, log_path, sample_rss=False, timeout=600.0):
+            if command[0] == "cmake" and ("--preset" in command or "--build" in command):
+                output, returncode = "", 0
+            elif "--startup-probe" in command:
+                output, returncode = startup, 0
+            else:
+                output, returncode = summaryless_output, 8
+                last_test = summaryless_build / "Testing/Temporary/LastTest.log"
+                last_test.parent.mkdir(parents=True, exist_ok=True)
+                last_test.write_text(summaryless_details, encoding="utf-8")
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            log_path.write_text(output, encoding="utf-8")
+            return returncode, 0.03, None, output
+
+        with mock.patch.object(controls, "__file__", str(summaryless_root / "tests/sdk/controls.py")), \
+                mock.patch.object(controls, "cache_values", return_value={
+                    "GLUEYNEO_SDK_SANITIZER": "ADDRESS_UNDEFINED",
+                    "CMAKE_C_COMPILER_ID": "Clang",
+                    "CMAKE_C_COMPILER_VERSION": "18.1.8",
+                    "CMAKE_BUILD_TYPE": "Debug"}), \
+                mock.patch.object(controls, "verify_target_scoped_flags",
+                                  return_value=(True, "verified")), \
+                mock.patch.object(controls, "run_logged", side_effect=run_summaryless_ctest):
+            summaryless_report = controls.sanitizer_lane(
+                "sdk-asan-ubsan", "asan-ubsan", "ADDRESS_UNDEFINED",
+                "-fsanitize=address,undefined", "^sdk_")
+        assert summaryless_report["failed_tests"] == ["sdk_save_receipts"]
+        assert "# ASSERT save.pending-newer expected=1 observed=0" in "\n".join(
+            summaryless_report["runtime_log_tail"])
+        assert "LATER-PASS-ROW" not in "\n".join(summaryless_report["runtime_log_tail"])
+
+        passing_tsan = {
+            "lane": "tsan", "preset": "sdk-tsan", "status": "passed",
+            "runtime_status": "passed", "startup_status": "passed",
+            "expected_tests": 3, "tests_passed": 3, "sdk_assertions": 97,
+            "ctest_parallel_jobs": 1,
+            "compiler": {**identity["compiler"], "configuration": "Debug"},
+        }
+        aggregate_wire = "\n".join(
+            "SANITIZER_LANE " + json.dumps(row)
+            for row in (summaryless_report, passing_tsan)) + installed_sanitizer_records()
+        with mock.patch.object(verify_sdk, "BUILD", summaryless_root / "build/sdk-debug"), \
+                mock.patch.object(verify_sdk, "TREE", summaryless_root / "build/sdk-debug/verify-sdk"), \
+                mock.patch.object(verify_sdk, "preserve_output", return_value="c" * 64), \
+                mock.patch.object(verify_sdk.evidence, "current_identity",
+                                  return_value=identity), \
+                mock.patch.object(verify_sdk, "run", return_value=
+                                  subprocess.CompletedProcess([], 1, aggregate_wire)):
+            aggregate, _ = verify_sdk.sanitizer_summary(identity)
+        failure = aggregate["failed"][0]
+        assert failure["failed_tests"] == ["sdk_save_receipts"]
+        assert "# ASSERT save.pending-newer expected=1 observed=0" in failure["failure_diagnostic"]
+        assert "LATER-PASS-ROW" not in failure["failure_diagnostic"]
+        assert failure["runtime_ctest_output_sha256"] == summaryless_report[
+            "runtime_ctest_output_sha256"]
+        assert str(root) not in json.dumps(aggregate)
+
     # Exercise the native supervisor's partial CTest counts without running a
     # native sanitizer or relying on a particular host's runtime availability.
     startup = 'SANITIZER_STARTUP ' + json.dumps({

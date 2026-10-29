@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import math
 import os
 import platform
@@ -397,32 +398,76 @@ INSTALLED_SANITIZER_FLAGS = {
     "THREAD": "-fsanitize=thread",
 }
 
+ANSI_ESCAPE = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+RUNTIME_CTEST_OUTPUT_LIMIT = 16_000
+
+
+def sanitizer_failed_test_names(ctest_output: str, test_details: str) -> list[str]:
+    """Find failed SDK tests across CTest's colored summary and LastTest blocks."""
+    output = ANSI_ESCAPE.sub("", ctest_output).replace("\r\n", "\n").replace("\r", "\n")
+    details = ANSI_ESCAPE.sub("", test_details).replace("\r\n", "\n").replace("\r", "\n")
+    names = set(re.findall(
+        r"(?m)^\s*\d+\s+-\s+(sdk_\w+)\s+\([^\n]+\)\s*$", output))
+    for match in re.finditer(
+            r"(?m)^\s*\d+/\d+\s+Test #\d+:\s+(sdk_\w+)\s+([^\n]*)$", output):
+        if re.search(r"\*\*\*(?:Failed|Timeout|Not Run)\b", match.group(2)):
+            names.add(match.group(1))
+
+    starts = list(re.finditer(r"(?m)^\s*\d+/\d+\s+Testing:\s+(sdk_\w+)\s*$", details))
+    for index, match in enumerate(starts):
+        section_end = starts[index + 1].start() if index + 1 < len(starts) else len(details)
+        section = details[match.start():section_end]
+        if re.search(r"(?m)^\s*Test (?:Failed|Not Run)\.\s*$", section):
+            names.add(match.group(1))
+    return sorted(names)
+
+
+def _redacted_ctest_excerpt(output: str) -> str:
+    """Reuse the receipt producer's privacy scanner for a bounded raw-output excerpt."""
+    verify_sdk = sys.modules.get("verify_sdk")
+    if verify_sdk is None:
+        root = Path(__file__).resolve().parents[2]
+        tools_dir = str(root / "tools")
+        if tools_dir not in sys.path:
+            sys.path.insert(0, tools_dir)
+        import verify_sdk  # noqa: E402
+    return verify_sdk.redacted_failure_diagnostic(
+        output, limit=RUNTIME_CTEST_OUTPUT_LIMIT)
+
 
 def sanitizer_runtime_diagnostic_tail(ctest_output: str, test_details: str,
                                       limit: int = 60) -> list[str]:
     """Retain each failed test's output and CTest summary within a line bound."""
+    ctest_output = ANSI_ESCAPE.sub("", ctest_output).replace("\r\n", "\n").replace("\r", "\n")
+    test_details = ANSI_ESCAPE.sub("", test_details).replace("\r\n", "\n").replace("\r", "\n")
     ctest_lines = ctest_output.splitlines()
     detail_lines = test_details.splitlines()
+    failure_names = sanitizer_failed_test_names(ctest_output, test_details)
     failure_start = next((index for index in range(len(ctest_lines) - 1, -1, -1)
                           if ctest_lines[index].strip() == "The following tests FAILED:"),
                          None)
-    if failure_start is None:
+    if failure_start is None and not failure_names:
         return (ctest_lines + detail_lines)[-limit:]
 
-    failure_names = re.findall(
-        r"(?m)^\s*\d+\s+-\s+(sdk_\w+)\s+\([^\n]+\)\s*$",
-        "\n".join(ctest_lines[failure_start + 1:]))
     failure_summary = [
         line for line in ctest_lines[:failure_start]
         if re.search(r"\d+% tests passed, \d+ tests? failed", line) or
         "Total Test time" in line
-    ]
-    failure_summary.append(ctest_lines[failure_start])
+    ] if failure_start is not None else []
+    if failure_start is not None:
+        failure_summary.append(ctest_lines[failure_start])
+        failure_summary.extend(
+            line for line in ctest_lines[failure_start + 1:]
+            if re.match(r"^\s*\d+\s+-\s+sdk_\w+\s+\([^\n]+\)\s*$", line))
     failure_summary.extend(
-        line for line in ctest_lines[failure_start + 1:]
-        if re.match(r"^\s*\d+\s+-\s+sdk_\w+\s+\([^\n]+\)\s*$", line))
+        line for line in ctest_lines
+        if re.match(r"^\s*\d+/\d+\s+Test #\d+:\s+sdk_\w+\s+.*\*\*\*(?:Failed|Timeout|Not Run)\b", line)
+        and line not in failure_summary)
+    for name in failure_names:
+        if not any(re.search(rf"\b{re.escape(name)}\b", line) for line in failure_summary):
+            failure_summary.append(f"failed test: {name}")
 
-    starts = list(re.finditer(r"(?m)^\d+/\d+ Testing: (sdk_\w+)\s*$", test_details))
+    starts = list(re.finditer(r"(?m)^\s*\d+/\d+\s+Testing:\s+(sdk_\w+)\s*$", test_details))
     test_output: dict[str, list[str]] = {}
     for index, match in enumerate(starts):
         name = match.group(1)
@@ -457,10 +502,13 @@ def sanitizer_runtime_diagnostic_tail(ctest_output: str, test_details: str,
                 output = output[-per_test_budget:]
             details.extend(output)
     elif detail_budget > 0:
-        details = detail_lines[-detail_budget:]
+        # Do not substitute the tail of LastTest.log: it often belongs to a
+        # later passing test. Preserve the missing-block fact explicitly.
+        details = ["failed test output block was unavailable in LastTest.log"]
 
     remaining = limit - len(failure_summary) - len(details)
-    context = ctest_lines[:failure_start][-remaining:] if remaining > 0 else []
+    context = (ctest_lines[:failure_start][-remaining:]
+               if remaining > 0 and failure_start is not None else [])
     return (details + context + failure_summary)[-limit:]
 
 
@@ -1133,7 +1181,11 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
     last_test_log = build_dir / "Testing" / "Temporary" / "LastTest.log"
     test_details = (last_test_log.read_text(encoding="utf-8", errors="replace")
                     if last_test_log.exists() else "")
-    ctest_log = ctest_output + "\n" + test_details
+    normalized_ctest_output = ANSI_ESCAPE.sub("", ctest_output).replace(
+        "\r\n", "\n").replace("\r", "\n")
+    normalized_test_details = ANSI_ESCAPE.sub("", test_details).replace(
+        "\r\n", "\n").replace("\r", "\n")
+    ctest_log = normalized_ctest_output + "\n" + normalized_test_details
     sdk_records = records_from_log(ctest_log, "SDK_RESULT ")
     control_records = (records_from_log(ctest_log, "SDK_CONTROL_RESULT ")
                        if probe_name == "tsan" else [])
@@ -1144,13 +1196,14 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
     # outcome; none of those is interchangeable with the old timeout receipt.
     completed = re.findall(
         r"(?m)^\s*\d+/\d+\s+Test #\d+:\s+(sdk_\w+)\s+([^\n]*?)\s+[\d.]+\s+sec\s*$",
-        ctest_output)
-    started = set(re.findall(r"(?m)^\s*Start \d+:\s+(sdk_\w+)\s*$", ctest_output))
+        normalized_ctest_output)
+    started = set(re.findall(r"(?m)^\s*Start \d+:\s+(sdk_\w+)\s*$",
+                             normalized_ctest_output))
     report["tests_attempted"] = len(started | {name for name, _ in completed})
     report["tests_passed"] = len({name for name, status in completed
                                   if re.search(r"\bPassed\b", status)})
-    report["failed_tests"] = sorted(set(re.findall(
-        r"(?m)^\s*\d+\s+-\s+(sdk_\w+)\s+\([^\n]+\)\s*$", ctest_output)))
+    report["failed_tests"] = sanitizer_failed_test_names(
+        normalized_ctest_output, normalized_test_details)
     report["sdk_assertions"] = sum(
         record.get("assertions", 0) for record in log_records
         if isinstance(record.get("assertions"), int)) + sum(
@@ -1161,8 +1214,17 @@ def sanitizer_lane(preset: str, probe_name: str, cache_mode: str,
         report["runtime_status"] = "failed"
         report["status"] = "failed_runtime"
         report["error"] = f"runtime CTest suite exited {ctest_status}"
+        runtime_output_path = result_dir / "runtime.log"
+        ctest_bytes = (runtime_output_path.read_bytes() if runtime_output_path.is_file()
+                       else ctest_output.encode("utf-8", errors="replace"))
+        report["runtime_ctest_output_sha256"] = hashlib.sha256(ctest_bytes).hexdigest()
+        report["runtime_ctest_output_bytes"] = len(ctest_bytes)
+        report["runtime_ctest_output_excerpt_truncated"] = (
+            len(ctest_bytes) > RUNTIME_CTEST_OUTPUT_LIMIT)
+        report["runtime_ctest_output_excerpt"] = _redacted_ctest_excerpt(
+            ctest_bytes.decode("utf-8", errors="replace"))
         report["runtime_log_tail"] = sanitizer_runtime_diagnostic_tail(
-            ctest_output, test_details)
+            normalized_ctest_output, normalized_test_details)
         return report
     if report["tests_passed"] != report["expected_tests"]:
         report["failure_stage"] = "runtime"
