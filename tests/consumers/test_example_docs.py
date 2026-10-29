@@ -287,6 +287,7 @@ def validate_evidence_matrices(documents: dict[str, str]) -> int:
         "glueyneo-sdk-0.2.1-macos-arm64.tar.gz",
         "glueyneo-sdk-0.2.1-windows-x86_64.tar.gz",
     )
+
     for artifact in required_artifacts:
         matches = [row for row in release_rows if artifact in row["Source/artifact identity"]]
         if len(matches) != 1 or matches[0]["Outcome"] != "pass":
@@ -387,6 +388,66 @@ def validate_evidence_matrices(documents: dict[str, str]) -> int:
     return sum(len(rows) + 1 for rows in loaded.values()) + len(compatibility_rows)
 
 
+def _validate_compile_metadata(source: Path, variant: str, metadata: list[str]) -> None:
+    if (not isinstance(metadata, list) or not metadata or
+            any(type(value) is not str for value in metadata)):
+        raise CheckError("guide consumer build did not expose compile policy metadata")
+    rendered = "\n".join(metadata)
+    normalized = rendered.replace("\\", "/").casefold()
+    private_checkout = str(ROOT).replace("\\", "/").casefold()
+    sdk_cmakefiles = str(source / f"build/sdk-{variant}" / "CMakeFiles")
+    if private_checkout in normalized or sdk_cmakefiles.replace("\\", "/").casefold() in normalized:
+        raise CheckError("guide consumer compile metadata refers to a source checkout or producer build")
+    install_prefix = str(source / f"build/install-{variant}").replace("\\", "/").casefold()
+    if install_prefix not in normalized:
+        raise CheckError("guide consumer compile metadata does not use the installed package")
+
+
+def _file_api_compile_metadata(source: Path, variant: str) -> list[str]:
+    reply_dir = source / f"build/examples-{variant}" / ".cmake" / "api" / "v1" / "reply"
+    indexes = sorted(reply_dir.glob("index-*.json"))
+    if not indexes:
+        raise CheckError("guide consumer build did not produce CMake File API metadata")
+    try:
+        index = json.loads(indexes[-1].read_text(encoding="utf-8"))
+        codemodel_entry = next(
+            entry for entry in index["reply"].values() if entry.get("kind") == "codemodel"
+        )
+        codemodel = json.loads((reply_dir / codemodel_entry["jsonFile"]).read_text(encoding="utf-8"))
+        metadata: list[str] = []
+        group_count = 0
+        for configuration in codemodel["configurations"]:
+            for target_ref in configuration["targets"]:
+                target = json.loads((reply_dir / target_ref["jsonFile"]).read_text(encoding="utf-8"))
+                for group in target.get("compileGroups", []):
+                    group_count += 1
+                    for fragment in group.get("compileCommandFragments", []):
+                        metadata.append(fragment["fragment"])
+                    metadata.extend(include["path"] for include in group.get("includes", []))
+                    metadata.extend(define["define"] for define in group.get("defines", []))
+    except (AttributeError, KeyError, TypeError, ValueError, OSError, StopIteration) as error:
+        raise CheckError("guide consumer CMake File API compile metadata is malformed") from error
+    if group_count == 0:
+        raise CheckError("guide consumer CMake File API has no compiled targets")
+    return metadata
+
+
+def _check_guide_compile_metadata(source: Path, variant: str) -> None:
+    build_dir = source / f"build/examples-{variant}"
+    compile_db = build_dir / "compile_commands.json"
+    metadata = _file_api_compile_metadata(source, variant)
+    _validate_compile_metadata(source, variant, metadata)
+    if compile_db.is_file():
+        try:
+            rows = json.loads(compile_db.read_text(encoding="utf-8"))
+            compile_db_metadata = [
+                value for row in rows
+                for value in (row.get("command", ""), row.get("directory", ""), row.get("file", ""))
+            ]
+        except (AttributeError, TypeError, ValueError, OSError) as error:
+            raise CheckError("guide consumer compile database is malformed") from error
+        _validate_compile_metadata(source, variant, compile_db_metadata)
+
 class ExampleGuideCommandTests(unittest.TestCase):
     assertion_count = 0
     cmake_generator: str | None = None
@@ -464,6 +525,11 @@ class ExampleGuideCommandTests(unittest.TestCase):
             staged_guide = source / "docs" / "sdk-examples.md"
             self.assertEqual(staged_guide.read_bytes(), GUIDE.read_bytes())
             commands = guide_commands(variant, staged_guide)
+            file_api_query = (
+                source / f"build/examples-{variant}" / ".cmake" / "api" / "v1" / "query"
+            )
+            file_api_query.mkdir(parents=True)
+            (file_api_query / "codemodel-v2").write_text("", encoding="utf-8")
             last_outputs: list[tuple[list[str], str]] = []
             persistence_executable: Path | None = None
             host_producer: dict[str, object] | None = None
@@ -535,12 +601,7 @@ class ExampleGuideCommandTests(unittest.TestCase):
             self.assertEqual(checked_records % 6, 0)
             self.assertIsNotNone(fixture)
             self.assertIsNotNone(persistence_executable)
-            compile_db = source / f"build/examples-{variant}" / "compile_commands.json"
-            self.assertTrue(compile_db.is_file(), "guide must export consumer compile commands")
-            compile_text = compile_db.read_text(encoding="utf-8")
-            self.assertNotIn(str(ROOT), compile_text)
-            self.assertNotIn(str(source / f"build/sdk-{variant}" / "CMakeFiles"), compile_text)
-            self.assertIn(str(source / f"build/install-{variant}"), compile_text)
+            _check_guide_compile_metadata(source, variant)
             self._check_host_failure_outcomes(
                 source, variant, persistence_executable, host_producer, network_env,
             )
@@ -704,6 +765,18 @@ class ExampleGuideContractTests(unittest.TestCase):
             self.assertEqual(build_argv[build_argv.index("--config") + 1], "Release")
             self.assertIn("--config", install_argv)
             self.assertEqual(install_argv[install_argv.index("--config") + 1], "Release")
+
+    def test_compile_metadata_requires_installed_include_and_rejects_build_paths(self) -> None:
+        source = Path("/tmp/relocated-guide")
+        installed_include = str(source / "build/install-static/include")
+        _validate_compile_metadata(source, "static", [installed_include, "/TC"])
+        for invalid in (
+            [installed_include, str(ROOT / "src" / "instance.c")],
+            [installed_include, str(source / "build/sdk-static/CMakeFiles/Glueyneo.dir")],
+            ["/tmp/other/include", "/TC"],
+        ):
+            with self.subTest(metadata=invalid), self.assertRaises(CheckError):
+                _validate_compile_metadata(source, "static", invalid)
 
     def _load_verify_sdk(self):
         return _load_verify_sdk_module()
