@@ -595,11 +595,11 @@
       {
         "path": "docs/native-save.md",
         "bytes": 27665,
-        "sha256": "a30776e27ea309242ef4c7d054672c6c25c14df2a4ab997ea52352ead48926e5",
+        "sha256": "9eb3fa545eab5a15cbf5d3fb45a6e827b3f495c91174adc45b3e5f67b5d3a26f",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract.",
-        "source_revision": "61aaa5acc386fb722cc7da8b9d2bb01a3fdbcdb3"
+        "source_revision": "809b151d764ff709d1d50799b5e8c20381819044"
       },
       {
         "path": "docs/native-state.md",
