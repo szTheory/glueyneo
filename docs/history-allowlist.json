@@ -1,6 +1,415 @@
 {
   "base_revision": "b6319a251c535e24d214745396ca7e8e1fb92177",
-  "rows": [],
+  "rows": [
+    {
+      "key": "fixtures/diagnostic/manifest.json",
+      "kind": "rights",
+      "pin": "93e07d140b37b854ced50ee3f3040643120316231747caa2330f81b011f78f92",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/audio/test_design_mvs_pcm.py",
+      "kind": "rights",
+      "pin": "0594fee1913c40fdce7ee512b97b7d97758b039877e89ab98a3e9882b177f2d0",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/chips/Z80-ADMISSION.md",
+      "kind": "rights",
+      "pin": "2f68d95222347d895f9abec261f811c9ccb7666c6434697e52ff218affbebc35",
+      "revision": "bdca1240ef48752c7fd9838393de150866344826"
+    },
+    {
+      "key": "tests/chips/check_ym2610.py",
+      "kind": "rights",
+      "pin": "4865f32a38c60d8207ef04ca3f70fa0fb43bbaeb0894be49b50dd3036f3806c9",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/chips/check_z80_source.py",
+      "kind": "rights",
+      "pin": "054a7e86d135f15c99eabb20ac2123378fb2e3b5546468aa572d472ecbfb8b78",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/chips/test_ym2610.c",
+      "kind": "rights",
+      "pin": "5c6da5c1c75ac5b854459c1de6f2a57184adfbf4e5bb635333869df7d43ada22",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/chips/test_z80.c",
+      "kind": "rights",
+      "pin": "e2158d9c704fdb726aeedb11b3784e732895b8b409eb2c32c15560f9b63d967a",
+      "revision": "22cb6fdeaf76584887c1ff23da47476541225d22"
+    },
+    {
+      "key": "tests/consumers/sanitizer_runtime.cpp",
+      "kind": "rights",
+      "pin": "8a909d0c85c14dd49d52cdd5ab018faa4127a6280f2d28e020ccbb5f7ca51c69",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/consumers/sound_consumer.c",
+      "kind": "rights",
+      "pin": "7127ef5c83c81e26c53fe2c5bff07d724b87058a97fb023946c6178db3d25423",
+      "revision": "71307b88e62b7b772d6b5c3b53e10e323f23dd82"
+    },
+    {
+      "key": "tests/consumers/test_check_package.py",
+      "kind": "rights",
+      "pin": "ae7d91711b1ca533f922183bc056a939554c61b640ee951c32ea5cbca4fb91ad",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/consumers/test_continuation_install.py",
+      "kind": "rights",
+      "pin": "a7f00e189e88d0217f30631956765d53ecd5ecc4e889e7d6c7e2d36ebe5ddff4",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/consumers/test_delivery_contract.py",
+      "kind": "rights",
+      "pin": "8e77280d097e611f76be688c0f7f046f7be6d9988af466880bc36f6317b2ad72",
+      "revision": "52bf2265fce96a2051492ba979ea353fa690f7a5"
+    },
+    {
+      "key": "tests/consumers/test_example_docs.py",
+      "kind": "rights",
+      "pin": "5734350e9ecccd00885a3ebd7319229be02cb915d0df653fe7ec7dfc73f97e65",
+      "revision": "51cb999894dc826dd4f48d2ecafcf67bacbd9886"
+    },
+    {
+      "key": "tests/consumers/test_persistence_install.py",
+      "kind": "rights",
+      "pin": "50074be7537e43bb47451cbc8b65b1bf96d04cffe63bf3f3b874f72275c7b465",
+      "revision": "6a9d61eb1c79e566294b607d59338a6c1b52e628"
+    },
+    {
+      "key": "tests/consumers/test_playable_install.py",
+      "kind": "rights",
+      "pin": "e10690ec18ed8b4d319692498e5fa9bcf3a8320f7df0b045cdd7c1cae2aa983d",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/fixture/ORACLE.md",
+      "kind": "rights",
+      "pin": "20428faf5fd96564e861e9030a5434ad23bad069600cb158ddb977e009f6f79f",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/fixture/check_fixture.py",
+      "kind": "rights",
+      "pin": "871530490bc4fe9a7ed1d13dc998360ecdf8f41ce4f4ede6d61f14e437eaf15a",
+      "revision": "bdca1240ef48752c7fd9838393de150866344826"
+    },
+    {
+      "key": "tests/fixture/public_guest.c",
+      "kind": "rights",
+      "pin": "33a74942292d5b06a460edc93d7b89da9fed64291f85e669999cd400c20ba243",
+      "revision": "bdca1240ef48752c7fd9838393de150866344826"
+    },
+    {
+      "key": "tests/fixture/public_persistence_guest.c",
+      "kind": "rights",
+      "pin": "65d7b941ce5545af83a3c340aa7bfe70dd7aa0db68b79d8dc6f13e960b2ccfff",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/fixture/public_save_guest.c",
+      "kind": "rights",
+      "pin": "0b722de47f1601c21401f4aef7a9d232290bdd93639baf2b653b01666df4fbda",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/fixture/public_sound_guest.c",
+      "kind": "rights",
+      "pin": "529215e4bd007525e2a2c31b33edee35e21df1d3ccda9fd7a4e6b1f7ee7b98d1",
+      "revision": "bdca1240ef48752c7fd9838393de150866344826"
+    },
+    {
+      "key": "tests/fixture/rights-manifest.json",
+      "kind": "rights",
+      "pin": "8125d6f32e63c6ff8eed83e73d9b6cacb61d44978694e8bd1f98f13aef9b3738",
+      "revision": "ef047cce7cc6bc63a44329b04467d489530aa24b"
+    },
+    {
+      "key": "tests/fixture/test_public_guest.c",
+      "kind": "rights",
+      "pin": "325ee87fcdc8668c549d3fa63012e0270d0ddb4854a4931e855990b5c70c3af9",
+      "revision": "bdca1240ef48752c7fd9838393de150866344826"
+    },
+    {
+      "key": "tests/fixture/test_public_sound_guest.c",
+      "kind": "rights",
+      "pin": "05fe1dd15632357a354d56587ba3b57614bf635e80ab130bb66af244a37ba0a4",
+      "revision": "bdca1240ef48752c7fd9838393de150866344826"
+    },
+    {
+      "key": "tests/fuzz/state_regressions.json",
+      "kind": "rights",
+      "pin": "8f1c0ba562a7507fcdd67ec8bd0133ea4c9573abbbcbcf8ed69e3d2babb63208",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/fuzz/test_state_controls.py",
+      "kind": "rights",
+      "pin": "369703e7cf4ec6005e000a281426182cb2f4e8874f5ff5aa10ec10e698a9efd7",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/libretro/callback_harness.c",
+      "kind": "rights",
+      "pin": "ca8996446c2c04338707f1d5395d56e31be459ed99fadebcaf6208f859018545",
+      "revision": "bdca1240ef48752c7fd9838393de150866344826"
+    },
+    {
+      "key": "tests/libretro/frontend_observer_test.py",
+      "kind": "rights",
+      "pin": "7cc6af55b30cf735e5989d48e4720c401b3ed6dedd4f2d109a6cd397e7bdf3c1",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/libretro/retroarch_smoke.py",
+      "kind": "rights",
+      "pin": "33d064db7b108704dce15a5cbec1987157e822e8a71bc9c2847d9690fb494854",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/libretro/state_safety.c",
+      "kind": "rights",
+      "pin": "0dd685c688a4853d17b313913066e11981de16aa680cdbcd13a514e2768cdb88",
+      "revision": "3c4fae120b108a8133b8342350165b04c0b09d8f"
+    },
+    {
+      "key": "tests/libretro/test_frontend_registration.py",
+      "kind": "rights",
+      "pin": "efb3aad3a22b080085f1af2674be13289b495800711d09d7eeefa16d5790fc3d",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/libretro/test_frontend_replay.py",
+      "kind": "rights",
+      "pin": "f200735a25f99bf17b51330901f98020a1714ec3bd2fcd5d00a235b79b3f8588",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/libretro/test_manual_gameplay.py",
+      "kind": "rights",
+      "pin": "7d6713495dee2b02063d8dccfb03ca72776ed6a7ec0686f3f77731bc91483d79",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/libretro/test_retroarch_smoke.py",
+      "kind": "rights",
+      "pin": "c895cf0da3bfdd428b1b61e3d8d95cc0390023ec7bf35a5be0112af734695de8",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/mvs/fuzz_import.c",
+      "kind": "rights",
+      "pin": "b4b8e6d59d86cc5a164b3b78aa441b80a6c3953c463c9e6a8562b80732f611f9",
+      "revision": "bdca1240ef48752c7fd9838393de150866344826"
+    },
+    {
+      "key": "tests/mvs/qualification_failure_driver.c",
+      "kind": "rights",
+      "pin": "d1146263dd63fdbffb2719113eb351e231c5df1888388d501fafb1d7c9415b37",
+      "revision": "bdca1240ef48752c7fd9838393de150866344826"
+    },
+    {
+      "key": "tests/mvs/test_hybrid_acceptance.py",
+      "kind": "rights",
+      "pin": "973e5cf78b652be9ddda82fd0b47323e8c422720800f53bc7c5b5d45209af0e1",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/mvs/test_hybrid_qualification.py",
+      "kind": "rights",
+      "pin": "6a32c3ad2e533f9e6b7e3ba31ea5d74fff29d45f712ce88db9b105d488d15c04",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/mvs/test_hybrid_revalidation.py",
+      "kind": "rights",
+      "pin": "c8796f191563d3aba8458b926c5b046f244defea7f9287df9ca93415d8149fb8",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/mvs/test_mvs.c",
+      "kind": "rights",
+      "pin": "2fa7e8bf2f6e82bc2e974b1edc98ce302d597910e00fe349a21d16748b4431a6",
+      "revision": "f4c0c4f7792a0324f19375f233e01a8917d87323"
+    },
+    {
+      "key": "tests/mvs/test_mvs_qualification.py",
+      "kind": "rights",
+      "pin": "a6d46c031973141a0bb1fce9ccd32273137de4096c2c6c2e518448242bea0408",
+      "revision": "363445e41b8d80583a52e3819858c3f13e7767dc"
+    },
+    {
+      "key": "tests/mvs/test_strict_producer_proof.py",
+      "kind": "rights",
+      "pin": "64cef4f0f1591ab633ab69e4e8a2513d64aa43cbbc27cedfa390f5577ae84ae0",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/mvs/test_strict_receipt.py",
+      "kind": "rights",
+      "pin": "33d8605697895fe6f9c50e8d8b67c3c789e37fbd49f4379642469930d96d3b8f",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/owned_cpu/ORACLE.md",
+      "kind": "rights",
+      "pin": "56ddbc5b5d44276ad49c9b049436341ae165be741bb14bd4d4803cd1b24dbc6b",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/owned_cpu/isolation_fixture.h",
+      "kind": "rights",
+      "pin": "4b0e4c88390f5f76819e9cc9633b6fe6d7c6346d7b1d3577e2ed9656e943c07a",
+      "revision": "bdca1240ef48752c7fd9838393de150866344826"
+    },
+    {
+      "key": "tests/sdk/ORACLE.md",
+      "kind": "rights",
+      "pin": "1973238044b5c29dd6dd0e3f270c75690120ffaf249503df7712c0cbdc9baabd",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/sdk/save_controls.py",
+      "kind": "rights",
+      "pin": "92604d2c23817abee4ac9cb6faa64ead6b8adeb8890b2cc3891d2c1a867a07ad",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/sdk/save_fixture.c",
+      "kind": "rights",
+      "pin": "8bb6d4cb7983c261efeff67977327e1e21480be6b8825f6d19f4d8a2028d8937",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/sdk/save_fixture.h",
+      "kind": "rights",
+      "pin": "d98ffb948b6805e0fedf25627d7acf3b554c50ee891c965f1e7fdad479908473",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/sdk/save_host.c",
+      "kind": "rights",
+      "pin": "379fa3262caabfaf59506a331a69030f33be230bef462ddaa8174542b0e5fc19",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/sdk/save_host.h",
+      "kind": "rights",
+      "pin": "1b022f12f3f72ecc0c9cb519c110585034cdf544cc08e42396efa447ac9216b3",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/sdk/save_process.c",
+      "kind": "rights",
+      "pin": "b8c5b7e8e96a2394072a49319fc3fa9603fa9525a75ef2ee922c72c3f9223435",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/sdk/state_fixture.h",
+      "kind": "rights",
+      "pin": "e66aea56da4466da11c98de4480614f122dfe8f57ca3a7fb7471633f101f32e2",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/sdk/test_save.c",
+      "kind": "rights",
+      "pin": "20a2d98871e377f76d543f7d77eecf8252b28171ca3a795394897517c6fbb1b8",
+      "revision": "ca97ed96d27941eeb0d49fe4882248333d7029ee"
+    },
+    {
+      "key": "tests/sdk/test_save_lifecycle.c",
+      "kind": "rights",
+      "pin": "1f2195ea60fff310281a6862ef9ce4a7d8cc71ae1e857fcf049ca0422f7819a4",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/sdk/test_save_process.py",
+      "kind": "rights",
+      "pin": "63418a5cdbb76ecabe40ff877c5ac2883a6bf8504b988bc1c51ad3d48c7e0a28",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/sdk/test_save_registration.py",
+      "kind": "rights",
+      "pin": "477f4fe3859b8f7cf1f76d6e83117924b3b96bab032c10a27655cccca28a7beb",
+      "revision": "bdca1240ef48752c7fd9838393de150866344826"
+    },
+    {
+      "key": "tests/support/portable_stdio.h",
+      "kind": "rights",
+      "pin": "6899dc00ef762310bc31b05a635e185f42296ca55a8a1485f780a708f47e7fd8",
+      "revision": "bdca1240ef48752c7fd9838393de150866344826"
+    },
+    {
+      "key": "tests/tools/check_runtime_host.py",
+      "kind": "rights",
+      "pin": "44634b906c7fe52ba0156bee9cf5ecd3a80aa3c8c854309c2f4ab3e1aa88cdaf",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/tools/check_runtime_storage.py",
+      "kind": "rights",
+      "pin": "3aaf3f399995bbf52be66f963a0e04b918e3ae42d6a493cffb3342cdeea5143c",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/tools/check_security_register.py",
+      "kind": "rights",
+      "pin": "114013a68f04e07253430e37ef660eacb723fce9d2d274b4c669ef4b5d3ef0c8",
+      "revision": "bdca1240ef48752c7fd9838393de150866344826"
+    },
+    {
+      "key": "tests/tools/test_check_runtime_host.py",
+      "kind": "rights",
+      "pin": "c8fdda346462b98af7309c5245dcaac53cbef42b02ba3cb4e971fd0161b53bd8",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/tools/test_check_runtime_storage.py",
+      "kind": "rights",
+      "pin": "b1bf204508c8ec090a7585776e3cd1481d114041830e8e60f3dc9195828a840f",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/tools/test_check_security_register.py",
+      "kind": "rights",
+      "pin": "e08d17ea4203a536fbb37933c4df931a2f5fc304d01c03757de83e79fde42e8e",
+      "revision": "bdca1240ef48752c7fd9838393de150866344826"
+    },
+    {
+      "key": "tests/tools/test_g3_source.py",
+      "kind": "rights",
+      "pin": "d5fa7ad1e1641f836fa75dcc8bce7de55b2864f1f31839c1fe279894c7d27d9e",
+      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+    },
+    {
+      "key": "tests/tools/test_independent_review.py",
+      "kind": "rights",
+      "pin": "bbe29a4194ac1a796968cc668c27bfc12647b8436fba0a106f2a6b03a4c26cc4",
+      "revision": "bdca1240ef48752c7fd9838393de150866344826"
+    },
+    {
+      "key": "tests/tools/test_private_paths.py",
+      "kind": "rights",
+      "pin": "7f89c032333890caa61356c4f9e97a200c3166cd10a2a2edfafade004ca335a3",
+      "revision": "bdca1240ef48752c7fd9838393de150866344826"
+    },
+    {
+      "key": "tests/tools/test_verify_playable.py",
+      "kind": "rights",
+      "pin": "c899e784f1812d9efc998e32f1a9612f0ca89309786694e8f166f658656b71ca",
+      "revision": "d3a6fb7b861c42ef252b1eec53a3ee1179548b1e"
+    }
+  ],
   "schema": 1,
   "scope": "first-playable-game milestone branch pre-ship records"
 }
