@@ -406,8 +406,8 @@
     {
       "key": "tests/tools/test_verify_playable.py",
       "kind": "rights",
-      "pin": "c899e784f1812d9efc998e32f1a9612f0ca89309786694e8f166f658656b71ca",
-      "revision": "d3a6fb7b861c42ef252b1eec53a3ee1179548b1e"
+      "pin": "c4576764fd232c24452d263ca94efca5b56b943209b276c6efb38af764d9f5ef",
+      "revision": "3851e1120774a90be0867827ed18b159af4bda47"
     }
   ],
   "schema": 1,
