@@ -1773,7 +1773,12 @@ static int active_sound_window_open(const active_schedule *schedule,
                                     active_sound_window *window) {
     char path[192];
     if (!active_sound_window_path(schedule, window, path, sizeof(path))) return 0;
+#if defined(_MSC_VER)
+    window->pcm_file = NULL;
+    if (fopen_s(&window->pcm_file, path, "wbx") != 0) return 0;
+#else
     window->pcm_file = fopen(path, "wbx");
+#endif
     return window->pcm_file != NULL;
 }
 
