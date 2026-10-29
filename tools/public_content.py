@@ -103,7 +103,7 @@ SOURCE_FINDING_DISPOSITIONS = {
         "rules": {"machine-identifier"},
         "reason": "serial is a zero-initialized Carbon ProcessSerialNumber local variable, not a host identifier value",
     },
-    ("tests/consumers/test_example_docs.py", "282d0a56bd249e60b4d509984f9b0137aefb7bee23289ba3ac86a88f3ecce61a"): {
+    ("tests/consumers/test_example_docs.py", "526e49af1334ba2b18ae4c33466d6342c26565541b491f11a3c2825aad239c04"): {
         "rules": {"private-url"},
         "reason": "synthetic localhost port-9 proxy blocks network access in the example-doc test; exact path and bytes are bound",
     },
@@ -114,6 +114,10 @@ SOURCE_FINDING_DISPOSITIONS = {
 # redaction tests contain synthetic identity/path canaries. A changed blob is
 # scanned.
 HISTORY_FINDING_DISPOSITIONS = {
+    "239b1e38898909c88843cc39505a5ca37f4c6a2b": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact historical bytes retain the offline documentation test's synthetic localhost port-9 proxy with the refreshed measured save identity",
+    },
     "b5768eac5f6a183b6e21613d244bea18dc621c34": {
         "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
         "reason": "exact historical bytes retain the offline documentation test's synthetic localhost port-9 proxy; only the bound save-source identity literals changed",

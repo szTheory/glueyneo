@@ -719,6 +719,49 @@ def ctest_failure_receipt_controls() -> None:
             last_test.unlink()
         last_test.write_text(failed_block, encoding="utf-8")
 
+        # A hard link is a regular file, but it is not the one-link CTest log
+        # that the pre-run signature observed. The same producer path must
+        # reject its content and serialize only the captured CTest output.
+        linked = {"done": False, "hardlink": False}
+
+        def hardlink_substitute_before_open(path, flags, *args, **kwargs):
+            if Path(path) == last_test and not linked["done"]:
+                linked["done"] = True
+                last_test.unlink()
+                try:
+                    os.link(attacker_file, last_test)
+                    linked["hardlink"] = True
+                except OSError:
+                    last_test.write_text(attacker_marker, encoding="utf-8")
+            return original_open(path, flags, *args, **kwargs)
+
+        hardlink_receipt_path = root / "matrix-windows-msvc-hardlinked-log.json"
+        hardlink_argv = ["verify_sdk.py", "--suite", "matrix", "--lane", "windows-msvc",
+                         "--output", str(hardlink_receipt_path)]
+        with mock.patch.object(verify_sdk, "ROOT", root), \
+                mock.patch.object(verify_sdk, "BUILD", build), \
+                mock.patch.object(verify_sdk, "LOG_DIR", root / "logs"), \
+                mock.patch.object(verify_sdk, "suite_matrix", side_effect=fail_from_ctest), \
+                mock.patch.object(verify_sdk.subprocess, "run", side_effect=failed_ctest), \
+                mock.patch.object(verify_sdk.os, "open", side_effect=hardlink_substitute_before_open), \
+                mock.patch.object(sys, "argv", hardlink_argv), \
+                mock.patch.dict(os.environ, {"GITHUB_SHA": "a" * 40}, clear=False), \
+                contextlib.redirect_stderr(io.StringIO()):
+            assert verify_sdk.main() == 1
+        assert linked["done"]
+        hardlink_receipt = evidence.load_canonical_json(
+            hardlink_receipt_path.read_bytes(), label="hard-linked LastTest matrix failure artifact")
+        hardlink_details = hardlink_receipt["ctest_failure_diagnostics"]
+        assert hardlink_details["last_test_log_status"] in {"unsafe", "stale"}
+        assert hardlink_details["source"] == "ctest-output"
+        assert attacker_marker not in hardlink_details["excerpt"]
+        assert attacker_marker not in hardlink_receipt["detail"]
+        assert attacker_marker not in hardlink_receipt_path.read_text(encoding="utf-8")
+        if linked["hardlink"]:
+            assert last_test.stat().st_nlink == 2
+            last_test.unlink()
+        last_test.write_text(failed_block, encoding="utf-8")
+
         credential_name = "ghp_" + "A" * 36
         unsafe_error = verify_sdk.VerificationError("test failed")
         unsafe_error.failure_diagnostics = {"failed_tests": [credential_name]}

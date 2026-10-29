@@ -469,7 +469,7 @@ def ctest_last_test_path(argv: list[str], cwd: Path) -> Path:
 
 
 def _ctest_regular_file_signature(file_stat: os.stat_result) -> tuple[int, int, int, int, int] | None:
-    if not stat.S_ISREG(file_stat.st_mode):
+    if not stat.S_ISREG(file_stat.st_mode) or file_stat.st_nlink != 1:
         return None
     return (file_stat.st_dev, getattr(file_stat, "st_ino", 0), file_stat.st_mtime_ns,
             file_stat.st_ctime_ns, file_stat.st_size)
