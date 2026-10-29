@@ -2,6 +2,11 @@
 cmake_minimum_required(VERSION 3.20)
 project(GlueyneoInstalledConsumer LANGUAGES C CXX)
 
+# Keep the guide's documented ./build/examples-*/ executable paths stable
+# across single- and multi-configuration generators. A generator expression
+# prevents multi-config generators from appending a config-specific directory.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/$<0:>")
+
 # Standalone SDK examples carry the same manifest as their source release.
 # In the source checkout, use the root manifest directly.
 set(_manifest "${CMAKE_CURRENT_LIST_DIR}/.release-please-manifest.json")

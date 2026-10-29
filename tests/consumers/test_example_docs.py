@@ -68,7 +68,9 @@ def guide_commands(variant: str, guide: Path = GUIDE) -> list[str]:
     return commands
 
 
-def command_argv(command: str, cwd: Path) -> list[str]:
+def command_argv(
+    command: str, cwd: Path, *, cmake_generator: str | None = None,
+) -> list[str]:
     # Parse the controlled shell syntax before expanding the host path so a
     # Windows cwd never passes through POSIX shlex as source text. Join the
     # documented POSIX suffix as path components to preserve native separators.
@@ -89,6 +91,8 @@ def command_argv(command: str, cwd: Path) -> list[str]:
             raise CheckError("Guide $PWD suffix must use normalized path components")
         path = cwd.joinpath(*components) if components else cwd
         expanded.append(prefix + str(path))
+    if cmake_generator and expanded[0] == "cmake" and "-S" in expanded and "-B" in expanded:
+        expanded[1:1] = ["-G", cmake_generator]
     if str(ROOT) in " ".join(expanded):
         raise CheckError("Guide command refers to the original source checkout")
     return expanded
@@ -330,6 +334,7 @@ def validate_evidence_matrices(documents: dict[str, str]) -> int:
 
 class ExampleGuideCommandTests(unittest.TestCase):
     assertion_count = 0
+    cmake_generator: str | None = None
 
     def __getattribute__(self, name: str):
         attribute = super().__getattribute__(name)
@@ -360,7 +365,7 @@ class ExampleGuideCommandTests(unittest.TestCase):
             host_producer: dict[str, object] | None = None
             fixture: Path | None = None
             for command in commands:
-                argv = command_argv(command, source)
+                argv = command_argv(command, source, cmake_generator=self.cmake_generator)
                 result = run(argv, cwd=source, env=network_env,
                              timeout=COMMAND_TIMEOUT_SECONDS)
                 executed += 1
@@ -375,6 +380,14 @@ class ExampleGuideCommandTests(unittest.TestCase):
                     package = installed / "lib" / "cmake" / "Glueyneo"
                     self.assertTrue((package / "GlueyneoConfig.cmake").is_file())
                     self.assertTrue((package / "GlueyneoTargets-release.cmake").is_file())
+                elif (argv[:2] == ["cmake", "--build"] and
+                      argv[2].startswith("build/examples-")):
+                    binary_dir = source / argv[2]
+                    extension = ".exe" if sys.platform == "win32" else ""
+                    self.assertTrue(
+                        (binary_dir / f"glueyneo-installed-sound{extension}").is_file(),
+                        "documented consumer executables must share the guide's stable build path",
+                    )
                 elif "glueyneo-installed-continuation" in executable:
                     role = "producer" if "--produce" in argv else "reader"
                     record = result_record(result.stdout, "SDK_CONTINUATION ", role)
@@ -416,7 +429,9 @@ class ExampleGuideCommandTests(unittest.TestCase):
             self._check_host_failure_outcomes(
                 source, variant, persistence_executable, host_producer, network_env,
             )
-            self._check_missing_helper_control(source, variant, network_env)
+            self._check_missing_helper_control(
+                source, variant, network_env, cmake_generator=self.cmake_generator,
+            )
             variants[variant] = {
                 "commands": 14,
                 "fixture_bytes": fixture.stat().st_size,
@@ -497,6 +512,7 @@ class ExampleGuideCommandTests(unittest.TestCase):
 
     def _check_missing_helper_control(
         self, source: Path, variant: str, env: dict[str, str],
+        *, cmake_generator: str | None = None,
     ) -> None:
         missing_source = new_work_dir(f"example-guide-missing-{variant}") / "project"
         stage_documentation_project(missing_source)
@@ -513,7 +529,8 @@ class ExampleGuideCommandTests(unittest.TestCase):
             command for command in guide_commands(variant, source / "docs" / "sdk-examples.md")
             if command.startswith("cmake --build build/examples-")
         )
-        run(command_argv(configure, missing_source), cwd=missing_source, env=env)
+        run(command_argv(configure, missing_source, cmake_generator=cmake_generator),
+            cwd=missing_source, env=env)
         run(command_argv(build, missing_source), cwd=missing_source, env=env)
         target = "glueyneo-installed-persistence"
         missing_target = subprocess.run([
@@ -710,10 +727,15 @@ def main() -> int:
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=("commands", "contracts"), required=True)
+    parser.add_argument("--generator", choices=("Ninja Multi-Config",), default=None,
+                        help="execute documented configure commands with this installed generator")
     args = parser.parse_args()
     if args.mode == "commands":
+        ExampleGuideCommandTests.cmake_generator = args.generator
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(ExampleGuideCommandTests)
     else:
+        if args.generator:
+            parser.error("--generator is only valid with --mode commands")
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(ExampleGuideContractTests)
     result = unittest.TextTestRunner(stream=sys.stdout, verbosity=2).run(suite)
     return 0 if result.wasSuccessful() else 1
