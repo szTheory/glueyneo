@@ -1192,19 +1192,26 @@ class DocumentationCopies:
 
     @staticmethod
     def frontend_summary() -> dict[str, object]:
-        """Return tracked evidence or a deterministic test receipt bound to this checkout's HEAD."""
+        """Return tracked evidence or a deterministic test receipt for this checkout shape."""
         path = ROOT / playable.FRONTEND_EVIDENCE
         if path.is_file():
             return json.loads(path.read_text(encoding="utf-8"))
         if DocumentationCopies._synthetic_frontend_summary is None:
-            revision = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True, text=True,
-                                      stdout=subprocess.PIPE).stdout.strip()
-            with tempfile.TemporaryDirectory(prefix="playable-test-snapshot-") as temporary:
-                snapshot = playable.create_snapshot(ROOT, revision, Path(temporary) / "source")
+            if (ROOT / ".git").exists():
+                revision = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True, text=True,
+                                          stdout=subprocess.PIPE).stdout.strip()
+                with tempfile.TemporaryDirectory(prefix="playable-test-snapshot-") as temporary:
+                    snapshot = playable.create_snapshot(ROOT, revision, Path(temporary) / "source")
+                inventory_sha256 = playable.inventory_digest(snapshot.inventory)
+            else:
+                # Source archives have no commit inventory to bind. These fixtures exercise document shape only;
+                # repository-binding tests are skipped there and use real Git evidence in checkouts.
+                revision = "a" * 40
+                inventory_sha256 = "0" * 64
             summary: dict[str, object] = {
                 "schema": 1,
                 "source_revision": revision,
-                "inventory_sha256": playable.inventory_digest(snapshot.inventory),
+                "inventory_sha256": inventory_sha256,
                 "status": "pass",
                 "retroarch_status": "pass",
                 "retroarch": {"bundle_id": None, "version": "1.22.2",
@@ -1226,11 +1233,13 @@ class DocumentationCopies:
     @staticmethod
     def write_sanitized_review_fixture(source_root: Path) -> None:
         """Create public-safe review inputs for tests when private Phase04 records are absent."""
-        revisions = subprocess.run(["git", "-C", str(ROOT), "rev-list", "--reverse", "HEAD"], check=True,
-                                   text=True, stdout=subprocess.PIPE).stdout.split()
-        if len(revisions) < 2:
-            raise AssertionError("sanitized review fixture needs two committed source revisions")
-        reviewed, cited = revisions[0], revisions[1]
+        if (ROOT / ".git").exists():
+            revision = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True, text=True,
+                                      stdout=subprocess.PIPE).stdout.strip()
+        else:
+            # Keep fixture references structurally valid without inventing Git history in a source archive.
+            revision = "a" * 40
+        reviewed = cited = revision
         directory = source_root / playable.PHASE_DIRECTORY
         directory.mkdir(parents=True, exist_ok=True)
         base_files = ("tools/verify_playable.py", "tests/tools/test_verify_playable.py", "docs/first-playable-build.md")
@@ -1450,6 +1459,23 @@ class InstalledSoundRecipeTest(unittest.TestCase):
 
 
 class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
+    def test_synthetic_documentation_fixtures_work_without_git_metadata(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-source-archive-") as archive_dir, \
+                tempfile.TemporaryDirectory(prefix="playable-source-archive-review-") as review_dir:
+            archive = Path(archive_dir)
+            self.assertFalse((archive / ".git").exists())
+            with mock.patch.dict(globals(), {"ROOT": archive}), \
+                    mock.patch.object(DocumentationCopies, "_synthetic_frontend_summary", None), \
+                    mock.patch.object(subprocess, "run", side_effect=AssertionError("source archive called Git")):
+                summary = DocumentationCopies.frontend_summary()
+                self.assertEqual(summary["source_revision"], "a" * 40)
+                self.assertEqual(summary["inventory_sha256"], "0" * 64)
+                DocumentationCopies.write_sanitized_review_fixture(Path(review_dir))
+            review = (Path(review_dir) / playable.REVIEW).read_text(encoding="utf-8")
+            self.assertIn("reviewed_revision: " + "a" * 40, review)
+            disposition = (Path(review_dir) / playable.DISPOSITION).read_text(encoding="utf-8")
+            self.assertEqual(disposition.count("`" + "a" * 40 + "`"), 5)
+
     def test_check_docs_accepts_pending_status_without_evidence(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-docs-pending-") as temporary:
             self.copy_documentation(Path(temporary))
