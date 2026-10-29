@@ -130,7 +130,7 @@ def _canonical_importer_command(importer: str | Path | list[str] | None = None) 
             return None
     except OSError:
         return None
-    return str(configured)
+    return configured.as_posix()
 
 
 def _production_importer_identity() -> dict[str, str] | None:
@@ -141,7 +141,7 @@ def _production_importer_identity() -> dict[str, str] | None:
         digest = hashlib.sha256(configured.read_bytes()).hexdigest()
     except OSError:
         return None
-    return {"scope": "production", "path": str(configured), "sha256": digest}
+    return {"scope": "production", "path": configured.as_posix(), "sha256": digest}
 
 
 def _importer_identity_matches(importer: str | Path | list[str] | None,
@@ -175,7 +175,7 @@ def _production_qualifier_identity() -> dict[str, str] | None:
     if configured is None:
         return None
     try:
-        return {"scope": "production", "path": str(configured),
+        return {"scope": "production", "path": configured.as_posix(),
                 "sha256": hashlib.sha256(configured.read_bytes()).hexdigest()}
     except OSError:
         return None
@@ -185,7 +185,7 @@ def _production_evaluator_identity() -> dict[str, str] | None:
     """Bind frozen local scene predicates to the evaluator source bytes."""
     try:
         source = Path(__file__).resolve(strict=True)
-        return {"scope": "production", "path": str(source),
+        return {"scope": "production", "path": source.as_posix(),
                 "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}
     except (OSError, RuntimeError):
         return None

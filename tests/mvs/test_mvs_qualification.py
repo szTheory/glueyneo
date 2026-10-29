@@ -851,11 +851,11 @@ class ImporterTests(unittest.TestCase):
                 freshness = ensure_fresh(run=runner)
                 self.assertEqual(freshness, "fresh")
                 self.assertEqual(freshness.importer_identity, {
-                    "scope": "production", "path": str(configured.resolve()),
+                    "scope": "production", "path": configured.resolve().as_posix(),
                     "sha256": hashlib.sha256(configured.read_bytes()).hexdigest(),
                 })
                 self.assertEqual(freshness.qualifier_identity, {
-                    "scope": "production", "path": str(qualifier.resolve()),
+                    "scope": "production", "path": qualifier.resolve().as_posix(),
                     "sha256": hashlib.sha256(qualifier.read_bytes()).hexdigest(),
                 })
             self.assertEqual(artifacts_present_at_build, [(True, True)])
@@ -1003,7 +1003,7 @@ class ImporterTests(unittest.TestCase):
                 runner = root / "mvs_qualify"
                 runner.write_bytes(b"current BIOS indication predicate")
                 runner.chmod(0o755)
-                identity = {"scope": "production", "path": str(runner.resolve()),
+                identity = {"scope": "production", "path": runner.resolve().as_posix(),
                             "sha256": hashlib.sha256(runner.read_bytes()).hexdigest()}
                 build = type("Freshness", (str,), {
                     "importer_identity": {"scope": "production",
@@ -1501,7 +1501,7 @@ class ImporterTests(unittest.TestCase):
                 self.assertEqual(result["qualifier_build"], "unchecked")
                 self.assertEqual(result["status"], "synthetic_importer_identity_verified")
                 self.assertEqual(result["importer_identity_scope"], "synthetic")
-                self.assertEqual(calls[0][0], str(configured.resolve()))
+                self.assertEqual(calls[0][0], configured.resolve().as_posix())
                 self.assertEqual(len(calls), 1)
 
             for candidate in (str(wrapper), [str(configured), "--wrapper-flag"]):
@@ -1971,7 +1971,7 @@ class ImporterTests(unittest.TestCase):
             configured.write_bytes(b"configured importer")
             configured.chmod(0o755)
             expected_identity = {
-                "scope": "production", "path": str(configured.resolve()),
+                "scope": "production", "path": configured.resolve().as_posix(),
                 "sha256": hashlib.sha256(configured.read_bytes()).hexdigest(),
             }
             game, bios = root / "game.zip", root / "bios.zip"
@@ -2078,7 +2078,7 @@ class ImporterTests(unittest.TestCase):
             configured.write_bytes(b"configured importer")
             configured.chmod(0o755)
             expected_identity = {
-                "scope": "production", "path": str(configured.resolve()),
+                "scope": "production", "path": configured.resolve().as_posix(),
                 "sha256": hashlib.sha256(configured.read_bytes()).hexdigest(),
             }
             report = root / "negative.json"
@@ -2120,7 +2120,7 @@ class ImporterTests(unittest.TestCase):
             configured.write_bytes(b"configured importer")
             configured.chmod(0o755)
             identity = {
-                "scope": "production", "path": str(configured.resolve()),
+                "scope": "production", "path": configured.resolve().as_posix(),
                 "sha256": hashlib.sha256(configured.read_bytes()).hexdigest(),
             }
             calls: list[list[str]] = []
@@ -2134,7 +2134,7 @@ class ImporterTests(unittest.TestCase):
                 return Result()
 
             check_identity = lambda: qualification.checked_importer_command(
-                str(configured), identity=identity) == str(configured.resolve())
+                str(configured), identity=identity) == configured.resolve().as_posix()
             with mock.patch.object(qualification, "CONFIGURED_IMPORTER_PATH", configured), \
                  mock.patch.object(qualification.subprocess, "run", side_effect=run):
                 with self.assertRaises(qualification.ImporterIdentityChanged):
@@ -4551,7 +4551,7 @@ class ImporterTests(unittest.TestCase):
                     native_schedule_identity=q.active_scene_configuration_identity(schedule),
                     app_identity=app, configuration_identity="configuration",
                     reviewed_capture_identity=report["invocations"][0]["captures"][0]["sha256"],
-                    calibration_report=str(report_path))
+                    calibration_report=report_path.as_posix())
                 def check(candidate, *, update_digest=True):
                     report_path.write_text(json.dumps(candidate))
                     if update_digest:
