@@ -354,9 +354,9 @@
       },
       {
         "path": "tests/sdk/test_save.c",
-        "sha256": "5053900983373801223b2e24447d69aa949a096afe99e01a796f73faee508cbb",
-        "bytes": 56339,
-        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "sha256": "c119792165dff9929acc14d6b80ab09ecd47303759cacc627863205687860dfb",
+        "bytes": 57454,
+        "source_revision": "acf6cc25c75795e842d2c07a58b1e5b2c1b18d6f",
         "license": "MIT",
         "role": "Native save API, receipt and guest assertions."
       },
@@ -593,7 +593,7 @@
       {
         "path": "docs/native-save.md",
         "bytes": 27665,
-        "sha256": "f616849f8f578fb62029c5a5615aafa8554c14bb99e21197cb5e72f27b67d269",
+        "sha256": "ee8c676336fd82b97ef47a6e126da76290d68579566c6c47e0f0800e3c93a832",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
@@ -608,8 +608,8 @@
       },
       {
         "path": "docs/testing.md",
-        "bytes": 75833,
-        "sha256": "cb028f060a73baaf7e9cc57ce4a2803e170bec31fcbfcf2fdf66a46066a2b48b",
+        "bytes": 76115,
+        "sha256": "4f560e950f09f9190664cc24eb21afb43f92d3afb35c2a1be925ddfde1a9349b",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
