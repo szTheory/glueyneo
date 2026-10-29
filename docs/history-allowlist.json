@@ -64,8 +64,8 @@
     {
       "key": "tests/consumers/test_continuation_install.py",
       "kind": "rights",
-      "pin": "a7f00e189e88d0217f30631956765d53ecd5ecc4e889e7d6c7e2d36ebe5ddff4",
-      "revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+      "pin": "452a41ad941964e87ac06376a903b5134ef4fd8e505891c976b9faaf73d54b8d",
+      "revision": "bb715265dde3cbb965292232aad7ee4f1daa870c"
     },
     {
       "key": "tests/consumers/test_delivery_contract.py",
@@ -82,8 +82,8 @@
     {
       "key": "tests/consumers/test_persistence_install.py",
       "kind": "rights",
-      "pin": "50074be7537e43bb47451cbc8b65b1bf96d04cffe63bf3f3b874f72275c7b465",
-      "revision": "6a9d61eb1c79e566294b607d59338a6c1b52e628"
+      "pin": "d7540f4fe0a9bd861835d0e610da8986e952a7a5c99d358cf1afaf4dd152e4fe",
+      "revision": "bb715265dde3cbb965292232aad7ee4f1daa870c"
     },
     {
       "key": "tests/consumers/test_playable_install.py",
