@@ -259,9 +259,9 @@
     "assertion_sources": [
       {
         "path": "CMakeLists.txt",
-        "sha256": "b3762277bc1cc999f7499e35c46b47bdfcf94379fc4fa7a6de01f037c17e6217",
-        "bytes": 84309,
-        "source_revision": "dd39cd9e98b0ca1524858e7d9f6874892b0db28c",
+        "sha256": "5ede2cd48477f05c74324d851036d057aeb00b56c43a7d97463a9a832b6e13a7",
+        "bytes": 84609,
+        "source_revision": "6b69495005c94f07fe3987b00a391d90ef35c3c0",
         "license": "MIT",
         "role": "CMake target and platform registration for the focused save witness."
       },
@@ -569,11 +569,12 @@
       },
       {
         "path": "CMakeLists.txt",
-        "bytes": 84309,
-        "sha256": "b3762277bc1cc999f7499e35c46b47bdfcf94379fc4fa7a6de01f037c17e6217",
+        "bytes": 84609,
+        "sha256": "5ede2cd48477f05c74324d851036d057aeb00b56c43a7d97463a9a832b6e13a7",
         "license": "MIT",
         "notice": "LICENSE",
-        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract.",
+        "source_revision": "6b69495005c94f07fe3987b00a391d90ef35c3c0"
       },
       {
         "path": "docs/first-playable-build.md",
@@ -594,11 +595,11 @@
       {
         "path": "docs/native-save.md",
         "bytes": 27665,
-        "sha256": "d33308d7f8262581bb884a9ce63dfd8f5b1f147fb52559919204f7d8030d5764",
+        "sha256": "a30776e27ea309242ef4c7d054672c6c25c14df2a4ab997ea52352ead48926e5",
         "license": "MIT",
         "notice": "LICENSE",
         "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract.",
-        "source_revision": "f99331c99b29d7de8c37cc54700c9b9407557a2a"
+        "source_revision": "61aaa5acc386fb722cc7da8b9d2bb01a3fdbcdb3"
       },
       {
         "path": "docs/native-state.md",
