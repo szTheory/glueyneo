@@ -15,6 +15,7 @@ import sys
 import tempfile
 import traceback
 import unittest
+import xml.etree.ElementTree as ET
 from unittest import mock
 
 import check_package
@@ -471,8 +472,77 @@ def _path_is_within(root: PurePath, candidate: PurePath) -> bool:
     return True
 
 
+def _visual_studio_release_c17(
+    target_build_dir: Path, target_name: str, generator_platform: str,
+) -> bool:
+    project_path = target_build_dir / f"{target_name}.vcxproj"
+    try:
+        if not project_path.is_file() or project_path.stat().st_size > 1_048_576:
+            return False
+        project = ET.parse(project_path).getroot()
+    except (ET.ParseError, OSError):
+        return False
+
+    namespace = "{http://schemas.microsoft.com/developer/msbuild/2003}"
+    if project.tag != namespace + "Project":
+        return False
+
+    release_groups: list[tuple[str, str, ET.Element]] = []
+    for group in list(project):
+        standards = list(group.iter(namespace + "LanguageStandard_C"))
+        if group.tag != namespace + "ItemDefinitionGroup":
+            if standards:
+                return False
+            continue
+        condition = group.get("Condition", "")
+        match = re.fullmatch(
+            r"'\$\(Configuration\)\|\$\(Platform\)'=='([^|' ]+)\|([^|' ]+)'",
+            condition,
+        )
+        if match is None:
+            # A broad, conditional, or unconditional C standard group might also
+            # apply to Release, so it cannot establish the effective dialect.
+            if standards:
+                return False
+            continue
+        release_groups.append((match.group(1), match.group(2), group))
+
+    if generator_platform:
+        selected_platform = generator_platform
+    else:
+        platforms = {
+            platform for configuration, platform, _ in release_groups
+            if configuration == "Release"
+        }
+        if len(platforms) != 1:
+            return False
+        selected_platform = next(iter(platforms))
+
+    selected_groups = [
+        group for configuration, platform, group in release_groups
+        if configuration == "Release" and platform == selected_platform
+    ]
+    if len(selected_groups) != 1:
+        return False
+    cl_compile = [child for child in list(selected_groups[0])
+                  if child.tag == namespace + "ClCompile"]
+    if (len(cl_compile) != 1 or
+            any("Condition" in element.attrib for element in cl_compile)):
+        return False
+    properties = [
+        prop for element in cl_compile for prop in list(element)
+        if prop.tag == namespace + "LanguageStandard_C"
+    ]
+    all_properties = list(selected_groups[0].iter(namespace + "LanguageStandard_C"))
+    if (len(all_properties) != len(properties) or
+            any("Condition" in prop.attrib for prop in properties)):
+        return False
+    return len(properties) == 1 and (properties[0].text or "").strip() == "stdc17"
+
+
 def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, list[str]]:
-    reply_dir = source / f"build/examples-{variant}" / ".cmake" / "api" / "v1" / "reply"
+    build_dir = source / f"build/examples-{variant}"
+    reply_dir = build_dir / ".cmake" / "api" / "v1" / "reply"
     indexes = sorted(reply_dir.glob("index-*.json"))
     if not indexes:
         raise CheckError("guide consumer build did not produce CMake File API metadata")
@@ -487,6 +557,18 @@ def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, 
         reported_source_root = Path(codemodel["paths"]["source"]).resolve(strict=True)
         if reported_source_root != expected_source_root:
             raise CheckError("guide consumer codemodel is not rooted at the staged consumer source")
+        reported_build_root = Path(codemodel["paths"]["build"]).resolve(strict=True)
+        if reported_build_root != build_dir.resolve(strict=True):
+            raise CheckError("guide consumer codemodel is not rooted at the configured build directory")
+        generator = index["cmake"]["generator"]
+        if (not isinstance(generator, dict) or type(generator.get("name")) is not str or
+                type(generator.get("multiConfig")) is not bool):
+            raise CheckError("guide consumer CMake File API generator metadata is malformed")
+        generator_name = generator["name"]
+        generator_platform = generator.get("platform", "")
+        if type(generator_platform) is not str:
+            raise CheckError("guide consumer CMake File API generator platform is malformed")
+        visual_studio_generator = generator_name.startswith("Visual Studio ")
         configurations = codemodel["configurations"]
         release_configs = [config for config in configurations if config.get("name") == "Release"]
         if len(release_configs) != 1:
@@ -499,8 +581,21 @@ def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, 
             if name in target_metadata:
                 raise CheckError("guide consumer CMake File API contains a duplicate Release target")
             target = json.loads((reply_dir / target_ref["jsonFile"]).read_text(encoding="utf-8"))
-            if target.get("name") != name:
+            if (target.get("name") != name or type(target_ref.get("id")) is not str or
+                    target.get("id") != target_ref["id"]):
                 raise CheckError("guide consumer CMake File API target identity is inconsistent")
+            target_paths = target.get("paths")
+            if not isinstance(target_paths, dict) or type(target_paths.get("build")) is not str:
+                raise CheckError("guide consumer CMake File API target build path is malformed")
+            target_build_dir = Path(target_paths["build"])
+            if not target_build_dir.is_absolute():
+                target_build_dir = build_dir / target_build_dir
+            try:
+                resolved_target_build_dir = target_build_dir.resolve(strict=True)
+            except OSError:
+                raise CheckError("guide consumer CMake File API target build path is missing") from None
+            if not _path_is_within(build_dir.resolve(strict=True), resolved_target_build_dir):
+                raise CheckError("guide consumer CMake File API target build path is outside its build")
             groups = target.get("compileGroups")
             if not isinstance(groups, list) or not groups:
                 raise CheckError("guide consumer Release target has no compile groups")
@@ -565,8 +660,23 @@ def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, 
                     metadata.append(fragment_text)
                     group_metadata.append(fragment_text)
                     dialect_flags.extend(_c_standard_options(fragment_text))
-                if not dialect_flags or dialect_flags[-1] not in {"-std=c17", "/std:c17"}:
-                    raise CheckError("guide consumer Release target is missing its strict C17 compiler flag")
+                if dialect_flags:
+                    has_strict_c17 = dialect_flags[-1] in {"-std=c17", "/std:c17"}
+                else:
+                    has_strict_c17 = (
+                        visual_studio_generator and _visual_studio_release_c17(
+                            resolved_target_build_dir, name, generator_platform,
+                        )
+                    )
+                if not has_strict_c17:
+                    evidence = (
+                        "Visual Studio Release LanguageStandard_C=stdc17"
+                        if visual_studio_generator and not dialect_flags
+                        else "a strict C17 compiler flag"
+                    )
+                    raise CheckError(
+                        f"guide consumer Release target {name} is missing {evidence}"
+                    )
                 includes = group.get("includes", [])
                 if not isinstance(includes, list):
                     raise CheckError("guide consumer Release include directories are malformed")
@@ -591,8 +701,11 @@ def _file_api_release_compile_metadata(source: Path, variant: str) -> dict[str, 
                 raise CheckError("guide consumer Release compile groups omit target source files")
             _validate_compile_metadata(source, variant, metadata, include_paths)
             target_metadata[name] = metadata
-    except (AttributeError, KeyError, TypeError, ValueError, OSError, StopIteration):
-        raise CheckError("guide consumer CMake File API compile metadata is malformed") from None
+    except (AttributeError, KeyError, TypeError, ValueError, OSError, StopIteration) as error:
+        raise CheckError(
+            "guide consumer CMake File API compile metadata is malformed "
+            f"({type(error).__name__})"
+        ) from None
     if set(target_metadata) != set(GUIDE_CONSUMER_TARGETS):
         raise CheckError("guide consumer Release codemodel omits an executed example target")
     return target_metadata
@@ -1000,11 +1113,13 @@ class ExampleGuideContractTests(unittest.TestCase):
                     }]
                 json_file = f"target-{name}.json"
                 (reply / json_file).write_text(json.dumps({
+                    "id": f"{name}::consumer-target",
                     "name": name,
+                    "paths": {"build": "."},
                     "sources": [{"path": source_path} for source_path in source_paths],
                     "compileGroups": compile_groups,
                 }), encoding="utf-8")
-                return {"name": name, "jsonFile": json_file}
+                return {"id": f"{name}::consumer-target", "name": name, "jsonFile": json_file}
 
             def compile_group(
                 source_indexes: list[int],
@@ -1026,12 +1141,19 @@ class ExampleGuideContractTests(unittest.TestCase):
             def write_codemodel(
                 configurations: list[dict[str, object]],
                 source_root: str = str(consumer_source_root),
+                generator: dict[str, object] | None = None,
             ) -> None:
                 (reply / "codemodel-v2.json").write_text(json.dumps({
-                    "paths": {"source": source_root},
+                    "paths": {
+                        "source": source_root,
+                        "build": str(source / "build/examples-static"),
+                    },
                     "configurations": configurations,
                 }), encoding="utf-8")
                 (reply / "index-test.json").write_text(json.dumps({
+                    "cmake": {"generator": generator or {
+                        "name": "Ninja", "multiConfig": False, "platform": "",
+                    }},
                     "reply": {"codemodel": {
                         "kind": "codemodel", "jsonFile": "codemodel-v2.json",
                     }},
@@ -1090,6 +1212,154 @@ class ExampleGuideContractTests(unittest.TestCase):
 
             write_target(required_targets[2], installed_include, fragment='--std "c17"')
             _check_guide_compile_metadata(source, "static")
+
+            visual_studio_generator = {
+                "name": "Visual Studio 18 2026",
+                "multiConfig": True,
+                "platform": "x64",
+            }
+
+            def write_visual_studio_target(
+                name: str,
+                *,
+                configuration: str = "Release",
+                platform: str = "x64",
+                standard: str = "stdc17",
+            ) -> None:
+                project = source / f"build/examples-static/{name}.vcxproj"
+                project.parent.mkdir(parents=True, exist_ok=True)
+                project.write_text(
+                    "<Project xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">"
+                    "<ItemDefinitionGroup Condition=\"'$(Configuration)|$(Platform)'=="
+                    f"'{configuration}|{platform}'\"><ClCompile><LanguageStandard_C>"
+                    f"{standard}</LanguageStandard_C></ClCompile></ItemDefinitionGroup></Project>",
+                    encoding="utf-8",
+                )
+
+            visual_studio_targets = [
+                write_target(name, installed_include, fragment="")
+                for name in required_targets
+            ]
+            release_configuration = {"name": "Release", "targets": visual_studio_targets}
+            write_codemodel([release_configuration], generator=visual_studio_generator)
+            for name in required_targets:
+                write_visual_studio_target(name)
+            _check_guide_compile_metadata(source, "static")
+
+            persistence_project = (
+                source / f"build/examples-static/{required_targets[2]}.vcxproj"
+            )
+            conditional_project = persistence_project.read_text(encoding="utf-8").replace(
+                "<LanguageStandard_C>",
+                '<LanguageStandard_C Condition="false">',
+            )
+            persistence_project.write_text(conditional_project, encoding="utf-8")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_visual_studio_target(required_targets[2])
+            conditional_project = persistence_project.read_text(encoding="utf-8").replace(
+                "<ClCompile>", '<ClCompile Condition="false">',
+            )
+            persistence_project.write_text(conditional_project, encoding="utf-8")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_visual_studio_target(required_targets[2])
+            conditional_override = persistence_project.read_text(encoding="utf-8").replace(
+                "</LanguageStandard_C>",
+                "</LanguageStandard_C><LanguageStandard_C Condition=\"'$(Configuration)'=='Release'\">"
+                "stdc11</LanguageStandard_C>",
+            )
+            persistence_project.write_text(conditional_override, encoding="utf-8")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_visual_studio_target(required_targets[2])
+            duplicate_compile = persistence_project.read_text(encoding="utf-8").replace(
+                "</ItemDefinitionGroup>",
+                "<ClCompile><WarningLevel>Level3</WarningLevel></ClCompile>"
+                "</ItemDefinitionGroup>",
+            )
+            persistence_project.write_text(duplicate_compile, encoding="utf-8")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_visual_studio_target(required_targets[2])
+            duplicate_standard = persistence_project.read_text(encoding="utf-8").replace(
+                "</LanguageStandard_C>",
+                "</LanguageStandard_C><LanguageStandard_C>stdc17</LanguageStandard_C>",
+            )
+            persistence_project.write_text(duplicate_standard, encoding="utf-8")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_visual_studio_target(required_targets[2])
+            unconditional_override = persistence_project.read_text(encoding="utf-8").replace(
+                "</Project>",
+                "<ItemDefinitionGroup><ClCompile><LanguageStandard_C>stdc11</LanguageStandard_C>"
+                "</ClCompile></ItemDefinitionGroup></Project>",
+            )
+            persistence_project.write_text(unconditional_override, encoding="utf-8")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_visual_studio_target(required_targets[2])
+            broad_condition = persistence_project.read_text(encoding="utf-8").replace(
+                "</Project>",
+                "<ItemDefinitionGroup Condition=\"'$(Configuration)'=='Release'\"><ClCompile>"
+                "<LanguageStandard_C>stdc11</LanguageStandard_C></ClCompile>"
+                "</ItemDefinitionGroup></Project>",
+            )
+            persistence_project.write_text(broad_condition, encoding="utf-8")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_visual_studio_target(required_targets[2])
+            other_platform = persistence_project.read_text(encoding="utf-8").replace(
+                "</Project>",
+                "<ItemDefinitionGroup Condition=\"'$(Configuration)|$(Platform)'=='Release|Win32'\">"
+                "<ClCompile><LanguageStandard_C>stdc11</LanguageStandard_C></ClCompile>"
+                "</ItemDefinitionGroup></Project>",
+            )
+            persistence_project.write_text(other_platform, encoding="utf-8")
+            _check_guide_compile_metadata(source, "static")
+
+            write_visual_studio_target(required_targets[2])
+            wrong_namespace_project = persistence_project.read_text(encoding="utf-8").replace(
+                "http://schemas.microsoft.com/developer/msbuild/2003", "urn:other-project",
+            )
+            persistence_project.write_text(wrong_namespace_project, encoding="utf-8")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_visual_studio_target(required_targets[2])
+
+            write_codemodel([release_configuration], generator={
+                "name": "Ninja", "multiConfig": False, "platform": "",
+            })
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_codemodel([release_configuration], generator=visual_studio_generator)
+
+            write_visual_studio_target(required_targets[2], configuration="Debug")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_visual_studio_target(required_targets[2], platform="Win32")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_visual_studio_target(required_targets[2])
+            write_visual_studio_target(required_targets[2], standard="stdc11")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
+
+            write_visual_studio_target(required_targets[2])
+            write_target(required_targets[2], installed_include, fragment="/std:gnu17")
+            with self.assertRaises(CheckError):
+                _check_guide_compile_metadata(source, "static")
 
             persistence_sources = sorted(GUIDE_CONSUMER_SOURCES[required_targets[2]])
             persistence_indexes = {

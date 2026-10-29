@@ -245,14 +245,15 @@ class PublicContentTests(unittest.TestCase):
                     content.scan_archive(archive)
                 self.assertEqual(caught.exception.reason, "rights-path-set", path)
 
-    def test_personal_home_path_mentions_are_found_and_redacted(self) -> None:
-        local_home = os.path.expanduser("~")
+    def test_personal_path_roots_are_found_and_redacted(self) -> None:
         suffix = "/".join((".codex", "config.toml"))
-        path = local_home + "/" + suffix
-        for text in ("@" + path, "(" + path + ")", "[config] (" + path + ")"):
-            result = content.scan_bytes(text.encode(), "tests/synthetic-reference.txt")
-            self.assertIn("personal-path", result["findings"][0]["rules"])
-            self.assertNotIn(local_home, json.dumps(result))
+        home_roots = ("/" + "home/runnerfixture", "/" + "Users/runnerfixture")
+        for home_root in home_roots:
+            path = home_root + "/" + suffix
+            for text in ("@" + path, "(" + path + ")", "[config] (" + path + ")"):
+                result = content.scan_bytes(text.encode(), "tests/synthetic-reference.txt")
+                self.assertIn("personal-path", result["findings"][0]["rules"])
+                self.assertNotIn(home_root, json.dumps(result))
 
     def test_only_listed_noreply_trailer_identities_are_public(self) -> None:
         trailer = "Co-Authored-By: Claude <" + "noreply" + "@anthropic.com>"

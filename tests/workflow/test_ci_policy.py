@@ -126,7 +126,7 @@ class PublicContentSummaryTests(TestCase):
             "schema_version": 1, "assertions": 1, "cases": 1,
             "failure_count": 1, "expected_failure_count": 0, "skipped_count": 0,
             "unexpected_success_count": 0,
-            "nonpassing_test_ids": ["module.Tests.ghp_" + ("A" * 36)],
+            "nonpassing_test_ids": ["ghp_" + ("A" * 36)],
             "nonpassing_test_ids_truncated": False, "outcome": "fail",
         }
         with self.assertRaises(ValueError) as caught:
@@ -139,7 +139,7 @@ class PublicContentSummaryTests(TestCase):
             "schema_version": 1, "assertions": 1, "cases": 10 ** 1400,
             "failure_count": 10 ** 1400, "expected_failure_count": 0,
             "skipped_count": 0, "unexpected_success_count": 0,
-            "nonpassing_test_ids": ["module.Tests.test_failure"],
+            "nonpassing_test_ids": ["test_failure"],
             "nonpassing_test_ids_truncated": False, "outcome": "fail",
         }
         with self.assertRaises(ValueError) as caught:
@@ -203,9 +203,8 @@ class PublicContentSummaryTests(TestCase):
             )
             with self.assertRaisesRegex(ValueError, "expected_failures=1; skipped=1") as caught:
                 policy.public_content_control_counts(root)
-            self.assertIn("test_public_content.OutcomeTests.test_expected_failure",
-                          str(caught.exception))
-            self.assertIn("test_public_content.OutcomeTests.test_skipped", str(caught.exception))
+            self.assertIn("test_expected_failure", str(caught.exception))
+            self.assertIn("test_skipped", str(caught.exception))
 
 
 def expect(value: bool, message: str) -> None:
@@ -221,12 +220,16 @@ def check_public_content_failure_diagnostics() -> None:
         (root / "tests" / "__init__.py").write_text("", encoding="utf-8")
         (workflow_tests / "__init__.py").write_text("", encoding="utf-8")
         failure_methods = "".join(
+            (f"    def test_failure_{index}(self):\n"
+             "        with self.subTest(private_path=__file__):\n"
+             "            self.fail(__file__)\n") if index == 3 else
             f"    def test_failure_{index}(self):\n        self.fail(__file__)\n"
             for index in range(7)
         )
+        long_class_name = "FailureTests" + "C" * 100
         (workflow_tests / "test_public_content.py").write_text(
             "import unittest\n"
-            "class FailureTests(unittest.TestCase):\n" + failure_methods,
+            f"class {long_class_name}(unittest.TestCase):\n" + failure_methods,
             encoding="utf-8",
         )
         try:
@@ -237,11 +240,17 @@ def check_public_content_failure_diagnostics() -> None:
                    "public-content failure diagnostics must include the child return code")
             expect("failures=7" in diagnostic,
                    "public-content failure diagnostics must count all failing controls")
-            expect("test_public_content.FailureTests.test_failure_0" in diagnostic and
-                   "test_public_content.FailureTests.test_failure_4" in diagnostic,
-                   "public-content failure diagnostics must include a safe failing test identifier")
+            expect("nonpassing_test_ids=test_failure_0,test_failure_1,test_failure_2,test_failure_3,test_failure_4"
+                   in diagnostic,
+                   "public-content failure diagnostics must expose bounded source method names")
             expect("test_failure_5" not in diagnostic and "test_ids_truncated=true" in diagnostic,
                    "public-content failure diagnostics must cap and mark its test identifier list")
+            expect(long_class_name not in diagnostic and "private_path" not in diagnostic,
+                   "public-content failure diagnostics must omit qualified IDs and subtest parameters")
+            expect("account_class=" in diagnostic,
+                   "public-content failure diagnostics must report only the account-root class")
+            expect(os.path.expanduser("~") not in diagnostic,
+                   "public-content failure diagnostics must not include the host home path")
             expect(str(root) not in diagnostic,
                    "public-content failure diagnostics must not include the temporary host path")
             expect(len(diagnostic) <= 1024,

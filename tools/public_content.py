@@ -103,9 +103,9 @@ SOURCE_FINDING_DISPOSITIONS = {
         "rules": {"machine-identifier"},
         "reason": "serial is a zero-initialized Carbon ProcessSerialNumber local variable, not a host identifier value",
     },
-    ("tests/consumers/test_example_docs.py", "01af77cca67f089f5dd744770bac457074d6d1d54971e6f9c8b834af586c007b"): {
+    ("tests/consumers/test_example_docs.py", "6831490ac7b4dd0bd7fa646c2e1e992a3d76ef6e1b608de62dacdd7becaab881"): {
         "rules": {"private-url"},
-        "reason": "the offline guide regression binds staged target sources and effective C17 selector tokens, while retaining a synthetic localhost port-9 proxy; exact path and bytes are bound",
+        "reason": "the offline guide regression binds staged target sources and C17 metadata emitted by CMake, while retaining a synthetic localhost port-9 proxy; exact path and bytes are bound",
     },
 }
 # Exact immutable history objects audited as bounded false positives. These
@@ -114,6 +114,10 @@ SOURCE_FINDING_DISPOSITIONS = {
 # redaction tests contain synthetic identity/path canaries. A changed blob is
 # scanned.
 HISTORY_FINDING_DISPOSITIONS = {
+    "1c8033be6e079de0794a6f82b13e0c3779c6797c": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact reviewed Visual Studio guide test blob retains its synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
     "f295b390cadcb34a50c8ece59e67996041cab213": {
         "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
         "reason": "exact strict-selector alias regressions retain the offline test synthetic localhost port-9 proxy; path and blob identity are bound",

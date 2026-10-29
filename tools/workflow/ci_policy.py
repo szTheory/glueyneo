@@ -36,7 +36,7 @@ _MAX_PUBLIC_CONTROL_UNEXPECTED_SUCCESSES = 1_000_000
 _MAX_PUBLIC_CONTROL_FAILURE_IDS = 5
 _MAX_PUBLIC_CONTROL_FAILURE_ID_LENGTH = 96
 _MAX_PUBLIC_CONTROL_DIAGNOSTIC_BYTES = 1024
-_PUBLIC_CONTROL_FAILURE_ID = re.compile(r"[A-Za-z0-9_.]{1,96}")
+_PUBLIC_CONTROL_FAILURE_ID = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,95}")
 
 
 def _is_commit_sha(value: Any) -> bool:
@@ -215,6 +215,16 @@ def _bounded_public_content_diagnostic(message: str) -> str:
     return redacted
 
 
+def _host_account_class() -> str:
+    """Classify the host's account-root convention without reporting its path."""
+    home_parts = Path(os.path.expanduser("~")).parts
+    if len(home_parts) > 1 and home_parts[1] == "Users":
+        return "mac"
+    if len(home_parts) > 1 and home_parts[1] == "home":
+        return "linux"
+    return "other"
+
+
 def _reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
@@ -249,10 +259,19 @@ nonpassing_tests = ([test for test, _detail in failures]
 test_ids = []
 for test in nonpassing_tests:
     try:
-        identifier = test.id()
+        source_test = getattr(test, "test_case", test)
+        identifier = getattr(source_test, "_testMethodName", None)
     except Exception:
+        source_test = None
         identifier = ""
-    if isinstance(identifier, str) and re.fullmatch(r"[A-Za-z0-9_.]{1,96}", identifier):
+    source_method = None
+    if isinstance(source_test, unittest.TestCase) and isinstance(identifier, str):
+        for test_class in type(source_test).__mro__:
+            if identifier in test_class.__dict__:
+                source_method = test_class.__dict__[identifier]
+                break
+    if (type(identifier) is str and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,95}", identifier)
+            and callable(source_method)):
         test_ids.append(identifier)
     else:
         test_ids.append("unidentified-test")
@@ -335,7 +354,8 @@ raise SystemExit(0 if summary["outcome"] == "pass" else 1)
             f"result_records={records}; cases={cases_label}; failures={failures_label}; "
             f"expected_failures={expected_failures_label}; skipped={skipped_label}; "
             f"unexpected_successes={unexpected_successes_label}; "
-            f"nonpassing_test_ids={tests_label}; test_ids_truncated={truncated})"
+            f"nonpassing_test_ids={tests_label}; test_ids_truncated={truncated}; "
+            f"account_class={_host_account_class()})"
         )
         raise ValueError(_bounded_public_content_diagnostic(message))
     cases = summary.get("cases") if summary is not None else None
