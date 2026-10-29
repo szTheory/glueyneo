@@ -103,7 +103,7 @@ SOURCE_FINDING_DISPOSITIONS = {
         "rules": {"machine-identifier"},
         "reason": "serial is a zero-initialized Carbon ProcessSerialNumber local variable, not a host identifier value",
     },
-    ("tests/consumers/test_example_docs.py", "6831490ac7b4dd0bd7fa646c2e1e992a3d76ef6e1b608de62dacdd7becaab881"): {
+    ("tests/consumers/test_example_docs.py", "8ede21b6d43dd22f6d5d04675c0da1467f2b2352fe38f79a8bd621b235114a1e"): {
         "rules": {"private-url"},
         "reason": "the offline guide regression binds staged target sources and C17 metadata emitted by CMake, while retaining a synthetic localhost port-9 proxy; exact path and bytes are bound",
     },
@@ -215,6 +215,14 @@ HISTORY_FINDING_DISPOSITIONS = {
         "path": ".planning/workstreams/first-playable-game/phases/05-selected-mvs-boot/05-07-SUMMARY.md",
         "rules": {"machine-identifier"},
         "reason": "plan summary quotes the urlsplit attribute expression that tripped the hostname rule; no machine identifier present",
+    },
+    "12fd262aa4412f648acfdfa443585e505f587e81": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact current guide test blob retains its synthetic localhost proxy; path and blob identity are bound",
+    },
+    "1d9fad38ddd7043dd8bd69b7110b18a311c55b93": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact current guide test blob retains its synthetic localhost proxy; path and blob identity are bound",
     },
 }
 

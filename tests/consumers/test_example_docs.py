@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import importlib.util
+import os
 from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath
 import re
 import shlex
@@ -33,6 +34,8 @@ from check_package import (
 
 
 GUIDE = ROOT / "docs" / "sdk-examples.md"
+WINDOWS_SHARED_PATH_INSTRUCTION = '$env:PATH = "$PWD/build/install-shared/bin;$env:PATH"'
+WINDOWS_SHARED_POSIX_PATH_INSTRUCTION = 'export PATH="$PWD/build/install-shared/bin:$PATH"'
 REPAIR_FLAG = re.compile(
     r"(?:^|\s)(?:-I|-L|-Wl,|CMAKE_(?:PREFIX_PATH|MODULE_PATH|C_FLAGS|CXX_FLAGS)|"
     r"(?:DYLD|LD)_LIBRARY_PATH)(?:\s|=|$)"
@@ -189,6 +192,26 @@ def blocked_network_environment() -> dict[str, str]:
         env[name] = blocked_proxy
     env["NO_PROXY"] = ""
     env["no_proxy"] = ""
+    return env
+
+
+def guide_command_environment(
+    variant: str,
+    library_directory: Path | PureWindowsPath,
+    source_env: dict[str, str],
+    *,
+    platform: str | None = None,
+) -> dict[str, str]:
+    env = clean_environment(source_env)
+    current_platform = sys.platform if platform is None else platform
+    if variant == "shared":
+        for name in ("DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH", "LD_LIBRARY_PATH"):
+            env.pop(name, None)
+        path_separator = ";" if current_platform == "win32" else os.pathsep
+        if current_platform == "win32":
+            existing = env.get("PATH", "")
+            prefix = str(library_directory)
+            env["PATH"] = prefix + (path_separator + existing if existing else "")
     return env
 
 
@@ -814,6 +837,9 @@ class ExampleGuideCommandTests(unittest.TestCase):
             work = new_work_dir(f"example-guide-{variant}")
             source = work / "project"
             stage_documentation_project(source)
+            variant_env = guide_command_environment(
+                variant, source / "build" / f"install-{variant}" / "bin", network_env,
+            )
             staged_guide = source / "docs" / "sdk-examples.md"
             self.assertEqual(staged_guide.read_bytes(), GUIDE.read_bytes())
             commands = guide_commands(variant, staged_guide)
@@ -837,7 +863,7 @@ class ExampleGuideCommandTests(unittest.TestCase):
                     self.assertTrue(selected_file.is_file(),
                                     "Windows launch must select the built example executable")
                 try:
-                    result = run(argv, cwd=source, env=network_env,
+                    result = run(argv, cwd=source, env=variant_env,
                                  timeout=COMMAND_TIMEOUT_SECONDS)
                 except FileNotFoundError:
                     _raise_guide_launch_failure(command_index, argv[0], source)
@@ -895,10 +921,10 @@ class ExampleGuideCommandTests(unittest.TestCase):
             self.assertIsNotNone(persistence_executable)
             _check_guide_compile_metadata(source, variant)
             self._check_host_failure_outcomes(
-                source, variant, persistence_executable, host_producer, network_env,
+                source, variant, persistence_executable, host_producer, variant_env,
             )
             self._check_missing_helper_control(
-                source, variant, network_env, cmake_generator=self.cmake_generator,
+                source, variant, variant_env, cmake_generator=self.cmake_generator,
             )
             variants[variant] = {
                 "commands": 14,
@@ -1052,6 +1078,55 @@ class ExampleGuideContractTests(unittest.TestCase):
             "MSBuild : error MSB4019: imported project was not found",
             "glueyneo-installed-persistence",
         ))
+
+    def test_windows_shared_guide_environment_uses_installed_dll_path_and_reaches_child(self) -> None:
+        guide = GUIDE.read_text(encoding="utf-8")
+        self.assertIn(WINDOWS_SHARED_PATH_INSTRUCTION, guide)
+        self.assertIn(WINDOWS_SHARED_POSIX_PATH_INSTRUCTION, guide)
+
+        library_directory = PureWindowsPath(
+            r"C:\runner\work\guide with spaces\build\install-shared\bin"
+        )
+        seeded = {
+            "PATH": r"C:\Windows\System32;C:\Tools\bin",
+            "HTTP_PROXY": "http://localhost:9",
+            "LD_LIBRARY_PATH": "stale-linux-loader",
+            "DYLD_LIBRARY_PATH": "stale-darwin-loader",
+            "DYLD_FALLBACK_LIBRARY_PATH": "stale-darwin-fallback",
+        }
+        shared_env = guide_command_environment(
+            "shared", library_directory, seeded, platform="win32",
+        )
+        self.assertEqual(
+            shared_env["PATH"], str(library_directory) + ";" + seeded["PATH"],
+        )
+        self.assertEqual(shared_env["HTTP_PROXY"], seeded["HTTP_PROXY"])
+        for name in ("LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH"):
+            self.assertNotIn(name, shared_env)
+
+        static_env = guide_command_environment(
+            "static", library_directory, seeded, platform="win32",
+        )
+        self.assertEqual(static_env["PATH"], seeded["PATH"])
+        self.assertEqual(static_env["LD_LIBRARY_PATH"], seeded["LD_LIBRARY_PATH"])
+        self.assertEqual(static_env["DYLD_LIBRARY_PATH"], seeded["DYLD_LIBRARY_PATH"])
+
+        posix_shared_env = guide_command_environment(
+            "shared", Path("/staged/sdk/bin"), seeded, platform="linux",
+        )
+        self.assertEqual(posix_shared_env["PATH"], seeded["PATH"])
+        self.assertNotIn("LD_LIBRARY_PATH", posix_shared_env)
+        child = subprocess.run(
+            [sys.executable, "-c", "import json, os; print(json.dumps({k: os.environ.get(k) for k in ('PATH', 'HTTP_PROXY', 'LD_LIBRARY_PATH', 'DYLD_LIBRARY_PATH')}))"],
+            env=shared_env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            timeout=COMMAND_TIMEOUT_SECONDS, check=False,
+        )
+        self.assertEqual(child.returncode, 0, child.stderr)
+        observed = json.loads(child.stdout)
+        self.assertEqual(observed["PATH"], shared_env["PATH"])
+        self.assertEqual(observed["HTTP_PROXY"], seeded["HTTP_PROXY"])
+        self.assertIsNone(observed["LD_LIBRARY_PATH"])
+        self.assertIsNone(observed["DYLD_LIBRARY_PATH"])
 
     def test_command_argv_preserves_expanded_path_separators(self) -> None:
         windows_root = PureWindowsPath(r"C:\build\guide with spaces\project")

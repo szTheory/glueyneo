@@ -73,6 +73,19 @@ mkdir build/sdk-static-host
 
 ## Shared installed package
 
+On Windows PowerShell, prepend the installed shared DLL directory to `PATH`
+before running the shared executable examples:
+
+```powershell
+$env:PATH = "$PWD/build/install-shared/bin;$env:PATH"
+```
+
+For a POSIX-style shell on Windows, use:
+
+```sh
+export PATH="$PWD/build/install-shared/bin:$PATH"
+```
+
 <!-- sdk-examples:shared-commands:start -->
 ```sh
 cmake -S . -B build/sdk-shared \
