@@ -244,8 +244,8 @@
     {
       "key": "tests/mvs/test_mvs_qualification.py",
       "kind": "rights",
-      "pin": "11318f79e4e79992d17466d09d91e3b9c08ced88d63a08a88dc805e402d63cdd",
-      "revision": "6b69495005c94f07fe3987b00a391d90ef35c3c0"
+      "pin": "d84a344ee0d183ea4fcfe2d53dd27e89be1fdde3f633c3f3eaa72b9a8d5252e6",
+      "revision": "0e1ac34e8aa7963e135d500372efd80b8c9b8681"
     },
     {
       "key": "tests/mvs/test_strict_producer_proof.py",
