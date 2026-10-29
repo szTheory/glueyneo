@@ -2216,7 +2216,8 @@ class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
                 self.assertFalse(any(argument == bad or (bad and bad in argument) for argument in arguments), arguments)
 
     def test_g4wr_04_malformed_path_never_reaches_git(self) -> None:
-        for bad in ("", "/etc/passwd", "tests/../x", "-x"):
+        for bad in ("", "/etc/passwd", "tests/../x", "-x", "D:/file", "D:file",
+                    "tests/D:/file", "tests/D:file"):
             with self.subTest(path=bad), tempfile.TemporaryDirectory(prefix="playable-rights-") as temporary:
                 repository, _first, second = self.make_repository(Path(temporary))
                 self.write_inventory(repository, [{"path": bad, "sha256": self.digest("two\n"),
@@ -3169,7 +3170,11 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         return self.squashed(Path(temporary.name), base_row)
 
-    def source_identity_fixture(self) -> "SimpleNamespace":
+    def source_identity_fixture(self, *, skip_history_generation: bool = False,
+                                malformed_recipe_origin: bool = False,
+                                omit_recipe_origin: bool = False,
+                                omit_origin_mirror: bool = False,
+                                non_object_recipe_origin: bool = False) -> "SimpleNamespace":
         """A source record and its outer rights row across a full branch, squash, and fresh clone."""
         from types import SimpleNamespace
 
@@ -3180,12 +3185,17 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         repo.mkdir()
         self.git(repo, "init", "-q", "-b", "main")
         (repo / "base.txt").write_text("base\n", encoding="utf-8")
+        legacy_recipe = repo / "tests/sdk/save_process.c"
+        legacy_recipe.parent.mkdir(parents=True)
+        legacy_recipe.write_text("historical recipe only\n", encoding="utf-8")
         base = self.commit(repo, "base", "base.txt")
+        self.git(repo, "add", "tests/sdk/save_process.c")
+        base = self.commit(repo, "base historical recipe", "tests/sdk/save_process.c")
         self.git(repo, "checkout", "-q", "-b", "feature")
 
         source_path = "tests/source.c"
         source_bytes = b"source identity bytes\n"
-        (repo / source_path).parent.mkdir(parents=True)
+        (repo / source_path).parent.mkdir(parents=True, exist_ok=True)
         (repo / source_path).write_bytes(source_bytes)
         source_revision = self.commit(repo, "source", source_path)
 
@@ -3195,7 +3205,24 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
             "sha256": hashlib.sha256(source_bytes).hexdigest(), "bytes": len(source_bytes),
             "license": "MIT", "notice": "LICENSE",
         }
-        manifest = {"mvs_save_fixture": {"generator_source": record}}
+        recipe_origin: dict[str, object] = {
+            "path": "tests/sdk/save_process.c",
+            "source_revision": base,
+            "description": "Immutable historical recipe origin, not a current source fingerprint.",
+        }
+        if malformed_recipe_origin:
+            recipe_origin = {**record, "description": "Complete current identity cannot replace the historical origin."}
+        mirrored_revision = str(recipe_origin["source_revision"])
+        save_fixture: dict[str, object] = {"generator_source": record}
+        ancestry: dict[str, object] = {}
+        if not omit_recipe_origin:
+            save_fixture["recipe_origin"] = "not-an-object" if non_object_recipe_origin else recipe_origin
+            if not omit_origin_mirror:
+                ancestry["recipe_origin_revision"] = mirrored_revision
+        manifest = {
+            "mvs_save_fixture": save_fixture,
+            "frontend_continuation": {"public_fixture_ancestry": ancestry},
+        }
         manifest_bytes = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
         manifest_file = repo / manifest_path
         manifest_file.parent.mkdir(parents=True)
@@ -3210,11 +3237,18 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         }
         self.write_inventory(repo, [outer])
         self.commit(repo, "outer rights row", playable.RIGHTS_INVENTORY.as_posix())
-        generated = json.loads(self.generate(repo, base="main"))
-        self.assertEqual(generated["rows"], [{
-            "kind": "rights", "key": manifest_path, "revision": manifest_revision,
-            "pin": self.canonical(outer),
-        }])
+        if skip_history_generation:
+            generated = {
+                "schema": 1, "scope": playable.HISTORY_ALLOWLIST_SCOPE, "base_revision": base,
+                "rows": [{"kind": "rights", "key": manifest_path, "revision": manifest_revision,
+                          "pin": self.canonical(outer)}],
+            }
+        else:
+            generated = json.loads(self.generate(repo, base="main"))
+            self.assertEqual(generated["rows"], [{
+                "kind": "rights", "key": manifest_path, "revision": manifest_revision,
+                "pin": self.canonical(outer),
+            }])
         (repo / playable.HISTORY_ALLOWLIST).write_text(
             json.dumps(generated, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         self.commit(repo, "allowlist outer rights row", playable.HISTORY_ALLOWLIST.as_posix())
@@ -3260,7 +3294,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         self.assertEqual(results[0], results[1])
 
     def test_squash_source_identity_uses_only_pinned_outer_manifest_and_checked_head_bytes(self) -> None:
-        fx = self.source_identity_fixture()
+        fx = self.source_identity_fixture(skip_history_generation=True)
         retained_notes: list[str] = []
         self.assertEqual(playable.fixture_source_identity_errors(
             fx.repo, fx.repo, "HEAD", unverifiable=retained_notes), [])
@@ -3361,6 +3395,104 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         problems = playable.fixture_source_identity_errors(
             fx.repo, fx.repo, "HEAD", allowlist=wrong_origin_pin)
         self.assertTrue(any("does not hold the recorded bytes" in problem for problem in problems), problems)
+
+    def test_historical_recipe_origin_is_mirrored_and_separate_from_current_identities(self) -> None:
+        fx = self.source_identity_fixture()
+        manifest = json.loads((fx.repo / fx.manifest_path).read_text(encoding="utf-8"))
+        reference = manifest["mvs_save_fixture"]["recipe_origin"]
+        ancestry = manifest["frontend_continuation"]["public_fixture_ancestry"]
+        self.assertIsNone(playable._historical_recipe_origin_error(
+            reference, ancestry, fx.repo, "main", outer_allowed=False))
+
+        wrong_ancestry = {**ancestry, "recipe_origin_revision": "0" * 40}
+        self.assertIn("does not match the mirrored ancestry revision", playable._historical_recipe_origin_error(
+            reference, wrong_ancestry, fx.repo, "main", outer_allowed=True) or "")
+        wrong_path = {**reference, "path": "tests/sdk/unrelated.c"}
+        self.assertIn("unexpected schema or path", playable._historical_recipe_origin_error(
+            wrong_path, ancestry, fx.repo, "main", outer_allowed=True) or "")
+
+        self.git(fx.repo, "checkout", "-q", "-b", "later-origin", "main")
+        (fx.repo / "later.txt").write_text("later\n", encoding="utf-8")
+        later = self.commit(fx.repo, "later", "later.txt")
+        self.git(fx.repo, "checkout", "-q", "main")
+        descendant = {**reference, "source_revision": later}
+        descendant_ancestry = {**ancestry, "recipe_origin_revision": later}
+        self.assertIn("descendant of the checked head", playable._historical_recipe_origin_error(
+            descendant, descendant_ancestry, fx.repo, "main", outer_allowed=True) or "")
+
+        self.git(fx.repo, "checkout", "-q", "-b", "unrelated-origin", fx.base)
+        (fx.repo / "unrelated.txt").write_text("unrelated\n", encoding="utf-8")
+        unrelated = self.commit(fx.repo, "unrelated", "unrelated.txt")
+        self.git(fx.repo, "checkout", "-q", "main")
+        unrelated_reference = {**reference, "source_revision": unrelated}
+        unrelated_ancestry = {**ancestry, "recipe_origin_revision": unrelated}
+        self.assertIn("not pinned", playable._historical_recipe_origin_error(
+            unrelated_reference, unrelated_ancestry, fx.repo, "main", outer_allowed=False) or "")
+        notes: list[str] = []
+        self.assertIsNone(playable._historical_recipe_origin_error(
+            unrelated_reference, unrelated_ancestry, fx.repo, "main", outer_allowed=True,
+            unverifiable=notes))
+        self.assertTrue(any("ancestry is not claimed" in note for note in notes), notes)
+
+        absent_reference = {**reference, "source_revision": "f" * 40}
+        absent_ancestry = {**ancestry, "recipe_origin_revision": "f" * 40}
+        absent_notes: list[str] = []
+        self.assertIsNone(playable._historical_recipe_origin_error(
+            absent_reference, absent_ancestry, fx.repo, "main", outer_allowed=True,
+            unverifiable=absent_notes))
+        self.assertTrue(any("bytes are not verified" in note for note in absent_notes), absent_notes)
+
+    def test_incomplete_current_fixture_identity_cannot_be_downgraded_to_history_reference(self) -> None:
+        malformed = {
+            "mvs_save_fixture": {
+                "recipe_origin": {"path": "tests/sdk/save_process.c", "source_revision": "a" * 40,
+                                  "description": "historical"},
+                "assertion_sources": [{"path": "tests/sdk/test_support.h", "source_revision": "a" * 40,
+                                        "sha256": "0" * 64}],
+            },
+        }
+        identities, references, errors = playable._fixture_source_records(malformed)
+        self.assertEqual(identities, [])
+        self.assertEqual([pointer for pointer, _ in references], ["/mvs_save_fixture/recipe_origin"])
+        self.assertEqual(errors, ["fixture source identity /mvs_save_fixture/assertion_sources/0 is incomplete"])
+
+        complete_but_misplaced = {
+            "mvs_save_fixture": {
+                "recipe_origin": {
+                    "path": "tests/sdk/test_support.h", "source_revision": "a" * 40,
+                    "description": "historical", "sha256": "0" * 64, "bytes": 1,
+                },
+            },
+        }
+        identity_rows, reference_rows, schema_errors = playable._fixture_source_records(complete_but_misplaced)
+        self.assertEqual(identity_rows, [])
+        self.assertEqual(reference_rows, [])
+        self.assertEqual(schema_errors, [
+            "fixture source reference /mvs_save_fixture/recipe_origin has an unexpected historical-origin schema",
+        ])
+
+    def test_complete_current_identity_cannot_replace_historical_recipe_origin(self) -> None:
+        fx = self.source_identity_fixture(skip_history_generation=True, malformed_recipe_origin=True)
+        errors = playable.fixture_source_identity_errors(fx.repo, fx.repo, "HEAD")
+        self.assertEqual(errors, [
+            "fixture source reference /mvs_save_fixture/recipe_origin has an unexpected historical-origin schema",
+        ])
+
+    def test_missing_recipe_origin_and_mirror_are_rejected(self) -> None:
+        fx = self.source_identity_fixture(skip_history_generation=True, omit_recipe_origin=True)
+        errors = playable.fixture_source_identity_errors(fx.repo, fx.repo, "HEAD")
+        self.assertIn(
+            f"fixture source reference {playable.HISTORICAL_RECIPE_ORIGIN_POINTER} is missing", errors)
+
+    def test_malformed_recipe_origin_type_and_missing_mirror_are_rejected(self) -> None:
+        non_object = self.source_identity_fixture(
+            skip_history_generation=True, non_object_recipe_origin=True)
+        errors = playable.fixture_source_identity_errors(non_object.repo, non_object.repo, "HEAD")
+        self.assertTrue(any("historical-origin schema" in error for error in errors), errors)
+
+        missing_mirror = self.source_identity_fixture(skip_history_generation=True, omit_origin_mirror=True)
+        errors = playable.fixture_source_identity_errors(missing_mirror.repo, missing_mirror.repo, "HEAD")
+        self.assertTrue(any("does not match the mirrored ancestry revision" in error for error in errors), errors)
 
     def test_source_identity_manifest_symlink_is_rejected_before_read(self) -> None:
         fx = self.source_identity_fixture()
@@ -4112,10 +4244,46 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         errors, notes = self.gate("rights_revision_errors", fx.repo)
         self.assertEqual(notes, [])
         self.assertEqual(len(errors), 1, errors)
-        for path in ("tests/./a.txt", "tests//a.txt", "tests/a.txt/", "tests\\a.txt"):
+        for path in ("tests/./a.txt", "tests//a.txt", "tests/a.txt/", "tests\\a.txt",
+                     "D:/file", "D:file", "Z:relative/path", "tests/D:/file", "tests/D:file"):
             with self.subTest(path):
                 self.assertFalse(playable._rights_path_is_relative_posix(path))
         self.assertTrue(playable._rights_path_is_relative_posix("tests/a.txt"))
+
+    def test_g6wr_03_directory_symlink_swap_after_open_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-source-race-") as temporary:
+            root = Path(temporary)
+            parent = root / "nested"
+            parent.mkdir()
+            source = parent / "input.bin"
+            source.write_bytes(b"stable source bytes")
+            moved = root / "moved"
+            real_fdopen = os.fdopen
+            swapped = False
+
+            def swap_ancestor_after_open(descriptor: int, *args: object, **kwargs: object) -> object:
+                nonlocal swapped
+                stream = real_fdopen(descriptor, *args, **kwargs)
+                if not swapped:
+                    parent.rename(moved)
+                    try:
+                        parent.symlink_to(moved, target_is_directory=True)
+                    except OSError as error:
+                        moved.rename(parent)
+                        stream.close()  # type: ignore[attr-defined]
+                        self.skipTest(f"directory symlinks unavailable: {type(error).__name__}")
+                    swapped = True
+                return stream
+
+            try:
+                with mock.patch.object(os, "fdopen", side_effect=swap_ancestor_after_open):
+                    self.assertIsNone(playable._read_regular_source_bytes(root, "nested/input.bin"))
+                self.assertTrue(swapped)
+                self.assertTrue(parent.is_symlink())
+            finally:
+                if parent.is_symlink():
+                    parent.unlink()
+                    moved.rename(parent)
 
     # ---- G7WR-03: the tolerated rights branch judges the committed bytes at the checked head ----
 

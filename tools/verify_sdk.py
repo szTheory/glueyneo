@@ -1246,9 +1246,20 @@ def validate_frontend_phase_provenance(manifest: Any, root: Path = ROOT) -> int:
     generator = save_fixture.get("generator_source", {})
     origin = save_fixture.get("recipe_origin", {})
     sound_generator = sound_fixture.get("generator_source", {})
-    if (not isinstance(ancestry, dict) or ancestry.get("save_fixture_manifest_path") != "mvs_save_fixture" or
+    origin_fields = {"path", "source_revision", "description"}
+    origin_revision = origin.get("source_revision") if isinstance(origin, dict) else None
+    mirrored_origin_revision = (ancestry.get("recipe_origin_revision")
+                                if isinstance(ancestry, dict) else None)
+    if (not isinstance(origin, dict) or set(origin) != origin_fields or
+            origin.get("path") != "tests/sdk/save_process.c" or
+            not isinstance(origin_revision, str) or re.fullmatch(r"[0-9a-f]{40}", origin_revision) is None or
+            not isinstance(origin.get("description"), str) or not origin["description"] or
+            not isinstance(ancestry, dict) or
+            not isinstance(mirrored_origin_revision, str) or
+            re.fullmatch(r"[0-9a-f]{40}", mirrored_origin_revision) is None or
+            mirrored_origin_revision != origin_revision or
+            ancestry.get("save_fixture_manifest_path") != "mvs_save_fixture" or
             ancestry.get("save_guest_source_revision") != generator.get("source_revision") or
-            ancestry.get("recipe_origin_revision") != origin.get("source_revision") or
             ancestry.get("sound_fixture_source_path") != sound_generator.get("path") or
             ancestry.get("sound_fixture_source_sha256") != sound_generator.get("sha256") or
             ancestry.get("hardware_truth_established") is not False):

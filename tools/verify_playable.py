@@ -1498,6 +1498,8 @@ def _git_bytes(repository: Path, arguments: list[str]) -> bytes | None:
 
 RIGHTS_INVENTORY = Path("docs/rights-inventory.md")
 FIXTURE_RIGHTS_MANIFEST = Path("tests/fixture/rights-manifest.json")
+HISTORICAL_RECIPE_ORIGIN_POINTER = "/mvs_save_fixture/recipe_origin"
+HISTORICAL_RECIPE_ORIGIN_PATH = "tests/sdk/save_process.c"
 RIGHTS_REVISION = re.compile(r"[0-9a-f]{40}")
 RIGHTS_EXEMPT_PREFIX = "third_party/"
 
@@ -1700,9 +1702,12 @@ def _note_once(notes: list[str] | None, note: str) -> None:
 
 
 def _rights_path_is_relative_posix(path: object) -> bool:
-    """Normalized relative POSIX path: not rooted, no leading `-`, and no empty, `.` or `..` segment (T-04-103, G6WR-03)."""
-    return (isinstance(path, str) and path != "" and not path.startswith(("/", "-")) and "\\" not in path
-            and all(segment not in ("", ".", "..") for segment in path.split("/")))
+    """Normalized relative POSIX path without Windows drive prefixes in any component."""
+    if not isinstance(path, str) or path == "" or path.startswith(("/", "-")) or "\\" in path:
+        return False
+    segments = path.split("/")
+    return (all(segment not in ("", ".", "..") and re.match(r"^[A-Za-z]:", segment) is None
+                for segment in segments))
 
 
 def _head_blob(repository: Path, head: str, path: str) -> bytes | None:
@@ -1745,7 +1750,7 @@ def _head_blob_entry(repository: Path, head: str, path: str) -> tuple[bytes, str
 
 def _read_regular_source_bytes(source_root: Path, relative: str, *, expected_size: int | None = None,
                                expected_mode: str | None = None) -> bytes | None:
-    """Read a bounded regular file under the declared root without following path symlinks."""
+    """Read bounded regular bytes without following symlinks and recheck directory identity afterward."""
     if (not _rights_path_is_relative_posix(relative) or
             (expected_size is not None and (type(expected_size) is not int or expected_size <= 0 or
                                             expected_size > MAX_SOURCE_FILE_BYTES)) or
@@ -1757,15 +1762,19 @@ def _read_regular_source_bytes(source_root: Path, relative: str, *, expected_siz
     try:
         root = source_root.resolve(strict=True)
         root_info = root.lstat()
-        if not stat.S_ISDIR(root_info.st_mode):
+        root_signature = _directory_source_signature(root_info)
+        if root_signature is None:
             return None
         parts = relative.split("/")
+        directory_signatures: list[tuple[Path, tuple[int, int, int]]] = [(root, root_signature)]
         target = root
         for component in parts[:-1]:
             target = target / component
             parent_info = target.lstat()
-            if not stat.S_ISDIR(parent_info.st_mode):
+            parent_signature = _directory_source_signature(parent_info)
+            if parent_signature is None:
                 return None
+            directory_signatures.append((target, parent_signature))
         target = target / parts[-1]
         before_info = target.lstat()
         before = _regular_source_signature(before_info)
@@ -1802,7 +1811,15 @@ def _read_regular_source_bytes(source_root: Path, relative: str, *, expected_siz
             path_after = _regular_source_signature(target.lstat())
         except OSError:
             return None
-        if (after != before or path_after != before or len(data) > limit or
+        directories_after: list[tuple[Path, tuple[int, int, int] | None]] = []
+        for directory, _signature in directory_signatures:
+            try:
+                directories_after.append((directory, _directory_source_signature(directory.lstat())))
+            except OSError:
+                directories_after.append((directory, None))
+        if (after != before or path_after != before or
+                any(current != expected for (_, expected), (_, current)
+                    in zip(directory_signatures, directories_after)) or len(data) > limit or
                 (expected_size is not None and len(data) != expected_size)):
             return None
         return data
@@ -1825,6 +1842,13 @@ def _regular_source_signature(file_stat: os.stat_result) -> tuple[int, int, int,
             getattr(file_stat, "st_mtime_ns", int(file_stat.st_mtime * 1_000_000_000)),
             getattr(file_stat, "st_ctime_ns", int(file_stat.st_ctime * 1_000_000_000)),
             file_stat.st_size, int(bool(file_stat.st_mode & 0o111)))
+
+
+def _directory_source_signature(file_stat: os.stat_result) -> tuple[int, int, int] | None:
+    if not stat.S_ISDIR(file_stat.st_mode):
+        return None
+    return (file_stat.st_dev, getattr(file_stat, "st_ino", 0),
+            getattr(file_stat, "st_ctime_ns", int(file_stat.st_ctime * 1_000_000_000)))
 
 
 def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
@@ -1936,6 +1960,14 @@ def _fixture_source_records(value: object) -> tuple[list[tuple[str, dict[str, An
 
     def walk(item: object, pointer: str) -> None:
         if isinstance(item, dict):
+            if pointer == HISTORICAL_RECIPE_ORIGIN_POINTER:
+                expected_fields = {"path", "source_revision", "description"}
+                if (set(item) != expected_fields or item.get("path") != HISTORICAL_RECIPE_ORIGIN_PATH or
+                        not isinstance(item.get("description"), str) or not item["description"]):
+                    errors.append(f"fixture source reference {pointer} has an unexpected historical-origin schema")
+                else:
+                    references.append((pointer, item))
+                return
             if "path" in item and "source_revision" in item:
                 if {"path", "source_revision", "sha256", "bytes"}.issubset(item):
                     identities.append((pointer or "/", item))
@@ -1950,7 +1982,49 @@ def _fixture_source_records(value: object) -> tuple[list[tuple[str, dict[str, An
                 walk(child, f"{pointer}/{index}")
 
     walk(value, "")
+    save_fixture = value.get("mvs_save_fixture") if isinstance(value, dict) else None
+    if not isinstance(save_fixture, dict) or "recipe_origin" not in save_fixture:
+        errors.append(f"fixture source reference {HISTORICAL_RECIPE_ORIGIN_POINTER} is missing")
+    elif not isinstance(save_fixture["recipe_origin"], dict):
+        errors.append(f"fixture source reference {HISTORICAL_RECIPE_ORIGIN_POINTER} has an unexpected historical-origin schema")
     return identities, references, errors
+
+
+def _historical_recipe_origin_error(reference: object, ancestry: object, repository: Path, head: str, *,
+                                    outer_allowed: bool,
+                                    unverifiable: list[str] | None = None) -> str | None:
+    """Validate the intentionally historical save-recipe reference, separate from current byte identities."""
+    expected_fields = {"path", "source_revision", "description"}
+    if (not isinstance(reference, dict) or set(reference) != expected_fields or
+            reference.get("path") != HISTORICAL_RECIPE_ORIGIN_PATH or
+            not isinstance(reference.get("description"), str) or not reference["description"]):
+        return "historical save recipe origin has an unexpected schema or path"
+    revision = reference.get("source_revision")
+    mirrored_revision = ancestry.get("recipe_origin_revision") if isinstance(ancestry, dict) else None
+    if (not isinstance(revision, str) or RIGHTS_REVISION.fullmatch(revision) is None or
+            not isinstance(ancestry, dict) or not isinstance(mirrored_revision, str) or
+            RIGHTS_REVISION.fullmatch(mirrored_revision) is None or mirrored_revision != revision):
+        return "historical save recipe origin does not match the mirrored ancestry revision"
+    relation = _revision_relation(repository, revision, head)
+    if relation == "descendant":
+        return "historical save recipe origin revision is a descendant of the checked head"
+    resolves = _git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}"]) == 0
+    if relation == "ancestor":
+        if _head_blob_entry(repository, revision, reference["path"]) is None:
+            return "historical save recipe origin path is not a regular file at its cited revision"
+        return None
+    if not outer_allowed:
+        state = "available but unordered" if resolves else "unavailable"
+        return f"historical save recipe origin is {state} and the exact outer rights-manifest row is not pinned"
+    if resolves:
+        if _head_blob_entry(repository, revision, reference["path"]) is None:
+            return "historical save recipe origin path is not a regular file at its cited revision"
+        _note_once(unverifiable, f"historical save recipe origin revision {revision[:12]} is available but not ordered "
+                                 "with the checked head; cited regular path is present, ancestry is not claimed")
+    else:
+        _note_once(unverifiable, f"historical save recipe origin revision {revision[:12]} is unavailable; "
+                                 "the exact outer rights-manifest pin retains the reference, bytes are not verified")
+    return None
 
 
 def fixture_source_identity_errors(source_root: Path, repository: Path, head: str, *,
@@ -2119,7 +2193,15 @@ def fixture_source_identity_errors(source_root: Path, repository: Path, head: st
             _note_once(observed, f"fixture source identity {pointer} revision {revision[:12]}: historical commit unavailable; "
                                "checked-head path and bytes match under the outer rights-manifest pin")
 
+    ancestry = value.get("frontend_continuation", {}) if isinstance(value, dict) else {}
+    ancestry = ancestry.get("public_fixture_ancestry", {}) if isinstance(ancestry, dict) else {}
     for pointer, reference in references:
+        if pointer == HISTORICAL_RECIPE_ORIGIN_POINTER:
+            problem = _historical_recipe_origin_error(reference, ancestry, repository, head,
+                                                      outer_allowed=outer_allowed, unverifiable=observed)
+            if problem:
+                errors.append(f"fixture source reference {pointer}: {problem}")
+            continue
         path = reference.get("path")
         revision = reference.get("source_revision")
         if (not isinstance(path, str) or not isinstance(revision, str) or

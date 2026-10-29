@@ -317,6 +317,23 @@ class FrontendRegistrationTests(unittest.TestCase):
         bad_ancestry = copy.deepcopy(manifest)
         bad_ancestry["frontend_continuation"]["public_fixture_ancestry"]["recipe_origin_revision"] = "unknown"
         mutations.append(bad_ancestry)
+        missing_recipe_origin_and_mirror = copy.deepcopy(manifest)
+        del missing_recipe_origin_and_mirror["mvs_save_fixture"]["recipe_origin"]
+        del missing_recipe_origin_and_mirror["frontend_continuation"]["public_fixture_ancestry"][
+            "recipe_origin_revision"
+        ]
+        mutations.append(missing_recipe_origin_and_mirror)
+        missing_recipe_origin = copy.deepcopy(manifest)
+        del missing_recipe_origin["mvs_save_fixture"]["recipe_origin"]
+        mutations.append(missing_recipe_origin)
+        missing_origin_mirror = copy.deepcopy(manifest)
+        del missing_origin_mirror["frontend_continuation"]["public_fixture_ancestry"][
+            "recipe_origin_revision"
+        ]
+        mutations.append(missing_origin_mirror)
+        malformed_origin_revision = copy.deepcopy(manifest)
+        malformed_origin_revision["mvs_save_fixture"]["recipe_origin"]["source_revision"] = 123
+        mutations.append(malformed_origin_revision)
         mislabelled_history = copy.deepcopy(manifest)
         mislabelled_history["frontend_continuation"]["historical_results"]["phase05_original_regression"] = "passed"
         mutations.append(mislabelled_history)
