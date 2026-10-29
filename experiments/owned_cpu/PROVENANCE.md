@@ -2,10 +2,14 @@
 
 The source manifest is the current distribution inventory. Each record identifies
 exact bytes, origin, MIT notice, update owner, compilation and host-call role.
-The earlier state inventory remains the field/callback audit; its source hashes
-are dated audit evidence. The current manifest owns refreshed source identities.
-Regenerate explicitly with `python3 tools/owned_cpu/inventory.py refresh-manifest`
-after reviewed source changes, then run `check` against the actual build closure.
+The state inventory is the current field/callback audit and binds both its
+top-level and private-record core identities to the exact `cpu.c` bytes. After
+reviewed CPU changes, refresh that contract with
+`python3 tools/owned_cpu/inventory.py refresh-state-inventory`; this updates the
+header identity and existing source-hash entries without rebuilding field
+metadata. Regenerate the distribution manifest separately with
+`python3 tools/owned_cpu/inventory.py refresh-manifest`, then run `check`
+against the actual build closure.
 Generated build products are local outputs, not generated runtime source.
 
 Only `cpu.c` enters the owned runtime archive. It uses explicit caller allocator

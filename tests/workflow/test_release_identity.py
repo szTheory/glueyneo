@@ -44,9 +44,15 @@ class ReleaseIdentityTests(unittest.TestCase):
     def test_recovery_keeps_original_source_with_newer_workflow(self):
         result = resolve_identity(self.repo, self.snapshot, self.env)
         self.assertEqual(result, {'should_build': 'true', 'commit': self.source,
-                                 'version': '0.2.0', 'tag': 'v0.2.0'})
+                                 'workflow_commit': self.workflow, 'version': '0.2.0', 'tag': 'v0.2.0'})
         self.snapshot['release']['target_commitish'] = 'main'
         self.assertEqual(resolve_identity(self.repo, self.snapshot, self.env)['commit'], self.source)
+
+    def test_workflow_revision_is_recorded_separately_from_original_tag_source(self):
+        result = resolve_identity(self.repo, self.snapshot, self.env)
+        self.assertEqual(result['commit'], self.source)
+        self.assertEqual(result['workflow_commit'], self.workflow)
+        self.assertNotEqual(result['commit'], result['workflow_commit'])
 
     def test_new_release_requires_workflow_and_tag_to_be_identical(self):
         self.env.update(RELEASE_CREATED='true', RELEASE_TAG='v0.2.0',
@@ -54,7 +60,9 @@ class ReleaseIdentityTests(unittest.TestCase):
         with self.assertRaises(ReleaseStateError):
             resolve_identity(self.repo, self.snapshot, self.env)
         self.snapshot['release'].update(tag_commit=self.workflow, target_commitish=self.workflow)
-        self.assertEqual(resolve_identity(self.repo, self.snapshot, self.env)['commit'], self.workflow)
+        result = resolve_identity(self.repo, self.snapshot, self.env)
+        self.assertEqual(result['commit'], self.workflow)
+        self.assertEqual(result['workflow_commit'], self.workflow)
         for key in ('RELEASE_SHA', 'RELEASE_VERSION', 'RELEASE_TAG'):
             with self.subTest(key=key), self.assertRaises(ReleaseStateError):
                 resolve_identity(self.repo, self.snapshot, {**self.env, key: 'wrong'})
@@ -160,18 +168,24 @@ class ReleaseIdentityTests(unittest.TestCase):
         policy = '\n'.join(line[10:] for line in section[start:end].splitlines())
         base = {**os.environ, 'CONTROL_RESULT': 'success', 'BUILD_RESULT': 'success',
                 'STAGE_RESULT': 'success', 'VERIFY_RESULT': 'success', 'PUBLISH_RESULT': 'success',
+                'PUBLISHED_VERIFY_RESULT': 'success',
                 'SHOULD_BUILD': 'true', 'REUSING_BUILDS': 'false', 'PUBLISH_EXPECTED': 'true',
-                'SOURCE_COMMIT': self.source}
+                'SOURCE_COMMIT': self.source, 'WORKFLOW_COMMIT': self.source}
         cases = [
             ({}, True),
-            ({'PUBLISH_EXPECTED': 'false', 'PUBLISH_RESULT': 'skipped'}, True),
+            ({'PUBLISH_EXPECTED': 'false', 'PUBLISH_RESULT': 'skipped', 'PUBLISHED_VERIFY_RESULT': 'skipped'}, True),
             ({'REUSING_BUILDS': 'true', 'BUILD_RESULT': 'skipped',
-              'PUBLISH_EXPECTED': 'false', 'PUBLISH_RESULT': 'skipped'}, True),
+              'PUBLISH_EXPECTED': 'false', 'PUBLISH_RESULT': 'skipped',
+              'PUBLISHED_VERIFY_RESULT': 'skipped'}, True),
             ({'SHOULD_BUILD': 'false', 'BUILD_RESULT': 'skipped', 'STAGE_RESULT': 'skipped',
-              'VERIFY_RESULT': 'skipped', 'PUBLISH_RESULT': 'skipped'}, True),
+              'VERIFY_RESULT': 'skipped', 'PUBLISH_RESULT': 'skipped',
+              'PUBLISHED_VERIFY_RESULT': 'skipped'}, True),
             ({'REUSING_BUILDS': 'true', 'BUILD_RESULT': 'skipped', 'VERIFY_RESULT': 'skipped',
-              'PUBLISH_EXPECTED': 'false', 'PUBLISH_RESULT': 'skipped'}, False),
+              'PUBLISH_EXPECTED': 'false', 'PUBLISH_RESULT': 'skipped',
+              'PUBLISHED_VERIFY_RESULT': 'skipped'}, False),
             ({'VERIFY_RESULT': 'failure', 'PUBLISH_RESULT': 'skipped'}, False),
+            ({'PUBLISHED_VERIFY_RESULT': 'failure'}, False),
+            ({'WORKFLOW_COMMIT': self.workflow}, False),
             ({'PUBLISH_RESULT': 'skipped'}, False),
             ({'PUBLISH_RESULT': 'cancelled'}, False),
             ({'CONTROL_RESULT': 'cancelled'}, False),
@@ -203,8 +217,11 @@ class ReleaseIdentityTests(unittest.TestCase):
         verification = re.split(r'\n  [a-z][\w-]*:\n', workflow.split('\n  verify-downloaded-release:\n', 1)[1])[0]
         self.assertIn('gh release download', stage)
         self.assertNotIn('gh release download', verification)
-        self.assertNotIn('GH_TOKEN', verification)
+        self.assertIn('GH_TOKEN: ${{ github.token }}', verification)
+        self.assertNotIn('steps.app-token.outputs.token', verification)
         self.assertNotIn('secrets.', verification)
+        consumer_steps = verification.split('      - name: Bind downloaded example output', 1)[0]
+        self.assertNotIn('GH_TOKEN:', consumer_steps)
         self.assertIn('contents: read', verification)
         self.assertIn("!cancelled() && needs.release-control.result == 'success'", verification)
         publish = workflow.split('\n  publish-release:\n', 1)[1].split('\n  release-policy:\n', 1)[0]
@@ -216,7 +233,7 @@ class ReleaseIdentityTests(unittest.TestCase):
         self.assertIn('run-id: ${{ needs.release-control.outputs.build_run_id }}', stage)
         self.assertIn('cmp -s build/prior/expected-release-manifest.json build/expected-release-manifest.json', stage)
         self.assertIn('manifest_artifact_name: ${{ steps.assemble.outputs.manifest_artifact_name }}', workflow)
-        self.assertEqual(workflow.count('name: ${{ needs.stage-release.outputs.manifest_artifact_name }}'), 2)
+        self.assertEqual(workflow.count('name: ${{ needs.stage-release.outputs.manifest_artifact_name }}'), 3)
         self.assertIn('release-identity-manifest-attempt-${GITHUB_RUN_ATTEMPT}', workflow)
         self.assertEqual(workflow.count('release-app-authority-${{ github.job }}-attempt-${{ github.run_attempt }}'), 3)
         helper_checkout = workflow.split('      - name: Check out trusted release packaging helper\n', 1)[1].split('      - name:', 1)[0]

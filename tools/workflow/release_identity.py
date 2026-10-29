@@ -25,7 +25,8 @@ def resolve_identity(repo: Path, snapshot: dict, env: dict[str, str]) -> dict[st
         raise ReleaseStateError("release-please identity differs from the tested workflow revision")
     if env.get("DISPATCH_TAG") and env["DISPATCH_TAG"] != tag:
         raise ReleaseStateError("manual recovery tag differs from root version manifest")
-    result = {"should_build": "false", "tag": tag, "version": version, "commit": workflow_commit}
+    result = {"should_build": "false", "tag": tag, "version": version, "commit": workflow_commit,
+              "workflow_commit": workflow_commit}
     if snapshot.get("status") == "absent" and snapshot.get("release") is None:
         if created:
             raise ReleaseStateError("release-please reported a release but the expected draft is absent")

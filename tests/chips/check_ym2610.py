@@ -18,14 +18,14 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 REVISION = "81aec25ccbb98f4873a255f7551ac4dadac59b4a"
 FILES = {
-    "src/ymfm.h": "f5ab6fed63c8669abab8403e0e93132e1dad0ae4d8e4954e7836ab9e5b228405",
-    "src/ymfm_adpcm.cpp": "74e5ded129ea7e532112e5b637d0a7bd4e127fd83331f1fac32011723051d4e0",
-    "src/ymfm_adpcm.h": "5933691971493b853a9be443f6e6fd74f63869aa21225f66dd89fc20de20914d",
-    "src/ymfm_fm.h": "1b27bfb7fa4963d7c54cb06fd9bf659450362d8ed496c6af7d487b068cac45c9",
-    "src/ymfm_fm.ipp": "4fb7fe59d4494a19e9f9c7888eb644a63d86e109fdefb27a8117bf6a5f6ab4b9",
-    "src/ymfm_opn.cpp": "8734c6d5a6e1bf49a08eeb33d260d39c17cd1d26f5db506e5d0d3e416913b489",
-    "src/ymfm_opn.h": "1950990c3ea0c6d492a20f66a683a372a7367ef39f7830aa65b20a20d1bcbef5",
-    "src/ymfm_ssg.cpp": "73a3028a77f13f3769b7705079659eb8325431a67b8164ded25e12f324f42bfd",
+    "src/ymfm.h": "cfee36f433c6ddb705e33448f58b4792634f99f3702c3b56618727e6c871dc9b",
+    "src/ymfm_adpcm.cpp": "c02fee503f12472e8450b24a4869dc1f4430575d9343cce7c3abdee2394b2a37",
+    "src/ymfm_adpcm.h": "7f60f28e358265f878fa82381d61779f39a74392eea538e0a5d89ef50feb7f47",
+    "src/ymfm_fm.h": "ea4e9d89f16208b878d70d7015ae7e2adbd01a24323d3ca3208040f78475a8e3",
+    "src/ymfm_fm.ipp": "46a31435d24393d15f0a3c78a6c37e80e7b92f39c48f9f80b91f21f4ec86610c",
+    "src/ymfm_opn.cpp": "7ff2a907be4af34e3422f16569b591184f93d44e682d46b2f34e91be36a56af4",
+    "src/ymfm_opn.h": "8b5881221fa0f26712421d34454cba942a68b85e6e394c7b4cc71c8cbe09af84",
+    "src/ymfm_ssg.cpp": "bf9911f074d4482e8ec7f07e7e227f0b5180c26442ec1ead0165a2b5ceaff196",
     "src/ymfm_ssg.h": "27966b0887fe98f2d06a96be2776c911107e2f2a13a64f9a349e1ffc19cf7584",
 }
 
@@ -120,10 +120,14 @@ def test_run(binary: Path, report_path: Path) -> dict[str, object]:
         else "fail"
         for name in (
             "identical_clock_and_register_traces_match_non_silent_samples",
+            "bounded_diagnostics_are_per_instance_and_do_not_reset_chip_state",
+            "fm_key_frequency_and_stereo_registers_reach_native_output",
+            "diagnostic_event_storage_is_bounded_with_saturating_drop_count",
             "independent_interleaved_instances_match_isolated_baselines",
             "reset_and_chunked_continuation_reproduce_baseline",
             "callback_failure_latches_until_reset_and_exceptions_are_contained",
             "capacities_and_clock_limits_fail_before_mutation",
+            "state_validation_bypass_hook_is_active_and_single_use",
         )
     }
     summary = re.search(r"(\d+) Tests (\d+) Failures (\d+) Ignored", result.stdout)
@@ -133,7 +137,7 @@ def test_run(binary: Path, report_path: Path) -> dict[str, object]:
     )
     if summary is None or sample is None:
         raise RuntimeError("YM2610 consumer output omitted test totals or sample evidence")
-    if tuple(map(int, summary.groups())) != (5, 0, 0):
+    if tuple(map(int, summary.groups())) != (9, 0, 0):
         raise RuntimeError(f"YM2610 tests did not pass completely: {summary.group(0)}")
     if any(status != "pass" for status in tests.values()):
         raise RuntimeError(f"YM2610 required test is missing or failed: {tests}")
@@ -142,6 +146,9 @@ def test_run(binary: Path, report_path: Path) -> dict[str, object]:
     gates: dict[str, dict[str, str]] = {
         "source_closure": {"status": "pass", "evidence": "pinned digests and NOTICE inventory"},
         "deterministic_clock_samples": {"status": "pass", "evidence": tests["identical_clock_and_register_traces_match_non_silent_samples"]},
+        "bounded_instance_diagnostics": {"status": "pass", "evidence": tests["bounded_diagnostics_are_per_instance_and_do_not_reset_chip_state"]},
+        "fm_voice_output": {"status": "pass", "evidence": tests["fm_key_frequency_and_stereo_registers_reach_native_output"]},
+        "bounded_register_event_storage": {"status": "pass", "evidence": tests["diagnostic_event_storage_is_bounded_with_saturating_drop_count"]},
         "distinct_instances": {"status": "pass", "evidence": tests["independent_interleaved_instances_match_isolated_baselines"]},
         "reset_continuation": {"status": "pass", "evidence": tests["reset_and_chunked_continuation_reproduce_baseline"]},
         "callback_failure": {"status": "pass", "evidence": tests["callback_failure_latches_until_reset_and_exceptions_are_contained"]},
@@ -239,14 +246,16 @@ set_property(TARGET ym2610_installed_consumer PROPERTY C_EXTENSIONS OFF)
         if shared == "OFF" and "-lc++" not in consumer_build_result.stdout and "-lstdc++" not in consumer_build_result.stdout:
             raise RuntimeError(f"{linkage} C consumer link omitted its C++ runtime target dependency")
         summary = re.search(r"(\d+) Tests (\d+) Failures (\d+) Ignored", execution.stdout)
-        if summary is None or tuple(map(int, summary.groups())) != (5, 0, 0):
+        if (summary is None or tuple(map(int, summary.groups())) != (8, 0, 0) or
+                any(re.search(r":" + re.escape(name) + r":PASS(?:\s|$)", execution.stdout) is None
+                    for name in report["direct_consumer"]["tests"])):
             raise RuntimeError(f"{linkage} installed consumer tests did not all pass")
         results[linkage] = {
             "status": "pass", "source_revision": source_revision(),
             "configuration": "Release", "build_shared_libs": shared,
             "prefix": str(prefix.relative_to(report_path.parents[2])),
             "consumer_language": "C17", "link_driver": "C compiler with C++ runtime from imported CMake target",
-            "tests": 5, "failures": 0,
+            "tests": 8, "failures": 0,
             "configure_output_sha256": hashlib.sha256(
                 (configure.stdout + consumer_configure.stdout).encode()
             ).hexdigest(),
@@ -260,7 +269,10 @@ set_property(TARGET ym2610_installed_consumer PROPERTY C_EXTENSIONS OFF)
                               if name.startswith("_ym2610_candidate_"))
             unexpected = sorted(name for name in nm.stdout.splitlines()
                                 if name.startswith("__Z") or name.startswith("_ZN"))
-            if unexpected or len(exported) != 8:
+            expected_exports = {"_ym2610_candidate_" + name for name in (
+                "create", "destroy", "reset", "write", "read", "clock", "sample_rate",
+                "observe", "diagnostics_clear", "test_create_oom", "test_probe_read", "test_throw")}
+            if unexpected or set(exported) != expected_exports:
                 raise RuntimeError(
                     f"unexpected shared exports: ym2610={exported}, C++={unexpected}"
                 )

@@ -4,7 +4,12 @@
 from __future__ import annotations
 
 import copy
+import contextlib
+import hashlib
+import io
 import json
+import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -69,9 +74,48 @@ def valid_report() -> dict:
 def sanitizer_failure_controls() -> None:
     identity = {"source_revision": "a" * 40, "relevant_source_sha256": "b" * 64,
                 "compiler": {"id": "Clang", "version": "18.1.8"}}
+    colored_failure = ("The following tests FAILED:\r\n"
+                       "\t\x1b[0;31m  1 - sdk_save_receipts (Failed)\x1b[0;0m\r\n")
+    assert controls.sanitizer_failed_test_names(colored_failure, "") == ["sdk_save_receipts"]
+    ansi_split_path = "/ho\x1b[31mme/synthetic-review-account/file.c\x1b[0m"
+    assert verify_sdk.redacted_failure_diagnostic(ansi_split_path) == "[private-path-redacted]"
+    assert controls._redacted_ctest_excerpt(ansi_split_path) == "[private-path-redacted]"
+
+    def installed_sanitizer_records() -> str:
+        wire = ""
+        for mode in sorted(verify_sdk.INSTALLED_SANITIZER_MODES):
+            run_id = "fixture-" + mode.lower()
+            for case_id in sorted(verify_sdk.INSTALLED_SANITIZER_CASES):
+                tested_mode = "NONE" if case_id == "ordinary_none_export" else mode
+                row = {
+                    "case_id": case_id,
+                    "mode": mode,
+                    "tested_mode": tested_mode,
+                    "run_id": run_id,
+                    "prefix_id": f"installed/{mode}/{run_id}",
+                    "linkage": "static_shared" if case_id == "ordinary_none_export" else "static",
+                    "configuration": "Debug",
+                    "outcome": "pass",
+                    "cases": 1,
+                    "assertions": 1,
+                    "duration_seconds": 0.01,
+                    "detail": "synthetic installed-sanitizer failure-control fixture",
+                    "compiler": {
+                        "c_id": "Clang", "c_version": "18.1.8", "c_path": "clang",
+                        "cxx_id": "Clang", "cxx_version": "18.1.8", "cxx_path": "clang++",
+                        "linker": "ld", "sanitizer": tested_mode,
+                    },
+                    "platform": {"system": "Darwin", "release": "fixture", "machine": "arm64"},
+                }
+                if case_id == "ordinary_none_export":
+                    row["prefixes"] = [f"installed/NONE/static/{run_id}",
+                                        f"installed/NONE/shared/{run_id}"]
+                wire += "\nSDK_INSTALLED_SANITIZER " + json.dumps(row)
+        return wire
+
     passing = {"lane": "asan-ubsan", "preset": "sdk-asan-ubsan", "status": "passed",
                "runtime_status": "passed", "startup_status": "passed",
-               "expected_tests": 8, "tests_passed": 8, "sdk_assertions": 80,
+               "expected_tests": 13, "tests_passed": 13, "sdk_assertions": 100,
                "compiler": {**identity["compiler"], "configuration": "Debug"}}
     native_path = "/" + "home/" + "private-account/runner.c"
     native_failure = (
@@ -88,6 +132,62 @@ def sanitizer_failure_controls() -> None:
         "The following tests FAILED:\n"
         " 10 - sdk_isolation (Timeout)\n"
         " 11 - sdk_cold (Timeout)\n")
+    long_passing_log = "\n".join(
+        f"passed test output row {index}" for index in range(120))
+    failure_summary = (
+        "Start 10: sdk_state\n"
+        "1/2 Test #10: sdk_state ................***Failed 0.01 sec\n"
+        "50% tests passed, 1 tests failed out of 2\n"
+        "The following tests FAILED:\n"
+        " 10 - sdk_state (Failed)\n")
+    bounded_diagnostic = controls.sanitizer_runtime_diagnostic_tail(
+        failure_summary, long_passing_log)
+    assert len(bounded_diagnostic) <= 60
+    assert "The following tests FAILED:" in bounded_diagnostic
+    assert any("10 - sdk_state (Failed)" in line for line in bounded_diagnostic)
+    assert any("10 - sdk_state (Failed)" in line for line in bounded_diagnostic)
+
+    failed_body = (
+        "save receipt control failed: positive suite exited 1\n"
+        "# ASSERT save.pending-newer expected=1 observed=0\n"
+        "native failure at " + native_path + "\n")
+    native_build = "/" + "home/" + "private-account/build"
+    failed_last_test = (
+        "Start testing: Oct 29 00:23 UTC\n"
+        "----------------------------------------------------------\n"
+        "55/13 Testing: sdk_save_receipts\n"
+        "55/13 Test: sdk_save_receipts\n"
+        f"Command: \"{native_build}/sdk_save_test\" receipts\n"
+        f"Directory: {native_build}\n"
+        "Output:\n"
+        "----------------------------------------------------------\n" + failed_body +
+        "\"sdk_save_receipts\" end time: Oct 29 00:23 UTC\n"
+        "\"sdk_save_receipts\" time elapsed: 00:00:01\n"
+        "Test Failed.\n"
+        "----------------------------------------------------------\n"
+        "56/13 Testing: sdk_run\n"
+        "56/13 Test: sdk_run\n"
+        "Output:\n" + "\n".join(
+            f"later passing log row {index}" for index in range(120)) + "\n"
+        "Test Passed.\n")
+    failed_ctest_output = (
+        "Start 55: sdk_save_receipts\n"
+        "1/13 Test #55: sdk_save_receipts ........***Failed    1.00 sec\n"
+        "2/13 Test #56: sdk_run ..................   Passed    0.01 sec\n"
+        "92% tests passed, 1 tests failed out of 13\n"
+        "Total Test time (real) = 72.55 sec\n"
+        "The following tests FAILED:\n"
+        " 55 - sdk_save_receipts (Failed)\n")
+    failed_case_diagnostic = controls.sanitizer_runtime_diagnostic_tail(
+        failed_ctest_output, failed_last_test)
+    assert len(failed_case_diagnostic) <= 60
+    failed_case_text = "\n".join(failed_case_diagnostic)
+    assert "save receipt control failed: positive suite exited 1" in failed_case_text
+    assert "# ASSERT save.pending-newer expected=1 observed=0" in failed_case_text
+    assert "55 - sdk_save_receipts (Failed)" in failed_case_text
+    safe_failed_case = verify_sdk.redacted_failure_diagnostic(failed_case_text)
+    assert native_path not in safe_failed_case
+    assert "[private-path-redacted]" in safe_failed_case
     variants = [
         ({"status": "failed_runtime", "runtime_status": "failed",
           "error": "runtime CTest suite exited 8", "tests_passed": 1,
@@ -104,9 +204,10 @@ def sanitizer_failure_controls() -> None:
          "", [], 0, 0, "startup"),
     ]
     for changes, runtime, failed_tests, attempts, failed_assertions, stage in variants:
-        failed = {"lane": "tsan", "preset": "sdk-tsan", "expected_tests": 2,
+        failed = {"lane": "tsan", "preset": "sdk-tsan", "expected_tests": 3,
                   "ctest_parallel_jobs": 1, **changes}
         wire = "\n".join("SANITIZER_LANE " + json.dumps(row) for row in (passing, failed))
+        wire += installed_sanitizer_records()
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
             runtime_path = base / "sdk-tsan/sanitizer-control/runtime.log"
@@ -115,11 +216,16 @@ def sanitizer_failure_controls() -> None:
             with mock.patch.object(verify_sdk, "BUILD", base / "sdk-debug"), \
                     mock.patch.object(verify_sdk, "TREE", base / "sdk-debug/verify-sdk"), \
                     mock.patch.object(verify_sdk, "preserve_output", return_value="c" * 64), \
+                    mock.patch.object(verify_sdk.evidence, "current_identity",
+                                      return_value=identity), \
                     mock.patch.object(verify_sdk, "run", return_value=subprocess.CompletedProcess([], 1, wire)):
                 result, _ = verify_sdk.sanitizer_summary(identity)
         assert result["outcome"] == "fail"
-        assert result["cases"] == 8 and result["assertions"] == 80
-        assert result["attempted_tests"] == 8 + attempts
+        installed_positive_cases = (len(verify_sdk.INSTALLED_SANITIZER_CASES) *
+                                    len(verify_sdk.INSTALLED_SANITIZER_MODES))
+        assert result["cases"] == 13 + installed_positive_cases
+        assert result["assertions"] == 100 + installed_positive_cases
+        assert result["attempted_tests"] == 13 + attempts
         assert result["reported_failed_assertions"] == failed_assertions
         failure = result["failed"][0]
         assert failure["failed_tests"] == failed_tests and failure["stage"] == stage
@@ -129,6 +235,245 @@ def sanitizer_failure_controls() -> None:
         if stage == "startup" or failed_assertions:
             assert "ThreadSanitizer" in failure["failure_diagnostic"]
             assert "[private-path-redacted]" in failure["failure_diagnostic"]
+
+    # Exercise the production CTest -> sanitizer lane -> receipt path. The later
+    # passing test has a long LastTest block, while the final CTest summary omits
+    # the failed name; the failure row and LastTest block must still survive.
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        build = root / "build/sdk-asan-ubsan"
+        build.mkdir(parents=True)
+        child = root / "ctest-child.py"
+        child.write_text(
+            "import sys\n"
+            "if sys.argv[1] == 'fail':\n"
+            " print('FAILED-BODY-MARKER expected=1 observed=0')\n"
+            " print('PRIVATE-CHILD-PATH ' + sys.argv[2])\n"
+            " print('PRIVATE-ANSI-PATH /ho\\x1b[31mme/synthetic-review-account/file.c\\x1b[0m')\n"
+            " sys.exit(1)\n"
+            "for i in range(120): print('LATER-PASS-ROW-%d' % i)\n",
+            encoding="utf-8")
+
+        def cmake_quote(value: str) -> str:
+            return '"' + value.replace("\\", "/").replace('"', '\\"') + '"'
+
+        ctest_file = (
+            f"add_test(sdk_save_receipts {cmake_quote(sys.executable)} "
+            f"{cmake_quote(str(child))} fail {cmake_quote(str(root))})\n"
+            f"add_test(sdk_save_lifecycle {cmake_quote(sys.executable)} "
+            f"{cmake_quote(str(child))} pass)\n")
+        (build / "CTestTestfile.cmake").write_text(ctest_file, encoding="utf-8")
+        startup = "SANITIZER_STARTUP " + json.dumps({
+            "outcome": "pass", "lane": "asan-ubsan", "startup_checks": 17,
+            "sanitizer": "ADDRESS_UNDEFINED", "compiler": "Clang 18.1.8"})
+        original_run_logged = controls.run_logged
+
+        def run_production_ctest(command, log_path, sample_rss=False, timeout=600.0):
+            if command[0] == "cmake" and ("--preset" in command or "--build" in command):
+                output = ""
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+                log_path.write_text(output, encoding="utf-8")
+                return 0, 0.01, None, output
+            if "--startup-probe" in command:
+                output = startup
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+                log_path.write_text(output, encoding="utf-8")
+                return 0, 0.01, None, output
+            return original_run_logged(
+                ["ctest", "--test-dir", str(build), "--parallel", "1",
+                 "--output-on-failure", "--no-tests=error"],
+                log_path, sample_rss, timeout,
+                environment=dict(os.environ, CTEST_COLOR_OUTPUT="1", CLICOLOR_FORCE="1"))
+
+        with mock.patch.object(controls, "__file__", str(root / "tests/sdk/controls.py")), \
+                mock.patch.object(controls, "cache_values", return_value={
+                    "GLUEYNEO_SDK_SANITIZER": "ADDRESS_UNDEFINED",
+                    "CMAKE_C_COMPILER_ID": "Clang",
+                    "CMAKE_C_COMPILER_VERSION": "18.1.8",
+                    "CMAKE_BUILD_TYPE": "Debug"}), \
+                mock.patch.object(controls, "verify_target_scoped_flags",
+                                  return_value=(True, "verified")), \
+                mock.patch.object(controls, "run_logged", side_effect=run_production_ctest):
+            production_report = controls.sanitizer_lane(
+                "sdk-asan-ubsan", "asan-ubsan", "ADDRESS_UNDEFINED",
+                "-fsanitize=address,undefined", "^sdk_")
+
+        assert production_report["status"] == "failed_runtime", production_report
+        assert production_report["failed_tests"] == ["sdk_save_receipts"]
+        produced_json = json.loads(json.dumps(production_report))
+        assert "FAILED-BODY-MARKER expected=1 observed=0" in "\n".join(
+            produced_json["runtime_log_tail"])
+        assert "LATER-PASS-ROW" not in "\n".join(produced_json["runtime_log_tail"])
+        raw_ctest = (build / "sanitizer-control/runtime.log").read_bytes()
+        assert produced_json["runtime_ctest_output_sha256"] == hashlib.sha256(raw_ctest).hexdigest()
+        assert produced_json["runtime_ctest_output_bytes"] == len(raw_ctest)
+        assert produced_json["runtime_ctest_output_excerpt_truncated"] == (
+            len(raw_ctest) > controls.RUNTIME_CTEST_OUTPUT_LIMIT)
+        assert "FAILED-BODY-MARKER expected=1 observed=0" in produced_json[
+            "runtime_ctest_output_excerpt"]
+        assert str(root) not in produced_json["runtime_ctest_output_excerpt"]
+        assert "[private-path-redacted]" in produced_json["runtime_ctest_output_excerpt"]
+        assert "synthetic-review-account" not in produced_json["runtime_ctest_output_excerpt"]
+
+        summaryless_root = root / "summaryless"
+        summaryless_build = summaryless_root / "build/sdk-asan-ubsan"
+        summaryless_build.mkdir(parents=True)
+        summaryless_output = (
+            "Start 55: sdk_save_receipts\n"
+            "92% tests passed, 1 tests failed out of 13\n"
+            "Total Test time (real) = 72.55 sec\n")
+        summaryless_details = failed_last_test
+
+        def run_summaryless_ctest(command, log_path, sample_rss=False, timeout=600.0):
+            if command[0] == "cmake" and ("--preset" in command or "--build" in command):
+                output, returncode = "", 0
+            elif "--startup-probe" in command:
+                output, returncode = startup, 0
+            else:
+                output, returncode = summaryless_output, 8
+                last_test = summaryless_build / "Testing/Temporary/LastTest.log"
+                last_test.parent.mkdir(parents=True, exist_ok=True)
+                last_test.write_text(summaryless_details, encoding="utf-8")
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            log_path.write_text(output, encoding="utf-8")
+            return returncode, 0.03, None, output
+
+        with mock.patch.object(controls, "__file__", str(summaryless_root / "tests/sdk/controls.py")), \
+                mock.patch.object(controls, "cache_values", return_value={
+                    "GLUEYNEO_SDK_SANITIZER": "ADDRESS_UNDEFINED",
+                    "CMAKE_C_COMPILER_ID": "Clang",
+                    "CMAKE_C_COMPILER_VERSION": "18.1.8",
+                    "CMAKE_BUILD_TYPE": "Debug"}), \
+                mock.patch.object(controls, "verify_target_scoped_flags",
+                                  return_value=(True, "verified")), \
+                mock.patch.object(controls, "run_logged", side_effect=run_summaryless_ctest):
+            summaryless_report = controls.sanitizer_lane(
+                "sdk-asan-ubsan", "asan-ubsan", "ADDRESS_UNDEFINED",
+                "-fsanitize=address,undefined", "^sdk_")
+        assert summaryless_report["failed_tests"] == ["sdk_save_receipts"]
+        assert "# ASSERT save.pending-newer expected=1 observed=0" in "\n".join(
+            summaryless_report["runtime_log_tail"])
+        assert "LATER-PASS-ROW" not in "\n".join(summaryless_report["runtime_log_tail"])
+
+        passing_tsan = {
+            "lane": "tsan", "preset": "sdk-tsan", "status": "passed",
+            "runtime_status": "passed", "startup_status": "passed",
+            "expected_tests": 3, "tests_passed": 3, "sdk_assertions": 97,
+            "ctest_parallel_jobs": 1,
+            "compiler": {**identity["compiler"], "configuration": "Debug"},
+        }
+        aggregate_wire = "\n".join(
+            "SANITIZER_LANE " + json.dumps(row)
+            for row in (summaryless_report, passing_tsan)) + installed_sanitizer_records()
+        with mock.patch.object(verify_sdk, "BUILD", summaryless_root / "build/sdk-debug"), \
+                mock.patch.object(verify_sdk, "TREE", summaryless_root / "build/sdk-debug/verify-sdk"), \
+                mock.patch.object(verify_sdk, "preserve_output", return_value="c" * 64), \
+                mock.patch.object(verify_sdk.evidence, "current_identity",
+                                  return_value=identity), \
+                mock.patch.object(verify_sdk, "run", return_value=
+                                  subprocess.CompletedProcess([], 1, aggregate_wire)):
+            aggregate, _ = verify_sdk.sanitizer_summary(identity)
+        failure = aggregate["failed"][0]
+        assert failure["failed_tests"] == ["sdk_save_receipts"]
+        assert "# ASSERT save.pending-newer expected=1 observed=0" in failure["failure_diagnostic"]
+        assert "LATER-PASS-ROW" not in failure["failure_diagnostic"]
+        assert failure["runtime_ctest_output_sha256"] == summaryless_report[
+            "runtime_ctest_output_sha256"]
+        assert str(root) not in json.dumps(aggregate)
+
+        # Drive the actual sanitizer CLI path through matrix-lane creation and
+        # the canonical file writer consumed by the CI artifact upload step.
+        lane_identity = {
+            "source_revision": identity["source_revision"],
+            "relevant_source_sha256": identity["relevant_source_sha256"],
+            "working_tree_dirty": False,
+            "compiler": {"id": "Clang", "version": "18.1.8"},
+            "architecture": "arm64",
+            "configuration": "Debug",
+            "cmake": "cmake version 3.31.6",
+            "generator": {"name": "Ninja", "version": "1.12"},
+            "fixture_manifest_sha256": "f" * 64,
+            "runtime_artifacts": [{"path": "libglueyneo.a", "sha256": "e" * 64}],
+            "sdk": {"version": "unknown"},
+        }
+        with tempfile.TemporaryDirectory() as output_directory:
+            lane_path = Path(output_directory) / "matrix-lane.json"
+            public_scan = verify_sdk.evidence.scan_public_value
+
+            def scan_before_lane_write(value):
+                assert not lane_path.exists(), "CI lane output must be scanned before the artifact is written"
+                public_scan(value)
+
+            argv = ["verify_sdk.py", "--suite", "sanitizer", "--lane",
+                    "linux-clang-sanitizer", "--output", str(lane_path)]
+            hosted = {
+                "GITHUB_ACTIONS": "true", "GITHUB_RUN_ID": "12345",
+                "GITHUB_RUN_ATTEMPT": "1", "GITHUB_RUNNER": "ubuntu-24.04",
+                "ImageOS": "ubuntu24", "ImageVersion": "2026.10.1",
+            }
+            with mock.patch.object(verify_sdk, "ensure_debug_build", return_value=1.0), \
+                    mock.patch.object(verify_sdk.evidence, "current_identity",
+                                      return_value=lane_identity), \
+                    mock.patch.object(verify_sdk, "sanitizer_summary",
+                                      return_value=(aggregate, "")), \
+                    mock.patch.object(verify_sdk, "collect_sanitized_audio_calls",
+                                      return_value={"ctest_cases": 0}), \
+                    mock.patch.object(verify_sdk.evidence, "scan_public_value",
+                                      side_effect=scan_before_lane_write), \
+                    mock.patch.object(sys, "argv", argv), \
+                    mock.patch.dict(os.environ, hosted, clear=False), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                assert verify_sdk.main() == 1
+            serialized_lane = evidence.load_canonical_json(
+                lane_path.read_bytes(), label="sanitizer CI matrix lane")
+            failure_rows = serialized_lane["failure_diagnostics"]
+            assert len(failure_rows) == 1
+            failure_row = failure_rows[0]
+            assert failure_row["failed_tests"] == ["sdk_save_receipts"]
+            assert "# ASSERT save.pending-newer expected=1 observed=0" in \
+                failure_row["failure_diagnostic"]
+            assert "[private-path-redacted]" in failure_row["failure_diagnostic"]
+            assert failure_row["runtime_ctest_output_sha256"] == summaryless_report[
+                "runtime_ctest_output_sha256"]
+            assert failure_row["runtime_ctest_output_bytes"] == summaryless_report[
+                "runtime_ctest_output_bytes"]
+            assert failure_row["runtime_ctest_output_excerpt_truncated"] == summaryless_report[
+                "runtime_ctest_output_excerpt_truncated"]
+            assert str(root) not in lane_path.read_text(encoding="utf-8")
+
+        diagnostic_row = {
+            "lane": "asan-ubsan", "stage": "runtime",
+            "failure_diagnostic": "sdk_save_receipts: expected=1 observed=0",
+            "failed_tests": ["sdk_save_receipts"], "attempted_tests": 2, "passed_tests": 1,
+            "source_revision": "a" * 40, "relevant_source_sha256": "b" * 64,
+            "runtime_log_sha256": None, "runtime_ctest_output_sha256": "c" * 64,
+            "runtime_ctest_output_bytes": 128,
+            "runtime_ctest_output_excerpt_truncated": False,
+            "runtime_ctest_output_excerpt": "bounded CTest detail",
+        }
+
+        def require_bad_diagnostic(rows, reason):
+            with mock.patch.object(evidence, "current_identity", return_value=lane_identity):
+                try:
+                    evidence.matrix_lane_from_environment(
+                        "linux-clang-sanitizer",
+                        {"suite": "sanitizer", "outcome": "fail", "lanes": {"failed": rows}},
+                        1.0)
+                except evidence.EvidenceError as error:
+                    assert error.reason == reason, (error.reason, reason)
+                else:
+                    raise AssertionError(f"malformed sanitizer diagnostics accepted: {reason}")
+
+        require_bad_diagnostic([None], "sanitizer-diagnostics-malformed")
+        require_bad_diagnostic([diagnostic_row] * 3, "sanitizer-diagnostics-malformed")
+        require_bad_diagnostic([{**diagnostic_row, "attempted_tests": True}],
+                               "sanitizer-diagnostics-malformed")
+        require_bad_diagnostic([{**diagnostic_row, "stage": []}],
+                               "sanitizer-diagnostics-malformed")
+        require_bad_diagnostic([{**diagnostic_row,
+                                 "runtime_ctest_output_excerpt": "x" * 16_001}],
+                               "sanitizer-diagnostic-too-large")
+
     # Exercise the native supervisor's partial CTest counts without running a
     # native sanitizer or relying on a particular host's runtime availability.
     startup = 'SANITIZER_STARTUP ' + json.dumps({
@@ -141,16 +486,418 @@ def sanitizer_failure_controls() -> None:
             mock.patch.object(controls, "run_logged", side_effect=[
                 (0, 0.01, None, ""), (0, 0.01, None, ""),
                 (0, 0.01, None, startup), (8, 0.03, None, native_failure)]):
-        supervised = controls.sanitizer_lane("sdk-tsan", "tsan", "THREAD", "-fsanitize=thread", "^sdk_(isolation|cold)$")
+        supervised = controls.sanitizer_lane("sdk-tsan", "tsan", "THREAD", "-fsanitize=thread", "^sdk_(isolation|cold|state_isolation)$")
     assert supervised["status"] == "failed_runtime" and supervised["failure_stage"] == "runtime"
     assert supervised["tests_attempted"] == 2 and supervised["tests_passed"] == 1
     assert supervised["failed_tests"] == ["sdk_isolation"]
 
 
+    identity_record = {
+        "suite": "sdk-state", "outcome": "pass", "cases": 1,
+        "assertions": 67,
+        "identity": {"sanitizer": "THREAD"},
+    }
+    isolation_record = {
+        "suite": "isolation", "outcome": "pass", "cases": 1,
+        "assertions": 11,
+        "identity": {"sanitizer": "THREAD"},
+    }
+    cold_record = {
+        "suite": "cold", "outcome": "pass", "cases": 1,
+        "assertions": 19,
+        "identity": {"sanitizer": "THREAD"},
+    }
+    ctest_output = (
+        "Start 35: sdk_state_isolation\n"
+        "1/3 Test #35: sdk_state_isolation ............ Passed 0.01 sec\n"
+        "Start 51: sdk_isolation\n"
+        "2/3 Test #51: sdk_isolation ................. Passed 0.01 sec\n"
+        "Start 52: sdk_cold\n"
+        "3/3 Test #52: sdk_cold ...................... Passed 0.01 sec\n"
+        "100% tests passed, 0 tests failed out of 3\n"
+        "Total Test time (real) = 0.03 sec\n")
+    last_test_log = ("SDK_RESULT " + json.dumps(identity_record) + "\n" +
+                     "SDK_CONTROL_RESULT " + json.dumps(isolation_record) + "\n" +
+                     "SDK_CONTROL_RESULT " + json.dumps(cold_record) + "\n")
+    startup = "SANITIZER_STARTUP " + json.dumps({
+        "outcome": "pass", "lane": "tsan", "startup_checks": 18,
+        "sanitizer": "THREAD",
+        "compiler": "AppleClang 21.0.0.21000101"})
+    original_run_logged = controls.run_logged
+
+    def run_logged_with_positive_ctest(command, log_path, sample_rss=False,
+                                       timeout=600.0):
+        if command[0] == "cmake" and "--preset" in command:
+            output = ""
+        elif command[0] == "cmake" and "--build" in command:
+            output = ""
+        elif "--startup-probe" in command:
+            output = startup
+        else:
+            output = ctest_output
+            test_log = (Path(controls.__file__).resolve().parents[2] /
+                        "build/sdk-tsan/Testing/Temporary/LastTest.log")
+            test_log.parent.mkdir(parents=True, exist_ok=True)
+            test_log.write_text(last_test_log, encoding="utf-8")
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path.write_text(output, encoding="utf-8")
+        return 0, 0.01, None, output
+
+    with tempfile.TemporaryDirectory() as directory, \
+            mock.patch.object(controls, "__file__", str(Path(directory) / "tests/sdk/controls.py")), \
+            mock.patch.object(controls, "cache_values", return_value={
+                "GLUEYNEO_SDK_SANITIZER": "THREAD",
+                "CMAKE_C_COMPILER_ID": "AppleClang",
+                "CMAKE_C_COMPILER_VERSION": "21.0.0.21000101",
+                "CMAKE_BUILD_TYPE": "Debug"}), \
+            mock.patch.object(controls, "verify_target_scoped_flags",
+                              return_value=(True, "verified")), \
+            mock.patch.object(controls, "run_logged",
+                              side_effect=run_logged_with_positive_ctest):
+        supervised = controls.sanitizer_lane(
+            "sdk-tsan", "tsan", "THREAD", "-fsanitize=thread",
+            "^sdk_(isolation|cold|state_isolation)$")
+    controls.run_logged = original_run_logged
+    assert supervised["status"] == "passed", supervised
+    assert supervised["tests_passed"] == 3
+    assert supervised["sdk_assertions"] == 97
+
+
+def ctest_failure_receipt_controls() -> None:
+    """The uploaded failure artifact retains the failed test body, not later log tail."""
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        build = root / "build/sdk-debug"
+        last_test = build / "Testing/Temporary/LastTest.log"
+        last_test.parent.mkdir(parents=True)
+        win_separator = chr(92)
+        private_windows_path = ("C:" + win_separator + "Users" + win_separator + "runneradmin" +
+                                win_separator + "work" + win_separator + "glueyneo")
+        failed_block = (
+            "Start testing: Oct 28 03:47 UTC\n"
+            "----------------------------------------------------------\n"
+            "17/25 Testing: mvs_import_contract\n"
+            "17/25 Test: mvs_import_contract\n"
+            "Command: python tests/mvs/test_mvs_qualification.py\n"
+            f"Directory: {private_windows_path}{win_separator}build{win_separator}sdk-debug\n"
+            "Output:\n"
+            "Traceback (most recent call last):\n"
+            "WINDOWS-ASSERTION-MARKER expected=1 observed=0\n"
+            f"{private_windows_path}{win_separator}tests{win_separator}mvs{win_separator}test.py:42\n"
+            "Test Failed.\n"
+            "----------------------------------------------------------\n")
+        later_block = (
+            "18/25 Testing: later_passing_test\n"
+            "18/25 Test: later_passing_test\n"
+            "Output:\n" + "\n".join(
+                f"LATER-PASS-ROW-{index}" for index in range(300)) +
+            "\nTest Passed.\n")
+        last_test.write_text(failed_block + later_block, encoding="utf-8")
+        ctest_stdout = (
+            "test 1\nStart 1: earlier_passing_test\n" +
+            "\n".join(f"1: EARLY-PASS-ROW-{index}" for index in range(260)) +
+            "\n1/25 Test #1: earlier_passing_test ........   Passed  1.00 sec\n"
+            "test 17\nStart 17: mvs_import_contract\n"
+            "17: Test command: python tests/mvs/test_mvs_qualification.py\n"
+            f"17: WINDOWS-ASSERTION-MARKER expected=1 observed=0 at {private_windows_path}{win_separator}tests{win_separator}mvs{win_separator}test.py:42\n"
+            "17/25 Test #17: mvs_import_contract ........***Failed  1.00 sec\n"
+            "test 18\nStart 18: mvs_import_max_horizon\n"
+            "18: Test command: python tests/mvs/test_mvs_qualification.py --mode maximum-horizon\n"
+            f"18: WINDOWS-HORIZON-MARKER expected=3600 observed=3599 at {private_windows_path}{win_separator}tests{win_separator}mvs{win_separator}test.py:84\n"
+            "18/25 Test #18: mvs_import_max_horizon ......***Failed  1.25 sec\n"
+            "test 21\nStart 21: mvs_import.contract.v2\n"
+            "21: Test command: python tests/mvs/test_mvs_qualification.py --mode revision-two\n"
+            f"21: WINDOWS-DOTTED-MARKER expected=2 observed=1 at {private_windows_path}{win_separator}tests{win_separator}mvs{win_separator}test.py:96\n"
+            "21/25 Test #21: mvs_import.contract.v2 ......***Failed  1.50 sec\n"
+            "test 22\nStart 22: mvs_import.exception_case\n"
+            f"22: AddressSanitizer: heap-use-after-free at {private_windows_path}{win_separator}tests{win_separator}mvs{win_separator}test.py:103\n"
+            "22: WINDOWS-EXCEPTION-MARKER signal=Segmentation fault\n"
+            "22/25 Test #22: mvs_import.exception_case ...***Exception: SegFault 1.50 sec\n"
+            "test 25\nStart 25: later_passing_test\n" +
+            "\n".join(f"25: LATER-PASS-ROW-{index}" for index in range(500)) +
+            "\n25/25 Test #25: later_passing_test ..........   Passed  1.00 sec\n"
+            "CTest exited with code 8; final summary omitted failed test names\n")
+        ctest_bytes = ctest_stdout.encode("utf-8")
+
+        ctest_attempt = {"stdout": ctest_stdout, "rewrite_last_test": True}
+
+        def failed_ctest(argv, **_kwargs):
+            if ctest_attempt["rewrite_last_test"]:
+                last_test.write_text(failed_block + later_block, encoding="utf-8")
+            return subprocess.CompletedProcess(argv, 8, ctest_attempt["stdout"])
+
+        def fail_from_ctest():
+            verify_sdk.run(["ctest", "--preset", "sdk-debug", "--verbose",
+                            "--output-on-failure", "--no-tests=error", "-L", "mvs"])
+
+        receipt_path = root / "matrix-windows-msvc.json"
+        argv = ["verify_sdk.py", "--suite", "matrix", "--lane", "windows-msvc",
+                "--output", str(receipt_path)]
+        with mock.patch.object(verify_sdk, "ROOT", root), \
+                mock.patch.object(verify_sdk, "BUILD", build), \
+                mock.patch.object(verify_sdk, "LOG_DIR", root / "logs"), \
+                mock.patch.object(verify_sdk, "suite_matrix", side_effect=fail_from_ctest), \
+                mock.patch.object(verify_sdk.subprocess, "run", side_effect=failed_ctest), \
+                mock.patch.object(sys, "argv", argv), \
+                mock.patch.dict(os.environ, {"GITHUB_SHA": "a" * 40}, clear=False), \
+                contextlib.redirect_stderr(io.StringIO()):
+            assert verify_sdk.main() == 1
+
+        produced = evidence.load_canonical_json(
+            receipt_path.read_bytes(), label="Windows matrix failure artifact")
+        assert produced["schema"] == "sdk-verify-failure/v1"
+        details = produced["ctest_failure_diagnostics"]
+        assert details["source"] == "ctest-last-test-log+ctest-output"
+        assert details["last_test_log_status"] == "read"
+        assert details["failed_tests"] == [
+            "mvs_import.contract.v2", "mvs_import.exception_case",
+            "mvs_import_contract", "mvs_import_max_horizon"]
+        assert details["output_sha256"] == hashlib.sha256(ctest_bytes).hexdigest()
+        assert details["output_bytes"] == len(ctest_bytes)
+        assert details["output_excerpt_truncated"] is True
+        excerpt = details["excerpt"]
+        assert "WINDOWS-ASSERTION-MARKER expected=1 observed=0" in excerpt
+        assert "WINDOWS-HORIZON-MARKER expected=3600 observed=3599" in excerpt
+        assert "WINDOWS-DOTTED-MARKER expected=2 observed=1" in excerpt
+        assert "WINDOWS-EXCEPTION-MARKER signal=Segmentation fault" in excerpt
+        assert "mvs_import_contract" in excerpt
+        assert "[private-path-redacted]" in excerpt
+        assert "runneradmin" not in excerpt
+        assert "LATER-PASS-ROW" not in excerpt
+        assert "later verbose pass row" not in excerpt
+
+        last_test.write_text(failed_block, encoding="utf-8")
+        stale_stdout = ctest_stdout
+        ctest_attempt["stdout"] = stale_stdout
+        ctest_attempt["rewrite_last_test"] = False
+        stale_receipt_path = root / "matrix-windows-msvc-stale-log.json"
+        stale_argv = ["verify_sdk.py", "--suite", "matrix", "--lane", "windows-msvc",
+                      "--output", str(stale_receipt_path)]
+        with mock.patch.object(verify_sdk, "ROOT", root), \
+                mock.patch.object(verify_sdk, "BUILD", build), \
+                mock.patch.object(verify_sdk, "LOG_DIR", root / "logs"), \
+                mock.patch.object(verify_sdk, "suite_matrix", side_effect=fail_from_ctest), \
+                mock.patch.object(verify_sdk.subprocess, "run", side_effect=failed_ctest), \
+                mock.patch.object(sys, "argv", stale_argv), \
+                mock.patch.dict(os.environ, {"GITHUB_SHA": "a" * 40}, clear=False), \
+                contextlib.redirect_stderr(io.StringIO()):
+            assert verify_sdk.main() == 1
+        stale_receipt = evidence.load_canonical_json(
+            stale_receipt_path.read_bytes(), label="stale LastTest matrix failure artifact")
+        stale_details = stale_receipt["ctest_failure_diagnostics"]
+        assert stale_details["last_test_log_status"] == "stale"
+        assert stale_details["source"] == "ctest-output"
+        assert stale_details["failed_tests"] == [
+            "mvs_import.contract.v2", "mvs_import.exception_case",
+            "mvs_import_contract", "mvs_import_max_horizon"]
+        assert "WINDOWS-ASSERTION-MARKER expected=1 observed=0" in stale_details["excerpt"]
+        assert "WINDOWS-HORIZON-MARKER expected=3600 observed=3599" in stale_details["excerpt"]
+        assert "WINDOWS-DOTTED-MARKER expected=2 observed=1" in stale_details["excerpt"]
+        assert "WINDOWS-EXCEPTION-MARKER signal=Segmentation fault" in stale_details["excerpt"]
+        assert "EARLY-PASS-ROW" not in stale_details["excerpt"]
+        assert "LATER-PASS-ROW" not in stale_details["excerpt"]
+
+        # A test can change the log path after CTest's return but before the
+        # receipt collector opens it. Exercise that exact producer race: the
+        # collector must reject a symlink (or a substituted file where the
+        # platform cannot create symlinks) and serialize no target contents.
+        attacker_file = root / "runner-private-data.txt"
+        attacker_marker = "UNRELATED-RUNNER-FILE-MUST-NOT-ENTER-RECEIPT"
+        attacker_file.write_text(attacker_marker, encoding="utf-8")
+        last_test.write_text("prior invocation\n", encoding="utf-8")
+        ctest_attempt["rewrite_last_test"] = True
+        attacked = {"done": False, "symlink": False}
+        original_open = os.open
+
+        def substitute_log_before_open(path, flags, *args, **kwargs):
+            if Path(path) == last_test and not attacked["done"]:
+                attacked["done"] = True
+                last_test.unlink()
+                try:
+                    last_test.symlink_to(attacker_file)
+                    attacked["symlink"] = True
+                except OSError:
+                    last_test.write_text(attacker_marker, encoding="utf-8")
+            return original_open(path, flags, *args, **kwargs)
+
+        attacked_receipt_path = root / "matrix-windows-msvc-substituted-log.json"
+        attacked_argv = ["verify_sdk.py", "--suite", "matrix", "--lane", "windows-msvc",
+                         "--output", str(attacked_receipt_path)]
+        with mock.patch.object(verify_sdk, "ROOT", root), \
+                mock.patch.object(verify_sdk, "BUILD", build), \
+                mock.patch.object(verify_sdk, "LOG_DIR", root / "logs"), \
+                mock.patch.object(verify_sdk, "suite_matrix", side_effect=fail_from_ctest), \
+                mock.patch.object(verify_sdk.subprocess, "run", side_effect=failed_ctest), \
+                mock.patch.object(verify_sdk.os, "open", side_effect=substitute_log_before_open), \
+                mock.patch.object(sys, "argv", attacked_argv), \
+                mock.patch.dict(os.environ, {"GITHUB_SHA": "a" * 40}, clear=False), \
+                contextlib.redirect_stderr(io.StringIO()):
+            assert verify_sdk.main() == 1
+        assert attacked["done"]
+        attacked_receipt = evidence.load_canonical_json(
+            attacked_receipt_path.read_bytes(), label="substituted LastTest matrix failure artifact")
+        attacked_details = attacked_receipt["ctest_failure_diagnostics"]
+        assert attacked_details["last_test_log_status"] in {"unsafe", "stale"}
+        assert attacked_details["source"] == "ctest-output"
+        assert "WINDOWS-ASSERTION-MARKER expected=1 observed=0" in attacked_details["excerpt"]
+        assert "WINDOWS-HORIZON-MARKER expected=3600 observed=3599" in attacked_details["excerpt"]
+        assert "WINDOWS-DOTTED-MARKER expected=2 observed=1" in attacked_details["excerpt"]
+        assert "WINDOWS-EXCEPTION-MARKER signal=Segmentation fault" in attacked_details["excerpt"]
+        assert attacker_marker not in attacked_details["excerpt"]
+        assert attacker_marker not in attacked_receipt["detail"]
+        assert attacker_marker not in attacked_receipt_path.read_text(encoding="utf-8")
+        if attacked["symlink"]:
+            assert last_test.is_symlink()
+            last_test.unlink()
+        last_test.write_text(failed_block, encoding="utf-8")
+
+        # A hard link is a regular file, but it is not the one-link CTest log
+        # that the pre-run signature observed. The same producer path must
+        # reject its content and serialize only the captured CTest output.
+        linked = {"done": False, "hardlink": False}
+
+        def hardlink_substitute_before_open(path, flags, *args, **kwargs):
+            if Path(path) == last_test and not linked["done"]:
+                linked["done"] = True
+                last_test.unlink()
+                try:
+                    os.link(attacker_file, last_test)
+                    linked["hardlink"] = True
+                except OSError:
+                    last_test.write_text(attacker_marker, encoding="utf-8")
+            return original_open(path, flags, *args, **kwargs)
+
+        hardlink_receipt_path = root / "matrix-windows-msvc-hardlinked-log.json"
+        hardlink_argv = ["verify_sdk.py", "--suite", "matrix", "--lane", "windows-msvc",
+                         "--output", str(hardlink_receipt_path)]
+        with mock.patch.object(verify_sdk, "ROOT", root), \
+                mock.patch.object(verify_sdk, "BUILD", build), \
+                mock.patch.object(verify_sdk, "LOG_DIR", root / "logs"), \
+                mock.patch.object(verify_sdk, "suite_matrix", side_effect=fail_from_ctest), \
+                mock.patch.object(verify_sdk.subprocess, "run", side_effect=failed_ctest), \
+                mock.patch.object(verify_sdk.os, "open", side_effect=hardlink_substitute_before_open), \
+                mock.patch.object(sys, "argv", hardlink_argv), \
+                mock.patch.dict(os.environ, {"GITHUB_SHA": "a" * 40}, clear=False), \
+                contextlib.redirect_stderr(io.StringIO()):
+            assert verify_sdk.main() == 1
+        assert linked["done"]
+        hardlink_receipt = evidence.load_canonical_json(
+            hardlink_receipt_path.read_bytes(), label="hard-linked LastTest matrix failure artifact")
+        hardlink_details = hardlink_receipt["ctest_failure_diagnostics"]
+        assert hardlink_details["last_test_log_status"] in {"unsafe", "stale"}
+        assert hardlink_details["source"] == "ctest-output"
+        assert "WINDOWS-ASSERTION-MARKER expected=1 observed=0" in hardlink_details["excerpt"]
+        assert "WINDOWS-HORIZON-MARKER expected=3600 observed=3599" in hardlink_details["excerpt"]
+        assert "WINDOWS-DOTTED-MARKER expected=2 observed=1" in hardlink_details["excerpt"]
+        assert "WINDOWS-EXCEPTION-MARKER signal=Segmentation fault" in hardlink_details["excerpt"]
+        assert attacker_marker not in hardlink_details["excerpt"]
+        assert attacker_marker not in hardlink_receipt["detail"]
+        assert attacker_marker not in hardlink_receipt_path.read_text(encoding="utf-8")
+        if linked["hardlink"]:
+            assert last_test.stat().st_nlink == 2
+            last_test.unlink()
+        last_test.write_text(failed_block, encoding="utf-8")
+
+        # Unparseable CTest output must not fall back to verbose passing output
+        # that cannot be tied to a failed result row.
+        malformed_stdout = (
+            "test 21\nStart 21: mvs_import.contract.v2\n"
+            "21: LATER-PASS-MARKER private details from an unbound row\n"
+            "CTest exited before emitting a result row\n")
+        ctest_attempt["stdout"] = malformed_stdout
+        ctest_attempt["rewrite_last_test"] = False
+        malformed_receipt_path = root / "matrix-windows-msvc-unbound-output.json"
+        malformed_argv = ["verify_sdk.py", "--suite", "matrix", "--lane", "windows-msvc",
+                          "--output", str(malformed_receipt_path)]
+        with mock.patch.object(verify_sdk, "ROOT", root), \
+                mock.patch.object(verify_sdk, "BUILD", build), \
+                mock.patch.object(verify_sdk, "LOG_DIR", root / "logs"), \
+                mock.patch.object(verify_sdk, "suite_matrix", side_effect=fail_from_ctest), \
+                mock.patch.object(verify_sdk.subprocess, "run", side_effect=failed_ctest), \
+                mock.patch.object(sys, "argv", malformed_argv), \
+                mock.patch.dict(os.environ, {"GITHUB_SHA": "a" * 40}, clear=False), \
+                contextlib.redirect_stderr(io.StringIO()):
+            assert verify_sdk.main() == 1
+        malformed_receipt = evidence.load_canonical_json(
+            malformed_receipt_path.read_bytes(), label="unbound CTest output failure artifact")
+        malformed_details = malformed_receipt["ctest_failure_diagnostics"]
+        assert malformed_details["source"] == "ctest-output"
+        assert malformed_details["last_test_log_status"] == "stale"
+        assert malformed_details["failed_tests"] == []
+        assert malformed_details["output_sha256"] == hashlib.sha256(
+            malformed_stdout.encode("utf-8")).hexdigest()
+        assert malformed_details["output_bytes"] == len(malformed_stdout.encode("utf-8"))
+        assert "withheld because no failed-test block could be bound safely" in malformed_details["excerpt"]
+        assert "LATER-PASS-MARKER" not in malformed_details["excerpt"]
+        assert "LATER-PASS-MARKER" not in malformed_receipt["detail"]
+        assert "LATER-PASS-MARKER" not in malformed_receipt_path.read_text(encoding="utf-8")
+
+        credential_name = "ghp_" + "A" * 36
+        unsafe_error = verify_sdk.VerificationError("test failed")
+        unsafe_error.failure_diagnostics = {"failed_tests": [credential_name]}
+        guarded = verify_sdk.failure_receipt("matrix", "windows-msvc", unsafe_error)
+        assert "ctest_failure_diagnostics" not in guarded
+        assert credential_name not in json.dumps(guarded)
+        assert "withheld" in guarded["detail"]
+        evidence.scan_public_value(guarded)
+        assert not verify_sdk.public_content.scan_bytes(
+            evidence.canonical_bytes(guarded), "test-failure-receipt")["findings"]
+
+        with mock.patch.object(verify_sdk, "CTEST_LAST_TEST_LOG_LIMIT", 8):
+            over_limit = verify_sdk.ctest_failure_diagnostics(ctest_stdout, last_test)
+        assert over_limit["last_test_log_status"] == "over-limit"
+        assert over_limit["source"] == "ctest-output"
+        assert "WINDOWS-ASSERTION-MARKER expected=1 observed=0" in over_limit["excerpt"]
+        assert "WINDOWS-HORIZON-MARKER expected=3600 observed=3599" in over_limit["excerpt"]
+        assert "WINDOWS-DOTTED-MARKER expected=2 observed=1" in over_limit["excerpt"]
+        assert "WINDOWS-EXCEPTION-MARKER signal=Segmentation fault" in over_limit["excerpt"]
+        assert "EARLY-PASS-ROW" not in over_limit["excerpt"]
+        assert "LATER-PASS-ROW" not in over_limit["excerpt"]
+
+        # A command-level timeout follows the same structured receipt path;
+        # preserve both the timed-out CTest output and its fresh failed block.
+        timeout_build = root / "build/timeout"
+        timeout_log = timeout_build / "Testing/Temporary/LastTest.log"
+        timeout_log.parent.mkdir(parents=True, exist_ok=True)
+        timeout_receipt_path = root / "matrix-timeout.json"
+        timeout_argv = ["verify_sdk.py", "--suite", "matrix", "--lane", "linux-clang",
+                        "--output", str(timeout_receipt_path)]
+        timeout_output = ("Start 17: mvs_import_contract\n"
+                          "mvs_import_contract timed out after partial output\n").encode("utf-8")
+
+        def timeout_ctest(argv, **_kwargs):
+            timeout_log.write_text(failed_block, encoding="utf-8")
+            raise subprocess.TimeoutExpired(argv, 1, output=timeout_output)
+
+        def fail_from_timed_out_ctest():
+            verify_sdk.run(["ctest", "--test-dir", str(timeout_build), "--output-on-failure"])
+
+        with mock.patch.object(verify_sdk, "ROOT", root), \
+                mock.patch.object(verify_sdk, "BUILD", timeout_build), \
+                mock.patch.object(verify_sdk, "LOG_DIR", root / "logs"), \
+                mock.patch.object(verify_sdk, "suite_matrix", side_effect=fail_from_timed_out_ctest), \
+                mock.patch.object(verify_sdk.subprocess, "run", side_effect=timeout_ctest), \
+                mock.patch.object(sys, "argv", timeout_argv), \
+                mock.patch.dict(os.environ, {"GITHUB_SHA": "a" * 40}, clear=False), \
+                contextlib.redirect_stderr(io.StringIO()):
+            assert verify_sdk.main() == 1
+        timeout_receipt = evidence.load_canonical_json(
+            timeout_receipt_path.read_bytes(), label="timed-out CTest matrix failure artifact")
+        timeout_details = timeout_receipt["ctest_failure_diagnostics"]
+        assert timeout_details["source"] == "ctest-last-test-log"
+        assert timeout_details["failed_tests"] == ["mvs_import_contract"]
+        assert timeout_details["output_sha256"] == hashlib.sha256(timeout_output).hexdigest()
+        assert timeout_details["output_bytes"] == len(timeout_output)
+        assert "WINDOWS-ASSERTION-MARKER expected=1 observed=0" in timeout_details["excerpt"]
+
+
 def mvs_lane_controls() -> None:
     names = sorted(verify_sdk.CTEST_CASES["mvs"])
+    importer = evidence.mvs_importer_identity(
+        verify_sdk.ROOT, verify_sdk.BUILD.relative_to(verify_sdk.ROOT).as_posix())
     identity = {"source_revision": "a" * 40,
-                "relevant_source_sha256": "b" * 64}
+                "relevant_source_sha256": "b" * 64,
+                "mvs_importer": importer}
 
     def output_for(observed: list[str], denominator: int | None = None,
                    percent: int = 100) -> str:
@@ -166,15 +913,24 @@ def mvs_lane_controls() -> None:
             return lane
 
     lane = collect(output_for(names))
-    assert lane["ctest_cases"] == 7 and lane["named_tests"] == names
+    assert lane["ctest_cases"] == 25 and len(names) == 25 and lane["named_tests"] == names
     assert lane["source_revision"] == identity["source_revision"]
     verify_sdk.validate_mvs_lane(lane, identity)
 
+    without_failure_diagnostics = [
+        name for name in names if name != "mvs_failure_diagnostics"]
+    try:
+        collect(output_for(without_failure_diagnostics))
+    except verify_sdk.VerificationError:
+        pass
+    else:
+        raise AssertionError("MVS CTest collector accepted the lane without mvs_failure_diagnostics")
+
     for observed, denominator, percent, returncode in (
-            (names[:-1], 6, 100, 0),
+            (names[:-1], len(names) - 1, 100, 0),
             (names, 0, 100, 0),
-            ([*names[:-1], "mvs_renamed"], 7, 100, 0),
-            (names, 7, 85, 1)):
+            ([*names[:-1], "mvs_renamed"], len(names), 100, 0),
+            (names, len(names), 85, 1)):
         try:
             collect(output_for(observed, denominator, percent), returncode)
         except verify_sdk.VerificationError:
@@ -192,23 +948,446 @@ def mvs_lane_controls() -> None:
         raise AssertionError("MVS lane accepted a stale relevant-source digest")
 
 
+class CtestLabelContractTests(unittest.TestCase):
+    def test_sdk_controls_label_includes_state_negative_controls(self) -> None:
+        self.assertEqual(verify_sdk.CTEST_CASES["controls"],
+                         {"sdk_controls", "sdk_state_controls"})
+
+    def test_sdk_isolation_label_includes_state_isolation(self) -> None:
+        self.assertEqual(verify_sdk.CTEST_CASES["isolation"],
+                         {"sdk_state_isolation", "sdk_isolation", "sdk_cold"})
+
+    def test_sdk_hostile_label_includes_state_minimizer(self) -> None:
+        self.assertEqual(verify_sdk.CTEST_CASES["hostile"],
+                         {"sdk_mutation_media", "sdk_mutation_sequence",
+                          "sdk_mutation_minimizer", "sdk_state_minimizer"})
+
+    def test_mvs_inventory_includes_libretro_save_and_state_controls(self) -> None:
+        self.assertTrue({"libretro_mvs_state_contract", "libretro_mvs_save_ram_contract",
+                         "libretro_mvs_state_rejection", "libretro_mvs_retention"}.issubset(
+                             verify_sdk.CTEST_CASES["mvs"]))
+
+    def test_generated_ctest_bracket_arguments_bind_one_mvs_importer(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            build = Path(directory)
+            importer = (build / "mvs_importer").as_posix()
+            names = ("mvs_import_contract", "mvs_import_mutation", "mvs_import_fuzz_corpus")
+            lines = [f'add_test([=[{name}]=] [=[python3]=] [=[test.py]=] '
+                     f'[=[--importer]=] [=[{importer}]=])' for name in names]
+            (build / "CTestTestfile.cmake").write_text("\n".join(lines), encoding="utf-8")
+            self.assertEqual(verify_sdk.configured_mvs_importer_path(build),
+                             (build / "mvs_importer").resolve())
+            for alternate in ((build / "other_importer").as_posix(),
+                              (build / "nested" / "mvs_importer").as_posix()):
+                with self.subTest(alternate=Path(alternate).name):
+                    mismatched = list(lines)
+                    mismatched[-1] = mismatched[-1].replace(importer, alternate)
+                    (build / "CTestTestfile.cmake").write_text(
+                        "\n".join(mismatched), encoding="utf-8")
+                    with self.assertRaisesRegex(
+                            verify_sdk.VerificationError, "resolve to .* different artifacts"):
+                        verify_sdk.configured_mvs_importer_path(build)
+            (build / "CTestTestfile.cmake").write_text("\n".join(lines[:-1]), encoding="utf-8")
+            with self.assertRaisesRegex(verify_sdk.VerificationError, "missing named registrations"):
+                verify_sdk.configured_mvs_importer_path(build)
+
+
 class MvsLaneTests(unittest.TestCase):
+    def test_build_matrix_report_rejects_nonobject_rows_before_sorting(self) -> None:
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "tests/sdk/test_evidence.py"),
+             "--case", "row_shape_matrix_aggregator"],
+            cwd=ROOT, capture_output=True, text=True, check=False)
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 0, output)
+        rows = [line.removeprefix("SDK_EVIDENCE_CASE ") for line in output.splitlines()
+                if line.startswith("SDK_EVIDENCE_CASE ")]
+        self.assertEqual(len(rows), 1, output)
+        case = json.loads(rows[0])
+        self.assertEqual(case["case_id"], "evidence.row-shape-matrix-aggregator")
+        self.assertEqual(case["outcome"], "pass")
+        expected = {"container": "matrix-lanes-missing",
+                    "row": "matrix-lane-malformed",
+                    "empty": "matrix-revision-missing",
+                    "singleton": "matrix-missing-lane"}
+        self.assertEqual(case["expected"], expected)
+        self.assertEqual(case["observed"], expected)
+
+    def test_build_matrix_report_preserves_valid_order_and_duplicate_control(self) -> None:
+        original = valid_report()["lanes"]
+        reversed_rows = list(reversed(original))
+        before = evidence.canonical_bytes(reversed_rows)
+        report = evidence.build_matrix_report(reversed_rows)
+        self.assertEqual([row["lane"] for row in report["lanes"]],
+                         sorted(row["lane"] for row in original))
+        self.assertEqual(evidence.canonical_bytes(reversed_rows), before)
+        evidence.validate_matrix_report(report)
+
+        duplicate_rows = [*reversed_rows, dict(reversed_rows[0])]
+        with self.assertRaises(evidence.EvidenceError) as caught:
+            evidence.build_matrix_report(duplicate_rows)
+        self.assertEqual(caught.exception.reason, "matrix-lane-duplicate")
+
+    def test_validate_matrix_report_keeps_its_nonobject_row_guard(self) -> None:
+        non_objects = [None, [], "row", 1, 1.5, True]
+        positions = ((0, "first"), (2, "middle"), (-1, "last"))
+        for value in non_objects:
+            for position, label in positions:
+                with self.subTest(value=value, position=label):
+                    report = valid_report()
+                    report["lanes"][position] = value
+                    with self.assertRaises(evidence.EvidenceError) as caught:
+                        evidence.validate_matrix_report(report)
+                    self.assertEqual(caught.exception.reason, "matrix-lane-malformed")
+
+    def test_board_partitions_preserve_exact_subcheck_coverage(self) -> None:
+        # Structural harness oracle: retain the 30 pre-partition subchecks once.
+        # Their executable assertions, rather than this registration check,
+        # supply the board behavior evidence.
+        source = (ROOT / "tests/mvs/test_mvs.c").read_text()
+        cmake = (ROOT / "CMakeLists.txt").read_text()
+        expected = {
+            "check_mvs_pcm_public_api", "check_start_input", "check_irq_timing",
+            "check_logical_frame_budget", "check_failed_frame_prefix",
+            "check_io_status", "check_mvs_controls_guest", "check_calendar",
+            "check_calendar_timing", "check_calendar_interrupt_noops",
+            "check_calendar_resume_commands", "check_status_a",
+            "check_controller_select_without_host_input", "check_sound_command_reply",
+            "check_disabled_nmi_pending_then_enable", "check_sound_bus_boundary",
+            "check_sound_clock_and_sources", "check_sound_ym_board",
+            "check_sound_selector_reset", "check_status_b", "check_output3_latch",
+            "check_output2_latch", "check_single_cartridge_slot_selection",
+            "check_p2_banking_guest_write_and_instance_reset",
+            "check_p2_banking_guest_byte_lanes", "check_mslugx_protection_guest",
+            "check_mslugx_protection_instance_isolation", "check_mvs_fixed_renderer",
+            "check_mvs_sprite_renderer", "check_mvs_sprite_instance_isolation",
+        }
+        groups = ("core", "io", "calendar", "sound", "cartridge", "video")
+
+        def calls(text: str, group: str) -> list[str]:
+            body = re.search(
+                rf"static void check_board_{group}\([^{{]+\) \{{(.*?)\n\}}",
+                text, re.S)
+            self.assertIsNotNone(body, group)
+            return re.findall(r"\b(check_\w+)\(", body.group(1))
+
+        def require_coverage(text: str) -> None:
+            flattened = [name for group in groups for name in calls(text, group)]
+            self.assertEqual(set(flattened), expected)
+            self.assertEqual(len(flattened), len(expected))
+
+        require_coverage(source)
+        call = "    check_mvs_pcm_public_api(bundle, size);"
+        with self.assertRaises(AssertionError):
+            require_coverage(source.replace(call, "", 1))
+        with self.assertRaises(AssertionError):
+            require_coverage(source.replace(call, call + "\n" + call, 1))
+        self.assertCountEqual(calls(source, "behavior"),
+                              [f"check_board_{group}" for group in groups])
+        for group in groups:
+            case = "behavior" if group == "core" else group
+            self.assertIn(
+                f"add_test(NAME mvs_board_{case} COMMAND mvs_test --board-{group})",
+                cmake)
+            self.assertIn(f"mvs_board_{case}", verify_sdk.CTEST_CASES["mvs"])
+            self.assertIn(
+                f'strcmp(argv[1], "--board-{group}") == 0) {{\n'
+                f'        check_board_{group}(bundle, bundle_size);', source)
+
     def test_mvs_lane_registered_exact_inventory(self) -> None:
         expected = {
             "mvs_synthetic_trace", "mvs_media_contract", "mvs_import_contract",
             "mvs_import_mutation", "mvs_callback_contract", "mvs_boot_checkpoint",
-            "mvs_import_fuzz_corpus",
+            "mvs_attract_predicate", "mvs_board_behavior",
+            "mvs_board_io", "mvs_board_calendar", "mvs_board_sound",
+            "mvs_board_cartridge", "mvs_board_video",
+            "mvs_import_fuzz_corpus", "mvs_failure_diagnostics",
+            "mvs_import_max_horizon", "mvs_input_observations", "public_sound_fixture",
+            "sdk_sound_reference", "libretro_audio_contract",
+            "libretro_mvs_state_contract", "libretro_mvs_save_ram_contract",
+            "libretro_mvs_state_rejection", "libretro_mvs_retention",
+            "mvs_audio_call_corpus",
         }
         self.assertEqual(verify_sdk.CTEST_CASES.get("mvs"), expected)
 
+    def test_native_call_lane_requires_success_and_rejection_counts(self) -> None:
+        text = "Start 1: mvs_audio_call_corpus\nStart 2: mvs_import_fuzz_corpus\n100% tests passed out of 2\n"
+        for success, rejected in ((0, 14), (30, 0), (30, 14)):
+            with self.subTest(success=success, rejected=rejected), \
+                    mock.patch.object(verify_sdk, "run", return_value=subprocess.CompletedProcess(
+                        [], 0, text+f"MVS_AUDIO_CALLS success={success} rejected={rejected} seed=51a7c0de\n", "")), \
+                    mock.patch.object(verify_sdk, "preserve_output", return_value="a"*64):
+                if success and rejected:
+                    self.assertEqual(verify_sdk.collect_audio_call_lane("sdk-debug")["ctest_cases"], 2)
+                else:
+                    with self.assertRaises(verify_sdk.VerificationError):
+                        verify_sdk.collect_audio_call_lane("sdk-debug")
+
+    def test_native_call_sanitizer_uses_actual_asan_status(self) -> None:
+        with mock.patch.object(verify_sdk, "collect_audio_call_lane", return_value={"outcome":"pass"}) as run:
+            result=verify_sdk.collect_sanitized_audio_calls({"outcome":"pass", "lanes":[
+                {"lane":"asan-ubsan", "status":"unsupported", "unsupported_reason":"runtime absent"}]})
+            self.assertEqual(result["outcome"],"unsupported")
+            run.assert_not_called()
+            result=verify_sdk.collect_sanitized_audio_calls({"outcome":"pass", "lanes":[
+                {"lane":"asan-ubsan", "status":"passed"}]})
+            self.assertEqual(result["outcome"],"pass")
+            run.assert_called_once_with("sdk-asan-ubsan")
+
+    def test_mvs_lane_rejects_omitted_failure_diagnostics(self) -> None:
+        names = sorted(verify_sdk.CTEST_CASES["mvs"])
+        identity = {"source_revision": "a" * 40,
+                    "relevant_source_sha256": "b" * 64,
+                    "mvs_importer": {"basename": "mvs_importer", "sha256": "c" * 64,
+                                     "source_sha256": "d" * 64,
+                                     "working_tree_dirty": False}}
+        omitted = [name for name in names if name != "mvs_failure_diagnostics"]
+        output = "\n".join([*(f"Start {index}: {name}"
+                               for index, name in enumerate(omitted, 1)),
+                            f"100% tests passed out of {len(omitted)}"])
+        with mock.patch.object(verify_sdk, "run", return_value=subprocess.CompletedProcess(
+                [], 0, output, "")), \
+             mock.patch.object(verify_sdk, "preserve_output", return_value="e" * 64):
+            with self.assertRaises(verify_sdk.VerificationError):
+                verify_sdk.collect_ctest_lane("mvs", identity)
+
+    def test_mvs_lane_requires_matching_importer_identity(self) -> None:
+        names = sorted(verify_sdk.CTEST_CASES["mvs"])
+        identity = {
+            "source_revision": "a" * 40,
+            "relevant_source_sha256": "b" * 64,
+            "mvs_importer": {
+                "basename": "mvs_importer",
+                "sha256": "c" * 64,
+                "source_sha256": "d" * 64,
+                "working_tree_dirty": False,
+            },
+        }
+        lane = {
+            "outcome": "pass", "label": "mvs", "ctest_cases": len(names),
+            "named_tests": names, "source_revision": identity["source_revision"],
+            "relevant_source_sha256": identity["relevant_source_sha256"],
+            "output_sha256": "e" * 64,
+            "importer_basename": "mvs_importer", "importer_sha256": "c" * 64,
+            "importer_source_sha256": "d" * 64,
+        }
+        verify_sdk.validate_mvs_lane(lane, identity)
+        for identity_variant, lane_variant in (
+                ({**identity, "mvs_importer": None}, lane),
+                (identity, {**lane, "importer_sha256": "f" * 64}),
+                (identity, {**lane, "importer_source_sha256": "0" * 64}),
+                (identity, {**lane, "importer_basename": "mvs_importer.exe"})):
+            with self.subTest(identity=identity_variant.get("mvs_importer"),
+                              basename=lane_variant.get("importer_basename")):
+                with self.assertRaises(verify_sdk.VerificationError):
+                    verify_sdk.validate_mvs_lane(lane_variant, identity_variant)
+
+    def test_debug_build_rebuilds_mvs_importer_before_identity_capture(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            build = Path(directory) / "build" / "sdk-debug"
+            build.mkdir(parents=True)
+            importer = build / ("mvs_importer.exe" if sys.platform == "win32" else "mvs_importer")
+            importer.write_bytes(b"same-path substitute")
+            runner = build / ("glueyneo-diagnostic.exe" if sys.platform == "win32"
+                              else "glueyneo-diagnostic")
+            runner.write_bytes(b"synthetic runner")
+            importer_absent_during_build: list[bool] = []
+
+            def fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+                if command[:4] == ["cmake", "--build", "--preset", "sdk-debug"]:
+                    importer_absent_during_build.append(not importer.exists())
+                    importer.write_bytes(b"rebuilt importer")
+                return subprocess.CompletedProcess(command, 0, "", "")
+
+            with mock.patch.object(verify_sdk, "BUILD", build), \
+                 mock.patch.object(verify_sdk, "run", side_effect=fake_run):
+                verify_sdk.ensure_debug_build()
+
+            self.assertEqual(importer_absent_during_build, [True],
+                             "a preexisting same-path importer must be removed before rebuilding")
+            self.assertEqual(importer.read_bytes(), b"rebuilt importer")
+
+    def test_mvs_importer_source_closure_is_in_sdk_identity(self) -> None:
+        expected = {
+            "CMakeLists.txt", "CMakePresets.json", "docs/mvs-media.md",
+            "tools/mvs/mvs_import.c", "third_party/zlib/LICENSE",
+            "tools/verify_sdk.py",
+            "third_party/zlib/adler32.c", "third_party/zlib/crc32.c",
+            "third_party/zlib/crc32.h", "third_party/zlib/gzguts.h",
+            "third_party/zlib/inffast.c", "third_party/zlib/inffast.h",
+            "third_party/zlib/inffixed.h", "third_party/zlib/inflate.c",
+            "third_party/zlib/inflate.h", "third_party/zlib/inftrees.c",
+            "third_party/zlib/inftrees.h", "third_party/zlib/zconf.h",
+            "third_party/zlib/zlib.h", "third_party/zlib/zutil.c",
+            "third_party/zlib/zutil.h",
+        }
+        self.assertTrue(expected.issubset(set(evidence.RELEVANT_FILES)))
+        self.assertTrue(expected.issubset(set(evidence.MVS_IMPORTER_SOURCE_FILES)))
+
+    def test_replay_and_public_fixture_mutations_change_identity_and_dirty_flag(self) -> None:
+        targets = {"tools/mvs/frontend_replay.py", "tests/libretro/test_frontend_replay.py",
+                   "docs/audio-contract.md", "tests/fixture/public_guest.c",
+                   "tests/fixture/test_public_guest.c"}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in set(evidence.RELEVANT_FILES) | targets:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(("synthetic original source: " + name).encode())
+            build = root / "build/sdk-debug"
+            build.mkdir(parents=True)
+            for name in ("libglueyneo.a", "glueyneo.lib", "glueyneo-diagnostic",
+                         "glueyneo-diagnostic.exe", "mvs_importer", "mvs_importer.exe"):
+                (build / name).write_bytes(b"synthetic identity-only artifact")
+            changed = set()
+            def git_output(*args: str, cwd: Path = root) -> str:
+                if args[0] == "rev-parse":
+                    return "a" * 40
+                if args[0] == "status":
+                    return "\n".join(" M " + name for name in changed if name in args)
+                raise AssertionError(args)
+            with mock.patch.object(evidence, "_git", side_effect=git_output), \
+                 mock.patch.object(evidence, "_run", return_value="synthetic version"):
+                before = evidence.public_source_identity(root)
+                self.assertFalse(before["working_tree_dirty"])
+                for name in sorted(targets):
+                    with self.subTest(source=name):
+                        path = root / name
+                        original = path.read_bytes()
+                        path.write_bytes(original + b"\nsource mutation")
+                        changed.add(name)
+                        after = evidence.public_source_identity(root)
+                        self.assertNotEqual(before["relevant_source_sha256"], after["relevant_source_sha256"])
+                        self.assertTrue(after["working_tree_dirty"])
+                        path.write_bytes(original)
+                        changed.remove(name)
+
+    def test_z80_headers_are_hashed_and_in_dirty_pathspec(self) -> None:
+        headers = {"src/chips/z80_candidate.h", "third_party/chips/z80.h"}
+        self.assertTrue(headers.issubset(evidence.RELEVANT_FILES))
+        rows = evidence.relevant_source_rows(ROOT)
+        by_path = {row["path"]: row for row in rows}
+        for header in headers:
+            self.assertEqual(by_path[header]["sha256"],
+                             evidence.sha256_file(ROOT / header))
+        # Exercise the actual public collector's Git pathspec. Report dirty
+        # only when the mutated header was included in that query.
+        for header in headers:
+            def git_output(*args: str, cwd: Path = ROOT) -> str:
+                if args[0] == "rev-parse":
+                    return "a" * 40
+                if args[0] == "status":
+                    return " M " + header if header in args else ""
+                raise AssertionError(args)
+            with mock.patch.object(evidence, "_git", side_effect=git_output):
+                identity = evidence.public_source_identity(ROOT, "build/owned-debug")
+            self.assertTrue(identity["working_tree_dirty"], header)
+
+    def test_public_identity_binds_windows_importer_and_zlib_mutations(self) -> None:
+        source_files = set(evidence.MVS_IMPORTER_SOURCE_FILES)
+        source_files.add("tools/verify_sdk.py")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative in source_files | {"experiments/owned_cpu/cpu.c"}:
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(f"synthetic source: {relative}".encode())
+            manifest = root / evidence.MANIFEST_PATH
+            manifest.parent.mkdir(parents=True, exist_ok=True)
+            manifest.write_bytes(b"synthetic manifest")
+            build = root / "build/sdk-debug"
+            build.mkdir(parents=True)
+            for name in ("glueyneo.lib", "glueyneo_test.lib", "glueyneo-diagnostic.exe"):
+                (build / name).write_bytes(name.encode())
+            importer_path = build / "mvs_importer.exe"
+            importer_path.write_bytes(b"synthetic configured importer")
+            zlib_header = root / "third_party/zlib/zlib.h"
+            original_header = zlib_header.read_bytes()
+            stdio_header = root / "tests/support/portable_stdio.h"
+            original_stdio = stdio_header.read_bytes()
+            verifier = root / "tools/verify_sdk.py"
+            original_verifier = verifier.read_bytes()
+            mutated_paths: set[str] = set()
+
+            def git_output(*args: str, cwd: Path = ROOT) -> str:
+                if args[0] == "rev-parse":
+                    return "a" * 40
+                if args[0] == "status":
+                    return "\n".join(f" M {path}" for path in sorted(mutated_paths)
+                                     if path in args)
+                raise AssertionError(f"unexpected git query: {args[0]}")
+
+            with mock.patch.object(evidence.sys, "platform", "win32"), \
+                 mock.patch.object(evidence.shutil, "which", return_value=None), \
+                 mock.patch.object(evidence, "RELEVANT_FILES", tuple(sorted(source_files | {"experiments/owned_cpu/cpu.c"}))), \
+                 mock.patch.object(evidence, "_git", side_effect=git_output), \
+                 mock.patch.object(evidence, "_run", return_value="synthetic version"):
+                before = evidence.public_source_identity(root)
+                self.assertIn("mvs_importer", before)
+                importer = before["mvs_importer"]
+                self.assertEqual(importer["basename"], "mvs_importer.exe")
+                self.assertEqual(importer["sha256"], evidence.sha256_file(importer_path))
+                zlib_header.write_bytes(original_header + b"\nheader mutation")
+                mutated_paths.add("third_party/zlib/zlib.h")
+                after = evidence.public_source_identity(root)
+                stdio_header.write_bytes(original_stdio + b"\nhelper mutation")
+                mutated_paths.add("tests/support/portable_stdio.h")
+                after_helper = evidence.public_source_identity(root)
+                verifier.write_bytes(original_verifier + b"\ncollector mutation")
+                mutated_paths.add("tools/verify_sdk.py")
+                after_collector = evidence.public_source_identity(root)
+
+        self.assertNotEqual(before["relevant_source_sha256"], after["relevant_source_sha256"])
+        self.assertNotEqual(before["mvs_importer"]["source_sha256"],
+                            after["mvs_importer"]["source_sha256"])
+        self.assertNotEqual(after["mvs_importer"]["source_sha256"],
+                            after_helper["mvs_importer"]["source_sha256"])
+        self.assertNotEqual(after_helper["mvs_importer"]["source_sha256"],
+                            after_collector["mvs_importer"]["source_sha256"])
+        self.assertNotEqual(after_helper["relevant_source_sha256"],
+                            after_collector["relevant_source_sha256"])
+        self.assertFalse(before["mvs_importer"]["working_tree_dirty"])
+        self.assertTrue(after["mvs_importer"]["working_tree_dirty"])
+        self.assertTrue(after_helper["mvs_importer"]["working_tree_dirty"])
+        self.assertTrue(after_collector["mvs_importer"]["working_tree_dirty"])
+
+    def test_mvs_collector_rejects_importer_substitution_during_ctest(self) -> None:
+        proof = {"basename": "mvs_importer", "sha256": "a" * 64,
+                 "source_sha256": "b" * 64, "working_tree_dirty": False,
+                 "source_files": []}
+        substituted = {**proof, "sha256": "c" * 64}
+        identity = {"source_revision": "d" * 40,
+                    "relevant_source_sha256": "e" * 64,
+                    "mvs_importer": proof}
+        with mock.patch.object(verify_sdk, "run_existing_ctest",
+                               return_value=(9, "all named MVS tests passed")), \
+             mock.patch.object(verify_sdk, "preserve_output", return_value="f" * 64), \
+             mock.patch.object(verify_sdk.evidence, "mvs_importer_identity",
+                               side_effect=[proof, substituted], create=True):
+            with self.assertRaises(verify_sdk.VerificationError):
+                verify_sdk.collect_ctest_lane("mvs", identity)
+
 
 def main() -> int:
+    loader = unittest.defaultTestLoader
+    suite = unittest.TestSuite([
+        loader.loadTestsFromTestCase(CtestLabelContractTests),
+        loader.loadTestsFromTestCase(MvsLaneTests),
+    ])
+    result = unittest.TextTestRunner(verbosity=1).run(suite)
+    if not result.wasSuccessful():
+        return 1
     mvs_lane_controls()
     expected_mvs_sources = {
         "tools/mvs/mvs_import.c", "tools/mvs/qualify_local_boot.py",
-        "tools/mvs/mvs_qualify.c", "src/mvs/mvs_bus.c",
+        "tools/mvs/mvs_qualify.c", "src/mvs/mvs_bus.c", "src/mvs/mvs_protocol.c",
+        "src/instance.c", "src/sdk_private.h",
         "src/libretro/libretro_core.c", "experiments/owned_cpu/cpu.c",
         "tests/mvs/test_mvs.c", "tests/mvs/test_mvs_qualification.py",
+        "tests/mvs/qualification_failure_driver.c",
+        "tests/support/portable_stdio.h",
+            "src/chips/ym2610_candidate.cpp", "src/chips/ym2610_candidate.h",
+            "third_party/ymfm/src/ymfm_opn.cpp", "third_party/ymfm/NOTICE.md",
         "tests/mvs/fuzz_import.c", "tests/libretro/retroarch_smoke.py",
         "tests/libretro/test_retroarch_smoke.py", "CMakeLists.txt",
         "docs/mvs-media.md",
@@ -236,7 +1415,8 @@ def main() -> int:
         manifest = root / evidence.MANIFEST_PATH
         manifest.parent.mkdir(parents=True, exist_ok=True)
         manifest.write_bytes(b"synthetic manifest")
-        for name in ("glueyneo.lib", "glueyneo_test.lib", "glueyneo-diagnostic.exe"):
+        for name in ("glueyneo.lib", "glueyneo_test.lib", "glueyneo-diagnostic.exe",
+                     "mvs_importer.exe"):
             (build / name).write_bytes(name.encode())
         with mock.patch.object(evidence.sys, "platform", "win32"), \
              mock.patch.object(evidence.shutil, "which", return_value=None), \
@@ -303,6 +1483,8 @@ def main() -> int:
     sanitizer_failure_controls()
     print("PASS: matrix evidence positive identity, outcome, count, timing, and cost controls")
     print("PASS: sanitizer non-timeout, timeout, and startup failures preserve identity and excluded counts")
+    ctest_failure_receipt_controls()
+    print("PASS: failed CTest bodies survive redaction and canonical CI artifact serialization")
     return 0
 
 

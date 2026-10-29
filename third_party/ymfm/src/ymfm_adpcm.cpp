@@ -112,6 +112,14 @@ void adpcm_a_channel::save_restore(ymfm_saved_state &state)
 	state.save_restore(m_curaddress);
 	state.save_restore(m_accumulator);
 	state.save_restore(m_step_index);
+	state.require(m_playing <= 1 && m_curnibble <= 1);
+	state.require(m_curbyte <= 0xff);
+	// YM2610 uses an 8-bit address shift. 0x1000000 is the valid
+	// one-past-end sentinel for the inclusive 0xffff address.
+	state.require(m_curaddress <= 0x1000000);
+	state.require(m_step_index >= 0 && m_step_index <= 48);
+	// The decoder stores the wrapped 12-bit hardware value as unsigned.
+	state.require(m_accumulator >= 0 && m_accumulator <= 0xfff);
 }
 
 
@@ -260,7 +268,12 @@ adpcm_a_engine::adpcm_a_engine(ymfm_interface &intf, uint32_t addrshift) :
 {
 	// create the channels
 	for (int chnum = 0; chnum < CHANNELS; chnum++)
+	{
+#if defined(GLUEYNEO_YM2610_TEST_HOOKS) || defined(GLUEYNEO_SDK_TEST_HOOKS)
+		ymfm_test_allocation_point(sizeof(adpcm_a_channel), 1u);
+#endif
 		m_channel[chnum] = std::make_unique<adpcm_a_channel>(*this, chnum, addrshift);
+	}
 }
 
 
@@ -437,6 +450,13 @@ void adpcm_b_channel::save_restore(ymfm_saved_state &state)
 	state.save_restore(m_accumulator);
 	state.save_restore(m_prev_accum);
 	state.save_restore(m_adpcm_step);
+	state.require((m_status & ~(STATUS_EOS | STATUS_BRDY | STATUS_PLAYING)) == 0);
+	state.require(m_curnibble <= 1 && m_dummy_read <= 2);
+	state.require(m_position <= 0xffff);
+	state.require(m_curaddress <= 0xffffff);
+	state.require(m_accumulator >= -32768 && m_accumulator <= 32767);
+	state.require(m_prev_accum >= -32768 && m_prev_accum <= 32767);
+	state.require(m_adpcm_step >= STEP_MIN && m_adpcm_step <= STEP_MAX);
 }
 
 
@@ -732,6 +752,9 @@ adpcm_b_engine::adpcm_b_engine(ymfm_interface &intf, uint32_t addrshift) :
 	m_intf(intf)
 {
 	// create the channel (only one supported for now, but leaving possibilities open)
+#if defined(GLUEYNEO_YM2610_TEST_HOOKS) || defined(GLUEYNEO_SDK_TEST_HOOKS)
+	ymfm_test_allocation_point(sizeof(adpcm_b_channel), 2u);
+#endif
 	m_channel = std::make_unique<adpcm_b_channel>(*this, addrshift);
 }
 

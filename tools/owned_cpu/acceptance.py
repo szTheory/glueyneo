@@ -120,8 +120,13 @@ def validate_presets(document):
     groups = {}
     for group in ("configurePresets", "buildPresets", "testPresets"):
         rows = document.get(group, [])
-        require(len(rows) == 4 and {row.get("name") for row in rows} == set(LANES), "preset names/duplicates")
-        groups[group] = {row["name"]: row for row in rows}
+        names = [row.get("name") for row in rows]
+        require(all(isinstance(name, str) and name for name in names) and
+                len(names) == len(set(names)), "preset names/duplicates")
+        owned = {row["name"]: row for row in rows
+                 if row["name"].startswith("owned-")}
+        require(set(owned) == set(LANES), "owned preset names/duplicates")
+        groups[group] = owned
     base = groups["configurePresets"]["owned-debug"]
     require(base.get("generator") == "Ninja" and base.get("cacheVariables") == {
         "GLUEYNEO_CPU_EXPERIMENT": "OFF", "GLUEYNEO_OWNED_CPU_EXPERIMENT": "ON",

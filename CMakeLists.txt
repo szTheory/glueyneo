@@ -46,7 +46,10 @@ set_target_properties(glueyneo_mvs_zlib PROPERTIES C_STANDARD 17
   C_STANDARD_REQUIRED YES C_EXTENSIONS NO POSITION_INDEPENDENT_CODE ON)
 
 option(GLUEYNEO_BUILD_TESTS "Build SDK tests and the headless diagnostic" ${BUILD_TESTING})
-option(GLUEYNEO_YM2610_ADMISSION "Build the private ymfm YM2610 admission candidate" ${GLUEYNEO_BUILD_TESTS})
+option(GLUEYNEO_YM2610_ADMISSION "Build the separate private ymfm YM2610 admission tests" ${GLUEYNEO_BUILD_TESTS})
+option(GLUEYNEO_MVS_INPUT_OBSERVATIONS "Enable bounded local libretro input/video observations" OFF)
+option(GLUEYNEO_LIBRETRO_CONTINUATION_OBSERVATIONS
+  "Build a separate Libretro core with bounded continuation observations" OFF)
 option(GLUEYNEO_CPU_EXPERIMENT "Build the private CPU acceptance experiment" OFF)
 option(GLUEYNEO_OWNED_CPU_EXPERIMENT "Build the private owned MC68000 experiment" OFF)
 option(GLUEYNEO_PRE_SHIP_HISTORY_CHECK "Register the pre-ship history allowlist CTest (needs full branch history)" OFF)
@@ -60,25 +63,32 @@ if(NOT GLUEYNEO_SDK_SANITIZER MATCHES "^(NONE|ADDRESS_UNDEFINED|THREAD)$")
   message(FATAL_ERROR "Unknown SDK sanitizer mode: ${GLUEYNEO_SDK_SANITIZER}")
 endif()
 
-if(GLUEYNEO_YM2610_ADMISSION)
-  enable_language(CXX)
-endif()
+# The admitted YM2610 is part of the MVS runtime even without admission tests.
+enable_language(CXX)
 
 set(GLUEYNEO_SDK_SANITIZER_FLAGS "")
 set(GLUEYNEO_SDK_SANITIZER_LINK_FLAGS "")
+set(GLUEYNEO_SDK_SANITIZER_RUNTIME_LINK_FLAG "")
 if(GLUEYNEO_SDK_SANITIZER STREQUAL "ADDRESS_UNDEFINED")
   include(CheckCCompilerFlag)
+  include(CheckCXXCompilerFlag)
   include(CheckLinkerFlag)
   set(CMAKE_REQUIRED_LINK_OPTIONS "-fsanitize=address,undefined")
   check_c_compiler_flag("-fsanitize=address,undefined"
     GLUEYNEO_SDK_HAS_ASAN_UBSAN_COMPILE)
-  unset(CMAKE_REQUIRED_LINK_OPTIONS)
   check_linker_flag(C "-fsanitize=address,undefined"
     GLUEYNEO_SDK_HAS_ASAN_UBSAN_LINK)
+  check_cxx_compiler_flag("-fsanitize=address,undefined"
+    GLUEYNEO_SDK_HAS_ASAN_UBSAN_CXX_COMPILE)
+  check_linker_flag(CXX "-fsanitize=address,undefined"
+    GLUEYNEO_SDK_HAS_ASAN_UBSAN_CXX_LINK)
+  unset(CMAKE_REQUIRED_LINK_OPTIONS)
   if(NOT GLUEYNEO_SDK_HAS_ASAN_UBSAN_COMPILE OR
-     NOT GLUEYNEO_SDK_HAS_ASAN_UBSAN_LINK)
+     NOT GLUEYNEO_SDK_HAS_ASAN_UBSAN_LINK OR
+     NOT GLUEYNEO_SDK_HAS_ASAN_UBSAN_CXX_COMPILE OR
+     NOT GLUEYNEO_SDK_HAS_ASAN_UBSAN_CXX_LINK)
     message(FATAL_ERROR
-      "SDK_SANITIZER_UNSUPPORTED: selected C compiler/linker lacks ASan+UBSan")
+      "SDK_SANITIZER_UNSUPPORTED: selected C or C++ compiler/linker lacks ASan+UBSan")
   endif()
   set(GLUEYNEO_SDK_SANITIZER_FLAGS
       -fsanitize=address,undefined -fno-omit-frame-pointer
@@ -86,35 +96,47 @@ if(GLUEYNEO_SDK_SANITIZER STREQUAL "ADDRESS_UNDEFINED")
   set(GLUEYNEO_SDK_SANITIZER_LINK_FLAGS
       -fsanitize=address,undefined -fno-omit-frame-pointer
       -fno-sanitize-recover=all)
+  set(GLUEYNEO_SDK_SANITIZER_RUNTIME_LINK_FLAG "-fsanitize=address,undefined")
 elseif(GLUEYNEO_SDK_SANITIZER STREQUAL "THREAD")
   include(CheckCCompilerFlag)
+  include(CheckCXXCompilerFlag)
   include(CheckLinkerFlag)
   set(CMAKE_REQUIRED_LINK_OPTIONS "-fsanitize=thread")
   check_c_compiler_flag("-fsanitize=thread"
     GLUEYNEO_SDK_HAS_TSAN_COMPILE)
-  unset(CMAKE_REQUIRED_LINK_OPTIONS)
   check_linker_flag(C "-fsanitize=thread" GLUEYNEO_SDK_HAS_TSAN_LINK)
-  if(NOT GLUEYNEO_SDK_HAS_TSAN_COMPILE OR NOT GLUEYNEO_SDK_HAS_TSAN_LINK)
+  check_cxx_compiler_flag("-fsanitize=thread"
+    GLUEYNEO_SDK_HAS_TSAN_CXX_COMPILE)
+  check_linker_flag(CXX "-fsanitize=thread" GLUEYNEO_SDK_HAS_TSAN_CXX_LINK)
+  unset(CMAKE_REQUIRED_LINK_OPTIONS)
+  if(NOT GLUEYNEO_SDK_HAS_TSAN_COMPILE OR NOT GLUEYNEO_SDK_HAS_TSAN_LINK OR
+     NOT GLUEYNEO_SDK_HAS_TSAN_CXX_COMPILE OR NOT GLUEYNEO_SDK_HAS_TSAN_CXX_LINK)
     message(FATAL_ERROR
-      "SDK_SANITIZER_UNSUPPORTED: selected C compiler/linker lacks TSan")
+      "SDK_SANITIZER_UNSUPPORTED: selected C or C++ compiler/linker lacks TSan")
   endif()
   set(GLUEYNEO_SDK_SANITIZER_FLAGS
       -fsanitize=thread -fno-omit-frame-pointer -fno-sanitize-recover=all)
   set(GLUEYNEO_SDK_SANITIZER_LINK_FLAGS
       -fsanitize=thread -fno-omit-frame-pointer -fno-sanitize-recover=all)
+  set(GLUEYNEO_SDK_SANITIZER_RUNTIME_LINK_FLAG "-fsanitize=thread")
 endif()
 
 function(glueyneo_apply_sdk_sanitizer target)
   if(GLUEYNEO_SDK_SANITIZER_FLAGS)
     target_compile_options(${target} PRIVATE ${GLUEYNEO_SDK_SANITIZER_FLAGS})
     get_target_property(target_type ${target} TYPE)
-    if(NOT target_type STREQUAL "STATIC_LIBRARY")
+    if(target_type STREQUAL "STATIC_LIBRARY")
+      target_link_options(${target} INTERFACE ${GLUEYNEO_SDK_SANITIZER_RUNTIME_LINK_FLAG})
+    else()
       target_link_options(${target} PRIVATE ${GLUEYNEO_SDK_SANITIZER_LINK_FLAGS})
     endif()
   endif()
 endfunction()
 
 glueyneo_apply_sdk_sanitizer(glueyneo_mvs_zlib)
+if(NOT GLUEYNEO_SDK_SANITIZER STREQUAL "NONE")
+  set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+endif()
 
 if(GLUEYNEO_CPU_EXPERIMENT AND GLUEYNEO_OWNED_CPU_EXPERIMENT)
   message(FATAL_ERROR "Select one whole CPU backend experiment per build directory")
@@ -123,8 +145,44 @@ endif()
 set(GLUEYNEO_RUNTIME_SOURCES
   src/instance.c
   src/mvs/mvs_bus.c
+  src/mvs/mvs_protocol.c
+  src/chips/z80_candidate.c
   experiments/owned_cpu/cpu.c
+  src/chips/ym2610_candidate.cpp
+  third_party/ymfm/src/ymfm_opn.cpp
+  third_party/ymfm/src/ymfm_adpcm.cpp
+  third_party/ymfm/src/ymfm_ssg.cpp
 )
+
+function(glueyneo_configure_runtime_ym target)
+  target_compile_features(${target} PRIVATE cxx_std_14)
+  set_target_properties(${target} PROPERTIES CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO
+    CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES)
+  target_include_directories(${target} SYSTEM PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/ymfm/src)
+  target_compile_definitions(${target} PRIVATE GLUEYNEO_YM2610_CANDIDATE_INTERNAL)
+  if(GLUEYNEO_SDK_SANITIZER STREQUAL "THREAD" AND NOT MSVC)
+    # The real per-tick chip workload exceeded the unchanged TSan time bound
+    # at -O0. Clang's TSan usage recommends -O1 or higher; retain full
+    # instrumentation and debug info, optimizing only this C++ dependency.
+    target_compile_options(${target} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-O1>")
+  endif()
+  # C-only installed consumers cannot infer the private C++ runtime from their
+  # enabled languages. Keep its link requirement on static archives only.
+  get_target_property(_runtime_type ${target} TYPE)
+  if(_runtime_type STREQUAL "STATIC_LIBRARY")
+    if("stdc++" IN_LIST CMAKE_CXX_IMPLICIT_LINK_LIBRARIES)
+      # Includes GNU/Clang MinGW: WIN32 is true there, UNIX is false.
+      target_link_libraries(${target} INTERFACE "$<$<LINK_LANGUAGE:C>:stdc++>")
+    elseif("c++" IN_LIST CMAKE_CXX_IMPLICIT_LINK_LIBRARIES OR APPLE)
+      target_link_libraries(${target} INTERFACE "$<$<LINK_LANGUAGE:C>:c++>")
+    elseif(UNIX)
+      target_link_libraries(${target} INTERFACE "$<$<LINK_LANGUAGE:C>:stdc++>")
+    endif()
+  endif()
+endfunction()
+
 add_library(glueyneo ${GLUEYNEO_RUNTIME_SOURCES})
 add_library(Glueyneo::glueyneo ALIAS glueyneo)
 target_compile_features(glueyneo PRIVATE c_std_17)
@@ -142,6 +200,9 @@ target_include_directories(glueyneo
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/experiments/owned_cpu
 )
+target_include_directories(glueyneo SYSTEM PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/third_party/chips
+)
 if(BUILD_SHARED_LIBS)
   target_compile_definitions(glueyneo
     PUBLIC GLUEYNEO_SHARED
@@ -149,10 +210,11 @@ if(BUILD_SHARED_LIBS)
   )
 endif()
 if(MSVC)
-  target_compile_options(glueyneo PRIVATE /W4 /WX)
+  target_compile_options(glueyneo PRIVATE /W4 "$<$<COMPILE_LANGUAGE:C>:/WX>")
 else()
-  target_compile_options(glueyneo PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  target_compile_options(glueyneo PRIVATE -Wall -Wextra -Wpedantic "$<$<COMPILE_LANGUAGE:C>:-Werror>")
 endif()
+glueyneo_configure_runtime_ym(glueyneo)
 glueyneo_apply_sdk_sanitizer(glueyneo)
 
 # A static copy of the production runtime (no test hooks) for binaries that
@@ -173,12 +235,16 @@ if(BUILD_SHARED_LIBS)
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/experiments/owned_cpu
   )
+  target_include_directories(glueyneo_runtime_static SYSTEM PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/chips
+  )
   if(MSVC)
-    target_compile_options(glueyneo_runtime_static PRIVATE /W4 /WX)
+    target_compile_options(glueyneo_runtime_static PRIVATE /W4 "$<$<COMPILE_LANGUAGE:C>:/WX>")
   else()
     target_compile_options(glueyneo_runtime_static PRIVATE
-      -Wall -Wextra -Wpedantic -Werror)
+      -Wall -Wextra -Wpedantic "$<$<COMPILE_LANGUAGE:C>:-Werror>")
   endif()
+  glueyneo_configure_runtime_ym(glueyneo_runtime_static)
   glueyneo_apply_sdk_sanitizer(glueyneo_runtime_static)
 else()
   add_library(glueyneo_runtime_static ALIAS glueyneo)
@@ -189,6 +255,8 @@ endif()
 # statically so the installed core is a single self-contained module.
 add_library(glueyneo_libretro SHARED src/libretro/libretro_core.c)
 target_compile_features(glueyneo_libretro PRIVATE c_std_17)
+target_compile_definitions(glueyneo_libretro PRIVATE
+  $<$<BOOL:${GLUEYNEO_MVS_INPUT_OBSERVATIONS}>:GLUEYNEO_MVS_INPUT_OBSERVATIONS>)
 set_target_properties(glueyneo_libretro PROPERTIES
   C_STANDARD 17
   C_STANDARD_REQUIRED YES
@@ -211,6 +279,35 @@ else()
   target_compile_options(glueyneo_libretro PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 glueyneo_apply_sdk_sanitizer(glueyneo_libretro)
+
+# A private opt-in core exposes bounded save/load continuation observations for
+# the pinned frontend smoke. The installed production core above stays clean.
+if(GLUEYNEO_LIBRETRO_CONTINUATION_OBSERVATIONS)
+  add_library(glueyneo_libretro_observed SHARED src/libretro/libretro_core.c)
+  target_compile_features(glueyneo_libretro_observed PRIVATE c_std_17)
+  target_compile_definitions(glueyneo_libretro_observed PRIVATE
+    GLUEYNEO_LIBRETRO_CONTINUATION_OBSERVATIONS
+    GLUEYNEO_MVS_INPUT_OBSERVATIONS)
+  set_target_properties(glueyneo_libretro_observed PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS NO
+    C_VISIBILITY_PRESET hidden
+    OUTPUT_NAME glueyneo_libretro_observed
+    PREFIX ""
+  )
+  target_include_directories(glueyneo_libretro_observed PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libretro
+  )
+  target_link_libraries(glueyneo_libretro_observed PRIVATE glueyneo_runtime_static)
+  if(MSVC)
+    target_compile_options(glueyneo_libretro_observed PRIVATE /W4 /WX)
+  else()
+    target_compile_options(glueyneo_libretro_observed PRIVATE
+      -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(glueyneo_libretro_observed)
+endif()
 
 # Source identity belongs to the checkout, independently of the C compiler.
 # An offline source archive without Git retains the explicit unknown identity.
@@ -343,12 +440,12 @@ install(DIRECTORY include/glueyneo
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 install(FILES LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/Glueyneo")
+install(FILES third_party/ymfm/LICENSE third_party/ymfm/NOTICE.md
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/Glueyneo/ymfm")
 install(FILES third_party/libretro/libretro.h third_party/libretro/NOTICE.md
   DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/Glueyneo/libretro")
 install(FILES third_party/chips/NOTICE.md
   DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/Glueyneo/chips")
-install(FILES third_party/ymfm/LICENSE third_party/ymfm/NOTICE.md
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/Glueyneo/ymfm")
 install(FILES third_party/zlib/LICENSE
   DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/Glueyneo/zlib")
 install(FILES "${GLUEYNEO_DIAGNOSTIC_FIXTURE}"
@@ -379,6 +476,50 @@ install(FILES
 if(GLUEYNEO_BUILD_TESTS)
   enable_testing()
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  # Bind the process exchange runner to the exact source and dependency bytes
+  # present when this SDK configuration is generated. The Python supervisor
+  # recomputes this value before accepting any child result.
+  set(_glueyneo_state_identity_roots
+    src
+    include/glueyneo
+    tests/sdk
+    tests/fixture
+    third_party/chips
+    third_party/ymfm/src
+  )
+  set(_glueyneo_state_identity_files)
+  foreach(_root IN LISTS _glueyneo_state_identity_roots)
+    file(GLOB_RECURSE _root_files
+      LIST_DIRECTORIES false
+      "${CMAKE_CURRENT_SOURCE_DIR}/${_root}/*.c"
+      "${CMAKE_CURRENT_SOURCE_DIR}/${_root}/*.h"
+      "${CMAKE_CURRENT_SOURCE_DIR}/${_root}/*.cpp"
+      "${CMAKE_CURRENT_SOURCE_DIR}/${_root}/*.hpp"
+      "${CMAKE_CURRENT_SOURCE_DIR}/${_root}/*.py"
+      "${CMAKE_CURRENT_SOURCE_DIR}/${_root}/*.json"
+      "${CMAKE_CURRENT_SOURCE_DIR}/${_root}/*.md"
+    )
+    list(APPEND _glueyneo_state_identity_files ${_root_files})
+  endforeach()
+  list(APPEND _glueyneo_state_identity_files
+    "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CMakePresets.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/ymfm/NOTICE.md"
+  )
+  list(REMOVE_DUPLICATES _glueyneo_state_identity_files)
+  list(SORT _glueyneo_state_identity_files)
+  set(_glueyneo_state_identity_material "")
+  foreach(_identity_file IN LISTS _glueyneo_state_identity_files)
+    file(SHA256 "${_identity_file}" _identity_file_sha256)
+    file(RELATIVE_PATH _identity_relative "${CMAKE_CURRENT_SOURCE_DIR}"
+      "${_identity_file}")
+    string(APPEND _glueyneo_state_identity_material
+      "${_identity_relative}:${_identity_file_sha256}\n")
+  endforeach()
+  string(SHA256 GLUEYNEO_SOURCE_CONTENT_ID
+    "${_glueyneo_state_identity_material}")
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    ${_glueyneo_state_identity_files})
   if(NOT WIN32)
     find_package(Threads REQUIRED)
   endif()
@@ -396,15 +537,20 @@ if(GLUEYNEO_BUILD_TESTS)
       ${CMAKE_CURRENT_SOURCE_DIR}/src
       ${CMAKE_CURRENT_SOURCE_DIR}/experiments/owned_cpu
   )
+  target_include_directories(glueyneo_test SYSTEM PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/chips
+  )
   target_compile_definitions(glueyneo_test PRIVATE
     GLUEYNEO_SDK_TEST_HOOKS
+    Z80_CANDIDATE_TEST_HOOKS
     OWNED_CPU_TEST_HOOKS
   )
   if(MSVC)
-    target_compile_options(glueyneo_test PRIVATE /W4 /WX)
+    target_compile_options(glueyneo_test PRIVATE /W4 "$<$<COMPILE_LANGUAGE:C>:/WX>")
   else()
-    target_compile_options(glueyneo_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_compile_options(glueyneo_test PRIVATE -Wall -Wextra -Wpedantic "$<$<COMPILE_LANGUAGE:C>:-Werror>")
   endif()
+  glueyneo_configure_runtime_ym(glueyneo_test)
   glueyneo_apply_sdk_sanitizer(glueyneo_test)
 
   add_library(glueyneo_unity STATIC third_party/unity/src/unity.c)
@@ -484,7 +630,63 @@ if(GLUEYNEO_BUILD_TESTS)
     public_guest_negative_left public_guest_negative_none PROPERTIES
     LABELS "public-fixture;native-tracer")
 
-  add_executable(libretro_callback_test tests/libretro/callback_harness.c)
+  add_executable(public_sound_test
+    tests/fixture/test_public_sound_guest.c
+    tests/fixture/public_sound_guest.c
+  )
+  target_include_directories(public_sound_test PRIVATE tests/fixture)
+  target_compile_features(public_sound_test PRIVATE c_std_17)
+  set_target_properties(public_sound_test PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS NO
+  )
+  target_link_libraries(public_sound_test PRIVATE glueyneo glueyneo_unity)
+  if(MSVC)
+    target_compile_options(public_sound_test PRIVATE /W4 /WX)
+  else()
+    target_compile_options(public_sound_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(public_sound_test)
+  set(GLUEYNEO_PUBLIC_SOUND_FIXTURE
+      "${CMAKE_CURRENT_BINARY_DIR}/public-sound-mvs.bin")
+  add_custom_command(
+    OUTPUT "${GLUEYNEO_PUBLIC_SOUND_FIXTURE}"
+    COMMAND $<TARGET_FILE:public_sound_test> --write-fixture
+            "${GLUEYNEO_PUBLIC_SOUND_FIXTURE}"
+    DEPENDS public_sound_test tests/fixture/public_sound_guest.c
+    VERBATIM
+  )
+  add_custom_target(glueyneo-public-sound-fixture ALL
+    DEPENDS "${GLUEYNEO_PUBLIC_SOUND_FIXTURE}")
+  add_test(NAME public_sound_fixture
+    COMMAND public_sound_test "${GLUEYNEO_PUBLIC_SOUND_FIXTURE}")
+  set_tests_properties(public_sound_fixture PROPERTIES
+    LABELS "public-fixture;mvs-audio-contract" TIMEOUT 180)
+
+  add_executable(sound_consumer_reference tests/consumers/sound_consumer.c
+    tests/fixture/public_sound_guest.c)
+  target_link_libraries(sound_consumer_reference PRIVATE Glueyneo::glueyneo)
+  set_target_properties(sound_consumer_reference PROPERTIES
+    C_STANDARD 17 C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
+  if(MSVC)
+    target_compile_options(sound_consumer_reference PRIVATE /W4 /WX)
+  else()
+    target_compile_options(sound_consumer_reference PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(sound_consumer_reference)
+  add_dependencies(sound_consumer_reference glueyneo-public-sound-fixture)
+  set(GLUEYNEO_SOUND_REFERENCE "${CMAKE_CURRENT_BINARY_DIR}/public-sound-reference.trace")
+  add_test(NAME sdk_sound_reference COMMAND sound_consumer_reference
+    "${GLUEYNEO_PUBLIC_SOUND_FIXTURE}" --trace "${GLUEYNEO_SOUND_REFERENCE}")
+  set_tests_properties(sdk_sound_reference PROPERTIES
+    FIXTURES_SETUP sdk_sound_reference LABELS "public-fixture;mvs-audio-contract" TIMEOUT 30)
+
+  add_executable(libretro_callback_test
+    tests/libretro/callback_harness.c
+    tests/fixture/public_save_guest.c
+    tests/fixture/public_sound_guest.c
+  )
   target_include_directories(libretro_callback_test PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libretro
   )
@@ -506,9 +708,125 @@ if(GLUEYNEO_BUILD_TESTS)
   endif()
   glueyneo_apply_sdk_sanitizer(libretro_callback_test)
   add_dependencies(libretro_callback_test glueyneo-public-fixture)
+  add_dependencies(libretro_callback_test glueyneo-public-sound-fixture)
   add_test(NAME libretro_callback
     COMMAND libretro_callback_test "${GLUEYNEO_PUBLIC_FIXTURE}")
   set_tests_properties(libretro_callback PROPERTIES LABELS "libretro;callback-contract")
+  add_test(NAME libretro_audio_contract
+    COMMAND libretro_callback_test --sound "${GLUEYNEO_PUBLIC_SOUND_FIXTURE}")
+  set_tests_properties(libretro_audio_contract PROPERTIES
+    LABELS "libretro;mvs-audio-contract" TIMEOUT 180)
+
+  add_executable(libretro_frontend_observer_test
+    tests/libretro/callback_harness.c
+    tests/fixture/public_save_guest.c
+    tests/fixture/public_sound_guest.c
+    src/libretro/libretro_core.c
+  )
+  target_include_directories(libretro_frontend_observer_test PRIVATE
+    src tests/sdk tests/fixture third_party/libretro third_party/chips
+  )
+  target_compile_features(libretro_frontend_observer_test PRIVATE c_std_17)
+  target_compile_definitions(libretro_frontend_observer_test PRIVATE
+    GLUEYNEO_LIBRETRO_CONTINUATION_OBSERVATIONS
+  )
+  set_target_properties(libretro_frontend_observer_test PROPERTIES
+    C_STANDARD 17 C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
+  target_link_libraries(libretro_frontend_observer_test PRIVATE
+    glueyneo_test glueyneo_unity ${CMAKE_DL_LIBS})
+  if(MSVC)
+    target_compile_options(libretro_frontend_observer_test PRIVATE /W4 /WX)
+  else()
+    target_compile_options(libretro_frontend_observer_test PRIVATE
+      -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(libretro_frontend_observer_test)
+  add_dependencies(libretro_frontend_observer_test glueyneo-public-sound-fixture)
+
+  add_executable(libretro_frontend_production_test
+    tests/libretro/callback_harness.c
+    tests/fixture/public_save_guest.c
+    tests/fixture/public_sound_guest.c
+    src/libretro/libretro_core.c
+  )
+  target_include_directories(libretro_frontend_production_test PRIVATE
+    src tests/sdk tests/fixture third_party/libretro third_party/chips
+  )
+  target_compile_features(libretro_frontend_production_test PRIVATE c_std_17)
+  set_target_properties(libretro_frontend_production_test PROPERTIES
+    C_STANDARD 17 C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
+  target_link_libraries(libretro_frontend_production_test PRIVATE
+    glueyneo_test glueyneo_unity ${CMAKE_DL_LIBS})
+  if(MSVC)
+    target_compile_options(libretro_frontend_production_test PRIVATE /W4 /WX)
+  else()
+    target_compile_options(libretro_frontend_production_test PRIVATE
+      -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(libretro_frontend_production_test)
+  add_dependencies(libretro_frontend_production_test glueyneo-public-sound-fixture)
+
+  set(GLUEYNEO_PUBLIC_SAVE_FIXTURE
+      "${CMAKE_CURRENT_BINARY_DIR}/public-save.gnmv")
+  add_custom_command(
+    OUTPUT "${GLUEYNEO_PUBLIC_SAVE_FIXTURE}"
+    COMMAND $<TARGET_FILE:libretro_callback_test> --write-save-fixture
+            "${GLUEYNEO_PUBLIC_SAVE_FIXTURE}"
+    DEPENDS libretro_callback_test tests/fixture/public_save_guest.c
+            tests/fixture/public_sound_guest.c
+    VERBATIM
+  )
+  add_custom_target(glueyneo-public-save-fixture ALL
+    DEPENDS "${GLUEYNEO_PUBLIC_SAVE_FIXTURE}")
+  add_test(NAME libretro_mvs_state_contract
+    COMMAND libretro_callback_test --mvs-state "${GLUEYNEO_PUBLIC_SAVE_FIXTURE}")
+  set_tests_properties(libretro_mvs_state_contract PROPERTIES
+    LABELS "libretro;mvs-state-contract;public-fixture" TIMEOUT 180)
+  add_test(NAME libretro_mvs_save_ram_contract
+    COMMAND libretro_callback_test --mvs-save-ram
+            "${GLUEYNEO_PUBLIC_SAVE_FIXTURE}")
+  set_tests_properties(libretro_mvs_save_ram_contract PROPERTIES
+    LABELS "libretro;mvs-save-ram-contract;public-fixture" TIMEOUT 180)
+
+  # Compile the production adapter against the test runtime so state and SRAM
+  # failure hooks exercise the real callback boundary without adding a
+  # production failpoint ABI.
+  add_executable(libretro_mvs_state_safety_test
+    tests/libretro/state_safety.c
+    tests/sdk/save_fixture.c
+    tests/fixture/public_save_guest.c
+    tests/fixture/public_sound_guest.c
+    src/libretro/libretro_core.c
+  )
+  target_include_directories(libretro_mvs_state_safety_test PRIVATE
+    src tests/sdk tests/fixture third_party/libretro third_party/chips
+  )
+  target_compile_features(libretro_mvs_state_safety_test PRIVATE c_std_17)
+  target_compile_definitions(libretro_mvs_state_safety_test PRIVATE
+    GLUEYNEO_SDK_TEST_HOOKS
+  )
+  set_target_properties(libretro_mvs_state_safety_test PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS NO
+  )
+  target_link_libraries(libretro_mvs_state_safety_test PRIVATE
+    glueyneo_test glueyneo_unity ${CMAKE_DL_LIBS}
+  )
+  if(MSVC)
+    target_compile_options(libretro_mvs_state_safety_test PRIVATE /W4 /WX /UNDEBUG)
+  else()
+    target_compile_options(libretro_mvs_state_safety_test PRIVATE
+      -Wall -Wextra -Wpedantic -Werror -UNDEBUG
+    )
+  endif()
+  glueyneo_apply_sdk_sanitizer(libretro_mvs_state_safety_test)
+  add_test(NAME libretro_mvs_state_rejection
+    COMMAND libretro_mvs_state_safety_test --state-rejection)
+  add_test(NAME libretro_mvs_retention
+    COMMAND libretro_mvs_state_safety_test --retention)
+  set_tests_properties(libretro_mvs_state_rejection libretro_mvs_retention
+    PROPERTIES LABELS "libretro;mvs-state-safety" TIMEOUT 180)
 
   add_library(mvs_import_lib STATIC tools/mvs/mvs_import.c)
   target_compile_definitions(mvs_import_lib PRIVATE MVS_IMPORT_NO_MAIN)
@@ -538,39 +856,99 @@ if(GLUEYNEO_BUILD_TESTS)
   glueyneo_apply_sdk_sanitizer(mvs_importer)
 
   add_executable(mvs_test tests/mvs/test_mvs.c)
+  target_sources(mvs_test PRIVATE tests/fixture/public_guest.c)
   target_include_directories(mvs_test PRIVATE
-    src third_party/libretro third_party/zlib)
+    src third_party/libretro third_party/zlib third_party/chips)
   target_compile_features(mvs_test PRIVATE c_std_17)
-  target_compile_definitions(mvs_test PRIVATE GLUEYNEO_SDK_TEST_HOOKS)
+  target_compile_definitions(mvs_test PRIVATE GLUEYNEO_SDK_TEST_HOOKS
+    $<$<BOOL:${GLUEYNEO_MVS_INPUT_OBSERVATIONS}>:GLUEYNEO_MVS_INPUT_OBSERVATIONS>)
   set_target_properties(mvs_test PROPERTIES C_STANDARD 17
     C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
   target_link_libraries(mvs_test PRIVATE
     glueyneo_test glueyneo_unity mvs_import_lib glueyneo_libretro
     ${CMAKE_DL_LIBS})
   if(MSVC)
-    target_compile_options(mvs_test PRIVATE /W4 /WX)
+    target_compile_options(mvs_test PRIVATE /W4 /WX /UNDEBUG)
   else()
-    target_compile_options(mvs_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_compile_options(mvs_test PRIVATE -Wall -Wextra -Wpedantic -Werror -UNDEBUG)
   endif()
   glueyneo_apply_sdk_sanitizer(mvs_test)
+  # Compile an instrumented adapter directly with the private test runtime;
+  # the ordinary installed core retains the default-OFF diagnostic contract.
+  add_executable(mvs_observations_test tests/mvs/test_mvs.c
+    tests/fixture/public_guest.c src/libretro/libretro_core.c)
+  target_include_directories(mvs_observations_test PRIVATE
+    src third_party/libretro third_party/zlib third_party/chips)
+  target_compile_features(mvs_observations_test PRIVATE c_std_17)
+  target_compile_definitions(mvs_observations_test PRIVATE
+    GLUEYNEO_SDK_TEST_HOOKS GLUEYNEO_MVS_INPUT_OBSERVATIONS)
+  set_target_properties(mvs_observations_test PROPERTIES C_STANDARD 17
+    C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
+  target_link_libraries(mvs_observations_test PRIVATE
+    glueyneo_test glueyneo_unity mvs_import_lib ${CMAKE_DL_LIBS})
+  if(MSVC)
+    target_compile_options(mvs_observations_test PRIVATE /W4 /WX /UNDEBUG)
+  else()
+    target_compile_options(mvs_observations_test PRIVATE -Wall -Wextra -Wpedantic -Werror -UNDEBUG)
+  endif()
+  glueyneo_apply_sdk_sanitizer(mvs_observations_test)
+  add_test(NAME mvs_input_observations
+    COMMAND mvs_observations_test --input-observations)
+  set_tests_properties(mvs_input_observations PROPERTIES LABELS "mvs;libretro" TIMEOUT 180)
   add_test(NAME mvs_synthetic_trace COMMAND mvs_test)
   set_tests_properties(mvs_synthetic_trace PROPERTIES
     LABELS "mvs;importer;guest;libretro" TIMEOUT 60)
   add_test(NAME mvs_media_contract COMMAND mvs_test --media-contract)
   add_test(NAME mvs_import_contract
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/mvs/test_mvs_qualification.py
-            --importer $<TARGET_FILE:mvs_importer> --mode positive)
+            --importer $<TARGET_FILE:mvs_importer>
+            --failure-driver $<TARGET_FILE:mvs_failure_driver> --mode positive)
+  # Keep the full 3,600-frame guest run in ordinary integration coverage. Its
+  # sanitizer-instrumented -O0 workload exceeds the existing 120-second child
+  # bound; shorter guest, input and maximum-bound rejection checks remain in
+  # mvs_import_contract under ASan/UBSan.
+  if(GLUEYNEO_SDK_SANITIZER STREQUAL "NONE")
+    set(_GLUEYNEO_MAX_HORIZON_CTEST_TIMEOUT 180)
+    if(MSVC)
+      # A Windows Debug runner previously reached the 120-second child bound
+      # before completing the fixed 3,600-frame boundary case.
+      set(_GLUEYNEO_MAX_HORIZON_CTEST_TIMEOUT 300)
+    endif()
+    add_test(NAME mvs_import_max_horizon
+      COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/mvs/test_mvs_qualification.py
+              --importer $<TARGET_FILE:mvs_importer> --mode maximum-horizon)
+    set_tests_properties(mvs_import_max_horizon PROPERTIES
+      LABELS "mvs;resource-boundary" TIMEOUT ${_GLUEYNEO_MAX_HORIZON_CTEST_TIMEOUT})
+  endif()
+  add_test(NAME mvs_failure_diagnostics
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/mvs/test_mvs_qualification.py
+            --importer $<TARGET_FILE:mvs_importer>
+            --failure-driver $<TARGET_FILE:mvs_failure_driver> --mode failure)
   add_test(NAME mvs_import_mutation
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/mvs/test_mvs_qualification.py
             --importer $<TARGET_FILE:mvs_importer> --mode mutation)
   add_test(NAME mvs_callback_contract COMMAND mvs_test --callback-contract)
   add_test(NAME mvs_boot_checkpoint COMMAND mvs_test --boot-checkpoint)
-  set_tests_properties(mvs_media_contract mvs_import_contract mvs_import_mutation
-    mvs_callback_contract mvs_boot_checkpoint PROPERTIES LABELS "mvs" TIMEOUT 180)
+  add_test(NAME mvs_attract_predicate COMMAND mvs_test --attract-predicate)
+  # Preserve every board assertion in bounded semantic partitions. The legacy
+  # --board-behavior CLI still executes all six groups for direct callers.
+  add_test(NAME mvs_board_behavior COMMAND mvs_test --board-core)
+  add_test(NAME mvs_board_io COMMAND mvs_test --board-io)
+  add_test(NAME mvs_board_calendar COMMAND mvs_test --board-calendar)
+  add_test(NAME mvs_board_sound COMMAND mvs_test --board-sound)
+  add_test(NAME mvs_board_cartridge COMMAND mvs_test --board-cartridge)
+  add_test(NAME mvs_board_video COMMAND mvs_test --board-video)
+  set_tests_properties(mvs_media_contract mvs_import_contract mvs_failure_diagnostics
+    mvs_import_mutation
+    mvs_callback_contract mvs_boot_checkpoint mvs_attract_predicate
+    mvs_board_behavior mvs_board_io mvs_board_calendar mvs_board_sound
+    mvs_board_cartridge mvs_board_video
+    PROPERTIES LABELS "mvs" TIMEOUT 180)
 
   add_executable(mvs_import_fuzz tests/mvs/fuzz_import.c)
   target_compile_features(mvs_import_fuzz PRIVATE c_std_17)
-  target_link_libraries(mvs_import_fuzz PRIVATE mvs_import_lib)
+  target_link_libraries(mvs_import_fuzz PRIVATE mvs_import_lib Glueyneo::glueyneo)
+  add_dependencies(mvs_import_fuzz glueyneo-public-sound-fixture)
   if(MSVC)
     target_compile_options(mvs_import_fuzz PRIVATE /W4 /WX)
   else()
@@ -584,6 +962,10 @@ if(GLUEYNEO_BUILD_TESTS)
             --mode fuzz)
   set_tests_properties(mvs_import_fuzz_corpus PROPERTIES
     LABELS "mvs;fuzz" TIMEOUT 180)
+  add_test(NAME mvs_audio_call_corpus COMMAND mvs_import_fuzz
+    --audio-calls "${GLUEYNEO_PUBLIC_SOUND_FIXTURE}")
+  set_tests_properties(mvs_audio_call_corpus PROPERTIES
+    LABELS "mvs-audio-contract;fuzz" TIMEOUT 60)
 
   # mvs_qualify reads the private fetch trace, which a shared libglueyneo
   # hides, so it links the static runtime copy in every build mode.
@@ -600,6 +982,24 @@ if(GLUEYNEO_BUILD_TESTS)
     target_compile_options(mvs_qualify PRIVATE -Wall -Wextra -Wpedantic -Werror)
   endif()
   glueyneo_apply_sdk_sanitizer(mvs_qualify)
+
+  add_executable(mvs_failure_driver
+    tests/mvs/qualification_failure_driver.c tools/mvs/mvs_qualify.c)
+  target_include_directories(mvs_failure_driver PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src)
+  target_compile_features(mvs_failure_driver PRIVATE c_std_17)
+  target_compile_definitions(mvs_failure_driver PRIVATE
+    GLUEYNEO_SDK_TEST_HOOKS GN_MVS_QUALIFY_NO_MAIN)
+  set_target_properties(mvs_failure_driver PROPERTIES C_STANDARD 17
+    C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
+  target_link_libraries(mvs_failure_driver PRIVATE glueyneo_test)
+  if(MSVC)
+    target_compile_options(mvs_failure_driver PRIVATE /W4 /WX)
+  else()
+    target_compile_options(mvs_failure_driver PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(mvs_failure_driver)
 
   add_executable(sdk_diagnostic tests/sdk/test_sdk.c tests/sdk/guest_fixture.c)
   target_include_directories(sdk_diagnostic PRIVATE tests/sdk src)
@@ -629,7 +1029,213 @@ if(GLUEYNEO_BUILD_TESTS)
   endif()
   glueyneo_apply_sdk_sanitizer(sdk_diagnostic)
 
-  # The pinned Z80 remains a private candidate until its admission gates pass.
+  add_executable(sdk_state_test
+    tests/sdk/test_state.c
+    tests/fuzz/state_mutation.c
+    tests/fixture/public_sound_guest.c
+  )
+  target_include_directories(sdk_state_test PRIVATE
+    tests/sdk src tests/fixture third_party/chips
+  )
+  target_compile_features(sdk_state_test PRIVATE c_std_17)
+  set_target_properties(sdk_state_test PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS NO
+  )
+  target_link_libraries(sdk_state_test PRIVATE glueyneo_test glueyneo_unity)
+  if(NOT WIN32)
+    target_link_libraries(sdk_state_test PRIVATE Threads::Threads)
+  endif()
+  target_compile_definitions(sdk_state_test PRIVATE GLUEYNEO_SDK_TEST_HOOKS)
+  target_compile_definitions(sdk_state_test PRIVATE
+    GLUEYNEO_SOURCE_REVISION="${GLUEYNEO_SOURCE_REVISION}"
+    GLUEYNEO_CONFIGURATION="${CMAKE_BUILD_TYPE}"
+    GLUEYNEO_COMPILER_ID="${CMAKE_C_COMPILER_ID}"
+    GLUEYNEO_COMPILER_VERSION="${CMAKE_C_COMPILER_VERSION}"
+    GLUEYNEO_SANITIZER="${GLUEYNEO_SDK_SANITIZER}"
+  )
+  if(MSVC)
+    target_compile_options(sdk_state_test PRIVATE /W4 /WX)
+  else()
+    target_compile_options(sdk_state_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(sdk_state_test)
+
+  add_executable(sdk_state_mutation
+    tests/sdk/test_state.c
+    tests/fuzz/state_mutation.c
+    tests/fuzz/state_oom.c
+    tests/fixture/public_sound_guest.c
+  )
+  target_include_directories(sdk_state_mutation PRIVATE
+    tests/sdk src tests/fixture third_party/chips
+  )
+  target_compile_features(sdk_state_mutation PRIVATE c_std_17)
+  set_target_properties(sdk_state_mutation PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS NO
+  )
+  target_link_libraries(sdk_state_mutation PRIVATE glueyneo_test glueyneo_unity)
+  if(NOT WIN32)
+    target_link_libraries(sdk_state_mutation PRIVATE Threads::Threads)
+  endif()
+  target_compile_definitions(sdk_state_mutation PRIVATE
+    GLUEYNEO_SDK_TEST_HOOKS
+    GLUEYNEO_STATE_MUTATION_EXECUTABLE
+    GLUEYNEO_SOURCE_REVISION="${GLUEYNEO_SOURCE_REVISION}"
+    GLUEYNEO_CONFIGURATION="${CMAKE_BUILD_TYPE}"
+    GLUEYNEO_COMPILER_ID="${CMAKE_C_COMPILER_ID}"
+    GLUEYNEO_COMPILER_VERSION="${CMAKE_C_COMPILER_VERSION}"
+    GLUEYNEO_SANITIZER="${GLUEYNEO_SDK_SANITIZER}"
+  )
+  if(MSVC)
+    target_compile_options(sdk_state_mutation PRIVATE /W4 /WX)
+  else()
+    target_compile_options(sdk_state_mutation PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(sdk_state_mutation)
+
+  add_executable(sdk_state_process
+    tests/sdk/state_process.c
+    tests/sdk/guest_fixture.c
+    tests/fixture/public_sound_guest.c
+  )
+  target_include_directories(sdk_state_process PRIVATE
+    tests/sdk src tests/fixture third_party/chips
+  )
+  target_compile_features(sdk_state_process PRIVATE c_std_17)
+  set_target_properties(sdk_state_process PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS NO
+  )
+  target_link_libraries(sdk_state_process PRIVATE glueyneo_test glueyneo_unity)
+  target_compile_definitions(sdk_state_process PRIVATE
+    GLUEYNEO_SDK_TEST_HOOKS
+    GLUEYNEO_SOURCE_REVISION="${GLUEYNEO_SOURCE_REVISION}"
+    GLUEYNEO_SOURCE_CONTENT_ID="${GLUEYNEO_SOURCE_CONTENT_ID}"
+    GLUEYNEO_CONFIGURATION="${CMAKE_BUILD_TYPE}"
+    GLUEYNEO_COMPILER_ID="${CMAKE_C_COMPILER_ID}"
+    GLUEYNEO_COMPILER_VERSION="${CMAKE_C_COMPILER_VERSION}"
+    GLUEYNEO_SANITIZER="${GLUEYNEO_SDK_SANITIZER}"
+  )
+  if(MSVC)
+    target_compile_options(sdk_state_process PRIVATE /W4 /WX)
+  else()
+    target_compile_options(sdk_state_process PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(sdk_state_process)
+  add_test(NAME libretro_frontend_observer
+    COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/tests/libretro/frontend_observer_test.py
+      --harness $<TARGET_FILE:libretro_frontend_observer_test>
+      --production $<TARGET_FILE:libretro_frontend_production_test>
+      --witness $<TARGET_FILE:sdk_state_process>
+      --bundle ${GLUEYNEO_PUBLIC_SOUND_FIXTURE})
+  set_tests_properties(libretro_frontend_observer PROPERTIES
+    LABELS "libretro;continuation;state" TIMEOUT 180)
+
+  add_executable(sdk_save_process
+    tests/sdk/save_process.c
+    tests/sdk/save_host.c
+    tests/fixture/public_save_guest.c
+    tests/fixture/public_sound_guest.c
+  )
+  target_include_directories(sdk_save_process PRIVATE
+    tests/sdk src tests/fixture third_party/chips
+  )
+  target_compile_features(sdk_save_process PRIVATE c_std_17)
+  set_target_properties(sdk_save_process PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS NO
+  )
+  target_link_libraries(sdk_save_process PRIVATE glueyneo_test glueyneo_unity)
+  target_compile_definitions(sdk_save_process PRIVATE
+    GLUEYNEO_SDK_TEST_HOOKS
+    GLUEYNEO_SOURCE_REVISION="${GLUEYNEO_SOURCE_REVISION}"
+    GLUEYNEO_SOURCE_CONTENT_ID="${GLUEYNEO_SOURCE_CONTENT_ID}"
+    GLUEYNEO_CONFIGURATION="${CMAKE_BUILD_TYPE}"
+    GLUEYNEO_COMPILER_ID="${CMAKE_C_COMPILER_ID}"
+    GLUEYNEO_COMPILER_VERSION="${CMAKE_C_COMPILER_VERSION}"
+    GLUEYNEO_SANITIZER="${GLUEYNEO_SDK_SANITIZER}"
+  )
+  if(MSVC)
+    target_compile_options(sdk_save_process PRIVATE /W4 /WX)
+  else()
+    target_compile_options(sdk_save_process PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(sdk_save_process)
+
+  add_executable(sdk_save_test
+    tests/sdk/test_save.c
+    tests/sdk/save_fixture.c
+    tests/fixture/public_save_guest.c
+    tests/fixture/public_sound_guest.c
+  )
+  target_include_directories(sdk_save_test PRIVATE
+    tests/sdk src tests/fixture third_party/chips
+  )
+  target_compile_features(sdk_save_test PRIVATE c_std_17)
+  set_target_properties(sdk_save_test PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS NO
+  )
+  target_link_libraries(sdk_save_test PRIVATE glueyneo_test glueyneo_unity)
+  target_compile_definitions(sdk_save_test PRIVATE
+    GLUEYNEO_SDK_TEST_HOOKS
+    GLUEYNEO_SOURCE_REVISION="${GLUEYNEO_SOURCE_REVISION}"
+    GLUEYNEO_CONFIGURATION="${CMAKE_BUILD_TYPE}"
+    GLUEYNEO_COMPILER_ID="${CMAKE_C_COMPILER_ID}"
+    GLUEYNEO_COMPILER_VERSION="${CMAKE_C_COMPILER_VERSION}"
+    GLUEYNEO_SANITIZER="${GLUEYNEO_SDK_SANITIZER}"
+  )
+  if(MSVC)
+    target_compile_options(sdk_save_test PRIVATE /W4 /WX)
+  else()
+    target_compile_options(sdk_save_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  glueyneo_apply_sdk_sanitizer(sdk_save_test)
+
+  add_executable(sdk_save_lifecycle_test
+    tests/sdk/test_save_lifecycle.c
+    tests/sdk/save_fixture.c
+    tests/fixture/public_save_guest.c
+    tests/fixture/public_sound_guest.c
+  )
+  target_include_directories(sdk_save_lifecycle_test PRIVATE
+    tests/sdk src tests/fixture third_party/chips
+  )
+  target_compile_features(sdk_save_lifecycle_test PRIVATE c_std_17)
+  set_target_properties(sdk_save_lifecycle_test PROPERTIES
+    C_STANDARD 17
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS NO
+  )
+  target_link_libraries(sdk_save_lifecycle_test PRIVATE
+    glueyneo_test glueyneo_unity
+  )
+  target_compile_definitions(sdk_save_lifecycle_test PRIVATE
+    GLUEYNEO_SDK_TEST_HOOKS
+    GLUEYNEO_SOURCE_REVISION="${GLUEYNEO_SOURCE_REVISION}"
+    GLUEYNEO_CONFIGURATION="${CMAKE_BUILD_TYPE}"
+    GLUEYNEO_COMPILER_ID="${CMAKE_C_COMPILER_ID}"
+    GLUEYNEO_COMPILER_VERSION="${CMAKE_C_COMPILER_VERSION}"
+    GLUEYNEO_SANITIZER="${GLUEYNEO_SDK_SANITIZER}"
+  )
+  if(MSVC)
+    target_compile_options(sdk_save_lifecycle_test PRIVATE /W4 /WX)
+  else()
+    target_compile_options(sdk_save_lifecycle_test PRIVATE
+      -Wall -Wextra -Wpedantic -Werror
+    )
+  endif()
+  glueyneo_apply_sdk_sanitizer(sdk_save_lifecycle_test)
+
+  # Keep the candidate's direct conformance tests alongside its private runtime link.
   add_executable(z80_admission_test
     tests/chips/test_z80.c
     src/chips/z80_candidate.c
@@ -642,6 +1248,7 @@ if(GLUEYNEO_BUILD_TESTS)
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/chips
   )
   target_compile_features(z80_admission_test PRIVATE c_std_17)
+  target_compile_definitions(z80_admission_test PRIVATE Z80_CANDIDATE_TEST_HOOKS=1)
   set_target_properties(z80_admission_test PROPERTIES
     C_STANDARD 17
     C_STANDARD_REQUIRED YES
@@ -699,6 +1306,203 @@ if(GLUEYNEO_BUILD_TESTS)
   glueyneo_apply_sdk_sanitizer(sdk_mutation)
   add_test(NAME sdk_diagnostic COMMAND sdk_diagnostic diagnostic)
   set_tests_properties(sdk_diagnostic PROPERTIES LABELS "sdk-contract;sdk-diagnostic")
+  add_test(NAME sdk_state_tracer COMMAND sdk_diagnostic state-tracer)
+  set_tests_properties(sdk_state_tracer PROPERTIES
+    LABELS "sdk-state"
+    TIMEOUT 60
+  )
+  add_test(NAME sdk_state_identity COMMAND sdk_diagnostic state-identity)
+  set_tests_properties(sdk_state_identity PROPERTIES
+    LABELS "sdk-state"
+    TIMEOUT 60
+  )
+  add_test(NAME sdk_state_ym COMMAND sdk_diagnostic state-ym)
+  set_tests_properties(sdk_state_ym PROPERTIES
+    LABELS "sdk-state"
+    TIMEOUT 60
+  )
+  add_test(NAME sdk_state_machine COMMAND sdk_diagnostic state-machine)
+  set_tests_properties(sdk_state_machine PROPERTIES
+    LABELS "sdk-state"
+    TIMEOUT 60
+  )
+  add_test(NAME sdk_state_continuation COMMAND sdk_state_test continuation)
+  set_tests_properties(sdk_state_continuation PROPERTIES
+    LABELS "sdk-state"
+    TIMEOUT 60
+  )
+  add_test(NAME sdk_state_controls
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/sdk/state_controls.py
+            $<TARGET_FILE:sdk_state_test>)
+  set_tests_properties(sdk_state_controls PROPERTIES
+    LABELS "sdk-state;sdk-controls"
+    TIMEOUT 300
+  )
+  add_test(NAME sdk_state_isolation COMMAND sdk_state_test isolation)
+  set_tests_properties(sdk_state_isolation PROPERTIES
+    LABELS "sdk-state;sdk-isolation"
+    TIMEOUT 180
+  )
+  add_test(NAME sdk_state_repeat COMMAND sdk_state_test repeat)
+  set_tests_properties(sdk_state_repeat PROPERTIES
+    LABELS "sdk-state"
+    TIMEOUT 60
+  )
+  add_test(NAME sdk_state_hostile
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/fuzz/verify_state_controls.py
+            $<TARGET_FILE:sdk_state_mutation>)
+  set_tests_properties(sdk_state_hostile PROPERTIES
+    LABELS "sdk-state;hostile"
+    TIMEOUT 120
+  )
+  add_test(NAME sdk_state_oom COMMAND sdk_state_mutation oom)
+  set_tests_properties(sdk_state_oom PROPERTIES
+    LABELS "sdk-state;oom"
+    TIMEOUT 60
+  )
+  add_test(NAME sdk_state_process
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/sdk/test_state_exchange.py
+            --mode process --runner $<TARGET_FILE:sdk_state_process>)
+  set_tests_properties(sdk_state_process PROPERTIES
+    LABELS "sdk-state;process-exchange"
+    TIMEOUT 300
+    PROCESSORS 2
+  )
+  if(APPLE)
+    add_test(NAME sdk_save_process
+      COMMAND ${Python3_EXECUTABLE}
+              ${CMAKE_CURRENT_SOURCE_DIR}/tests/sdk/test_save_process.py
+              --mode process --runner $<TARGET_FILE:sdk_save_process>)
+  else()
+    # The reference file-commit protocol is Darwin-specific. Keep a portable
+    # executable stub in every build and report the process test as skipped.
+    add_test(NAME sdk_save_process COMMAND $<TARGET_FILE:sdk_save_process>)
+    set_tests_properties(sdk_save_process PROPERTIES SKIP_RETURN_CODE 77)
+  endif()
+  set_tests_properties(sdk_save_process PROPERTIES
+    LABELS "sdk-save;process-exchange"
+    TIMEOUT 60
+    PROCESSORS 1
+    RESOURCE_LOCK sdk_save_single_process
+  )
+  if(APPLE)
+    add_test(NAME sdk_save_host_faults
+      COMMAND ${Python3_EXECUTABLE}
+              ${CMAKE_CURRENT_SOURCE_DIR}/tests/sdk/test_save_process.py
+              --mode host-faults --runner $<TARGET_FILE:sdk_save_process>)
+  else()
+    add_test(NAME sdk_save_host_faults COMMAND $<TARGET_FILE:sdk_save_process>
+             --mode host-faults)
+    set_tests_properties(sdk_save_host_faults PROPERTIES SKIP_RETURN_CODE 77)
+  endif()
+  set_tests_properties(sdk_save_host_faults PROPERTIES
+    LABELS "sdk-save;host-faults"
+    TIMEOUT 60
+    PROCESSORS 1
+    RESOURCE_LOCK sdk_save_single_process
+  )
+  if(APPLE)
+    add_test(NAME sdk_save_recovery
+      COMMAND ${Python3_EXECUTABLE}
+              ${CMAKE_CURRENT_SOURCE_DIR}/tests/sdk/test_save_process.py
+              --mode recovery --runner $<TARGET_FILE:sdk_save_process>)
+  else()
+    add_test(NAME sdk_save_recovery COMMAND $<TARGET_FILE:sdk_save_process>
+             --mode recovery)
+    set_tests_properties(sdk_save_recovery PROPERTIES SKIP_RETURN_CODE 77)
+  endif()
+  set_tests_properties(sdk_save_recovery PROPERTIES
+    LABELS "sdk-save;recovery"
+    TIMEOUT 60
+    PROCESSORS 1
+    RESOURCE_LOCK sdk_save_single_process
+  )
+  if(APPLE)
+    add_test(NAME sdk_save_barriers
+      COMMAND ${Python3_EXECUTABLE}
+              ${CMAKE_CURRENT_SOURCE_DIR}/tests/sdk/test_save_process.py
+              --mode barriers --runner $<TARGET_FILE:sdk_save_process>)
+  else()
+    add_test(NAME sdk_save_barriers COMMAND $<TARGET_FILE:sdk_save_process>
+             --mode barriers)
+    set_tests_properties(sdk_save_barriers PROPERTIES SKIP_RETURN_CODE 77)
+  endif()
+  set_tests_properties(sdk_save_barriers PROPERTIES
+    LABELS "sdk-save;barriers"
+    TIMEOUT 60
+    PROCESSORS 1
+    RESOURCE_LOCK sdk_save_single_process
+  )
+  add_test(NAME sdk_save_api COMMAND sdk_save_test api)
+  set_tests_properties(sdk_save_api PROPERTIES
+    LABELS "sdk-save"
+    TIMEOUT 60
+    PROCESSORS 1
+  )
+  if(GLUEYNEO_SDK_SANITIZER STREQUAL "ADDRESS_UNDEFINED")
+    set(SDK_SAVE_CONTROL_TIMEOUT_SECONDS 90)
+    set(SDK_SAVE_CONTROL_TEST_TIMEOUT_SECONDS 180)
+  else()
+    set(SDK_SAVE_CONTROL_TIMEOUT_SECONDS 30)
+    set(SDK_SAVE_CONTROL_TEST_TIMEOUT_SECONDS 60)
+  endif()
+  add_test(NAME sdk_save_receipts
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/sdk/save_controls.py
+            --mode receipts --runner $<TARGET_FILE:sdk_save_test>
+            --timeout ${SDK_SAVE_CONTROL_TIMEOUT_SECONDS}
+  )
+  set_tests_properties(sdk_save_receipts PROPERTIES
+    LABELS "sdk-save"
+    TIMEOUT ${SDK_SAVE_CONTROL_TEST_TIMEOUT_SECONDS}
+    PROCESSORS 1
+  )
+  add_test(NAME sdk_save_lifecycle
+    COMMAND sdk_save_lifecycle_test lifecycle
+  )
+  set_tests_properties(sdk_save_lifecycle PROPERTIES
+    LABELS "sdk-save"
+    TIMEOUT ${SDK_SAVE_CONTROL_TEST_TIMEOUT_SECONDS}
+    PROCESSORS 1
+  )
+  add_test(NAME sdk_save_registration
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/sdk/test_save_registration.py
+  )
+  set_tests_properties(sdk_save_registration PROPERTIES
+    LABELS "sdk-save"
+    TIMEOUT 60
+    PROCESSORS 1
+  )
+  set(SDK_STATE_DEBUG_RUNNER
+    "${CMAKE_SOURCE_DIR}/build/sdk-debug/sdk_state_process${CMAKE_EXECUTABLE_SUFFIX}")
+  set(SDK_STATE_RELEASE_RUNNER
+    "${CMAKE_SOURCE_DIR}/build/sdk-release/sdk_state_process${CMAKE_EXECUTABLE_SUFFIX}")
+  if(EXISTS "${SDK_STATE_DEBUG_RUNNER}" AND EXISTS "${SDK_STATE_RELEASE_RUNNER}" AND
+     NOT SDK_STATE_DEBUG_RUNNER STREQUAL SDK_STATE_RELEASE_RUNNER)
+    add_test(NAME sdk_state_exchange
+      COMMAND ${Python3_EXECUTABLE}
+              ${CMAKE_CURRENT_SOURCE_DIR}/tests/sdk/test_state_exchange.py
+              --mode exchange
+              --debug-runner "${SDK_STATE_DEBUG_RUNNER}"
+              --release-runner "${SDK_STATE_RELEASE_RUNNER}")
+    set_tests_properties(sdk_state_exchange PROPERTIES
+      LABELS "sdk-state;process-exchange"
+      TIMEOUT 600
+      PROCESSORS 2
+      DEPENDS sdk_state_process
+    )
+  endif()
+  add_test(NAME sdk_state_registration
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/cmake/test_state_test_metadata.py)
+  set_tests_properties(sdk_state_registration PROPERTIES
+    LABELS "sdk-state-metadata"
+    TIMEOUT 15
+  )
   add_test(NAME sdk_lifecycle COMMAND sdk_diagnostic lifecycle)
   set_tests_properties(sdk_lifecycle PROPERTIES LABELS "sdk-contract;sdk-lifecycle")
   add_test(NAME sdk_media COMMAND sdk_diagnostic media)
@@ -712,8 +1516,12 @@ if(GLUEYNEO_BUILD_TESTS)
   add_test(NAME sdk_mutation_minimizer
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/fuzz/minimize.py
             --self-test)
+  add_test(NAME sdk_state_minimizer
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/fuzz/minimize.py
+            --self-test --state)
   set_tests_properties(sdk_mutation_media sdk_mutation_sequence
-    sdk_mutation_minimizer PROPERTIES LABELS "sdk-hostile;sdk-mutation" TIMEOUT 180)
+    sdk_mutation_minimizer sdk_state_minimizer
+    PROPERTIES LABELS "sdk-hostile;sdk-mutation" TIMEOUT 180)
   add_test(NAME sdk_controls
     COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/tests/sdk/controls.py --controls
@@ -722,7 +1530,8 @@ if(GLUEYNEO_BUILD_TESTS)
   add_test(NAME sdk_isolation
     COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/tests/sdk/controls.py --isolation
-            $<TARGET_FILE:sdk_diagnostic>)
+            $<TARGET_FILE:sdk_diagnostic>
+            $<IF:$<STREQUAL:${GLUEYNEO_SDK_SANITIZER},THREAD>,60,30>)
   add_test(NAME sdk_cold
     COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/tests/sdk/controls.py --cold
@@ -748,13 +1557,16 @@ set(_sdk_nm "@CMAKE_NM@")
 set(_sdk_windows "@WIN32@")
 set(_sdk_dumpbin "@GLUEYNEO_SDK_DUMPBIN@")
 set(_sdk_host_names "fopen|freopen|fread|fwrite|remove|rename|open|close|read|write|time|clock|gettimeofday|socket|connect|accept|system|fork|execve|pthread_create|pthread_mutex_lock|CreateFileA|CreateFileW|ReadFile|WriteFile|DeleteFileA|DeleteFileW|MoveFileA|MoveFileW|GetSystemTime|GetSystemTimeAsFileTime|GetSystemTimePreciseAsFileTime|GetTickCount|GetTickCount64|QueryPerformanceCounter|QueryPerformanceFrequency|timeGetTime|GetEnvironmentVariableA|GetEnvironmentVariableW|WSAStartup|closesocket|getaddrinfo|send|recv|bind|listen|CreateThread|_beginthread|_beginthreadex|CreateMutexA|CreateMutexW|WaitForSingleObject|WaitForMultipleObjects|EnterCriticalSection|AcquireSRWLockExclusive|AcquireSRWLockShared|Sleep|SleepEx|SwitchToThread")
-set(_sdk_host_calls "(^|[^A-Za-z0-9_])(${_sdk_host_names})[ \t]*\\(")
-foreach(_sdk_source IN LISTS _sdk_sources)
-  file(READ "${_sdk_source}" _sdk_text)
-  if(_sdk_text MATCHES "${_sdk_host_calls}")
-    message(FATAL_ERROR "Ambient host call found in runtime source: ${_sdk_source}")
-  endif()
-endforeach()
+# Immutable ymfm source is audited by its exact pinned-byte/license gate.
+# Owned C++ distinguishes member expressions from global host calls. All
+# compiled objects remain subject to the forbidden-symbol checks below.
+execute_process(COMMAND "@Python3_EXECUTABLE@"
+  "@CMAKE_CURRENT_SOURCE_DIR@/tests/tools/check_runtime_host.py"
+  --root "@CMAKE_CURRENT_SOURCE_DIR@" --names "${_sdk_host_names}" ${_sdk_sources}
+  RESULT_VARIABLE _sdk_source_result)
+if(NOT _sdk_source_result EQUAL 0)
+  message(FATAL_ERROR "Runtime host-call source/provenance audit failed")
+endif()
 if(_sdk_windows)
   # /SYMBOLS exposes each COFF object's external definitions and references in
   # the static archive. /GL objects lack this table and must fail qualification.
@@ -853,10 +1665,37 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
             --case build-shared)
   add_test(NAME sdk_package_consumers_static
     COMMAND ${Python3_EXECUTABLE} "${GLUEYNEO_CONSUMER_CHECK}"
-            --case consumers-static)
+            --case consumers-static --sound-reference "${GLUEYNEO_SOUND_REFERENCE}")
   add_test(NAME sdk_package_consumers_shared
     COMMAND ${Python3_EXECUTABLE} "${GLUEYNEO_CONSUMER_CHECK}"
-            --case consumers-shared)
+            --case consumers-shared --sound-reference "${GLUEYNEO_SOUND_REFERENCE}")
+  set_tests_properties(sdk_package_consumers_static sdk_package_consumers_shared
+    PROPERTIES FIXTURES_REQUIRED sdk_sound_reference)
+  add_test(NAME sdk_example_continuation_static
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/consumers/test_continuation_install.py
+            --variant static --mode process)
+  add_test(NAME sdk_example_continuation_shared
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/consumers/test_continuation_install.py
+            --variant shared --mode process)
+  set_tests_properties(sdk_example_continuation_static sdk_example_continuation_shared
+    PROPERTIES LABELS "sdk-example-continuation" TIMEOUT 600)
+  add_test(NAME sdk_example_persistence_static
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/consumers/test_persistence_install.py
+            --variant static --mode full)
+  add_test(NAME sdk_example_persistence_shared
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/consumers/test_persistence_install.py
+            --variant shared --mode full)
+  add_test(NAME sdk_example_persistence_faults
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/consumers/test_persistence_install.py
+            --variant static --mode faults)
+  set_tests_properties(sdk_example_persistence_static sdk_example_persistence_shared
+    sdk_example_persistence_faults
+    PROPERTIES LABELS "sdk-example-persistence" TIMEOUT 900)
   add_test(NAME sdk_package_docs_static
     COMMAND ${Python3_EXECUTABLE} "${GLUEYNEO_CONSUMER_CHECK}"
             --case docs-static)
@@ -866,6 +1705,10 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
   add_test(NAME sdk_package_docs_readme
     COMMAND ${Python3_EXECUTABLE} "${GLUEYNEO_CONSUMER_CHECK}"
             --case docs-readme)
+  add_test(NAME sdk_example_docs
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/consumers/test_example_docs.py
+            --mode commands)
   add_test(NAME sdk_package_capabilities
     COMMAND ${Python3_EXECUTABLE} "${GLUEYNEO_CONSUMER_CHECK}"
             --case capabilities)
@@ -875,6 +1718,8 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
     PROPERTIES LABELS "sdk-package-consumers" TIMEOUT 360)
   set_tests_properties(sdk_package_docs_static sdk_package_docs_shared sdk_package_docs_readme
     PROPERTIES LABELS "sdk-package-docs" TIMEOUT 600)
+  set_tests_properties(sdk_example_docs
+    PROPERTIES LABELS "sdk-package-docs" TIMEOUT 900)
   set_tests_properties(sdk_package_capabilities
     PROPERTIES LABELS "sdk-package-capabilities" TIMEOUT 180)
 
@@ -907,6 +1752,19 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
   add_test(NAME qualification_frontend_smoke
     COMMAND ${Python3_EXECUTABLE} -m unittest discover
             -s "${CMAKE_CURRENT_SOURCE_DIR}/tests/libretro" -p test_retroarch_smoke.py)
+  set_property(TEST qualification_frontend_smoke APPEND PROPERTY ENVIRONMENT
+    "GLUEYNEO_MVS_OBSERVATION_TEST=$<TARGET_FILE:mvs_observations_test>")
+  add_test(NAME libretro_frontend_registration
+    COMMAND ${Python3_EXECUTABLE} -B
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/libretro/test_frontend_registration.py"
+            --build-dir "${CMAKE_CURRENT_BINARY_DIR}" --mode registration)
+  set_tests_properties(libretro_frontend_registration PROPERTIES
+    LABELS "libretro;qualification-tools" TIMEOUT 120)
+  add_test(NAME qualification_frontend_replay
+    COMMAND ${Python3_EXECUTABLE} -B -m unittest discover
+            -s "${CMAKE_CURRENT_SOURCE_DIR}/tests/libretro" -p test_frontend_replay.py)
+  set_tests_properties(qualification_frontend_replay PROPERTIES
+    LABELS "qualification-tools;libretro" TIMEOUT 30)
   # The register consistency check reads planning state, which a source archive
   # may not carry. An empty GLUEYNEO_PLANNING_WORKSTREAM means auto: the default
   # workstream is checked when its directory exists and silently skipped when it
@@ -941,9 +1799,36 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/test_check_security_register.py")
   # The duplicated runtime copies in libretro_callback_test must share no
   # mutable state: reject any writable or zero-initialized runtime symbol.
+  set(GLUEYNEO_STORAGE_AUDIT_TARGET glueyneo_runtime_static)
+  if(NOT GLUEYNEO_SDK_SANITIZER STREQUAL "NONE")
+    # Sanitizers inject writable registration/diagnostic metadata. Keep the
+    # strict symbol audit (no symbol allowlist), but inspect the exact same
+    # production sources/properties with instrumentation explicitly disabled.
+    add_library(glueyneo_storage_audit STATIC ${GLUEYNEO_RUNTIME_SOURCES})
+    foreach(property C_STANDARD C_STANDARD_REQUIRED C_EXTENSIONS
+        CXX_STANDARD CXX_STANDARD_REQUIRED CXX_EXTENSIONS
+        CXX_VISIBILITY_PRESET VISIBILITY_INLINES_HIDDEN
+        POSITION_INDEPENDENT_CODE C_VISIBILITY_PRESET INCLUDE_DIRECTORIES
+        SYSTEM_INCLUDE_DIRECTORIES COMPILE_DEFINITIONS COMPILE_OPTIONS)
+      get_target_property(value glueyneo_runtime_static ${property})
+      if(NOT value STREQUAL "value-NOTFOUND")
+        set_property(TARGET glueyneo_storage_audit PROPERTY ${property} "${value}")
+      endif()
+    endforeach()
+    target_include_directories(glueyneo_storage_audit SYSTEM PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/third_party/chips
+      ${CMAKE_CURRENT_SOURCE_DIR}/third_party/ymfm/src)
+    target_compile_options(glueyneo_storage_audit PRIVATE -fno-sanitize=all)
+    set(GLUEYNEO_STORAGE_AUDIT_TARGET glueyneo_storage_audit)
+    set(GLUEYNEO_STORAGE_AUDIT_ARGS
+      --compile-commands "${CMAKE_BINARY_DIR}/compile_commands.json")
+  endif()
   add_test(NAME runtime_writable_storage
     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/check_runtime_storage.py"
-            --nm "${CMAKE_NM}" "$<TARGET_FILE:glueyneo_runtime_static>")
+            --nm "${CMAKE_NM}" ${GLUEYNEO_STORAGE_AUDIT_ARGS}
+            "$<TARGET_FILE:${GLUEYNEO_STORAGE_AUDIT_TARGET}>")
+  add_test(NAME runtime_host_source_audit
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/test_check_runtime_host.py")
   add_test(NAME runtime_writable_storage_audit
     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/tools/test_check_runtime_storage.py")
   set_tests_properties(runtime_writable_storage PROPERTIES SKIP_RETURN_CODE 77)
@@ -951,6 +1836,7 @@ message(STATUS "SDK runtime host-call closure passed for ${_sdk_library}")
     qualification_independent_review
     qualification_frontend_smoke
     planning_security_register_mutations runtime_writable_storage runtime_writable_storage_audit
+    runtime_host_source_audit
     PROPERTIES LABELS "qualification-tools" TIMEOUT 300)
 
   # CI builds tests only against a static libglueyneo, where hidden private

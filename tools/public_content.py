@@ -26,6 +26,7 @@ MAX_FILE_BYTES = 64 * 1024 * 1024
 MAX_TOTAL_BYTES = 512 * 1024 * 1024
 MAX_MEMBERS = 50_000
 MAX_HISTORY_OBJECTS = 50_000
+MAX_SOURCE_FILES = 50_000
 BLOCK_SIZE = 1024 * 1024
 SOURCE_PATHS = (
     ".release-please-manifest.json", "CMakeLists.txt", "CMakePresets.json",
@@ -39,6 +40,7 @@ SOURCE_PATHS = (
 # though the SDK source archive intentionally has a narrower file set.
 REPOSITORY_PATHS = SOURCE_PATHS + (".github/workflows", "release-please-config.json", ".gitattributes")
 TEST_SOURCE_PATHS = frozenset({
+    "tests/cmake/test_state_test_metadata.py",
     "tests/consumers/CMakeLists.txt", "tests/consumers/check_package.py",
     "tests/consumers/header.cpp", "tests/consumers/test_exports.py",
     "tests/consumers/test_release_consumer.py", "tests/cpu/guest_fixture.c",
@@ -48,7 +50,9 @@ TEST_SOURCE_PATHS = frozenset({
     "tests/cpu/test_audit.py", "tests/cpu/test_cold.c", "tests/cpu/test_faults.c",
     "tests/cpu/test_guest.c", "tests/cpu/test_inventory.py",
     "tests/cpu/test_isolation.c", "tests/cpu/test_state.c", "tests/cpu/test_timing.c",
-    "tests/fuzz/minimize.py", "tests/fuzz/sdk_mutation.c", "tests/owned_cpu/cold.py",
+    "tests/fuzz/minimize.py", "tests/fuzz/sdk_mutation.c",
+    "tests/fuzz/state_mutation.c", "tests/fuzz/state_oom.c",
+    "tests/fuzz/verify_state_controls.py", "tests/owned_cpu/cold.py",
     "tests/owned_cpu/isolation_fixture.h", "tests/owned_cpu/negative.py",
     "tests/owned_cpu/negative_timing.py", "tests/owned_cpu/test_acceptance.py",
     "tests/owned_cpu/test_cold.c", "tests/owned_cpu/test_contract.py",
@@ -56,8 +60,11 @@ TEST_SOURCE_PATHS = frozenset({
     "tests/owned_cpu/test_inventory.py", "tests/owned_cpu/test_isolation.c",
     "tests/owned_cpu/test_semantics.c", "tests/owned_cpu/test_state.c",
     "tests/owned_cpu/test_timing.c", "tests/sdk/controls.py", "tests/sdk/guest_fixture.c",
-    "tests/sdk/guest_fixture.h", "tests/sdk/test_evidence.py",
-    "tests/sdk/test_matrix_evidence.py", "tests/sdk/test_sdk.c",
+    "tests/sdk/guest_fixture.h", "tests/sdk/state_controls.py",
+    "tests/sdk/state_fixture.h", "tests/sdk/state_process.c",
+    "tests/sdk/test_evidence.py", "tests/sdk/test_matrix_evidence.py",
+    "tests/sdk/test_sdk.c", "tests/sdk/test_state.c",
+    "tests/sdk/test_state_exchange.py",
     "tests/sdk/test_support.h", "tests/workflow/test_ci_policy.py",
     "tests/workflow/test_phase01_admission.py", "tests/workflow/test_phase01_docs.py",
     "tests/workflow/test_app_scope.py", "tests/workflow/test_release_build_reuse.py", "tests/workflow/test_release_identity.py",
@@ -81,8 +88,8 @@ PRIVACY_RULES = (
 PUBLIC_EMAILS = {"noreply@github.com", "noreply@anthropic.com"}
 SYNTHETIC_PATH_MARKERS = {"private-person"}
 SYNTHETIC_EMAIL_SUFFIXES = (".invalid", ".example", ".example.com", ".example.org", ".example.net")
-# Exact source/archive false positives are tied to both path and complete bytes.
-# Other paths, changed bytes, and captured logs still use the ordinary detectors.
+# Audited current-source false positives. Both path and complete bytes must
+# match; logs, changed files and other paths retain the ordinary detectors.
 SOURCE_FINDING_DISPOSITIONS = {
     ("third_party/zlib/LICENSE", "e32ff4e00d9d94930537635291da39e7e612703334bf6fde8c7f1686fe8a45a2"): {
         "rules": {"private-identity"},
@@ -92,6 +99,14 @@ SOURCE_FINDING_DISPOSITIONS = {
         "rules": {"private-identity"},
         "reason": "upstream public copyright contacts in unchanged zlib.h at da607da739fa6047df13e66a2af6b8bec7c2a498",
     },
+    ("tests/libretro/retroarch_smoke.py", "a2ee8649681ab38113d6d1f23241119503083be395ae7f2bba687523cf374f1d"): {
+        "rules": {"machine-identifier"},
+        "reason": "serial is a zero-initialized Carbon ProcessSerialNumber local variable, not a host identifier value",
+    },
+    ("tests/consumers/test_example_docs.py", "5dcfdcf13cfeff8d9529ecfc7746edce959bb505305ed7de2bdae3cb03f20d5b"): {
+        "rules": {"private-url"},
+        "reason": "the offline guide regression binds staged target sources and C17 metadata emitted by CMake, while retaining a synthetic localhost port-9 proxy; exact path and bytes are bound",
+    },
 }
 # Exact immutable history objects audited as bounded false positives. These
 # dispositions are tied to object IDs, not paths or rule classes globally:
@@ -99,6 +114,87 @@ SOURCE_FINDING_DISPOSITIONS = {
 # redaction tests contain synthetic identity/path canaries. A changed blob is
 # scanned.
 HISTORY_FINDING_DISPOSITIONS = {
+    "1c8033be6e079de0794a6f82b13e0c3779c6797c": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact reviewed Visual Studio guide test blob retains its synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
+    "f295b390cadcb34a50c8ece59e67996041cab213": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact strict-selector alias regressions retain the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
+    "90216ee3217f034dac3d19bee5918b9c86cfda5a": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact tokenized compile-policy regression retains the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
+    "568f4b5e118528b9550925ed93b1c57047a86111": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact staged source-closure regression retains the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
+    "c9d1ec68556b640056a27c2d4196ca5f768d1f60": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact target source-origin and Release compile-policy regression retains the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
+    "2e70f80d961045ec8f6476e4cb0cbc3b04407a06": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact per-target Release compile metadata regression retains the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
+    "6e5a3ec0fb8fdc78cf0aef433f78d18e9d502356": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact generator-neutral compile metadata regression retains the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
+    "289e06a48018d46bdf571800c4b10ef05a56633b": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact Windows child-process fix retains the offline test synthetic localhost port-9 proxy; path and blob are bound",
+    },
+    "3d0b0de0ee4b7ccb132edd0f0d39d41f101b55b0": {
+        "path": "tests/consumers/test_example_docs.py",
+        "rules": {"personal-path", "private-url"},
+        "reason": "exact intermediate Windows launcher diagnostic test bytes contain synthetic path canaries and the offline test localhost port-9 proxy; path and blob are bound",
+    },
+    "747fd5525479af237b24e8e1cbdae38c4a8c865e": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact intermediate guide regression bytes retain the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
+    "a3d2ee98203fc48c505323f163aa4388f92b743e": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact Windows launcher regression bytes retain the offline documentation test synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
+    "8ebe5d0c04f914d2aeb92b3947c877fba746cc16": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact updated multi-config guide regression bytes retain the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
+    "e4e09163a26c3f43455177765ac4922b888fdce3": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact updated guide regression bytes retain the offline test synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
+    "7cbfaa1a5e5b4c0cda12642be5364fb05215010c": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact current documentation-command regression bytes retain the offline test's synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
+    "8fe1f746fb7ee736baf4c249e9b0696c1be82b96": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact updated documentation-command regression bytes retain the offline test's synthetic localhost port-9 proxy; path and blob identity are bound",
+    },
+    "239b1e38898909c88843cc39505a5ca37f4c6a2b": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact historical bytes retain the offline documentation test's synthetic localhost port-9 proxy with the refreshed measured save identity",
+    },
+    "2c031c28d50713b8edaabcf49262c97ee0036338": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact historical bytes retain the offline documentation test's synthetic localhost port-9 proxy with the corrected measured save identity",
+    },
+    "b5768eac5f6a183b6e21613d244bea18dc621c34": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact historical bytes retain the offline documentation test's synthetic localhost port-9 proxy; only the bound save-source identity literals changed",
+    },
+    "a66573bcf978e1bc8db8ff53dd121f38c894e31e": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact historical bytes are the offline documentation test's localhost port-9 proxy; the path and blob identity are bound",
+    },
+    "f5356b7f12b6876d2bbddca2fea22667a7257f84": {
+        "path": "tests/libretro/retroarch_smoke.py", "rules": {"machine-identifier"},
+        "reason": "exact historical bytes use a zero-initialized Carbon ProcessSerialNumber local, not a host identifier value",
+    },
     "007bd7fabaee7b0c171cb38a2581abeacf0f0c15": {
         "path": "third_party/musashi/m68kmake.c", "rules": {"private-identity"},
         "reason": "immutable upstream public copyright contact; preserved source and license history",
@@ -114,6 +210,23 @@ HISTORY_FINDING_DISPOSITIONS = {
     "b7a69d058e616651eae27b3f90c0b7fd36c099b2": {
         "path": "third_party/zlib/LICENSE", "rules": {"private-identity"},
         "reason": "immutable upstream zlib 1.3.2 license attribution at da607da739fa6047df13e66a2af6b8bec7c2a498; preserve license notice",
+    },
+    "a4aef26d7f87492ee6b18b88648fb0860835a9a9": {
+        "path": ".planning/workstreams/first-playable-game/phases/05-selected-mvs-boot/05-07-SUMMARY.md",
+        "rules": {"machine-identifier"},
+        "reason": "plan summary quotes the urlsplit attribute expression that tripped the hostname rule; no machine identifier present",
+    },
+    "12fd262aa4412f648acfdfa443585e505f587e81": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact current guide test blob retains its synthetic localhost proxy; path and blob identity are bound",
+    },
+    "1d9fad38ddd7043dd8bd69b7110b18a311c55b93": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact current guide test blob retains its synthetic localhost proxy; path and blob identity are bound",
+    },
+    "108f34893a947120147108ebad7e8be6d9057fd8": {
+        "path": "tests/consumers/test_example_docs.py", "rules": {"private-url"},
+        "reason": "exact current guide test blob retains its synthetic localhost proxy; path and blob identity are bound",
     },
 }
 
@@ -217,14 +330,33 @@ _SYNTHETIC_PATH_HISTORY_OBJECTS = (
     ("fd40f966998de1411b92b2ac8585f36bfa6a817d", "tests/tools/test_verify_playable.py"),
     ("fead28e7de760ab3daca8d167c3d6dc7fb0d442c", ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-38-PLAN.md"),
 )
+_PLAN_PATTERN_HISTORY_OBJECTS = (
+    ("01c43d2ff4a43531e2c8685533374a8ce152e02a", ".planning/workstreams/first-playable-game/phases/05-selected-mvs-boot/05-21-PLAN.md"),
+    ("016eafeba35b6e8acbdc2fd85833adb4bc1a85a9", ".planning/workstreams/first-playable-game/phases/05-selected-mvs-boot/05-22-PLAN.md"),
+    ("167aa3a8021e43c6a0a149531532a2becc639906", ".planning/workstreams/first-playable-game/phases/05-selected-mvs-boot/05-22-PLAN.md"),
+    ("a39d0178b83cc9320c6ebdb45971b1d7fcf953dc", ".planning/workstreams/first-playable-game/phases/05-selected-mvs-boot/05-22-PLAN.md"),
+    ("fe678bd5cf7d6078456184c746f1b85899ab6e63", ".planning/workstreams/first-playable-game/phases/05-selected-mvs-boot/05-22-PLAN.md"),
+)
 _SYNTHETIC_PATH_OBJECT_IDS = [object_id for object_id, _ in _SYNTHETIC_PATH_HISTORY_OBJECTS]
+_PLAN_PATTERN_OBJECT_IDS = [object_id for object_id, _ in _PLAN_PATTERN_HISTORY_OBJECTS]
 if (len(set(_SYNTHETIC_PATH_OBJECT_IDS)) != len(_SYNTHETIC_PATH_OBJECT_IDS)
-        or HISTORY_FINDING_DISPOSITIONS.keys() & set(_SYNTHETIC_PATH_OBJECT_IDS)):
+        or len(set(_PLAN_PATTERN_OBJECT_IDS)) != len(_PLAN_PATTERN_OBJECT_IDS)
+        or HISTORY_FINDING_DISPOSITIONS.keys() & set(_SYNTHETIC_PATH_OBJECT_IDS)
+        or HISTORY_FINDING_DISPOSITIONS.keys() & set(_PLAN_PATTERN_OBJECT_IDS)
+        or set(_SYNTHETIC_PATH_OBJECT_IDS) & set(_PLAN_PATTERN_OBJECT_IDS)):
     raise RuntimeError("history disposition object IDs must be unique")  # G9IN-01: never overwrite silently
 HISTORY_FINDING_DISPOSITIONS.update({
     object_id: {"path": path, "rules": {"personal-path"},
                 "reason": "synthetic path canary in a redaction or smoke-test fixture; audited object"}
     for object_id, path in _SYNTHETIC_PATH_HISTORY_OBJECTS
+})
+HISTORY_FINDING_DISPOSITIONS.update({
+    object_id: {
+        "path": path,
+        "rules": {"personal-path"},
+        "reason": "planner-authored detector alternation in a plan check; audited with no user segment",
+    }
+    for object_id, path in _PLAN_PATTERN_HISTORY_OBJECTS
 })
 
 
@@ -309,6 +441,8 @@ def _read_regular(path: Path, *, reason_prefix: str = "input") -> bytes:
 
 def scan_tree(root: Path, paths: list[str]) -> dict[str, Any]:
     """Read only the explicitly proposed public tree and fail on links/specials."""
+    if len(paths) > MAX_SOURCE_FILES:
+        raise ContentError("source-count", "public source exceeds the file count limit")
     rows: list[dict[str, Any]] = []
     total = 0
     seen: set[str] = set()
@@ -398,17 +532,19 @@ def _validate_archive_inventory(rows: list[dict[str, Any]], root: Path = ROOT) -
     all_paths: set[str] = set()
     for row in rows:
         path = row["path"]
+        if not isinstance(path, str):
+            raise ContentError("archive-path", "release archive contains an unsafe member path")
         if path.startswith("glueyneo-source/"):
             path = path[len("glueyneo-source/"):]
         all_paths.add(path)
         if _is_rights_candidate(path):
+            if path in normalized:
+                raise ContentError("archive-duplicate", "release archive contains duplicate member names")
             normalized[path] = row
     if not normalized:
         return None
     inventory = load_rights_inventory(root)
-    declared = {item.get("path"): item for item in inventory.get("items", []) if isinstance(item, dict)}
-    if set(normalized) != set(declared):
-        raise ContentError("rights-path-set", "release archive contains unknown or missing fixture/dependency paths")
+    declared = _validated_inventory_items(inventory, set(normalized))
     for path, row in normalized.items():
         item = declared[path]
         if item.get("rights") != "affirmative":
@@ -479,29 +615,38 @@ def scan_archive(path: Path) -> dict[str, Any]:
             "inventory_sha256": sha256_bytes(canonical_bytes([{k: row[k] for k in ("path", "sha256", "bytes")} for row in rows]))}
 
 
-def validate_inventory(inventory: Any, actual: dict[str, bytes]) -> dict[str, Any]:
-    """Require exact path/digest coverage and affirmative item-level rights."""
-    if not isinstance(inventory, dict) or inventory.get("schema") != 1 or not isinstance(inventory.get("items"), list):
+def _validated_inventory_items(inventory: Any, actual_paths: set[str]) -> dict[str, dict[str, Any]]:
+    """Validate inventory structure before building maps or comparing source paths."""
+    if (not isinstance(inventory, dict) or type(inventory.get("schema")) is not int
+            or inventory["schema"] != 1 or not isinstance(inventory.get("items"), list)):
         raise ContentError("rights-schema", "rights inventory schema is invalid")
     declared: dict[str, dict[str, Any]] = {}
     for item in inventory["items"]:
         if not isinstance(item, dict):
             raise ContentError("rights-schema", "rights inventory item is malformed")
         path = item.get("path")
-        if not isinstance(path, str) or path in declared or PurePosixPath(path).is_absolute() or ".." in PurePosixPath(path).parts:
+        if (not isinstance(path, str) or not path or path.startswith("-") or "\\" in path or
+                "\x00" in path or path in declared or PurePosixPath(path).is_absolute() or
+                any(part in {"", ".", ".."} for part in path.split("/"))):
             raise ContentError("rights-path", "rights inventory contains an unsafe or duplicate path")
         declared[path] = item
         if item.get("rights") != "affirmative":
             raise ContentError("rights-unknown", "shipped item lacks affirmative redistribution evidence")
-        if not all(isinstance(item.get(key), str) and item[key] for key in
+        if not all(isinstance(item.get(key), str) and item[key].strip() for key in
                    ("kind", "license", "provenance", "source_revision", "notice")):
             raise ContentError("rights-record", "shipped item is missing its license, provenance, or notice")
         if re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", item["source_revision"]) is None:
             raise ContentError("rights-record", "source revision must be an immutable Git object ID")
-        if re.fullmatch(r"[0-9a-f]{64}", str(item.get("sha256", ""))) is None:
+        if not isinstance(item.get("sha256"), str) or re.fullmatch(r"[0-9a-f]{64}", item["sha256"]) is None:
             raise ContentError("rights-record", "shipped item digest is malformed")
-    if set(declared) != set(actual):
+    if set(declared) != actual_paths:
         raise ContentError("rights-path-set", "shipped content differs from the exact rights inventory")
+    return declared
+
+
+def validate_inventory(inventory: Any, actual: dict[str, bytes]) -> dict[str, Any]:
+    """Require exact path/digest coverage and affirmative item-level rights."""
+    declared = _validated_inventory_items(inventory, set(actual))
     for path, data in actual.items():
         if sha256_bytes(data) != declared[path]["sha256"]:
             raise ContentError("rights-digest", "shipped item bytes differ from the rights inventory")
@@ -597,7 +742,12 @@ def _git_history(root: Path, revision: str = "--all") -> tuple[bytes, list[dict[
             disposition = HISTORY_FINDING_DISPOSITIONS.get(object_id)
             if disposition is not None:
                 actual_rules = set(result["findings"][0]["rules"] if result["findings"] else ())
-                if path != disposition["path"] or actual_rules != disposition["rules"]:
+                accepted_paths = {disposition["path"]}
+                original = ".planning/workstreams/first-playable-game/"
+                archived = ".planning/milestones/ws-first-playable-game-2026-10-24/"
+                if disposition["path"].startswith(original):
+                    accepted_paths.add(archived + disposition["path"][len(original):])
+                if path not in accepted_paths or actual_rules != disposition["rules"]:
                     raise ContentError("history-disposition", "a provenance-bound history disposition no longer matches its object")
                 dispositions.append({"object": object_id, "location": _safe_location(f"history/{path}"),
                                      "rules": sorted(disposition["rules"]), "reason": disposition["reason"]})
@@ -702,7 +852,9 @@ def scan_inputs(*, root: Path = ROOT, paths: list[str] | None = None,
                                           else "selected revision"),
                          "history_revision": history_revision if history_text is None else None,
                          "history_scope": "objects available in this checkout" if history_text is None else None},
-            "limits": {"file_bytes": MAX_FILE_BYTES, "total_bytes": MAX_TOTAL_BYTES, "archive_members": MAX_MEMBERS}}
+            "limits": {"file_bytes": MAX_FILE_BYTES, "total_bytes": MAX_TOTAL_BYTES,
+                       "archive_members": MAX_MEMBERS, "source_files": MAX_SOURCE_FILES,
+                       "history_objects": MAX_HISTORY_OBJECTS}}
 
 
 def main(argv: list[str] | None = None) -> int:

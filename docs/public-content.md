@@ -27,14 +27,18 @@ matched content is never included.
 
 The scanner rejects unreadable inputs, symlinks, multiply linked or non-regular
 files, unsafe/absolute/traversing/duplicate archive members, archive links and
-special files, and limits exceeded before extraction. The current limits are
-64 MiB per file/member, 512 MiB total per input class, 50,000 archive members,
-and 50,000 reachable history objects. History fails closed if a reachable blob
-exceeds these limits. Source paths and archive members are measured before
-scanning. Reports
-include file/member and byte denominators for source, history, logs, and
-archives; zero means that class was not supplied. A missing class remains an
-uncovered class and cannot support a full release-qualification claim.
+special files, and limits exceeded before extraction. Its current bounds are
+64 MiB per file or archive member; 512 MiB total for each source, history,
+captured-log, or individual archive input class; 50,000 source files; 50,000
+archive members per archive; and 50,000 reachable history objects. Git source
+listing is bounded to 30 seconds, history metadata to 60 seconds, object-list
+and object metadata queries to 120 seconds, and streamed object reading to 120
+seconds. History fails closed if a reachable object, blob, aggregate byte
+count, or subprocess limit is exceeded. Source paths and archive members are
+measured before scanning. Reports include file/member and byte denominators for
+source, history, logs, and archives; zero means that class was not supplied. A
+missing class remains an uncovered class and cannot support a full
+release-qualification claim.
 
 The configured detector covers common personal POSIX and Windows paths, email identities,
 machine/serial identifiers, credential assignments, common GitHub/AWS token
@@ -43,8 +47,21 @@ URLs. Home-directory paths are detected when they follow mentions or appear in
 Markdown and parenthesized references. It does not decode arbitrary binary
 formats, discover every credential shape, inspect remote
 services, detect all personal data, or scan unbounded history/log/archive sets.
-The synthetic test addresses, paths and credentials are constructed from pieces
-so the public test sources do not themselves contain the canary values.
+Most synthetic test addresses, paths, and credentials are constructed from
+pieces so source text does not contain complete detector canaries. The
+example-guide offline test explicitly uses `localhost` on unserved port `9` as
+its HTTP proxy so accidental network access fails locally.
+The scanner binds that one `private-url` disposition to the exact test path and
+source digest. A changed file, another source path, a log, or an archive member
+still receives ordinary detection.
+
+The zlib 1.3.2 license retains its upstream copyright contacts. Only its
+canonical 1,002-byte LF form has a path-and-digest-bound disposition. Windows
+release-fixture tests force CRLF working bytes, stage them with the repository's
+`.gitattributes`, and verify Git exports the canonical LF blob into the source
+archive and installed SDK. The attributes file remains excluded from shipped
+source paths. CRLF notice bytes, changed bytes, other paths, logs, and archives
+retain ordinary detection; the notice is preserved unchanged.
 
 The separate rights gate reads the JSON record in
 [`rights-inventory.md`](rights-inventory.md), compares every tracked fixture,
@@ -53,22 +70,54 @@ source files are classified by exact repository-relative paths; every other
 test path requires an affirmative inventory row, regardless of extension or
 whether its bytes look like text. Unknown and extensionless test paths therefore
 fail the exact path-set comparison. The gate also checks that required notices
-appear in source and source archives. Unknown or changed items fail. The
-inventory covers the original MIT diagnostic assets and test metadata, plus the
-Unity subset pinned to upstream commit
+appear in source and source archives. Unknown or changed items fail. The current
+source archive contains 116 rights-candidate paths; all 116 have affirmative,
+path-specific records. The inventory covers the original MIT diagnostic assets,
+persistence guest, test sources and metadata, plus the Unity subset pinned to upstream commit
 `b6763fbd9cedfacaa89e2ad9fd00d615a234e355`. Game ROMs, BIOS images,
 save states, capture files, private corpora, and the experimental Musashi tree
 remain excluded.
 
-The public playable tracer has a separate
+The silent public playable GNFX v1 tracer has a separate
 [`tests/fixture/rights-manifest.json`](../tests/fixture/rights-manifest.json)
-that binds the tracked guest recipe and assertion source to the 602-byte build
-output. `tests/fixture/check_fixture.py` checks those identities, affirmative
-MIT rights, the single CMake producer, and the common native/RetroArch artifact
-path. With `--check-rebuild --negative-control`, it invokes the named CMake
-target twice and verifies that a mutated artifact is rejected. The output stays
-build-only; its digest is an identity record, not a claim that the binary is a
-public source asset or independent rights evidence.
+record that binds its tracked guest recipe and assertion source to the 602-byte
+build output. `tests/fixture/check_fixture.py` checks those identities,
+affirmative MIT rights, the single CMake producer, and the common native/
+RetroArch artifact path. With `--check-rebuild --negative-control`, it invokes
+the named CMake target twice and verifies that a mutated artifact is rejected.
+GNFX remains a separate silent, reset-per-frame fixture.
+
+The same manifest also records the independent GNMV v3 sound fixture:
+[`public_sound_guest.c`](../tests/fixture/public_sound_guest.c) builds its
+first-party launch substitute, Z80 sound program, fixed-layer marker, and
+formula-generated 256-byte ADPCM-B sample; the native consumer tests the exact
+recipe, signal controls, and the generated build digest. The observed owned-
+debug output is 67,108,976 bytes and remains ignored build output. The manifest
+also binds the original standard-library FIR design tool and the runtime
+converter source. It explicitly identifies the pinned BSD-3-Clause YMFM code
+as a third-party emulator dependency, not fixture authorship. The rights rows
+document ownership and source provenance; a digest is an identity record, not
+proof that rights apply or that the binary is a public source asset.
+
+The same rights manifest binds the public persistence guest to its original C
+recipe and the source-derived synthetic fixture it extends. Its expected
+outcomes are emulator-consumer assertions only; they establish neither
+hardware truth nor production BIOS or commercial-game behavior. The example's
+`persistence_host.[ch]` helper is a Glueyneo-owned MIT sample copy derived from
+the pinned `tests/sdk/save_host.[ch]` source at the revision recorded in the
+manifest. The manifest records exact current and origin bytes and requires
+maintainers to review drift against that source when the sample copy changes.
+The provenance record does not claim the two implementations remain identical.
+The manifest's nested source revisions are proved against their Git blobs by
+the full-history public-content check before merge. After squash, a cited
+commit may be absent or remain available but unrelated to the checked head.
+Both cases require the exact pinned outer rights row; an available commit must
+also contain the recorded blob, while an absent commit is checked against the
+current source path bytes. The gate reports ancestry as
+`unverifiable-history`; it does not claim an unrelated commit is an ancestor or
+recover a missing historical blob. Descendants, unpinned rows, and mismatching
+bytes still fail. A shallow hosted policy checkout reports its limited history
+and relies on the separate full-history check for the ancestry proof.
 
 Rights are an evidence question distinct from pattern detection. A digest binds
 bytes to a record; it does not prove ownership, license scope, or permission.
@@ -84,3 +133,16 @@ Phase 03 publication commit map records their corresponding public history
 identities. Locally retained private refs remain outside the publication set;
 scan the explicit publication head with `--history-revision HEAD`. Hosted
 checkouts scan every fetched public ref.
+
+Scanner results describe only the supplied revision and inputs. Before public
+delivery, refresh source and history scans against the final sanitized source
+identity after all delivery-plan edits, and scan the actual source and SDK
+archives plus any supplied logs. This intermediate source closure does not
+qualify later changes or authorize publishing private local history.
+
+The protected release workflow preserves its bounded source/history/archive
+scan report and producer outputs. After publication, its read-only named
+platform jobs download the public tag assets without credentials, compare the
+actual bytes with the staged manifest, and repeat the offline source and
+relocated SDK consumers. These post-publication observations are bound to the
+same immutable source and archive digests in the delivery receipt.

@@ -19,6 +19,7 @@ import platform
 import plistlib
 import posixpath
 import re
+import runpy
 import select
 import shutil
 import signal
@@ -42,6 +43,7 @@ Z80_REVISION = "9e88298ce56319953ac7a43213a1120359f7a3a6"
 RETROARCH_SHA256 = "ed90b54434a2899de0ddbfed59f335255fb462c8691bd970a1a761ebb5656d65"
 INVENTORY_SCHEMA = "glueyneo.source-inventory/v1"
 MAX_ARCHIVE_BYTES = 256 * 1024 * 1024
+MAX_SOURCE_FILE_BYTES = 64 * 1024 * 1024
 MAX_GIT_COMMAND_SECONDS = 120
 
 
@@ -51,6 +53,8 @@ class SnapshotError(RuntimeError):
     def __init__(self, reason: str, detail: str) -> None:
         super().__init__(detail)
         self.reason = reason
+        # Private diagnostic metadata is deliberately absent from public error text.
+        self.archive_mismatch: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -75,6 +79,7 @@ def clean_environment() -> dict[str, str]:
         "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES",
         "GIT_COMMON_DIR", "GIT_CEILING_DIRECTORIES", "GIT_CONFIG", "GIT_CONFIG_COUNT",
         "GIT_CONFIG_PARAMETERS", "GIT_CONFIG_GLOBAL", "GIT_ATTR_NOSYSTEM",
+        "GLUEYNEO_ARCHIVE_DIAGNOSTIC_DIR",
     }
     environment = {
         key: value for key, value in os.environ.items()
@@ -296,8 +301,29 @@ def _archive_members(
         **{path: ("file-executable" if executable else "file") for path, (_data, executable) in files.items()},
         **{path: "symlink" for path in symlinks},
     }
+    # A directory replacing a committed file is a type difference; ordinary
+    # parent directories remain outside the committed blob/symlink map.
+    archived_types.update({path: "directory" for path in directories if path in expected})
     if archived_types != expected:
-        raise SnapshotError("incomplete-archive", "Git archive does not contain the complete committed source tree")
+        missing = expected.keys() - archived_types.keys()
+        extra = archived_types.keys() - expected.keys()
+        changed = {path for path in expected.keys() & archived_types.keys()
+                   if expected[path] != archived_types[path]}
+        examples = []
+        for path in sorted(missing | extra | changed)[:5]:
+            example = {"path": path[:160], "expected": expected.get(path), "archived": archived_types.get(path)}
+            if len(path) > 160:
+                example["path_truncated"] = True
+            examples.append(example)
+        error = SnapshotError(
+            "incomplete-archive", "Git archive does not contain the complete committed source tree "
+            f"(missing={len(missing)}, extra={len(extra)}, type_mismatches={len(changed)})")
+        error.archive_mismatch = {
+            "expected_count": len(expected), "archived_count": len(archived_types),
+            "missing_count": len(missing), "extra_count": len(extra), "type_mismatch_count": len(changed),
+            "examples": examples,
+        }
+        raise error
     for path in directories:
         if path in expected or not any(candidate.startswith(path + "/") for candidate in expected):
             raise SnapshotError("ambiguous-archive", "Git archive contains an unexpected directory entry")
@@ -319,6 +345,49 @@ def _archive_members(
     return files, symlinks, tuple(rows)
 
 
+def _capture_archive_mismatch(repository: Path, commit: str, archive: bytes, error: SnapshotError) -> None:
+    """Opt-in private evidence; capture failure must not replace archive rejection."""
+    selected = os.environ.get("GLUEYNEO_ARCHIVE_DIAGNOSTIC_DIR")
+    if not selected or error.reason != "incomplete-archive":
+        return
+    directory_fd = None
+    temporary_name = None
+    recorded = False
+    try:
+        directory = Path(selected).resolve(strict=True)
+        if any(os.path.samefile(parent, root) for parent in (directory, *directory.parents)
+               for root in (repository, ROOT)):
+            raise ValueError("in-tree diagnostic directory")
+        directory_fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        name = f"glueyneo-archive-mismatch-{os.urandom(12).hex()}.json"
+        temporary_name = name + ".tmp"
+        descriptor = os.open(temporary_name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                             0o600, dir_fd=directory_fd)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            os.fchmod(stream.fileno(), 0o600)
+            json.dump({"schema": "glueyneo.archive-mismatch/v1", "commit": commit,
+                       "archive_sha256": hashlib.sha256(archive).hexdigest(),
+                       "mismatch": error.archive_mismatch}, stream, sort_keys=True, ensure_ascii=True)
+            stream.write("\n")
+        os.rename(temporary_name, name, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
+        recorded = True
+    except (OSError, ValueError, AttributeError, NotImplementedError):
+        pass
+    finally:
+        if directory_fd is not None:
+            if temporary_name is not None and not recorded:
+                try:
+                    os.unlink(temporary_name, dir_fd=directory_fd)
+                except OSError:
+                    pass
+            try:
+                os.close(directory_fd)
+            except OSError:
+                pass
+    status = "recorded" if recorded else "unavailable"
+    error.args = (f"{error} (private diagnostic {status})",)
+
+
 def create_snapshot(repository: Path, revision: str, destination: Path) -> SourceSnapshot:
     """Materialize and verify the complete committed Git archive without checkout inputs."""
     repository = repository.resolve()
@@ -326,7 +395,11 @@ def create_snapshot(repository: Path, revision: str, destination: Path) -> Sourc
     expected = _expected_tree(repository, commit)
     archive = _git_archive(repository, commit)
 
-    files, symlinks, archive_rows = _archive_members(archive, expected)
+    try:
+        files, symlinks, archive_rows = _archive_members(archive, expected)
+    except SnapshotError as error:
+        _capture_archive_mismatch(repository, commit, archive, error)
+        raise
 
     destination = destination.absolute()
     if destination.exists() or destination.is_symlink():
@@ -879,6 +952,9 @@ def run_consumer(runner: Runner, source_root: Path, prefix: Path, fixture: Path,
         sys.executable, str(source_root / "tests/consumers/test_playable_install.py"),
         "--prefix", str(prefix), "--consumer", str(consumer), "--fixture", str(diagnostic_fixture),
         "--core", str(core),
+        "--sound-consumer", str(consumer_build / "glueyneo-installed-sound"),
+        "--sound-reference-consumer", str(fixture.parent / "sound_consumer_reference"),
+        "--sound-fixture", str(fixture.parent / "public-sound-mvs.bin"),
     ])
 
 
@@ -914,11 +990,13 @@ def _markdown_table_rows(document: str, header: str) -> list[list[str]]:
     return rows
 
 
-FRONTEND_EVIDENCE = Path(
-    ".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-FRONTEND-RECEIPT.json")
+# The accepted workstream is archived; its committed review ancestry retains
+# the original paths. Keep evidence lookup separate from historical Git lookup.
+PHASE_DIRECTORY = Path(".planning/milestones/ws-first-playable-game-2026-10-24/phases/04-public-playable-tracer")
+PHASE_HISTORY_DIRECTORY = Path(".planning/workstreams/first-playable-game/phases/04-public-playable-tracer")
+FRONTEND_EVIDENCE = PHASE_DIRECTORY / "04-FRONTEND-RECEIPT.json"
 GUIDE = Path("docs/first-playable-build.md")
-VALIDATION = Path(".planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-VALIDATION.md")
-PHASE_DIRECTORY = Path(".planning/workstreams/first-playable-game/phases/04-public-playable-tracer")
+VALIDATION = PHASE_DIRECTORY / "04-VALIDATION.md"
 SECURITY = PHASE_DIRECTORY / "04-SECURITY.md"
 REVIEW = PHASE_DIRECTORY / "04-REVIEW.md"
 DISPOSITION = PHASE_DIRECTORY / "04-REVIEW-DISPOSITION.md"
@@ -1060,7 +1138,7 @@ def load_frontend_evidence(source_root: Path, *, repository: Path | None = None,
         raise RuntimeError("frontend evidence revision cannot be checked") from error
     if ancestor.returncode != 0:
         if allowlist is None:
-            allowlist = load_history_allowlist(source_root)
+            allowlist = load_history_allowlist(source_root, repository=repository, head=head)
         allowlist = anchored_history_allowlist(allowlist, repository, head)
         if (_revision_relation(repository, revision, head) == "absent"
                 and allowlist.covers("frontend_receipt", "source_revision", revision, _canonical_digest(summary))):
@@ -1419,6 +1497,9 @@ def _git_bytes(repository: Path, arguments: list[str]) -> bytes | None:
 
 
 RIGHTS_INVENTORY = Path("docs/rights-inventory.md")
+FIXTURE_RIGHTS_MANIFEST = Path("tests/fixture/rights-manifest.json")
+HISTORICAL_RECIPE_ORIGIN_POINTER = "/mvs_save_fixture/recipe_origin"
+HISTORICAL_RECIPE_ORIGIN_PATH = "tests/sdk/save_process.c"
 RIGHTS_REVISION = re.compile(r"[0-9a-f]{40}")
 RIGHTS_EXEMPT_PREFIX = "third_party/"
 
@@ -1464,15 +1545,41 @@ class HistoryAllowlist:
 HistoryAllowlist.EMPTY = HistoryAllowlist(rows={})  # type: ignore[attr-defined]
 
 
-def load_history_allowlist(source_root: Path) -> HistoryAllowlist:
-    """Read `docs/history-allowlist.json`: an absent file is the empty allowlist, a malformed one fails closed."""
+def load_history_allowlist(source_root: Path, *, repository: Path | None = None,
+                           head: str | None = None) -> HistoryAllowlist:
+    """Read a bounded regular allowlist, optionally binding it to the exact checked-head blob and mode."""
     path = source_root / HISTORY_ALLOWLIST
-    if not path.is_file():
-        return HistoryAllowlist.EMPTY  # type: ignore[attr-defined]
     malformed = RuntimeError("history allowlist is malformed")
+    mismatch = RuntimeError("history allowlist differs from the checked head")
+    if (repository is None) != (head is None):
+        raise ValueError("history allowlist binding requires both repository and head")
     try:
-        document = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as error:
+        relative = HISTORY_ALLOWLIST.as_posix()
+        if repository is None:
+            raw = _read_regular_source_bytes(source_root, relative)
+            if raw is None:
+                try:
+                    path.lstat()
+                except FileNotFoundError:
+                    return HistoryAllowlist.EMPTY  # type: ignore[attr-defined]
+                raise malformed
+        else:
+            checked = _head_blob_entry(repository, head or "HEAD", relative)
+            if checked is None:
+                try:
+                    path.lstat()
+                except FileNotFoundError:
+                    return HistoryAllowlist.EMPTY  # type: ignore[attr-defined]
+                raise mismatch
+            checked_bytes, checked_mode = checked
+            raw = _read_regular_source_bytes(source_root, relative,
+                                             expected_size=len(checked_bytes), expected_mode=checked_mode)
+            if raw is None or raw != checked_bytes:
+                raise mismatch
+        document = json.loads(raw.decode("utf-8"))
+    except (OSError, UnicodeError, ValueError) as error:
+        if error is mismatch:
+            raise
         raise malformed from error
     if (not isinstance(document, dict) or type(document.get("schema")) is not int or document["schema"] != 1
             or not isinstance(document.get("scope"), str) or not isinstance(document.get("rows"), list)
@@ -1595,9 +1702,12 @@ def _note_once(notes: list[str] | None, note: str) -> None:
 
 
 def _rights_path_is_relative_posix(path: object) -> bool:
-    """Normalized relative POSIX path: not rooted, no leading `-`, and no empty, `.` or `..` segment (T-04-103, G6WR-03)."""
-    return (isinstance(path, str) and path != "" and not path.startswith(("/", "-")) and "\\" not in path
-            and all(segment not in ("", ".", "..") for segment in path.split("/")))
+    """Normalized relative POSIX path without Windows drive prefixes in any component."""
+    if not isinstance(path, str) or path == "" or path.startswith(("/", "-")) or "\\" in path:
+        return False
+    segments = path.split("/")
+    return (all(segment not in ("", ".", "..") and re.match(r"^[A-Za-z]:", segment) is None
+                for segment in segments))
 
 
 def _head_blob(repository: Path, head: str, path: str) -> bytes | None:
@@ -1609,6 +1719,14 @@ def _head_blob(repository: Path, head: str, path: str) -> bytes | None:
     path through a symlinked directory (which Git does not resolve), a submodule or a missing entry
     yields None. `path` is form-validated by `_rights_path_is_relative_posix` before this call.
     """
+    entry = _head_blob_entry(repository, head, path)
+    return entry[0] if entry is not None else None
+
+
+def _head_blob_entry(repository: Path, head: str, path: str) -> tuple[bytes, str] | None:
+    """Committed bytes and Git regular-file mode for a path at `head`, or None."""
+    if not _rights_path_is_relative_posix(path):
+        return None
     listing = _git_stdout(repository, ["ls-tree", "-z", head, "--", path])
     if not listing:
         return None
@@ -1620,7 +1738,117 @@ def _head_blob(repository: Path, head: str, path: str) -> bytes | None:
     if (listed != path or len(fields) != 3 or fields[0] not in ("100644", "100755") or fields[1] != "blob"
             or re.fullmatch(r"[0-9a-f]{40,64}", fields[2]) is None):
         return None
-    return _git_bytes(repository, ["cat-file", "blob", fields[2]])
+    size_text = _git_stdout(repository, ["cat-file", "-s", fields[2]])
+    if size_text is None or re.fullmatch(r"[0-9]+", size_text.strip()) is None:
+        return None
+    size = int(size_text.strip())
+    if size > MAX_SOURCE_FILE_BYTES:
+        return None
+    data = _git_bytes(repository, ["cat-file", "blob", fields[2]])
+    return (data, fields[0]) if data is not None and len(data) == size else None
+
+
+def _read_regular_source_bytes(source_root: Path, relative: str, *, expected_size: int | None = None,
+                               expected_mode: str | None = None) -> bytes | None:
+    """Read bounded regular bytes without following symlinks and recheck directory identity afterward."""
+    if (not _rights_path_is_relative_posix(relative) or
+            (expected_size is not None and (type(expected_size) is not int or expected_size <= 0 or
+                                            expected_size > MAX_SOURCE_FILE_BYTES)) or
+            (expected_mode is not None and expected_mode not in {"100644", "100755"})):
+        return None
+    limit = expected_size if expected_size is not None else MAX_SOURCE_FILE_BYTES
+    descriptor: int | None = None
+    directory_fd: int | None = None
+    try:
+        root = source_root.resolve(strict=True)
+        root_info = root.lstat()
+        root_signature = _directory_source_signature(root_info)
+        if root_signature is None:
+            return None
+        parts = relative.split("/")
+        directory_signatures: list[tuple[Path, tuple[int, int, int]]] = [(root, root_signature)]
+        target = root
+        for component in parts[:-1]:
+            target = target / component
+            parent_info = target.lstat()
+            parent_signature = _directory_source_signature(parent_info)
+            if parent_signature is None:
+                return None
+            directory_signatures.append((target, parent_signature))
+        target = target / parts[-1]
+        before_info = target.lstat()
+        before = _regular_source_signature(before_info)
+        working_mode = "100755" if before_info.st_mode & 0o111 else "100644"
+        if (before is None or before_info.st_size > limit or
+                (expected_mode is not None and working_mode != expected_mode) or
+                (expected_size is not None and before_info.st_size != expected_size)):
+            return None
+
+        nofollow = getattr(os, "O_NOFOLLOW", 0)
+        nonblock = getattr(os, "O_NONBLOCK", 0)
+        leaf_flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | nofollow | nonblock
+        use_directory_fds = (os.open in getattr(os, "supports_dir_fd", set()) and
+                             hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"))
+        if use_directory_fds:
+            directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+            directory_fd = os.open(root, directory_flags)
+            for component in parts[:-1]:
+                next_fd = os.open(component, directory_flags, dir_fd=directory_fd)
+                os.close(directory_fd)
+                directory_fd = next_fd
+            descriptor = os.open(parts[-1], leaf_flags, dir_fd=directory_fd)
+        else:
+            descriptor = os.open(target, leaf_flags)
+
+        opened = _regular_source_signature(os.fstat(descriptor))
+        if opened is None or opened != before:
+            return None
+        with os.fdopen(descriptor, "rb") as stream:
+            descriptor = None
+            data = stream.read(limit + 1)
+            after = _regular_source_signature(os.fstat(stream.fileno()))
+        try:
+            path_after = _regular_source_signature(target.lstat())
+        except OSError:
+            return None
+        directories_after: list[tuple[Path, tuple[int, int, int] | None]] = []
+        for directory, _signature in directory_signatures:
+            try:
+                directories_after.append((directory, _directory_source_signature(directory.lstat())))
+            except OSError:
+                directories_after.append((directory, None))
+        if (after != before or path_after != before or
+                any(current != expected for (_, expected), (_, current)
+                    in zip(directory_signatures, directories_after)) or len(data) > limit or
+                (expected_size is not None and len(data) != expected_size)):
+            return None
+        return data
+    except (OSError, RuntimeError, ValueError):
+        return None
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        if directory_fd is not None:
+            try:
+                os.close(directory_fd)
+            except OSError:
+                pass
+
+
+def _regular_source_signature(file_stat: os.stat_result) -> tuple[int, int, int, int, int, int] | None:
+    if not stat.S_ISREG(file_stat.st_mode) or file_stat.st_nlink != 1:
+        return None
+    return (file_stat.st_dev, getattr(file_stat, "st_ino", 0),
+            getattr(file_stat, "st_mtime_ns", int(file_stat.st_mtime * 1_000_000_000)),
+            getattr(file_stat, "st_ctime_ns", int(file_stat.st_ctime * 1_000_000_000)),
+            file_stat.st_size, int(bool(file_stat.st_mode & 0o111)))
+
+
+def _directory_source_signature(file_stat: os.stat_result) -> tuple[int, int, int] | None:
+    if not stat.S_ISDIR(file_stat.st_mode):
+        return None
+    return (file_stat.st_dev, getattr(file_stat, "st_ino", 0),
+            getattr(file_stat, "st_ctime_ns", int(file_stat.st_ctime * 1_000_000_000)))
 
 
 def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
@@ -1645,10 +1873,11 @@ def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
     listed pre-ship rows of the first-playable-game milestone branch. `allowlist=None` reads the file
     under `source_root`.
     """
-    if allowlist is None:
-        allowlist = load_history_allowlist(source_root)
-    allowlist = anchored_history_allowlist(allowlist, repository, head)
-    text = (source_root / RIGHTS_INVENTORY).read_text(encoding="utf-8")
+    inventory_path = RIGHTS_INVENTORY.as_posix()
+    inventory_bytes = _read_regular_source_bytes(source_root, inventory_path)
+    if inventory_bytes is None:
+        return ["rights inventory is not a regular file without symlinked path components"]
+    text = inventory_bytes.decode("utf-8")
     blocks = re.findall(r"```json\s*\n(.*?)\n```", text, re.DOTALL)
     if len(blocks) != 1:
         raise RuntimeError("rights inventory must contain one JSON record")
@@ -1658,6 +1887,29 @@ def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
         raise RuntimeError("rights inventory JSON is malformed") from error
     if not isinstance(items, list):
         raise RuntimeError("rights inventory JSON is malformed")
+    for item in items:
+        path = item.get("path") if isinstance(item, dict) else None
+        if not _rights_path_is_relative_posix(path):
+            return [f"rights path {path} is not a relative POSIX path"]
+        if path.startswith(RIGHTS_EXEMPT_PREFIX):
+            continue
+        revision = item.get("source_revision")
+        if not isinstance(revision, str) or RIGHTS_REVISION.fullmatch(revision) is None:
+            return [f"rights source_revision for {path} is not 40 hex"]
+
+    inventory_entry = _head_blob_entry(repository, head, inventory_path)
+    if inventory_entry is None:
+        return ["rights inventory is absent from the checked head"]
+    verified_inventory = _read_regular_source_bytes(
+        source_root, inventory_path, expected_size=len(inventory_entry[0]), expected_mode=inventory_entry[1])
+    if inventory_bytes != inventory_entry[0] or verified_inventory != inventory_entry[0]:
+        return ["rights inventory differs from the checked head"]
+    if allowlist is None:
+        try:
+            allowlist = load_history_allowlist(source_root, repository=repository, head=head)
+        except RuntimeError as error:
+            return [str(error)]
+    allowlist = anchored_history_allowlist(allowlist, repository, head)
     errors: list[str] = []
     for item in items:
         path = item.get("path") if isinstance(item, dict) else None
@@ -1696,6 +1948,270 @@ def rights_revision_errors(source_root: Path, repository: Path, head: str, *,
     return errors
 
 
+def _fixture_source_records(value: object) -> tuple[list[tuple[str, dict[str, Any]]],
+                                                    list[tuple[str, dict[str, Any]]], list[str]]:
+    """Return complete first-party source identities, short references, and malformed identity paths."""
+    identities: list[tuple[str, dict[str, Any]]] = []
+    references: list[tuple[str, dict[str, Any]]] = []
+    errors: list[str] = []
+
+    def escape(part: str) -> str:
+        return part.replace("~", "~0").replace("/", "~1")
+
+    def walk(item: object, pointer: str) -> None:
+        if isinstance(item, dict):
+            if pointer == HISTORICAL_RECIPE_ORIGIN_POINTER:
+                expected_fields = {"path", "source_revision", "description"}
+                if (set(item) != expected_fields or item.get("path") != HISTORICAL_RECIPE_ORIGIN_PATH or
+                        not isinstance(item.get("description"), str) or not item["description"]):
+                    errors.append(f"fixture source reference {pointer} has an unexpected historical-origin schema")
+                else:
+                    references.append((pointer, item))
+                return
+            if "path" in item and "source_revision" in item:
+                if {"path", "source_revision", "sha256", "bytes"}.issubset(item):
+                    identities.append((pointer or "/", item))
+                elif "sha256" in item or "bytes" in item:
+                    errors.append(f"fixture source identity {pointer or '/'} is incomplete")
+                else:
+                    references.append((pointer or "/", item))
+            for key, child in item.items():
+                walk(child, f"{pointer}/{escape(str(key))}")
+        elif isinstance(item, list):
+            for index, child in enumerate(item):
+                walk(child, f"{pointer}/{index}")
+
+    walk(value, "")
+    save_fixture = value.get("mvs_save_fixture") if isinstance(value, dict) else None
+    if not isinstance(save_fixture, dict) or "recipe_origin" not in save_fixture:
+        errors.append(f"fixture source reference {HISTORICAL_RECIPE_ORIGIN_POINTER} is missing")
+    elif not isinstance(save_fixture["recipe_origin"], dict):
+        errors.append(f"fixture source reference {HISTORICAL_RECIPE_ORIGIN_POINTER} has an unexpected historical-origin schema")
+    return identities, references, errors
+
+
+def _historical_recipe_origin_error(reference: object, ancestry: object, repository: Path, head: str, *,
+                                    outer_allowed: bool,
+                                    unverifiable: list[str] | None = None) -> str | None:
+    """Validate the intentionally historical save-recipe reference, separate from current byte identities."""
+    expected_fields = {"path", "source_revision", "description"}
+    if (not isinstance(reference, dict) or set(reference) != expected_fields or
+            reference.get("path") != HISTORICAL_RECIPE_ORIGIN_PATH or
+            not isinstance(reference.get("description"), str) or not reference["description"]):
+        return "historical save recipe origin has an unexpected schema or path"
+    revision = reference.get("source_revision")
+    mirrored_revision = ancestry.get("recipe_origin_revision") if isinstance(ancestry, dict) else None
+    if (not isinstance(revision, str) or RIGHTS_REVISION.fullmatch(revision) is None or
+            not isinstance(ancestry, dict) or not isinstance(mirrored_revision, str) or
+            RIGHTS_REVISION.fullmatch(mirrored_revision) is None or mirrored_revision != revision):
+        return "historical save recipe origin does not match the mirrored ancestry revision"
+    relation = _revision_relation(repository, revision, head)
+    if relation == "descendant":
+        return "historical save recipe origin revision is a descendant of the checked head"
+    resolves = _git_exit(repository, ["rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}"]) == 0
+    if relation == "ancestor":
+        if _head_blob_entry(repository, revision, reference["path"]) is None:
+            return "historical save recipe origin path is not a regular file at its cited revision"
+        return None
+    if not outer_allowed:
+        state = "available but unordered" if resolves else "unavailable"
+        return f"historical save recipe origin is {state} and the exact outer rights-manifest row is not pinned"
+    if resolves:
+        if _head_blob_entry(repository, revision, reference["path"]) is None:
+            return "historical save recipe origin path is not a regular file at its cited revision"
+        _note_once(unverifiable, f"historical save recipe origin revision {revision[:12]} is available but not ordered "
+                                 "with the checked head; cited regular path is present, ancestry is not claimed")
+    else:
+        _note_once(unverifiable, f"historical save recipe origin revision {revision[:12]} is unavailable; "
+                                 "the exact outer rights-manifest pin retains the reference, bytes are not verified")
+    return None
+
+
+def fixture_source_identity_errors(source_root: Path, repository: Path, head: str, *,
+                                   manifest: object | None = None,
+                                   allowlist: HistoryAllowlist | None = None,
+                                   unverifiable: list[str] | None = None) -> list[str]:
+    """Validate rights-manifest source rows against history or its exact outer rights row after squash.
+
+    Source revisions are strict when their commit is available: it must be an ancestor of `head` and
+    its path must hold the recorded bytes. If a cited commit is missing after the squash, the complete
+    manifest must still be pinned by a passing `rights_revision_errors` row and every source path at
+    the checked head must match its recorded byte count and digest. Missing history is reported as
+    unverifiable; it is never presented as proof of the original commit's contents. A depth-limited
+    checkout performs only the exact pin and checked-head byte checks; the required full-history
+    public-content job remains responsible for proving source ancestry before merge.
+    """
+    manifest_path = FIXTURE_RIGHTS_MANIFEST.as_posix()
+    checked_entry = _head_blob_entry(repository, head, manifest_path)
+    manifest_file = source_root / FIXTURE_RIGHTS_MANIFEST
+    if checked_entry is None:
+        try:
+            manifest_file.lstat()
+        except FileNotFoundError:
+            return []
+        return ["fixture rights manifest is absent from the checked head"]
+    checked_manifest, checked_mode = checked_entry
+    try:
+        checked_value = json.loads(checked_manifest.decode("utf-8"))
+        working_bytes = _read_regular_source_bytes(
+            source_root, manifest_path, expected_size=len(checked_manifest), expected_mode=checked_mode)
+        if working_bytes is None:
+            return ["fixture rights manifest is not a regular file with checked-head size and mode"]
+        working_value = json.loads(working_bytes.decode("utf-8"))
+    except (OSError, UnicodeError, ValueError) as error:
+        return [f"fixture rights manifest is unreadable ({type(error).__name__})"]
+    value = working_value if manifest is None else manifest
+    if working_bytes != checked_manifest or value != checked_value:
+        return ["fixture rights manifest differs from the checked head"]
+
+    try:
+        inventory_path = RIGHTS_INVENTORY.as_posix()
+        checked_inventory_entry = _head_blob_entry(repository, head, inventory_path)
+        if checked_inventory_entry is None:
+            return ["rights inventory is absent from the checked head"]
+        checked_inventory, inventory_mode = checked_inventory_entry
+        inventory_bytes = _read_regular_source_bytes(
+            source_root, inventory_path, expected_size=len(checked_inventory), expected_mode=inventory_mode)
+        if inventory_bytes is None:
+            return ["rights inventory is not a regular file with checked-head size and mode"]
+        if inventory_bytes != checked_inventory:
+            return ["rights inventory differs from the checked head"]
+        inventory_text = inventory_bytes.decode("utf-8")
+        blocks = re.findall(r"```json\s*\n(.*?)\n```", inventory_text, re.DOTALL)
+        if len(blocks) != 1:
+            return ["rights inventory must contain one JSON record"]
+        inventory = json.loads(blocks[0])
+        items = inventory["items"]
+    except (OSError, UnicodeError, ValueError, KeyError, TypeError):
+        return ["rights inventory is malformed while binding the fixture manifest"]
+    if not isinstance(items, list):
+        return ["rights inventory is malformed while binding the fixture manifest"]
+    outer_rows = [item for item in items if isinstance(item, dict) and item.get("path") == manifest_path]
+    if len(outer_rows) != 1:
+        return ["fixture rights manifest must have exactly one outer rights row"]
+    outer = outer_rows[0]
+    if outer.get("rights") != "affirmative" or hashlib.sha256(checked_manifest).hexdigest() != outer.get("sha256"):
+        return ["fixture rights manifest does not match its affirmative outer rights row"]
+
+    try:
+        selected_allowlist = (allowlist if allowlist is not None else
+                              load_history_allowlist(source_root, repository=repository, head=head))
+    except RuntimeError as error:
+        return [str(error)]
+    observed: list[str] = []
+    shallow_output = (_git_stdout(repository, ["rev-parse", "--is-shallow-repository"]) or "").strip()
+    if shallow_output not in {"true", "false"}:
+        return ["fixture source identity checkout depth could not be determined"]
+    shallow = shallow_output == "true"
+    if shallow:
+        anchored = selected_allowlist
+    else:
+        anchor_problems = history_allowlist_anchor_errors(selected_allowlist, repository, head)
+        if anchor_problems:
+            return [f"fixture rights manifest outer rights row is not verified: {anchor_problems[0]}"]
+        anchored = anchored_history_allowlist(selected_allowlist, repository, head)
+        right_problems = rights_revision_errors(source_root, repository, head, allowlist=anchored)
+        if right_problems:
+            return [f"fixture rights manifest outer rights row is not verified: {right_problems[0]}"]
+    outer_revision = outer.get("source_revision")
+    if not isinstance(outer_revision, str) or RIGHTS_REVISION.fullmatch(outer_revision) is None:
+        return ["fixture rights manifest outer source revision is malformed"]
+    outer_resolves = (_git_exit(repository, ["rev-parse", "--verify", "--quiet",
+                                             f"{outer_revision}^{{commit}}"]) == 0)
+    outer_relation = _revision_relation(repository, outer_revision, head)
+    outer_allowed = anchored.covers("rights", manifest_path, outer_revision, _canonical_digest(outer))
+    if outer_relation == "descendant":
+        return ["fixture rights manifest outer source revision is a descendant of the checked head"]
+    if outer_relation == "absent" and not outer_allowed:
+        return ["fixture rights manifest outer source revision is missing and its rights row is not allowlisted"]
+    if outer_relation == "ancestor" or outer_resolves:
+        outer_entry = _head_blob_entry(repository, outer_revision, manifest_path)
+        if outer_entry is None or outer_entry[0] != checked_manifest:
+            return ["fixture rights manifest outer source revision does not hold the checked-head manifest bytes"]
+        if outer_relation == "absent":
+            _note_once(observed, "fixture rights-manifest source revision resolves but is not ordered with the checked head; its exact rights-row pin and cited manifest blob match")
+    else:
+        _note_once(observed, "fixture rights-manifest source revision unavailable; its exact rights-row pin and checked-head bytes match")
+    if shallow:
+        _note_once(observed, "fixture source history is shallow; public full-history CI is required to prove available source ancestry")
+
+    identities, references, malformed = _fixture_source_records(value)
+    if malformed:
+        return malformed
+    if not identities:
+        return ["fixture rights manifest has no complete source identity records"]
+    errors: list[str] = []
+    by_path_revision: set[tuple[str, str]] = set()
+    for pointer, record in identities:
+        path = record.get("path")
+        revision = record.get("source_revision")
+        digest = record.get("sha256")
+        size = record.get("bytes")
+        if (not _rights_path_is_relative_posix(path) or path.startswith(RIGHTS_EXEMPT_PREFIX) or
+                not isinstance(revision, str) or RIGHTS_REVISION.fullmatch(revision) is None or
+                not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None or
+                type(size) is not int or size <= 0):
+            errors.append(f"fixture source identity {pointer} has malformed path, revision, digest, or byte count")
+            continue
+        by_path_revision.add((path, revision))
+        head_entry = _head_blob_entry(repository, head, path)
+        if head_entry is None:
+            errors.append(f"fixture source identity {pointer} does not match the checked-head path and bytes")
+            continue
+        head_bytes, source_mode = head_entry
+        current_bytes = _read_regular_source_bytes(
+            source_root, path, expected_size=size, expected_mode=source_mode)
+        if (current_bytes is None or current_bytes != head_bytes or
+                len(head_bytes) != size or hashlib.sha256(head_bytes).hexdigest() != digest):
+            errors.append(f"fixture source identity {pointer} does not match the checked-head path and bytes")
+            continue
+        resolves = (_git_exit(repository, ["rev-parse", "--verify", "--quiet",
+                                           f"{revision}^{{commit}}"] ) == 0)
+        relation = _revision_relation(repository, revision, head)
+        if relation == "descendant":
+            errors.append(f"fixture source identity {pointer} revision {revision[:12]} is a descendant of the checked head")
+            continue
+        if relation == "ancestor":
+            historical_entry = _head_blob_entry(repository, revision, path)
+            recorded = historical_entry[0] if historical_entry is not None else None
+            if recorded is None or len(recorded) != size or hashlib.sha256(recorded).hexdigest() != digest:
+                errors.append(f"fixture source identity {pointer} revision {revision[:12]} does not hold the recorded bytes")
+        elif resolves:
+            if not outer_allowed:
+                errors.append(f"fixture source identity {pointer} is available but unordered with the checked head and the outer rights-manifest row is not pinned")
+                continue
+            historical_entry = _head_blob_entry(repository, revision, path)
+            recorded = historical_entry[0] if historical_entry is not None else None
+            if recorded is None or len(recorded) != size or hashlib.sha256(recorded).hexdigest() != digest:
+                errors.append(f"fixture source identity {pointer} revision {revision[:12]} does not hold the recorded bytes")
+            else:
+                _note_once(observed, f"fixture source identity {pointer} revision {revision[:12]}: historical commit is available but not ordered with the checked head; cited blob matches under the exact outer rights-manifest pin")
+        else:
+            if not outer_allowed:
+                errors.append(f"fixture source identity {pointer} is unavailable and the outer rights-manifest row is not pinned")
+                continue
+            _note_once(observed, f"fixture source identity {pointer} revision {revision[:12]}: historical commit unavailable; "
+                               "checked-head path and bytes match under the outer rights-manifest pin")
+
+    ancestry = value.get("frontend_continuation", {}) if isinstance(value, dict) else {}
+    ancestry = ancestry.get("public_fixture_ancestry", {}) if isinstance(ancestry, dict) else {}
+    for pointer, reference in references:
+        if pointer == HISTORICAL_RECIPE_ORIGIN_POINTER:
+            problem = _historical_recipe_origin_error(reference, ancestry, repository, head,
+                                                      outer_allowed=outer_allowed, unverifiable=observed)
+            if problem:
+                errors.append(f"fixture source reference {pointer}: {problem}")
+            continue
+        path = reference.get("path")
+        revision = reference.get("source_revision")
+        if (not isinstance(path, str) or not isinstance(revision, str) or
+                (path, revision) not in by_path_revision):
+            errors.append(f"fixture source reference {pointer} has no matching complete identity row")
+    for note in observed:
+        _note_once(unverifiable, note)
+    return errors
+
+
 REVIEW_REVISION_FORMS = (
     re.compile(r"review \(04-\d{2}, ([0-9a-f]{12,40})\)"),
     re.compile(r"revision `([0-9a-f]{40})`"),
@@ -1716,8 +2232,16 @@ def _review_round_anchor(finding_id: str, source_root: Path, repository: Path, h
         return _reviewed_revision((source_root / REVIEW).read_text(encoding="utf-8")), "04-REVIEW.md reviewed_revision"
     round_number = match.group("round")
     name = "04-REVIEW-GAPS.md" if not round_number else f"04-REVIEW-GAPS-R{round_number}.md"
-    added = _git_stdout(repository, ["log", "--diff-filter=A", "--format=%H", head, "--", (PHASE_DIRECTORY / name).as_posix()])
-    lines = added.split() if added else []
+    # Prefer the immutable original path so archiving cannot become a new
+    # review-round anchor. Avoid rename heuristics: separate rounds can have
+    # identical text. The archive path supports histories without the old path.
+    lines: list[str] = []
+    for directory in (PHASE_HISTORY_DIRECTORY, PHASE_DIRECTORY):
+        added = _git_stdout(repository, ["log", "--diff-filter=A", "--format=%H", head,
+                                         "--", (directory / name).as_posix()])
+        lines = added.split() if added else []
+        if lines:
+            break
     if not lines:
         return f"review round file {name} for {finding_id} is not committed at the checked head"
     return lines[-1], name
@@ -1753,7 +2277,7 @@ def review_provenance_errors(source_root: Path, repository: Path, head: str, *,
     under `source_root`.
     """
     if allowlist is None:
-        allowlist = load_history_allowlist(source_root)
+        allowlist = load_history_allowlist(source_root, repository=repository, head=head)
     allowlist = anchored_history_allowlist(allowlist, repository, head)
     reviewed = _reviewed_revision((source_root / REVIEW).read_text(encoding="utf-8"))
     anchor_unverifiable = False
@@ -1803,13 +2327,15 @@ def review_provenance_errors(source_root: Path, repository: Path, head: str, *,
     return errors
 
 
-def history_allowlist_stale(source_root: Path) -> list[str]:
+def history_allowlist_stale(source_root: Path, *, repository: Path | None = None,
+                            head: str | None = None) -> list[str]:
     """`<kind> <key>` of each listed row whose current record is missing or no longer matches its pin (report only).
 
     A voided row is already evaluated strictly by the gates, so `check_docs` does not fail on it; this
     report feeds the pre-ship regeneration step. Empty when no allowlist is tracked.
     """
-    allowlist = load_history_allowlist(source_root)
+    allowlist = (load_history_allowlist(source_root, repository=repository, head=head)
+                 if repository is not None and head is not None else load_history_allowlist(source_root))
     if not allowlist.rows:
         return []
     current: dict[tuple[str, str], str | None] = {}
@@ -1870,7 +2396,11 @@ def history_allowlist_document(source_root: Path, repository: Path, head: str,
     be listed and nothing can be generated on a squashed history, where listed rows are absent. A row is
     listed only when its cited revision is not an ancestor of M (rows reachable from main stay strict),
     with the per-record pin the gates compare. A listed rights row must also pass the post-squash
-    predicate now: the file at the checked head holds the recorded SHA-256 (G7CR-01). The text has no timestamp, host or absolute path.
+    predicate now: the file at the checked head holds the recorded SHA-256 (G7CR-01). In a sanitized public
+    checkout with no private review, disposition or frontend receipt record in either the checkout or
+    checked commit, only the rights gate is available; it still runs strictly, and the resulting allowlist
+    contains rights rows only. Any present or partially checked-out private evidence retains the full
+    review, frontend and rights checks. The text has no timestamp, host or absolute path.
     """
     if not isinstance(base, str) or (RIGHTS_REVISION.fullmatch(base) is None and HISTORY_BASE_NAME.fullmatch(base) is None):
         raise _allowlist_refusal("base is not a revision or branch name")
@@ -1881,13 +2411,35 @@ def history_allowlist_document(source_root: Path, repository: Path, head: str,
     if RIGHTS_REVISION.fullmatch(merge_base) is None:
         raise _allowlist_refusal(f"base {base} has no merge-base with the checked head")
     notes: list[str] = []
+    planning_records = (REVIEW, DISPOSITION, FRONTEND_EVIDENCE)
+    tracked_planning_records = {
+        relative: _git_exit(repository, ["cat-file", "-e", f"{head}:{relative.as_posix()}"]) == 0
+        for relative in planning_records
+    }
+    missing_tracked_records = [relative.as_posix() for relative, tracked in tracked_planning_records.items()
+                               if tracked and not (source_root / relative).is_file()]
+    if missing_tracked_records:
+        raise _allowlist_refusal("private planning record is missing from the checked-out source")
+    has_planning_history = any(tracked_planning_records.values()) or any(
+        (source_root / relative).is_file() for relative in planning_records)
     try:
-        load_frontend_evidence(source_root, repository=repository, head=head,
-                               allowlist=HistoryAllowlist.EMPTY, unverifiable=notes)  # type: ignore[attr-defined]
-        problems = [*review_provenance_errors(source_root, repository, head,
-                                              allowlist=HistoryAllowlist.EMPTY, unverifiable=notes),  # type: ignore[attr-defined]
+        if has_planning_history:
+            load_frontend_evidence(source_root, repository=repository, head=head,
+                                   allowlist=HistoryAllowlist.EMPTY, unverifiable=notes)  # type: ignore[attr-defined]
+            review_problems = review_provenance_errors(
+                source_root, repository, head, allowlist=HistoryAllowlist.EMPTY,
+                unverifiable=notes)  # type: ignore[attr-defined]
+        else:
+            # Sanitized public histories omit all three private evidence records. Unrelated .planning
+            # documents may remain public, but any one of these paths makes the full gate apply. The
+            # rights rows below still have to prove their bytes.
+            review_problems = []
+        problems = [*review_problems,
                     *rights_revision_errors(source_root, repository, head,
-                                            allowlist=HistoryAllowlist.EMPTY, unverifiable=notes)]  # type: ignore[attr-defined]
+                                            allowlist=HistoryAllowlist.EMPTY, unverifiable=notes),
+                    *fixture_source_identity_errors(source_root, repository, head,
+                                                    allowlist=HistoryAllowlist.EMPTY,
+                                                    unverifiable=notes)]  # type: ignore[attr-defined]
     except (RuntimeError, OSError, UnicodeError, ValueError) as error:
         raise _allowlist_refusal(str(error)) from error
     if problems or notes:
@@ -1900,18 +2452,19 @@ def history_allowlist_document(source_root: Path, repository: Path, head: str,
         return _git_exit(repository, ["merge-base", "--is-ancestor", full, merge_base]) != 0
 
     rows: set[tuple[str, str, str, str]] = set()
-    review_text = (source_root / REVIEW).read_text(encoding="utf-8")
-    reviewed = _reviewed_revision(review_text)
-    if introduced(reviewed):
-        rows.add(("reviewed_revision", "04-REVIEW.md", reviewed, _reviewed_revision_pin(reviewed)))
-    disposition = (source_root / DISPOSITION).read_text(encoding="utf-8")
-    for row in _markdown_table_rows(disposition, "| Finding | Severity | Disposition | Source |"):
-        finding_id, _severity, state, source = row
-        if state.strip().lower() == "open":
-            continue
-        for revision in {match for form in REVIEW_REVISION_FORMS for match in form.findall(source)}:
-            if introduced(revision):
-                rows.add(("review_citation", finding_id, revision, _disposition_row_pin(disposition, finding_id) or ""))
+    if has_planning_history:
+        review_text = (source_root / REVIEW).read_text(encoding="utf-8")
+        reviewed = _reviewed_revision(review_text)
+        if introduced(reviewed):
+            rows.add(("reviewed_revision", "04-REVIEW.md", reviewed, _reviewed_revision_pin(reviewed)))
+        disposition = (source_root / DISPOSITION).read_text(encoding="utf-8")
+        for row in _markdown_table_rows(disposition, "| Finding | Severity | Disposition | Source |"):
+            finding_id, _severity, state, source = row
+            if state.strip().lower() == "open":
+                continue
+            for revision in {match for form in REVIEW_REVISION_FORMS for match in form.findall(source)}:
+                if introduced(revision):
+                    rows.add(("review_citation", finding_id, revision, _disposition_row_pin(disposition, finding_id) or ""))
     receipt_path = source_root / FRONTEND_EVIDENCE
     if receipt_path.is_file():
         receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
@@ -1940,14 +2493,10 @@ def history_allowlist_document(source_root: Path, repository: Path, head: str,
 def history_allowlist_is_current(source_root: Path, repository: Path, head: str,
                                  base: str = HISTORY_DEFAULT_BASE) -> bool:
     """True only when the tracked allowlist file equals what `history_allowlist_document` produces now."""
-    path = source_root / HISTORY_ALLOWLIST
-    if not path.is_file():
-        return False
     document = history_allowlist_document(source_root, repository, head, base)
-    try:
-        return path.read_bytes() == document.encode("utf-8")
-    except OSError:
-        return False
+    working = _read_regular_source_bytes(source_root, HISTORY_ALLOWLIST.as_posix(),
+                                         expected_size=len(document.encode("utf-8")))
+    return working == document.encode("utf-8")
 
 
 def history_allowlist_check_applies(source_root: Path, repository: Path, head: str, base: str) -> str | None:
@@ -1969,7 +2518,8 @@ def history_allowlist_check_applies(source_root: Path, repository: Path, head: s
         raise RuntimeError("history allowlist base is not a revision or branch name")
     if _git_exit(repository, ["diff", "--quiet", base, head, "--", HISTORY_ALLOWLIST.as_posix()]) != 0:
         return f"{HISTORY_ALLOWLIST.as_posix()} differs from {base}"
-    for _kind, _key, revision in sorted(load_history_allowlist(source_root).rows):
+    for _kind, _key, revision in sorted(
+            load_history_allowlist(source_root, repository=repository, head=head).rows):
         if _revision_relation(repository, revision, head) == "ancestor":
             return f"listed revision {revision[:12]} is in this history"
     return None
@@ -1988,11 +2538,12 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
     Returns the tolerated items: one note per listed pre-ship row of `docs/history-allowlist.json`
     whose cited revision is history-absent (G5WR-01); empty on full history or with no allowlist.
     """
-    allowlist = load_history_allowlist(source_root)
-    notes: list[str] = []
     binding = repository
     if binding is None and (source_root / ".git").exists():
         binding = source_root
+    allowlist = (load_history_allowlist(source_root, repository=binding, head=head)
+                 if binding is not None else load_history_allowlist(source_root))
+    notes: list[str] = []
     if binding is not None:
         # G7IN-01: a base_revision missing from this repository (for example a shallow clone) is
         # reported before the frontend gate turns the emptied allowlist into a less specific error;
@@ -2044,6 +2595,10 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
                                                  allowlist=allowlist, unverifiable=notes)
         if rights_problems:
             raise RuntimeError(rights_problems[0])
+        source_identity_problems = fixture_source_identity_errors(
+            source_root, provenance_repository, head, allowlist=allowlist, unverifiable=notes)
+        if source_identity_problems:
+            raise RuntimeError(source_identity_problems[0])
 
     task_rows = _markdown_table_rows(
         validation,
@@ -2061,6 +2616,7 @@ def check_docs(source_root: Path, *, repository: Path | None = None, head: str =
         raise RuntimeError("unfinished placeholder in current frontend status")
     if not {"HOST-02", "QUAL-03"}.issubset(requirement_ids) or frontend_status != frontend_row_status(evidence):
         raise RuntimeError("HOST-02 and frontend QUAL-03 status in the validation map does not match the tracked evidence")
+    runpy.run_path(str(source_root / "tests/consumers/test_playable_install.py"))["validate_sound_recipe"](source_root)
     return notes
 
 
@@ -2115,6 +2671,7 @@ def _write_receipt(receipt: dict[str, Any]) -> str:
     text = json.dumps(safe_receipt, indent=2, sort_keys=True) + "\n"
     summary = json.dumps({
         "status": safe_receipt["status"], "receipt": "build/playable-qualification/receipt.json",
+        "qualification_scope": safe_receipt.get("qualification_scope", "frontend-integration"),
         "fixture_sha256": safe_receipt.get("fixture", {}).get("sha256", "unknown"),
         "retroarch_status": safe_receipt.get("retroarch_smoke", {}).get("status", "unknown"),
         "reason": safe_receipt.get("reason", ""),
@@ -2165,6 +2722,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--retroarch", type=Path)
     parser.add_argument("--clean", action="store_true", help="qualify a fresh committed-source snapshot and fresh build/install directories")
+    parser.add_argument("--headless", action="store_true",
+                        help="check public core/packages from committed source without launching RetroArch; no device evidence")
     parser.add_argument("--check-docs", action="store_true")
     parser.add_argument("--record-frontend-evidence", action="store_true",
                         help="write the public-safe summary of a passing receipt to the tracked Phase 04 evidence file")
@@ -2175,6 +2734,8 @@ def main() -> int:
                         help=f"revision or branch the allowlist excludes (default {HISTORY_DEFAULT_BASE}, which must be "
                              "fetched); only with --history-allowlist")
     args = parser.parse_args()
+    if args.headless and (not args.clean or args.retroarch is not None or args.record_frontend_evidence):
+        parser.error("--headless requires --clean and cannot acquire or publish frontend evidence")
     if args.base is not None and args.history_allowlist is None:
         parser.error("--base is only accepted with --history-allowlist")
     if args.history_allowlist is not None:
@@ -2205,7 +2766,7 @@ def main() -> int:
                 print(f"History allowlist is current ({len(load_history_allowlist(ROOT).rows)} rows).")
                 return 0
             message = "history allowlist is stale or missing; run --history-allowlist write"
-            stale = history_allowlist_stale(ROOT) if (ROOT / HISTORY_ALLOWLIST).is_file() else []
+            stale = history_allowlist_stale(ROOT)
             if stale:
                 message += "; stale rows: " + ", ".join(stale)
             emit_error("", message)
@@ -2243,7 +2804,7 @@ def main() -> int:
             print(f"unverifiable-history: {note}")
         print("Phase 04 documentation gate passed.")
         return 0
-    if args.retroarch is None:
+    if args.retroarch is None and not args.headless:
         parser.error("--retroarch is required unless --check-docs is used without --clean")
     try:
         OUTPUT.mkdir(parents=True, exist_ok=True)
@@ -2310,7 +2871,8 @@ def main() -> int:
                                        check=False, timeout=30)
         identity["cmake"] = cmake_version.stdout.splitlines()[0] if cmake_version.returncode == 0 and cmake_version.stdout else "unknown"
         identity["ninja"] = ninja_version.stdout.strip() if ninja_version.returncode == 0 else "unknown"
-        identity["retroarch"] = frontend_identity(args.retroarch.resolve())
+        identity["retroarch"] = (frontend_identity(args.retroarch.resolve()) if not args.headless else
+                                 {"status": "not-run", "reason": "explicit public-core headless mode"})
         if sys.platform == "darwin" and shutil.which("xcrun", path=environment.get("PATH", "")):
             sdk = subprocess.run(["xcrun", "--show-sdk-version"], cwd=source_root, env=environment,
                                  text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -2395,6 +2957,7 @@ def main() -> int:
     try:
         receipt: dict[str, object] = {
             "schema": "glueyneo.playable-qualification/v1",
+            "qualification_scope": "public-core-headless" if args.headless else "frontend-integration",
             "status": status,
             "identity": identity,
             "lanes": runner.lanes if runner is not None else {},
@@ -2418,7 +2981,9 @@ def main() -> int:
             receipt["identity"]["source_snapshot"] = {"status": "fail", "reason": reason}  # type: ignore[index]
         if runner is None:
             receipt["lanes"] = {}
-        if snapshot is not None and runner is not None and shared_core.is_file() and fixture_shared.is_file():
+        if args.headless:
+            receipt["retroarch_smoke"] = {"status": "not-run", "reason": "explicit public-core headless mode; no device evidence"}
+        elif snapshot is not None and runner is not None and shared_core.is_file() and fixture_shared.is_file():
             try:
                 smoke_record, lane_failure = run_frontend_smoke_lane(
                     runner, source_root, args.retroarch.resolve(), shared_core, fixture_shared)

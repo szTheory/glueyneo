@@ -41,6 +41,7 @@ jobs:
       tag: ${{ steps.identity.outputs.tag }}
       version: ${{ steps.identity.outputs.version }}
       commit: ${{ steps.identity.outputs.commit }}
+      workflow_commit: ${{ steps.identity.outputs.workflow_commit }}
       build_run_id: ${{ steps.build-origin.outputs.build_run_id }}
       reuse_builds: ${{ steps.build-origin.outputs.reuse_builds }}
       prior_manifest_artifact_name: ${{ steps.build-origin.outputs.prior_manifest_artifact_name }}
@@ -341,6 +342,7 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
+      actions: read
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -378,14 +380,29 @@ jobs:
         env:
           RELEASE_COMMIT: ${{ needs.release-control.outputs.commit }}
           RELEASE_VERSION: ${{ needs.release-control.outputs.version }}
-        run: python3 tests/consumers/test_release_consumer.py --verify-downloaded --directory build/release-download --manifest build/expected/expected-release-manifest.json --commit "$RELEASE_COMMIT" --version "$RELEASE_VERSION" --platform "${{ matrix.name }}"
+        run: python3 tests/consumers/test_release_consumer.py --verify-downloaded --directory build/release-download --manifest build/expected/expected-release-manifest.json --commit "$RELEASE_COMMIT" --version "$RELEASE_VERSION" --platform "${{ matrix.name }}" --output build/delivery-evidence/consumer-result.json
         if: runner.os != 'Windows'
       - name: Rebuild downloaded source offline and execute Windows SDK consumers
         shell: pwsh
         env:
           RELEASE_COMMIT: ${{ needs.release-control.outputs.commit }}
           RELEASE_VERSION: ${{ needs.release-control.outputs.version }}
-        run: python tests/consumers/test_release_consumer.py --verify-downloaded --directory build/release-download --manifest build/expected/expected-release-manifest.json --commit $env:RELEASE_COMMIT --version $env:RELEASE_VERSION --platform windows-x86_64
+        run: python tests/consumers/test_release_consumer.py --verify-downloaded --directory build/release-download --manifest build/expected/expected-release-manifest.json --commit $env:RELEASE_COMMIT --version $env:RELEASE_VERSION --platform windows-x86_64 --output build/delivery-evidence/consumer-result.json
+        if: runner.os == 'Windows'
+      - name: Bind downloaded example output to this platform job and source manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          RELEASE_WORKFLOW_COMMIT: ${{ needs.release-control.outputs.workflow_commit }}
+        run: python3 tests/consumers/test_delivery_contract.py --mode platform --distribution staged --directory build/release-download --manifest build/expected/expected-release-manifest.json --consumer-result build/delivery-evidence/consumer-result.json --platform "${{ matrix.name }}" --output build/delivery-evidence/platform.json
+        if: runner.os != 'Windows'
+      - name: Bind downloaded Windows example output to its platform job and source manifest
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          RELEASE_WORKFLOW_COMMIT: ${{ needs.release-control.outputs.workflow_commit }}
+        run: python tests/consumers/test_delivery_contract.py --mode platform --distribution staged --directory build/release-download --manifest build/expected/expected-release-manifest.json --consumer-result build/delivery-evidence/consumer-result.json --platform windows-x86_64 --output build/delivery-evidence/platform.json
         if: runner.os == 'Windows'
       - name: Scan history, downloaded bytes, notices, and rights on Linux
         if: matrix.name == 'linux-x86_64'
@@ -397,6 +414,8 @@ jobs:
           python3 tools/public_content.py --root . --history-revision "$RELEASE_COMMIT" \
             --log build/release-download/release-manifest.json \
             --log build/download-verification.json \
+            --log build/delivery-evidence/consumer-result.json \
+            --log build/delivery-evidence/platform.json \
             --log .github/workflows/release.yml \
             --log release-please-config.json \
             --archive "build/release-download/glueyneo-source-${RELEASE_VERSION}.tar.gz" \
@@ -404,10 +423,31 @@ jobs:
             --archive "build/release-download/glueyneo-sdk-${RELEASE_VERSION}-macos-arm64.tar.gz" \
             --archive "build/release-download/glueyneo-sdk-${RELEASE_VERSION}-windows-x86_64.tar.gz" \
             --json build/public-content.json
+      - name: Upload staged downloaded-example producer evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: delivery-evidence-staged-${{ matrix.name }}-attempt-${{ github.run_attempt }}
+          path: |
+            build/delivery-evidence/consumer-result.json
+            build/delivery-evidence/platform.json
+            build/download-verification.json
+            build/expected/expected-release-manifest.json
+            build/release-download/release-manifest.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Upload staged source/history scan evidence
+        if: always() && matrix.name == 'linux-x86_64'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: delivery-evidence-public-content-attempt-${{ github.run_attempt }}
+          path: build/public-content.json
+          if-no-files-found: warn
+          retention-days: 7
 
   publish-release:
     needs: [release-control, stage-release, verify-downloaded-release]
-    if: ${{ !cancelled() && needs.release-control.result == 'success' && needs.release-control.outputs.should_build == 'true' && needs.stage-release.result == 'success' && needs.verify-downloaded-release.result == 'success' && (github.event_name == 'push' || inputs.publish) }}
+    if: ${{ !cancelled() && needs.release-control.result == 'success' && needs.release-control.outputs.should_build == 'true' && needs.release-control.outputs.commit == needs.release-control.outputs.workflow_commit && needs.stage-release.result == 'success' && needs.verify-downloaded-release.result == 'success' && (github.event_name == 'push' || inputs.publish) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -454,6 +494,45 @@ jobs:
           python3 tools/release_state.py query-api --repository "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --output build/release-api.json
           python3 tools/release_state.py validate-draft --release build/release-api.json --manifest build/expected/expected-release-manifest.json --tag "$RELEASE_TAG" --version "$RELEASE_VERSION" --commit "$RELEASE_COMMIT" > build/release-validation.json
           python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["status"] == "ready" and d["publishable"]' build/release-validation.json
+      - name: Record trusted publication event and exact main source
+        env:
+          SOURCE_COMMIT: ${{ needs.release-control.outputs.commit }}
+          WORKFLOW_COMMIT: ${{ needs.release-control.outputs.workflow_commit }}
+          PUBLISH_INPUT: ${{ inputs.publish }}
+        run: |
+          python3 - <<'PY_TRIGGER'
+          import json, os, re
+          from pathlib import Path
+
+          event = os.environ.get("GITHUB_EVENT_NAME", "")
+          ref = os.environ.get("GITHUB_REF", "")
+          source_commit = os.environ.get("SOURCE_COMMIT", "")
+          workflow_commit = os.environ.get("WORKFLOW_COMMIT", "")
+          publish_raw = os.environ.get("PUBLISH_INPUT", "").strip().lower()
+          if event == "push":
+              publish_input = None if publish_raw in {"", "false"} else True if publish_raw == "true" else "invalid"
+              source_event = "push-main"
+          elif event == "workflow_dispatch":
+              publish_input = publish_raw == "true"
+              source_event = "workflow-dispatch-publish"
+          else:
+              raise SystemExit("unsupported publication event")
+          if (ref != "refs/heads/main" or not re.fullmatch(r"[0-9a-f]{40}", source_commit)
+                  or not re.fullmatch(r"[0-9a-f]{40}", workflow_commit)
+                  or workflow_commit != os.environ.get("GITHUB_SHA")
+                  or publish_input == "invalid"
+                  or not (event == "push" or publish_input is True)):
+              raise SystemExit("publication trigger is not an authorized current-main release")
+          record = {"schema_version": 1, "repository": os.environ["GITHUB_REPOSITORY"],
+                    "event": event, "source_event": source_event, "ref": ref,
+                    "source_commit": source_commit, "workflow_commit": workflow_commit,
+                    "publish_input": publish_input,
+                    "publication_expected": True}
+          path = Path("build/release-trigger.json")
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n",
+                          encoding="utf-8")
+          PY_TRIGGER
       - name: Publish the verified unsigned draft
         shell: bash
         env:
@@ -464,10 +543,105 @@ jobs:
           release_id=$(python3 -c 'import json; print(json.load(open("build/release-api.json"))["release"]["id"])')
           gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$release_id" -F draft=false > build/published-release.json
           python3 -c 'import json,os; d=json.load(open("build/published-release.json")); assert d["tag_name"] == os.environ["RELEASE_TAG"] and d["draft"] is False'
+      - name: Preserve published identity and protected manifest evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: delivery-evidence-published-release-attempt-${{ github.run_attempt }}
+          path: |
+            build/published-release.json
+            build/release-trigger.json
+            build/expected/expected-release-manifest.json
+            build/app-authority.json
+          if-no-files-found: warn
+          retention-days: 7
+
+  verify-published-release:
+    needs: [release-control, stage-release, verify-downloaded-release, publish-release]
+    if: ${{ !cancelled() && needs.release-control.result == 'success' && needs.release-control.outputs.should_build == 'true' && needs.stage-release.result == 'success' && needs.verify-downloaded-release.result == 'success' && needs.publish-release.result == 'success' }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - name: linux-x86_64
+            runner: ubuntu-24.04
+          - name: macos-arm64
+            runner: macos-15
+          - name: windows-x86_64
+            runner: windows-2025
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.release-control.outputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ needs.stage-release.outputs.manifest_artifact_name }}
+          path: build/expected
+      - name: Download the final public release bytes without credentials
+        env:
+          RELEASE_TAG: ${{ needs.release-control.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.release-control.outputs.version }}
+        run: python3 tests/consumers/test_delivery_contract.py --mode public-download --directory build/release-download --manifest build/expected/expected-release-manifest.json --tag "$RELEASE_TAG" --version "$RELEASE_VERSION"
+        if: runner.os != 'Windows'
+      - name: Download the final public release bytes without credentials on Windows
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ needs.release-control.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.release-control.outputs.version }}
+        run: python tests/consumers/test_delivery_contract.py --mode public-download --directory build/release-download --manifest build/expected/expected-release-manifest.json --tag $env:RELEASE_TAG --version $env:RELEASE_VERSION
+        if: runner.os == 'Windows'
+      - name: Rebuild anonymously downloaded source and execute this platform SDK consumers
+        env:
+          RELEASE_COMMIT: ${{ needs.release-control.outputs.commit }}
+          RELEASE_VERSION: ${{ needs.release-control.outputs.version }}
+        run: python3 tests/consumers/test_release_consumer.py --verify-downloaded --directory build/release-download --manifest build/expected/expected-release-manifest.json --commit "$RELEASE_COMMIT" --version "$RELEASE_VERSION" --platform "${{ matrix.name }}" --output build/delivery-evidence/consumer-result.json
+        if: runner.os != 'Windows'
+      - name: Rebuild anonymously downloaded Windows source and execute Windows SDK consumers
+        shell: pwsh
+        env:
+          RELEASE_COMMIT: ${{ needs.release-control.outputs.commit }}
+          RELEASE_VERSION: ${{ needs.release-control.outputs.version }}
+        run: python tests/consumers/test_release_consumer.py --verify-downloaded --directory build/release-download --manifest build/expected/expected-release-manifest.json --commit $env:RELEASE_COMMIT --version $env:RELEASE_VERSION --platform windows-x86_64 --output build/delivery-evidence/consumer-result.json
+        if: runner.os == 'Windows'
+      - name: Bind anonymous public bytes and example output to the platform job
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          RELEASE_WORKFLOW_COMMIT: ${{ needs.release-control.outputs.workflow_commit }}
+        run: python3 tests/consumers/test_delivery_contract.py --mode platform --distribution published --directory build/release-download --manifest build/expected/expected-release-manifest.json --consumer-result build/delivery-evidence/consumer-result.json --platform "${{ matrix.name }}" --output build/delivery-evidence/platform.json
+        if: runner.os != 'Windows'
+      - name: Bind anonymous Windows bytes and example output to the platform job
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          RELEASE_WORKFLOW_COMMIT: ${{ needs.release-control.outputs.workflow_commit }}
+        run: python tests/consumers/test_delivery_contract.py --mode platform --distribution published --directory build/release-download --manifest build/expected/expected-release-manifest.json --consumer-result build/delivery-evidence/consumer-result.json --platform windows-x86_64 --output build/delivery-evidence/platform.json
+        if: runner.os == 'Windows'
+      - name: Upload anonymous published consumer producer evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: delivery-evidence-published-${{ matrix.name }}-attempt-${{ github.run_attempt }}
+          path: |
+            build/delivery-evidence/consumer-result.json
+            build/delivery-evidence/platform.json
+            build/expected/expected-release-manifest.json
+            build/release-download/release-manifest.json
+          if-no-files-found: warn
+          retention-days: 7
 
   release-policy:
     if: always()
-    needs: [release-control, build-release, stage-release, verify-downloaded-release, publish-release]
+    needs: [release-control, build-release, stage-release, verify-downloaded-release, publish-release, verify-published-release]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -481,17 +655,21 @@ jobs:
           STAGE_RESULT: ${{ needs.stage-release.result }}
           VERIFY_RESULT: ${{ needs.verify-downloaded-release.result }}
           PUBLISH_RESULT: ${{ needs.publish-release.result }}
+          PUBLISHED_VERIFY_RESULT: ${{ needs.verify-published-release.result }}
           SHOULD_BUILD: ${{ needs.release-control.outputs.should_build }}
           REUSING_BUILDS: ${{ needs.release-control.outputs.reuse_builds }}
           PUBLISH_EXPECTED: ${{ github.event_name == 'push' || inputs.publish }}
           SOURCE_COMMIT: ${{ needs.release-control.outputs.commit }}
+          WORKFLOW_COMMIT: ${{ needs.release-control.outputs.workflow_commit }}
         run: |
           python3 - <<'PY_POLICY'
           import json, os, sys
-          results = {name: os.environ.get(name + "_RESULT", "") for name in ("CONTROL", "BUILD", "STAGE", "VERIFY", "PUBLISH")}
+          results = {name: os.environ.get(name + "_RESULT", "") for name in ("CONTROL", "BUILD", "STAGE", "VERIFY", "PUBLISH", "PUBLISHED_VERIFY")}
           should_build = os.environ.get("SHOULD_BUILD", "")
           reuse = os.environ.get("REUSING_BUILDS", "")
           publish = os.environ.get("PUBLISH_EXPECTED", "")
+          source_commit = os.environ.get("SOURCE_COMMIT", "")
+          workflow_commit = os.environ.get("WORKFLOW_COMMIT", "")
           issues = []
           if results["CONTROL"] != "success" or should_build not in {"true", "false"}:
               issues.append("release-control-not-successful")
@@ -503,7 +681,11 @@ jobs:
                   issues.append("staging-or-consumers-not-successful")
               if publish not in {"true", "false"} or results["PUBLISH"] != ("success" if publish == "true" else "skipped"):
                   issues.append("publication-result-unexpected")
-          elif should_build == "false" and any(results[name] != "skipped" for name in ("BUILD", "STAGE", "VERIFY", "PUBLISH")):
+              if publish == "true" and (not source_commit or source_commit != workflow_commit):
+                  issues.append("publication-source-is-not-current-workflow-commit")
+              if results["PUBLISHED_VERIFY"] != ("success" if publish == "true" else "skipped"):
+                  issues.append("published-anonymous-consumers-result-unexpected")
+          elif should_build == "false" and any(results[name] != "skipped" for name in ("BUILD", "STAGE", "VERIFY", "PUBLISH", "PUBLISHED_VERIFY")):
               issues.append("no-release-path-mutated")
           print("RELEASE_POLICY " + json.dumps({"outcome": "fail" if issues else "pass", "issues": issues, "results": results, "should_build": should_build, "reuse_builds": reuse, "source_commit": os.environ.get("SOURCE_COMMIT", "") if should_build == "true" else None, "workflow_commit": os.environ.get("GITHUB_SHA", ""), "run_id": os.environ.get("GITHUB_RUN_ID", "")}, sort_keys=True, separators=(",", ":")))
           sys.exit(1 if issues else 0)

@@ -202,7 +202,7 @@ static void stopped_cpu_wakes_on_a_level_seven_edge(void) {
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_set_irq(machine.cpu, 7u));
     owned_cpu_run_result result = owned_cpu_run(machine.cpu, 1u);
     TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, result.reason);
-    TEST_ASSERT_EQUAL_UINT64(72u, result.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(44u, result.elapsed_cycles);
     TEST_ASSERT_EQUAL(OWNED_CPU_OK, owned_cpu_observe(machine.cpu, &observation));
     TEST_ASSERT_EQUAL_UINT8(0u, observation.stopped);
     TEST_ASSERT_EQUAL_UINT8(31u, observation.last_exception_vector);

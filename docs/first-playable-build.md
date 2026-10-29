@@ -1,6 +1,6 @@
 # First Playable public tracer build and load
 
-This procedure builds the public GNFX v1 tracer from a complete committed Git snapshot, installs the native package and Libretro core into temporary prefixes under ignored `build/`, and checks both static and shared native consumers. It uses only the original 602-byte public fixture. It does not read or package a game ROM or BIOS.
+This procedure builds the public GNFX v1 tracer from a complete committed Git snapshot, installs the native package and Libretro core into temporary prefixes under ignored `build/`, and checks both static and shared native consumers. It uses the original 602-byte diagnostic video fixture and a separate original GNMV sound fixture with generated assets. Both fixtures come from original source. The GNMV BIOS-role bytes are an original launch substitute; no commercial game ROM or production/SNK BIOS is used or packaged.
 
 ## Run the qualification
 
@@ -10,7 +10,7 @@ On the selected macOS host with CMake, Ninja, Python 3, and the pinned RetroArch
 python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean
 ```
 
-The runner configures fresh static and shared CMake builds, builds `glueyneo-original-fixture` and `glueyneo-public-fixture`, installs each prefix, and compiles/runs an out-of-tree C17 consumer against each installed native package. It compares the installed diagnostic fixture to the generated copy, checks `public-playable.bin` against its recorded identity, runs the full CTest suite, runs the pinned Z80 and YM2610 source/admission checks, then starts the actual RetroArch smoke with the installed shared Libretro core and the generated public fixture. `--check-docs` also verifies this guide and the validation map:
+The runner configures fresh static and shared CMake builds, builds `glueyneo-original-fixture` and `glueyneo-public-fixture`, installs each prefix, and compiles/runs out-of-tree diagnostic and sound C17 consumers against each installed native package. It compares the installed diagnostic fixture to the generated copy, checks `public-playable.bin` against its recorded identity, runs the full CTest suite, runs the pinned Z80 and YM2610 source/admission checks, then starts the actual RetroArch smoke with the installed shared Libretro core and the generated public fixture. `--check-docs` also verifies this guide and the validation map:
 
 ```sh
 python3 tools/verify_playable.py --retroarch /Applications/RetroArch.app --clean --check-docs
@@ -22,9 +22,33 @@ Therefore dirty and untracked checkout files do not enter the build; the archive
 
 The receipt is written to ignored `build/playable-qualification/receipt.json`; per-command logs and fresh build/install prefixes are retained in that run directory. `identity.source_snapshot` records the full commit, archive SHA-256, inventory schema and algorithm, aggregate inventory SHA-256, entry counts, and every archived regular file and symlink. Each entry has a repository-relative path, type, byte length, and SHA-256; regular-file entries preserve the executable bit, while symlink entries also contain the exact relative target. `artifacts` separately records generated fixture/core hashes, installed-tree inventories, and the YM2610 report/build identities. Toolchain, OS, SDK, and pinned frontend identities remain in the receipt. A zero exit means every required lane passed. A nonzero exit preserves lane outcomes and a named failure reason; mock Libretro harnesses never count as an actual frontend pass.
 
+## Headless iteration and installed sound
+
+For public core/package development without desktop acquisition:
+
+```sh
+python3 tools/verify_playable.py --clean --headless
+```
+
+This keeps the committed snapshot, static/shared builds, real installed C sound
+consumers, full public tests and chip/linkage checks. Its receipt uses
+`qualification_scope=public-core-headless` and `retroarch_smoke.status=not-run`.
+It supplies no new frontend/device observation and does not refresh the generated
+historical frontend status block below. For the actual installed C
+create/load/capacity/frame procedure and executable commands, follow
+[audio-contract.md](audio-contract.md#installed-c-sound-consumer). That consumer
+checks generated tone, fire omission and release plus exact current-native
+PCM/video transfer using original assets. Private scene acquisition remains a
+separate local procedure; no private media enters these public commands.
+
 ## Fixture and consumer paths
 
 The build generates `public-playable.bin` through the `glueyneo-public-fixture` target. Its expected SHA-256 is `59ed3645b156db15e20599ab71f40d416f870472078e8f6751d2174afe7a5cf0` (602 bytes). The generator and assets are original Glueyneo work under MIT; the fixture has no external guest bytes, game ROM, BIOS, private media, or derived capture. The source, rights and oracle limits are recorded in `tests/fixture/rights-manifest.json` and `tests/fixture/ORACLE.md`.
+
+The GNFX v1 public tracer smoke exercises startup and frontend input. It is
+not the saved MVS continuation route; see
+[frontend-continuation.md](frontend-continuation.md) for the tested native
+state payload, RetroArch container, SRAM policies, and local-only acceptance.
 
 Native `public_guest_*` CTests run the generated fixture through the guest's ordinary frame and input path, including no-input, wrong-direction and right-direction observations. The installed-package C consumer separately loads the installed original diagnostic fixture to prove package relocation and C linkage. The Libretro smoke loads the same generated GNFX fixture used by the native tracer, requests frontend screenshots, checks its guest marker, verifies mapped and wrong input, then quits RetroArch to check unload.
 
@@ -79,7 +103,7 @@ Two build defects had to be fixed before a clean committed-snapshot run could pa
 python3 tools/verify_playable.py --record-frontend-evidence
 ```
 
-This writes `.planning/workstreams/first-playable-game/phases/04-public-playable-tracer/04-FRONTEND-RECEIPT.json` from the ignored receipt and regenerates the status block above and the validation-map frontend row. The summary keeps identities, the snapshot inventory digest, lane outcomes and smoke observations, and contains no paths. `--check-docs` requires the status block and row to match the summary exactly. It accepts a summary only if every required lane passed, the fixture and pinned RetroArch digests match, the marker moved right, the revision is a committed ancestor of `HEAD`, and that revision's archive reproduces the recorded inventory digest. The gate rejects status claims outside the generated block: any requirement ID, any revision-like hexadecimal token of 7 to 40 characters other than the pinned YMFM and Z80 revisions, and the capitalized completion and qualification status words listed in `tools/verify_playable.py`. It also rejects any private root anywhere in this guide. The status block is bound to committed evidence, so `--check-docs` needs a Git checkout, or `--clean --check-docs`, which binds against the originating checkout and its snapshot commit; without one it fails instead of trusting the summary. Other prose is not a qualification claim and is not machine-checked. The run directory (raw logs, `CMakeCache.txt`, build trees) is private by definition and must never be published or attached. Public sinks are protected differently: the receipt, the runner and smoke stdout and the tracked summary pass through `tools/private_paths.py`, which drops private roots in every known form and fails closed with `private-path-survived` if any root survives.
+This writes `.planning/milestones/ws-first-playable-game-2026-10-24/phases/04-public-playable-tracer/04-FRONTEND-RECEIPT.json` from the ignored receipt and regenerates the status block above and the validation-map frontend row. The summary keeps identities, the snapshot inventory digest, lane outcomes and smoke observations, and contains no paths. `--check-docs` requires the status block and row to match the summary exactly. It accepts a summary only if every required lane passed, the fixture and pinned RetroArch digests match, the marker moved right, the revision is a committed ancestor of `HEAD`, and that revision's archive reproduces the recorded inventory digest. The gate rejects status claims outside the generated block: any requirement ID, any revision-like hexadecimal token of 7 to 40 characters other than the pinned YMFM and Z80 revisions, and the capitalized completion and qualification status words listed in `tools/verify_playable.py`. It also rejects any private root anywhere in this guide. The status block is bound to committed evidence, so `--check-docs` needs a Git checkout, or `--clean --check-docs`, which binds against the originating checkout and its snapshot commit; without one it fails instead of trusting the summary. Other prose is not a qualification claim and is not machine-checked. The run directory (raw logs, `CMakeCache.txt`, build trees) is private by definition and must never be published or attached. Public sinks are protected differently: the receipt, the runner and smoke stdout and the tracked summary pass through `tools/private_paths.py`, which drops private roots in every known form and fails closed with `private-path-survived` if any root survives.
 
 ## Historical toolchain and frontend observation
 

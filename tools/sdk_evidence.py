@@ -26,17 +26,58 @@ UNITY_FILES = {
     "third_party/unity/src/unity_internals.h": "35bffad23ebc533977291e7a848c646027513572268fbfa9bd03d5ec21ee818a",
     "third_party/unity/LICENSE.txt": "ec6cf55f05ba2aa538b9677b2481b9ac14a87c63594fce8a0677d4f71c583980",
 }
+YM2610_RUNTIME_SOURCE_FILES = (
+    "src/chips/ym2610_candidate.cpp", "src/chips/ym2610_candidate.h",
+    "third_party/ymfm/LICENSE", "third_party/ymfm/NOTICE.md",
+    "third_party/ymfm/src/ymfm.h", "third_party/ymfm/src/ymfm_adpcm.cpp",
+    "third_party/ymfm/src/ymfm_adpcm.h", "third_party/ymfm/src/ymfm_fm.h",
+    "third_party/ymfm/src/ymfm_fm.ipp", "third_party/ymfm/src/ymfm_opn.cpp",
+    "third_party/ymfm/src/ymfm_opn.h", "third_party/ymfm/src/ymfm_ssg.cpp",
+    "third_party/ymfm/src/ymfm_ssg.h",
+)
+MVS_IMPORTER_SOURCE_FILES = tuple(sorted(set((
+    "CMakeLists.txt",
+    "CMakePresets.json",
+    "docs/mvs-media.md",
+    "src/instance.c",
+    "src/mvs/mvs_bus.c",
+    "src/sdk_private.h",
+    "tests/support/portable_stdio.h",
+    "tests/mvs/qualification_failure_driver.c",
+    "tests/mvs/test_mvs.c",
+    "tests/mvs/test_mvs_qualification.py",
+    "tools/verify_sdk.py",
+    "tools/mvs/mvs_import.c",
+    "tools/mvs/mvs_qualify.c",
+    "tools/mvs/qualify_local_boot.py",
+    "third_party/zlib/LICENSE",
+    "third_party/zlib/adler32.c",
+    "third_party/zlib/crc32.c",
+    "third_party/zlib/crc32.h",
+    "third_party/zlib/gzguts.h",
+    "third_party/zlib/inffast.c",
+    "third_party/zlib/inffast.h",
+    "third_party/zlib/inffixed.h",
+    "third_party/zlib/inflate.c",
+    "third_party/zlib/inflate.h",
+    "third_party/zlib/inftrees.c",
+    "third_party/zlib/inftrees.h",
+    "third_party/zlib/zconf.h",
+    "third_party/zlib/zlib.h",
+    "third_party/zlib/zutil.c",
+    "third_party/zlib/zutil.h",
+)) | set(YM2610_RUNTIME_SOURCE_FILES)))
 FIXTURES = {
     "a": {
         "file": "build/sdk-debug/diagnostic-original-a.bin",
         "sha256": "495eb195089d0ee7e73f4090514980b47a5fd4a55869d9e7f46376bce1646948",
-        "output_sha256": "d1a59d8a8b552cf512173fd67bba2524948d23ece994173b80d31a72fb54ac5c",
+        "output_sha256": "e0cb8ba07f599ed85a8217d196f577e539cddbba86f2c930da0ed5f468a806bf",
         "values": (10, 0x1237, 1),
     },
     "b": {
         "file": "build/sdk-debug/diagnostic-original-b.bin",
         "sha256": "be1d769bc7c89530a5e09ac60f8cd89858454b0ae604dd0fe506dcd52b154855",
-        "output_sha256": "324e8897e88fc6a1b746431b43585d4c6ba6ff929afaac0fd55a8ea5808ea094",
+        "output_sha256": "b551afb0fd32171001a3155599f3ee51521a95b7994b4f94fdbb1861790c0cfb",
         "values": (16, 0x2348, 1),
     },
 }
@@ -63,7 +104,7 @@ IDENTITY_FIELDS = {
 }
 
 BASELINE_SCHEMA_VERSION = 1
-BASELINE_WORKLOAD_ID = "diagnostic-original-a-196-cycles"
+BASELINE_WORKLOAD_ID = "diagnostic-original-a-172-cycles"
 BASELINE_EXECUTION_RUNS_PER_SAMPLE = 32
 BASELINE_INPUT_SHA256 = FIXTURES["a"]["sha256"]
 BASELINE_OUTPUT_SHA256 = FIXTURES["a"]["output_sha256"]
@@ -72,8 +113,8 @@ BASELINE_EXPECTED_OUTPUT = {
     "initialized_result": 0x1237,
     "bss_result": 1,
     "ready": 1,
-    "requested_cycles": 196,
-    "elapsed_cycles": 196,
+    "requested_cycles": 172,
+    "elapsed_cycles": 172,
     "overshoot_cycles": 0,
     "instructions": 12,
     "terminal_pc": 0x12E,
@@ -89,13 +130,25 @@ RELEVANT_FILES = (
     "tests/sdk/ORACLE.md", "tests/fuzz/sdk_mutation.c", "tests/fuzz/regressions.json",
     "tests/fuzz/minimize.py", "tests/consumers/CMakeLists.txt",
     "tests/consumers/check_package.py", "tests/consumers/header.cpp",
+    "tests/consumers/sound_consumer.c", "tests/consumers/test_playable_install.py",
+    "tests/fixture/public_guest.c", "tests/fixture/test_public_guest.c",
+    "tests/fixture/public_sound_guest.c", "tests/fixture/test_public_sound_guest.c",
+    "tests/support/portable_stdio.h",
+    "tests/libretro/callback_harness.c",
     "tools/diagnostic/main.c", "tools/sdk_evidence.py", "tools/verify_sdk.py",
-    "src/mvs/mvs_bus.c",
+    "src/mvs/mvs_bus.c", "src/mvs/mvs_protocol.c",
+    "src/chips/z80_candidate.c", "src/chips/z80_candidate.h",
+    "third_party/chips/z80.h",
+    "tests/tools/check_runtime_storage.py", "tests/tools/test_check_runtime_storage.py",
+    "tests/tools/check_runtime_host.py", "tests/tools/test_check_runtime_host.py",
+    "tests/chips/check_ym2610.py",
     "src/libretro/libretro_core.c", "tools/mvs/mvs_import.c",
     "tools/mvs/qualify_local_boot.py", "tools/mvs/mvs_qualify.c",
     "tests/mvs/test_mvs.c", "tests/mvs/test_mvs_qualification.py",
     "tests/mvs/fuzz_import.c", "tests/libretro/retroarch_smoke.py",
     "tests/libretro/test_retroarch_smoke.py", "docs/mvs-media.md",
+    "tools/mvs/frontend_replay.py", "tests/libretro/test_frontend_replay.py",
+    "docs/audio-contract.md",
     "tools/workflow/ci_policy.py", "tests/workflow/test_ci_policy.py",
     "tests/sdk/test_matrix_evidence.py", ".github/workflows/ci.yml",
     "fixtures/diagnostic/manifest.json",
@@ -104,6 +157,23 @@ RELEVANT_FILES = (
     "third_party/unity/src/unity_internals.h", "third_party/unity/LICENSE.txt",
     "third_party/unity/PROVENANCE.md",
 )
+EXAMPLE_SOURCE_FILES = (
+    "CMakeLists.txt",
+    "docs/frontend-continuation.md", "docs/native-save.md", "docs/native-state.md",
+    "docs/ownership-and-errors.md", "docs/public-content.md", "docs/releasing.md",
+    "docs/sdk-examples.md", "docs/testing.md",
+    "examples/continuation.c", "examples/diagnostic.c", "examples/persistence.c",
+    "examples/persistence_host.c", "examples/persistence_host.h",
+    "tests/consumers/CMakeLists.txt", "tests/consumers/check_package.py",
+    "tests/consumers/test_check_package.py", "tests/consumers/test_continuation_install.py",
+    "tests/consumers/test_example_docs.py", "tests/consumers/test_persistence_install.py",
+    "tests/consumers/test_release_consumer.py",
+    "tests/fixture/public_persistence_guest.c", "tests/fixture/public_save_guest.c",
+    "tools/release_manifest.py",
+    "tools/release_state.py", "tools/verify_sdk.py",
+)
+RELEVANT_FILES = tuple(sorted(set(RELEVANT_FILES) | set(MVS_IMPORTER_SOURCE_FILES)
+                              | set(EXAMPLE_SOURCE_FILES)))
 
 PRIVACY_PATTERNS = (
     re.compile(r"(?i)(?:^|[\s\"'=])/(?:Users|home|private/var|var/folders)/[^\s\"']+"),
@@ -255,7 +325,7 @@ def matrix_lane_from_environment(lane: str, verification: dict[str, Any],
     cold_seconds = float(verification.get("cold_build_seconds", 0))
     if not cold_seconds and cold_samples:
         cold_seconds = float(sorted(cold_samples)[len(cold_samples) // 2]) / 1_000_000_000
-    return {
+    lane_record = {
         "lane": lane,
         "compiler": identity["compiler"],
         "sdk": {"name": sdk_name, "version": sdk_version},
@@ -280,10 +350,83 @@ def matrix_lane_from_environment(lane: str, verification: dict[str, Any],
         "runner_id": runner_id,
         "runner_minutes": duration_seconds / 60,
     }
+    if verification.get("suite") == "sanitizer":
+        sanitizer = verification.get("lanes")
+        require(isinstance(sanitizer, dict), "sanitizer-diagnostics-malformed",
+                "sanitizer lane report must be an object")
+        failures = sanitizer.get("failed", [])
+        require(isinstance(failures, list) and len(failures) <= 2
+                and all(isinstance(row, dict) for row in failures),
+                "sanitizer-diagnostics-malformed",
+                "sanitizer failures must be at most two lane records")
+        diagnostics = []
+        seen_lanes = set()
+        fields = (
+            "lane", "stage", "failure_diagnostic", "failed_tests", "attempted_tests",
+            "passed_tests", "source_revision", "relevant_source_sha256", "runtime_log_sha256",
+            "runtime_ctest_output_sha256", "runtime_ctest_output_bytes",
+            "runtime_ctest_output_excerpt_truncated", "runtime_ctest_output_excerpt",
+        )
+        for failure in failures:
+            failure_lane = failure.get("lane")
+            require(isinstance(failure_lane, str)
+                    and failure_lane in {"asan-ubsan", "tsan"}
+                    and failure_lane not in seen_lanes,
+                    "sanitizer-diagnostics-malformed", "sanitizer failure lane is invalid or duplicated")
+            seen_lanes.add(failure_lane)
+            stage = failure.get("stage")
+            message = failure.get("failure_diagnostic")
+            failed_tests = failure.get("failed_tests")
+            attempted = failure.get("attempted_tests")
+            passed = failure.get("passed_tests")
+            revision = failure.get("source_revision")
+            source_sha256 = failure.get("relevant_source_sha256")
+            require(isinstance(stage, str)
+                    and stage in {"configure", "build", "startup", "runtime", "unknown"}
+                    and isinstance(message, str)
+                    and isinstance(failed_tests, list)
+                    and all(isinstance(name, str) and re.fullmatch(r"sdk_\w+", name)
+                            for name in failed_tests)
+                    and isinstance(attempted, int) and not isinstance(attempted, bool)
+                    and isinstance(passed, int) and not isinstance(passed, bool)
+                    and isinstance(revision, str) and re.fullmatch(r"[0-9a-f]{40}", revision)
+                    and isinstance(source_sha256, str) and re.fullmatch(r"[0-9a-f]{64}", source_sha256),
+                    "sanitizer-diagnostics-malformed", "sanitizer failure fields have invalid types or identities")
+            maximum_tests = 13 if failure_lane == "asan-ubsan" else 3
+            require(len(failed_tests) <= maximum_tests
+                    and 0 <= passed <= attempted <= maximum_tests,
+                    "sanitizer-diagnostics-malformed", "sanitizer failure counts exceed the lane inventory")
+            for hash_field in ("runtime_log_sha256", "runtime_ctest_output_sha256"):
+                digest = failure.get(hash_field)
+                require(digest is None or (isinstance(digest, str)
+                        and re.fullmatch(r"[0-9a-f]{64}", digest)),
+                        "sanitizer-diagnostics-malformed", f"{hash_field} must be a SHA-256 digest")
+            output_bytes = failure.get("runtime_ctest_output_bytes")
+            excerpt_truncated = failure.get("runtime_ctest_output_excerpt_truncated")
+            excerpt = failure.get("runtime_ctest_output_excerpt")
+            require(output_bytes is None or (isinstance(output_bytes, int)
+                    and not isinstance(output_bytes, bool) and 0 <= output_bytes <= 2**63 - 1),
+                    "sanitizer-diagnostics-malformed", "CTest output byte count is invalid")
+            require(excerpt_truncated is None or isinstance(excerpt_truncated, bool),
+                    "sanitizer-diagnostics-malformed", "CTest excerpt truncation flag is invalid")
+            require(excerpt is None or isinstance(excerpt, str),
+                    "sanitizer-diagnostics-malformed", "CTest excerpt must be text")
+            require(len(message.encode("utf-8", errors="replace")) <= 8_000,
+                    "sanitizer-diagnostic-too-large", "sanitizer failure detail exceeds the public bound")
+            require(excerpt is None or len(excerpt.encode("utf-8", errors="replace")) <= 16_000,
+                    "sanitizer-diagnostic-too-large", "sanitizer CTest excerpt exceeds the public bound")
+            diagnostic = {key: failure[key] for key in fields if key in failure}
+            diagnostics.append(diagnostic)
+        if diagnostics:
+            lane_record["failure_diagnostics"] = diagnostics
+    return lane_record
 
 
 def build_matrix_report(lanes: list[dict[str, Any]]) -> dict[str, Any]:
     """Aggregate per-job receipts without converting unknowns into support."""
+    require(isinstance(lanes, list), "matrix-lanes-missing", "matrix lanes must be an array")
+    require(all(isinstance(row, dict) for row in lanes), "matrix-lane-malformed",
+            "each lane must be an object")
     rows = sorted(lanes, key=lambda row: row.get("lane", ""))
     durations = [row.get("duration_seconds") for row in rows]
     report = {
@@ -347,9 +490,9 @@ def load_canonical_json(data: bytes, *, label: str = "record") -> Any:
     return value
 
 
-def _run(argv: list[str], *, timeout: int = 20) -> str:
+def _run(argv: list[str], *, timeout: int = 20, cwd: Path = ROOT) -> str:
     try:
-        result = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True,
+        result = subprocess.run(argv, cwd=cwd, capture_output=True, text=True,
                                 timeout=timeout, check=False)
     except (OSError, subprocess.TimeoutExpired) as error:
         raise EvidenceError("identity-unavailable", f"could not inspect required build identity: {argv[0]}") from error
@@ -357,8 +500,8 @@ def _run(argv: list[str], *, timeout: int = 20) -> str:
     return result.stdout.strip()
 
 
-def _git(*args: str) -> str:
-    return _run(["git", *args])
+def _git(*args: str, cwd: Path = ROOT) -> str:
+    return _run(["git", *args], cwd=cwd)
 
 
 def _cache_value(cache: Path, name: str, fallback: str) -> str:
@@ -378,9 +521,13 @@ def _cmake_generated_value(build_dir: Path, name: str, fallback: str) -> str:
     return match.group(1) if match else fallback
 
 
-def relevant_source_rows(root: Path = ROOT) -> list[dict[str, Any]]:
+def relevant_source_rows(root: Path = ROOT,
+                         paths: tuple[str, ...] | None = None) -> list[dict[str, Any]]:
     rows = []
-    for relative in sorted(RELEVANT_FILES):
+    selected = sorted(RELEVANT_FILES if paths is None else paths)
+    require(len(selected) == len(set(selected)), "identity-order",
+            "identity paths must be unique")
+    for relative in selected:
         path = root / relative
         require(path.is_file(), "missing-identity-row", f"required identity file is missing: {relative}")
         rows.append({"path": relative, "sha256": sha256_file(path), "bytes": path.stat().st_size})
@@ -389,11 +536,31 @@ def relevant_source_rows(root: Path = ROOT) -> list[dict[str, Any]]:
     return rows
 
 
+def mvs_importer_identity(root: Path = ROOT,
+                          build_relative: str = "build/sdk-debug") -> dict[str, Any]:
+    """Bind the configured MVS importer artifact to its complete source closure."""
+    basename = "mvs_importer.exe" if sys.platform == "win32" else "mvs_importer"
+    artifact = root / build_relative / basename
+    require(artifact.is_file(), "missing-artifact",
+            "MVS importer must be built before collecting evidence")
+    rows = relevant_source_rows(root, MVS_IMPORTER_SOURCE_FILES)
+    source_dirty = bool(_git("status", "--porcelain", "--untracked-files=all",
+                             "--", *MVS_IMPORTER_SOURCE_FILES, cwd=root))
+    return {
+        "basename": basename,
+        "sha256": sha256_file(artifact),
+        "source_files": rows,
+        "source_sha256": sha256_bytes(canonical_bytes(rows)),
+        "working_tree_dirty": source_dirty,
+    }
+
+
 def public_source_identity(root: Path = ROOT,
                            build_relative: str = "build/sdk-debug") -> dict[str, Any]:
     rows = relevant_source_rows(root)
     relevant_digest = sha256_bytes(canonical_bytes(rows))
-    dirty = bool(_git("status", "--porcelain", "--untracked-files=all", "--", *RELEVANT_FILES))
+    dirty = bool(_git("status", "--porcelain", "--untracked-files=all", "--",
+                      *RELEVANT_FILES, cwd=root))
     build_dir = root / build_relative
     cache = build_dir / "CMakeCache.txt"
     compiler_path = _cache_value(cache, "CMAKE_C_COMPILER", "unknown")
@@ -420,7 +587,7 @@ def public_source_identity(root: Path = ROOT,
     configuration = _cache_value(cache, "CMAKE_BUILD_TYPE", "unknown")
     configuration_flags = _cache_value(cache, "CMAKE_C_FLAGS_" + configuration.upper(), "")
     return {
-        "source_revision": _git("rev-parse", "HEAD"),
+        "source_revision": _git("rev-parse", "HEAD", cwd=root),
         "relevant_source_sha256": relevant_digest,
         "working_tree_dirty": dirty,
         "relevant_source_files": rows,
@@ -434,6 +601,7 @@ def public_source_identity(root: Path = ROOT,
             [{"path": p.name, "sha256": sha256_file(p)} for p in runtime] +
             [{"path": runner.name, "sha256": sha256_file(runner)}],
             key=lambda row: row["path"]),
+        "mvs_importer": mvs_importer_identity(root, build_relative),
         "compiler": {"path_basename": Path(compiler_path).name, "id": compiler_id, "version": compiler_version},
         "cmake": cmake_version,
         "generator": {"name": generator, "version": generator_version},
@@ -464,6 +632,48 @@ def scan_public_value(value: Any) -> None:
             require(pattern.search(value) is None, "privacy-contamination", "public evidence contains a personal path or identifier")
 
 
+def validate_mvs_importer_identity(importer: Any,
+                                   relevant_rows: list[dict[str, Any]]) -> None:
+    require(isinstance(importer, dict), "importer-identity-missing",
+            "MVS importer identity must be an object")
+    require(set(importer) == {"basename", "sha256", "source_files", "source_sha256",
+                              "working_tree_dirty"},
+            "importer-identity-malformed", "MVS importer identity fields are incomplete or unknown")
+    require(importer.get("basename") in {"mvs_importer", "mvs_importer.exe"},
+            "importer-identity-malformed", "MVS importer identity needs a platform executable basename")
+    require(re.fullmatch(r"[0-9a-f]{64}", str(importer.get("sha256", ""))) is not None,
+            "importer-identity-malformed", "MVS importer artifact digest is not SHA-256")
+    require(isinstance(importer.get("working_tree_dirty"), bool),
+            "importer-identity-malformed", "MVS importer dirty flag must be boolean")
+    rows = importer.get("source_files")
+    require(isinstance(rows, list) and rows,
+            "importer-identity-order", "MVS importer source rows must be present and sorted")
+    require(all(isinstance(row, dict) for row in rows), "importer-identity-malformed",
+            "MVS importer source rows must be objects")
+    require(rows == sorted(rows, key=lambda row: row.get("path", "")),
+            "importer-identity-order", "MVS importer source rows must be present and sorted")
+    paths = [row.get("path") for row in rows]
+    require(len(paths) == len(set(paths)), "duplicate-identity-row",
+            "MVS importer source inventory contains duplicate paths")
+    require(paths == list(MVS_IMPORTER_SOURCE_FILES), "importer-identity-mismatch",
+            "MVS importer source inventory differs from the complete pinned closure")
+    require(all(isinstance(row.get("bytes"), int) and not isinstance(row.get("bytes"), bool)
+                and row["bytes"] > 0
+                and re.fullmatch(r"[0-9a-f]{64}", str(row.get("sha256", "")))
+                for row in rows),
+            "importer-identity-malformed", "MVS importer source rows need positive sizes and SHA-256 digests")
+    require(sha256_bytes(canonical_bytes(rows)) == importer.get("source_sha256"),
+            "importer-identity-mismatch", "MVS importer source digest does not match its file inventory")
+    require(isinstance(relevant_rows, list), "identity-malformed",
+            "relevant source identity rows must be an array")
+    require(all(isinstance(row, dict) for row in relevant_rows), "identity-malformed",
+            "relevant source identity rows must be objects")
+    relevant_by_path = {row.get("path"): row for row in relevant_rows}
+    require(all(relevant_by_path.get(row["path"]) == row for row in rows),
+            "importer-identity-mismatch",
+            "MVS importer proof differs from the global relevant-source inventory")
+
+
 def validate_identity(identity: Any, expected: dict[str, Any] | None = None) -> None:
     require(isinstance(identity, dict), "identity-missing", "identity must be an object")
     missing = IDENTITY_FIELDS - identity.keys()
@@ -474,12 +684,19 @@ def validate_identity(identity: Any, expected: dict[str, Any] | None = None) -> 
     require(isinstance(identity.get("working_tree_dirty"), bool), "identity-malformed", "dirty flag must be boolean")
     require(identity.get("unity_pin") == UNITY_PIN, "identity-mismatch", "Unity immutable pin differs")
     unity_files = identity.get("unity_files")
-    require(isinstance(unity_files, list) and unity_files == sorted(unity_files, key=lambda r: r.get("path", "")),
+    require(isinstance(unity_files, list), "identity-order", "Unity identity rows must be present and sorted")
+    require(all(isinstance(row, dict) for row in unity_files), "identity-malformed",
+            "Unity identity rows must be objects")
+    require(unity_files == sorted(unity_files, key=lambda r: r.get("path", "")),
             "identity-order", "Unity identity rows must be present and sorted")
     require({row.get("path"): row.get("sha256") for row in unity_files} == UNITY_FILES,
             "identity-mismatch", "Unity source or notice digest differs")
     rows = identity.get("relevant_source_files")
-    require(isinstance(rows, list) and rows and rows == sorted(rows, key=lambda r: r.get("path", "")),
+    require(isinstance(rows, list) and rows,
+            "identity-order", "relevant source identity rows must be nonempty and sorted")
+    require(all(isinstance(row, dict) for row in rows), "identity-malformed",
+            "relevant source identity rows must be objects")
+    require(rows == sorted(rows, key=lambda r: r.get("path", "")),
             "identity-order", "relevant source identity rows must be nonempty and sorted")
     paths = [row.get("path") for row in rows]
     require(len(paths) == len(set(paths)), "duplicate-identity-row", "relevant source identity contains duplicate paths")
@@ -487,11 +704,17 @@ def validate_identity(identity: Any, expected: dict[str, Any] | None = None) -> 
             "identity-malformed", "source identity rows need positive sizes and SHA-256 digests")
     require(sha256_bytes(canonical_bytes(rows)) == identity.get("relevant_source_sha256"),
             "identity-mismatch", "relevant-source digest does not match its canonical file inventory")
+    if "mvs_importer" in identity:
+        validate_mvs_importer_identity(identity["mvs_importer"], rows)
     for field in ("owned_backend_sha256", "fixture_manifest_sha256", "fixture_sha256", "expected_output_sha256"):
         require(re.fullmatch(r"[0-9a-f]{64}", str(identity.get(field, ""))) is not None,
                 "identity-malformed", f"{field} is not SHA-256")
     artifacts = identity.get("runtime_artifacts")
-    require(isinstance(artifacts, list) and artifacts and artifacts == sorted(artifacts, key=lambda r: r.get("path", "")),
+    require(isinstance(artifacts, list) and artifacts,
+            "identity-order", "runtime artifact rows must be nonempty and sorted")
+    require(all(isinstance(row, dict) for row in artifacts), "identity-malformed",
+            "runtime artifact rows must be objects")
+    require(artifacts == sorted(artifacts, key=lambda r: r.get("path", "")),
             "identity-order", "runtime artifact rows must be nonempty and sorted")
     artifact_paths = [row.get("path") for row in artifacts]
     require(len(artifact_paths) == len(set(artifact_paths)), "duplicate-identity-row", "runtime artifact identity contains duplicate paths")
@@ -623,8 +846,8 @@ def validate_baseline_record(record: Any,
     require(observed_output_digest == BASELINE_OUTPUT_SHA256 and
             workload.get("observed_output_sha256") == observed_output_digest,
             "workload-mismatch", "observed output digest differs from the explicit big-endian result tuple")
-    require(workload.get("guest_cycles") == 196,
-            "workload-mismatch", "baseline guest-cycle request differs from 196")
+    require(workload.get("guest_cycles") == 172,
+            "workload-mismatch", "baseline guest-cycle request differs from 172")
 
     protocol = record.get("protocol")
     require(isinstance(protocol, dict), "missing-raw-samples", "sampling protocol is missing")
@@ -757,27 +980,46 @@ def validate_manifest_document(manifest: Any) -> None:
     require(oracle.get("primary_sources"), "manifest-ancestry", "fixture primary sources are empty")
     require(oracle.get("ancestry"), "manifest-ancestry", "fixture test-oracle ancestry is empty")
     sources = manifest.get("source_inputs")
-    require(isinstance(sources, list) and sources and sources == sorted(sources, key=lambda r: r.get("path", "")),
+    require(isinstance(sources, list) and sources,
+            "manifest-empty", "fixture source inputs are empty or noncanonical")
+    require(all(isinstance(row, dict) for row in sources), "manifest-identity",
+            "fixture source rows must be objects")
+    require(sources == sorted(sources, key=lambda row: row.get("path", "")),
             "manifest-empty", "fixture source inputs are empty or noncanonical")
     source_paths = [row.get("path") for row in sources]
     require(len(source_paths) == len(set(source_paths)), "manifest-identity", "manifest source identities are duplicated")
     require(set(source_paths) == {"tests/sdk/guest_fixture.c", "tests/sdk/guest_fixture.h", "tests/sdk/ORACLE.md"},
             "manifest-identity", "manifest does not bind the full original recipe, interface, and oracle")
     require(all(re.fullmatch(r"[0-9a-f]{64}", str(row.get("sha256", ""))) and
-                isinstance(row.get("bytes"), int) and row["bytes"] > 0 for row in sources),
+                isinstance(row.get("bytes"), int) and not isinstance(row.get("bytes"), bool) and
+                row["bytes"] > 0 for row in sources),
             "manifest-identity", "manifest source rows need positive size and SHA-256")
     dependencies = manifest.get("dependencies")
-    require(isinstance(dependencies, list) and len(dependencies) == 1, "manifest-dependency", "manifest must identify the pinned test-only dependency")
+    require(isinstance(dependencies, list), "manifest-dependency",
+            "manifest dependencies must be an array")
+    require(all(isinstance(row, dict) for row in dependencies), "manifest-dependency",
+            "manifest dependency rows must be objects")
+    require(len(dependencies) == 1, "manifest-dependency",
+            "manifest must identify the pinned test-only dependency")
     dependency = dependencies[0]
     require(dependency.get("name") == "Unity" and dependency.get("revision") == UNITY_PIN and
             dependency.get("license") == "MIT", "manifest-dependency", "Unity manifest pin or notice is not immutable")
     unity_records = dependency.get("files")
-    require(isinstance(unity_records, list) and unity_records == sorted(unity_records, key=lambda r: r.get("path", "")),
+    require(isinstance(unity_records, list), "manifest-order",
+            "dependency source and notice rows must be sorted")
+    require(all(isinstance(row, dict) for row in unity_records), "manifest-dependency",
+            "dependency file rows must be objects")
+    require(unity_records == sorted(unity_records, key=lambda row: row.get("path", "")),
             "manifest-order", "dependency source and notice rows must be sorted")
+    unity_paths = [row.get("path") for row in unity_records]
+    require(len(unity_paths) == len(set(unity_paths)), "manifest-dependency",
+            "Unity dependency file inventory contains duplicate paths")
     require({row.get("path"): row.get("sha256") for row in unity_records} == UNITY_FILES,
             "manifest-dependency", "Unity source/license digest inventory is incomplete")
     fixtures = manifest.get("fixtures")
     require(isinstance(fixtures, list) and fixtures, "manifest-empty", "fixture manifest contains no generated outputs")
+    require(all(isinstance(row, dict) for row in fixtures), "manifest-fixture",
+            "fixture rows must be objects")
     require(len(fixtures) == 2 and [item.get("scenario") for item in fixtures] == ["a", "b"],
             "manifest-order", "fixture scenarios must include A then B in canonical order")
     for item in fixtures:
@@ -788,7 +1030,7 @@ def validate_manifest_document(manifest: Any) -> None:
                 item.get("layout") == "ROM[512] || RAM_INITIALIZATION[10]" and
                 item.get("firmware_required") is False,
                 "manifest-fixture", f"fixture {key} digest/length/layout differs from the original oracle")
-        expected_values = [*spec["values"], 196, 196, 0, 12, 0x12e, 1]
+        expected_values = [*spec["values"], 172, 172, 0, 12, 0x12e, 1]
         record = struct.pack(">IIIQQQQII", *expected_values)
         expected_output = item.get("expected_output")
         require(len(record) == 52 and sha256_bytes(record) == spec["output_sha256"] and
@@ -843,14 +1085,14 @@ def build_manifest(root: Path = ROOT, source_revision: str | None = None) -> dic
         require(path.is_file() and path.stat().st_size == 522, "fixture-artifact-mismatch", f"generated fixture {key} is absent or has wrong length")
         digest = sha256_file(path)
         require(digest == spec["sha256"], "fixture-artifact-mismatch", f"generated fixture {key} differs from the independently recorded identity")
-        output = struct.pack(">IIIQQQQII", *spec["values"], 196, 196, 0, 12, 0x12e, 1)
+        output = struct.pack(">IIIQQQQII", *spec["values"], 172, 172, 0, 12, 0x12e, 1)
         fixtures.append({
             "scenario": key,
             "bytes": 522,
             "sha256": digest,
             "layout": "ROM[512] || RAM_INITIALIZATION[10]",
             "firmware_required": False,
-            "expected_output": {"encoding": ">IIIQQQQII", "fields": ["arithmetic:u32", "initialized:u32", "bss:u32", "requested_cycles:u64", "elapsed_cycles:u64", "overshoot_cycles:u64", "instructions:u64", "terminal_pc:u32", "stop_reason:u32"], "bytes": len(output), "sha256": sha256_bytes(output), "values": [*spec["values"], 196, 196, 0, 12, 0x12e, 1]},
+            "expected_output": {"encoding": ">IIIQQQQII", "fields": ["arithmetic:u32", "initialized:u32", "bss:u32", "requested_cycles:u64", "elapsed_cycles:u64", "overshoot_cycles:u64", "instructions:u64", "terminal_pc:u32", "stop_reason:u32"], "bytes": len(output), "sha256": sha256_bytes(output), "values": [*spec["values"], 172, 172, 0, 12, 0x12e, 1]},
         })
     unity = [{"path": p, "sha256": h, "notice": p.endswith("LICENSE.txt")} for p, h in sorted(UNITY_FILES.items())]
     return {

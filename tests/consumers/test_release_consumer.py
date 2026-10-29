@@ -26,6 +26,124 @@ import public_content
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def copy_release_fixture(
+    source: Path, destination: Path, *, include_git_attributes: bool = False,
+) -> None:
+    """Copy tracked release paths, optionally including Git attributes for a fixture repo."""
+    source = source.resolve(strict=True)
+    source_paths = release_manifest.SOURCE_PATHS
+    if include_git_attributes:
+        source_paths = (*source_paths, ".gitattributes")
+    paths = subprocess.run(
+        ["git", "ls-files", "-z", "--", *source_paths],
+        cwd=source, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        timeout=30,
+    ).stdout.split(b"\0")
+    destination.mkdir(parents=True)
+    for encoded in paths:
+        if not encoded:
+            continue
+        relative = Path(os.fsdecode(encoded))
+        original = source / relative
+        if (relative.is_absolute() or ".." in relative.parts
+                or not original.resolve(strict=True).is_relative_to(source)
+                or any(path.is_symlink() for path in (original, *original.parents)
+                       if path != source and source in path.parents)
+                or not original.is_file()):
+            raise release_manifest.ReleaseError("release fixture requires contained regular source files")
+        target = destination / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(original, target)
+
+
+class ReleaseFixtureTests(unittest.TestCase):
+    def assert_source_directory_alias_rejected(self, *, external: bool) -> None:
+        with tempfile.TemporaryDirectory(prefix="glueyneo-fixture-alias-") as temp:
+            root = Path(temp).resolve()
+            source = root / "repo"
+            original = source / "src"
+            original.mkdir(parents=True)
+            (original / "owned.c").write_text("int owned;\n", encoding="utf-8")
+            subprocess.run(["git", "init", "-q", str(source)], check=True)
+            subprocess.run(["git", "add", "src/owned.c"], cwd=source, check=True)
+            target = root / "outside" if external else source / "actual-src"
+            original.rename(target)
+            copied = root / "copied"
+
+            def rejected() -> None:
+                with mock.patch.object(shutil, "copy2", wraps=shutil.copy2) as copy:
+                    with self.assertRaisesRegex(release_manifest.ReleaseError, "contained regular"):
+                        copy_release_fixture(source, copied)
+                    copy.assert_not_called()
+                self.assertFalse((copied / "src/owned.c").exists())
+
+            try:
+                original.symlink_to(target, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                # Windows runners may lack symlink privilege. Model the same
+                # resolved escape/ancestor link while retaining ordinary bytes
+                # at the source path, so the old leaf-only check still fails.
+                original.mkdir()
+                (original / "owned.c").write_text("int owned;\n", encoding="utf-8")
+                real_resolve = Path.resolve
+                real_is_symlink = Path.is_symlink
+
+                def resolve(path: Path, *args, **kwargs):
+                    if path == original / "owned.c":
+                        return target / "owned.c"
+                    return real_resolve(path, *args, **kwargs)
+
+                def is_symlink(path: Path):
+                    return path == original or real_is_symlink(path)
+
+                with mock.patch.object(Path, "resolve", resolve), \
+                        mock.patch.object(Path, "is_symlink", is_symlink):
+                    rejected()
+            else:
+                rejected()
+
+    def test_source_directory_symlink_cannot_escape_checkout(self) -> None:
+        self.assert_source_directory_alias_rejected(external=True)
+
+    def test_source_directory_symlink_cannot_alias_tracked_paths(self) -> None:
+        self.assert_source_directory_alias_rejected(external=False)
+
+    def test_only_tracked_distributable_files_are_copied(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="glueyneo-fixture-copy-") as temp:
+            root = Path(temp)
+            source = root / "repo"
+            source.mkdir()
+            subprocess.run(["git", "init", "-q", str(source)], check=True)
+            files = {
+                "CMakeLists.txt": "project(synthetic C)\n",
+                ".release-please-manifest.json": '{".":"1.2.3"}\n',
+                "src/owned.c": "int original;\n",
+                "local/private.bin": "private local input\n",
+                ".env.local": "private configuration\n",
+                "src/untracked-private.bin": "private untracked input\n",
+                ".gitignore": "src/untracked-private.bin\n",
+                ".planning/private.md": "private planning\n",
+            }
+            for relative, data in files.items():
+                target = source / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(data, encoding="utf-8")
+            subprocess.run(
+                ["git", "add", "CMakeLists.txt", ".release-please-manifest.json",
+                 "src/owned.c", "local/private.bin", ".env.local", ".planning/private.md"],
+                cwd=source, check=True,
+            )
+            # Exercise working-tree edits, not just the bytes stored in Git.
+            (source / "src/owned.c").write_text("int current;\n", encoding="utf-8")
+            copied = root / "source"
+            copy_release_fixture(source, copied)
+            self.assertEqual(
+                {path.relative_to(copied).as_posix() for path in copied.rglob("*") if path.is_file()},
+                {"CMakeLists.txt", ".release-please-manifest.json", "src/owned.c"},
+            )
+            self.assertEqual((copied / "src/owned.c").read_text(), "int current;\n")
+
+
 class ReleaseWorkspaceTests(unittest.TestCase):
     def test_explicit_parent_precedes_runner_temp_and_runner_precedes_default(self):
         with tempfile.TemporaryDirectory(prefix="glueyneo-workspace-test-") as temp:
@@ -84,6 +202,424 @@ class ReleaseWorkspaceTests(unittest.TestCase):
                     self.assertIs(release_manifest.workspace_parent(selected), resolved)
 
 
+class ArchiveMemberBoundaryTests(unittest.TestCase):
+    @staticmethod
+    def member(name: str, size: int = 0) -> tarfile.TarInfo:
+        result = tarfile.TarInfo(name)
+        result.size = size
+        return result
+
+    def test_member_count_limit_accepts_limit_minus_one_and_limit(self) -> None:
+        release_manifest.validate_member_info(
+            [self.member("a"), self.member("b")], max_members=3)
+        release_manifest.validate_member_info(
+            [self.member("a"), self.member("b"), self.member("c")], max_members=3)
+        with self.assertRaisesRegex(release_manifest.ReleaseError, "member count"):
+            release_manifest.validate_member_info(
+                [self.member("a"), self.member("b"), self.member("c"), self.member("d")],
+                max_members=3)
+
+    def test_member_extent_limit_accepts_limit_minus_one_and_limit(self) -> None:
+        release_manifest.validate_member_info([self.member("below", 7)], max_member_bytes=8)
+        release_manifest.validate_member_info([self.member("at", 8)], max_member_bytes=8)
+        with self.assertRaisesRegex(release_manifest.ReleaseError, "per-file size limit"):
+            release_manifest.validate_member_info([self.member("above", 9)], max_member_bytes=8)
+
+    def test_expanded_total_limit_accepts_limit_minus_one_and_limit(self) -> None:
+        release_manifest.validate_member_info(
+            [self.member("a", 3), self.member("b", 4)],
+            max_member_bytes=8, max_archive_bytes=8)
+        release_manifest.validate_member_info(
+            [self.member("a", 3), self.member("b", 5)],
+            max_member_bytes=8, max_archive_bytes=8)
+        with self.assertRaisesRegex(release_manifest.ReleaseError, "total uncompressed size"):
+            release_manifest.validate_member_info(
+                [self.member("a", 4), self.member("b", 5)],
+                max_member_bytes=8, max_archive_bytes=8)
+
+
+class ReleaseManifestBoundaryTests(unittest.TestCase):
+    VERSION = "0.1.0"
+    COMMIT = "a" * 40
+    DIGEST = "b" * 64
+
+    def expected_inventory(self, size: int = 7) -> dict[str, dict[str, object]]:
+        names = release_state.required_archive_names(self.VERSION) | {"release-manifest.json"}
+        return {name: {"size": size, "sha256": self.DIGEST} for name in names}
+
+    def valid_release(self, size: int = 7) -> dict[str, object]:
+        return {
+            "tag_name": f"v{self.VERSION}", "tag_commit": self.COMMIT,
+            "target_commitish": self.COMMIT, "draft": True, "prerelease": False,
+            "assets": [
+                {"name": name, "size": size, "digest": self.DIGEST, "state": "uploaded"}
+                for name in sorted(self.expected_inventory(size))
+            ],
+        }
+
+    def validate(self, release: dict[str, object], *, size: int = 7,
+                 commit: str | None = None) -> dict[str, object]:
+        return release_state.validate_release(
+            release, expected_tag=f"v{self.VERSION}", expected_version=self.VERSION,
+            expected_commit=commit or self.COMMIT, manifest_version=self.VERSION,
+            expected_assets=self.expected_inventory(size),
+        )
+
+    def test_release_rejects_each_nonobject_asset_and_mixed_rows(self) -> None:
+        for malformed in (None, "not-an-object", [], 7):
+            with self.subTest(row=malformed):
+                release = self.valid_release()
+                release["assets"].append(malformed)
+                result = self.validate(release)
+                self.assertEqual(result["error"], "release contains a malformed asset")
+
+    def test_release_sizes_are_exact_integers_above_float_precision_boundary(self) -> None:
+        size = 2**53 + 1
+        release = self.valid_release(size)
+        self.assertEqual(self.validate(release, size=size)["status"], "ready")
+        release["assets"][0]["size"] += 1
+        result = self.validate(release, size=size)
+        self.assertEqual(result["error"], "existing release asset bytes differ from staged bytes")
+
+    def test_release_requires_full_digest_and_full_commit_identity(self) -> None:
+        release = self.valid_release()
+        release["assets"][0]["digest"] = self.DIGEST[:-1] + "c"
+        self.assertEqual(self.validate(release)["error"],
+                         "existing release asset bytes differ from staged bytes")
+        release = self.valid_release()
+        release["tag_commit"] = self.COMMIT[:-1] + "c"
+        self.assertEqual(self.validate(release)["error"],
+                         "release tag does not target the tested versioned commit")
+
+    def test_download_manifest_rejects_nonobject_and_mixed_rows(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="glueyneo-manifest-shape-") as temporary:
+            root = Path(temporary)
+            names = sorted(release_state.required_archive_names(self.VERSION))
+            rows = [{"name": name, "size": 1, "sha256": self.DIGEST} for name in names]
+            manifest_path = root / "manifest.json"
+            for malformed in (None, "not-an-object", [], 7):
+                manifest = {"schema_version": 1, "tag": f"v{self.VERSION}",
+                            "source_commit": self.COMMIT, "version": self.VERSION,
+                            "assets": [*rows, malformed]}
+                manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+                with self.subTest(row=malformed), self.assertRaisesRegex(
+                        release_state.ReleaseStateError, "manifest row is malformed"):
+                    release_state.validate_downloaded_assets(root, manifest_path)
+
+    def test_boolean_schema_version_is_not_integer_schema_version(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="glueyneo-manifest-schema-") as temporary:
+            root = Path(temporary)
+            manifest = {"schema_version": True, "tag": f"v{self.VERSION}",
+                        "source_commit": self.COMMIT, "version": self.VERSION,
+                        "assets": [{"name": name, "size": 1, "sha256": self.DIGEST}
+                                   for name in sorted(release_state.required_archive_names(self.VERSION))]}
+            manifest_path = root / "manifest.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            with self.assertRaisesRegex(release_state.ReleaseStateError, "identity is malformed"):
+                release_state.validate_downloaded_assets(root, manifest_path)
+            with self.assertRaisesRegex(release_state.ReleaseStateError, "identity is malformed"):
+                release_state.expected_api_assets(manifest_path)
+
+
+def packaged_record(output: str, marker: str, *, role: str | None = None) -> dict[str, object]:
+    rows = [line[len(marker):] for line in output.splitlines() if line.startswith(marker)]
+    if len(rows) != 1:
+        raise release_manifest.ReleaseError(f"expected one {marker.strip()} result record, found {len(rows)}")
+    try:
+        record = json.loads(rows[0])
+    except json.JSONDecodeError as error:
+        raise release_manifest.ReleaseError(f"malformed {marker.strip()} result record") from error
+    if (not isinstance(record, dict) or type(record.get("schema_version")) is not int
+            or record["schema_version"] != 1):
+        raise release_manifest.ReleaseError(f"invalid {marker.strip()} result record")
+    if role is not None and record.get("role") != role:
+        raise release_manifest.ReleaseError(f"unexpected role in {marker.strip()} result record")
+    return record
+
+
+_PACKAGED_CONSUMER_TARGETS = frozenset({
+    "glueyneo-installed-c",
+    "glueyneo-installed-cxx",
+    "glueyneo-installed-sound",
+    "glueyneo-installed-continuation",
+    "glueyneo-installed-persistence",
+})
+
+
+def packaged_consumer_executable(consumer_build: Path, target: str) -> Path:
+    """Resolve a staged consumer target at its declared config-independent output root."""
+    if target not in _PACKAGED_CONSUMER_TARGETS:
+        raise release_manifest.ReleaseError("unknown packaged consumer target")
+    suffix = ".exe" if os.name == "nt" else ""
+    build_root = consumer_build.resolve(strict=True)
+    executable = build_root / f"{target}{suffix}"
+    if executable.is_symlink():
+        raise release_manifest.ReleaseError(
+            f"packaged consumer target is not a direct build output: {target}"
+        )
+    if executable.is_file():
+        resolved = executable.resolve(strict=True)
+        if resolved.parent != build_root:
+            raise release_manifest.ReleaseError(
+                f"packaged consumer target resolved outside its output root: {target}"
+            )
+        return resolved
+    release_executable = build_root / "Release" / f"{target}{suffix}"
+    if release_executable.is_file():
+        raise release_manifest.ReleaseError(
+            f"packaged consumer target used a config-specific output directory: {target}"
+        )
+    raise release_manifest.ReleaseError(f"packaged SDK omitted consumer executable: {target}")
+
+
+def archive_scan_failure_identity(
+    label: str, findings: list[dict[str, object]], source_root: Path, sdk_root: Path,
+) -> str:
+    """Summarize source/install notice identity without exposing contents or host paths."""
+    safe_findings = []
+    for finding in findings[:8]:
+        location = finding.get("location")
+        normalized_location = location.replace("\\", "/") if isinstance(location, str) else ""
+        drive_absolute = (len(normalized_location) >= 3 and normalized_location[0].isalpha()
+                          and normalized_location[1:3] == ":/")
+        if (normalized_location.startswith("/") or drive_absolute
+                or ".." in normalized_location.split("/")):
+            normalized_location = "<redacted-location>"
+        safe_findings.append({
+            "location": normalized_location[:240] if normalized_location else "<redacted-location>",
+            "rules": sorted(rule for rule in finding.get("rules", []) if isinstance(rule, str))[:8],
+        })
+    summary: dict[str, object] = {
+        "archive": label,
+        "finding_count": len(findings),
+        "findings": safe_findings,
+    }
+    try:
+        identities = []
+        for variant in ("static", "shared"):
+            data = (sdk_root / variant / "share/licenses/Glueyneo/zlib/LICENSE").read_bytes()
+            identities.append({
+                "path": f"{variant}/share/licenses/Glueyneo/zlib/LICENSE",
+                "bytes": len(data),
+                "sha256": hashlib.sha256(data).hexdigest(),
+            })
+        source_license = (source_root / "third_party/zlib/LICENSE").read_bytes()
+    except OSError:
+        summary["license_identity_status"] = "unavailable"
+    else:
+        summary["source_license"] = {
+            "bytes": len(source_license),
+            "sha256": hashlib.sha256(source_license).hexdigest(),
+        }
+        summary["installed_licenses"] = identities
+    return json.dumps(summary, sort_keys=True, separators=(",", ":"))
+
+
+class ReleaseArchiveScanDiagnosticTests(unittest.TestCase):
+    def test_failure_summary_is_path_safe_and_binds_exact_license_bytes(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="glueyneo-archive-scan-diagnostic-") as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            sdk = root / "sdk"
+            (source / "third_party/zlib").mkdir(parents=True)
+            license_bytes = b"upstream license fixture\n"
+            (source / "third_party/zlib/LICENSE").write_bytes(license_bytes)
+            for variant in ("static", "shared"):
+                target = sdk / variant / "share/licenses/Glueyneo/zlib/LICENSE"
+                target.parent.mkdir(parents=True)
+                target.write_bytes(license_bytes)
+            findings = [
+                {"location": str(root / "private"), "rules": ["private-identity"]},
+                {"location": "Q:\\fixture\\private", "rules": ["private-identity"]},
+            ]
+
+            summary = archive_scan_failure_identity("SDK", findings, source, sdk)
+
+            self.assertNotIn(str(root), summary)
+            self.assertNotIn("Q:", summary)
+            self.assertIn("<redacted-location>", summary)
+            self.assertIn(hashlib.sha256(license_bytes).hexdigest(), summary)
+            self.assertIn('"finding_count":2', summary)
+
+    def test_failure_summary_has_value_free_fallback_when_license_reads_fail(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="glueyneo-archive-scan-fallback-") as temporary:
+            root = Path(temporary)
+            findings = [{"location": str(root / "private"), "rules": ["private-identity"]}]
+            with mock.patch.object(Path, "read_bytes", side_effect=OSError("host path must not escape")):
+                summary = archive_scan_failure_identity("SDK", findings, root, root)
+
+            self.assertNotIn(str(root), summary)
+            self.assertNotIn("host path must not escape", summary)
+            self.assertIn('"license_identity_status":"unavailable"', summary)
+
+
+class PackagedConsumerExecutableTests(unittest.TestCase):
+    def test_target_symlink_cannot_select_an_outside_executable(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="glueyneo-consumer-symlink-") as temporary:
+            root = Path(temporary)
+            build = root / "consumer-build"
+            outside = root / "outside"
+            build.mkdir()
+            outside.mkdir()
+            suffix = ".exe" if os.name == "nt" else ""
+            executable = build.resolve() / f"glueyneo-installed-c{suffix}"
+            external = outside.resolve() / executable.name
+            external.write_bytes(b"outside executable marker")
+            try:
+                executable.symlink_to(external)
+            except (OSError, NotImplementedError):
+                # Model a Windows symlink when the current account lacks the
+                # privilege; the production path must still reject it before launch.
+                executable.write_bytes(b"modeled symlink target")
+                original_is_symlink = Path.is_symlink
+
+                def is_symlink(path: Path) -> bool:
+                    return path == executable or original_is_symlink(path)
+
+                with mock.patch.object(Path, "is_symlink", is_symlink):
+                    with self.assertRaisesRegex(
+                            release_manifest.ReleaseError, "not a direct build output"):
+                        packaged_consumer_executable(build, "glueyneo-installed-c")
+            else:
+                with self.assertRaisesRegex(
+                        release_manifest.ReleaseError, "not a direct build output"):
+                    packaged_consumer_executable(build, "glueyneo-installed-c")
+
+    def test_resolved_target_must_remain_at_the_staged_output_root(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="glueyneo-consumer-alias-") as temporary:
+            root = Path(temporary)
+            build = root / "consumer-build"
+            outside = root / "outside"
+            build.mkdir()
+            outside.mkdir()
+            suffix = ".exe" if os.name == "nt" else ""
+            executable = build.resolve() / f"glueyneo-installed-c{suffix}"
+            executable.write_bytes(b"regular staged output")
+            resolved_elsewhere = outside.resolve() / executable.name
+            resolved_elsewhere.write_bytes(b"external target")
+            original_resolve = Path.resolve
+
+            def resolve(path: Path, *args, **kwargs) -> Path:
+                if path == executable:
+                    return resolved_elsewhere
+                return original_resolve(path, *args, **kwargs)
+
+            with mock.patch.object(Path, "resolve", resolve):
+                with self.assertRaisesRegex(
+                        release_manifest.ReleaseError, "outside its output root"):
+                    packaged_consumer_executable(build, "glueyneo-installed-c")
+
+
+def run_packaged_examples(
+    consumer_build: Path, prefix: Path, run_root: Path, *,
+    environment: dict[str, str] | None = None,
+) -> dict[str, object]:
+    """Run the packaged continuation and persistence examples against a relocated SDK."""
+    env = dict(os.environ if environment is None else environment)
+    env["PATH"] = str(prefix / "bin") + os.pathsep + env.get("PATH", "")
+    run_root.mkdir(parents=True)
+
+    def invoke(name: str, arguments: list[str], *, timeout: int = 120) -> str:
+        executable = packaged_consumer_executable(consumer_build, name)
+        result = subprocess.run(
+            [str(executable), *arguments], cwd=run_root, env=env,
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            check=False, timeout=timeout,
+        )
+        if result.returncode:
+            raise release_manifest.ReleaseError(
+                f"packaged SDK example failed ({name}, {result.returncode}): {result.stdout[-4000:]}"
+            )
+        return result.stdout
+
+    media = run_root / "public-sound-mvs.bin"
+    invoke("glueyneo-installed-sound", ["--write-fixture", str(media)])
+    trace = run_root / "sound.trace"
+    sound_output = invoke("glueyneo-installed-sound", [str(media), "--trace", str(trace)])
+    if (not any(line.startswith('SDK_SOUND {"outcome":"pass"') for line in sound_output.splitlines())
+            or not media.is_file() or media.stat().st_size <= 0
+            or not trace.is_file() or trace.stat().st_size <= 0):
+        raise release_manifest.ReleaseError("packaged sound recipe did not produce its public fixture")
+
+    state, expected, observed = (run_root / name for name in ("position.gnst", "expected.gnct", "observed.gnct"))
+    producer = packaged_record(invoke("glueyneo-installed-continuation", [
+        "--produce", str(media), str(state), str(expected),
+    ]), "SDK_CONTINUATION ", role="producer")
+    reader = packaged_record(invoke("glueyneo-installed-continuation", [
+        "--consume", str(media), str(state), str(expected), str(observed),
+    ]), "SDK_CONTINUATION ", role="reader")
+    for record, fields in (
+        (producer, ("frames", "elapsed_cycles", "audio_frames", "nonzero_audio_samples")),
+        (reader, ("frames", "elapsed_cycles", "audio_frames")),
+    ):
+        if (record.get("outcome") != "pass" or record.get("case_id") != "sdk.continuation.process"
+                or not all(type(record.get(field)) is int and record[field] > 0 for field in fields)):
+            raise release_manifest.ReleaseError("packaged continuation did not prove guest/time/video/PCM progress")
+    if (producer.get("frames") != reader.get("frames")
+            or producer.get("elapsed_cycles") != reader.get("elapsed_cycles")
+            or producer.get("audio_frames") != reader.get("audio_frames")
+            or not expected.is_file() or not observed.is_file()
+            or expected.read_bytes() != observed.read_bytes()
+            or reader.get("control") != "pass"):
+        raise release_manifest.ReleaseError("packaged continuation trace, including video and PCM, did not match")
+
+    portable_slot = run_root / "portable.gnsave"
+    portable_producer = packaged_record(invoke("glueyneo-installed-persistence", [
+        "--mode", "portable", "--role", "producer", "--value", "A",
+        "--slot", str(portable_slot), "--scope", "00000000000000000000000000000021",
+    ]), "SDK_PERSISTENCE ", role="producer")
+    portable_reader = packaged_record(invoke("glueyneo-installed-persistence", [
+        "--mode", "portable", "--role", "reader", "--slot", str(portable_slot),
+        "--scope", "00000000000000000000000000000022",
+    ]), "SDK_PERSISTENCE ", role="reader")
+    portable_omitted = packaged_record(invoke("glueyneo-installed-persistence", [
+        "--mode", "portable", "--role", "reader", "--slot", str(portable_slot),
+        "--scope", "00000000000000000000000000000025", "--no-import",
+    ]), "SDK_PERSISTENCE ", role="reader")
+    for record in (portable_producer, portable_reader, portable_omitted):
+        if (record.get("case_id") != "sdk.persistence.portable" or record.get("outcome") != "pass"
+                or record.get("host_file_commit") != "not_claimed"
+                or type(record.get("assertions")) is not int or record["assertions"] <= 0):
+            raise release_manifest.ReleaseError("packaged portable persistence did not report guest consumption")
+    if (portable_reader.get("public_observation") == portable_omitted.get("public_observation")
+            or not isinstance(portable_reader.get("public_observation"), dict)
+            or type(portable_reader["public_observation"].get("instructions")) is not int
+            or portable_reader["public_observation"]["instructions"] <= 0
+            or portable_reader.get("transfer_bytes") != 65632):
+        raise release_manifest.ReleaseError("packaged portable persistence did not prove the imported guest state was consumed")
+
+    host_dir = run_root / "host"
+    host_dir.mkdir()
+    host_slot = host_dir / "slot.gnsave"
+    host_producer = packaged_record(invoke("glueyneo-installed-persistence", [
+        "--mode", "host", "--role", "producer", "--value", "A", "--slot", str(host_slot),
+        "--scratch-dir", str(host_dir), "--scope", "00000000000000000000000000000023",
+    ]), "SDK_PERSISTENCE ", role="producer")
+    host_reader = packaged_record(invoke("glueyneo-installed-persistence", [
+        "--mode", "host", "--role", "reader", "--reopen", "--slot", str(host_slot),
+        "--scratch-dir", str(host_dir), "--scope", "00000000000000000000000000000024",
+    ]), "SDK_PERSISTENCE ", role="reader")
+    if (host_producer.get("case_id") != "sdk.persistence.host"
+            or host_reader.get("case_id") != "sdk.persistence.host"):
+        raise release_manifest.ReleaseError("packaged host persistence result was mislabeled")
+    if host_producer.get("outcome") == "unsupported":
+        if (host_reader.get("outcome") != "unsupported"
+                or host_producer.get("host_file_commit") != "unsupported"
+                or host_reader.get("host_file_commit") != "unsupported"
+                or not host_producer.get("reason") or not host_reader.get("reason")):
+            raise release_manifest.ReleaseError("packaged unsupported host persistence result was incomplete")
+        host_outcome = "unsupported"
+    elif (host_producer.get("outcome") == "pass" and host_reader.get("outcome") == "pass"
+          and host_producer.get("host_file_commit") == "committed_darwin_apfs"
+          and host_reader.get("host_file_commit") == "read_only_reopen"
+          and host_producer.get("receipt_acked") == 1 and host_reader.get("receipt_acked") == 0):
+        host_outcome = "committed-and-reopened"
+    else:
+        raise release_manifest.ReleaseError("packaged host persistence result did not match its platform contract")
+    return {"continuation": "guest/time/video/PCM pass", "portable_persistence": "guest-consumed",
+            "host_persistence": host_outcome}
+
+
 class ReleaseManifestCompilerIdentityTests(unittest.TestCase):
     def test_generated_compiler_identity_accepts_visual_studio_string_and_filepath_cache(self):
         compiler = (
@@ -128,11 +664,7 @@ class ReleaseConsumerTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="glueyneo-release-red-")
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name) / "source"
-        shutil.copytree(
-            ROOT,
-            self.root,
-            ignore=shutil.ignore_patterns(".git", "build", "__pycache__", ".planning"),
-        )
+        copy_release_fixture(ROOT, self.root)
 
     def configure(self) -> subprocess.CompletedProcess[str]:
         build = Path(self.temp.name) / "build"
@@ -165,12 +697,27 @@ class ReleaseConsumerTests(unittest.TestCase):
 
     def test_release_archive_rebuilds_offline_and_relocates_consumers(self) -> None:
         repo = Path(self.temp.name) / "repo"
+        copy_release_fixture(ROOT, repo, include_git_attributes=True)
+        canonical_zlib_license = subprocess.run(
+            ["git", "show", "HEAD:third_party/zlib/LICENSE"], cwd=ROOT,
+            check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10,
+        ).stdout
+        (repo / "third_party/zlib/LICENSE").write_bytes(
+            canonical_zlib_license.replace(b"\n", b"\r\n")
+        )
+        subprocess.run(["git", "init", "--quiet", str(repo)], check=True,
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+        subprocess.run(["git", "add", "--all"], cwd=repo, check=True,
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+        indexed_zlib_license = subprocess.run(
+            ["git", "show", ":third_party/zlib/LICENSE"], cwd=repo,
+            check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10,
+        ).stdout
+        self.assertEqual(indexed_zlib_license, canonical_zlib_license)
         subprocess.run(
-            ["git", "clone", "--quiet", str(ROOT), str(repo)],
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=60,
+            ["git", "-c", "user.name=Glueyneo Tests", "-c", "user.email=tests@example.org",
+             "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "test: snapshot release source"],
+            cwd=repo, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30,
         )
         (repo / ".release-please-manifest.json").write_text('{".": "9.8.7"}\n', encoding="utf-8")
         subprocess.run(
@@ -202,12 +749,13 @@ class ReleaseConsumerTests(unittest.TestCase):
         self.assertEqual(record["version"], "9.8.7")
         self.assertEqual(hashlib.sha256(source_archive.read_bytes()).hexdigest(), record["source_sha256"])
         self.assertEqual(hashlib.sha256(sdk_archive.read_bytes()).hexdigest(), record["sdk_sha256"])
-        self.assertEqual(public_content.scan_archive(source_archive)["findings"], [])
-        self.assertEqual(public_content.scan_archive(sdk_archive)["findings"], [])
-
         source_extract = Path(self.temp.name) / "source-extracted"
         release_manifest.safe_extract(source_archive, source_extract)
         source_root = source_extract / "glueyneo-source"
+        self.assertFalse((source_root / ".gitattributes").exists())
+        self.assertEqual(
+            (source_root / "third_party/zlib/LICENSE").read_bytes(), canonical_zlib_license,
+        )
         source_build = Path(self.temp.name) / "offline-build"
         configure = subprocess.run(
             ["cmake", "-S", str(source_root), "-B", str(source_build),
@@ -224,6 +772,13 @@ class ReleaseConsumerTests(unittest.TestCase):
             check=False, timeout=180,
         )
         self.assertEqual(build.returncode, 0, build.stdout)
+        guide = subprocess.run(
+            [sys.executable, str(source_root / "tests/consumers/test_example_docs.py"), "--mode", "commands"],
+            cwd=source_root, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            check=False, timeout=900,
+        )
+        self.assertEqual(guide.returncode, 0, guide.stdout)
+        self.assertIn('"commands_executed": 28', guide.stdout)
 
         sdk_extract = Path(self.temp.name) / "sdk-extracted"
         release_manifest.safe_extract(sdk_archive, sdk_extract)
@@ -240,6 +795,20 @@ class ReleaseConsumerTests(unittest.TestCase):
             self.assertTrue(asset_path.is_file(), asset["path"])
             self.assertEqual(hashlib.sha256(asset_path.read_bytes()).hexdigest(), asset["sha256"])
             self.assertEqual(asset_path.stat().st_size, asset["size"])
+        example_closure = {
+            "consumer-example/source/continuation.c": "examples/continuation.c",
+            "consumer-example/source/persistence.c": "examples/persistence.c",
+            "consumer-example/source/persistence_host.c": "examples/persistence_host.c",
+            "consumer-example/source/persistence_host.h": "examples/persistence_host.h",
+            "consumer-example/source/public_persistence_guest.c": "tests/fixture/public_persistence_guest.c",
+            "docs/sdk-examples.md": "docs/sdk-examples.md",
+            "docs/native-state.md": "docs/native-state.md",
+            "docs/native-save.md": "docs/native-save.md",
+            "docs/testing.md": "docs/testing.md",
+            "docs/frontend-continuation.md": "docs/frontend-continuation.md",
+        }
+        for packaged, original in example_closure.items():
+            self.assertEqual((sdk_root / packaged).read_bytes(), (source_root / original).read_bytes(), packaged)
         notices = {
             "libretro/libretro.h": "third_party/libretro/libretro.h",
             "libretro/NOTICE.md": "third_party/libretro/NOTICE.md",
@@ -307,9 +876,15 @@ class ReleaseConsumerTests(unittest.TestCase):
             cache = (consumer_build / "CMakeCache.txt").read_text(encoding="utf-8")
             multi_config = any(line.startswith("CMAKE_CONFIGURATION_TYPES:")
                                for line in cache.splitlines())
-            exe_dir = consumer_build / "Release" if multi_config else consumer_build
-            exe_suffix = ".exe" if os.name == "nt" else ""
-            consumer_exe = exe_dir / f"glueyneo-installed-c{exe_suffix}"
+            consumer_exe = packaged_consumer_executable(
+                consumer_build, "glueyneo-installed-c"
+            )
+            consumer_cxx_exe = packaged_consumer_executable(
+                consumer_build, "glueyneo-installed-cxx"
+            )
+            if multi_config:
+                self.assertEqual(consumer_exe.parent, consumer_build.resolve())
+                self.assertEqual(consumer_cxx_exe.parent, consumer_build.resolve())
             consumer_env = os.environ.copy()
             consumer_env["PATH"] = (str(prefix / "bin") + os.pathsep
                                      + consumer_env.get("PATH", ""))
@@ -318,14 +893,40 @@ class ReleaseConsumerTests(unittest.TestCase):
                 text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 check=False, timeout=30, env=consumer_env,
             )
-            self.assertEqual(consumer.returncode, 0, consumer.stdout)
+            self.assertEqual(consumer.returncode, 0, "installed C consumer failed")
             self.assertIn('"outcome":"pass"', consumer.stdout)
+            consumer_cxx = subprocess.run(
+                [str(consumer_cxx_exe)],
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                check=False, timeout=30, env=consumer_env,
+            )
+            self.assertEqual(consumer_cxx.returncode, 0, "installed C++ consumer failed")
+            self.assertIn('SDK_CONSUMER_CPP {"schema_version":1,"case_id":"sdk.consumer.cpp","outcome":"pass"',
+                          consumer_cxx.stdout)
+            examples = run_packaged_examples(
+                consumer_build, prefix, Path(self.temp.name) / f"examples-{variant}",
+            )
+            self.assertEqual(examples["continuation"], "guest/time/video/PCM pass")
+            self.assertEqual(examples["portable_persistence"], "guest-consumed")
+            self.assertIn(examples["host_persistence"], {"unsupported", "committed-and-reopened"})
         self.assertFalse(repo.exists())
         self.assertFalse(source_root.exists())
         self.assertFalse(source_build.exists())
         self.assertTrue(disabled_repo.exists())
         self.assertTrue(disabled_source.exists())
         self.assertTrue(disabled_build.exists())
+        content_errors = []
+        for label, archive in (("source", source_archive), ("SDK", sdk_archive)):
+            try:
+                report = public_content.scan_archive(archive)
+            except public_content.ContentError as error:
+                content_errors.append(f"{label}: {error}")
+            else:
+                if report["findings"]:
+                    self.fail(archive_scan_failure_identity(
+                        label, report["findings"], disabled_source, moved_sdk
+                    ))
+        self.assertEqual(content_errors, [], "; ".join(content_errors))
 
     def test_archive_extraction_rejects_traversal_and_links(self) -> None:
         for member in (
@@ -369,13 +970,17 @@ class ReleaseConsumerTests(unittest.TestCase):
         self.assertEqual(result["outcome"], "pass")
         self.assertEqual(result["source_commit"], source_commit)
 
-        (download / "glueyneo-sdk-0.1.0-linux-x86_64.tar.gz").write_bytes(b"replaced")
+        linux_archive = download / "glueyneo-sdk-0.1.0-linux-x86_64.tar.gz"
+        linux_archive.write_bytes(b"x" + contents[linux_archive.name][1:])
         with self.assertRaises(release_state.ReleaseStateError):
             release_state.validate_downloaded_assets(download, staged_manifest)
-        (download / "glueyneo-sdk-0.1.0-linux-x86_64.tar.gz").write_bytes(
-            contents["glueyneo-sdk-0.1.0-linux-x86_64.tar.gz"])
+        linux_archive.write_bytes(contents[linux_archive.name])
         (download / "unexpected.zip").write_bytes(b"extra")
         with self.assertRaises(release_state.ReleaseStateError):
+            release_state.validate_downloaded_assets(download, staged_manifest)
+        (download / "unexpected.zip").unlink()
+        (download / "glueyneo-sdk-0.1.0-linux-x86_64.tar.gz").unlink()
+        with self.assertRaisesRegex(release_state.ReleaseStateError, "names differ from the manifest"):
             release_state.validate_downloaded_assets(download, staged_manifest)
 
 
@@ -401,20 +1006,48 @@ def verify_downloaded_release(download: Path, staged_manifest: Path, *, commit: 
         except release_manifest.ReleaseError as error:
             raise RuntimeError(str(error)) from error
 
+    def cache_values(cache: Path) -> dict[str, str]:
+        values: dict[str, str] = {}
+        for line in cache.read_text(encoding="utf-8").splitlines():
+            if line.startswith(("CMAKE_C_COMPILER_ID:", "CMAKE_C_COMPILER_VERSION:", "CMAKE_GENERATOR:")):
+                key, value = line.split("=", 1)
+                values[key.split(":", 1)[0]] = value
+        return values
+
     with tempfile.TemporaryDirectory(prefix="glueyneo-downloaded-consumer-") as temp_name:
         work = Path(temp_name)
         source_dir = work / "source"
         release_manifest.safe_extract(source_archive, source_dir)
         source_root = source_dir / "glueyneo-source"
         build = work / "offline-build"
+        cases: list[dict[str, str]] = [
+            {"id": "downloaded-assets", "status": "pass",
+             "detail": "all downloaded bytes matched the trusted staged manifest"},
+        ]
         run([cmake, "-S", str(source_root), "-B", str(build), "-DBUILD_TESTING=OFF",
              "-DGLUEYNEO_BUILD_TESTS=OFF", "-DCMAKE_BUILD_TYPE=Release",
              "-DFETCHCONTENT_FULLY_DISCONNECTED=ON"], cwd=source_root)
         run([cmake, "--build", str(build), "--config", "Release", "--parallel", "2"], cwd=source_root)
+        cases.append({"id": "offline-source-build", "status": "pass",
+                      "detail": "the downloaded source archive configured and built offline"})
+        source_toolchain = cache_values(build / "CMakeCache.txt")
+        if not source_toolchain.get("CMAKE_C_COMPILER_ID") or not source_toolchain.get("CMAKE_C_COMPILER_VERSION"):
+            raise RuntimeError("offline source build did not record its C compiler identity")
+        guide = run(
+            [sys.executable, str(source_root / "tests/consumers/test_example_docs.py"), "--mode", "commands"],
+            cwd=source_root, timeout=900,
+        )
+        if ('"commands_executed": 28' not in guide or '"result_records_checked": 12' not in guide
+                or '"outcome": "pass"' not in guide):
+            raise RuntimeError(f"downloaded source archive guide command closure was incomplete: {guide[-4000:]}")
+        cases.append({"id": "guide-command-closure", "status": "pass",
+                      "detail": "28 documented commands and 12 result records passed"})
+        cmake_version = run([cmake, "--version"], cwd=work).splitlines()[0]
 
         sdk_dir = work / "sdk"
         release_manifest.safe_extract(sdk_archive, sdk_dir)
         sdk_root = sdk_dir / f"glueyneo-sdk-{version}"
+        toolchain_builds: list[dict[str, str]] = []
         for variant in ("static", "shared"):
             prefix = sdk_root / variant
             fixture = prefix / "share/glueyneo/diagnostic-original-a.bin"
@@ -424,14 +1057,17 @@ def verify_downloaded_release(download: Path, staged_manifest: Path, *, commit: 
                                         check=False, timeout=30)
             if diagnostic.returncode:
                 raise RuntimeError(f"relocated {variant} diagnostic failed: {diagnostic.stdout[-4000:]}")
+            cases.append({"id": f"{variant}-diagnostic", "status": "pass",
+                          "detail": "relocated SDK diagnostic accepted the original public fixture"})
             consumer_source = sdk_root / "consumer-example/source"
             consumer_build = work / f"consumer-{variant}"
             run([cmake, "-S", str(consumer_source), "-B", str(consumer_build),
                  f"-DGlueyneo_DIR={prefix / 'lib/cmake/Glueyneo'}",
                  "-DGLUEYNEO_CONSUMER_C_SOURCE=diagnostic.c", "-DCMAKE_BUILD_TYPE=Release"], cwd=work)
             run([cmake, "--build", str(consumer_build), "--config", "Release", "--parallel", "2"], cwd=work)
-            exe_dir = consumer_build / "Release" if platform.system() == "Windows" else consumer_build
-            consumer_exe = exe_dir / ("glueyneo-installed-c.exe" if platform.system() == "Windows" else "glueyneo-installed-c")
+            consumer_exe = packaged_consumer_executable(
+                consumer_build, "glueyneo-installed-c"
+            )
             process_env = dict(__import__("os").environ)
             binary_dir = str(prefix / "bin")
             process_env["PATH"] = binary_dir + __import__("os").pathsep + process_env.get("PATH", "")
@@ -440,9 +1076,36 @@ def verify_downloaded_release(download: Path, staged_manifest: Path, *, commit: 
                                       check=False, timeout=30, env=process_env)
             if consumer.returncode or '"outcome":"pass"' not in consumer.stdout:
                 raise RuntimeError(f"relocated {variant} SDK consumer failed: {consumer.stdout[-4000:]}")
+            cases.append({"id": f"{variant}-c-consumer", "status": "pass",
+                          "detail": "compiled installed C consumer passed"})
+            examples = run_packaged_examples(
+                consumer_build, prefix, work / f"examples-{variant}",
+                environment=process_env,
+            )
+            cases.append({"id": f"{variant}-continuation", "status": "pass",
+                          "detail": str(examples["continuation"])})
+            cases.append({"id": f"{variant}-portable-persistence", "status": "pass",
+                          "detail": str(examples["portable_persistence"])})
+            host_status = "unsupported" if examples["host_persistence"] == "unsupported" else "pass"
+            cases.append({"id": f"{variant}-host-persistence", "status": host_status,
+                          "detail": "host file-commit route is unsupported on this platform" if host_status == "unsupported"
+                          else "host file persistence committed and reopened in a fresh process"})
+            cache = cache_values(consumer_build / "CMakeCache.txt")
+            if not cache.get("CMAKE_C_COMPILER_ID") or not cache.get("CMAKE_C_COMPILER_VERSION"):
+                raise RuntimeError(f"{variant} installed consumer build did not record its C compiler identity")
+            toolchain_builds.append({"linkage": variant, "compiler_id": cache["CMAKE_C_COMPILER_ID"],
+                                     "compiler_version": cache["CMAKE_C_COMPILER_VERSION"],
+                                     "generator": cache.get("CMAKE_GENERATOR", "unknown")})
         return {"outcome": "pass", "source_commit": commit, "version": version,
                 "platform": platform_name, "variants": ["static", "shared"], "downloaded_byte_verification": "pass",
-                "offline_source_rebuild": "pass", "relocated_consumer": "pass"}
+                "source_archive_sha256": hashlib.sha256(source_archive.read_bytes()).hexdigest(),
+                "sdk_archive_sha256": hashlib.sha256(sdk_archive.read_bytes()).hexdigest(),
+                "offline_source_rebuild": "pass", "guide_command_closure": "pass",
+                "relocated_consumer": "pass", "packaged_examples": "pass", "cases": cases,
+                "toolchain": {"cmake_version": cmake_version, "configuration": "Release",
+                              "source_compiler_id": source_toolchain["CMAKE_C_COMPILER_ID"],
+                              "source_compiler_version": source_toolchain["CMAKE_C_COMPILER_VERSION"],
+                              "builds": toolchain_builds}}
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--verify-downloaded":
@@ -454,10 +1117,15 @@ if __name__ == "__main__":
         parser.add_argument("--commit", required=True)
         parser.add_argument("--version", required=True)
         parser.add_argument("--platform")
+        parser.add_argument("--output", type=Path)
         args = parser.parse_args()
-        print(json.dumps(verify_downloaded_release(args.directory, args.manifest,
-                                                   commit=args.commit, version=args.version,
-                                                   platform_name=args.platform),
-                         sort_keys=True, separators=(",", ":")))
+        result = verify_downloaded_release(args.directory, args.manifest,
+                                           commit=args.commit, version=args.version,
+                                           platform_name=args.platform)
+        serialized = json.dumps(result, sort_keys=True, separators=(",", ":"))
+        if args.output is not None:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(serialized + "\n", encoding="utf-8")
+        print(serialized)
     else:
         unittest.main(verbosity=2)

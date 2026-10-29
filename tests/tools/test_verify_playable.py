@@ -11,22 +11,185 @@ import json
 import os
 from pathlib import Path
 import re
+import runpy
 import shutil
 import signal
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
 import unittest
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def has_two_committed_revisions(root: Path = ROOT) -> bool:
+    """Whether root-bound review fixtures can enforce strict parent-to-head ordering."""
+    if not (root / ".git").exists():
+        return False
+    return subprocess.run(["git", "-C", str(root), "rev-parse", "--verify", "--quiet", "HEAD^"],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False).returncode == 0
+
+
+def has_bound_documentation_history(root: Path = ROOT) -> bool:
+    """Whether copied-document tests can bind review order and the allowlist base in this checkout."""
+    if not has_two_committed_revisions(root):
+        return False
+    try:
+        allowlist = json.loads((root / "docs/history-allowlist.json").read_text(encoding="utf-8"))
+        base = allowlist.get("base_revision") if isinstance(allowlist, dict) else None
+    except (OSError, ValueError):
+        return False
+    if not isinstance(base, str) or not base:
+        return False
+    return subprocess.run(["git", "-C", str(root), "rev-parse", "--verify", "--quiet", f"{base}^{{commit}}"],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False).returncode == 0
+
+
 sys.path.insert(0, str(ROOT / "tools"))
 import public_content  # noqa: E402
 import verify_playable as playable  # noqa: E402
 
 
 class SnapshotTest(unittest.TestCase):
+    def test_archive_private_sink_is_not_in_build_child_output(self) -> None:
+        with mock.patch.dict(os.environ, {"GLUEYNEO_ARCHIVE_DIAGNOSTIC_DIR": str(self.base)}):
+            child = subprocess.run([
+                sys.executable, "-B", "-c",
+                "import os; print(os.environ.get('GLUEYNEO_ARCHIVE_DIAGNOSTIC_DIR', 'unset'))",
+            ], env=playable.clean_environment(), capture_output=True, text=True, timeout=10)
+        self.assertEqual(child.returncode, 0)
+        self.assertEqual(child.stdout, "unset\n")
+        self.assertNotIn(str(self.base), child.stdout + child.stderr)
+
+    def test_archive_directory_replacing_committed_file_is_diagnosed(self) -> None:
+        archive = io.BytesIO()
+        with tarfile.open(fileobj=archive, mode="w:") as tar:
+            member = tarfile.TarInfo("source.c/")
+            member.type = tarfile.DIRTYPE
+            tar.addfile(member)
+        with self.assertRaises(playable.SnapshotError) as raised:
+            playable._archive_members(archive.getvalue(), {"source.c": "file"})
+        self.assertEqual(raised.exception.reason, "incomplete-archive")
+        self.assertEqual(raised.exception.archive_mismatch["examples"], [
+            {"path": "source.c", "expected": "file", "archived": "directory"},
+        ])
+
+    def test_archive_private_capture_is_opt_in_and_bound_to_real_git_failure(self) -> None:
+        commit = self.commit_fixture_project()
+        diagnostic_directory = self.base / "diagnostics"
+        diagnostic_directory.mkdir()
+        (self.repository / ".git/info/attributes").write_text("writer.c export-ignore\n", encoding="utf-8")
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("GLUEYNEO_ARCHIVE_DIAGNOSTIC_DIR", None)
+            with self.assertRaises(playable.SnapshotError) as raised:
+                playable.create_snapshot(self.repository, commit, self.base / "default-off")
+            self.assertEqual(raised.exception.reason, "incomplete-archive")
+            self.assertEqual(list(diagnostic_directory.iterdir()), [])
+        with mock.patch.dict(os.environ, {"GLUEYNEO_ARCHIVE_DIAGNOSTIC_DIR": str(diagnostic_directory)}):
+            with self.assertRaises(playable.SnapshotError) as raised:
+                playable.create_snapshot(self.repository, commit, self.base / "captured")
+            self.assertEqual(raised.exception.reason, "incomplete-archive")
+            self.assertIn("private diagnostic recorded", str(raised.exception))
+            self.assertNotIn(str(diagnostic_directory), str(raised.exception))
+            reports = list(diagnostic_directory.glob("glueyneo-archive-mismatch-*.json"))
+            self.assertEqual(len(reports), 1)
+            self.assertEqual(reports[0].stat().st_mode & 0o777, 0o600)
+            report = json.loads(reports[0].read_text(encoding="utf-8"))
+            self.assertEqual(report["commit"], commit)
+            self.assertEqual(report["archive_sha256"], hashlib.sha256(playable._git_archive(self.repository, commit)).hexdigest())
+            self.assertEqual(report["mismatch"]["examples"], [
+                {"path": "writer.c", "expected": "file", "archived": None},
+            ])
+            child = subprocess.run([
+                sys.executable, "-B", "-c",
+                "import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); "
+                "import verify_playable as p\n"
+                "try: p.create_snapshot(Path(sys.argv[2]), sys.argv[3], Path(sys.argv[4]))\n"
+                "except p.SnapshotError as e: print(e); sys.exit(17)\n",
+                str(ROOT / "tools"), str(self.repository), commit, str(self.base / "child"),
+            ], env=os.environ.copy(), capture_output=True, text=True, timeout=10)
+            self.assertEqual(child.returncode, 17, child.stderr)
+            self.assertIn("private diagnostic recorded", child.stdout)
+            self.assertNotIn(str(diagnostic_directory), child.stdout + child.stderr)
+            self.assertEqual(len(list(diagnostic_directory.glob("*.json"))), 2)
+            (self.repository / ".git/info/attributes").unlink()
+            playable.create_snapshot(self.repository, commit, self.base / "matching")
+            self.assertEqual(len(list(diagnostic_directory.iterdir())), 2)
+
+    def test_archive_private_capture_rejects_in_tree_or_missing_sink_without_masking(self) -> None:
+        commit = self.commit_fixture_project()
+        (self.repository / ".git/info/attributes").write_text("writer.c export-ignore\n", encoding="utf-8")
+        for index, directory in enumerate((self.repository, ROOT, self.base / "missing")):
+            with self.subTest(index=index), mock.patch.dict(os.environ, {
+                "GLUEYNEO_ARCHIVE_DIAGNOSTIC_DIR": str(directory),
+            }):
+                with self.assertRaises(playable.SnapshotError) as raised:
+                    playable.create_snapshot(self.repository, commit, self.base / f"rejected-{index}")
+                self.assertEqual(raised.exception.reason, "incomplete-archive")
+                self.assertIn("private diagnostic unavailable", str(raised.exception))
+                self.assertNotIn(str(directory), str(raised.exception))
+
+    def test_archive_mismatch_diagnostics_are_bounded_and_not_public_paths(self) -> None:
+        expected = {"changed": "file-executable", "missing": "file"}
+        archive = io.BytesIO()
+        with tarfile.open(fileobj=archive, mode="w:") as tar:
+            for name in ("changed", "extra-private-name"):
+                member = tarfile.TarInfo(name)
+                member.mode = 0o644
+                member.size = 1
+                tar.addfile(member, io.BytesIO(b"x"))
+        with self.assertRaises(playable.SnapshotError) as raised:
+            playable._archive_members(archive.getvalue(), expected)
+        error = raised.exception
+        self.assertEqual(error.reason, "incomplete-archive")
+        self.assertIn("missing=1, extra=1, type_mismatches=1", str(error))
+        self.assertNotIn("extra-private-name", str(error))
+        self.assertEqual(error.archive_mismatch, {
+            "expected_count": 2, "archived_count": 2,
+            "missing_count": 1, "extra_count": 1, "type_mismatch_count": 1,
+            "examples": [
+                {"path": "changed", "expected": "file-executable", "archived": "file"},
+                {"path": "extra-private-name", "expected": None, "archived": "file"},
+                {"path": "missing", "expected": "file", "archived": None},
+            ],
+        })
+
+    def test_archive_mismatch_diagnostic_sample_boundaries(self) -> None:
+        archive = io.BytesIO()
+        with tarfile.open(fileobj=archive, mode="w:"):
+            pass
+        for count in (1, 5, 6):
+            with self.subTest(count=count):
+                expected = {f"missing-{index}": "file" for index in range(count)}
+                with self.assertRaises(playable.SnapshotError) as raised:
+                    playable._archive_members(archive.getvalue(), expected)
+                diagnostic = raised.exception.archive_mismatch
+                self.assertEqual(diagnostic["missing_count"], count)
+                self.assertEqual(len(diagnostic["examples"]), min(count, 5))
+        long_path = "a" * 300
+        with self.assertRaises(playable.SnapshotError) as raised:
+            playable._archive_members(archive.getvalue(), {long_path: "file"})
+        self.assertEqual(raised.exception.archive_mismatch["examples"], [
+            {"path": "a" * 160, "path_truncated": True, "expected": "file", "archived": None},
+        ])
+        files, symlinks, rows = playable._archive_members(archive.getvalue(), {})
+        self.assertEqual((files, symlinks, rows), ({}, {}, ()))
+
+    def test_archive_mismatch_diagnostics_keep_unsafe_path_gate(self) -> None:
+        for name in ("/absolute", "../escape", "back\\slash", "line\nbreak"):
+            with self.subTest(name=name):
+                archive = io.BytesIO()
+                with tarfile.open(fileobj=archive, mode="w:") as tar:
+                    tar.addfile(tarfile.TarInfo(name), io.BytesIO())
+                with self.assertRaises(playable.SnapshotError) as raised:
+                    playable._archive_members(archive.getvalue(), {})
+                self.assertEqual(raised.exception.reason, "unsafe-archive-path")
+                self.assertIsNone(raised.exception.archive_mismatch)
+                self.assertNotIn(name, str(raised.exception))
+
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory(prefix="playable-snapshot-test-")
         self.addCleanup(self.temporary.cleanup)
@@ -1050,11 +1213,132 @@ class DocumentationCopies:
     against its working-tree digest as in a real checkout.
     """
 
+    _synthetic_frontend_summary: dict[str, object] | None = None
+
+    @staticmethod
+    def frontend_summary() -> dict[str, object]:
+        """Return tracked evidence or a deterministic test receipt for this checkout shape."""
+        path = ROOT / playable.FRONTEND_EVIDENCE
+        if path.is_file():
+            return json.loads(path.read_text(encoding="utf-8"))
+        if DocumentationCopies._synthetic_frontend_summary is None:
+            if (ROOT / ".git").exists():
+                revision = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True, text=True,
+                                          stdout=subprocess.PIPE).stdout.strip()
+                with tempfile.TemporaryDirectory(prefix="playable-test-snapshot-") as temporary:
+                    snapshot = playable.create_snapshot(ROOT, revision, Path(temporary) / "source")
+                inventory_sha256 = playable.inventory_digest(snapshot.inventory)
+            else:
+                # Source archives have no commit inventory to bind. These fixtures exercise document shape only;
+                # repository-binding tests are skipped there and use real Git evidence in checkouts.
+                revision = "a" * 40
+                inventory_sha256 = "1" * 64
+            summary: dict[str, object] = {
+                "schema": 1,
+                "source_revision": revision,
+                "inventory_sha256": inventory_sha256,
+                "status": "pass",
+                "retroarch_status": "pass",
+                "retroarch": {"bundle_id": None, "version": "1.22.2",
+                              "executable_sha256": playable.RETROARCH_SHA256},
+                "os": "test fixture platform",
+                "core_sha256": "0" * 64,
+                "fixture_sha256": playable.FIXTURE_SHA256,
+                "input_mapping": playable.EXPECTED_INPUT_MAPPING,
+                "observations": list(playable.REQUIRED_FRONTEND_OBSERVATIONS),
+                "marker_before": [10, 10, 1],
+                "marker_after_right": [11, 10, 1],
+                "frontend_unloaded": True,
+                "lanes": {name: "pass" for name in playable.REQUIRED_FRONTEND_LANES},
+            }
+            playable.validate_frontend_evidence(summary)
+            DocumentationCopies._synthetic_frontend_summary = summary
+        return json.loads(json.dumps(DocumentationCopies._synthetic_frontend_summary))
+
+    @staticmethod
+    def write_sanitized_review_fixture(source_root: Path) -> None:
+        """Create public-safe review inputs for tests when private Phase04 records are absent."""
+        if (ROOT / ".git").exists():
+            revisions = subprocess.run(["git", "-C", str(ROOT), "rev-list", "--max-count=2", "HEAD"],
+                                       check=True, text=True, stdout=subprocess.PIPE).stdout.split()
+            if not revisions:
+                raise AssertionError("Git-backed sanitized review fixture needs a committed HEAD")
+            # Full checkouts get a real parent-to-HEAD order. A depth-one checkout still creates valid fixture
+            # shape; tests that bind review ordering to this checkout are skipped until a parent is available.
+            revision = revisions[0]
+            reviewed = revisions[1] if len(revisions) > 1 else revision
+        else:
+            # Keep fixture references structurally valid without inventing Git history in a source archive.
+            revision = reviewed = "a" * 40
+        cited = revision
+        directory = source_root / playable.PHASE_DIRECTORY
+        directory.mkdir(parents=True, exist_ok=True)
+        base_files = ("tools/verify_playable.py", "tests/tools/test_verify_playable.py", "docs/first-playable-build.md")
+        (source_root / playable.REVIEW).write_text(
+            "---\nphase: test-fixture\ndepth: standard\nreviewed_revision: " + reviewed + "\nfiles_reviewed_list:\n"
+            + "".join(f"  - {path}\n" for path in base_files)
+            + "---\n\n### CR-01: fixture finding\n### CR-03: fixture finding\n### CR-05: fixture finding\n"
+              "### IN-03: fixture finding\n### WR-01: fixture finding\n### WR-10: fixture finding\n",
+            encoding="utf-8")
+        (directory / "04-REVIEW-GAPS-R1.md").write_text(
+            "---\nfiles_reviewed_list:\n  - tools/public_content.py\n---\n\n", encoding="utf-8")
+        for relative in (*base_files, "tools/public_content.py"):
+            source = ROOT / relative
+            if source.is_file():
+                target = source_root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
+        (source_root / playable.SECURITY).write_text(
+            "| Threat ID | Severity | Status |\n|---|---|---|\n| T-04-46 | moderate | mitigated |\n", encoding="utf-8")
+        findings = (
+            ("CR-01", "critical", "fixed", f"revision `{cited}`"),
+            ("CR-03", "warning", "fixed", f"revision `{cited}`"),
+            ("CR-05", "warning", "fixed", f"revision `{cited}`"),
+            ("IN-03", "info", "open", "recorded"),
+            ("WR-01", "warning", "fixed", f"revision `{cited}`"),
+            ("WR-10", "warning", "fixed", f"revision `{cited}`"),
+        )
+        frontmatter = "---\nfindings:\n" + "".join(
+            f"  - id: {finding}\n    severity: {severity}\n    disposition: {state}\n"
+            for finding, severity, state, _source in findings)
+        table = "| Finding | Severity | Disposition | Source |\n|---|---|---|---|\n" + "".join(
+            f"| {finding} | {severity} | {state} | {source} |\n"
+            for finding, severity, state, source in findings)
+        (source_root / playable.DISPOSITION).write_text(frontmatter + "---\n\n" + table, encoding="utf-8")
+
+    @staticmethod
+    def write_sanitized_validation_fixture(source_root: Path, summary: dict[str, object] | None) -> None:
+        row_status = playable.frontend_row_status(summary)  # type: ignore[arg-type]
+        task_header = ("| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | "
+                       "Automated Command | File Exists | Status |\n"
+                       "|---|---|---|---|---|---|---|---|---|---|\n")
+        task = ("| 04-15 T2 | 04-15 | 4 | HOST-02, QUAL-03 | T-04-46 | Generated fixture evidence | "
+                "automated | `python3 tools/verify_playable.py --check-docs` | yes | " + row_status + " |\n")
+        crosswalk = ("| Review Finding | Severity | Existing Threat Scope | Disposition |\n"
+                     "|---|---|---|---|\n"
+                     "| CR-01 | critical | T-04-46 | fixed |\n"
+                     "| CR-03 | warning | T-04-46 | fixed |\n"
+                     "| CR-05 | warning | T-04-46 | fixed |\n"
+                     "| IN-03 | info | T-04-46 | open |\n"
+                     "| WR-01 | warning | T-04-46 | fixed |\n"
+                     "| WR-10 | warning | T-04-46 | fixed |\n")
+        path = source_root / playable.VALIDATION
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("# Public-safe qualification fixture\n\n" + task_header + task + "\n" + crosswalk,
+                        encoding="utf-8")
+
     def copy_review_provenance(self, source_root: Path) -> None:
-        reviewed = sorted(playable.review_round_paths(ROOT))
-        rounds = sorted(path.relative_to(ROOT) for path in (ROOT / playable.PHASE_DIRECTORY).glob(playable.REVIEW_ROUNDS))
-        for path in (playable.SECURITY, playable.REVIEW, playable.DISPOSITION, Path("README.md"), playable.RIGHTS_INVENTORY,
-                     playable.HISTORY_ALLOWLIST, *rounds, *(Path(item) for item in reviewed)):
+        live_review = (ROOT / playable.REVIEW).is_file() and (ROOT / playable.DISPOSITION).is_file() \
+            and (ROOT / playable.SECURITY).is_file()
+        if live_review:
+            reviewed = sorted(playable.review_round_paths(ROOT))
+            rounds = sorted(path.relative_to(ROOT) for path in (ROOT / playable.PHASE_DIRECTORY).glob(playable.REVIEW_ROUNDS))
+            evidence_files = (playable.SECURITY, playable.REVIEW, playable.DISPOSITION, *rounds,
+                              *(Path(item) for item in reviewed))
+        else:
+            self.write_sanitized_review_fixture(source_root)
+            evidence_files = ()
+        for path in (*evidence_files, Path("README.md"), playable.RIGHTS_INVENTORY, playable.HISTORY_ALLOWLIST):
             if (ROOT / path).is_file():
                 (source_root / path).parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / path, source_root / path)
@@ -1067,34 +1351,178 @@ class DocumentationCopies:
 
     def copy_documentation(self, source_root: Path) -> Path:
         """Copy the docs as they read without tracked frontend evidence."""
-        for path in (playable.GUIDE, playable.VALIDATION):
-            (source_root / path).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(ROOT / path, source_root / path)
+        for path in (playable.GUIDE, playable.VALIDATION, Path("docs/audio-contract.md"),
+                     Path("tests/consumers/test_playable_install.py"), Path("tests/consumers/sound_consumer.c"),
+                     Path("examples/diagnostic.c")):
+            if (ROOT / path).is_file():
+                (source_root / path).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / path, source_root / path)
         self.copy_review_provenance(source_root)
-        summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        summary = self.frontend_summary() if (ROOT / playable.FRONTEND_EVIDENCE).is_file() else None
+        if not (source_root / playable.GUIDE).is_file():
+            (source_root / playable.GUIDE).parent.mkdir(parents=True, exist_ok=True)
+            (source_root / playable.GUIDE).write_text(
+                f"# First playable build\n\n{playable.frontend_status_block(None)}\n\n"
+                "The generated fixture runs from a complete committed Git snapshot and checks its inventory SHA-256. "
+                "Dirty and untracked checkout files are excluded. Other prose is not a qualification claim and is "
+                "not machine-checked. The gate matches 7 to 40 characters. "
+                f"Pinned dependencies: {playable.YMFM_REVISION} {playable.Z80_REVISION}.\n", encoding="utf-8")
+        if not (source_root / playable.VALIDATION).is_file():
+            self.write_sanitized_validation_fixture(source_root, None)
         guide = source_root / playable.GUIDE
-        guide.write_text(guide.read_text(encoding="utf-8").replace(
-            playable.frontend_status_block(summary), playable.frontend_status_block(None)), encoding="utf-8")
+        if summary is not None:
+            guide.write_text(guide.read_text(encoding="utf-8").replace(
+                playable.frontend_status_block(summary), playable.frontend_status_block(None)), encoding="utf-8")
+        else:
+            guide_text, replacements = re.subn(
+                re.escape(playable.STATUS_BEGIN) + r".*?" + re.escape(playable.STATUS_END),
+                playable.frontend_status_block(None), guide.read_text(encoding="utf-8"), count=1, flags=re.DOTALL)
+            if replacements != 1:
+                raise AssertionError("copied guide lacks exactly one generated frontend status block")
+            guide.write_text(guide_text, encoding="utf-8")
         validation = source_root / playable.VALIDATION
-        validation.write_text(validation.read_text(encoding="utf-8").replace(
-            playable.frontend_row_status(summary), playable.frontend_row_status(None)), encoding="utf-8")
+        if summary is not None:
+            validation.write_text(validation.read_text(encoding="utf-8").replace(
+                playable.frontend_row_status(summary), playable.frontend_row_status(None)), encoding="utf-8")
+        else:
+            row, replacements = re.subn(
+                r"(?m)^(\| 04-15 T2 \|(?:[^|]*\|){8})[^|]*\|$",
+                lambda match: f"{match.group(1)} {playable.frontend_row_status(None)} |",
+                validation.read_text(encoding="utf-8"), count=1)
+            if replacements != 1:
+                raise AssertionError("copied validation map lacks exactly one frontend qualification row")
+            validation.write_text(row, encoding="utf-8")
         return validation
 
     def copy_documentation_with_evidence(self, source_root: Path) -> dict[str, object]:
-        for path in (playable.GUIDE, playable.VALIDATION, playable.FRONTEND_EVIDENCE):
-            (source_root / path).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(ROOT / path, source_root / path)
+        for path in (playable.GUIDE, playable.VALIDATION,
+                     Path("docs/audio-contract.md"), Path("tests/consumers/test_playable_install.py"),
+                     Path("tests/consumers/sound_consumer.c"), Path("examples/diagnostic.c")):
+            if (ROOT / path).is_file():
+                (source_root / path).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / path, source_root / path)
         self.copy_review_provenance(source_root)
-        return json.loads((source_root / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        summary = self.frontend_summary()
+        if not (source_root / playable.GUIDE).is_file():
+            self.copy_documentation(source_root)
+        evidence_path = source_root / playable.FRONTEND_EVIDENCE
+        if (ROOT / playable.FRONTEND_EVIDENCE).is_file():
+            shutil.copyfile(ROOT / playable.FRONTEND_EVIDENCE, evidence_path)
+        else:
+            evidence_path.parent.mkdir(parents=True, exist_ok=True)
+            evidence_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+        if not (source_root / playable.VALIDATION).is_file():
+            self.write_sanitized_validation_fixture(source_root, summary)
+        guide = source_root / playable.GUIDE
+        guide_text, replacements = re.subn(
+            re.escape(playable.STATUS_BEGIN) + r".*?" + re.escape(playable.STATUS_END),
+            lambda _: playable.frontend_status_block(summary), guide.read_text(encoding="utf-8"),
+            count=1, flags=re.DOTALL)
+        if replacements != 1:
+            raise AssertionError("copied guide lacks exactly one generated frontend status block")
+        guide.write_text(guide_text, encoding="utf-8")
+        validation = source_root / playable.VALIDATION
+        row, replacements = re.subn(
+            r"(?m)^(\| 04-15 T2 \|(?:[^|]*\|){8})[^|]*\|$",
+            lambda match: f"{match.group(1)} {playable.frontend_row_status(summary)} |",
+            validation.read_text(encoding="utf-8"), count=1)
+        if replacements != 1:
+            raise AssertionError("copied validation map lacks exactly one frontend qualification row")
+        validation.write_text(row, encoding="utf-8")
+        return summary
+
+
+class InstalledSoundRecipeTest(unittest.TestCase):
+    def validate(self, root: Path) -> None:
+        helper = runpy.run_path(str(ROOT / "tests/consumers/test_playable_install.py"))
+        helper["validate_sound_recipe"](root)
+
+    def copy_recipe(self, root: Path) -> None:
+        for name in ("docs/audio-contract.md", "tests/consumers/sound_consumer.c", "examples/diagnostic.c"):
+            target = root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / name, target)
+        self.validate(root)
+
+    def test_current_recipe_matches_real_consumer(self) -> None:
+        self.validate(ROOT)
+
+    def test_missing_documented_consumer_source_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_recipe(root)
+            (root / "examples/diagnostic.c").unlink()
+            with self.assertRaisesRegex(RuntimeError, "sound recipe diagnostic source"):
+                self.validate(root)
+
+    def test_missing_fixture_command_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_recipe(root)
+            path = root / "docs/audio-contract.md"
+            original = path.read_text()
+            changed = original.replace("--write-fixture", "--old-fixture-option")
+            self.assertTrue(original != changed, "required recipe token is absent")
+            path.write_text(changed)
+            with self.assertRaisesRegex(RuntimeError, "sound recipe"):
+                self.validate(root)
+
+    def test_stale_documented_capacity_api_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_recipe(root)
+            path = root / "docs/audio-contract.md"
+            original = path.read_text()
+            changed = original.replace("gn_mvs_audio_capacity_v1", "gn_obsolete_capacity")
+            self.assertTrue(original != changed, "required recipe token is absent")
+            path.write_text(changed)
+            with self.assertRaisesRegex(RuntimeError, "sound recipe"):
+                self.validate(root)
+
+    def test_changed_executable_api_sequence_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_recipe(root)
+            path = root / "tests/consumers/sound_consumer.c"
+            path.write_text(path.read_text().replace("gn_mvs_advance_frame_v1", "gn_run_mvs"))
+            with self.assertRaisesRegex(RuntimeError, "sound recipe"):
+                self.validate(root)
 
 
 class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
+    def test_synthetic_documentation_fixtures_work_without_git_metadata(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-source-archive-") as archive_dir, \
+                tempfile.TemporaryDirectory(prefix="playable-source-archive-review-") as review_dir:
+            archive = Path(archive_dir)
+            self.assertFalse((archive / ".git").exists())
+            with mock.patch.dict(globals(), {"ROOT": archive}), \
+                    mock.patch.object(DocumentationCopies, "_synthetic_frontend_summary", None), \
+                    mock.patch.object(subprocess, "run", side_effect=AssertionError("source archive called Git")):
+                summary = DocumentationCopies.frontend_summary()
+                self.assertEqual(summary["source_revision"], "a" * 40)
+                self.assertEqual(summary["inventory_sha256"], "1" * 64)
+                DocumentationCopies.write_sanitized_review_fixture(Path(review_dir))
+            review = (Path(review_dir) / playable.REVIEW).read_text(encoding="utf-8")
+            self.assertIn("reviewed_revision: " + "a" * 40, review)
+            disposition = (Path(review_dir) / playable.DISPOSITION).read_text(encoding="utf-8")
+            self.assertEqual(disposition.count("`" + "a" * 40 + "`"), 5)
+
+    def test_root_history_predicate_rejects_source_archive_and_depth_one(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-one-commit-") as temporary:
+            repository = Path(temporary)
+            subprocess.run(["git", "init", "-q", "-b", "main", str(repository)], check=True)
+            subprocess.run(["git", "-C", str(repository), "-c", "user.name=t", "-c",
+                            "user.email=t@example.invalid", "commit", "-q", "--allow-empty", "-m", "one"],
+                           check=True)
+            self.assertFalse(has_two_committed_revisions(repository))
+            self.assertFalse(has_bound_documentation_history(repository))
+
     def test_check_docs_accepts_pending_status_without_evidence(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-docs-pending-") as temporary:
             self.copy_documentation(Path(temporary))
             playable.check_docs(Path(temporary))
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_bound_documentation_history(), "needs a parent commit and allowlist base for review binding")
     def test_check_docs_accepts_complete_status_generated_from_tracked_receipt(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-docs-evidence-") as temporary:
             self.copy_documentation_with_evidence(Path(temporary))
@@ -1143,8 +1571,8 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
 
     @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_tracked_receipt_must_match_its_committed_inventory(self) -> None:
-        summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
-        self.assertIsNotNone(playable.load_frontend_evidence(ROOT))
+        summary = self.frontend_summary()
+        self.assertEqual(playable.validate_frontend_evidence(summary), summary["source_revision"])
         # Forge the receipt against the clone's own HEAD commit, which exists in every checkout (full or
         # squash-merged), instead of checking out the live receipt revision (G5WR-01, C2).
         head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"],
@@ -1161,7 +1589,7 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
 
     @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_live_receipt_binds_its_committed_inventory_on_full_history(self) -> None:
-        summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        summary = self.frontend_summary()
         revision = summary["source_revision"]
         present = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--verify", "--quiet", revision + "^{commit}"],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
@@ -1170,9 +1598,14 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
         if not ancestor:
             self.skipTest(f"live receipt revision {revision[:12]} absent from history (squashed checkout); "
                           "binding is pinned on full history")
-        notes: list[str] = []
-        self.assertIsNotNone(playable.load_frontend_evidence(ROOT, unverifiable=notes))
-        self.assertEqual(notes, [])
+        with tempfile.TemporaryDirectory(prefix="playable-live-receipt-") as temporary:
+            source_root = Path(temporary)
+            evidence = source_root / playable.FRONTEND_EVIDENCE
+            evidence.parent.mkdir(parents=True, exist_ok=True)
+            evidence.write_text(json.dumps(summary), encoding="utf-8")
+            notes: list[str] = []
+            self.assertEqual(playable.load_frontend_evidence(source_root, repository=ROOT, unverifiable=notes), summary)
+            self.assertEqual(notes, [])
         forged = dict(summary, inventory_sha256="0" * 64)
         with tempfile.TemporaryDirectory(prefix="playable-docs-inventory-live-") as temporary:
             clone = Path(temporary) / "clone"
@@ -1183,7 +1616,7 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "inventory digest does not match"):
                 playable.load_frontend_evidence(clone)
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_bound_documentation_history(), "needs a parent commit and allowlist base for review binding")
     def test_check_docs_requires_generated_status_to_match_evidence(self) -> None:
         cases = (
             ("evidence with pending block", self.copy_documentation, True, "status block does not match"),
@@ -1193,10 +1626,12 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
             with self.subTest(case=label), tempfile.TemporaryDirectory(prefix="playable-docs-block-") as temporary:
                 source_root = Path(temporary)
                 copy(source_root)
-                summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+                summary = self.frontend_summary()
                 guide = source_root / playable.GUIDE
                 if add_evidence:
-                    shutil.copyfile(ROOT / playable.FRONTEND_EVIDENCE, source_root / playable.FRONTEND_EVIDENCE)
+                    evidence = source_root / playable.FRONTEND_EVIDENCE
+                    evidence.parent.mkdir(parents=True, exist_ok=True)
+                    evidence.write_text(json.dumps(summary), encoding="utf-8")
                 else:
                     guide.write_text(guide.read_text(encoding="utf-8").replace(
                         playable.frontend_status_block(None), playable.frontend_status_block(summary)), encoding="utf-8")
@@ -1212,7 +1647,7 @@ class ConsumerInputTest(DocumentationCopies, unittest.TestCase):
                 playable.check_docs(source_root, repository=ROOT)
 
     def test_record_frontend_evidence_summary_drops_receipt_paths(self) -> None:
-        summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        summary = self.frontend_summary()
         receipt = {
             "status": "pass",
             "identity": {"source_revision": summary["source_revision"], "retroarch": summary["retroarch"],
@@ -1290,7 +1725,7 @@ class EvidenceBindingTest(DocumentationCopies, unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "cannot be bound to committed bytes"):
                     playable.check_docs(source_root)
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_bound_documentation_history(), "needs HEAD^ and the history allowlist base")
     def test_explicit_repository_binds_the_copied_evidence(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-bound-") as temporary:
             source_root = Path(temporary)
@@ -1356,8 +1791,10 @@ class CrosswalkProvenanceTest(DocumentationCopies, unittest.TestCase):
                                    lambda match: f"{match.group(1)} {scope} {match.group(2)}", text, count=1)
 
     def test_live_crosswalk_is_accepted(self) -> None:
-        text = (ROOT / playable.VALIDATION).read_text(encoding="utf-8")
-        self.assertEqual(playable.crosswalk_errors(ROOT, text), [])
+        with tempfile.TemporaryDirectory(prefix="playable-crosswalk-live-") as temporary:
+            source_root = Path(temporary)
+            validation = self.copy_documentation(source_root)
+            self.assertEqual(playable.crosswalk_errors(source_root, validation.read_text(encoding="utf-8")), [])
 
     def test_scope_references_must_resolve(self) -> None:
         cases = (
@@ -1372,11 +1809,15 @@ class CrosswalkProvenanceTest(DocumentationCopies, unittest.TestCase):
                 self.mutate_row(transform, expected)
 
     def test_scope_may_cite_a_path_reviewed_only_by_a_later_round(self) -> None:
-        later = playable.review_round_paths(ROOT) - playable._reviewed_paths(
-            (ROOT / playable.REVIEW).read_text(encoding="utf-8"))
-        self.assertIn("tools/public_content.py", later)
-        text = self.with_scope("CR-05", "`tools/public_content.py`")((ROOT / playable.VALIDATION).read_text(encoding="utf-8"))
-        self.assertEqual(playable.crosswalk_errors(ROOT, text), [])
+        with tempfile.TemporaryDirectory(prefix="playable-crosswalk-round-") as temporary:
+            source_root = Path(temporary)
+            validation = self.copy_documentation(source_root)
+            later = playable.review_round_paths(source_root) - playable._reviewed_paths(
+                (source_root / playable.REVIEW).read_text(encoding="utf-8"))
+            self.assertIn("tools/public_content.py", later)
+            text = self.with_scope("CR-05", "`tools/public_content.py`")(
+                validation.read_text(encoding="utf-8"))
+            self.assertEqual(playable.crosswalk_errors(source_root, text), [])
 
     def test_three_digit_threat_ids_are_read_whole(self) -> None:
         self.assertEqual(playable.THREAT_REFERENCE.findall("T-04-103 / T-04-10 / T-04-SC (04-58)"),
@@ -1540,6 +1981,23 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
                 [f"review finding {finding} cites revision {anchor[:12]} equal to its review round anchor ({label})"])
             self.assertEqual(self.round_errors(finding, later, head, repository, commits[0]), [])
 
+    def test_workstream_archive_preserves_original_review_round_anchor(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-archive-") as temporary:
+            repository = Path(temporary) / "repo"
+            with mock.patch.object(playable, "PHASE_DIRECTORY", playable.PHASE_HISTORY_DIRECTORY):
+                commits = self.rounds(repository)
+            old = repository / playable.PHASE_HISTORY_DIRECTORY
+            archived = repository / playable.PHASE_DIRECTORY
+            archived.parent.mkdir(parents=True, exist_ok=True)
+            old.rename(archived)
+            subprocess.run(["git", "-C", str(repository), "add", "-A"], check=True)
+            subprocess.run(["git", "-C", str(repository), "-c", "user.name=t", "-c",
+                            "user.email=t@example.invalid", "commit", "-qm", "archive workstream"], check=True)
+            anchor = (commits[2], "04-REVIEW-GAPS-R2.md")
+            self.assertEqual(playable._review_round_anchor("G2WR-01", repository, repository, "HEAD"), anchor)
+            self.assertEqual(playable._review_round_anchor("G2WR-01", repository, repository, commits[4]), anchor)
+            self.assertEqual(self.round_errors("G2WR-01", commits[3], "HEAD", repository, commits[0]), [])
+
     def test_g3wr_05_gap_round_two_closure_must_strictly_follow_its_round_file(self) -> None:
         self.check_round("G2WR-01", "04-REVIEW-GAPS-R2.md", 2)
 
@@ -1587,7 +2045,7 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
             rows = "".join(f"| {finding} | warning | open | recorded |\n" for finding in ("WR-01", "GWR-01", "G2WR-01", "G3WR-01", "XX-01"))
             self.assertEqual(self.errors(rows, commits[4], repository=repository, reviewed=commits[0]), [])
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_two_committed_revisions(), "needs at least two commits for the descendant comparison")
     def test_t_04_38_unresolvable_reviewed_revision_fails(self) -> None:
         head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True, text=True,
                               stdout=subprocess.PIPE).stdout.strip()
@@ -1628,7 +2086,7 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
         errors = self.errors(f"| WR-01 | warning | fixed | digest `{'a1' * 32}` and 0123abcd |\n")
         self.assertEqual(errors, ["review finding WR-01 disposition cites no review revision"])
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_two_committed_revisions(), "needs a later revision after the first commit")
     def test_ancestor_revision_in_either_recognized_form_is_accepted(self) -> None:
         # G3WR-05: the reviewed revision defaults to the first commit and a citation must strictly follow it,
         # so cite the second commit; the recognized forms under test are unchanged.
@@ -1643,7 +2101,7 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
         errors = self.errors("| CR-01 | critical | fixed | revision `" + "f" * 40 + "` |\n")
         self.assertEqual(errors, [f"review finding CR-01 cites revision {'f' * 12} that is not a committed ancestor"])
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_two_committed_revisions(), "needs distinct first and current commits")
     def test_revision_that_is_not_an_ancestor_of_head_is_rejected(self) -> None:
         first = self.first_commit()
         head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True, text=True,
@@ -1652,7 +2110,7 @@ class ReviewProvenanceTest(DocumentationCopies, unittest.TestCase):
         errors = self.errors(f"| CR-01 | critical | fixed | revision `{head}` |\n", head=first)
         self.assertEqual(errors, [f"review finding CR-01 cites revision {head[:12]} that is not a committed ancestor"])
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_bound_documentation_history(), "needs a parent commit and allowlist base for review binding")
     def test_check_docs_binds_the_live_record_and_rejects_a_stripped_revision(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-provenance-docs-") as temporary:
             root = Path(temporary)
@@ -1700,6 +2158,10 @@ class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
         (repository / "docs/rights-inventory.md").write_text(
             "# Inventory\n\n```json\n" + json.dumps({"schema": 1, "items": items}) + "\n```\n", encoding="utf-8")
 
+    def commit_inventory(self, repository: Path) -> None:
+        self.git(repository, "add", "docs/rights-inventory.md")
+        self.git(repository, "commit", "-q", "-m", "rights inventory fixture")
+
     @staticmethod
     def digest(text: str) -> str:
         return hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -1707,6 +2169,7 @@ class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
     def errors(self, repository: Path, items: list[dict[str, str]], head: str = "HEAD") -> list[str]:
         function = self.helper()
         self.write_inventory(repository, items)
+        self.commit_inventory(repository)
         try:
             return function(repository, repository, head)
         except Exception as error:  # noqa: BLE001 - a red run must fail on the assertion, not on an exception
@@ -1741,21 +2204,28 @@ class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
         for bad in ("--output=x", "HEAD", "a" * 39, "A" * 40, ""):
             with self.subTest(revision=bad), tempfile.TemporaryDirectory(prefix="playable-rights-") as temporary:
                 repository, _first, _second = self.make_repository(Path(temporary))
+                self.write_inventory(repository, [{"path": "tests/a.txt", "sha256": self.digest("two\n"),
+                                                   "source_revision": bad}])
+                self.commit_inventory(repository)
                 real = subprocess.run
                 with mock.patch.object(subprocess, "run", wraps=real) as run:
-                    errors = self.errors(repository, [{"path": "tests/a.txt", "sha256": self.digest("two\n"), "source_revision": bad}])
+                    errors = self.helper()(repository, repository, "HEAD")
                 self.assertEqual(len(errors), 1, errors)
                 self.assertIn("not 40 hex", errors[0])
                 arguments = [argument for call in run.call_args_list for argument in call.args[0]]
                 self.assertFalse(any(argument == bad or (bad and bad in argument) for argument in arguments), arguments)
 
     def test_g4wr_04_malformed_path_never_reaches_git(self) -> None:
-        for bad in ("", "/etc/passwd", "tests/../x", "-x"):
+        for bad in ("", "/etc/passwd", "tests/../x", "-x", "D:/file", "D:file",
+                    "tests/D:/file", "tests/D:file"):
             with self.subTest(path=bad), tempfile.TemporaryDirectory(prefix="playable-rights-") as temporary:
                 repository, _first, second = self.make_repository(Path(temporary))
+                self.write_inventory(repository, [{"path": bad, "sha256": self.digest("two\n"),
+                                                   "source_revision": second}])
+                self.commit_inventory(repository)
                 real = subprocess.run
                 with mock.patch.object(subprocess, "run", wraps=real) as run:
-                    errors = self.errors(repository, [{"path": bad, "sha256": self.digest("two\n"), "source_revision": second}])
+                    errors = self.helper()(repository, repository, "HEAD")
                 self.assertEqual(len(errors), 1, errors)
                 self.assertIn("not a relative POSIX path", errors[0])
                 arguments = [argument for call in run.call_args_list for argument in call.args[0]]
@@ -1783,7 +2253,7 @@ class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "rights inventory JSON is malformed"):
                     self.helper()(repository, repository, "HEAD")
 
-    def test_g4wr_04_revision_outside_the_checked_head_is_rejected(self) -> None:
+    def test_g4wr_04_uncommitted_authority_cannot_inject_a_side_revision(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-rights-") as temporary:
             repository, first, second = self.make_repository(Path(temporary))
             self.git(repository, "checkout", "-q", "-b", "side", first)
@@ -1791,11 +2261,15 @@ class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
             self.git(repository, "add", "tests/a.txt")
             self.git(repository, "commit", "-q", "-m", "side")
             side = self.git(repository, "rev-parse", "HEAD")
-            errors = self.errors(repository, [{"path": "tests/a.txt", "sha256": self.digest("three\n"), "source_revision": side}], head=second)
+            self.write_inventory(repository, [{"path": "tests/a.txt", "sha256": self.digest("three\n"),
+                                               "source_revision": side}])
+            self.commit_inventory(repository)
+            errors = self.helper()(repository, repository, second)
             self.assertEqual(len(errors), 1, errors)
-            self.assertIn("is not an ancestor of the checked head", errors[0])
+            self.assertIn("rights inventory is absent from the checked head", errors[0])
+            self.assertEqual(playable._revision_relation(repository, side, second), "absent")
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the inventory is bound to")
+    @unittest.skipUnless(has_bound_documentation_history(), "needs committed rights origins and the allowlist base")
     def test_g4wr_04_check_docs_raises_the_first_rights_error(self) -> None:
         with tempfile.TemporaryDirectory(prefix="playable-rights-docs-") as temporary:
             root = Path(temporary)
@@ -1805,8 +2279,8 @@ class RightsRevisionTest(DocumentationCopies, unittest.TestCase):
                     playable.check_docs(root, repository=ROOT)
 
     def test_g4wr_04_repository_rights_revisions_resolve(self) -> None:
-        if not (ROOT / ".git").exists():
-            self.skipTest("no .git: source archive")
+        if not has_bound_documentation_history():
+            self.skipTest("checkout lacks the history and allowlist base needed to resolve rights origins")
         function = self.helper()
         self.assertEqual(function(ROOT, ROOT, "HEAD"), [])
 
@@ -1827,7 +2301,7 @@ class GuideClaimTest(DocumentationCopies, unittest.TestCase):
         guide = source_root / playable.GUIDE
         guide.write_text(guide.read_text(encoding="utf-8") + "\n" + extra + "\n", encoding="utf-8")
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_bound_documentation_history(), "needs a parent commit and allowlist base for review binding")
     def test_claims_appended_after_the_generated_block_are_rejected(self) -> None:
         for claim in self.CLAIMS:
             with self.subTest(claim=claim), tempfile.TemporaryDirectory(prefix="playable-claim-") as temporary:
@@ -1836,7 +2310,7 @@ class GuideClaimTest(DocumentationCopies, unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "status claim outside the generated block"):
                     playable.check_docs(source_root, repository=ROOT)
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_bound_documentation_history(), "needs a parent commit and allowlist base for review binding")
     def test_digests_and_pinned_revisions_outside_the_block_are_allowed(self) -> None:
         extra = f"Digest {'ab12' * 16} and pins {playable.YMFM_REVISION} {playable.Z80_REVISION}."
         with tempfile.TemporaryDirectory(prefix="playable-claim-ok-") as temporary:
@@ -1844,12 +2318,11 @@ class GuideClaimTest(DocumentationCopies, unittest.TestCase):
             self.guide_with(source_root, extra)
             playable.check_docs(source_root, repository=ROOT)
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
     def test_live_guide_has_no_outside_block_claims(self) -> None:
         guide = (ROOT / playable.GUIDE).read_text(encoding="utf-8")
         self.assertEqual(playable.guide_claims_outside_block(guide), [])
 
-    @unittest.skipUnless((ROOT / ".git").exists(), "needs the Git history the summary is bound to")
+    @unittest.skipUnless(has_bound_documentation_history(), "needs a parent commit and allowlist base for review binding")
     def test_guide_with_a_private_checkout_path_is_rejected(self) -> None:
         private = str(playable.ROOT).replace("/", "\u2215")
         with tempfile.TemporaryDirectory(prefix="playable-claim-path-") as temporary:
@@ -1860,7 +2333,10 @@ class GuideClaimTest(DocumentationCopies, unittest.TestCase):
 
     def test_claim_gate_limits_are_documented_and_pinned(self) -> None:
         """GIN-04 (accepted): the gate matches 7 to 40 hex characters; longer tokens are not machine-checked."""
-        guide = (ROOT / playable.GUIDE).read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory(prefix="playable-guide-limits-") as temporary:
+            source_root = Path(temporary)
+            self.copy_documentation(source_root)
+            guide = (source_root / playable.GUIDE).read_text(encoding="utf-8")
         self.assertIn("7 to 40 characters", guide)
         self.assertIn("Other prose is not a qualification claim and is not machine-checked", guide)
         outside = guide + "\n\nunreviewed digest " + "a1b2c3d4" * 8 + "\n"
@@ -2227,6 +2703,22 @@ class AtomicRecordTest(DocumentationCopies, unittest.TestCase):
 
 
 class MainErrorPathTest(unittest.TestCase):
+    def test_explicit_headless_clean_reaches_snapshot_without_frontend_acquisition(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary, \
+                mock.patch.object(playable, "OUTPUT", Path(temporary)/"out"), \
+                mock.patch.object(playable, "create_snapshot", side_effect=playable.SnapshotError(
+                    "synthetic-source-failure", "synthetic failure")) as snapshot, \
+                mock.patch.object(playable, "run_frontend_smoke_lane") as frontend, \
+                mock.patch.object(sys, "argv", ["verify_playable.py", "--clean", "--headless"]), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(playable.main(), 1)
+            snapshot.assert_called_once()
+            frontend.assert_not_called()
+            receipt=json.loads((Path(temporary)/"out/receipt.json").read_text())
+            self.assertEqual(receipt["qualification_scope"], "public-core-headless")
+            self.assertEqual(receipt["retroarch_smoke"]["status"], "not-run")
+            self.assertEqual(receipt["status"], "fail", "headless must preserve public build failures")
+
     """Early failures still write a named fail receipt, and printed errors are redacted (CR-08, CR-09, IN-04)."""
 
     def run_main(self, *arguments: str) -> tuple[int, str, str]:
@@ -2678,12 +3170,108 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         return self.squashed(Path(temporary.name), base_row)
 
-    def gate(self, function_name: str, root: Path, *extra: object) -> tuple[list[str], list[str]]:
+    def source_identity_fixture(self, *, skip_history_generation: bool = False,
+                                malformed_recipe_origin: bool = False,
+                                omit_recipe_origin: bool = False,
+                                omit_origin_mirror: bool = False,
+                                non_object_recipe_origin: bool = False) -> "SimpleNamespace":
+        """A source record and its outer rights row across a full branch, squash, and fresh clone."""
+        from types import SimpleNamespace
+
+        temporary = tempfile.TemporaryDirectory(prefix="playable-source-identity-squash-")
+        self.addCleanup(temporary.cleanup)
+        base_dir = Path(temporary.name)
+        repo = base_dir / "repo"
+        repo.mkdir()
+        self.git(repo, "init", "-q", "-b", "main")
+        (repo / "base.txt").write_text("base\n", encoding="utf-8")
+        legacy_recipe = repo / "tests/sdk/save_process.c"
+        legacy_recipe.parent.mkdir(parents=True)
+        legacy_recipe.write_text("historical recipe only\n", encoding="utf-8")
+        base = self.commit(repo, "base", "base.txt")
+        self.git(repo, "add", "tests/sdk/save_process.c")
+        base = self.commit(repo, "base historical recipe", "tests/sdk/save_process.c")
+        self.git(repo, "checkout", "-q", "-b", "feature")
+
+        source_path = "tests/source.c"
+        source_bytes = b"source identity bytes\n"
+        (repo / source_path).parent.mkdir(parents=True, exist_ok=True)
+        (repo / source_path).write_bytes(source_bytes)
+        source_revision = self.commit(repo, "source", source_path)
+
+        manifest_path = playable.FIXTURE_RIGHTS_MANIFEST.as_posix()
+        record = {
+            "path": source_path, "source_revision": source_revision,
+            "sha256": hashlib.sha256(source_bytes).hexdigest(), "bytes": len(source_bytes),
+            "license": "MIT", "notice": "LICENSE",
+        }
+        recipe_origin: dict[str, object] = {
+            "path": "tests/sdk/save_process.c",
+            "source_revision": base,
+            "description": "Immutable historical recipe origin, not a current source fingerprint.",
+        }
+        if malformed_recipe_origin:
+            recipe_origin = {**record, "description": "Complete current identity cannot replace the historical origin."}
+        mirrored_revision = str(recipe_origin["source_revision"])
+        save_fixture: dict[str, object] = {"generator_source": record}
+        ancestry: dict[str, object] = {}
+        if not omit_recipe_origin:
+            save_fixture["recipe_origin"] = "not-an-object" if non_object_recipe_origin else recipe_origin
+            if not omit_origin_mirror:
+                ancestry["recipe_origin_revision"] = mirrored_revision
+        manifest = {
+            "mvs_save_fixture": save_fixture,
+            "frontend_continuation": {"public_fixture_ancestry": ancestry},
+        }
+        manifest_bytes = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        manifest_file = repo / manifest_path
+        manifest_file.parent.mkdir(parents=True)
+        manifest_file.write_bytes(manifest_bytes)
+        manifest_revision = self.commit(repo, "manifest", manifest_path)
+
+        outer = {
+            "path": manifest_path, "sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+            "kind": "fixture-rights-manifest", "license": "MIT", "rights": "affirmative",
+            "source_revision": manifest_revision, "provenance": "fixture manifest",
+            "notice": "LICENSE",
+        }
+        self.write_inventory(repo, [outer])
+        self.commit(repo, "outer rights row", playable.RIGHTS_INVENTORY.as_posix())
+        if skip_history_generation:
+            generated = {
+                "schema": 1, "scope": playable.HISTORY_ALLOWLIST_SCOPE, "base_revision": base,
+                "rows": [{"kind": "rights", "key": manifest_path, "revision": manifest_revision,
+                          "pin": self.canonical(outer)}],
+            }
+        else:
+            generated = json.loads(self.generate(repo, base="main"))
+            self.assertEqual(generated["rows"], [{
+                "kind": "rights", "key": manifest_path, "revision": manifest_revision,
+                "pin": self.canonical(outer),
+            }])
+        (repo / playable.HISTORY_ALLOWLIST).write_text(
+            json.dumps(generated, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        self.commit(repo, "allowlist outer rights row", playable.HISTORY_ALLOWLIST.as_posix())
+
+        self.git(repo, "checkout", "-q", "main")
+        self.git(repo, "merge", "--squash", "feature")
+        self.git(repo, "commit", "-q", "-m", "squash feature")
+        clone = base_dir / "clone"
+        self.git(base_dir, "clone", "-q", "--no-local", "--single-branch", "--branch", "main",
+                 str(repo), str(clone))
+        shallow_clone = base_dir / "shallow-clone"
+        self.git(base_dir, "clone", "-q", "--depth=1", "--no-local", "--single-branch", "--branch", "main",
+                 repo.as_uri(), str(shallow_clone))
+        return SimpleNamespace(repo=repo, clone=clone, base=base, source_revision=source_revision,
+                               shallow_clone=shallow_clone, manifest_revision=manifest_revision,
+                               manifest_path=manifest_path)
+
+    def gate(self, function_name: str, root: Path, **kwargs: object) -> tuple[list[str], list[str]]:
         function = getattr(playable, function_name, None)
         self.assertIsNotNone(function, f"{function_name} is missing")
         notes: list[str] = []
         try:
-            return function(root, root, "HEAD", unverifiable=notes), notes
+            return function(root, root, "HEAD", unverifiable=notes, **kwargs), notes
         except Exception as error:  # noqa: BLE001 - red must fail on an assertion, not on an exception
             self.fail(f"uncaught {type(error).__name__}")
 
@@ -2704,6 +3292,259 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
                 self.assertIn(expected, notes[0])
             results.append((errors, notes))
         self.assertEqual(results[0], results[1])
+
+    def test_squash_source_identity_uses_only_pinned_outer_manifest_and_checked_head_bytes(self) -> None:
+        fx = self.source_identity_fixture(skip_history_generation=True)
+        retained_notes: list[str] = []
+        self.assertEqual(playable.fixture_source_identity_errors(
+            fx.repo, fx.repo, "HEAD", unverifiable=retained_notes), [])
+        self.assertTrue(any("available but not ordered with the checked head" in note for note in retained_notes),
+                        retained_notes)
+        self.assertTrue(any("cited blob matches under the exact outer rights-manifest pin" in note
+                            for note in retained_notes), retained_notes)
+
+        unpinned_retained = playable.HistoryAllowlist(rows={}, base_revision=fx.base)
+        errors = playable.fixture_source_identity_errors(
+            fx.repo, fx.repo, "HEAD", allowlist=unpinned_retained)
+        self.assertTrue(errors, "available unrelated source objects must still require the exact outer pin")
+
+        for revision in (fx.source_revision, fx.manifest_revision):
+            absent = subprocess.run(["git", "-C", str(fx.clone), "rev-parse", "--verify", "--quiet",
+                                     f"{revision}^{{commit}}"], stdout=subprocess.DEVNULL, check=False)
+            self.assertNotEqual(absent.returncode, 0, "fresh clone must not retain feature-history objects")
+        notes: list[str] = []
+        self.assertEqual(playable.fixture_source_identity_errors(
+            fx.clone, fx.clone, "HEAD", unverifiable=notes), [])
+        self.assertTrue(any("historical commit unavailable" in note for note in notes), notes)
+        self.assertTrue(any("outer rights-row pin" in note or "rights-row pin" in note for note in notes), notes)
+
+        manifest_path = fx.clone / fx.manifest_path
+        exact_manifest = manifest_path.read_bytes()
+        manifest_path.write_bytes(exact_manifest + b"\n")
+        self.assertTrue(any(("differs from the checked head" in error or
+                             "checked-head size and mode" in error) for error in
+                            playable.fixture_source_identity_errors(fx.clone, fx.clone, "HEAD")),
+                        "whitespace-only manifest edits must not pass the exact checked-head pin")
+        manifest_path.write_bytes(exact_manifest)
+
+        inventory_path = fx.clone / playable.RIGHTS_INVENTORY
+        exact_inventory = inventory_path.read_bytes()
+        inventory_path.write_bytes(exact_inventory + b"\n")
+        self.assertTrue(any(("rights inventory differs from the checked head" in error or
+                             "checked-head size and mode" in error) for error in
+                            playable.fixture_source_identity_errors(fx.clone, fx.clone, "HEAD")),
+                        "whitespace-only inventory edits must not pass the exact checked-head pin")
+        inventory_path.write_bytes(exact_inventory)
+
+        allowlist_path = fx.clone / playable.HISTORY_ALLOWLIST
+        exact_allowlist = allowlist_path.read_bytes()
+        allowlist_path.write_bytes(exact_allowlist + b"\n")
+        self.assertTrue(any("history allowlist differs from the checked head" in error for error in
+                            playable.fixture_source_identity_errors(fx.clone, fx.clone, "HEAD")),
+                        "whitespace-only allowlist edits must not alter provenance authority")
+        allowlist_path.write_bytes(exact_allowlist)
+
+        shallow_notes: list[str] = []
+        self.assertEqual(playable.fixture_source_identity_errors(
+            fx.shallow_clone, fx.shallow_clone, "HEAD", unverifiable=shallow_notes), [])
+        self.assertTrue(any("shallow" in note for note in shallow_notes), shallow_notes)
+        self.assertTrue(any("outer rights-row pin" in note or "rights-row pin" in note for note in shallow_notes),
+                        shallow_notes)
+
+        allowlist_path = fx.clone / playable.HISTORY_ALLOWLIST
+        valid_allowlist = allowlist_path.read_text(encoding="utf-8")
+        allowlist = json.loads(valid_allowlist)
+        allowlist["rows"] = []
+        allowlist_path.write_text(json.dumps(allowlist, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        errors = playable.fixture_source_identity_errors(fx.clone, fx.clone, "HEAD")
+        self.assertTrue(errors, "source identity must fail if the outer rights row is unpinned")
+        allowlist_path.write_text(valid_allowlist, encoding="utf-8")
+
+        manifest_path = fx.clone / fx.manifest_path
+        original = manifest_path.read_text(encoding="utf-8")
+        for field, replacement in (("path", "tests/substituted.c"), ("sha256", "0" * 64), ("bytes", 1)):
+            mutated = json.loads(original)
+            mutated["mvs_save_fixture"]["generator_source"][field] = replacement
+            with self.subTest(field=field):
+                problems = playable.fixture_source_identity_errors(fx.clone, fx.clone, "HEAD", manifest=mutated)
+                self.assertTrue(problems, f"mutated source record {field} passed")
+
+        # An exact outer-manifest pin still cannot excuse an available unrelated commit
+        # whose cited source blob differs from the checked-head bytes.
+        wrong_source = b"different historical source bytes\n"
+        self.git(fx.repo, "checkout", "-q", "-b", "wrong-source-origin", "main")
+        (fx.repo / "tests/source.c").write_bytes(wrong_source)
+        wrong_revision = self.commit(fx.repo, "wrong source blob", "tests/source.c")
+        self.git(fx.repo, "checkout", "-q", "main")
+        manifest_path = fx.repo / fx.manifest_path
+        changed_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        changed_manifest["mvs_save_fixture"]["generator_source"]["source_revision"] = wrong_revision
+        manifest_path.write_text(json.dumps(changed_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        manifest_revision = self.commit(fx.repo, "substitute unrelated source revision", fx.manifest_path)
+        inventory_path = fx.repo / playable.RIGHTS_INVENTORY
+        inventory_text = inventory_path.read_text(encoding="utf-8")
+        inventory = json.loads(re.search(r"```json\s*\n(.*?)\n```", inventory_text, re.DOTALL).group(1))
+        outer = next(item for item in inventory["items"] if item["path"] == fx.manifest_path)
+        outer["sha256"] = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+        outer["source_revision"] = manifest_revision
+        self.write_inventory(fx.repo, [outer])
+        self.commit(fx.repo, "refresh substituted outer rights row", playable.RIGHTS_INVENTORY.as_posix())
+        wrong_origin_pin = playable.HistoryAllowlist(
+            rows={("rights", fx.manifest_path, manifest_revision): playable._canonical_digest(outer)},
+            base_revision=fx.base)
+        problems = playable.fixture_source_identity_errors(
+            fx.repo, fx.repo, "HEAD", allowlist=wrong_origin_pin)
+        self.assertTrue(any("does not hold the recorded bytes" in problem for problem in problems), problems)
+
+    def test_historical_recipe_origin_is_mirrored_and_separate_from_current_identities(self) -> None:
+        fx = self.source_identity_fixture()
+        manifest = json.loads((fx.repo / fx.manifest_path).read_text(encoding="utf-8"))
+        reference = manifest["mvs_save_fixture"]["recipe_origin"]
+        ancestry = manifest["frontend_continuation"]["public_fixture_ancestry"]
+        self.assertIsNone(playable._historical_recipe_origin_error(
+            reference, ancestry, fx.repo, "main", outer_allowed=False))
+
+        wrong_ancestry = {**ancestry, "recipe_origin_revision": "0" * 40}
+        self.assertIn("does not match the mirrored ancestry revision", playable._historical_recipe_origin_error(
+            reference, wrong_ancestry, fx.repo, "main", outer_allowed=True) or "")
+        wrong_path = {**reference, "path": "tests/sdk/unrelated.c"}
+        self.assertIn("unexpected schema or path", playable._historical_recipe_origin_error(
+            wrong_path, ancestry, fx.repo, "main", outer_allowed=True) or "")
+
+        self.git(fx.repo, "checkout", "-q", "-b", "later-origin", "main")
+        (fx.repo / "later.txt").write_text("later\n", encoding="utf-8")
+        later = self.commit(fx.repo, "later", "later.txt")
+        self.git(fx.repo, "checkout", "-q", "main")
+        descendant = {**reference, "source_revision": later}
+        descendant_ancestry = {**ancestry, "recipe_origin_revision": later}
+        self.assertIn("descendant of the checked head", playable._historical_recipe_origin_error(
+            descendant, descendant_ancestry, fx.repo, "main", outer_allowed=True) or "")
+
+        self.git(fx.repo, "checkout", "-q", "-b", "unrelated-origin", fx.base)
+        (fx.repo / "unrelated.txt").write_text("unrelated\n", encoding="utf-8")
+        unrelated = self.commit(fx.repo, "unrelated", "unrelated.txt")
+        self.git(fx.repo, "checkout", "-q", "main")
+        unrelated_reference = {**reference, "source_revision": unrelated}
+        unrelated_ancestry = {**ancestry, "recipe_origin_revision": unrelated}
+        self.assertIn("not pinned", playable._historical_recipe_origin_error(
+            unrelated_reference, unrelated_ancestry, fx.repo, "main", outer_allowed=False) or "")
+        notes: list[str] = []
+        self.assertIsNone(playable._historical_recipe_origin_error(
+            unrelated_reference, unrelated_ancestry, fx.repo, "main", outer_allowed=True,
+            unverifiable=notes))
+        self.assertTrue(any("ancestry is not claimed" in note for note in notes), notes)
+
+        absent_reference = {**reference, "source_revision": "f" * 40}
+        absent_ancestry = {**ancestry, "recipe_origin_revision": "f" * 40}
+        absent_notes: list[str] = []
+        self.assertIsNone(playable._historical_recipe_origin_error(
+            absent_reference, absent_ancestry, fx.repo, "main", outer_allowed=True,
+            unverifiable=absent_notes))
+        self.assertTrue(any("bytes are not verified" in note for note in absent_notes), absent_notes)
+
+    def test_incomplete_current_fixture_identity_cannot_be_downgraded_to_history_reference(self) -> None:
+        malformed = {
+            "mvs_save_fixture": {
+                "recipe_origin": {"path": "tests/sdk/save_process.c", "source_revision": "a" * 40,
+                                  "description": "historical"},
+                "assertion_sources": [{"path": "tests/sdk/test_support.h", "source_revision": "a" * 40,
+                                        "sha256": "0" * 64}],
+            },
+        }
+        identities, references, errors = playable._fixture_source_records(malformed)
+        self.assertEqual(identities, [])
+        self.assertEqual([pointer for pointer, _ in references], ["/mvs_save_fixture/recipe_origin"])
+        self.assertEqual(errors, ["fixture source identity /mvs_save_fixture/assertion_sources/0 is incomplete"])
+
+        complete_but_misplaced = {
+            "mvs_save_fixture": {
+                "recipe_origin": {
+                    "path": "tests/sdk/test_support.h", "source_revision": "a" * 40,
+                    "description": "historical", "sha256": "0" * 64, "bytes": 1,
+                },
+            },
+        }
+        identity_rows, reference_rows, schema_errors = playable._fixture_source_records(complete_but_misplaced)
+        self.assertEqual(identity_rows, [])
+        self.assertEqual(reference_rows, [])
+        self.assertEqual(schema_errors, [
+            "fixture source reference /mvs_save_fixture/recipe_origin has an unexpected historical-origin schema",
+        ])
+
+    def test_complete_current_identity_cannot_replace_historical_recipe_origin(self) -> None:
+        fx = self.source_identity_fixture(skip_history_generation=True, malformed_recipe_origin=True)
+        errors = playable.fixture_source_identity_errors(fx.repo, fx.repo, "HEAD")
+        self.assertEqual(errors, [
+            "fixture source reference /mvs_save_fixture/recipe_origin has an unexpected historical-origin schema",
+        ])
+
+    def test_missing_recipe_origin_and_mirror_are_rejected(self) -> None:
+        fx = self.source_identity_fixture(skip_history_generation=True, omit_recipe_origin=True)
+        errors = playable.fixture_source_identity_errors(fx.repo, fx.repo, "HEAD")
+        self.assertIn(
+            f"fixture source reference {playable.HISTORICAL_RECIPE_ORIGIN_POINTER} is missing", errors)
+
+    def test_malformed_recipe_origin_type_and_missing_mirror_are_rejected(self) -> None:
+        non_object = self.source_identity_fixture(
+            skip_history_generation=True, non_object_recipe_origin=True)
+        errors = playable.fixture_source_identity_errors(non_object.repo, non_object.repo, "HEAD")
+        self.assertTrue(any("historical-origin schema" in error for error in errors), errors)
+
+        missing_mirror = self.source_identity_fixture(skip_history_generation=True, omit_origin_mirror=True)
+        errors = playable.fixture_source_identity_errors(missing_mirror.repo, missing_mirror.repo, "HEAD")
+        self.assertTrue(any("does not match the mirrored ancestry revision" in error for error in errors), errors)
+
+    def test_source_identity_manifest_symlink_is_rejected_before_read(self) -> None:
+        fx = self.source_identity_fixture()
+        manifest_path = fx.clone / fx.manifest_path
+        outside = manifest_path.parent.parent / "outside-manifest.json"
+        outside.write_bytes(manifest_path.read_bytes())
+        manifest_path.unlink()
+        manifest_path.symlink_to(outside)
+        attempted = False
+        original_read_bytes = Path.read_bytes
+
+        def guarded_read(path: Path) -> bytes:
+            nonlocal attempted
+            if path == manifest_path:
+                attempted = True
+                raise AssertionError("symlink target must not be opened")
+            return original_read_bytes(path)
+
+        with mock.patch.object(Path, "read_bytes", guarded_read):
+            errors = playable.fixture_source_identity_errors(fx.clone, fx.clone, "HEAD")
+        self.assertTrue(any("not a regular file" in error for error in errors), errors)
+        self.assertFalse(attempted, "manifest symlink was opened before its leaf type was checked")
+
+    def test_source_identity_requires_checked_head_git_mode(self) -> None:
+        fx = self.source_identity_fixture()
+        source = fx.clone / "tests/source.c"
+        original_mode = source.stat().st_mode & 0o777
+        source.chmod(original_mode | 0o111)
+        try:
+            errors = playable.fixture_source_identity_errors(fx.clone, fx.clone, "HEAD")
+        finally:
+            source.chmod(original_mode)
+        self.assertTrue(any("checked-head path and bytes" in error for error in errors), errors)
+
+    def test_bounded_source_reader_rejects_symlinked_ancestor_and_nonregular_leaf_before_open(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-bounded-read-") as temporary:
+            base = Path(temporary)
+            source_root = base / "source"
+            outside = base / "outside"
+            source_root.mkdir()
+            outside.mkdir()
+            (outside / "item.txt").write_bytes(b"source bytes\n")
+            (source_root / "nested").symlink_to(outside, target_is_directory=True)
+            with mock.patch.object(playable.os, "open", side_effect=AssertionError("must reject before open")) as opened:
+                self.assertIsNone(playable._read_regular_source_bytes(source_root, "nested/item.txt"))
+                opened.assert_not_called()
+
+            (source_root / "nested").unlink()
+            (source_root / "item.txt").mkdir()
+            with mock.patch.object(playable.os, "open", side_effect=AssertionError("must reject before open")) as opened:
+                self.assertIsNone(playable._read_regular_source_bytes(source_root, "item.txt"))
+                opened.assert_not_called()
 
     def test_g5wr_01_cli_prints_one_line_per_tolerated_row(self) -> None:
         with mock.patch.object(playable, "check_docs", return_value=["note one", "note two"]), \
@@ -2759,6 +3600,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         disposition = (root / playable.DISPOSITION).read_text(encoding="utf-8")
         # (1) a fabricated rights revision
         self.add_rights_row(root, "tests/b.txt", "b\n", "f" * 40)
+        self.commit(root, "commit fabricated rights authority", playable.RIGHTS_INVENTORY.as_posix())
         errors, notes = self.gate("rights_revision_errors", root)
         self.assertEqual(len(errors), 1, errors)
         self.assertIn("tests/b.txt", errors[0])
@@ -2800,6 +3642,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         fx = self.fixture()
         for root, rights_message in ((fx.repo, "is not an ancestor of the checked head"), (fx.clone, "does not resolve")):
             self.add_rights_row(root, "tests/c.txt", "c\n", fx.F1)
+            self.commit(root, "commit unrelated rights row", playable.RIGHTS_INVENTORY.as_posix())
             self.append_disposition(root, f"| CR-04 | warning | fixed | revision `{fx.F1}` |")
             rights_errors, rights_notes, review_errors, review_notes = self.both(root)
             self.assertEqual(len(rights_errors), 1, rights_errors)
@@ -2831,14 +3674,16 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         side = self.commit(fx.repo, "side", "tests/a.txt")
         self.git(fx.repo, "checkout", "-q", "feature")
         self.write_inventory(fx.repo, [self.item("tests/a.txt", "two\n", side)])
+        self.commit(fx.repo, "commit side-branch rights row", playable.RIGHTS_INVENTORY.as_posix())
         errors, notes = self.gate("rights_revision_errors", fx.repo)
         self.assertEqual(len(errors), 1, errors)
         self.assertTrue(errors[0].endswith("is not an ancestor of the checked head"), errors[0])
         self.assertEqual(notes, [])
         self.git(fx.repo, "checkout", "-q", "--", playable.RIGHTS_INVENTORY.as_posix())
         self.git(fx.repo, "checkout", "-q", "--detach", fx.F2)
+        self.assertEqual(playable._revision_relation(fx.repo, fx.F3, fx.F2), "descendant")
         self.write_inventory(fx.repo, [self.item("tests/a.txt", "two\n", fx.F3)])
-        self.allowlist(fx.repo, [("rights", "tests/a.txt", fx.F3)], fx.B)
+        self.commit(fx.repo, "commit future-origin rights authority", playable.RIGHTS_INVENTORY.as_posix())
         errors, notes = self.gate("rights_revision_errors", fx.repo)
         self.assertEqual(len(errors), 1, errors)
         self.assertTrue(errors[0].endswith("is not an ancestor of the checked head"), errors[0])
@@ -2859,6 +3704,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         self.assertEqual(self.stale(root), ["review_citation CR-01"])
         (root / playable.DISPOSITION).write_text(text, encoding="utf-8")
         self.write_inventory(root, [self.item("tests/a.txt", "two\n", fx.F2, license="Apache-2.0")])
+        self.commit(root, "commit edited rights row", playable.RIGHTS_INVENTORY.as_posix())
         errors, notes = self.gate("rights_revision_errors", root)
         self.assertEqual(len(errors), 1, errors)
         self.assertTrue(errors[0].endswith("does not resolve"), errors[0])
@@ -2942,6 +3788,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         root = fx.clone
         bad = "a" * 39
         self.write_inventory(root, [self.item("tests/a.txt", "two\n", bad)])
+        self.commit(root, "commit malformed rights revision", playable.RIGHTS_INVENTORY.as_posix())
         real = subprocess.run
         with mock.patch("subprocess.run", wraps=real) as run:
             errors, _notes = self.gate("rights_revision_errors", root)
@@ -2958,7 +3805,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
     def test_g5wr_01_frontend_receipt_row(self) -> None:
         fx = self.fixture()
         load = getattr(playable, "load_frontend_evidence")
-        summary = json.loads((ROOT / playable.FRONTEND_EVIDENCE).read_text(encoding="utf-8"))
+        summary = self.frontend_summary()
         summary["source_revision"] = fx.F2
         temporary = tempfile.TemporaryDirectory(prefix="playable-receipt-")
         self.addCleanup(temporary.cleanup)
@@ -2972,7 +3819,8 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         self.allowlist(root, [("frontend_receipt", "source_revision", fx.F2)], fx.B)
         notes: list[str] = []
         try:
-            loaded = load(root, repository=fx.clone, head="HEAD", unverifiable=notes)
+            loaded = load(root, repository=fx.clone, head="HEAD", allowlist=playable.load_history_allowlist(root),
+                          unverifiable=notes)
         except Exception as error:  # noqa: BLE001
             self.fail(f"uncaught {type(error).__name__}")
         self.assertEqual(loaded, summary)
@@ -2983,21 +3831,25 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         write({**summary, "inventory_sha256": "0" * 64})
         notes = []
         with self.assertRaisesRegex(RuntimeError, "^frontend evidence revision cannot be checked$"):
-            load(root, repository=fx.clone, head="HEAD", unverifiable=notes)
+            load(root, repository=fx.clone, head="HEAD", allowlist=playable.load_history_allowlist(root),
+                 unverifiable=notes)
         self.assertEqual(notes, [])
         # Unrelated-but-resolving revision, not listed after the edit: today's not-an-ancestor message.
         with self.assertRaisesRegex(RuntimeError, "^frontend evidence revision is not a committed ancestor of the checked head$"):
-            load(root, repository=fx.repo, head="HEAD", unverifiable=notes)
+            load(root, repository=fx.repo, head="HEAD", allowlist=playable.load_history_allowlist(root),
+                 unverifiable=notes)
         # No allowlist at all: strict.
         write(summary)
         (root / "docs/history-allowlist.json").unlink()
         with self.assertRaisesRegex(RuntimeError, "^frontend evidence revision cannot be checked$"):
-            load(root, repository=fx.clone, head="HEAD", unverifiable=notes)
+            load(root, repository=fx.clone, head="HEAD", allowlist=playable.HistoryAllowlist.EMPTY,
+                 unverifiable=notes)
         # An ancestor revision is never tolerated: it takes the snapshot-binding path and today's error.
         self.allowlist(root, [("frontend_receipt", "source_revision", fx.F2)], fx.B)
         self.git(fx.repo, "checkout", "-q", "feature")
         with self.assertRaises(RuntimeError) as caught:
-            load(root, repository=fx.repo, head="HEAD", unverifiable=notes)
+            load(root, repository=fx.repo, head="HEAD", allowlist=playable.load_history_allowlist(root),
+                 unverifiable=notes)
         self.assertNotIn("allowlisted", str(caught.exception))
         self.assertEqual(notes, [])
 
@@ -3086,11 +3938,63 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, self.GENERATOR_REFUSAL):
             self.generate(fx.repo, base="nosuchref")
 
+    def test_sanitized_checkout_generates_strict_rights_only_allowlist(self) -> None:
+        """A public checkout without private planning history can still bind rights rows for squash."""
+        with tempfile.TemporaryDirectory(prefix="playable-sanitized-allowlist-") as temporary:
+            repo = Path(temporary) / "repo"
+            repo.mkdir()
+            self.git(repo, "init", "-q", "-b", "main")
+            (repo / "src").mkdir()
+            (repo / "src/source.c").write_text("one\n", encoding="utf-8")
+            base = self.commit(repo, "public base", "src/source.c")
+            public_plan = repo / ".planning/public-context.md"
+            public_plan.parent.mkdir()
+            public_plan.write_text("Public source-plan metadata.\n", encoding="utf-8")
+            self.commit(repo, "public planning context", ".planning/public-context.md")
+
+            self.write_inventory(repo, [self.item("src/source.c", "one\n", base)])
+            self.commit(repo, "rights inventory", playable.RIGHTS_INVENTORY.as_posix())
+            (repo / "src/source.c").write_text("two\n", encoding="utf-8")
+            source_commit = self.commit(repo, "source change", "src/source.c")
+            self.write_inventory(repo, [self.item("src/source.c", "two\n", source_commit)])
+            self.commit(repo, "updated rights inventory", playable.RIGHTS_INVENTORY.as_posix())
+
+            self.assertTrue(public_plan.is_file())
+            document = json.loads(self.generate(repo, base=base))
+            self.assertEqual(document["base_revision"], base)
+            self.assertEqual(document["rows"], [{
+                "kind": "rights", "key": "src/source.c", "revision": source_commit,
+                "pin": self.canonical(self.item("src/source.c", "two\n", source_commit)),
+            }])
+
+            allowlist_path = repo / playable.HISTORY_ALLOWLIST
+            allowlist_path.write_text(self.generate(repo, base=base), encoding="utf-8")
+            self.commit(repo, "generated sanitized allowlist", playable.HISTORY_ALLOWLIST.as_posix())
+            status, out, err = self.run_cli(repo, "--history-allowlist", "ci", "--base", base)
+            self.assertEqual(status, 0, err)
+            self.assertIn("History allowlist is current", out)
+
+            # An unrelated public .planning document does not select the private evidence path, but
+            # one present review record does and an incomplete set fails closed.
+            self.write_review(repo, base)
+            with self.assertRaisesRegex(RuntimeError, self.GENERATOR_REFUSAL):
+                self.generate(repo, base=base)
+            (repo / playable.REVIEW).unlink()
+
+            # Rights-only generation remains strict: changed recorded bytes cannot be pinned.
+            inventory = repo / playable.RIGHTS_INVENTORY
+            text = inventory.read_text(encoding="utf-8")
+            inventory.write_text(text.replace(self.sha("two\n"), "0" * 64), encoding="utf-8")
+            self.commit(repo, "tampered rights digest", playable.RIGHTS_INVENTORY.as_posix())
+            with self.assertRaisesRegex(RuntimeError, self.GENERATOR_REFUSAL + ".*does not hold"):
+                self.generate(repo, base=base)
+
     def test_g5wr_01_generator_skips_open_and_third_party_rows(self) -> None:
         fx = self.on_feature()
         self.append_disposition(fx.repo, "| CR-03 | info | open | recorded |")
         third_party = self.item("third_party/x", "x\n", "upstream-pin")
         self.write_inventory(fx.repo, [*self.items(fx.repo), third_party])
+        self.commit(fx.repo, "commit inventory fixture", playable.RIGHTS_INVENTORY.as_posix())
         document = json.loads(self.generate(fx.repo))
         keys = [row["key"] for row in document["rows"]]
         self.assertEqual(len(keys), 4, keys)
@@ -3211,6 +4115,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         """An unresolvable base_revision (as in a shallow clone) is reported before any other docs check."""
         fx = self.fixture()
         self.allowlist(fx.repo, self.all_rows(fx), "e" * 40)
+        self.commit(fx.repo, "commit unanchored allowlist", playable.HISTORY_ALLOWLIST.as_posix())
         with self.assertRaisesRegex(RuntimeError, "^history allowlist base_revision is not a commit"):
             playable.check_docs(fx.repo)
 
@@ -3242,6 +4147,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         self.allowlist(root, [("reviewed_revision", "04-REVIEW.md", fx.F1), ("review_citation", "CR-01", fx.F2),
                               ("review_citation", "CR-01", short), ("review_citation", "GWR-01", fx.F2),
                               ("rights", "tests/a.txt", fx.F2)], fx.B)
+        self.commit(root, "commit allowlist test authority", playable.HISTORY_ALLOWLIST.as_posix())
         errors, notes = self.gate("review_provenance_errors", root)
         self.assertEqual(errors, [])
         self.assertEqual(len([note for note in notes if "CR-01" in note]), 2, notes)
@@ -3271,6 +4177,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         for label, base in (("unresolvable", "e" * 40), ("not an ancestor of head", fx.F4)):
             with self.subTest(label):
                 self.allowlist(fx.repo, self.all_rows(fx), base)
+                self.commit(fx.repo, "commit forged allowlist base", playable.HISTORY_ALLOWLIST.as_posix())
                 rights_errors, rights_notes, review_errors, review_notes = self.both(fx.repo)
                 self.assertEqual((rights_notes, review_notes), ([], []))
                 self.assertTrue(rights_errors and review_errors, (rights_errors, review_errors))
@@ -3278,6 +4185,7 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
                     playable.load_history_allowlist(fx.repo), fx.repo, "HEAD")
                 self.assertTrue(reported and "base_revision" in reported[0], reported)
         self.allowlist(fx.repo, self.all_rows(fx), fx.B)
+        self.commit(fx.repo, "restore valid allowlist base", playable.HISTORY_ALLOWLIST.as_posix())
         errors, notes = self.gate("rights_revision_errors", fx.repo)
         self.assertEqual((errors, len(notes)), ([], 1))
 
@@ -3336,10 +4244,46 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         errors, notes = self.gate("rights_revision_errors", fx.repo)
         self.assertEqual(notes, [])
         self.assertEqual(len(errors), 1, errors)
-        for path in ("tests/./a.txt", "tests//a.txt", "tests/a.txt/", "tests\\a.txt"):
+        for path in ("tests/./a.txt", "tests//a.txt", "tests/a.txt/", "tests\\a.txt",
+                     "D:/file", "D:file", "Z:relative/path", "tests/D:/file", "tests/D:file"):
             with self.subTest(path):
                 self.assertFalse(playable._rights_path_is_relative_posix(path))
         self.assertTrue(playable._rights_path_is_relative_posix("tests/a.txt"))
+
+    def test_g6wr_03_directory_symlink_swap_after_open_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="playable-source-race-") as temporary:
+            root = Path(temporary)
+            parent = root / "nested"
+            parent.mkdir()
+            source = parent / "input.bin"
+            source.write_bytes(b"stable source bytes")
+            moved = root / "moved"
+            real_fdopen = os.fdopen
+            swapped = False
+
+            def swap_ancestor_after_open(descriptor: int, *args: object, **kwargs: object) -> object:
+                nonlocal swapped
+                stream = real_fdopen(descriptor, *args, **kwargs)
+                if not swapped:
+                    parent.rename(moved)
+                    try:
+                        parent.symlink_to(moved, target_is_directory=True)
+                    except OSError as error:
+                        moved.rename(parent)
+                        stream.close()  # type: ignore[attr-defined]
+                        self.skipTest(f"directory symlinks unavailable: {type(error).__name__}")
+                    swapped = True
+                return stream
+
+            try:
+                with mock.patch.object(os, "fdopen", side_effect=swap_ancestor_after_open):
+                    self.assertIsNone(playable._read_regular_source_bytes(root, "nested/input.bin"))
+                self.assertTrue(swapped)
+                self.assertTrue(parent.is_symlink())
+            finally:
+                if parent.is_symlink():
+                    parent.unlink()
+                    moved.rename(parent)
 
     # ---- G7WR-03: the tolerated rights branch judges the committed bytes at the checked head ----
 
@@ -3357,6 +4301,8 @@ class SquashMergeHistoryTest(DocumentationCopies, unittest.TestCase):
         # An untracked file holding the recorded bytes does not stand in for a missing tracked file.
         self.add_rights_row(fx.clone, "tests/untracked.txt", "u\n", fx.F2)
         self.allowlist(fx.clone, [*self.all_rows(fx), ("rights", "tests/untracked.txt", fx.F2)], fx.B)
+        self.commit(fx.clone, "commit untracked rights authority", playable.RIGHTS_INVENTORY.as_posix(),
+                    playable.HISTORY_ALLOWLIST.as_posix())
         errors, _notes = self.gate("rights_revision_errors", fx.clone)
         self.assertEqual(len(errors), 1, errors)
         self.assertIn("tests/untracked.txt", errors[0])

@@ -116,3 +116,230 @@ glueyneo-public-fixture public_guest_test && ctest --preset sdk-debug -R
 and runs the ordinary C API consumer and negative controls. The pinned
 RetroArch invocation is recorded in the adjacent 04-02 summary; a real frontend
 pass remains unknown until load, input, pixels, and unload are all observed.
+
+## Public sound fixture: original GNMV v3 recipe
+
+The sound workload is a separate original source-built fixture. The generator
+is `tests/fixture/public_sound_guest.c`; the ordinary C consumer and executable
+recipe checks are in `tests/fixture/test_public_sound_guest.c`. CMake's
+`glueyneo-public-sound-fixture` target runs
+`public_sound_test --write-fixture <build-dir>/public-sound-mvs.bin`, and both
+`public_sound_fixture` and the Libretro callback harness load that same
+generated path. The deterministic output is 67,108,976 bytes: a 16-byte GNMV
+header, eight 12-byte region descriptors, and 64 MiB of region data. Its
+recorded build identity and source identities are in
+[`rights-manifest.json`](rights-manifest.json). The binary remains ignored
+build output and is not committed or released.
+
+The header records GNMV manifest version 3, the normalized MSX profile, and
+eight regions serialized as descriptor followed immediately by that region's
+bytes, in this order:
+
+| Role | Bytes | Recipe |
+|---|---:|---|
+| BIOS | `0x80000` | Zero-filled launch substitute except for the original fixture vectors and main-CPU program at `0x100`; it is not SNK firmware. |
+| Program | `0x500000` | Zero-filled; the main fixture setup is intentionally in the BIOS-role substitute. |
+| Fixed | `0x20000` | Zero-filled except four first-party tile bytes at offsets `0x20`, `0x28`, `0x30`, and `0x38`. |
+| Audio program | `0x20000` | Zero-filled; the synthetic Z80 boot and command handler are in the audio-BIOS-role substitute. |
+| Samples | `0xa00000` | 256 generated ADPCM-B bytes followed by zeroes. For byte index `i`, high nibble is `(3*i+5) mod 16`, low nibble is `(7*i+2) mod 16`. |
+| Sprites | `0x3000000` | Zero-filled. |
+| Audio BIOS | `0x20000` | Original fixture Z80 boot, NMI handler, and YM2610 register-write routines. It is not a production BIOS. |
+| Y zoom | `0x20000` | Zero-filled. |
+
+The native recipe test checks the exact header, role order and sizes, the launch
+vectors, the active-low P1-A polling sequence, sound boot bytes, both command
+dispatch values, the ADPCM-B register-write sequence, the four fixed-layer
+bytes, all 256 formula-generated sample bytes, zero-filled sample tail, and
+byte equality with a fresh generator call. This makes the synthetic launch
+substitute and the generated sample part of the executable source contract,
+not undocumented fixture data.
+
+The launch main guest writes the fixed-layer palette and tile landmark, sends
+music command `0x3c`, and waits for the sound-CPU acknowledgment. It then polls
+the MVS input word at `0x00300000`; active-low P1 A sends action command `0xa5`,
+waits for acknowledgment, and returns to music after release. The synthetic
+Z80 boot enables the fixture command NMI. Its handler reads the command from
+port `0x00`, replies through port `0x0c`, and programs the actual YM2610 ports
+`0x04/0x05`. Command `0x3c` sets SSG channel A period 125, enables only its tone,
+and releases ADPCM-B. Command `0xa5` keeps that tone and starts ADPCM-B from
+address block zero through block zero, with Delta-N `0xffff`, maximum output
+level, and both left/right routes. Other commands key off the tone and stop
+ADPCM-B. The audio-channel distinction is therefore SSG plus ADPCM-B; this
+fixture does not exercise FM or ADPCM-A.
+
+### Oracle ancestry and test boundaries
+
+Primary chip documentation is separate from the expected emulator output:
+
+* The [Yamaha YM2610 data sheet](https://dtech.lv/files_ym/ym2610.pdf), pp. 2,
+  4, 5, and 8–9, identifies the standard 8 MHz master-clock input, SSG period
+  registers, ADPCM-B controls, sample-address registers, Delta-N, and 4-bit
+  ADPCM. The available copy is a scan hosted by a third-party mirror.
+* The [Yamaha YM2610 Application Manual, version 1.12, dated
+  1995-01-20](https://ajworld.net/neogeodev/ym2610am_en.html), Functional Overview and
+  ADPCM-B register sections, describes SSG fine/coarse period fields, ADPCM-B
+  start, stereo route, 256-byte address units, maximum level, and Delta-N.
+  The hosted manual is a translated copy; its Delta-N section explicitly notes
+  an ambiguity in the source divisor. The fixture records register values and
+  does not claim a physical-chip sample rate from that translated formula.
+
+The `0x7d` SSG period with a zero coarse register and the test's 48-output-frame
+correlation are the fixture's 1 kHz source-model expectation. The modified
+period `0x3e` is expected to correlate at 24 output frames (about 2 kHz in the
+48 kHz consumer stream). These converted periodicities are qualified against
+the pinned YMFM implementation plus Glueyneo's clocking and converter path;
+they are not measurements of a physical YM2610. The exact register image,
+sample data formula, command meanings, CPU launch code, fixed tile, and video
+landmark are first-party fixture definitions.
+
+The independent converter source is `tools/audio/design_mvs_pcm.py`; it derives
+the normalized 12-phase, 80-tap Q1.30 Kaiser-windowed sinc coefficients and
+analytic response with Python's standard library. `src/mvs/mvs_bus.c` contains
+the runtime coefficient table and conversion path. Their exact file identities
+are recorded in the manifest. The YM2610 implementation is the selected
+third-party `ymfm` source closure at revision
+`81aec25ccbb98f4873a255f7551ac4dadac59b4a`, with its BSD-3-Clause notice and
+Glueyneo reset patch recorded in `third_party/ymfm/NOTICE.md`. YMFM's behavior
+is implementation-model evidence; none of its source is claimed as Glueyneo
+authorship or physical-chip truth. The native and callback consumer claims are
+limited to the verified same-content, same-input, same-frame PCM/video
+transfer. Callback acceptance does not establish host-device playback.
+
+The native assertions require the sustained tone, generated sample burst,
+equal channels for the dual-route case, tone after burst release, and a fixed
+video landmark. Controls make the intended causes discriminating: period 62
+must replace the baseline 48-frame correlation with a 24-frame correlation;
+a wrong sound-handler command, key-off main command, and omitted launch command
+must be silent; left-only routing must alter burst stereo balance; zeroed
+original sample bytes must change fire-burst PCM. The consumer and
+`libretro_audio_contract` compare transferred PCM/video at matched emulated
+frame boundaries. These tests do not qualify FM, ADPCM-A, clipping limits,
+physical timing, BIOS behavior, commercial titles, or audible frontend output.
+They preserve the separate GNFX v1 silent fixture and its existing byte identity
+and timing checks.
+
+`cmake --preset owned-debug && cmake --build --preset owned-debug && ctest
+--preset owned-debug -R
+'^(public_sound_fixture|public_guest_contract|public_guest_trace|public_guest_negative_left|public_guest_negative_none)$'
+--output-on-failure --no-tests=error` regenerates and checks the sound recipe
+alongside the unchanged GNFX consumer and its input controls. The separate
+`libretro_audio_contract` test exercises the real C adapter callbacks; actual
+frontend/device playback remains a later qualification.
+
+### Native whole-machine continuation witness
+
+`tests/sdk/state_fixture.h` builds the same original GNMV v3 guest in memory by
+calling `public_sound_guest_build`. Its test-only setup writes the Z80 bank
+latch and YM Timer A registers, adds a timer ISR that clears the IRQ latch, and
+keeps the authored input-polling main guest active. The two isolation variants
+change only first-party fixture bytes: one updates the main/audio command and
+SSG setup together; the other also permutes the generated sample nibbles. The
+source recipe and all transformations are bound in `rights-manifest.json`.
+The 67,108,976-byte bundle is copied by the native load call, overwritten, and
+freed before continuation; no generated bundle or captured state is committed.
+
+`tests/sdk/test_state.c` captures/restores only through the public v1 state
+API. It compares the complete XRGB8888 frame, every delivered interleaved PCM
+sample, guest reply, frame result, board/calendar observations, video carry,
+watchdog state, interrupt mask, YM timer/clock state, and filter history against
+an independently uninterrupted instance on the same input schedule. The
+controls alter one canonical serialized section or one valid field in a copied
+state, restore that state through the public API, and require the named future
+guest, video, frame-time, or nonzero-PCM assertion to fail. The supervisor
+rejects a wrong assertion, extra failed assertion, empty report, crash, sanitizer
+diagnostic, or timeout. These controls demonstrate sensitivity to omitted or
+corrupted state in the tested observation path; they are not additional
+runtime qualification and do not establish hardware truth.
+
+The isolation suite uses three distinct normalized media identities and input
+schedules, retained save-RAM addresses, guarded caller state buffers, and
+same-instance serial references. Worker threads each query compatibility and
+restore one different instance; same-instance concurrent calls are outside the
+contract. Repeated successful restores, repeated rejection of the same invalid
+payload, and unload/reload are compared using future observations. Ordinary
+threaded success does not imply ThreadSanitizer coverage.
+
+### Native MVS save diagnostic guest
+
+`tests/fixture/public_save_guest.c` provides the tracked recipe used by both the
+process witness and its `--write-fixture` mode. It calls the original synthetic
+GNMV v3 public sound fixture builder, then replaces only that generated bundle's
+BIOS-role bytes in memory with an original Glueyneo diagnostic guest. It includes
+no production BIOS, game ROM, commercial asset, third-party guest, captured save
+or other private output. The rights manifest records the generator and assertion
+source sizes, SHA-256 identities, immutable Git revisions, and MIT provenance.
+
+The exact bundle is 67,108,976 bytes. Its emitted SHA-256 is
+`9cefb11420e190f5902e8861f5becda1c63c7ccd988118d7d93dc814a1b36690`, matching
+the output captured from the original in-runner recipe before extraction. The
+bounded generation command is
+`sdk_save_process --write-fixture <build-dir>/save-mvs.bin`; it creates the
+caller-specified file exclusively, writes no more than the fixture's recorded
+size, and refuses to overwrite an existing path. Generated bundles remain
+ignored build output and are not committed.
+
+The guest's first pass copies six SRAM bytes to work RAM before it considers any
+write: offsets `0`, `1`, `0x1234`, `0x1235`, `0xfffe`, and `0xffff`. The native
+runner compares those guest-produced bytes to the expected saved value and
+reports the result as `save.guest-output`. On the writer path, MVS input A or B
+selects the asymmetric payload below; the input changes execution only, so
+both payloads use the same guest and media identity.
+
+| Input | Guest-produced SRAM bytes |
+|---|---|
+| P1 A | `123456789abc` |
+| P1 B | `a1b2c3d4e5f6` |
+
+After the initial reads, the writer attempts a byte store while SRAM is locked,
+unlocks SRAM through the MVS control register, then performs two byte stores and
+two word stores covering the six observed offsets. The A path repeats an
+already-effective byte and word value to check that same-value stores do not
+advance persistence lineage. The reader runs in a distinct process after the
+writer exits, imports only the authoritative durable envelope, and checks its
+guest output. Two causal controls omit import or supply the other valid saved
+value; each must fail specifically at `save.guest-output`. Snapshot transfer
+is not used.
+
+The guest-output oracle is separate from the host disk-history oracle. Named
+host controls reject invalid authoritative targets before guest execution,
+reject a false ACK even when the published bytes can be read, preserve the
+latest B branch against an obsolete publication, and cover 18 syscall-fault
+cases across first-create and A-to-B replacement. A separate 20-case process
+kill matrix crosses ten publication stages with both disk histories, then
+opens a fresh reader and checks only the authoritative target; temporary
+orphans are not promoted. These host observations were run on macOS 26.6.2 /
+Darwin 25.6.0 / APFS with F_FULLFSYNC, checked file close, atomic rename,
+directory fsync and close. Other host commit protocols and physical power-loss
+recovery remain unqualified. The rights manifest binds these cases, their
+source files and revisions, the generated input identity, and the distinct
+guest-output expectations.
+
+These expectations are authored from the fixture and public persistence API.
+They establish that this implementation transfers the specified SRAM bytes
+through the exercised process path. They are not a reference to physical MVS
+behavior, a claim about any private game's save feature, or evidence of hardware
+truth. The guest's instructions, input mapping, and output convention are
+fixture semantics; hardware compatibility remains unknown.
+
+## Public persistence guest source provenance
+
+`tests/fixture/public_persistence_guest.c` is the original source recipe for
+the public persistence guest. It constructs the guest program in the BIOS role
+of the synthetic fixture at test time; it does not include a game ROM,
+commercial guest bytes, production firmware, private capture, or saved-state
+payload. `public_sound_guest.c` is the original synthetic base recipe. The
+`public_persistence_fixture` section of `rights-manifest.json` binds both
+source paths to their exact current Git blobs and records affirmative
+repository-MIT rights. Its oracle ancestry is the authored recipe and emulator
+consumer contract only. Passing these assertions does not establish hardware
+truth, production BIOS behavior, or commercial-game behavior.
+
+The example persistence host helper in `examples/persistence_host.[ch]` is a
+Glueyneo Maintainers-owned MIT sample copy derived from
+`tests/sdk/save_host.[ch]` at immutable revision
+`a73a9f543d8743896a5e4b7d2b28d0189f3e94c8`. The `sample_owned_helper` manifest
+section records SHA-256 and byte counts for those origin blobs and for the
+current sample files. A sample helper edit requires maintainers to review its
+drift against the pinned origin and rerun the source-bound checks. This record
+does not claim that the sample and test helper remain textually or behaviorally
+identical.

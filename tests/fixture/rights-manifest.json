@@ -3,18 +3,21 @@
   "fixture": "GNFX v1 public playable tracer",
   "source": {
     "path": "tests/fixture/public_guest.c",
-    "sha256": "597b3e01b9fc0d58328e37573d945a3b067e55604017683a084ffc1028788555",
-    "bytes": 2653
+    "sha256": "2da2be7f99ca9587e4a5198edfe8063d305fd35d11afd588b37a95cdc00c46ff",
+    "bytes": 2903
   },
   "assertions": {
     "path": "tests/fixture/test_public_guest.c",
-    "sha256": "7c5c7a0e87cd339f885b7c8092737c13322462c1c352a66b1ce66f3c919981e1"
+    "sha256": "a8300be5806237e8424ee9c55763857e1b4f697a32d5b19efb7b3d8ca504bd4a"
   },
   "generator": {
     "target": "glueyneo-public-fixture",
     "output_rule": "the sole CMake OUTPUT for public-playable.bin",
     "command": "public_guest_test --write-fixture <build-dir>/public-playable.bin",
-    "dependencies": ["public_guest_test", "tests/fixture/public_guest.c"],
+    "dependencies": [
+      "public_guest_test",
+      "tests/fixture/public_guest.c"
+    ],
     "tool_language": "C17",
     "external_generator_dependencies": []
   },
@@ -25,7 +28,8 @@
   },
   "oracle_document": {
     "path": "tests/fixture/ORACLE.md",
-    "sha256": "7e8a9e3321b6850ec1906f8a62f33578e3271e8c91ae9f4ea9b1d0cde3f508e2"
+    "sha256": "0ba1e71d438e794d3647a013ba7ff01ef6bce1351e4734dd2f5bd41741e8f871",
+    "bytes": 21659
   },
   "artifact": {
     "path": "build/sdk-debug/public-playable.bin",
@@ -55,5 +59,761 @@
     "mame_role": "differential reference only; not an independent physical-hardware oracle",
     "accepted_cpu_scope": "bounded diagnostic subset and the two named guest instruction forms only",
     "hardware_truth_established": false
+  },
+  "sound_fixture": {
+    "name": "GNMV v3 public synthetic MVS sound fixture",
+    "generator_source": {
+      "path": "tests/fixture/public_sound_guest.c",
+      "sha256": "db13f2dbeee318f4cb4d1da77a9e2f37e89461a8df0551bae42f77ac3c7404a0",
+      "bytes": 11173,
+      "license": "MIT",
+      "provenance": "Original Glueyneo fixture launch code, Z80 sound program, tile bytes, and generated sample formula."
+    },
+    "assertion_source": {
+      "path": "tests/fixture/test_public_sound_guest.c",
+      "sha256": "9662f817bcc191e8aafbc452720a0714fc64ef0d9c49ac25833379e3d78f4a9e",
+      "bytes": 25259,
+      "license": "MIT",
+      "provenance": "Original Glueyneo native consumer and executable GNMV layout, launch, sample, signal, and negative-control assertions."
+    },
+    "generator": {
+      "target": "glueyneo-public-sound-fixture",
+      "executable": "public_sound_test --write-fixture <build-dir>/public-sound-mvs.bin",
+      "build_language": "C17",
+      "external_generator_dependencies": [],
+      "artifact_committed": false
+    },
+    "recipe": {
+      "format": "GNMV manifest version 3; normalized MSX profile; eight inline descriptors followed by each region's data",
+      "header_bytes": 16,
+      "descriptor_bytes": 12,
+      "region_roles_in_order": [
+        "BIOS",
+        "PROGRAM",
+        "FIXED",
+        "AUDIO_PROGRAM",
+        "SAMPLES",
+        "SPRITES",
+        "AUDIO_BIOS",
+        "Y_ZOOM"
+      ],
+      "region_bytes_in_order": [
+        524288,
+        5242880,
+        131072,
+        131072,
+        10485760,
+        50331648,
+        131072,
+        131072
+      ],
+      "artifact_bytes": 67108976,
+      "sample": "Original 256-byte ADPCM-B block: high nibble (3*i+5) mod 16 and low nibble (7*i+2) mod 16 for 0 <= i < 256; remaining samples region bytes are zero.",
+      "launch_substitute": "Original first-party main-CPU setup occupies the BIOS role in this fixture only; it is not SNK firmware or evidence of BIOS compatibility."
+    },
+    "artifact": {
+      "observed_build_path": "build/owned-debug/public-sound-mvs.bin",
+      "bytes": 67108976,
+      "sha256": "79c375c69fb18693be07ab1ccfd2eecb84ad045d759db21d438f4327751c7ea4",
+      "status": "ignored build output; reproducible from tracked C source; not committed"
+    },
+    "supporting_sources": [
+      {
+        "path": "tools/audio/design_mvs_pcm.py",
+        "sha256": "f27645651659501c8c2f330030eaa138d8ed65d8f42caa747a82e8b2970b2ae5",
+        "bytes": 9918,
+        "license": "MIT",
+        "role": "Independent standard-library coefficient derivation and analytic response tool."
+      },
+      {
+        "path": "src/mvs/mvs_bus.c",
+        "sha256": "7ee70aa47074ef7eb23b89e30760fb3c73fe5a228be0bd4f592b36c36408537a",
+        "bytes": 46279,
+        "license": "MIT",
+        "role": "Glueyneo runtime mixer, fixed-point coefficient table, and streaming converter."
+      },
+      {
+        "path": "third_party/ymfm/NOTICE.md",
+        "license": "BSD-3-Clause",
+        "revision": "81aec25ccbb98f4873a255f7551ac4dadac59b4a",
+        "role": "Third-party YM2610 implementation provenance and local reset-patch inventory; not first-party fixture authorship."
+      }
+    ],
+    "rights": {
+      "status": "affirmative",
+      "basis": "The fixture generator, launch substitute, sound program, tile landmark, deterministic sample bytes, consumer assertions, and coefficient derivation tool are original Glueyneo work.",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "third_party_ymfm_claimed_as_first_party": false,
+      "game_rom_or_commercial_bytes": false,
+      "production_bios_bytes": false,
+      "private_media_or_capture_bytes": false,
+      "third_party_guest_bytes": false
+    },
+    "oracle": {
+      "primary_chip_documents": [
+        {
+          "title": "Yamaha YM2610 Data Sheet",
+          "revision_or_date": "Revision and publication date are not stated in the available scan; reviewed 2026-10-23",
+          "url": "https://dtech.lv/files_ym/ym2610.pdf",
+          "claims_used": "Standard 8 MHz master-clock input; SSG fine/coarse period registers; ADPCM-B register map, 4-bit data, and left/right control",
+          "limitations": "Manufacturer document scan hosted by a third-party mirror; its register/range statements do not verify this emulator's exact output."
+        },
+        {
+          "title": "Yamaha YM2610 Application Manual, Version 1.12",
+          "revision_or_date": "1995-01-20; reviewed 2026-10-23",
+          "url": "https://ajworld.net/neogeodev/ym2610am_en.html",
+          "claims_used": "SSG period fields; ADPCM-B start, routing, address, Delta-N, and level controls",
+          "limitations": "Translated hosted copy; the Delta-N rate section notes an ambiguity in the original divisor. Fixture expectations use register settings and do not assert a physical-chip sample rate."
+        }
+      ],
+      "implementation_model": "Pinned YMFM revision and Glueyneo's Z80/port/clock/converter path determine expected converted PCM periodicity and transfer; they are implementation evidence, not hardware truth.",
+      "converter_source": "tools/audio/design_mvs_pcm.py",
+      "fixture_tone_expectations": [
+        "SSG period register 0x007d with 48-output-frame correlation",
+        "changed period 0x003e with 24-output-frame correlation"
+      ],
+      "families_exercised": [
+        "SSG",
+        "ADPCM-B"
+      ],
+      "families_not_qualified_by_this_fixture": [
+        "FM",
+        "ADPCM-A"
+      ],
+      "hardware_truth_established": false
+    },
+    "native_state_witness": {
+      "fixture_source": {
+        "path": "tests/sdk/state_fixture.h",
+        "license": "MIT",
+        "provenance": "Original Glueyneo in-memory reuse and bounded patch recipe for the public_sound_guest fixture; no third-party guest or firmware bytes.",
+        "sha256": "72ce83de88d7a0c5b543aeac81a0f0d408bb6edb2edf009380066acb3226721b",
+        "bytes": 15011
+      },
+      "assertion_source": {
+        "path": "tests/sdk/test_state.c",
+        "license": "MIT",
+        "provenance": "Original Glueyneo continuation, observation, repeated-restore, isolation, and future-effect omission assertions.",
+        "sha256": "c5f39a73ff4243e6d500adb193abb1369941e9020b1b5aea9e6f5be3e7c3a8f0",
+        "bytes": 30641
+      },
+      "control_supervisor": {
+        "path": "tests/sdk/state_controls.py",
+        "license": "MIT",
+        "provenance": "Original Glueyneo exact-signature child-process supervisor; rejects unrelated failures, crashes, sanitizer diagnostics, timeouts, and empty reports.",
+        "sha256": "89ba3847f85882385bbb9212b1d66e587fec9b448ad5521e029a00e13f68de48",
+        "bytes": 4075
+      },
+      "recipe": {
+        "source_generator": "public_sound_guest_build in tests/fixture/public_sound_guest.c",
+        "artifact": "Generated in memory for tests; no bundle, state transfer, frame, or PCM capture is committed.",
+        "sound_setup": "Fixture-authored sound-bank selection, YM Timer A setup, and timer-acknowledging ISR; SSG/ADPCM-B source guest retained.",
+        "variants": [
+          "base public fixture",
+          "paired main/audio command and SSG patch",
+          "variant 1 plus original sample-nibble permutation"
+        ],
+        "external_generator_dependencies": []
+      },
+      "oracle": {
+        "contract": "Same media identity, same restored state, and same future input schedule must match an independent uninterrupted instance across all raw pixels, every delivered PCM sample, guest reply, timing, and tracked board state.",
+        "ancestry": "Original source-derived fixture and pinned YMFM implementation model; not an independent physical-hardware oracle.",
+        "hardware_truth_established": false,
+        "private_media_or_capture_bytes": false
+      },
+      "rights": {
+        "status": "affirmative",
+        "basis": "The public source fixture and all native state harness code are original MIT-licensed Glueyneo work.",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "game_rom_or_commercial_bytes": false,
+        "production_bios_bytes": false,
+        "private_media_or_capture_bytes": false
+      }
+    }
+  },
+  "mvs_save_fixture": {
+    "name": "GNMV v3 public synthetic MVS save diagnostic fixture",
+    "generator_source": {
+      "path": "tests/fixture/public_save_guest.c",
+      "sha256": "af74e58521d294c324c9510a2fba7432cbfcf57f2489f26c7d7045db5868734d",
+      "bytes": 6353,
+      "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+      "license": "MIT",
+      "provenance": "Original Glueyneo MVS SRAM diagnostic guest extracted byte-for-byte from the runner recipe present at its recorded origin revision."
+    },
+    "base_source": {
+      "path": "tests/fixture/public_sound_guest.c",
+      "sha256": "db13f2dbeee318f4cb4d1da77a9e2f37e89461a8df0551bae42f77ac3c7404a0",
+      "bytes": 11173,
+      "source_revision": "bdca1240ef48752c7fd9838393de150866344826",
+      "license": "MIT",
+      "role": "Original synthetic GNMV regions; only its BIOS-role bytes are replaced in memory by the save diagnostic guest."
+    },
+    "recipe_origin": {
+      "path": "tests/sdk/save_process.c",
+      "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+      "description": "Immutable pre-extraction revision containing the original in-runner guest recipe and media construction."
+    },
+    "assertion_sources": [
+      {
+        "path": "CMakeLists.txt",
+        "sha256": "5ede2cd48477f05c74324d851036d057aeb00b56c43a7d97463a9a832b6e13a7",
+        "bytes": 84609,
+        "source_revision": "6b69495005c94f07fe3987b00a391d90ef35c3c0",
+        "license": "MIT",
+        "role": "CMake target and platform registration for the focused save witness."
+      },
+      {
+        "path": "CMakePresets.json",
+        "sha256": "ed2ecd6734c4cf1d8e22507dfb46ed4ebb5cfe51eed5629377d5005ecfc2f78a",
+        "bytes": 3682,
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "license": "MIT",
+        "role": "Pinned SDK build configuration used by save verification."
+      },
+      {
+        "path": "include/glueyneo/glueyneo.h",
+        "sha256": "67a0e3ade482a7d39dd210b3c04ff2c51b3393d90e26d464fe0250518d3970d1",
+        "bytes": 24172,
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "license": "MIT",
+        "role": "Public save API declarations and ABI record identities."
+      },
+      {
+        "path": "src/instance.c",
+        "sha256": "a3b3be1f7fdd85d1c801e57c0f7d7ca3a45ba255433504167fe5883187262ef1",
+        "bytes": 311486,
+        "source_revision": "96260890ddfdbba1fbfb83f79f3b5fd3d9b0d278",
+        "license": "MIT",
+        "role": "Owned save implementation and lifecycle semantics."
+      },
+      {
+        "license": "MIT",
+        "role": "Private owner and save state type definitions consumed by the native save implementation and tests.",
+        "path": "src/sdk_private.h",
+        "sha256": "a827a090eac61d9c0818dcf8f8752a64c8bc586ff251b770c787108315446ee9",
+        "bytes": 27582,
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+      },
+      {
+        "path": "tests/fixture/ORACLE.md",
+        "sha256": "0ba1e71d438e794d3647a013ba7ff01ef6bce1351e4734dd2f5bd41741e8f871",
+        "bytes": 21659,
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "license": "MIT",
+        "role": "Oracle ancestry and emulator-only save guest observation contract."
+      },
+      {
+        "license": "MIT",
+        "role": "Named receipt controls and SDK_RESULT parsing for save-suite CTest evidence.",
+        "path": "tests/sdk/save_controls.py",
+        "sha256": "06552b5e744986a2a81ca5c0293bd7822e0221a8f570cdf8ae88d2101bf0a37f",
+        "bytes": 3905,
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+      },
+      {
+        "license": "MIT",
+        "role": "Synthetic MVS save fixture setup shared by native save API and lifecycle tests.",
+        "path": "tests/sdk/save_fixture.c",
+        "sha256": "613a419b05983a3f5262c2d3f7092a0ab95906446372c59c3b1e85c045abe868",
+        "bytes": 8436,
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+      },
+      {
+        "license": "MIT",
+        "role": "Private declarations for the synthetic MVS save fixture.",
+        "path": "tests/sdk/save_fixture.h",
+        "sha256": "42cf67e19f5b1a1e44e20a0cfe58d35db1aeeafc29fcef179a4bce66b843d60e",
+        "bytes": 2165,
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44"
+      },
+      {
+        "path": "tests/sdk/save_host.c",
+        "sha256": "5cf5a701b05b60449fa0805252e40963e0aa5ed695763d3f5c00ff67de52c281",
+        "bytes": 22222,
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "license": "MIT",
+        "role": "Darwin synchronous host writer and transition barriers."
+      },
+      {
+        "path": "tests/sdk/save_host.h",
+        "sha256": "28c2daa9309ac7fbdaa93206a72c2d765658749e47d384c5fb215461931accf0",
+        "bytes": 3720,
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "license": "MIT",
+        "role": "Private host transaction state and declarations."
+      },
+      {
+        "path": "tests/sdk/save_process.c",
+        "sha256": "ec7bfb0da5d9644ad4cef07be3a0277fb3d58c07f0b9839088644226f2fb73cb",
+        "bytes": 58509,
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "license": "MIT",
+        "role": "Bounded host process, interruption, failed-commit barriers and retry assertions."
+      },
+      {
+        "path": "tests/sdk/test_save.c",
+        "sha256": "71c158a7c0baa83f74cf4f27f8b3ce42b97fbc1b3d4c8e0fee6ac63c4860f5cf",
+        "bytes": 57708,
+        "source_revision": "ca97ed96d27941eeb0d49fe4882248333d7029ee",
+        "license": "MIT",
+        "role": "Native save API, receipt and guest assertions."
+      },
+      {
+        "path": "tests/sdk/test_save_lifecycle.c",
+        "sha256": "8cc13629c37a44ff7917acd4a9ef9420c4252c0ad0f111e02eadde38b4808bde",
+        "bytes": 53594,
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "license": "MIT",
+        "role": "Native save lifecycle and ownership assertions."
+      },
+      {
+        "path": "tests/sdk/test_save_process.py",
+        "sha256": "caa7a94322275aee1335dda6ddbaac65903b7749135d85a50eff9cbcea493023",
+        "bytes": 157602,
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "license": "MIT",
+        "role": "Process, fault, interruption and direct documentation assertion harness."
+      },
+      {
+        "path": "tests/sdk/test_save_registration.py",
+        "sha256": "af5eee1b2cce826c8e4ecf112f21a508136196c9f830a02ab2f1a2f6e9543544",
+        "bytes": 34655,
+        "source_revision": "bdca1240ef48752c7fd9838393de150866344826",
+        "license": "MIT",
+        "role": "Case denominator, manifest, portable docs and failed-control harness."
+      },
+      {
+        "license": "MIT",
+        "role": "Shared CTest diagnostics and assertion support used by native save tests.",
+        "path": "tests/sdk/test_support.h",
+        "sha256": "85366c9487038912475c68fbe8db851c57161d8d015b67f0b36b05a0fe84e916",
+        "bytes": 5238,
+        "source_revision": "88c4e8514f5f734e418b25b9fb3777353f12e12e"
+      },
+      {
+        "path": "tools/verify_sdk.py",
+        "sha256": "ef35d6f30a84c2370987b20f32c15f73396bb0e0ea32d5bcb816f8b3d49d5ed7",
+        "bytes": 177953,
+        "source_revision": "830f94eb8303f51a024a82121d3a0341f9454c31",
+        "license": "MIT",
+        "role": "SDK route selection, measurement validation and source identity harness."
+      }
+    ],
+    "generator": {
+      "target": "sdk_save_process",
+      "command": "sdk_save_process --write-fixture <build-dir>/save-mvs.bin",
+      "build_language": "C17",
+      "output_rule": "exclusive file creation, complete bounded write, and no overwrite of an existing path",
+      "maximum_bytes": 67108976,
+      "external_generator_dependencies": [],
+      "artifact_committed": false
+    },
+    "recipe": {
+      "format": "GNMV manifest version 3; normalized MSX profile; eight inline descriptors followed by each region's data",
+      "header_bytes": 16,
+      "descriptor_bytes": 12,
+      "region_roles_in_order": [
+        "BIOS",
+        "PROGRAM",
+        "FIXED",
+        "AUDIO_PROGRAM",
+        "SAMPLES",
+        "SPRITES",
+        "AUDIO_BIOS",
+        "Y_ZOOM"
+      ],
+      "artifact_bytes": 67108976,
+      "launch_substitute": "Original first-party MVS save guest occupies the BIOS role in this synthetic fixture; it is not production firmware or evidence of BIOS compatibility."
+    },
+    "artifact": {
+      "path": "build/sdk-debug/save-mvs.bin",
+      "bytes": 67108976,
+      "sha256": "9cefb11420e190f5902e8861f5becda1c63c7ccd988118d7d93dc814a1b36690",
+      "status": "ignored build output; regenerated from tracked C source; not committed",
+      "identity_basis": "Exact pre-extraction output from recipe revision 988572fd4f4fd2b191d173cd4f9ba477b1e3366e; the extracted generator reproduced this byte count and SHA-256 twice."
+    },
+    "rights": {
+      "status": "affirmative",
+      "basis": "The save guest, generator, host witness and assertions are original Glueyneo work under MIT; the base fixture is also original Glueyneo source.",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "third_party_guest_bytes": false,
+      "game_rom_or_commercial_bytes": false,
+      "production_bios_bytes": false,
+      "private_media_or_derived_output": false
+    },
+    "oracle": {
+      "contract": "The fresh reader's exact save.guest-output bytes must equal the value committed by the exited writer and are read by the guest from imported SRAM before any new stores.",
+      "writer_values": {
+        "A": "123456789abc",
+        "B": "a1b2c3d4e5f6"
+      },
+      "read_offsets": [
+        0,
+        1,
+        4660,
+        4661,
+        65534,
+        65535
+      ],
+      "negative_controls": [
+        "omit startup import",
+        "import the other valid value"
+      ],
+      "disk_history_controls": [
+        "test_invalid_authoritative_targets_fail_before_guest_and_are_not_missing",
+        "test_false_ack_control_fails_when_published_bytes_are_readable",
+        "test_obsolete_publication_control_fails_disk_latest_branch",
+        "test_syscall_fault_matrix_preserves_authoritative_history"
+      ],
+      "host_acknowledgement_controls": [
+        "save.pending-newer",
+        "test_false_ack_control_fails_when_published_bytes_are_readable",
+        "test_obsolete_publication_control_fails_disk_latest_branch"
+      ],
+      "host_fault_matrix_cases": 18,
+      "shared_media_identity_a_b": true,
+      "writer_reader_process_pairs": 2,
+      "process_interruption_cases": 20,
+      "process_interruption_stages": [
+        "temp-created",
+        "partial-write",
+        "write",
+        "file-fullfsync",
+        "file-close",
+        "rename",
+        "directory-fsync",
+        "directory-close",
+        "protocol-complete",
+        "ack"
+      ],
+      "measured_host": "macOS 26.6.2 / Darwin 25.6.0 / APFS",
+      "build_identity": "AppleClang 21.0.0.21000101; Debug; SDK sanitizer NONE",
+      "host_stage_trace": "temp-created,write,file-fullfsync,file-close,rename,directory-open,directory-fsync,directory-close,ack",
+      "sync_operations": [
+        "F_FULLFSYNC",
+        "checked file close",
+        "atomic rename",
+        "directory fsync",
+        "directory close"
+      ],
+      "child_timeout_bound_seconds": 15,
+      "child_output_bound_bytes": 1048576,
+      "save_suite_critical_path_bound_seconds": 900,
+      "unsupported_host_protocol": "Linux/Windows native save subset only; host commit protocol unsupported",
+      "physical_power_loss": "not qualified",
+      "ancestry": "Original source-authored guest plus Glueyneo API and process assertions; emulator implementation evidence only.",
+      "hardware_truth_established": false
+    }
+  },
+  "frontend_continuation": {
+    "scope": "Phase 06 frontend continuation tooling and source contracts",
+    "license": "MIT",
+    "notice": "LICENSE",
+    "rights": {
+      "status": "first-party-sources-only",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "private_content_included": false,
+      "commercial_media_included": false,
+      "hashes_establish_redistribution_rights": false
+    },
+    "selected_private_scene": {
+      "status": "local-only",
+      "rights_basis": "Existing authorized local scene contract; this manifest covers first-party Glueyneo tooling only.",
+      "content_bytes_committed": false,
+      "state_captures_committed": false,
+      "identity_hashes_published": false,
+      "public_ci_inputs": false
+    },
+    "pinned_frontend": {
+      "product": "RetroArch",
+      "version": "1.22.2",
+      "source_revision": "69a4f0ea1e8aaf442ae4858f2e7f2b31a1776576",
+      "executable_sha256": "ed90b54434a2899de0ddbfed59f335255fb462c8691bd970a1a761ebb5656d65",
+      "host_scope": "local macOS arm64",
+      "status": "measured"
+    },
+    "public_fixture_ancestry": {
+      "save_fixture_manifest_path": "mvs_save_fixture",
+      "save_guest_source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+      "recipe_origin_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+      "sound_fixture_source_path": "tests/fixture/public_sound_guest.c",
+      "sound_fixture_source_sha256": "db13f2dbeee318f4cb4d1da77a9e2f37e89461a8df0551bae42f77ac3c7404a0",
+      "hardware_truth_established": false
+    },
+    "historical_results": {
+      "phase04_accepted_results": "preserved",
+      "phase05_original_regression": {
+        "label": "Phase 05 original 105/106 regression",
+        "status": "preserved"
+      },
+      "phase05_targeted_manifest_repair": {
+        "label": "affected targeted manifest repair 2/2",
+        "status": "preserved"
+      },
+      "relabelled_as_phase06": false
+    },
+    "phase07_global_rights_inventory_closed": false,
+    "source_files": [
+      {
+        "path": ".github/workflows/ci.yml",
+        "bytes": 11475,
+        "sha256": "693ecad7783e23f0f6f75b4edd42dcaebba3d97b0fc9a002a4ac1657b7bc7cb3",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+      },
+      {
+        "path": "CMakeLists.txt",
+        "bytes": 84609,
+        "sha256": "5ede2cd48477f05c74324d851036d057aeb00b56c43a7d97463a9a832b6e13a7",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract.",
+        "source_revision": "6b69495005c94f07fe3987b00a391d90ef35c3c0"
+      },
+      {
+        "path": "docs/first-playable-build.md",
+        "bytes": 17020,
+        "sha256": "5c13bd6f326a9da9f1e327cc11135748024bdcb00f94c660cb1957c58bd11a88",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+      },
+      {
+        "path": "docs/frontend-continuation.md",
+        "bytes": 12372,
+        "sha256": "1445592da0f2059283b4010da5e4cdf0ffade96b1240415374879289df657370",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+      },
+      {
+        "path": "docs/native-save.md",
+        "bytes": 27665,
+        "sha256": "91028f806ebcbfcf571d3027fc8daeb6142c04bdf332240983cc0cfc8ac39e65",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract.",
+        "source_revision": "830f94eb8303f51a024a82121d3a0341f9454c31"
+      },
+      {
+        "path": "docs/native-state.md",
+        "bytes": 37491,
+        "sha256": "e46a8eb725c4a030d867af366b230dfc4e5b6e2ebb4c25cf98639612c46a116d",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+      },
+      {
+        "path": "docs/testing.md",
+        "bytes": 78616,
+        "sha256": "9151ef5de5a52ab6bb156920d0687640c114c92756b4e780210a2c3fe0c0ac63",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract.",
+        "source_revision": "e60a80212e563381277921c4f3263404076e3538"
+      },
+      {
+        "path": "src/instance.c",
+        "bytes": 311486,
+        "sha256": "a3b3be1f7fdd85d1c801e57c0f7d7ca3a45ba255433504167fe5883187262ef1",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; semantically equivalent fixed-width status masks preserve the current contract while removing strict MSVC narrowing warnings."
+      },
+      {
+        "path": "src/libretro/libretro_core.c",
+        "bytes": 41528,
+        "sha256": "4d8247fcf302cf1964b7388f3cf34c948028fc5b7e55e66731a61d376dbf0567",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+      },
+      {
+        "path": "src/sdk_private.h",
+        "bytes": 27582,
+        "sha256": "a827a090eac61d9c0818dcf8f8752a64c8bc586ff251b770c787108315446ee9",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+      },
+      {
+        "path": "tests/libretro/callback_harness.c",
+        "bytes": 75261,
+        "sha256": "70519ff0776f76dfc9085762105226fa18c35d8a76339fb273e6e943774f5386",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+      },
+      {
+        "path": "tests/libretro/frontend_observer_test.py",
+        "bytes": 7640,
+        "sha256": "eb3e6b532b7652653f34da48385a6d9d7134e9322fcada4df8a1fbeba554add7",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+      },
+      {
+        "path": "tests/libretro/retroarch_smoke.py",
+        "bytes": 393599,
+        "sha256": "a2ee8649681ab38113d6d1f23241119503083be395ae7f2bba687523cf374f1d",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+      },
+      {
+        "path": "tests/libretro/state_safety.c",
+        "bytes": 78972,
+        "sha256": "3ff11c8c11660fcbb4bde61586e422be30c4646a4ea87911d5c9bef6c86d6fd8",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+      },
+      {
+        "path": "tests/libretro/test_frontend_registration.py",
+        "bytes": 22837,
+        "sha256": "9c55fc6d26c5c49759e37a689ed34d2c94fb8577910d84345259da43c72297de",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract.",
+        "source_revision": "830f94eb8303f51a024a82121d3a0341f9454c31"
+      },
+      {
+        "path": "tests/libretro/test_frontend_replay.py",
+        "bytes": 27405,
+        "sha256": "24a07b08e16b525974252a03c54c505a43ad84931a5f29bbc7aa9697b6908de6",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+      },
+      {
+        "path": "tests/libretro/test_retroarch_smoke.py",
+        "bytes": 283047,
+        "sha256": "aea20e3ac7a4eb4272fc48bbb1e91d74cece891cb7c85278290ebefe67355d9b",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+      },
+      {
+        "path": "tests/sdk/state_process.c",
+        "bytes": 64952,
+        "sha256": "9607539482a24ff62eefc7944de8a47359b4aa0bfe8693eeb28208a5415d1d4e",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+      },
+      {
+        "path": "tests/support/portable_stdio.h",
+        "bytes": 449,
+        "sha256": "56efd4de7698020d7fbce4ad571c34e4ac0416069139927050f24762ae4f7705",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo host-side test portability helper used by frontend contract harnesses."
+      },
+      {
+        "path": "tools/mvs/frontend_replay.py",
+        "bytes": 29932,
+        "sha256": "5a8c6d0e0c69ee2ebc29eae091358c1253acb245486c6763d6836517393463af",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; Phase 06 frontend continuation tooling or current contract."
+      },
+      {
+        "path": "tools/verify_sdk.py",
+        "bytes": 177953,
+        "sha256": "ef35d6f30a84c2370987b20f32c15f73396bb0e0ea32d5bcb816f8b3d49d5ed7",
+        "license": "MIT",
+        "notice": "LICENSE",
+        "provenance": "Original Glueyneo first-party source; exact SDK, state-isolation, and hostile CTest inventories are bound in the evidence selector.",
+        "source_revision": "830f94eb8303f51a024a82121d3a0341f9454c31"
+      }
+    ]
+  },
+  "public_persistence_fixture": {
+    "name": "Source-built public persistence diagnostic guest",
+    "generator_source": {
+      "path": "tests/fixture/public_persistence_guest.c",
+      "sha256": "d937eec43c4ca9d205b1993e768c92ddbbc16b5cdec21abda514750fbbe944c0",
+      "bytes": 6709,
+      "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+      "license": "MIT",
+      "provenance": "Original source-defined Glueyneo persistence guest assembled from the source-bound public fixture; no imported guest bytes."
+    },
+    "base_source": {
+      "path": "tests/fixture/public_sound_guest.c",
+      "sha256": "db13f2dbeee318f4cb4d1da77a9e2f37e89461a8df0551bae42f77ac3c7404a0",
+      "bytes": 11173,
+      "source_revision": "bdca1240ef48752c7fd9838393de150866344826",
+      "license": "MIT",
+      "provenance": "Original source-bound synthetic fixture recipe used to construct public persistence input; no commercial media or production firmware."
+    },
+    "recipe_origin": {
+      "path": "tests/fixture/public_persistence_guest.c",
+      "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+      "description": "Original standalone first-party recipe added for the public persistence consumer; no copied guest payload."
+    },
+    "rights": {
+      "status": "affirmative",
+      "license": "MIT",
+      "notice": "LICENSE",
+      "third_party_guest_bytes": false,
+      "game_rom_or_commercial_bytes": false,
+      "production_bios_bytes": false,
+      "private_media_or_capture_bytes": false
+    },
+    "oracle": {
+      "ancestry": "Original source-defined diagnostic contract and existing public emulator consumer assertions.",
+      "emulator_only": true,
+      "hardware_truth_established": false,
+      "commercial_game_behavior_established": false,
+      "production_bios_behavior_established": false
+    }
+  },
+  "sample_owned_helper": {
+    "license": "MIT",
+    "notice": "LICENSE",
+    "owner": "Glueyneo Maintainers",
+    "origin_sources": [
+      {
+        "path": "tests/sdk/save_host.c",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "sha256": "5cf5a701b05b60449fa0805252e40963e0aa5ed695763d3f5c00ff67de52c281",
+        "bytes": 22222,
+        "license": "MIT",
+        "notice": "LICENSE"
+      },
+      {
+        "path": "tests/sdk/save_host.h",
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "sha256": "28c2daa9309ac7fbdaa93206a72c2d765658749e47d384c5fb215461931accf0",
+        "bytes": 3720,
+        "license": "MIT",
+        "notice": "LICENSE"
+      }
+    ],
+    "sample_sources": [
+      {
+        "path": "examples/persistence_host.c",
+        "sha256": "e6485a8cd6f07806b5fa3f9847805fc254952bab4601ff503c1416fda38e68d8",
+        "bytes": 29554,
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "license": "MIT",
+        "notice": "LICENSE"
+      },
+      {
+        "path": "examples/persistence_host.h",
+        "sha256": "1148ff863ca4d57ec23693c0c4046633e2b3d5fbdfef26f3f27312242c944dc5",
+        "bytes": 4955,
+        "source_revision": "f92d181378b785e4374509f4ef16fe835b789b44",
+        "license": "MIT",
+        "notice": "LICENSE"
+      }
+    ],
+    "drift_check": "Review drift against the pinned source helper whenever the sample copy changes; this record does not claim the two implementations remain textually identical."
   }
 }

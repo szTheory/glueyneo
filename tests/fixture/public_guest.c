@@ -3,6 +3,16 @@
 #include <stdint.h>
 #include <stdio.h>
 
+static inline FILE *gn_portable_fopen(const char *path, const char *mode) {
+#if defined(_MSC_VER)
+    FILE *file = NULL;
+    if (fopen_s(&file, path, mode) != 0) return NULL;
+    return file;
+#else
+    return fopen(path, mode);
+#endif
+}
+
 #define PUBLIC_GUEST_HEADER_SIZE 16u
 #define PUBLIC_GUEST_ROM_SIZE 512u
 #define PUBLIC_GUEST_RAM_SEED_SIZE 10u
@@ -55,7 +65,7 @@ int public_guest_write(const char *path) {
     uint8_t content[PUBLIC_GUEST_CONTENT_SIZE];
     if (path == NULL) return 0;
     public_guest_build(content);
-    FILE *file = fopen(path, "wb");
+    FILE *file = gn_portable_fopen(path, "wb");
     if (file == NULL) return 0;
     const size_t written = fwrite(content, 1u, sizeof(content), file);
     const int close_status = fclose(file);

@@ -57,42 +57,49 @@ jobs:
       max-parallel: 2
       matrix:
         include:
-          - lane: linux-clang
-            runner: ubuntu-24.04
-            suite: matrix
-            cc: clang
-            cxx: clang++
-          - lane: linux-gcc
-            runner: ubuntu-24.04
-            suite: matrix
-            cc: gcc
-            cxx: g++
-          - lane: macos-appleclang
-            runner: macos-15
-            suite: matrix
-            cc: ""
-            cxx: ""
           - lane: windows-msvc
             runner: windows-2025
             suite: matrix
             cc: ""
             cxx: ""
+            fetch_depth: 1
           - lane: linux-clang-sanitizer
             runner: ubuntu-24.04
             suite: sanitizer
             cc: clang
             cxx: clang++
+            fetch_depth: 0
+          - lane: linux-clang
+            runner: ubuntu-24.04
+            suite: matrix
+            cc: clang
+            cxx: clang++
+            fetch_depth: 0
+          - lane: linux-gcc
+            runner: ubuntu-24.04
+            suite: matrix
+            cc: gcc
+            cxx: g++
+            fetch_depth: 1
+          - lane: macos-appleclang
+            runner: macos-15
+            suite: matrix
+            cc: ""
+            cxx: ""
+            fetch_depth: 1
           - lane: linux-clang-fuzz
             runner: ubuntu-24.04
             suite: fuzz
             cc: clang
             cxx: clang++
+            fetch_depth: 1
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: ${{ matrix.fetch_depth }}
           persist-credentials: false
-      - name: Record matrix lane and measured identity
+      - name: Record matrix lane and measured identity (sanitizer lane verifies installed consumers)
         if: runner.os != 'Windows'
         shell: bash
         env:
@@ -137,6 +144,21 @@ jobs:
           python3 tests/workflow/test_app_scope.py
           python3 tools/verify_sdk.py --suite release-recovery
           python3 tools/verify_sdk.py --suite release-consumer
+      - name: Verify native save-state continuation and rejection suite
+        if: matrix.lane == 'linux-clang'
+        shell: bash
+        run: python3 tools/verify_sdk.py --suite state
+      - name: Verify native durable MVS backup-RAM save suite
+        if: matrix.lane == 'linux-clang'
+        shell: bash
+        run: python3 tools/verify_sdk.py --suite save
+      - name: Verify frontend callback boundary and recurring public registration
+        if: matrix.lane == 'linux-clang'
+        shell: bash
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: python3 tools/verify_sdk.py --suite frontend
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
@@ -157,7 +179,13 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Scan public source, history, notices, and rights inventory
-        run: python3 tools/verify_sdk.py --suite public-content
+        env:
+          SDK_SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python3 tools/workflow/ci_policy.py produce-public-content --root .
+          --source-revision "$SDK_SOURCE_REVISION"
+          --report-output build/verify-sdk/public-content.json
+          --output build/verify-sdk/public-content-receipt.json
       # G7WR-02: runs on every pull request; the tool applies the check whenever the
       # allowlist changed or any listed revision is in this history (the pre-ship
       # branch), so an edit to any pinned record cannot merge a stale allowlist.
@@ -173,7 +201,9 @@ jobs:
         if: always()
         with:
           name: public-content-receipt
-          path: build/verify-sdk/public-content.json
+          path: |
+            build/verify-sdk/public-content.json
+            build/verify-sdk/public-content-receipt.json
           if-no-files-found: ignore
           retention-days: 7
 
@@ -187,6 +217,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      - name: Run CI policy producer and aggregation controls
+        run: python3 tests/workflow/test_ci_policy.py --hosted
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         if: needs.matrix.result == 'success'
         with:

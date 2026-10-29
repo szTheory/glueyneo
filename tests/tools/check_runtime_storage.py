@@ -22,9 +22,11 @@ reports `unsupported` (CTest skip code 77) rather than passing.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from pathlib import Path
 import re
+import shlex
 import subprocess
 import sys
 
@@ -86,9 +88,44 @@ def run_nm(nm: str, library: str, platform: str) -> str:
     return result.stdout
 
 
+def check_compile_closure(rows: list[dict]) -> None:
+    """Prove the unsanitized audit mirrors production translation units/flags.
+
+    Only output filenames and the final instrumentation-disable flag may differ.
+    An inherited sanitizer option after that override fails closed.
+    """
+    production: dict[str, list[str]] = {}
+    audit: dict[str, list[str]] = {}
+    runtime_target = ("glueyneo_runtime_static.dir/" if any(
+        "glueyneo_runtime_static.dir/" in str(row.get("command", row.get("arguments", "")))
+        for row in rows) else "glueyneo.dir/")
+    for row in rows:
+        command = row.get("arguments") or shlex.split(row["command"])
+        kind = (audit if any("glueyneo_storage_audit.dir/" in arg for arg in command)
+                else production if any(runtime_target in arg for arg in command)
+                else None)
+        if kind is None:
+            continue
+        args = list(command)
+        if kind is audit:
+            flags = [arg for arg in args if arg.startswith(("-fsanitize=", "-fno-sanitize="))]
+            if not flags or flags[-1] != "-fno-sanitize=all":
+                raise ValueError("audit instrumentation not disabled last")
+            args.remove("-fno-sanitize=all")
+        output = args.index("-o")
+        del args[output:output + 2]
+        key = row["file"]
+        if key in kind and kind[key] != args:
+            raise ValueError("conflicting runtime compilation")
+        kind[key] = args
+    if not production or production != audit:
+        raise ValueError("audit source or compiler-property closure differs")
+
+
 def main(arguments: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--nm", default="nm")
+    parser.add_argument("--compile-commands", type=Path)
     parser.add_argument("library")
     options = parser.parse_args(arguments)
     platform = host_platform()
@@ -100,8 +137,10 @@ def main(arguments: list[str] | None = None) -> int:
         return SKIP
     name = Path(options.library).name
     try:
+        if options.compile_commands:
+            check_compile_closure(json.loads(options.compile_commands.read_text()))
         output = run_nm(options.nm, options.library, platform)
-    except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
+    except (OSError, ValueError, KeyError, RuntimeError, subprocess.TimeoutExpired) as error:
         print(f"FAIL: cannot inspect {name}: {type(error).__name__}", file=sys.stderr)
         return 1
     symbols, parsed = parse_symbols(output, platform)

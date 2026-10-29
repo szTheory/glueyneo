@@ -528,6 +528,24 @@ void ssg_resampler<OutputType, FirstOutput, MixTo1>::save_restore(ymfm_saved_sta
 {
 	state.save_restore(m_sampindex);
 	state.save_restore(m_last.data);
+
+	// held output is only ever produced by ssg_engine::output(), whose
+	// amplitude table spans 0..16382; anything else is unreachable and can
+	// overflow the signed resampler sums
+	for (int index = 0; index < 3; index++)
+		state.require(m_last.data[index] >= 0 && m_last.data[index] <= 16382);
+}
+
+
+//-------------------------------------------------
+//  reset - clear stream position and held SSG output
+//-------------------------------------------------
+
+template<typename OutputType, int FirstOutput, bool MixTo1>
+void ssg_resampler<OutputType, FirstOutput, MixTo1>::reset()
+{
+	m_sampindex = 0;
+	m_last.clear();
 }
 
 
@@ -1863,6 +1881,7 @@ void ym2610::reset()
 	// reset the engines
 	m_fm.reset();
 	m_ssg.reset();
+	m_ssg_resampler.reset();
 	m_adpcm_a.reset();
 	m_adpcm_b.reset();
 
@@ -1881,6 +1900,9 @@ void ym2610::save_restore(ymfm_saved_state &state)
 	state.save_restore(m_address);
 	state.save_restore(m_eos_status);
 	state.save_restore(m_flag_mask);
+	state.require(m_address <= 0x1ff);
+	// Bits 6 and 7 retain ADPCM-B's internal and visible EOS transition state.
+	state.require((m_flag_mask & ~EOS_FLAGS_MASK) == 0);
 
 	m_fm.save_restore(state);
 	m_ssg.save_restore(state);

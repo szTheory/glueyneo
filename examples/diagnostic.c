@@ -6,6 +6,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+static inline FILE *gn_portable_fopen(const char *path, const char *mode) {
+#if defined(_MSC_VER)
+    FILE *file = NULL;
+    if (fopen_s(&file, path, mode) != 0) return NULL;
+    return file;
+#else
+    return fopen(path, mode);
+#endif
+}
+
 enum {
     DIAGNOSTIC_ROM_BYTES = 512,
     DIAGNOSTIC_RAM_SEED_BYTES = 10,
@@ -15,7 +25,7 @@ enum {
 static uint64_t assertion_count;
 
 static int read_fixture(const char *path, uint8_t bytes[DIAGNOSTIC_FIXTURE_BYTES]) {
-    FILE *input = fopen(path, "rb");
+    FILE *input = gn_portable_fopen(path, "rb");
     if (input == NULL) {
         (void)fprintf(stderr, "cannot open diagnostic fixture: %s\n", path);
         return 0;
@@ -132,9 +142,9 @@ int main(int argc, char **argv) {
 
     gn_run_result run;
     memset(&run, 0, sizeof(run));
-    status = status == GN_STATUS_OK ? gn_run(instance, 196u, &run) : status;
+    status = status == GN_STATUS_OK ? gn_run(instance, 172u, &run) : status;
     passed &= check_status("sdk.run.status", GN_STATUS_OK, status);
-    passed &= check_u64("sdk.run.elapsed-cycles", 196u, run.elapsed_cycles);
+    passed &= check_u64("sdk.run.elapsed-cycles", 172u, run.elapsed_cycles);
     passed &= check_u64("sdk.run.instructions", 12u, run.instructions);
     passed &= check_u64("sdk.run.reason-stopped", GN_RUN_STOPPED, run.reason);
     passed &= check_u64("sdk.run.boundary-pc", 0x12eu, run.boundary_pc);
@@ -154,9 +164,9 @@ int main(int argc, char **argv) {
     const gn_status reset_status = gn_reset(instance);
     passed &= check_status("sdk.reset", GN_STATUS_OK, reset_status);
     memset(&run, 0, sizeof(run));
-    status = reset_status == GN_STATUS_OK ? gn_run(instance, 196u, &run) : reset_status;
+    status = reset_status == GN_STATUS_OK ? gn_run(instance, 172u, &run) : reset_status;
     passed &= check_status("sdk.reset-run.status", GN_STATUS_OK, status);
-    passed &= check_u64("sdk.reset-run.elapsed-cycles", 196u, run.elapsed_cycles);
+    passed &= check_u64("sdk.reset-run.elapsed-cycles", 172u, run.elapsed_cycles);
     memset(&observations, 0, sizeof(observations));
     status = status == GN_STATUS_OK ? gn_observe(instance, &observations) : status;
     passed &= check_status("sdk.reset-observe.status", GN_STATUS_OK, status);
@@ -166,7 +176,7 @@ int main(int argc, char **argv) {
     const gn_status unload_status = gn_unload(instance);
     passed &= check_status("sdk.unload", GN_STATUS_OK, unload_status);
     memset(&run, 0xa5, sizeof(run));
-    status = gn_run(instance, 196u, &run);
+    status = gn_run(instance, 172u, &run);
     passed &= check_status("sdk.unloaded-run.status", GN_STATUS_INVALID_STATE, status);
     passed &= check_u64("sdk.unloaded-run.cleared-cycles", 0u, run.elapsed_cycles);
 

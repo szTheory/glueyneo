@@ -132,7 +132,7 @@ static void assert_scenario(unsigned scenario, uint32_t expected, uint32_t desti
     TEST_ASSERT_EQUAL_HEX32(0x100u, before.pc);
     TEST_ASSERT_EQUAL_HEX32(0x2000u, before.ssp);
     TEST_ASSERT_EQUAL_HEX16(0x2700u, before.sr);
-    TEST_ASSERT_EQUAL_UINT64(64u, before.reset_cycles);
+    TEST_ASSERT_EQUAL_UINT64(40u, before.reset_cycles);
 
     size_t reads_before_zero = memory.reads;
     size_t writes_before_zero = memory.writes;
@@ -150,7 +150,7 @@ static void assert_scenario(unsigned scenario, uint32_t expected, uint32_t desti
 
     owned_cpu_run_result reset_event = owned_cpu_run(cpu, UINT64_C(1));
     TEST_ASSERT_EQUAL(OWNED_CPU_BUDGET, reset_event.reason);
-    TEST_ASSERT_EQUAL_UINT64(64u, reset_event.elapsed_cycles);
+    TEST_ASSERT_EQUAL_UINT64(40u, reset_event.elapsed_cycles);
     TEST_ASSERT_EQUAL_UINT64(0u, reset_event.instructions);
 
     owned_cpu_run_result result = owned_cpu_run(cpu, UINT64_C(36));

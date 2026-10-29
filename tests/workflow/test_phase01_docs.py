@@ -8,8 +8,8 @@ from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
 ADMISSION_STATUS = "Phase 01 passed whole-phase verification (10/10); Phase 02 is unblocked."
-STATE_PATH = ".planning/STATE.md"
-VERIFICATION_PATH = ".planning/phases/01-cpu-acceptance-experiment/01-VERIFICATION.md"
+STATE_PATH = ".planning/workstreams/cpu-bus-diagnostic-sdk-alpha/STATE.md"
+VERIFICATION_PATH = ".planning/workstreams/cpu-bus-diagnostic-sdk-alpha/milestones/v0.1-phases/01-cpu-acceptance-experiment/01-VERIFICATION.md"
 
 
 def markdown_link_targets(markdown):
@@ -37,7 +37,7 @@ def markdown_link_targets(markdown):
 class WorkflowDocsControls(unittest.TestCase):
     def setUp(self):
         self.readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.roadmap = (ROOT / ".planning/ROADMAP.md").read_text(encoding="utf-8")
+        self.roadmap = (ROOT / ".planning/workstreams/cpu-bus-diagnostic-sdk-alpha/milestones/v0.1-ROADMAP.md").read_text(encoding="utf-8")
 
     def check_navigation(self, readme, roadmap):
         self.assertIn(ADMISSION_STATUS, roadmap, "current admission status missing")

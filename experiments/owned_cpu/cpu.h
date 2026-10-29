@@ -90,6 +90,18 @@ owned_cpu_status owned_cpu_reset(owned_cpu *cpu);
 owned_cpu_run_result owned_cpu_run(owned_cpu *cpu, uint64_t cycle_budget);
 owned_cpu_status owned_cpu_set_irq(owned_cpu *cpu, unsigned level);
 owned_cpu_status owned_cpu_observe(const owned_cpu *cpu, owned_cpu_observation *out);
+/* Callback-safe: returns the PC latched at the start of the executing
+ * instruction. It is one field read with no bus access and no state change, and
+ * unlike owned_cpu_observe it is permitted while the CPU is active, so bus
+ * callbacks can attribute an access to the instruction that made it. Outside a
+ * run it returns the PC of the last started instruction (exception entry reports
+ * the interrupted PC). A NULL or never-reset CPU returns 0. */
+uint32_t owned_cpu_current_instruction_pc(const owned_cpu *cpu);
+/* Callback-safe elapsed transfer slots within the current instruction/event.
+ * Each completed 68000 byte/word transfer occupies four clocks (no wait
+ * states). This bounded sequential transfer model does not model prefetch or
+ * place instruction-internal idle clocks. Zero outside active execution. */
+uint64_t owned_cpu_current_bus_cycles(const owned_cpu *cpu);
 owned_cpu_status owned_cpu_copy_fetch_trace(
     const owned_cpu *cpu, owned_cpu_fetch_trace_event *events,
     size_t capacity, size_t *out_count);
@@ -103,11 +115,12 @@ typedef union {
     uint64_t counter;
 } owned_cpu_test_allocation_alignment;
 
-/* Private same-build continuation record. This is an in-memory test contract,
- * not a public ABI, wire format, emulator snapshot, replay, or durable save. */
+/* Private named CPU continuation record. It is not a public ABI or wire format;
+ * callers must encode its members explicitly and never copy its object bytes. */
+#endif
 #define OWNED_CPU_STATE_VERSION UINT32_C(1)
 #define OWNED_CPU_STATE_CORE_IDENTITY_SHA256 \
-    "21e81df57f6adb091014b1e824ce908cce4b675c2cf9c6cff9c6b4e269727d53"
+    "5e578260333c8ef78f77a9463d7698a55a2284afe4477fa3ef12151728aa6931"
 #define OWNED_CPU_STATE_FIELD_DATA_REGISTERS (UINT64_C(1) << 0)
 #define OWNED_CPU_STATE_FIELD_ADDRESS_REGISTERS (UINT64_C(1) << 1)
 #define OWNED_CPU_STATE_FIELD_PC_AND_PREVIOUS_PC (UINT64_C(1) << 2)
@@ -155,7 +168,19 @@ typedef struct {
 } owned_cpu_state;
 
 owned_cpu_status owned_cpu_capture_state(const owned_cpu *cpu, owned_cpu_state *out_state);
+owned_cpu_status owned_cpu_validate_state(const owned_cpu_state *state);
+int owned_cpu_is_active(const owned_cpu *cpu);
+int owned_cpu_buffer_overlaps(const owned_cpu *cpu, const void *buffer,
+                              size_t length);
+/* Applies a previously validated guest record without changing bus or allocator
+ * bindings. No callbacks or allocation occur during the apply. */
+owned_cpu_status owned_cpu_apply_state(owned_cpu *cpu, const owned_cpu_state *state);
 owned_cpu_status owned_cpu_restore_state(owned_cpu *cpu, const owned_cpu_state *state);
+#ifdef OWNED_CPU_TEST_HOOKS
+/* Test-only inspection of partial state after a terminal host callback fault.
+ * This does not make faulted state a resumable or public continuation. */
+owned_cpu_status owned_cpu_test_capture_faulted_state(
+    const owned_cpu *cpu, owned_cpu_state *out_state);
 
 /* Private test-only seeds for flag, stack-bank, fault-boundary, and accounting
  * cases. These declarations are absent from consumer builds. */
