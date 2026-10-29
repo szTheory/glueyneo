@@ -76,19 +76,24 @@ class ExampleRoutingTests(TestCase):
 
 
 class PublicContentSummaryTests(TestCase):
-    def run_summary(self, summary, returncode, *, extra_output=""):
+    def run_output(self, output, returncode):
         result = subprocess.CompletedProcess(
-            [sys.executable, "-c", "synthetic"], returncode,
-            "PUBLIC_CONTENT_RESULT=" + json.dumps(summary) + "\n" + extra_output, "",
+            [sys.executable, "-c", "synthetic"], returncode, output, "",
         )
         with mock.patch.object(policy.subprocess, "run", return_value=result):
             return policy.public_content_control_counts(ROOT)
 
+    def run_summary(self, summary, returncode, *, extra_output=""):
+        output = "PUBLIC_CONTENT_RESULT=" + json.dumps(summary) + "\n" + extra_output
+        return self.run_output(output, returncode)
+
     def test_pass_summary_rejects_nonzero_failure_count(self):
         summary = {
             "schema_version": 1, "assertions": 1, "cases": 1,
-            "failure_count": 1, "failure_test_ids": ["module.Tests.test_failure"],
-            "failure_test_ids_truncated": False, "outcome": "pass",
+            "failure_count": 1, "expected_failure_count": 0, "skipped_count": 0,
+            "unexpected_success_count": 0,
+            "nonpassing_test_ids": ["module.Tests.test_failure"],
+            "nonpassing_test_ids_truncated": False, "outcome": "pass",
         }
         with self.assertRaisesRegex(ValueError, "failed|omitted|invalid"):
             self.run_summary(summary, returncode=0)
@@ -96,16 +101,20 @@ class PublicContentSummaryTests(TestCase):
     def test_pass_summary_requires_exact_schema_and_field_types(self):
         valid = {
             "schema_version": 1, "assertions": 1, "cases": 1,
-            "failure_count": 0, "failure_test_ids": [],
-            "failure_test_ids_truncated": False, "outcome": "pass",
+            "failure_count": 0, "expected_failure_count": 0, "skipped_count": 0,
+            "unexpected_success_count": 0, "nonpassing_test_ids": [],
+            "nonpassing_test_ids_truncated": False, "outcome": "pass",
         }
         invalid_rows = (
             dict(valid, schema_version=True),
             dict(valid, cases=True),
             dict(valid, assertions=False),
             dict(valid, failure_count=False),
-            dict(valid, failure_test_ids=[{}]),
-            dict(valid, failure_test_ids_truncated=0),
+            dict(valid, expected_failure_count=True),
+            dict(valid, skipped_count=False),
+            dict(valid, unexpected_success_count=0.0),
+            dict(valid, nonpassing_test_ids=[{}]),
+            dict(valid, nonpassing_test_ids_truncated=0),
             dict(valid, unexpected="extra"),
         )
         for row in invalid_rows:
@@ -115,9 +124,10 @@ class PublicContentSummaryTests(TestCase):
     def test_failure_identifier_is_scanned_before_diagnostic(self):
         summary = {
             "schema_version": 1, "assertions": 1, "cases": 1,
-            "failure_count": 1,
-            "failure_test_ids": ["module.Tests.ghp_" + ("A" * 36)],
-            "failure_test_ids_truncated": False, "outcome": "fail",
+            "failure_count": 1, "expected_failure_count": 0, "skipped_count": 0,
+            "unexpected_success_count": 0,
+            "nonpassing_test_ids": ["module.Tests.ghp_" + ("A" * 36)],
+            "nonpassing_test_ids_truncated": False, "outcome": "fail",
         }
         with self.assertRaises(ValueError) as caught:
             self.run_summary(summary, returncode=1)
@@ -127,9 +137,10 @@ class PublicContentSummaryTests(TestCase):
     def test_large_failure_counts_keep_diagnostic_bounded(self):
         summary = {
             "schema_version": 1, "assertions": 1, "cases": 10 ** 1400,
-            "failure_count": 10 ** 1400,
-            "failure_test_ids": ["module.Tests.test_failure"],
-            "failure_test_ids_truncated": False, "outcome": "fail",
+            "failure_count": 10 ** 1400, "expected_failure_count": 0,
+            "skipped_count": 0, "unexpected_success_count": 0,
+            "nonpassing_test_ids": ["module.Tests.test_failure"],
+            "nonpassing_test_ids_truncated": False, "outcome": "fail",
         }
         with self.assertRaises(ValueError) as caught:
             self.run_summary(summary, returncode=1)
@@ -137,14 +148,64 @@ class PublicContentSummaryTests(TestCase):
 
     def test_duplicate_result_records_are_rejected(self):
         actual = {
-            "schema_version": 1, "assertions": 0, "cases": 27,
-            "failure_count": 0, "failure_test_ids": [],
-            "failure_test_ids_truncated": False, "outcome": "pass",
+            "schema_version": 1, "assertions": 1, "cases": 27,
+            "failure_count": 0, "expected_failure_count": 0, "skipped_count": 0,
+            "unexpected_success_count": 0, "nonpassing_test_ids": [],
+            "nonpassing_test_ids_truncated": False, "outcome": "pass",
         }
         forged = dict(actual, assertions=1)
         extra = "PUBLIC_CONTENT_RESULT=" + json.dumps(forged) + "\n"
         with self.assertRaisesRegex(ValueError, "duplicate|invalid|omitted"):
             self.run_summary(actual, returncode=0, extra_output=extra)
+
+    def test_malformed_result_records_count_as_duplicates(self):
+        valid = {
+            "schema_version": 1, "assertions": 1, "cases": 1,
+            "failure_count": 0, "expected_failure_count": 0, "skipped_count": 0,
+            "unexpected_success_count": 0, "nonpassing_test_ids": [],
+            "nonpassing_test_ids_truncated": False, "outcome": "pass",
+        }
+        valid_line = "PUBLIC_CONTENT_RESULT=" + json.dumps(valid) + "\n"
+        for malformed in ("PUBLIC_CONTENT_RESULT=\n",
+                          "PUBLIC_CONTENT_RESULT=" + ("x" * 5000) + "\n"):
+            with self.subTest(malformed_length=len(malformed)), self.assertRaises(ValueError):
+                self.run_output(valid_line + malformed, returncode=0)
+
+    def test_duplicate_json_object_keys_are_rejected(self):
+        output = (
+            'PUBLIC_CONTENT_RESULT={"schema_version":1,"assertions":0,'
+            '"assertions":1,"cases":1,"failure_count":0,"expected_failure_count":0,'
+            '"skipped_count":0,"unexpected_success_count":0,"nonpassing_test_ids":[],'
+            '"nonpassing_test_ids_truncated":false,"outcome":"pass"}\n'
+        )
+        with self.assertRaises(ValueError):
+            self.run_output(output, returncode=0)
+
+    def test_expected_failures_and_skips_are_rejected_by_producer(self):
+        with tempfile.TemporaryDirectory(prefix="ci-content-status-") as temp:
+            root = Path(temp)
+            workflow_tests = root / "tests" / "workflow"
+            workflow_tests.mkdir(parents=True)
+            (root / "tests" / "__init__.py").write_text("", encoding="utf-8")
+            (workflow_tests / "__init__.py").write_text("", encoding="utf-8")
+            (workflow_tests / "test_public_content.py").write_text(
+                "import unittest\n"
+                "class OutcomeTests(unittest.TestCase):\n"
+                "    @unittest.expectedFailure\n"
+                "    def test_expected_failure(self):\n"
+                "        self.fail('synthetic')\n"
+                "    @unittest.skip('synthetic')\n"
+                "    def test_skipped(self):\n"
+                "        self.assertTrue(True)\n"
+                "    def test_passing_control(self):\n"
+                "        self.assertTrue(True)\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "expected_failures=1; skipped=1") as caught:
+                policy.public_content_control_counts(root)
+            self.assertIn("test_public_content.OutcomeTests.test_expected_failure",
+                          str(caught.exception))
+            self.assertIn("test_public_content.OutcomeTests.test_skipped", str(caught.exception))
 
 
 def expect(value: bool, message: str) -> None:
@@ -232,8 +293,10 @@ def check_public_content_handoff() -> tuple[int, int]:
             if len(argv) > 1 and argv[1] == "-c":
                 result = {"schema_version": 1,
                           "assertions": actual_assertions, "cases": actual_cases,
-                          "failure_count": 0, "failure_test_ids": [],
-                          "failure_test_ids_truncated": False, "outcome": "pass"}
+                          "failure_count": 0, "expected_failure_count": 0,
+                          "skipped_count": 0, "unexpected_success_count": 0,
+                          "nonpassing_test_ids": [],
+                          "nonpassing_test_ids_truncated": False, "outcome": "pass"}
                 return subprocess.CompletedProcess(
                     argv, 0, "PUBLIC_CONTENT_RESULT=" + json.dumps(result) + "\n", "",
                 )
